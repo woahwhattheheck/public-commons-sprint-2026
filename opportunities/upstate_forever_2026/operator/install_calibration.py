@@ -29,7 +29,21 @@ FILES = ("model/calibration_execution.py", "model/calibration.py", "model/CALIBR
          "operator/install_calibration.py", "source_tools/calibration_assembly.py",
          "operator/web/calibration_design.mjs", "operator/CALIBRATION_DESIGN.md",
          "operator/calibration_design_patch.json", "operator/install_calibration_design.py",
-         "source/calibration-design/upper-savannah-reference-support.json")
+         "source/calibration-design/upper-savannah-reference-support.json",
+         "model/parameter_calibration.py",
+         "model/parameter_studies.py",
+         "model/parameter_report_source.py",
+         "model/parameter_study_transfer.py",
+         "operator/parameter_study_api.py",
+         "operator/web/parameter_studies.mjs",
+         "operator/web/parameter_studies.css",
+         "operator/PARAMETER_STUDY_CALIBRATION.md",
+         "integration/component_fragments/calibration-parameter-continuation.json",
+         "model/study_transfer.py",
+         "model/parameter_study_receiving.py",
+         "operator/parameter_receiving.py",
+         "operator/web/parameter_received_studies.mjs",
+         "operator/web/extensions/study_transfer.mjs")
 SHARED = ("operator/server.py", "operator/web/app.mjs", "operator/web/index.html",
           "model/scientific_figures.py")
 DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.mjs",
@@ -164,6 +178,25 @@ PREDECESSORS = {
     },
 }
 
+
+# Exact maintained predecessors for the complete selected-profile continuation.
+PREDECESSORS.setdefault("model/parameter_calibration.py", set()).add("1b7436c9106bdd75644225cc459ba518d6485c470e881c10ce137456afab1ffd")
+PREDECESSORS.setdefault("model/parameter_studies.py", set()).add("318cc124835854557e0fa7c17d66e9d1ff50c7fa59a18cd08cfd791993c099af")
+PREDECESSORS.setdefault("model/parameter_report_source.py", set()).add("f7168a7ca9f585b6a2f816570f352f2c8ee69c9b282bc991d53fd2b0ac8643ad")
+PREDECESSORS.setdefault("model/parameter_study_transfer.py", set()).add("4f4dcbf900bf4700377d0368c68b6bbed4210d4664a09f13584fa076f4e02c01")
+PREDECESSORS.setdefault("operator/parameter_study_api.py", set()).add("9d11cd7873b712889c5e45f3ad3f476b1063ab653dc48a2e394c2bf5cb95d942")
+PREDECESSORS.setdefault("operator/web/parameter_studies.mjs", set()).add("3481ae525bc967905e654db4627ff2cba08b07536095d183dc79cbd32a3674bf")
+PREDECESSORS.setdefault("operator/web/parameter_studies.css", set()).add("0b527187a0b8ec1fc7d6f93f5bca10d478e228ef037f1c8852006d597c75a833")
+PREDECESSORS.setdefault("operator/PARAMETER_STUDY_CALIBRATION.md", set()).add("1b76f3b5a68c96deb8586a044e16280db55d724005b04925f4298326ce978167")
+PREDECESSORS.setdefault("operator/install_calibration.py", set()).add("e83153c123e8cac5ae453bceffca466a99c585496727596109adf705d20e7bbd")
+PREDECESSORS.setdefault("operator/web/calibration.mjs", set()).add("3112af1cc2cc171566e7fe8ddbf5333279d3fdf87313f80d1e70e70daa1657df")
+PREDECESSORS.setdefault("operator/extensions/calibration.json", set()).add("f7ce633cb306d1e3f2a922b9dc34eb2ff11f7507162998d072ed19eb4317a13a")
+
+PREDECESSORS.setdefault("model/study_transfer.py", set()).add("48c07019f4dfbaeecffbe9f8804e0d940773d04372977876b2b9a542f432679b")
+PREDECESSORS.setdefault("model/parameter_study_receiving.py", set()).add("3cdebaa1dab37dd825097e2049ce89a8dff39187e54b67705527d7f71f029419")
+PREDECESSORS.setdefault("operator/parameter_receiving.py", set()).add("9e1519bf058e4135425c4426334e1da552a47995a4e2a8c8011c0fbc71e1ea89")
+PREDECESSORS.setdefault("operator/web/parameter_received_studies.mjs", set()).add("c6990961525109219f9a146ae9c4337ca85ff0d361dfffc5093a1aeec6ce7d25")
+PREDECESSORS.setdefault("operator/web/extensions/study_transfer.mjs", set()).add("adb620205dbd0185570bd6430fd9042f575a218d4e91c6efd7f13e937307b1bf")
 
 def _hash(data):
     return hashlib.sha256(data).hexdigest()
@@ -308,6 +341,19 @@ def patch_figure_markers(source):
     return source
 
 
+
+def patch_parameter_continuation(source):
+    """Preserve the complete current host while joining its native Parameter desk."""
+    anchor = " openParameterStudy:(selection,options)=>parameterStudies.openSavedStudy(selection,options),\n"
+    addition = " openCalibrationParameterStudy:selection=>parameterStudies.openFromCalibration(selection),\n"
+    if addition in source:
+        if source.count(addition) != 1:
+            raise ValueError("Compose the current unique selected-profile host callback")
+        return source
+    if source.count(anchor) != 1 or source.count("const parameterStudies=") != 1:
+        raise ValueError("Select the current complete Parameter study host before receiving calibration")
+    return source.replace(anchor, anchor + addition, 1)
+
 def register_sources(sources, extension_installer):
     """Compose the current maintained host and migrate only our earlier joins."""
     for name in (*SHARED, *DEPENDENCIES):
@@ -315,7 +361,7 @@ def register_sources(sources, extension_installer):
             raise ValueError("Receive the current complete application and extension host; missing " + name)
     result = {
         "operator/server.py": patch_journey_validation(extension_installer.patch_server(_legacy_server(sources["operator/server.py"]))),
-        "operator/web/app.mjs": extension_installer.patch_app(_legacy_app(sources["operator/web/app.mjs"])),
+        "operator/web/app.mjs": patch_parameter_continuation(extension_installer.patch_app(_legacy_app(sources["operator/web/app.mjs"]))),
         "operator/web/index.html": sources["operator/web/index.html"],
         "model/scientific_figures.py": patch_figure_markers(sources["model/scientific_figures.py"]),
     }

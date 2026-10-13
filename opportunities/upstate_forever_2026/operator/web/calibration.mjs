@@ -27,7 +27,7 @@ const notesList = values => (values??[]).length ? '<ul class="calibration-notes"
 
 export function createCalibrationDesk(host){return attachCalibration(host);}
 
-export function attachCalibration({getState,api,endpoint,openForm,submitAction,detail,fileList,openItem,showTask,toast,openDelivery,openScientificReport}){
+export function attachCalibration({getState,api,endpoint,openForm,submitAction,detail,fileList,openItem,showTask,toast,openDelivery,openScientificReport,openCalibrationParameterStudy}){
   let mounted=null,lastMarkup=null,generation=0,activeReport=null,activeTab='ranking',page=0,query='',sortKey='rank',sortDirection=1;
   let activeDraft=null,previewResult=null,previewIdentity=null,formToken=null,formRequest=0;
   let activeUncertainty=null,resultRequest=0;
@@ -793,7 +793,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const selected=view.ranking.find(row=>row.run_id===report.selected_run_id);
     const independent=(view.groups??[]).filter(group=>group.partition==='validation').length;
     return header(view.title||report.title,report.selected_run_id?'Original observations and completed native model runs. Lower calibration loss selects the retained parameter profile; validation describes that selected profile on the reserved catchment groups.':'The retained candidate outcomes identify the observations and native catchment support needed to complete parameter selection.',
-      button('back','All calibrations')+button('plan','Open selection',report.plan_id)+button('export','Export complete results',report.id,true))+
+      button('back','All calibrations')+button('plan','Open selection',report.plan_id)+button('export','Export complete results',report.id,true)+(report.selected_run_id?button('continue-profile','Continue selected profile',report.id):''))+
       '<div class="cards">'+[
         ['Selected parameter profile',report.selected_run_id?(selected?.title||named('profiles',report.selected_profile_id)):'No eligible candidate',report.selected_run_id?candidateModels(selected||{selected_models:report.selected_models})+' · native run '+short(report.selected_run_id):'Inspect the retained candidate outcomes below.'],
         ['Candidate runs',number(view.candidate_count??report.candidate_count??view.ranking.length),number(view.distinct_profile_count??report.distinct_profile_count??new Set(view.ranking.map(row=>row.profile_id)).size)+' distinct parameter profiles with their original run identities.'],
@@ -985,6 +985,14 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(action==='plan')return openPlan(id);
     if(action==='report')return openReport(id);
     if(action==='back'){reviewsDesk.reset();mapsDesk.reset();activeReport=null;activeUncertainty=null;resultRequest++;return repaint();}
+    if(action==='continue-profile'){
+      const workspace=current(),viewGeneration=generation,request=++resultRequest;
+      if(!activeReport||activeReport.report.id!==id||!activeReport.report.selected_run_id)
+        throw Error('Open a completed annual-reference result with a selected profile.');
+      const isCurrent=()=>current()===workspace&&generation===viewGeneration&&resultRequest===request&&activeReport?.report.id===id;
+      if(typeof openCalibrationParameterStudy!=='function')throw Error('Install the complete selected-profile continuation with this application.');
+      return openCalibrationParameterStudy({workspace_key:workspace,calibration_id:id,isCurrent});
+    }
     if(action==='uncertainty-new')return uncertaintyForm(id);
     if(action==='uncertainty')return openUncertainty(id);
     if(action==='uncertainty-nominal')return openReport(id);

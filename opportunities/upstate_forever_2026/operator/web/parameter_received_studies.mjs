@@ -19,12 +19,13 @@ export function receivedParameterStudiesHTML(detail,disabled=false){
   return '<section aria-label="Original Parameter studies"><h4>Parameter studies and saved source editions</h4>'+
     rows.map((row,index)=>{
       const local=row.editable===true&&row.relationship==='same_project';
+      const direct=row.source_kind==='direct_study';
       const design=typeof row.design==='string'?row.design:'Original saved parameter design';
       let html='<article class="st-received-source"><h4>'+esc(row.title)+'</h4>'+
         (row.purpose?'<p>'+esc(row.purpose)+'</p>':'')+
         '<p>'+esc(design)+' · '+esc(list(row.models).map(x=>x==='ndr'?'Nutrients':x==='sdr'?'Sediment':x).join(' and '))+
-        ' · '+count(list(row.selected_case_ids).length)+' selected report cases of '+count(row.captured_state?.case_count)+' prepared cases.</p>'+
-        '<p><strong>Captured report edition:</strong> '+esc(row.captured_state?.state||'Unspecified')+
+        ' · '+count(list(row.selected_case_ids).length)+(direct?' retained cases of ':' selected report cases of ')+count(row.captured_state?.case_count)+' prepared cases.</p>'+
+        '<p><strong>'+(direct?'Captured study:':'Captured report edition:')+'</strong> '+esc(row.captured_state?.state||'Unspecified')+
         (stateText(row.captured_state)?' · '+esc(stateText(row.captured_state)):'')+'.</p>'+
         (local?'<p><strong>Current retained study:</strong> '+esc(row.current_state?.state||'Unspecified')+
           (stateText(row.current_state)?' · '+esc(stateText(row.current_state)):'')+
@@ -32,19 +33,24 @@ export function receivedParameterStudiesHTML(detail,disabled=false){
           '<p>The original report comes from another project. Its captured inputs and results remain available in this source edition.</p>')+
         '<div class="st-actions">'+
         (local?button('open','Open saved study',index,disabled)+button('baseline','Open reference run',index,disabled):'')+
-        button('compose','Add source to report',index,disabled)+'</div>'+
+        (!direct?button('compose','Add source to report',index,disabled):'')+'</div>'+
         '<details class="st-details"><summary>Original selected cases</summary><div class="st-table-scroll"><table class="st-table">'+
-        '<thead><tr><th>Case</th><th>Captured state</th><th>Original profile</th><th>Native run</th></tr></thead><tbody>'+
+        '<thead><tr><th>Case</th><th>'+(direct?'Current retained state':'Captured state')+'</th><th>Original profile</th><th>Native run</th></tr></thead><tbody>'+
         list(row.selected_cases).map((item,position)=>'<tr><td>'+esc(item.label)+'<small>'+esc(item.id)+'</small></td><td>'+
           esc(item.state||'Unspecified')+'</td><td><code>'+esc(item.profile_id)+'</code></td><td>'+
           (local?button('run','Open saved run',index,disabled,'data-parameter-run="'+position+'"'):'<code>'+esc(item.run_id)+'</code>')+
           '</td></tr>').join('')+'</tbody></table></div></details>'+
         '<details class="st-details"><summary>Source identities and reference</summary><dl>'+
         [['Original project',row.source_project_id],['Original study',row.experiment_id],
-         ['Fixed reference run',row.baseline_run_id],['Captured result SHA-256',row.source_result_sha256],
-         ['Scientific source SHA-256',row.source_body_sha256]]
+         ['Fixed reference run',row.baseline_run_id],
+         ...(direct?[]:[['Captured result SHA-256',row.source_result_sha256],
+         ['Scientific source SHA-256',row.source_body_sha256]]),
+         ...(row.calibration_origin?[['Original evaluation',row.calibration_origin.calibration_id],
+           ['Original observation edition',row.calibration_origin.observation_id],
+           ['Original evaluation reference',row.calibration_origin.reference_run_id||'Not declared']]:[])]
           .map(([label,value])=>'<dt>'+esc(label)+'</dt><dd><code>'+esc(value)+'</code></dd>').join('')+
-        '</dl><p>Opening the current study does not replace this captured scientific-report edition. Original result units, masks and paired coverage stay with its exported tables.</p></details>'+
+        '</dl><p>'+(direct?'The original design, native cases and calibration lineage remain editable in this Workspace. No report source was required for capture.':
+          'Opening the current study does not replace this captured scientific-report edition.')+' Original result units, masks and paired coverage stay with its exported tables.</p></details>'+
         downloads(row._result_downloads,'Captured study results and exports');
       for(const report of list(detail.reports).filter(report=>list(row.report_ids).includes(report.id)))
         html+=downloads(report._downloads,'Scientific report: '+report.title);
