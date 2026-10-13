@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from copy import deepcopy
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -60,6 +61,18 @@ class Progression:
                 else:
                     documents[key] = {"path": resolved,
                                       "sha256": describe_file(path.parent, path)["sha256"]}
+        if args.chemistry_selection:
+            chemical_choice = read_json(args.chemistry_selection)
+            require(isinstance(chemical_choice, dict), "Chemistry selection must be an object")
+            references = {}
+            for field in ("edited-project", "request"):
+                value = chemical_choice.get(field)
+                if value:
+                    require(isinstance(value, str), "Use the actual file path for chemistry " + field)
+                    path = (args.chemistry_selection.parent / value).resolve(strict=True)
+                    references[field] = {"path": str(path),
+                                         "sha256": describe_file(path.parent, path)["sha256"]}
+            documents["chemistry_references"] = references
         self.request = {"schema": SCHEMA, "workspace": str(self.workspace),
                         "operator_state": str(self.operator_state),
                         "regional_arguments": regional_args,
@@ -118,11 +131,12 @@ class Progression:
     def open(self):
         opening_file = self.output / "original-opening.json"
         if "opening" not in self.state["steps"]:
-            prior = item(self.workspace / "operator-session.json")
-            self.state["original_saved_view"] = prior
-            self.write()
+            if "original_saved_view" not in self.state:
+                self.state["original_saved_view"] = item(self.workspace / "operator-session.json")
+                self.write()
             if self.args.opening:
-                opening = read_json(self.args.opening)
+                original = self.frozen_input(self.request["documents"]["opening"], "regional-opening.json")
+                opening = read_json(original)
                 atomic_json(opening_file, opening, immutable=True)
             else:
                 forbidden = {"--workspace", "--operator-state", "--opening-output",
@@ -185,7 +199,8 @@ class Progression:
         if self.args.prepare_only:
             return None
         if self.args.run_selection:
-            selected = read_json(self.args.run_selection)
+            selected = read_json(self.frozen_input(
+                self.request["documents"]["run_selection"], "native-run-selection.json"))
         else:
             run_id = opening.get("alternative_run_id") or opening.get("baseline_run_id")
             previous = (self.state.get("original_saved_view") or {}).get("journey", {}).get("selection", {})
@@ -210,6 +225,16 @@ class Progression:
 
     def browser(self, name, script, arguments, *, workspace=None):
         report_path = self.output / name / "journey.json"
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        key = workspace or self.key
+        intent = {"operation_id": self.state["operation_id"], "script": script,
+                  "workspace_key": key, "project_id": self.operator.ws(key).project["id"],
+                  "arguments": arguments}
+        intent_path = report_path.parent / "request.json"
+        previous_intent = item(intent_path)
+        require(previous_intent is None or previous_intent == intent,
+                "This browser output retains another native request: " + name)
+        atomic_json(intent_path, intent, immutable=True)
         if name in self.state["steps"]:
             saved = self.state["steps"][name]
             require(describe_file(self.output, report_path) == saved["journal"],
@@ -217,6 +242,28 @@ class Progression:
             return read_json(report_path)
         # Resume the same native queue requests recorded before a prior browser exit.
         previous = item(report_path) or {}
+        if previous.get("status") == "complete":
+            require(previous_intent == intent, "Adopt only the original browser request")
+            schemas = {
+                "profile-browser": ("upstate.profile-workbench-journey/v1", "workspace_id"),
+                "source-updates": ("upstate.source-updates-browser/v1", "workspace_key"),
+                "chemistry": ("upstate.chemistry-browser/v1", "workspace_key"),
+                "saved-view": ("upstate.regional-saved-view-browser-journey/v1", "operator_workspace_key"),
+                "received-view": ("upstate.regional-saved-view-browser-journey/v1", "operator_workspace_key"),
+            }
+            schema, workspace_field = schemas[name]
+            require(previous.get("schema") == schema and previous.get(workspace_field) == key,
+                    "The completed browser journal belongs to another native Workspace")
+            if name == "profile-browser":
+                require(previous.get("baseline_profile_id") == arguments[arguments.index("--profile") + 1],
+                        "The completed profile journal edited another baseline")
+            if name in {"saved-view", "received-view"}:
+                expected_opening = read_json(Path(arguments[arguments.index("--opening") + 1]))
+                require(previous.get("opening") == expected_opening,
+                        "The completed saved-view journal opened another regional selection")
+            self.record(name, {"adopted_completed_journal": True,
+                               "journal": describe_file(self.output, report_path)})
+            return previous
         task_ids = {row.get("task_id") for row in previous.get("steps", []) if row.get("task_id")}
         if previous.get("save_task_id"):
             task_ids.add(previous["save_task_id"])
@@ -230,6 +277,8 @@ class Progression:
         command = [self.node, str(APP / script), "--url-file", str(self.private_url),
                    "--workspace", workspace or self.key, "--output", str(report_path.parent),
                    *arguments]
+        if name == "chemistry" and (report_path.parent / "request-state.json").is_file():
+            command.append("--resume")
         if self.args.video:
             command.append("--video")
         if self.args.headed:
@@ -359,10 +408,27 @@ class Progression:
                                       "saved_view_revision": saved["revision"]})
         return result
 
+    def frozen_input(self, descriptor, filename):
+        source = Path(descriptor["path"])
+        body = source.read_bytes()
+        require(hashlib.sha256(body).hexdigest() == descriptor["sha256"],
+                "The selected scientific input changed: " + str(source))
+        target = self.output / "inputs" / filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            require(target.read_bytes() == body, "The retained scientific input copy differs: " + filename)
+        else:
+            with target.open("xb") as stream:
+                stream.write(body)
+                stream.flush()
+                os.fsync(stream.fileno())
+        return target
+
     def chemistry(self):
         if not self.args.chemistry_selection:
             return
-        choice = read_json(self.args.chemistry_selection)
+        document = self.request["documents"]["chemistry_selection"]
+        choice = read_json(self.frozen_input(document, "chemistry-selection.json"))
         allowed = {"case-id", "source-collection", "source-id", "edited-project",
                    "reason", "request", "receive"}
         require(isinstance(choice, dict) and not set(choice) - allowed,
@@ -378,7 +444,8 @@ class Progression:
             else:
                 require(isinstance(value, str) and value, "Use an original chemistry selection for " + name)
                 if name in {"edited-project", "request"}:
-                    value = str((self.args.chemistry_selection.parent / value).resolve(strict=True))
+                    descriptor = self.request["documents"]["chemistry_references"][name]
+                    value = str(self.frozen_input(descriptor, "chemistry-" + name + ".json"))
                 arguments.extend(["--" + name, value])
         self.browser("chemistry", "source/run_chemistry_browser.mjs", arguments)
 
@@ -391,11 +458,19 @@ class Progression:
             require(describe_file(self.output, report) == previous["journal"],
                     "The retained monitoring continuation changed")
             return
+        selected = self.frozen_input(self.request["documents"]["monitoring_selection"],
+                                     "monitoring-selection.json")
         result = self.command("monitoring", [
             sys.executable, "-B", str(APP / "operator/monitoring_receiving.py"),
-            "--workspace", str(self.workspace), "--selection", str(self.args.monitoring_selection.resolve()),
+            "--workspace", str(self.workspace), "--selection", str(selected),
             "--output", str(report.parent)])
         require(report.is_file(), "Open the original monitoring receiving result")
+        outcome = read_json(report)
+        if not (outcome.get("summary") or {}).get("complete"):
+            self.record("monitoring_outcome", {"journal": describe_file(self.output, report),
+                        "design_outcome": outcome.get("design_outcome")})
+            raise ValueError("Monitoring retained its original design outcome instead of a complete campaign: " +
+                             json.dumps(outcome.get("design_outcome", {})))
         self.record("monitoring", {**result, "journal": describe_file(self.output, report)})
 
     def run(self):
@@ -487,6 +562,12 @@ def main(argv=None):
             "Supply either --opening or the original regional preparation arguments after --")
     require(0 <= args.port <= 65535 and 0 < args.timeout <= 86400,
             "Choose a valid port and a native operation timeout up to 86400 seconds")
+    workspace = args.workspace.resolve()
+    require(not args.output.resolve().is_relative_to(workspace) and
+            not args.operator_state.resolve().is_relative_to(workspace),
+            "Keep receiving output and operator state outside the original Workspace")
+    require(not args.output.resolve().is_relative_to(args.operator_state.resolve()),
+            "Keep receiving output separate from operator state")
     args.output.resolve().mkdir(parents=True, exist_ok=True, mode=0o700)
     with held(args.output.resolve() / ".progression.lock", blocking=False):
         operation = Progression(args, regional_args)
