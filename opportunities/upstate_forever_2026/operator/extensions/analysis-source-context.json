@@ -1,0 +1,117 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "analysis-source-context",
+  "title": "Scenario source context",
+  "version": "1.1.0",
+  "order": 66,
+  "assets": [
+    "analysis_source_context.mjs"
+  ],
+  "backend": {
+    "module": "analysis_source_context",
+    "actions": [
+      "scenario.source_context.build"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/analysis-source-context/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/analysis-source-context/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/analysis-source-context/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "file_routes": [
+      {
+        "path": "/api/file/analysis-source-context/{workspace_key}/{report_id}/{artifact}",
+        "handler": "file_reply",
+        "args": [
+          "operator",
+          "route.workspace_key",
+          "route.report_id",
+          "route.artifact"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ],
+    "state": {
+      "key": "analysis_source_context",
+      "handler": "state",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    },
+    "items": [
+      {
+        "kind": "scenario-source-contexts",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "requires_actions": [
+    "observations.point_sources.bind"
+  ]
+}
