@@ -167,11 +167,11 @@ An original OSF administrator requests any DOI/URL redirect only after the actua
 
 ## Drafts and original-request recovery
 
-Browser form state uses the workspace's stable ID and a separate tab identity. Complete immutable draft checkpoints precede view/selection changes and submitted operations. Incomplete JSON text remains editable. Review notes, mapping-entry fields and handover decisions retain their original context. File selections are cleared when changing or restoring source context; original imported bytes live with their saved command.
+Browser form state uses the workspace's stable ID and a separate tab identity. The page stays inactive while its original saved head is loading, so early keystrokes or actions cannot be replaced by a late startup restore. If loading fails, Refresh resumes that same opening process. Every source, mapping, review, native plan, execution, comparison and handover selector is part of the retained form. Native execution resolutions are kept under their exact execution ID; choosing another execution opens its own resolution draft. Complete immutable draft checkpoints precede view/selection changes and submitted operations. Incomplete JSON text remains editable. Review notes, mapping-entry fields and handover decisions retain their original context. File selections are cleared when changing or restoring source context; original imported bytes live with their saved command.
 
 Use **Save draft** to retain a complete form edition in the native workspace. Download a full draft or original request from history. Working drafts can accompany the selected institutional archive. A received draft is opened only after its original source records are available in the receiving workspace.
 
-Every CLI mutation requires `--request`. Its complete request file is created and synced before dispatch; a different existing file is preserved. Request and export directories should be private. After a lost response:
+Every CLI mutation requires `--request`. Its complete request file is staged and synced before dispatch. Request, result and export files are staged completely in their original output directory, synchronized, and published through an exclusive final-file link. An interruption before publication leaves the final filename available for the same command; a published final file contains the complete original bytes. Repeating an identical publication reads those bytes back. A different existing file is preserved. Request and export directories should be private. After a lost response:
 
 ```sh
 node scripts/osf_cli.mjs operation --workspace /absolute/path/to/institutional-workspace --id ORIGINAL_OPERATION_ID

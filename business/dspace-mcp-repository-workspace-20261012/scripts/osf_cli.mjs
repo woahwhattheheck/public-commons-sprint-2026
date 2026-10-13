@@ -17,10 +17,50 @@ function privateDir(dir){
  if(fs.existsSync(dir)){if(!fs.lstatSync(dir).isDirectory()||fs.lstatSync(dir).isSymbolicLink())throw Error('Use a real output directory.');return;}
  privateDir(path.dirname(dir));fs.mkdirSync(dir,{mode:0o700});syncDir(path.dirname(dir));
 }
+function originalFile(target){
+ const fd=fs.openSync(target,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0)|(fs.constants.O_NONBLOCK||0));
+ try{const stat=fs.fstatSync(fd,{bigint:true});if(!stat.isFile())throw Error('Use a complete regular original file: '+target);return {fd,stat};}
+ catch(error){fs.closeSync(fd);throw error;}
+}
+function unchanged(opened,target){
+ const after=fs.fstatSync(opened.fd,{bigint:true}),before=opened.stat;
+ if(before.dev!==after.dev||before.ino!==after.ino||before.size!==after.size||before.mtimeNs!==after.mtimeNs||before.ctimeNs!==after.ctimeNs)throw Error('The original file changed while reading: '+target);
+}
+function sameRetained(target,bytes){
+ let opened;try{opened=originalFile(target);}catch(error){if(error.code==='ENOENT')return false;throw error;}
+ try{const actual=fs.readFileSync(opened.fd);unchanged(opened,target);if(!actual.equals(bytes))throw Error('A different retained file already exists: '+target);return true;}
+ finally{fs.closeSync(opened.fd);}
+}
+function publishStage(stage,target,existingMatches){
+ try{fs.linkSync(stage,target);}catch(error){if(error.code!=='EEXIST')throw error;existingMatches();}
+ syncDir(path.dirname(target));
+}
 function retain(target,bytes){
  target=path.resolve(target);privateDir(path.dirname(target));
- if(fs.existsSync(target)){const stat=fs.lstatSync(target);if(!stat.isFile()||stat.isSymbolicLink()||!fs.readFileSync(target).equals(bytes))throw Error('A different retained file already exists: '+target);return target;}
- const fd=fs.openSync(target,'wx',0o600);try{fs.writeFileSync(fd,bytes);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}syncDir(path.dirname(target));return target;
+ if(sameRetained(target,bytes))return target;
+ const stage=path.join(path.dirname(target),'.'+path.basename(target)+'.stage-'+randomUUID());
+ let fd;
+ try{
+  fd=fs.openSync(stage,fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|(fs.constants.O_NOFOLLOW||0),0o600);
+  fs.writeFileSync(fd,bytes);fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;
+  publishStage(stage,target,()=>{if(!sameRetained(target,bytes))throw Error('The retained destination disappeared during publication.');});
+  return target;
+ }finally{if(fd!==undefined)fs.closeSync(fd);try{fs.unlinkSync(stage);syncDir(path.dirname(target));}catch(error){if(error.code!=='ENOENT')throw error;}}
+}
+async function retainFile(target,source){
+ target=path.resolve(target);source=path.resolve(source);privateDir(path.dirname(target));
+ const expected=await fileHash(source);
+ try{const actual=await fileHash(target);if(stable(actual)!==stable(expected))throw Error('The existing destination differs from this complete export.');return expected;}
+ catch(error){if(error.code!=='ENOENT')throw error;}
+ const stage=path.join(path.dirname(target),'.'+path.basename(target)+'.stage-'+randomUUID());
+ try{
+  fs.copyFileSync(source,stage,fs.constants.COPYFILE_EXCL);fs.chmodSync(stage,0o600);
+  const fd=fs.openSync(stage,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}
+  const copied=await fileHash(stage),current=await fileHash(source);
+  if(stable(copied)!==stable(expected)||stable(current)!==stable(expected))throw Error('The original export changed while its complete file was staged.');
+  try{fs.linkSync(stage,target);}catch(error){if(error.code!=='EEXIST')throw error;const actual=await fileHash(target);if(stable(actual)!==stable(expected))throw Error('A different retained file already exists: '+target);}
+  syncDir(path.dirname(target));return expected;
+ }finally{try{fs.unlinkSync(stage);syncDir(path.dirname(target));}catch(error){if(error.code!=='ENOENT')throw error;}}
 }
 function readJSON(filename){return JSON.parse(fs.readFileSync(path.resolve(filename),'utf8'));}
 function localBytes(root,relative){
@@ -45,7 +85,11 @@ function sourceBytes(filename){
  });
  return changed?encode({...value,documents,files,source_manifest:{filename:path.basename(absolute),sha256:HASH(raw),body_text:raw.toString('utf8')}}):raw;
 }
-async function fileHash(filename){const h=createHash('sha256');let bytes=0;for await(const chunk of fs.createReadStream(filename)){h.update(chunk);bytes+=chunk.length;}return {sha256:h.digest('hex'),bytes};}
+async function fileHash(filename){
+ const opened=originalFile(filename),h=createHash('sha256'),buffer=Buffer.alloc(256*1024);let bytes=0;
+ try{for(;;){const count=fs.readSync(opened.fd,buffer,0,buffer.length,null);if(!count)break;h.update(buffer.subarray(0,count));bytes+=count;}unchanged(opened,filename);if(BigInt(bytes)!==opened.stat.size)throw Error('The original file length changed: '+filename);return {sha256:h.digest('hex'),bytes};}
+ finally{fs.closeSync(opened.fd);}
+}
 const HELP=`OSF institutional transition — Node 24, original DSpace workspace
 
 Read and prepare:
@@ -89,9 +133,7 @@ try{
    const file=await workspace.exportFile(required('kind'),required('id')),output=path.resolve(required('output'));privateDir(path.dirname(output));
    try{
     if(file.path){
-     const expected=await fileHash(file.path);
-     if(fs.existsSync(output)){const actual=await fileHash(output);if(stable(actual)!==stable(expected)||fs.lstatSync(output).isSymbolicLink())throw Error('The existing destination differs from this complete export.');}
-     else{fs.copyFileSync(file.path,output,fs.constants.COPYFILE_EXCL);fs.chmodSync(output,0o600);const fd=fs.openSync(output,'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}syncDir(path.dirname(output));}
+     const expected=await retainFile(output,file.path);
      result={output,...expected,content_type:file.contentType};
     }else{retain(output,file.bytes);result={output,bytes:file.bytes.length,sha256:HASH(file.bytes),content_type:file.contentType};}
    }finally{if(file.temporary){if(file.cleanup_directory)fs.rmSync(file.cleanup_directory,{recursive:true,force:true});else fs.rmSync(file.path,{force:true});}}
