@@ -77,6 +77,26 @@ a discovery mode; the same owner proceeds to the ordinary full command after
 selecting the existing case. A missing compatible pair is reported with that
 actual catalogue instead of creating a substitute scientific case.
 
+When the existing native-study GIS receiver has already completed, use its
+actual result directly. The maintained `receive_native_study_gis.py` writes
+`native-study-gis-result.json` with the original full export and receipt IDs:
+
+~~~sh
+"$NATIVE_PYTHON" -B source_tools/receive_gis_edition_review.py \
+  --application "$APPLICATION" \
+  --workspace "$ACTUAL_WORKSPACE" \
+  --output "$RECEIVING_OUTPUT" \
+  --pair-result "$NATIVE_STUDY_GIS_STATE/native-study-gis-result.json" \
+  --require-raster \
+  --node "$BROWSER_NODE"
+~~~
+
+The receiving result must have its actual completed native-study GIS schema,
+state and original project ID. Its complete original bytes are retained beside
+the review receiving result. This path uses that exact report-bearing raster
+pair and preserves the existing native-study receiver's source, numerical and
+cold-reopen work. It does not start a second copy of that course.
+
 ## Continue a completed study that has no managed GIS pair yet
 
 If the actual Workspace has completed sources, runs or a delivery but no

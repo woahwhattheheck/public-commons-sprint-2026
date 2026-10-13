@@ -137,6 +137,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
         files.append(path.name)
     files.extend(write_case_reports(workspace, directory, source_revision=source_revision))
     files.extend(write_register_reports(workspace, directory, source_revision=source_revision))
+    files.extend(write_crf_reports(workspace, directory, source_revision=source_revision))
     review_path = directory / "review.html"
     with PublishedText(review_path) as report:
         report.write("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" + cell(title) + "</title><style>" + STYLE + "</style></head><body>")
@@ -146,6 +147,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
         report.write("<p>This handover retains original inputs, reviewed mapping editions, migration-round selections and the current correction queue. Field results concern the supplied evidence. Review the selected population and coverage before interpreting a count.</p>")
         report.write("<h2>Case and document migration</h2><p><a href=\"case-review.html\">Open the complete selected case policy, relationships, rehearsals, review decisions and cutover record</a>. All original projections/results are included as complete NDJSON and CSV.</p>")
         report.write("<h2>Register migration</h2><p><a href=\"register-review.html\">Open the complete typed registers, relationship checks, exact financial controls and cutover reviews</a>. Full original rows and findings accompany each selected edition.</p>")
+        report.write('<h2>CRF reporting</h2><p><a href="crf-review.html">Open the complete retained reporting editions, findings, comparisons and workbook observations</a>. Every record includes its complete CSV and NDJSON section exports.</p>')
         report.write("<h2>Actions and current correction decisions</h2>")
         table_start(report, "Current correction queue at the selected revision", ("Correction", "State", "Owner", "Finding", "Latest review note"))
         count = 0
@@ -497,4 +499,71 @@ def write_register_reports(workspace, directory, *, source_revision):
     files.append(target.name)
     if workspace.project["revision"] != source_revision:
         raise ValueError("Register report changed from its selected original revision")
+    return files
+
+
+def write_crf_reports(workspace, directory, *, source_revision):
+    """Readable CRF handover plus every retained record and every complete section."""
+    import crf_workspace as crf
+    from migration_store import identifier
+    if workspace.project["revision"] != source_revision:
+        raise ValueError("CRF report must retain the selected original revision")
+    files, counts = [], {}
+    for kind in crf.KINDS:
+        path = directory / (kind.replace(".", "-") + ".ndjson")
+        count = 0
+        with PublishedText(path) as output:
+            for record in crf.records(workspace, kind):
+                output.write(canonical(record) + "\n")
+                count += 1
+        files.append(path.name)
+        counts[kind] = count
+    path = directory / "crf-review.html"
+    with PublishedText(path) as report:
+        report.write('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CRF reporting handover</title><style>' + STYLE + '</style></head><body>')
+        report.write('<header><p class="subtle">Crisis and Resilience Fund / Retained reporting editions</p><h1>CRF reporting handover</h1><p>Workspace <code>' + cell(workspace.project["id"]) + '</code> · Selected revision ' + str(source_revision) + '</p></header>')
+        report.write('<p>This report includes every retained contract, original source mapping, reporting edition, comparison, review and workbook record at the selected revision. Annual reporting is cumulative. Earlier editions remain separate history; totals from different editions are not added together.</p>')
+        report.write('<p>Computed reporting values and an observed workbook return do not establish whole-workbook compliance, fresh native calculation, Section 151 sign-off, the actual submission email or DWP acceptance. Use the original reviewed source coverage and actual returned workbook observations.</p>')
+        table_start(report, "Complete retained record inventory", ("Record kind", "Retained editions", "Complete catalogue"))
+        for kind in crf.KINDS:
+            table_row(report, (kind, counts[kind], kind.replace(".", "-") + ".ndjson"))
+        table_end(report)
+        for kind in crf.KINDS:
+            report.write("<h2>" + cell(kind.replace("crf.", "").replace("_", " ").capitalize()) + "</h2>")
+            for record in crf.records(workspace, kind):
+                record_id = identifier(record["id"])
+                report.write('<section><h3>' + cell(record["title"]) + '</h3><p><code>' + cell(record_id) + '</code> · Created at revision ' + cell(record["created_revision"]) + '</p>')
+                if kind == "crf.edition":
+                    summary = record["report"]
+                    report.write('<p>Period: ' + cell(record["period"]) + ' · Computation status: ' + cell(summary.get("status")) + ' · Original source rows: ' + cell(summary.get("selected_source_rows")) + '.</p>')
+                    table_start(report, "Complete computed metric selection for this edition", ("Metric", "Meaning", "Value", "Status", "Contributing rows"))
+                    for metric in crf.rows(workspace, record_id, "metrics"):
+                        table_row(report, (metric["id"], metric["label"], metric["value"], metric["status"], metric["source_contributions"]))
+                    table_end(report)
+                    report.write(json_detail("Finding counts and actual reporting context", summary))
+                elif kind == "crf.comparison":
+                    report.write(json_detail("Full original comparison selection and occurrence counts", {key: record[key] for key in ("earlier_id", "later_id", "counts")}))
+                elif kind == "crf.review":
+                    report.write(json_detail("Reviewed edition, exact parent and complete disposition counts", {key: record.get(key) for key in ("edition_id", "parent_id", "statuses", "review")}))
+                elif kind in ("crf.workbook_binding", "crf.workbook_output", "crf.workbook_return"):
+                    report.write('<p>Use the retained original file identities and full member/cell observations below. A cached formula value is an observation; inspect and recalculate the actual outgoing workbook in its authorised native application.</p>')
+                report.write(json_detail("Complete original record and source/evidence identities", record))
+                table_start(report, "Retained complete sections", ("Section", "Complete section identity and count"))
+                for section, description in record["sections"].items():
+                    table_row(report, (section, canonical(description)))
+                table_end(report)
+                for extension in ("ndjson", "csv"):
+                    target = directory / (record_id + "." + extension)
+                    with PublishedText(target) as output:
+                        for chunk in crf.iter_export(workspace, kind, record_id, extension):
+                            output.write(chunk.decode("utf-8"))
+                    files.append(target.name)
+                report.write('<p>Complete record and every original section: <a href="' + cell(record_id) + '.ndjson">NDJSON</a> · <a href="' + cell(record_id) + '.csv">CSV</a>.</p></section>')
+            if not counts[kind]:
+                report.write("<p>No " + cell(kind) + " record has been supplied or recorded in this workspace.</p>")
+        report.write('<h2>Continue the editable reporting workspace</h2><p>The portable archive retains the original SQLite workspace, source objects, complete application and this report. Follow <code>application/CRF_REPORTING.md</code> to receive it and open <code>/crf</code>. Retain earlier source and review editions; record explicit successors against the current workspace revision.</p>')
+        report.write('<p>Before presenting this outgoing product, open this actual report and its complete downloads, inspect the populated and empty views at intended and narrow widths, and reopen the editable delivery.</p><p><a href="review.html">Full workbench handover</a></p></body></html>\n')
+    files.append(path.name)
+    if workspace.project["revision"] != source_revision:
+        raise ValueError("CRF report changed from its selected original revision")
     return files

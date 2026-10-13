@@ -83,7 +83,9 @@ def receive_selected_gis(workspace, output, selection_file, choices, gis, review
     """Use the original export/receive APIs for an explicit retained GIS selection."""
     from model import gis_workspace
     source = Path(selection_file).resolve(strict=True)
+    selection_descriptor = gis.record(source.parent, source)
     selection = gis.load(source)
+    gis.checked(source.parent, selection_descriptor)
     spec = gis_workspace.request(workspace, selection)
     export_id = gis.fingerprint({"request": spec, "builder_version": gis.VERSION})
     existing = [row for row in choices["pairs"] if row["export_id"] == export_id]
@@ -97,8 +99,8 @@ def receive_selected_gis(workspace, output, selection_file, choices, gis, review
     state = gis.load(path) if path.exists() else {"identity": identity, "history": []}
     if state.get("identity") != identity:
         raise ValueError("The original explicit GIS receiving selection changed; use a new output")
-    state["selection_file"] = {"absolute_path": str(source), **gis.record(source.parent, source)}
-    gis.copy_checked(source.parent, gis.record(source.parent, source), output / "gis-selection.json")
+    state["selection_file"] = {"absolute_path": str(source), **selection_descriptor}
+    gis.copy_checked(source.parent, selection_descriptor, output / "gis-selection.json")
     pinned_receipt = state.get("receipt_id") or state.get("receive")
     if pinned_receipt:
         pinned_export = state.get("export_id") or export_id
@@ -353,7 +355,7 @@ def browser_course(application, workspace, output, report, folder, reopened, gis
 
 
 def receive(application, workspace, output, *, export_id=None, receipt_id=None,
-            require_raster=False, inspect=False, native_only=False, node="node", gis_selection=None,
+            require_raster=False, inspect=False, native_only=False, node="node", gis_selection=None, pair_result=None,
             playwright_module=None, browser_executable=None, operator_url_file=None, browser_timeout=900):
     application, output = Path(application).resolve(), Path(output).resolve()
     sys.path[:0] = [str(application / "operator"), str(application)]
@@ -363,6 +365,20 @@ def receive(application, workspace, output, *, export_id=None, receipt_id=None,
     if (output == workspace.root or workspace.root.is_relative_to(output)
             or output.is_relative_to(workspace.root)):
         raise ValueError("Keep receiving output in a separate sibling directory outside the scientific Workspace")
+    pair_input = None
+    if pair_result:
+        if export_id or receipt_id or gis_selection:
+            raise ValueError("Choose the native-study result, explicit pair IDs, or GIS selection separately")
+        pair_path = Path(pair_result).resolve(strict=True)
+        pair_descriptor = gis.record(pair_path.parent, pair_path)
+        pair_input = gis.load(pair_path)
+        gis.checked(pair_path.parent, pair_descriptor)
+        if (pair_input.get("schema") != "upstate.native-study-gis-receiving-result/v1"
+                or pair_input.get("status") != "native_course_complete"
+                or pair_input.get("restart_same_records_and_download") is not True
+                or pair_input.get("identity", {}).get("project_id") != workspace.project["id"]):
+            raise ValueError("Use the completed original native-study GIS result from this same Workspace")
+        export_id, receipt_id = pair_input["export_id"], pair_input["receipt_id"]
     if gis_selection and (export_id or receipt_id):
         raise ValueError("Choose explicit original pair IDs or an explicit GIS export selection, not both")
     if bool(export_id) != bool(receipt_id):
@@ -412,6 +428,9 @@ def receive(application, workspace, output, *, export_id=None, receipt_id=None,
             "created_at": timestamp(), "history": []}
         if (output / "gis-intake.json").is_file():
             state["gis_intake"] = gis.load(output / "gis-intake.json")
+        if pair_input is not None:
+            gis.copy_checked(pair_path.parent, pair_descriptor, output / "original-pair-result.json")
+            state["original_pair_result"] = {"absolute_path": str(pair_path), **pair_descriptor}
         state["sources"] = source_map(application, gis)
         state.setdefault("source_observations", []).append({"observed_at": timestamp(),
             "application": str(application), "sources": state["sources"]})
@@ -495,6 +514,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--export-id")
     parser.add_argument("--receipt-id")
+    parser.add_argument("--pair-result", type=Path,
+                        help="Completed native-study-gis-result.json containing the actual original pair")
     parser.add_argument("--gis-selection", type=Path,
                         help="Explicit existing GIS selection to export/receive if its compatible pair is absent")
     parser.add_argument("--require-raster", action="store_true")
@@ -512,7 +533,7 @@ def main():
         parser.error("Choose a finite browser timeout between 1 and 86400 seconds")
     result = receive(args.application, args.workspace, args.output,
         export_id=args.export_id, receipt_id=args.receipt_id, require_raster=args.require_raster,
-        gis_selection=args.gis_selection,
+        gis_selection=args.gis_selection, pair_result=args.pair_result,
         inspect=args.inspect, native_only=args.native_only, node=args.node,
         playwright_module=args.playwright_module, browser_executable=args.browser_executable,
         operator_url_file=args.operator_url_file,

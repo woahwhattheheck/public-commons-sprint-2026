@@ -305,6 +305,34 @@ class _Closure:
             for child in value:
                 self._descriptors(child, prefix)
 
+    def _native_stage_descriptors(self, stages, prefix):
+        """Retain copied stage files and each donor's original file context."""
+        if not isinstance(stages, dict):
+            raise ValueError("Native stages must retain their original model records.")
+        for model, stage in stages.items():
+            if not isinstance(stage, dict):
+                raise ValueError("A native stage must retain its original descriptors.")
+            # All copied outputs, digest-qualified source arguments and requested
+            # arguments belong to this run. Only reuse provenance changes roots.
+            self._descriptors({name: item for name, item in stage.items()
+                               if name != "reused_from"}, prefix)
+            source = stage.get("reused_from")
+            seen = set()
+            while source is not None:
+                if not isinstance(source, dict) or source.get("model") != model:
+                    raise ValueError("Native stage reuse must retain its original model.")
+                source_id = _study_key("runs", source.get("run_id"))
+                if source_id in seen:
+                    raise ValueError("Native stage reuse repeats an original run.")
+                seen.add(source_id)
+                self.need("runs", source_id, "Original reused " + model + " stage")
+                # original_arguments is relative to the donor, not the receiving
+                # run's requested arguments. A prior reuse changes roots again.
+                self._descriptors({name: item for name, item in source.items()
+                                   if name != "previous_reuse"},
+                                  "runs/" + source_id + "/")
+                source = source.get("previous_reuse")
+
     def _body(self, value):
         self.add_file(value["object"], value)
 
@@ -485,7 +513,7 @@ class _Closure:
             self._native_selection(value["selection"], "Native run inputs")
             self.tree(prefix.rstrip("/"))
             self._descriptors(value.get("artifacts", {}), prefix)
-            self._descriptors(value.get("stages", {}), prefix)
+            self._native_stage_descriptors(value.get("stages", {}), prefix)
             from .model_selection import validate_completed_run
             validate_completed_run(value)
         elif kind == "grids":
