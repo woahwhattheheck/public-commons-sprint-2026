@@ -22,9 +22,10 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      held, identifier, read_json, verify_file)
 from . import calibration_uncertainty as uncertainty
 from . import calibration_maps as maps
+from . import observation_support
 
 VERSION = 1
-PRESENTATION_EDITION = "native-execution-v1"
+PRESENTATION_EDITION = "native-execution-reference-basis-v2"
 KIND = "calibration-reviews"
 DIRECTORY = "calibration-review-exports"
 STYLE = """
@@ -198,7 +199,7 @@ def native_execution(report, plan):
     return value
 
 
-def _tables(report, plan):
+def _tables(report, plan, metadata=None):
     reference = {unit["id"]: unit for unit in report["reference_units"]}
     selected_rows = []
     for row in report["prediction_rows"]:
@@ -215,6 +216,11 @@ def _tables(report, plan):
         metric_rows.append({**values, "parameter": parameter, "partition": "validation",
                             "run_id": report["selected_run_id"], "profile_id": report["selected_profile_id"]})
     return {
+        "reference-basis": (
+            ("reference_id", "parameter", "catchment_id", "station_id", "observation_record_ids",
+             "reference_label", "parameter_codes", "reference_status", "interpretation",
+             "source_fields", "method_references"),
+            observation_support.reference_basis_rows(report["reference_units"], metadata)),
         "candidate-ranking": (RANK_FIELDS, report["ranked_candidates"]),
         "native-execution": (NATIVE_EXECUTION_FIELDS, native_execution(report, plan).get("rows", [])),
         "physical-metrics": (METRIC_FIELDS, metric_rows),
@@ -236,7 +242,7 @@ def _tables(report, plan):
     }
 
 
-def _scatter(rows, parameter):
+def _scatter(rows, parameter, metadata=None):
     selected = [row for row in rows if row["parameter"] == parameter]
     usable = [row for row in selected if row.get("included") and
               all(isinstance(row.get(key), (int, float)) and math.isfinite(row[key])
@@ -270,7 +276,9 @@ def _scatter(rows, parameter):
            'Modeled annual load</text></svg>')
     return '<figure><h3>' + _escape(parameter.title()) + '</h3>' + svg + '<figcaption>' + _escape(
         usable[0]["units"]) + " · " + str(len(usable)) + " complete pairs; " + str(len(selected)-len(usable)) + \
-        " incomplete pairs remain in the table. Filled circles: calibration. Open squares: held-out validation.</figcaption></figure>"
+        " incomplete pairs remain in the table. Filled circles: calibration. Open squares: held-out validation. " + \
+        "Reference bases: " + _escape("; ".join(dict.fromkeys(
+            observation_support.reference_basis(row, metadata)["label"] for row in selected))) + "</figcaption></figure>"
 
 
 def _html(selection, report, plan, observed, detail, atlas, tables, directory, files):
@@ -304,6 +312,11 @@ def _html(selection, report, plan, observed, detail, atlas, tables, directory, f
         "<h3>Catchment groups</h3>" + _table(("id", "partition", "catchment_ids", "station_ids", "observation_records"),
         [{**row, "partition": "validation" if row["id"] in validation_groups else "calibration"
           if row["id"] in calibration_groups else "unselected"} for row in groups]) +
+        "<h3>Original constituent and analytical basis</h3>" +
+        _table(("parameter", "catchment_id", "reference_label", "interpretation"),
+               tables["reference-basis"][1]) +
+        "<p>" + _link("tables/reference-basis.csv", "Complete original constituent and source-field CSV") +
+        ". Existing annual values, admitted references and candidate scores retain their original identities.</p>" +
         "<details><summary>Original estimator, period, uncertainty and source metadata</summary><pre>" +
         _escape(observed["metadata"]) + "</pre></details>"))
     sections.append(_section("ranking", "Candidate selection",
@@ -331,7 +344,7 @@ def _html(selection, report, plan, observed, detail, atlas, tables, directory, f
         ("Only the originally selected candidate is described on these reserved groups."
          if validation_groups else "All selected groups were used for calibration; there is no reserved group assessment.") +
         "</p>" + _table(METRIC_FIELDS, selected_metrics) +
-        '<div class="plots">' + "".join(_scatter(tables["selected-catchments"][1], parameter)
+        '<div class="plots">' + "".join(_scatter(tables["selected-catchments"][1], parameter, observed.get("metadata"))
                                          for parameter in report["objective"]) + "</div>" +
         "<details><summary>Complete held-out coverage and missing support</summary><pre>" + _escape(validation) +
         "</pre></details><p>" + _link("tables/physical-metrics.csv", "All candidate calibration metrics and selected-only validation") + "</p>"))
@@ -471,7 +484,7 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, map_id=None, titl
         for comparison_id in sorted(set(report["comparison_ids"].values())):
             value = workspace._get("observation-comparisons", identifier(comparison_id))
             add_record("records/observation-comparisons/" + comparison_id + ".json", value)
-        tables = _tables(report, plan)
+        tables = _tables(report, plan, observed.get("metadata"))
         if detail:
             tables["source-error-pairs"] = (PAIR_FIELDS, detail["pairwise"])
             for name in ("source_records", "reference_units", "selected_validation", "candidate_scores"):

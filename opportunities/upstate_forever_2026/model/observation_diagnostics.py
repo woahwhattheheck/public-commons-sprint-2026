@@ -10,7 +10,9 @@ from collections import Counter
 import json
 import math
 
-VERSION = "upstate.observation-diagnostics/v1"
+from . import observation_support
+
+VERSION = "upstate.observation-diagnostics/v2-reference-basis"
 BASIS = (
     "Residuals are modeled minus observed annual mass. The original pooled scores "
     "give each retained comparison row equal weight. The complementary catchment "
@@ -21,7 +23,7 @@ BASIS = (
     "replication: original catchments can overlap and repeated periods can overlap."
 )
 COHORT_BASIS = (
-    "Cohorts retain exact parameter, source species, mass unit and source method. "
+    "Cohorts retain exact parameter, source species, original constituent basis, mass unit and source method. "
     "Period rows additionally retain the exact original start/end pair. No periods "
     "are annualized, merged or duration-weighted here. Model period and source "
     "vintages remain descriptive source context, without inferred temporal alignment."
@@ -95,6 +97,9 @@ def build(comparison):
             omitted.append({**member, "reason": "Annual mass difference is nonfinite"})
             continue
         identity = {key: row.get(key) for key in ("parameter", "species", "units", "method")}
+        basis = observation_support.reference_basis(row, comparison.get("observation_method"))
+        identity["reference_basis"] = {
+            key: basis[key] for key in ("label", "parameter_codes", "status", "interpretation", "method_references")}
         key = _key(identity)
         if key not in groups:
             groups[key] = {"identity": identity, "rows": []}
@@ -103,7 +108,7 @@ def build(comparison):
             "period_start": row.get("period_start"), "period_end": row.get("period_end"),
             "period_days": row.get("period_days"), "observed": row["observed_annual_mass"],
             "modeled": row["modeled_annual_mass"], "residual": residual,
-            "stored_residual": row.get("residual"),
+            "stored_residual": row.get("residual"), "reference_basis": basis,
         })
     cohorts = []
     for cohort_number, group in enumerate(groups.values(), 1):
@@ -172,6 +177,10 @@ def report_blocks(review):
         blocks.append("Cohort " + str(cohort["cohort_number"]) + ": " + _text(cohort["parameter"])
                       + "; species: " + _text(cohort["species"]) + "; mass unit: " + unit
                       + "; source method: " + _text(cohort["method"]) + ".")
+        basis = cohort["reference_basis"]
+        blocks.append("Original reference basis: " + basis["label"] + ". " + basis["interpretation"])
+        if basis["method_references"]:
+            blocks.append("Source-method reference: " + "; ".join(basis["method_references"]) + ".")
         row, catchment = cohort["row_weighted"], cohort["catchment_weighted"]
         blocks.append(_table(
             ["Weighting", "Comparison rows", "Catchments", "Mean bias", "Mean absolute error", "RMSE"],
