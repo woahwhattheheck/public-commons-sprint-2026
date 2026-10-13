@@ -1,3 +1,4 @@
+import {createPMTilesCommerceUI} from './commerce.mjs';
 const $=id=>document.getElementById(id),copy=value=>JSON.parse(JSON.stringify(value));
 const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
 const eq=(a,b)=>canonical(a)===canonical(b);
@@ -27,6 +28,7 @@ async function api(path,{method='GET',body,binary,raw=false,signal}={}){
   if(!response.ok){let value;try{value=await response.json();}catch{}throw Object.assign(new Error(value?.error?.message??'HTTP '+response.status),{code:value?.error?.code,status:response.status});}
   return raw?response:response.json();
 }
+const commerceUI=createPMTilesCommerceUI({api,onWorkspaceChange:refresh});
 function ensureStyleOption(id){
   if(id&&!Array.from($('styleResource').options).some(option=>option.value===id)){
     const option=document.createElement('option');option.value=id;option.textContent=id;$('styleResource').append(option);
@@ -219,7 +221,7 @@ async function refresh(){
       const original=await api('/api/requests/'+selected.input.requestId).catch(error=>{if(error.status===404)return null;throw error;});
       if(pending===selected&&original?.status==='COMPLETE')await applyResult(copy(selected),completedResult(selected,original));
     }
-    renderState();}
+    renderState();commerceUI.observe(state);}
   finally{refreshing=false;}
 }
 async function connect(){
@@ -237,6 +239,7 @@ async function connect(){
   $('connection').hidden=true;$('workspace').hidden=false;sessionStorage.setItem('pmtiles.token:'+location.origin,token);
   await loadResources(true);renderState();renderPackage();persist();message('Connected to the saved workspace.');
   if(pending)await resume().catch(error=>message('Retained request: '+error.message,true));
+  await commerceUI.connect(state).catch(error=>commerceUI.report(error));
 }
 async function readStyle(){
   const id=$('styleResource').value,selectedKey=workspaceKey,selectedEdition=$('editionId').value;if(!id)throw Error('Select a retained style.');
@@ -685,7 +688,7 @@ else token=sessionStorage.getItem('pmtiles.token:'+location.origin)||'';
 if(token){$('token').value=token;connect().catch(error=>message(error.message,true));}
 let pollTimer=setInterval(()=>{if(state&&!document.hidden&&pageActive)refresh().catch(error=>message(error.message,true));},5000);
 addEventListener('pagehide',()=>{
-  persist();pageActive=false;clearInterval(pollTimer);pollTimer=null;editionReadGeneration++;editionReadAbort?.abort();
+  persist();commerceUI.close();pageActive=false;clearInterval(pollTimer);pollTimer=null;editionReadGeneration++;editionReadAbort?.abort();
   comparisonGeneration++;comparisonAbort?.abort();releaseReadGeneration++;releaseReadAbort?.abort();releaseDetailLoading=null;clearMap();
 });
 addEventListener('pageshow',event=>{if(event.persisted){pageActive=true;if(!pollTimer)pollTimer=setInterval(()=>{if(state&&!document.hidden&&pageActive)refresh().catch(error=>message(error.message,true));},5000);

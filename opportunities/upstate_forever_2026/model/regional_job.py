@@ -60,13 +60,15 @@ def _plan(path):
     body = path.read_bytes()
     plan = json.loads(body)
     required = {"schema", "title", "sources", "grid", "profile", "baseline"}
-    if plan.get("schema") != CORE_PLAN or not required <= set(plan) or set(plan) - required - {"models"}:
+    if plan.get("schema") != CORE_PLAN or not required <= set(plan) or set(plan) - required - {"models", "reuse_source_run_ids"}:
         raise ValueError("Select a complete upstate.regional-core-plan/v1 document")
     if not isinstance(plan["title"], str) or not plan["title"].strip():
         raise ValueError("Name the regional scientific selection")
     manifest_path, manifest_bytes, manifest = _document(path.parent, plan["sources"])
     by_id = {row["id"]: row for row in manifest["entries"]}
     plan = copy.deepcopy(plan)
+    if "reuse_source_run_ids" in plan:
+        plan["reuse_source_run_ids"] = _reuse_source_ids(plan["reuse_source_run_ids"])
     grid, profile, baseline = plan["grid"], plan["profile"], plan["baseline"]
     if any(not isinstance(value, dict) or "source_collection_id" in value
            for value in (grid, profile, baseline)):
@@ -101,6 +103,34 @@ def _plan(path):
     if baseline.get("kind") != "baseline" or baseline.get("patches"):
         raise ValueError("The core uses the selected original land-cover baseline")
     return plan, body, manifest_path, manifest_bytes, models
+
+
+def _reuse_source_ids(value):
+    """Normalize original run IDs while retaining the caller's candidate order."""
+    if not isinstance(value, list):
+        raise ValueError("reuse_source_run_ids must be a list of retained run IDs")
+    return list(dict.fromkeys(identifier(item) for item in value))
+
+
+def _execute_native(workspace, run_id, reuse_source_run_ids=None):
+    """Continue the normal native run with its optional retained donor choices."""
+    if reuse_source_run_ids is None:
+        return workspace.run(run_id)
+    return workspace.run(run_id, reuse_source_run_ids=reuse_source_run_ids)
+
+
+def _run_outcome(run):
+    """Keep the persisted provenance of the stages that produced each quantity."""
+    result = _run_summary(run)
+    for model, stage in run.get("stages", {}).items():
+        selected = result["stages"][model]
+        for field in ("runtime", "input_signature", "reused_from", "source_run_id"):
+            if field in stage:
+                selected[field] = copy.deepcopy(stage[field])
+    for field in ("reuse_source_run_ids", "reuse_observations"):
+        if field in run:
+            result[field] = copy.deepcopy(run[field])
+    return result
 
 
 def _progress(path, record, **changes):
@@ -163,7 +193,7 @@ def run_core(workspace_path, plan_path, *, source_reference, output=None):
             if state.get("run_id") and state["run_id"] != run["id"]:
                 raise ValueError("The retained core native run changed")
             _progress(progress, state, run_id=run["id"])
-            run = workspace.run(run["id"])
+            run = _execute_native(workspace, run["id"], plan.get("reuse_source_run_ids"))
             if run["state"] != "complete":
                 raise RuntimeError("The original regional native run did not complete")
             retained = directory / "result.json"
@@ -175,7 +205,7 @@ def run_core(workspace_path, plan_path, *, source_reference, output=None):
                       "source_reference": source_reference, "application_sources": application,
                       "grid_id": grid["id"], "profile_id": profile["id"],
                       "scenario_id": scenario["id"], "baseline_run_id": run["id"],
-                      "model_outcome": _run_summary(run), "completed_at": completed_at,
+                      "model_outcome": _run_outcome(run), "completed_at": completed_at,
                       "summary_directory": directory.relative_to(workspace.root).as_posix()}
             atomic_json(retained, result, immutable=True)
             summary_files = write_summary(directory, build_core_summary(workspace, result, title=plan["title"]))
@@ -320,7 +350,7 @@ def finish_delivery(core_path, plan_path, *, output=None, build=False):
                       "profiles": {name: run["selection"]["profile_id"] for name, run in runs.items()},
                       "scenarios": {name: run["selection"]["scenario_id"] for name, run in runs.items()},
                       "runs": run_ids, "comparison_id": comparison["id"],
-                      "model_outcomes": {name: _run_summary(run) for name, run in runs.items()},
+                      "model_outcomes": {name: _run_outcome(run) for name, run in runs.items()},
                       "delivery_selection": selection, "completed_at": completed_at}
             atomic_json(receiving, result, immutable=True)
             if output is not None:

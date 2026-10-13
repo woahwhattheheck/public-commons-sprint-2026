@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -25,11 +26,36 @@ def main(argv=None):
         commands.add_parser(name).add_argument("selection", type=Path)
     for name in ("table", "plan", "report"):
         commands.add_parser(name).add_argument("id")
+    revise = commands.add_parser(
+        "plan-revise-csv", help="Receive an edited interventions.csv as the next saved plan revision")
+    revise.add_argument("plan_id", help="Saved plan whose table, communities and scientific context are retained")
+    revise.add_argument("csv_file", type=Path, help="Edited original interventions.csv in UTF-8")
+    revise.add_argument("--title", help="Revised plan title; defaults to the original title")
+    revise.add_argument("--purpose", help="Revised purpose; defaults to the original purpose")
     args = parser.parse_args(argv)
     try:
         workspace = Workspace(args.workspace)
         if args.command == "overview":
             result = communities.overview(workspace)
+        elif args.command == "plan-revise-csv":
+            previous = communities.get_plan(workspace, args.plan_id)
+            original = args.csv_file.read_bytes()
+            imported = {
+                "schema": "upstate.intervention-csv-import/v1",
+                "selection": previous["selection"],
+                "source": {"filename": args.csv_file.name, "media_type": "text/csv; charset=utf-8",
+                           "bytes": len(original), "sha256": hashlib.sha256(original).hexdigest(),
+                           "text": original.decode("utf-8")},
+            }
+            context = {name: previous["context"].get(name) for name in (
+                "source_collection_ids", "grid_id", "baseline_run_id", "scenario_run_ids", "delivery_id")}
+            result = communities.save_plan(workspace, {
+                "table_id": previous["table_id"], "previous_plan_id": previous["id"],
+                "title": args.title if args.title is not None else previous["title"],
+                "purpose": args.purpose if args.purpose is not None else previous["purpose"],
+                "selection": previous["selection"], "context": context,
+                "notes": previous["notes"], "intervention_import": imported,
+            })
         elif args.command in {"table", "plan", "report"}:
             kind = {"table": communities.TABLE_KIND, "plan": communities.PLAN_KIND,
                     "report": communities.REPORT_KIND}[args.command]

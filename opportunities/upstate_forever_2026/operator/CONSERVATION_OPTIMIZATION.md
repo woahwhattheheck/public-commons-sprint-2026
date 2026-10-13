@@ -15,18 +15,20 @@ Receive these files into the current Upper Savannah application:
 - operator/extensions/conservation-optimization.json
 - operator/CONSERVATION_OPTIMIZATION.md
 
-The exact model companion is F0C8J0B8D1R: its complete model bridge and full
-methods guide were independently decoded and verified. The model file is
-47,743 bytes, SHA256
-60d91c12df8abe5db11aeff9c9473ae68e20e8c20322c95c3e03266c3ccba85c.
-It calls the maintained C8FF portfolio solver installed in model/portfolios.py
-and the current partial-model-aware conservation study/plan service.
+The maintained model bridge is installed at model/conservation_optimization.py.
+The current source includes published practice objectives, selected-model
+native support and the empty-selection unit correction merged in PR2808.
+It calls the maintained C8FF portfolio solver in model/portfolios.py and the
+original conservation study/plan service. Receive these normal source files
+from the current application revision together with its methods guide.
 
 The existing ECSA ExtensionRegistry discovers the installed JSON descriptor at
 startup. Use the maintained host installer in the complete application, then
 start that same operator on its original Workspace. No additional server or
-queue is needed. The descriptor is backend-only so C8FF can attach its existing
-operator controls without creating a competing browser desk.
+queue is needed. The optimization descriptor remains backend-only. The core
+Conservation registration embeds the maintained decision client in the same
+Conservation plans panel, alongside the original studies, candidate catalog,
+saved plans and native scenario controls.
 
 The current host registry accepts backend.actions as strings, an explicit
 provider factory and bindings, exact GET/POST reads, an optional item kind and
@@ -150,3 +152,47 @@ continues the same decision.
 When installed with the current scientific conservation-optimization bridge, the catalog also exposes published_axes. A study scored with published_method can use the published-method objective, whose axis is published_points. The queued preview derives the complete practice eligibility, prerequisite, source definition and original criterion coverage from that study. The same original native solver and Conservation plan store supply selection, save, reopen and decision export. The candidate table retains independent physical pollutant quantities and their actual native availability.
 
 The optimizer does not substitute known partial criterion points for a complete practice score. Use request.available_axes and the complete preview's candidate support to drive the existing interface. All previous geographic and native-quantity objective contracts remain available.
+
+## Conservation plans browser
+
+The same Conservation plans panel contains an objectives and resources section.
+Choose **Set objectives and resources** beside a completed original study.
+The form reads that study's retained bindings and offers geographic source
+context, actual available native outputs or complete published practice points.
+Paired physical objectives select one alternative already bound to that study.
+
+Set explicit weights and the intended resource limits. A blank count, area or
+budget imposes no invented cap. Count zero and budget zero remain deliberate
+limits and produce an inspectable empty preview. A USD budget requires the
+study's retained original USD cost table; amount strings keep supplied cents.
+The candidate universe uses original string IDs, including leading zeros.
+
+**Run complete preview** uses the original action queue. Open its result from
+the Operations task dialog or the Conservation decision task table. Review the
+complete inventory with search and pagination, candidate-specific support and
+exclusion reasons, signed objective quantities, fixed normalization, selected
+geometry unions and overlaps, supplied costs, and named preference outcomes.
+Pagination changes the visible table, not the calculation or selected inventory.
+
+**Revise selection** reopens the normalized request. **Save selected land plan**
+recomputes that request through the original optimizer and saves the resulting
+land through Conservation. Refresh and use the saved-plan or retained-analysis
+catalog to reopen it. **Export complete decision packet** queues the original
+portfolio ZIP and displays verified download tickets with the saved plan.
+**Open plan and prepare a native scenario** returns to the original core
+Conservation controls with that exact plan identity.
+
+The browser client and the core candidate catalog share a panel through
+conservation_optimization_bridge.mjs. The original conservation.mjs remains
+maintained independently. The bridge retains one client instance across normal
+host renders, preserves its selected result and filters, and routes completed
+optimization tasks through the existing core task controls. Catalog reads occur
+on first mount, explicit refresh, workspace change or completion of an original
+optimization task; ordinary progress updates reuse retained catalog state.
+
+## Project credit and review
+
+Maintained for TokenJunkieLabs in the existing Upper Savannah application.
+The repository's MIT license applies. **Needs expert review**: interpretation of
+geographic priorities, native model outputs, conservation practices and costs
+requires the project's domain review.

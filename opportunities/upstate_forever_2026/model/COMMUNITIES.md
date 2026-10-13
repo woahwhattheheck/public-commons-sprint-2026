@@ -26,6 +26,26 @@ The plan can bind original source editions, an existing grid, completed or in-pr
 
 Saving a revision retains the previous plan and binds the new selection. To change the underlying table edition, create a new plan.
 
+## Receive an edited intervention programme
+
+Open a saved plan and choose **Revise plan**. In **Receive an edited intervention programme**, select the report's edited `interventions.csv` and choose **Preview CSV changes**. The preview shows every source-row error, added/changed/removed intervention counts, the programme rows and the entered estimate total.
+
+Choose **Load these intervention rows** after reviewing the preview. The imported rows appear in the existing intervention editor, where you can make further changes. **Save revised plan** creates the next immutable revision, retaining the previous plan, the import's selected geography and the exact received CSV filename, UTF-8 text, byte count and SHA-256.
+
+Keep the exported column headings. `id`, `title`, `utility_id`, `watershed_id` and `reason` are required. Existing intervention IDs retain their identity; a blank ID receives a stable ID derived from the received file and source row. The existing priority, strategy and status choices still apply. Separate multiple GEOIDs with semicolons. Quoted commas and multiline notes are supported. Preserve geographic identifiers as text in a spreadsheet; leading zeros are restored only when the resulting HUC12 or GEOID matches the retained original table.
+
+CSV row order determines intervention order. Exported `position`, `population_context` and `household_context` values are recalculated from the selected plan and source rows. Additional columns stay in the original received CSV. Known formula-text escapes from the preceding plan round-trip to the original text; edited text remains the received text.
+
+A report built from the new revision contains the current `interventions.csv`, the exact `received-interventions.csv` and `INTERVENTION_IMPORT.json`, which records the import comparison and any later editor changes. Those files, the revised plan and its original source context travel in the existing workspace backup and restore.
+
+The same revision is available directly from the original Community CLI:
+
+~~~sh
+python model/community_cli.py --workspace /path/to/upstate-workspace plan-revise-csv ORIGINAL_PLAN_ID edited-interventions.csv --title "Revised source-water programme"
+~~~
+
+The command retains the original table, community selection, scientific context and notes, then prints the newly saved plan. Use that plan's ID with the existing `report-build` command. A malformed row or invalid community membership returns its source-row error before a revision is saved.
+
 ## Deliver and reopen
 
 Choose **Build complete report** from the saved plan. The report contains the complete narrative, utility and watershed summaries, source rows, intervention program, original scientific context and interpretation notes.
@@ -38,7 +58,9 @@ Choose **Build complete report** from the saved plan. The report contains the co
 | communities.csv | Selected whole-block-group rows |
 | utilities.csv | Utility summaries and separate service population estimates |
 | watersheds.csv | HUC12 summaries |
-| interventions.csv | Work program, owner, rationale, next step and estimate |
+| interventions.csv | Current work program, owner, rationale, next step and estimate |
+| received-interventions.csv | Exact edited CSV received with an imported revision |
+| INTERVENTION_IMPORT.json | Import comparison, geographic normalization and later editor changes |
 | scientific-context.csv | Original model totals and native comparison differences |
 | plan.json | Exact saved plan and context selection |
 | original-community-source.csv | Byte-for-byte original input table |

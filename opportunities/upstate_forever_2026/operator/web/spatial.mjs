@@ -405,8 +405,9 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     const size=c.model.frame.size,region=c.regionPreview||c.model.regions?.selection;
     for(const group of c.root.querySelectorAll('[data-spatial-region-paths]')){
       group.replaceChildren();
-      if(region?.crs!==c.model.view?.crs)continue;
-      const b=region.bounds,geometry=region.geometry||(b?{type:'Polygon',coordinates:[[[b[0],b[1]],[b[2],b[1]],[b[2],b[3]],[b[0],b[3]],[b[0],b[1]]]]}:null);
+      const visible=region?.crs===c.model.view?.crs?region:region?.display_geometry_crs===c.model.view?.crs?{geometry:region.display_geometry}:null;
+      if(!visible)continue;
+      const b=visible.bounds,geometry=visible.geometry||(b?{type:'Polygon',coordinates:[[[b[0],b[1]],[b[2],b[1]],[b[2],b[3]],[b[0],b[3]],[b[0],b[1]]]]}:null);
       if(!geometry)continue;
       const path=document.createElementNS(SVG_NS,'path');
       path.setAttribute('d',geometryPath(geometry,c.model.view,size));path.setAttribute('fill','rgba(0,0,0,.08)');path.setAttribute('fill-rule','evenodd');path.setAttribute('stroke','#111');path.setAttribute('stroke-width','2');path.setAttribute('stroke-dasharray','6 4');path.setAttribute('vector-effect','non-scaling-stroke');group.appendChild(path);
@@ -686,7 +687,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       const point=eventPoint(c,event,map);if(point)c.root.querySelector('[data-spatial-coordinate]').textContent=fmt(point.x)+', '+fmt(point.y);
       const drag=c.drag;if(!drag||drag.pointerId!==event.pointerId)return;
       const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
-      if(Math.hypot(dx,dy)>4&&!drag.moved){drag.moved=true;stopGroup(c,'drawControl');stopGroup(c,'pointControl');}
+      if(Math.hypot(dx,dy)>4&&!drag.moved){drag.moved=true;if(drag.tool!=='region')stopGroup(c,'drawControl');stopGroup(c,'pointControl');}
       if(drag.moved&&drag.tool==='region'){
         if(point?.crs===drag.start?.crs){c.regionPreview={crs:point.crs,bounds:[Math.min(drag.start.x,point.x),Math.min(drag.start.y,point.y),Math.max(drag.start.x,point.x),Math.max(drag.start.y,point.y)]};drawAnnotations(c);}
         return;
