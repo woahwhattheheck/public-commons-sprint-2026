@@ -457,6 +457,30 @@ def restore_workflow_paths(args):
             raise ValueError("The receiving destination selects another original scientific receipt")
         snapshot = args.source_directory / "receiving-locations" / (sha256(current_receiving) + ".json")
         atomic_bytes(snapshot, current_receiving.read_bytes(), immutable=True)
+    origin_state = receipt.get("receiving_origin", {}).get("state")
+    if origin_state:
+        from model.common import verify_file
+        retained_state = None
+        # Older capsules can recover a snapshot still present in the restored
+        # Workspace or receiving directory. Its recorded bytes remain exact.
+        state_roots = [capsule, original_path.parent, args.source_directory]
+        try:
+            original_relative = Path(receipt["source_directory"]).relative_to(Path(receipt["workspace"]))
+        except ValueError:
+            pass
+        else:
+            state_roots.append(ws.root / original_relative)
+        for state_root in state_roots:
+            try:
+                retained_state = verify_file(state_root, origin_state)
+            except FileNotFoundError:
+                continue
+            break
+        if retained_state is None:
+            raise ValueError("Restore the original native receiving-state snapshot named by this receipt")
+        state_bytes = retained_state.read_bytes()
+        atomic_bytes(capsule / origin_state["path"], state_bytes, immutable=True)
+        atomic_bytes(args.source_directory / origin_state["path"], state_bytes, immutable=True)
     atomic_bytes(current_receiving, original_path.read_bytes())
     relocated_selection = args.source_directory / "programme-selection.json"
     atomic_bytes(relocated_selection, selection_path.read_bytes(), immutable=True)
@@ -492,6 +516,11 @@ def retain_workflow(args, receipt, plan, state):
             raise ValueError("The retained capsule selects another original scientific receipt")
         atomic_bytes(capsule / "receiving-locations" / (sha256(original) + ".json"),
                      original.read_bytes(), immutable=True)
+    origin_state = receipt.get("receiving_origin", {}).get("state")
+    if origin_state:
+        from model.common import verify_file
+        retained_state = verify_file(receiving_path.parent, origin_state)
+        atomic_bytes(capsule / origin_state["path"], retained_state.read_bytes(), immutable=True)
     atomic_bytes(original, receiving_path.read_bytes())
     original_selection = ComputeProgrammes(Workspace(args.workspace)).status(
         receipt["programme_id"])["selection"]
@@ -534,6 +563,29 @@ def prepare(args, identity):
         event("original_workspace_reopened", receiving=str(receiving_path),
               programme_id=receipt["programme_id"], grid_id=receipt["grid_id"])
         return receipt
+    native_state_path = args.workspace / "gura-receiving" / "gura-receiving-state.json"
+    generic_selection_exists = any(
+        (args.source_directory / name).exists()
+        for name in ("sources.json", "programme-selection.json"))
+    if native_state_path.is_file() and not generic_selection_exists:
+        native_state = read_json(native_state_path)
+        native_baseline = native_state.get("workspace_baseline") or {}
+        if native_baseline.get("run_id"):
+            from source_tools.gura_receipt import prepare as adopt_native_baseline
+            native_reference = "upstate.original-gura-run:" + native_baseline["run_id"]
+            if args.source_reference and args.source_reference != native_reference:
+                raise ValueError("Continue the original native baseline source reference: " + native_reference)
+            adopt_native_baseline(
+                args.workspace, run_id=native_baseline["run_id"],
+                receiving_state=native_state_path, output=receiving_path)
+            receipt = check_receiving(
+                receiving_path, args.workspace,
+                expected_resolution_m=args.expected_resolution_m,
+                upstream_buffer_m=args.upstream_buffer_m)
+            event("original_native_baseline_adopted",
+                  receiving=str(receiving_path), baseline_run_id=native_baseline["run_id"],
+                  programme_id=receipt["programme_id"], grid_id=receipt["grid_id"])
+            return receipt
     inputs = original_inputs(args)
     selection_path = args.source_directory / "programme-selection.json"
     prior_selection = read_json(selection_path) if selection_path.exists() else None
