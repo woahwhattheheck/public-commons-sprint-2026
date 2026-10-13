@@ -101,6 +101,29 @@ def verify_native(ws, key):
     return run
 
 
+
+def verify_equivalent_export(ws, old_run, new_run, name):
+    """Compare physical cells and masks, allowing different TIFF encodings."""
+    import numpy as np
+    import rasterio
+    from model.rasters import check_same_grid
+    left = verify_file(ws.root / "runs" / old_run["id"], old_run["artifacts"][name])
+    right = verify_file(ws.root / "runs" / new_run["id"], new_run["artifacts"][name])
+    count = 0
+    with rasterio.open(left) as a, rasterio.open(right) as b:
+        check_same_grid(a, b)
+        for _, window in a.block_windows(1):
+            av, bv = a.read(1, window=window, masked=True), b.read(1, window=window, masked=True)
+            am = np.ma.getmaskarray(av) | ~np.isfinite(np.ma.getdata(av))
+            bm = np.ma.getmaskarray(bv) | ~np.isfinite(np.ma.getdata(bv))
+            if not np.array_equal(am, bm) or not np.array_equal(av.data[~am], bv.data[~bm]):
+                raise ValueError("Equivalent native inputs changed actual converted exports or their support: " + name)
+            count += int((~am).sum())
+    if not count:
+        raise ValueError("The equivalent comparison needs actual finite original reporting support")
+    return count
+
+
 def programme_snapshot(ws, programme_id):
     manager = ComputeProgrammes(ws)
     status = manager.status(programme_id, include_ensemble_candidates=False)
@@ -363,7 +386,7 @@ class Course:
                     if (item.get("sum_change") != 0
                             or item["valid_cells"] != before["artifacts"][name]["valid_cells"]
                             or item["valid_cells"] != after["artifacts"][name]["valid_cells"]
-                            or before["artifacts"][name]["sha256"] != after["artifacts"][name]["sha256"]):
+                            or item["valid_cells"] != verify_equivalent_export(self.ws, before, after, name)):
                         raise ValueError("Equivalent inputs did not retain the original converted export and support")
             rows.append({"key": row["key"], "source_run_id": old,
                          "target_run_id": row["run_id"], "comparison": value})
@@ -467,6 +490,8 @@ def run(args):
         capture = {"schema": CAPTURE_SCHEMA, "id": course.id, "identity": identity,
                    "workspace_id": ws.project["id"], "script_sha256": identity["script_sha256"],
                    "original": original, "editions": results, "comparisons": comparisons,
+                   "phase_history": [item for item in course.state["history"]
+                                     if item["phase"].startswith(("equivalent:", "sdr-coefficient:"))],
                    "source_editions": {mode: course.state["phases"][mode + ":source"]["result"]
                                        for mode in results}}
         capture_path = ws.root / "programme-reuse-courses" / course.id / "capture.json"
