@@ -10,6 +10,14 @@ Inspect all files. The inspection reports full row totals, every rejected-row co
 
 Use the existing native-domain binding form, station assignments and record-review desk for actual source assignments and qualified-result decisions. Then open **Saved collections and complete study editions**, save a complete study edition, and download its ZIP. The archive contains every supplied original, all original records and histories in `project.json`, the complete accepted/excluded calibration population, all-record CSV, eligible-input CSV, native identifier edition, and an offline HTML report. The report includes the entire input population and original-source links. The full original measured workspace is included, even when it contains additional source imports beyond this collection.
 
+### Changing workspaces during an operation
+
+The installed Measurements view binds each file inspection, collection operation, review and native-source assignment to the workspace in which it was opened. If you switch workspace or close the view while a file is still being read, the old view cannot submit that file to the newly selected project.
+
+A request already submitted continues in its original workspace. The browser does not cancel or repeat it. Reopening that workspace loads its native records and collections; a conditional notice identifies an operation that completed, failed or lost its response while the old view was closed. Inspect the existing sources, saved collections or review history before submitting again. The controller keeps only the last late operation's status and native identifiers for up to eight workspaces in memory, and clears them when the observed signed-in person changes. It does not retain raw result or source bodies across views. Durable originals, revisions and complete collection identities remain in the native engine. A fresh browser therefore reconciles through those same saved records.
+
+The ordinary source and collection downloads are also scoped to their opening view. A late response cannot start a download from a different workspace. The existing large-file transfer panel and Chemistry binding retain their own interruption and request-recovery behavior.
+
 ## Command line
 
 Create `collection.json` using the format below. Each SHA-256 is calculated from the actual original file, not a decoded or normalized surrogate. Paths are relative to the selected source directory. Symlink targets must remain inside it.

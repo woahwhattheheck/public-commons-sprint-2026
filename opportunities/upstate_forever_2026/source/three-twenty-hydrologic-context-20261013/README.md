@@ -74,6 +74,30 @@ python source/three-twenty-hydrologic-context-20261013/native_catchments.py --ap
 
 The four native output files preserve the complete area/topology result, derived incremental GeoJSON and two numerical tables. `NATIVE_CATCHMENTS.md` explains their exact input and output contract. Keep the measured result with its producer/runtime and compare a regenerated result to that source edition before changing the final report's computed-input identity.
 
+## Observed differences in actual river order
+
+The same report now joins the retained historical 2021–2025 and current 2026 observations to the original directed network. The complete comparison contains **286 rows across 25 same-day activity pairs**: all 275 original historical contrasts, all 10 current contrasts, and one explicitly derived current total-nitrogen contrast from the retained same-activity TKN + nitrate/nitrite sums.
+
+Each row preserves the original A/B labels and B−A interval alongside its downstream-minus-upstream interpretation. Reversing the geographic order swaps both interval bounds and endpoint inclusivity. Reporting-limit intervals remain intervals, including unbounded endpoints. Original result identifiers, physical CSV rows, activity records, method support, projects, clocks and time-zone labels remain attached.
+
+The summaries retain 54 exact support/project cohorts using the original 23 compatibility fields and the ordered pair of station projects. They separate 225 same-project comparisons from 61 comparisons across different projects. Eleven cohorts have both historical and current sampled support. Seasonal tables use the original sampling months; they retain the uneven date coverage.
+
+For the historical SV-833 → SV-735 NPS-2013 cohort, the 18 sampled pairs have higher downstream water temperature on all 18 occasions and lower dissolved oxygen on 15. Phosphorus is higher on 15, lower on 2, and unresolved from the reporting limits on 1. Among 17 reconstructed-TN pairs, 12 are higher downstream, 3 lower and 2 unresolved. The exact intervals and source methods are in the complete comparison tables. These are descriptive differences among the sampled records.
+
+The same two stations on January 14, 2026 have downstream-minus-upstream differences of +0.54 °C, −0.12 mg/L dissolved oxygen, +162.9 MPN/100 mL E. coli and +0.11 mg/L reconstructed total nitrogen. Their literal original clocks are 38 minutes apart. Across the complete comparison, signed collection-clock gaps range from −176 to +179 minutes; collection order is separate from river direction.
+
+The original pH result `STORET-1104042240`, reported as 724, remains available in its original body and the explicit exclusions export. It enters no comparison or statistical summary. Agreeing repeated result rows count once per activity and characteristic while every distinct original result identifier remains available.
+
+Use the characteristic/cohort filters, inspect the source details, and select **Show pair on map** to view the corresponding original stations. Export the complete comparison, cohort, season, period, sampling-coverage and excluded-record tables. The standalone observation report provides the same data and filters. Original geographical sources and observation dependencies have separate input manifests.
+
+Rebuild only the observation companion when needed:
+
+```sh
+node source/three-twenty-hydrologic-context-20261013/observation_context/build.mjs --application /ABSOLUTE/APPLICATION --output /ABSOLUTE/NEW_OBSERVATION_OUTPUT
+```
+
+The main `build_study.mjs` command also rebuilds this complete companion when `input-manifest.json.observation_inputs` names its exact descriptor. That descriptor binds 46 retained source/snapshot dependencies. Its frozen pre-composition network summary is independently tied to the original DM response and indexed station features, so there is no circular dependency on the combined report.
+
 ## Current Ecosystem delivery direction
 
 Build the simulated Upper Savannah model into a useful production workshare for Tim. Preserve real original source shapes, the 30 m regional grid, complete upstream model domain, separate South Carolina reporting support and utility focus. Keep clearly simulated scenario input fields editable, show baseline/restoration/matched-control NDR and SDR outputs in their actual annual units, preserve the real execution and elapsed history, and finish the source/run/report/edit/export/reopen workflow through the current native owners. Tim keeps scientific direction, method decisions, review and the client relationship. The observed station companion supports that same production work.

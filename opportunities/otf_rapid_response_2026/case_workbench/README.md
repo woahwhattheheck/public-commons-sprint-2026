@@ -36,3 +36,48 @@ The current original notice and full PDF extraction were recovered and their ret
 ## Build and receiving discipline
 
 This directory's AGENTS.md carries the complete owner instruction for actual rendered-product inspection. Open the exact outgoing desk, exercise the complete populated case course, inspect desktop and narrow widths, open the original attachments and exported reports/CSV/ZIP, and receive the complete workbook in a fresh desk before presenting an outgoing client version. Inspect the actual pixels and exported files and repair concrete defects in this implementation. The focused source course is not a substitute for the real rendered application.
+
+## Concrete commands
+
+Run from this directory. Use a private output directory; every produced file is create-only and an exact retry reuses its original bytes.
+
+```sh
+node build.mjs /private/otf/desk.html
+node cli.mjs example --directory /private/otf/authored-example
+node cli.mjs init --input new-workbook.json --output /private/otf/workbook.json
+node cli.mjs apply --workbook /private/otf/workbook.json --request operation.json --sources source-map.json --request-output /private/otf/original-request.json --output /private/otf/workbook-next.json
+node cli.mjs receive --input /private/otf/workbook-next.json --output /private/receiving/workbook.json
+node cli.mjs summary --workbook /private/receiving/workbook.json
+node cli.mjs handover --workbook /private/receiving/workbook.json --directory /private/receiving/handover
+node cli.mjs handover --workbook /private/receiving/workbook.json --zip /private/receiving/handover.zip
+node cli.mjs invoice --workbook /private/receiving/workbook.json --case CASE_ID --invoice INVOICE_ID --format html --output /private/receiving/invoice.html
+node cli.mjs vendor-review --input actual-vendor-input.json --directory /private/otf/vendor-review
+
+```
+
+An initialization descriptor is an object with id, title and created_at (a real UTC timestamp). An operation request has id, at, type and input, with optional complete documents. The browser presents every supported field as ordinary operator controls. forms.mjs lists those same input fields; example.mjs gives one complete readable course.
+
+The optional source-map.json maps a caller alias to an original local file, for example:
+
+```json
+{
+  "signed_work_order": {
+    "path": "originals/work-order.pdf",
+    "name": "work-order.pdf",
+    "media_type": "application/pdf"
+  }
+}
+
+```
+
+A source_ids array in the request can use that alias. The CLI reads the selected file once, hashes and retains its complete original bytes, replaces only source_ids aliases with the actual digest, and can preserve the full materialized request through --request-output. Replaying that retained full request requires no later reacquisition of the original file.
+
+The local CLI validates the entire result before writing. It uses private create-only output files and fsync. A retry verifies exact bytes. A process interrupted after linking its final file can recover only its same-directory, UUID-named partial link with the identical held inode; unrelated hardlinks remain rejected. There is no second mutable workspace database or advisory lock to abandon.
+
+## Whole receiving course
+
+Open desk.html in a normal browser. Open the authored example and inspect overview, both approved scope editions, the excluded preparation record, retained void/correction, reports, invoices and source downloads. Download the complete JSON and ZIP. Receive the JSON in a fresh desk. Open index.html and both original invoice files from the extracted ZIP; follow their original source links. Open standalone invoice HTML and use its embedded original-document downloads. The original prepared invoice output remains byte-identical after later scope, submission, payment and closeout operations.
+
+Create a separate empty workbook, attach an authored source, retain it, and exercise the actual contract/case forms. Adding source files or changing action type preserves entered form drafts. Inspect the invalid-input response and an original operation replay. The example has 23 operations, 9 authored documents, 105 billed minutes, 30 excluded preparation minutes, USD 17 direct costs, two invoices totaling USD 192 and a completed paid closeout. Its source documents explicitly identify all example facts as authored.
+
+The focused source execution has completed the full example, complete original-document hashing, independent cold receive, exact replay, ZIP member readback and three concrete admission risks: a future amendment budget cannot cover earlier excess work; an old report cannot cover later work; large original files use linear base64 admission. The exact native Node/filesystem course and rendered browser/attachment course travel with the published source to the original equipped receiver.

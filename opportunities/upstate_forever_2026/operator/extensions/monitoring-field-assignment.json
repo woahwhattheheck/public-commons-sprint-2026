@@ -64,6 +64,20 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/monitoring-field-assignment/selection",
+        "operation": "selection",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [

@@ -66,7 +66,8 @@
     "stellar/scf-starforge-20261009/sf61-bazaar-explorer",
     "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent",
     "stellar/scf-starforge-20261009/partners/unstructured",
-    "stellar/scf_2026/presentation/reviewer"
+    "stellar/scf_2026/presentation/reviewer",
+    "products/grant-operations"
   ],
   "browserAssets": [
     {

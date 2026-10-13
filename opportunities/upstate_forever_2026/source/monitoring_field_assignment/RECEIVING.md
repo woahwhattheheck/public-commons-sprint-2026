@@ -1,6 +1,6 @@
 # Saved field choices → editable implementation plan
 
-The **Field assignments** desk receives the JSON already saved by the monitoring field-planning desk. Choose its matching original field-support document, load the saved selection, inspect the assigned stations and original calendar, and create the editable native plan. The ordinary task queue saves the plan and its original report. Open the saved assignment to download its report, original selection and tables, or continue through **Open editable implementation plan**.
+The **Field assignments** desk receives the original selection already saved by the monitoring field-planning desk. Choose **Saved native field selection → Use retained selection** to read a selection from the existing Monitoring desk directly, or load its original saved JSON file. Choose its matching original field-support document, load the saved selection, inspect the assigned stations and original calendar, and create the editable native plan. The ordinary task queue saves the plan and its original report. Open the saved assignment to download its report, original selection and tables, or continue through **Open editable implementation plan**.
 
 ## What moves into the application
 
@@ -11,6 +11,14 @@ The native budget is the **full original programme budget**. The original USD ce
 The original field-support JSON and exact saved selection bytes are native managed attachments. The original plan, attachment revisions, source-family metadata, selected original rounds, source hashes, unassigned areas and original report are preserved. Later edits create ordinary plan revisions. Reopening this assignment keeps its original report and opens the current editable plan on request.
 
 The source support’s original project identity stays visible even when the source was received into another Workspace; the new plan belongs to the receiving project. The source collection, source ID, body hash, complete field-support hash and original support ID bind every assignment. Source-file intake uses the maintained Workspace verifier.
+
+## Direct native saved-selection handover
+
+The existing **Monitoring design → Saved field selections** product owns the retained review choice and its working desk. Its maintained reader verifies the original native Monitoring network, budget frontier and plans, every source companion and the exact saved selection JSON/HTML. Field assignments consumes that verified original record; it does not replace the reader or recompute the budget selection. The new assignment records the native selection ID and original selection SHA alongside the exact source binding. Changing a station, note or round remains an explicit new selection in the original desk, then a separately reviewed editable assignment.
+
+In the native command below, replace `--source-collection-id … --source-id … --selection-file …` with `--native-selection-id ACTUAL_SAVED_FIELD_SELECTION_ID` to use that complete original record directly. Other output/title/receive options stay unchanged. On resume, the original recorded choice remains frozen.
+
+The original RIVER receiving case already has the operated `Monitoring_4800_Field_Selection.json`, SHA256 `29a31882db493664d955bb4872209eb1791f999704a163f5fe36ccbf64dc98dc`, retained in its source companions. Use its actual Saved field selections record from the existing receiving operation rather than constructing a replacement.
 
 ## Native receiving in the same original operation
 
@@ -50,7 +58,7 @@ This component accepts the source schema and complete selected plan, rather than
 
 ## Installation and original ownership
 
-The additive operator extension registers `monitoring.field-assignment.save`, its catalogue/preview/detail routes, saved items, original task downloads and the new desk. No shared application controller or original RIVER template is replaced. Its component requires the maintained `implementation` and `extension-startup` components and travels with selected Study application source through the existing component fragment.
+The additive operator extension registers `monitoring.field-assignment.save`, its catalogue/preview/detail routes, saved items, original task downloads and the new desk. No shared application controller or original RIVER template is replaced. Its component requires the maintained `implementation`, `extension-startup` and `monitoring-field-selection` components and travels with selected Study application source through the existing component fragment.
 
 A selected implementation Study retains its native plan/history/reports and managed original attachments. The original assignment catalogue and source collection also travel in the complete Workspace archive produced by this receiver. Use that full project for the complete source desk and assignment catalogue, and the Implementation desk for a selected-plan Study.
 

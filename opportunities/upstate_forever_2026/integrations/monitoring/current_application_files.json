@@ -1,12 +1,13 @@
 {
   "schema": "upstate.monitoring-application-files/v1",
   "edition": "monitoring-editable-native-fieldwork-20261013",
-  "description": "Maintained Monitoring design, observed context, selected editable-study transfer, streamed original campaign packages and native campaign-to-Implementation receiving. Report-source, Study transfer and original Implementation receiving remain installed dependencies. Saved budget comparisons reopen the original frontier plans and retain exact observed-context selections, source reports and complete Workspace receiving. Saved comparisons enter the existing scientific report through their exact native records, per-plan context editions, source maps and ordered delivery. Selected editable Study transfer retains a saved comparison's original baseline, plans and per-plan contexts, plus its complete scientific report lineage. The same guarded installation retains its maintained inventories and original installers, upgrades exact shared figure-renderer predecessors, and includes the current utility-report dependency of native campaign exports. The maintained observed-report renderer is installed through its exact historical predecessors, including the original independent-capture inventory correction.",
+  "description": "Maintained Monitoring design, observed context, selected editable-study transfer, streamed original campaign packages and native campaign-to-Implementation receiving. Report-source, Study transfer and original Implementation receiving remain installed dependencies. Saved budget comparisons reopen the original frontier plans and retain exact observed-context selections, source reports and complete Workspace receiving. Saved comparisons enter the existing scientific report through their exact native records, per-plan context editions, source maps and ordered delivery. Selected editable Study transfer retains a saved comparison's original baseline, plans and per-plan contexts, plus its complete scientific report lineage. The same guarded installation retains its maintained inventories and original installers, upgrades exact shared figure-renderer predecessors, and includes the current utility-report dependency of native campaign exports. The maintained observed-report renderer is installed through its exact historical predecessors, including the original independent-capture inventory correction. Explicit field choices, notes and original calendar rounds reopen from an immutable native selection and complete editable desk; original source editions and campaign assignments remain distinct.",
   "files": [
     "docs/MONITORING_EXPORT_STREAMING.md",
     "docs/MONITORING_FIELDWORK_RETURN.md",
     "integration/component_fragments/monitoring-budget-comparison.json",
     "integration/component_fragments/monitoring-comparison-report.json",
+    "integration/component_fragments/monitoring-field-selection.json",
     "integration/component_fragments/monitoring-observed-station-scope.json",
     "integration/component_fragments/monitoring-study-transfer.json",
     "integration/monitoring_observed_sources.json",
@@ -30,6 +31,7 @@
     "model/monitoring_comparison_report.py",
     "model/monitoring_design.py",
     "model/monitoring_field_return.py",
+    "model/monitoring_field_selection.py",
     "model/monitoring_frontier_comparison.py",
     "model/monitoring_implementation.py",
     "model/monitoring_network.py",
@@ -50,14 +52,19 @@
     "operator/MONITORING_API.md",
     "operator/MONITORING_BUDGET_CHOICES.md",
     "operator/MONITORING_COMPARISON_REPORT.md",
+    "operator/MONITORING_FIELD_SELECTION.md",
+    "operator/extensions/monitoring-field-selection.json",
     "operator/extensions/monitoring-report.json",
     "operator/extensions/monitoring.json",
     "operator/install_receiving_waters.py",
     "operator/monitoring.py",
+    "operator/monitoring_field_selection_native.py",
     "operator/monitoring_native.py",
     "operator/monitoring_receiving.py",
     "operator/static/monitoring.js",
     "operator/web/monitoring-component.mjs",
+    "operator/web/monitoring-field-selection.css",
+    "operator/web/monitoring-field-selection.mjs",
     "operator/web/monitoring-frontiers.css",
     "operator/web/monitoring-frontiers.mjs",
     "operator/web/monitoring-observed.mjs",
@@ -135,6 +142,14 @@
       "source_commit": "fa7a77aecef81f13765a0c1024aef68dd323cb15",
       "producer_commit": "08cd869286c8cafd1ef217f20507a365a558ae15",
       "sha256": "8001ba6842dc3d5ed68e37ebdf2814323090e50d80fb7a068ec9ddadec57d695"
+    },
+    "retained_field_selection": {
+      "pull_request": 4266,
+      "source_commit": "bce7959671e0ba7106847106012327e4868d6afa",
+      "component": "integration/component_fragments/monitoring-field-selection.json",
+      "guide": "operator/MONITORING_FIELD_SELECTION.md",
+      "original_field_source": "source/monitoring-field-study/source-manifest.json",
+      "semantics": "Exact uploaded selection JSON and editable desk remain bound to the original source, project, network, frontier and saved plans; no campaign station reassignment."
     }
   }
 }

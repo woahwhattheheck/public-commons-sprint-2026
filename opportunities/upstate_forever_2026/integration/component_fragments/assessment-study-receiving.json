@@ -328,7 +328,12 @@
         "source_tools/receive_observed_station_studies.py",
         "integration/component_fragments/economic-comparison.json",
         "integration/component_fragments/economic-comparison-source.json",
-        "model/parameter_study_transfer.py"
+        "model/parameter_study_transfer.py",
+        "operator/scientific_source_reader.py",
+        "operator/web/scientific_source_reader.mjs",
+        "operator/extensions/source-reports.json",
+        "operator/SOURCE_REPORTS.md",
+        "model/ensemble_coefficient_evidence.py"
       ]
     },
     "station-assessment": {
@@ -656,7 +661,12 @@
         "source_tools/receive_observed_station_studies.py",
         "integration/component_fragments/economic-comparison.json",
         "integration/component_fragments/economic-comparison-source.json",
-        "model/parameter_study_transfer.py"
+        "model/parameter_study_transfer.py",
+        "operator/scientific_source_reader.py",
+        "operator/web/scientific_source_reader.mjs",
+        "operator/extensions/source-reports.json",
+        "operator/SOURCE_REPORTS.md",
+        "model/ensemble_coefficient_evidence.py"
       ]
     },
     "study-transfer": {
@@ -984,7 +994,12 @@
         "source_tools/receive_observed_station_studies.py",
         "integration/component_fragments/economic-comparison.json",
         "integration/component_fragments/economic-comparison-source.json",
-        "model/parameter_study_transfer.py"
+        "model/parameter_study_transfer.py",
+        "operator/scientific_source_reader.py",
+        "operator/web/scientific_source_reader.mjs",
+        "operator/extensions/source-reports.json",
+        "operator/SOURCE_REPORTS.md",
+        "model/ensemble_coefficient_evidence.py"
       ],
       "requires": [
         "station-assessment"

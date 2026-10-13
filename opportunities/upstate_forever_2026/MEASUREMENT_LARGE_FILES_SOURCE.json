@@ -166,8 +166,8 @@
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 3544,
-      "sha256": "05c7a3e4e45ae89de3c8a27cd819c337c3ba5fe5e20e9496584844d66051ab80",
+      "bytes": 7437,
+      "sha256": "7194eec1453cf39034e38f2a359e7ba474bf438773de0418c4b0d4b5865b349f",
       "role": "patch"
     },
     {
@@ -234,6 +234,8 @@
     "complete_inventory": "integration/measurements/INSTALLATION.json",
     "original_standalone_module": "measurement_workspace/legacy_chemistry.py",
     "original_download_lifecycle_commit": "6af867c99ba8ac84141adbf5b31a2d3efe9130f8",
-    "original_outer_database_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc"
+    "original_outer_database_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc",
+    "workspace_transport_commit": "cc01c5710da426fd5c4f571fd2d040afd3cea1a3",
+    "workspace_transport": "Mount-scoped original workspace and generation bind delayed inputs and responses; original admitted native operations preserve their identity."
   }
 }

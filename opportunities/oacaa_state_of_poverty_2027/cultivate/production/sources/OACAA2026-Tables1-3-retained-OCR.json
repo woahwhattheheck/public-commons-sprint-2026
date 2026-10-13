@@ -1,0 +1,15 @@
+{
+  "schema": "tjl.publication.original-excerpt.v1",
+  "sourceUrl": "https://oacaa.org/wp-content/uploads/2026/08/2026-state-of-poverty-report_final-low.pdf",
+  "representation": "Retained original-report OCR table transcription; page pixels are not part of this source receipt.",
+  "excerpts": [
+    {
+      "locator": "Table 1",
+      "text": "Table 1. Federal poverty level thresholds by household size and number of' children, 2024\n\n<table><tr> <td colspan=10> 5 6 7 8 or more</td> </tr>\n<tr> <td> One person, under age 65</td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> </tr>\n<tr> <td> Age65 and over</td> <td> $15,050</td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> </tr>\n<tr> <td> Two people, under age 65</td> <td> $21,006</td> <td> $21,621</td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> </tr>\n<tr> <td> Age 65and over</td> <td> $18,961</td> <td> $21,540</td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> </tr>\n<tr> <td> Three people</td> <td> $24,537</td> <td> $25,249</td> <td> $25,273</td> <td></td> <td></td> <td></td> <td></td> <td></td> <td></td> </tr>\n<tr> <td> Four people</td> <td> $32,355</td> <td> $32,884</td> <td> $31,812</td> <td> $31,922</td> <td></td> <td></td> <td></td> <td></td> <td></td> </tr>\n<tr> <td> Five people</td> <td> $39,019</td> <td> $39,586</td> <td> $38,374</td> <td> $37,436</td> <td> $36,863</td> <td></td> <td></td> <td></td> <td></td> </tr>\n<tr> <td> Six people</td> <td> $44,879</td> <td> $45,057</td> <td> $44,128</td> <td> $43,238</td> <td> $41,915</td> <td> $41,131</td> </tr>\n<tr> <td> Seven people</td> <td> $51,638</td> <td> $51,961</td> <td> $50,849</td> <td> $50,075</td> <td> $48,631</td> <td> $46,948</td> <td> $45,100</td> </tr>\n<tr> <td> Eight people</td> <td> $57,753</td> <td> $58,263</td> <td> $57,215</td> <td> $56,296</td> <td> $54,992</td> <td> $53,337</td> <td> $51,614</td> <td> $51,177</td> <td></td> </tr>\n<tr> <td> Nine people or more Source: U.5, Bucau Census</td> <td> $69,473</td> <td> $69,810</td> <td> $68,882</td> <td> $68,102</td> <td> $66,822</td> <td> $65,062</td> <td> $63,469</td> <td> $63,075</td> <td> $60,645</td> </tr></table>"
+    },
+    {
+      "locator": "Table 3",
+      "text": "Table 3. Chronic and episodic poverty rates, United States, 2011-2012, 2013-2014, and 2017-2019\n\n<table><tr> <td></td> <td> 2011-2012</td> <td> 2013-2014</td> <td> 2017-2019</td> </tr>\n<tr> <td> Percentage of population in poverty every month in a 24-month period (chronic poverty rate) #</td> <td> 5.0%</td> <td></td> <td> 3.3%</td> </tr>\n<tr> <td> Percentage of population in poverty for at least 2 consecutive months in a 24- _montheriod(episodic povertyrate)__ p</td> <td> 27.1%</td> <td> 27.5%</td> <td> 27.1%</td> </tr></table>"
+    }
+  ]
+}

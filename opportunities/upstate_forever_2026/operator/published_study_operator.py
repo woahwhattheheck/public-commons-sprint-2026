@@ -272,6 +272,13 @@ class PublishedStudyProvider:
         except (ValueError, OSError) as error:
             self._fail("STUDY_SOURCE", str(error))
 
+    def report_preview_file(self, workspace_key, ticket_id):
+        from published_report_preview import file_reply
+        try:
+            return file_reply(self.operator, workspace_key, ticket_id)
+        except (ValueError, OSError) as error:
+            self._fail("STUDY_PREVIEW", str(error), 404)
+
     def read(self, workspace_key, operation, payload):
         payload = payload or {}
         if not isinstance(payload, dict):
@@ -342,6 +349,10 @@ class PublishedStudyProvider:
                 result["context"] = self._source_links(workspace_key, ws, store, result["context"])
                 return result
             study_id, version_id = self._selection(payload)
+            if operation == "report-preview":
+                from published_report_preview import prepare
+                return prepare(self.operator, workspace_key, ws, store, study_id,
+                               version_id, payload.get("path"))
             if operation == "study":
                 return self._source_links(workspace_key, ws, store, store.get_study(study_id, version_id))
             if operation == "context":

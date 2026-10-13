@@ -1,0 +1,1820 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original Monitoring plan field support and editable station selection",
+  "captured_at": "2026-10-13",
+  "entries": [
+    {
+      "id": "monitoring-field-planning",
+      "kind": "document",
+      "title": "Upper Savannah monitoring field selection and retained station evidence",
+      "path": "Ecosystem_Monitoring_Field_Planning.html",
+      "sha256": "37b6f725b24aee0de570b8e8fffca1153c23f3d902bfea3a7211dd25c9aa58d7",
+      "uri": "urn:upstate:monitoring-field-support:e62688692e78bc7cb1551d15cff73afa2a6e3db47b44e78a06e34a89656b51aa",
+      "vintage": "Retained 2021-2025 observations and 2026 draft assessment; original winter 2026-2027 planning calendars",
+      "role": "monitoring_field_support",
+      "companions": [
+        {
+          "path": "CURRENT_OWNER_DIRECTION.md",
+          "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+        },
+        {
+          "path": "Monitoring_Field_Support_Brief.pdf",
+          "sha256": "1d404d58f7ac913975284eedf2e43cff17913234eb03d70ee830b80a8e01e8a4"
+        },
+        {
+          "path": "README.md",
+          "sha256": "7d5029a7f2b31846dd7bc3fd51105c90ad713e425a2d435b806f3748c3ee2507"
+        },
+        {
+          "path": "START_HERE.html",
+          "sha256": "806275efa026773473532014d46e239c556cd8ad2b2de943b2f53cb43f4a6693"
+        },
+        {
+          "path": "budget-13200-original-results.csv",
+          "sha256": "488173ef5f9b03038a720e5b75740555ca39a0ed45d8cac8790ba996eb26909a"
+        },
+        {
+          "path": "budget-4800-original-results.csv",
+          "sha256": "488173ef5f9b03038a720e5b75740555ca39a0ed45d8cac8790ba996eb26909a"
+        },
+        {
+          "path": "budget-9000-original-results.csv",
+          "sha256": "488173ef5f9b03038a720e5b75740555ca39a0ed45d8cac8790ba996eb26909a"
+        },
+        {
+          "path": "budget-field-support.csv",
+          "sha256": "38d491f73536ce418340fe1833beba142b42774f99a5d828508beae563b93f5b"
+        },
+        {
+          "path": "build-result.json",
+          "sha256": "c3ac4fed5946b3f01be58b77272381158921400e9ea61c105fad1e343664be4c"
+        },
+        {
+          "path": "catchments.svg",
+          "sha256": "1ccbb6ab0a996caad3c0486ac11b0a2f8b366f144a37c626f3d25ef7a51db3f8"
+        },
+        {
+          "path": "examples/Example_4800_Field_Review_Calendar.pdf",
+          "sha256": "ef483895a9f7791fd0df55cac0f641fe86e35c5322c819a8c47f6b2da52b34a8"
+        },
+        {
+          "path": "examples/Monitoring_4800_Crew_Selection.csv",
+          "sha256": "19478f5a82be7b3569f1faf1a01879f0d706954608b4eb8f688760b4c0dd27b2"
+        },
+        {
+          "path": "examples/Monitoring_4800_Field_Selection.json",
+          "sha256": "29a31882db493664d955bb4872209eb1791f999704a163f5fe36ccbf64dc98dc"
+        },
+        {
+          "path": "field-support.json",
+          "sha256": "3856323382aa704ae096979ce2c0b8a762845df27789d71fbfe8ae8fbf82acae"
+        },
+        {
+          "path": "native/frontier.json",
+          "sha256": "f0cfec244da3c0f79d9c6ef215d0f2111f9919ef6a51cacbe7d16a1aef8caf58"
+        },
+        {
+          "path": "native/network.json",
+          "sha256": "623699a80795289927787f5a897460075662f8476897f54bd0941ddfc47968ef"
+        },
+        {
+          "path": "native/plans/5e9719f183b7621f8fcf9e06a0e90a6e039008af59b2a98b69d7ce3b35ba6bc5.json",
+          "sha256": "9a3bd70543baf3d139dce3058ddf227cb738b964efb2d2936550d14a494c31b1"
+        },
+        {
+          "path": "native/plans/c1fee77c371be5cc788cb8db7b1fe236e1647f5fe01e02600596e841c15a5edc.json",
+          "sha256": "5c9a213a19af5dce5e5b29e7be95f08147e678f19ab57708f22181e2fb332f4b"
+        },
+        {
+          "path": "native/plans/c82a90e9c035e788e8d29990c494974597df3fbe783b1be9cc72e3d4c9ad9883.json",
+          "sha256": "f9cf12bb2dad5ac32d3efbb3e2cc5c9dd30cfe3b815b7953a3d971c63fdafc4b"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/GEOGRAPHY_README.md",
+          "sha256": "5ea9b11261e9a168fcb4ff7a4ed5d6676cca15b4d6a8c34d57c5b2fa8cf32b26"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/GEOGRAPHY_SOURCES.json",
+          "sha256": "f61581d15b3d960084f0bfdf7497388bacec725cca3b524615fd6445f7ca5c9e"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/README.md",
+          "sha256": "593d1308f984829cf6c4965407782d170a73596d680eb3bca66e6e90b2dd91ca"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/SOURCES.json",
+          "sha256": "9be40a48137960488757126962bef008ced3f5e20125e5471e424d52c3627f2e"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/assessment-model-context.json",
+          "sha256": "facd4af798a952c0a70e08ea3c2571efd1f828dc8f981eac7d52244b4e58f3e8"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/delistings_2026_draft.csv",
+          "sha256": "8400d4412f6f9e0a0c8d99769375fa57a33b74590dac0369853b7edf0c822f71"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/geography_coverage.json",
+          "sha256": "42845fa38bd66b9e0d13e8904d5a8317d848a21fedfe9dcff9d5292221ae9993"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/hartwell_nutrient_priority_2026_draft.csv",
+          "sha256": "874279517a03a9aa3c8aa89b72649d8bd9e0cb0baf337f7e77395e4818beb544"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/listed_causes_2026_draft.csv",
+          "sha256": "545a4e1413012b8f17c81c8afe815dd1e225ade5f5b9792ca22e83ef8723307f"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/observed_monitoring_sites.geojson",
+          "sha256": "fa007de328e7ecff10910ee8cca56da83e30148d79247c665419f3e59179a098"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/observed_station_coordinates.csv",
+          "sha256": "370649ae30618ef67c6d3fa5ab97f79ea9cc083547edb1b4533b226ca2d2bda4"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/operate_assessment_maps.py",
+          "sha256": "eb9541c6e83bdec3a19cf8f19ffd5598675b5e8a6f3261baa7f11990818d75ba"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/scdes_monitoring_14_original_features.json",
+          "sha256": "9878097972c3a6a9669a9bcdc0e1413e792ae2c37fa7457c8e77caa4ae28722b"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/scdes_monitoring_layer9_metadata.json",
+          "sha256": "f16b3722ce1b84f6785de7e68ff718d1840a71e379494d4687b723b3fd88db12"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/source_field_differences.csv",
+          "sha256": "8267737d5ef11db8731a5460f09d084fc7909eefe33792937ad6e94e45b25439"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/station_inventory_2026.csv",
+          "sha256": "203a0d17b2687cf4f211f90b33232922ad5b7678c6922212b790f4026a4cdde3"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/station_metadata_20261013.json",
+          "sha256": "22baf9cf3c2c33ddddc821ac14bf6da93a4ca3d8875269f38828ef36ebe0d6cd"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/stations_wgs84_2026.geojson",
+          "sha256": "070ef1609c281a100fee656541717961c99159a6fade4863a3940ab469c7e3d9"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/tmdl_coverage_2026_draft.csv",
+          "sha256": "15bdc9c5e206f655bb7f9f34e7346f64ac80f326edd93dc773f9b1cda37b2c20"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/tmdl_use_support_20260728.csv",
+          "sha256": "5d9ded58db9d397b017eb4bfd70ec24a44339500c0da71941a4fc973722dec7b"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/waters_of_concern_2026_draft.csv",
+          "sha256": "b1d47dad5092dacc4880896214bf7f8f58a5ed34488913c68e689e2cec75777a"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/source-collection.json",
+          "sha256": "1b29fa81518cb6d0bb816644eca4a371639b0c1e2d32709b79eea4243fb3ac36"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/source-collection.json",
+          "sha256": "116a7c44b2115997410b19a252bf35bc9ce01ea4628f1b5ee08c8ae970acf88c"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/coordinate-derivation.json",
+          "sha256": "eae7d449bb242a6a559c2b090830b9391e9320b99349a5d5e13ec366bbce88d6"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/README.md",
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/build_ecoli_report.mjs",
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/index.html",
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/arjws-results-2021-2025-original.csv",
+          "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/arjws-wbd-original.json",
+          "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2021-original.csv",
+          "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2022-original.csv",
+          "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2023-original.csv",
+          "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2024-original.csv",
+          "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2025-original.csv",
+          "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-wbd-display.json",
+          "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/stations-original.csv",
+          "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/stations-original.geojson",
+          "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/utility-focus-profile.json",
+          "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/utility-memberships.csv",
+          "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/results-with-provenance.csv",
+          "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/selected-stations.geojson",
+          "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/source-inputs.json",
+          "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/station-membership.csv",
+          "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/station-year-method-summary.csv",
+          "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/summary.json",
+          "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/stations-nad83.geojson",
+          "sha256": "0cb430b3556b7f6e2a92f21c8c38bfd56cea5bd66dfdf52455678b1e4d6b25ce"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/coordinate-derivation.json",
+          "sha256": "eae7d449bb242a6a559c2b090830b9391e9320b99349a5d5e13ec366bbce88d6"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/README.md",
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/build_ecoli_report.mjs",
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/index.html",
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/arjws-results-2021-2025-original.csv",
+          "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/arjws-wbd-original.json",
+          "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2021-original.csv",
+          "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2022-original.csv",
+          "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2023-original.csv",
+          "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2024-original.csv",
+          "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2025-original.csv",
+          "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-wbd-display.json",
+          "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/stations-original.csv",
+          "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/stations-original.geojson",
+          "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/utility-focus-profile.json",
+          "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/utility-memberships.csv",
+          "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/results-with-provenance.csv",
+          "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/selected-stations.geojson",
+          "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/source-inputs.json",
+          "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/station-membership.csv",
+          "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/station-year-method-summary.csv",
+          "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/summary.json",
+          "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/stations-wgs84.geojson",
+          "sha256": "7eafc3e00b862aded0cdf3289a208e5e004df157007bf282529f106e0ab3c0b7"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/source-collection.json",
+          "sha256": "d4769ef9131abfe1f137d4d0ae11adc7248344aa29d358944d6ab76167750bc2"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/README.md",
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/build_ecoli_report.mjs",
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/index.html",
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/arjws-results-2021-2025-original.csv",
+          "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/arjws-wbd-original.json",
+          "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2021-original.csv",
+          "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2022-original.csv",
+          "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2023-original.csv",
+          "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2024-original.csv",
+          "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2025-original.csv",
+          "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-wbd-display.json",
+          "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/stations-original.csv",
+          "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/stations-original.geojson",
+          "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/utility-focus-profile.json",
+          "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/utility-memberships.csv",
+          "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/results-with-provenance.csv",
+          "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/selected-stations.geojson",
+          "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/source-inputs.json",
+          "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/station-membership.csv",
+          "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/station-year-method-summary.csv",
+          "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/summary.json",
+          "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/source-collection.json",
+          "sha256": "e11c78fcff11482af17ad2228d9cd7e45f8d0d3ea8f6188fa81551a188a85201"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/domain-summary.json",
+          "sha256": "ccb2776313921db46aef064816f1d8a74d04d8a9e735f0c87d6e3a2fe2f0be42"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/feature-bindings.json",
+          "sha256": "75637c2c977ab022751db0e1a311aedfaf80c6bacc53571aa65a03665fb0c7fb"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/methods/capture_upstream_network.py",
+          "sha256": "bb89a8dbf86f0cf507e75f764cf116a929fd167bd0427cbf42556f091dd67fdc"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/methods/prepare_upstream_domain.py",
+          "sha256": "52092b4f47af2833b66f8bb02478706830d2057f2e8e86b3f59905ef74a53f6b"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/model-domain.esri.json.gz",
+          "sha256": "6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/capture.json",
+          "sha256": "0b1ad80e32a843d547ccb4317a1c4ddec7a7878c52b15d127accf1cb00886aee"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/network-selection.json",
+          "sha256": "c2b3f0f0f3842592984795bffde23c83a1bfd5297ee7ab70c1bff18d8bb27ef4"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/reference/layer-6.json.gz",
+          "sha256": "1d19d8452f609e6fe732f2e0974cc82b776dfe0332457054151310e54d240375"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/reference/layer-6.receipt.json",
+          "sha256": "0e9a40e59caf8f35327529bb49652399b5ab03e02b917d1b825a7979593b70b3"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/reference/selected-four-huc12.json.gz",
+          "sha256": "c5e0af7bd6fb8aa72ebb7283ceae6bb694bc203ce98ef0a0e33ce200800c6806"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/reference/selected-four-huc12.receipt.json",
+          "sha256": "ddc1a24d32b7e720631230e29defc8ebe510184b9627b4c095cb5881ef961e60"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-5ad6403a2d0a750ebdb2/body.json.gz",
+          "sha256": "76836f268955d269e335b00297a38521a84a368ab4379dcb6f63ebc9e6ac3804"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-5ad6403a2d0a750ebdb2/receipt.json",
+          "sha256": "f89024c2152c79d42936743e54df78d039c59ba1a8138cb7bdd71465fa689b63"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-78a86c8742e5a2ca8026/body.json.gz",
+          "sha256": "76836f268955d269e335b00297a38521a84a368ab4379dcb6f63ebc9e6ac3804"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-78a86c8742e5a2ca8026/receipt.json",
+          "sha256": "3b8fc546fb83b576558bbf0f538ffa0ec7993fb8f88b3e21359156d31e143b3a"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-aa67b8bc2b93c9cf2899/body.json.gz",
+          "sha256": "76836f268955d269e335b00297a38521a84a368ab4379dcb6f63ebc9e6ac3804"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-aa67b8bc2b93c9cf2899/receipt.json",
+          "sha256": "0f625760b9f5cad0213d5460f1f37b32864cd361d26790044dd1f01a35b8cb14"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0000/body.json.gz",
+          "sha256": "65f8c1726f91bef6e8429b3eac149d2feac1cfff990df92a34e3d593324386fe"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0000/receipt.json",
+          "sha256": "9ce1fca1e59070dd4129cb385f78c2a38b50e76193814069a71aa92c720d5084"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0001/body.json.gz",
+          "sha256": "9318c955749f4c1334894201f11a9b20d1dc12af566f9e7fe7963680d1c98913"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0001/receipt.json",
+          "sha256": "8f11109b98ac17b31ac09ca5be8ff03378e07713becd9fcacc4f8894f95d73ce"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0002/body.json.gz",
+          "sha256": "861d2211d5957eb47273d5832c2fa6e1f3e066b7c2eaef31a8ff2fafd42e279e"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0002/receipt.json",
+          "sha256": "354f3a6837a62a65c408ec7ea5229c89b99aea2ba6ee4ef1a63129b3513ffc43"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0003/body.json.gz",
+          "sha256": "c931fc72e6357df0073d8d71f9f40669a9b36ac9712a8bbd054673998ec3db84"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0003/receipt.json",
+          "sha256": "dae1aba67f995cbd3bf1f453c8fe88b8ae425be1b460189e4b8d2711e1d89300"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-attributes-0000/body.json.gz",
+          "sha256": "4d9742b72a3bd8002bab01d5ac391b3eed1869f42c792282c4268ec09afb4131"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-attributes-0000/receipt.json",
+          "sha256": "b76a53c3de8070b3fafb7c11613d7f9c469c65d7a8cf31b2c2249a55f27854cf"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-count/body.json.gz",
+          "sha256": "1921ecb766bef03c249523bbe7f6d9e689a9f9235443e2391b266264001ce551"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-count/receipt.json",
+          "sha256": "cf043ae5fb074d63c0ce787789e79bdd3e1d1449dcbfc7d6ff9c27fa6b15aa28"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-ids/body.json.gz",
+          "sha256": "77a330c27c75da32401ca3b2f427eb2763637a20dca82ef9bbbab6bc8730de38"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-ids/receipt.json",
+          "sha256": "6368e2a940fda07879c5c1ea4025cb9eb097cbcae2a286c4cc9b6980e074e7a2"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/upstream-ancestor-geometry-0000/body.json.gz",
+          "sha256": "3ea2bd940daa14f9a91a6ec9d6792dee88b5594c7c6924ac46d1f8a92ee279b1"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/upstream-ancestor-geometry-0000/receipt.json",
+          "sha256": "753da9f6601d293a73587781a48ba0a7b0b4222b645403df1e7b3890523a59af"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/upstream-ancestor-geometry-0001/body.json.gz",
+          "sha256": "2bd4edbb6bf2019ac3310251eadc5e6b511b44f1f148ba0bd88e4dab27663998"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/upstream-ancestor-geometry-0001/receipt.json",
+          "sha256": "719a546ca0572b3897a22d0f29116d646c6767644b79aa5091a772d685ec27f6"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/sources.json",
+          "sha256": "6ec8b77d75721a42596e8aab49c93f2f52eda2384ed2d563ed3f788c4be36aa3"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/topology-records.json",
+          "sha256": "f5a59936ce583b20d26e2173e3b12cb3b1069d5d48824ceda44a9aa449b8383d"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/GEOGRAPHY_README.md",
+          "sha256": "5ea9b11261e9a168fcb4ff7a4ed5d6676cca15b4d6a8c34d57c5b2fa8cf32b26"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/GEOGRAPHY_SOURCES.json",
+          "sha256": "f61581d15b3d960084f0bfdf7497388bacec725cca3b524615fd6445f7ca5c9e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/README.md",
+          "sha256": "593d1308f984829cf6c4965407782d170a73596d680eb3bca66e6e90b2dd91ca"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/SOURCES.json",
+          "sha256": "9be40a48137960488757126962bef008ced3f5e20125e5471e424d52c3627f2e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/assessment-model-context.json",
+          "sha256": "facd4af798a952c0a70e08ea3c2571efd1f828dc8f981eac7d52244b4e58f3e8"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/delistings_2026_draft.csv",
+          "sha256": "8400d4412f6f9e0a0c8d99769375fa57a33b74590dac0369853b7edf0c822f71"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/geography-model-sources.json",
+          "sha256": "ab280c116f2885df2b43f98897c9dc17e3f3a0ce18250b8d225f13697b5bca20"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/geography_coverage.json",
+          "sha256": "42845fa38bd66b9e0d13e8904d5a8317d848a21fedfe9dcff9d5292221ae9993"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/hartwell_nutrient_priority_2026_draft.csv",
+          "sha256": "874279517a03a9aa3c8aa89b72649d8bd9e0cb0baf337f7e77395e4818beb544"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/listed_causes_2026_draft.csv",
+          "sha256": "545a4e1413012b8f17c81c8afe815dd1e225ade5f5b9792ca22e83ef8723307f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/observed_monitoring_sites.geojson",
+          "sha256": "fa007de328e7ecff10910ee8cca56da83e30148d79247c665419f3e59179a098"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/observed_station_coordinates.csv",
+          "sha256": "370649ae30618ef67c6d3fa5ab97f79ea9cc083547edb1b4533b226ca2d2bda4"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/operate_assessment_maps.py",
+          "sha256": "eb9541c6e83bdec3a19cf8f19ffd5598675b5e8a6f3261baa7f11990818d75ba"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/scdes_monitoring_14_original_features.json",
+          "sha256": "9878097972c3a6a9669a9bcdc0e1413e792ae2c37fa7457c8e77caa4ae28722b"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/scdes_monitoring_layer9_metadata.json",
+          "sha256": "f16b3722ce1b84f6785de7e68ff718d1840a71e379494d4687b723b3fd88db12"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/source_field_differences.csv",
+          "sha256": "8267737d5ef11db8731a5460f09d084fc7909eefe33792937ad6e94e45b25439"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/station_inventory_2026.csv",
+          "sha256": "203a0d17b2687cf4f211f90b33232922ad5b7678c6922212b790f4026a4cdde3"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/station_metadata_20261013.json",
+          "sha256": "22baf9cf3c2c33ddddc821ac14bf6da93a4ca3d8875269f38828ef36ebe0d6cd"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/stations_nad83_2026.geojson",
+          "sha256": "a9530935ec79e7e9867d54276f0ae31085269243bd7bf22381c6d32c7b0558ad"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/stations_scdes_utm17n_2026.geojson",
+          "sha256": "c977b37abc4bc2e24fc7f0ff1fde28ee860c0c2cea0c4510b3065d5b4848e0de"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/stations_wgs84_2026.geojson",
+          "sha256": "070ef1609c281a100fee656541717961c99159a6fade4863a3940ab469c7e3d9"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/tmdl_coverage_2026_draft.csv",
+          "sha256": "15bdc9c5e206f655bb7f9f34e7346f64ac80f326edd93dc773f9b1cda37b2c20"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/tmdl_use_support_20260728.csv",
+          "sha256": "5d9ded58db9d397b017eb4bfd70ec24a44339500c0da71941a4fc973722dec7b"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/waters_of_concern_2026_draft.csv",
+          "sha256": "b1d47dad5092dacc4880896214bf7f8f58a5ed34488913c68e689e2cec75777a"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native-source-edition.json",
+          "sha256": "30ddb6309a026777488690086b618932722ba47ee647e04d670efca014383573"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/DMR_LOADS.md",
+          "sha256": "fb5b82f3654b14562ed02024308c955e7d081a49d8f8c7b229167cff6ad5d71f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/capture.json",
+          "sha256": "434dd8d458e646581224878cc4f4f110f91100af25048f30b70765c8e872fe9c"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/derived/annual_loads.csv",
+          "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/derived/period_loads.csv",
+          "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/derived/summary.json",
+          "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/dmr_outfalls_2023.geojson",
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/dmr_records.csv",
+          "sha256": "220204d5858981b56a203bb94e3a0a7459706e2ec037bee8b6e12a6503634ac9"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/map-layer-capture.json",
+          "sha256": "c6a83003f474bd031a485f397cfda2e61722ca61cd0fd33a594ea661c56dbb73"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/model-sources.json",
+          "sha256": "3a621b46350c20488ce6410188dce8247e182a44b8519196802f2ea875840d9f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_00530_2023.json",
+          "sha256": "f6d782ebb4512132adef1acac25aa9d68b678e30886b680e7bc7056675d7a9d0"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_00610_2023.json",
+          "sha256": "33e0a6acbf1c21cbf8a1543e8f926d02f7628430e6d12ce83152f3586e0539ee"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_00620_2023.json",
+          "sha256": "aecf79e0f1a2194921879b55dde6a7172ccb41302d543957369ee6768a72548a"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_00665_2023.json",
+          "sha256": "f138da40ca7d73b3f96a901e478446468bbafdc48d3a5cd79c655efe28b41067"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_2023_inventory.json",
+          "sha256": "e7d8ee26dacc939acf25b07de891de1be561f5860deac8c82dec86c403858e3f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_50050_2023.json",
+          "sha256": "48ad94742a16e0d06f78cc94a72e648bed1d309983308ec89ffee13bc359289a"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_00530_2023.json",
+          "sha256": "325975cd22e1d74318f578a9a8f3fcde7dea1e34f3091da92a28847ea33ce413"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_00600_2023.json",
+          "sha256": "955e7700bd4efa980a971e72b88aa91402080f255afb318ef1a8729c51665811"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_00610_2023.json",
+          "sha256": "01b3bb30d74dd2c75d8470eafe800e5cc57c582ba8e4de8e018df703ffb03a25"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_00665_2023.json",
+          "sha256": "99106e19c23fe55a507dc8b7cfa7a4c37f7bf3f78c6c75ca7e729dca3935f3ff"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_2023_inventory.json",
+          "sha256": "8d812c75b4c1185252b8ba0dcf30fe3a03c0fa37bfce84eee909ed97dfdeabf9"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_50050_2023.json",
+          "sha256": "deaca45550a108094158be654e6c8abc5f5f0638b30738d1c24c3e5402b0d9c4"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_00530_2023.json",
+          "sha256": "bb9aa13245f9d1938542ec6dd3174e3e6e948ad59e688b33393dc624b7d28dbf"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_00600_2023.json",
+          "sha256": "a54c2fb1e278e7a28269c215c10962ec557818dcb92d5cbb146d839dc1142fe6"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_00610_2023.json",
+          "sha256": "adec3fb0bd7df3d06da23f4b6d23c74db7eda3e071ec29e8400ec2aaee617407"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_00665_2023.json",
+          "sha256": "a47883f829abe169d618dc79b07d0ecddd6e1c6050e8063e5d62eed338f5dcdb"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_2023_inventory.json",
+          "sha256": "af3f79a8d09fe3d494922b411375a380f876b8e1a91fb9fbeb610911954c69d4"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_2023_january_all_parameters.json",
+          "sha256": "68b577ac0275ad491d154d4cb5932803819bfec82855f9a0bdc5dac7aefc15da"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_50050_2023.json",
+          "sha256": "ba2c20ea9abc201f344c2be9b6444d2a97b2fa48eb7be4c15514f2d3cd71b675"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_00530_2023.json",
+          "sha256": "5a5270796fc2e91206a4db2ac70c605d7edd0833e0568399b2947291607f377e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_00600_2023.json",
+          "sha256": "62775560cf5a0e39f3ac4956285d5b93bb0e4a33be95400c30d51012cd35356f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_00610_2023.json",
+          "sha256": "6b8b6995af174e32940ce86a4c65b26559d4e089b778c65eb49d3fec4b236eb1"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_00665_2023.json",
+          "sha256": "667e8edd23dc8e50248f74f4f28dc3883b19f1779654e222854e5b227122b204"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_2023_inventory.json",
+          "sha256": "43d195131e1615a1d29244d5e7ba5cea7e3099a2ce7acf80e8ef8cf68a1b704e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_2023_january_all_parameters.json",
+          "sha256": "1cccc9a8bdfe005dc27ee1362469bd2536d020eddfd52ed53e2fa0a04a476e5d"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_50050_2023.json",
+          "sha256": "9f546e57a7a4c1b8c5a70eed279c06cc53358e7511ffa1f7b0bc0430dfe7c0d3"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/des_four_npdes_outfall_features.json",
+          "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/des_npdes_layer21_metadata.json",
+          "sha256": "f1260fda40481fe22524971a144d72002011017c3b2b49f91c325854c56f6ecb"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/summarize_dmr.mjs",
+          "sha256": "dfd36aae420220a2e34a4bce98f29cd5ad715c20ecded4d6acf8c77924bd53f0"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native-source-edition.json",
+          "sha256": "18655f9f9486ba35488b6c72431163e8a6106d15a63f6a81c512d9eeed0d0fcf"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/planning.json",
+          "sha256": "3742ec3375f1b97a31533561e5bc0d352e23675b0753a62ebd244bb9fba4cfb8"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/station-lineage.json",
+          "sha256": "bd76ed4d798eac9d35272a028f4dbc108be11c1734e5881a3a627929f94f34d0"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/stations-wgs84.geojson",
+          "sha256": "c08b75fdbe7e2cafd374f2d4fdb2ed897f481d8c170779c81a2665af18db43ed"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/source-collection.json",
+          "sha256": "271afbdd3bbb9db76ba175e64bbda8b72221ca84a1ece90204ea6aaed8a6aa16"
+        },
+        {
+          "path": "original-plan-calendars.csv",
+          "sha256": "35a163af5426ad6443d8a1a99e292b1025a25105b7a866644f2468c8d35daa3e"
+        },
+        {
+          "path": "source/build_field_page.py",
+          "sha256": "37ba9a8eb9b7bcc325040b27996ba18a7de7f00a269959036283eb9415573fc6"
+        },
+        {
+          "path": "source/build_field_support.py",
+          "sha256": "df577042f70fc1dfa6c991016f0bc847e8336cc57544bb8f84b0e7658f5bbd8b"
+        },
+        {
+          "path": "source/field_planning.html",
+          "sha256": "4d11998ccf7364acd6df779d82187dba08054dd31d9f2d841e2886632690826c"
+        },
+        {
+          "path": "source/make_field_brief.py",
+          "sha256": "9538361e9dd98514a9a97e481903a979a865f984f52341bb7b1dcd04a13c21a3"
+        },
+        {
+          "path": "source/receive_field_support.py",
+          "sha256": "0c0b4ffaa3d4d58ad40babe385950c74164375348f1ca6bf1a1c40318993f2ea"
+        },
+        {
+          "path": "source-selection.json",
+          "sha256": "b8925db7bba7e8a23bdf974dee41a1b8f6ca2e0dd1acd67e99d9177ec099bdf7"
+        }
+      ]
+    },
+    {
+      "id": "monitoring-budget-field-support",
+      "kind": "table",
+      "title": "Original three-budget station and observation support",
+      "path": "budget-field-support.csv",
+      "sha256": "38d491f73536ce418340fe1833beba142b42774f99a5d828508beae563b93f5b",
+      "uri": "urn:upstate:monitoring-field-support:e62688692e78bc7cb1551d15cff73afa2a6e3db47b44e78a06e34a89656b51aa",
+      "vintage": "Retained 2021-2025 observations and 2026 draft assessment; original winter 2026-2027 planning calendars",
+      "role": "monitoring_field_support",
+      "companions": [
+        {
+          "path": "CURRENT_OWNER_DIRECTION.md",
+          "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+        },
+        {
+          "path": "Ecosystem_Monitoring_Field_Planning.html",
+          "sha256": "37b6f725b24aee0de570b8e8fffca1153c23f3d902bfea3a7211dd25c9aa58d7"
+        },
+        {
+          "path": "Monitoring_Field_Support_Brief.pdf",
+          "sha256": "1d404d58f7ac913975284eedf2e43cff17913234eb03d70ee830b80a8e01e8a4"
+        },
+        {
+          "path": "README.md",
+          "sha256": "7d5029a7f2b31846dd7bc3fd51105c90ad713e425a2d435b806f3748c3ee2507"
+        },
+        {
+          "path": "START_HERE.html",
+          "sha256": "806275efa026773473532014d46e239c556cd8ad2b2de943b2f53cb43f4a6693"
+        },
+        {
+          "path": "budget-13200-original-results.csv",
+          "sha256": "488173ef5f9b03038a720e5b75740555ca39a0ed45d8cac8790ba996eb26909a"
+        },
+        {
+          "path": "budget-4800-original-results.csv",
+          "sha256": "488173ef5f9b03038a720e5b75740555ca39a0ed45d8cac8790ba996eb26909a"
+        },
+        {
+          "path": "budget-9000-original-results.csv",
+          "sha256": "488173ef5f9b03038a720e5b75740555ca39a0ed45d8cac8790ba996eb26909a"
+        },
+        {
+          "path": "build-result.json",
+          "sha256": "c3ac4fed5946b3f01be58b77272381158921400e9ea61c105fad1e343664be4c"
+        },
+        {
+          "path": "catchments.svg",
+          "sha256": "1ccbb6ab0a996caad3c0486ac11b0a2f8b366f144a37c626f3d25ef7a51db3f8"
+        },
+        {
+          "path": "examples/Example_4800_Field_Review_Calendar.pdf",
+          "sha256": "ef483895a9f7791fd0df55cac0f641fe86e35c5322c819a8c47f6b2da52b34a8"
+        },
+        {
+          "path": "examples/Monitoring_4800_Crew_Selection.csv",
+          "sha256": "19478f5a82be7b3569f1faf1a01879f0d706954608b4eb8f688760b4c0dd27b2"
+        },
+        {
+          "path": "examples/Monitoring_4800_Field_Selection.json",
+          "sha256": "29a31882db493664d955bb4872209eb1791f999704a163f5fe36ccbf64dc98dc"
+        },
+        {
+          "path": "field-support.json",
+          "sha256": "3856323382aa704ae096979ce2c0b8a762845df27789d71fbfe8ae8fbf82acae"
+        },
+        {
+          "path": "native/frontier.json",
+          "sha256": "f0cfec244da3c0f79d9c6ef215d0f2111f9919ef6a51cacbe7d16a1aef8caf58"
+        },
+        {
+          "path": "native/network.json",
+          "sha256": "623699a80795289927787f5a897460075662f8476897f54bd0941ddfc47968ef"
+        },
+        {
+          "path": "native/plans/5e9719f183b7621f8fcf9e06a0e90a6e039008af59b2a98b69d7ce3b35ba6bc5.json",
+          "sha256": "9a3bd70543baf3d139dce3058ddf227cb738b964efb2d2936550d14a494c31b1"
+        },
+        {
+          "path": "native/plans/c1fee77c371be5cc788cb8db7b1fe236e1647f5fe01e02600596e841c15a5edc.json",
+          "sha256": "5c9a213a19af5dce5e5b29e7be95f08147e678f19ab57708f22181e2fb332f4b"
+        },
+        {
+          "path": "native/plans/c82a90e9c035e788e8d29990c494974597df3fbe783b1be9cc72e3d4c9ad9883.json",
+          "sha256": "f9cf12bb2dad5ac32d3efbb3e2cc5c9dd30cfe3b815b7953a3d971c63fdafc4b"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/GEOGRAPHY_README.md",
+          "sha256": "5ea9b11261e9a168fcb4ff7a4ed5d6676cca15b4d6a8c34d57c5b2fa8cf32b26"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/GEOGRAPHY_SOURCES.json",
+          "sha256": "f61581d15b3d960084f0bfdf7497388bacec725cca3b524615fd6445f7ca5c9e"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/README.md",
+          "sha256": "593d1308f984829cf6c4965407782d170a73596d680eb3bca66e6e90b2dd91ca"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/SOURCES.json",
+          "sha256": "9be40a48137960488757126962bef008ced3f5e20125e5471e424d52c3627f2e"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/assessment-model-context.json",
+          "sha256": "facd4af798a952c0a70e08ea3c2571efd1f828dc8f981eac7d52244b4e58f3e8"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/delistings_2026_draft.csv",
+          "sha256": "8400d4412f6f9e0a0c8d99769375fa57a33b74590dac0369853b7edf0c822f71"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/geography_coverage.json",
+          "sha256": "42845fa38bd66b9e0d13e8904d5a8317d848a21fedfe9dcff9d5292221ae9993"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/hartwell_nutrient_priority_2026_draft.csv",
+          "sha256": "874279517a03a9aa3c8aa89b72649d8bd9e0cb0baf337f7e77395e4818beb544"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/listed_causes_2026_draft.csv",
+          "sha256": "545a4e1413012b8f17c81c8afe815dd1e225ade5f5b9792ca22e83ef8723307f"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/observed_monitoring_sites.geojson",
+          "sha256": "fa007de328e7ecff10910ee8cca56da83e30148d79247c665419f3e59179a098"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/observed_station_coordinates.csv",
+          "sha256": "370649ae30618ef67c6d3fa5ab97f79ea9cc083547edb1b4533b226ca2d2bda4"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/operate_assessment_maps.py",
+          "sha256": "eb9541c6e83bdec3a19cf8f19ffd5598675b5e8a6f3261baa7f11990818d75ba"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/scdes_monitoring_14_original_features.json",
+          "sha256": "9878097972c3a6a9669a9bcdc0e1413e792ae2c37fa7457c8e77caa4ae28722b"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/scdes_monitoring_layer9_metadata.json",
+          "sha256": "f16b3722ce1b84f6785de7e68ff718d1840a71e379494d4687b723b3fd88db12"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/source_field_differences.csv",
+          "sha256": "8267737d5ef11db8731a5460f09d084fc7909eefe33792937ad6e94e45b25439"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/station_inventory_2026.csv",
+          "sha256": "203a0d17b2687cf4f211f90b33232922ad5b7678c6922212b790f4026a4cdde3"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/station_metadata_20261013.json",
+          "sha256": "22baf9cf3c2c33ddddc821ac14bf6da93a4ca3d8875269f38828ef36ebe0d6cd"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/stations_wgs84_2026.geojson",
+          "sha256": "070ef1609c281a100fee656541717961c99159a6fade4863a3940ab469c7e3d9"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/tmdl_coverage_2026_draft.csv",
+          "sha256": "15bdc9c5e206f655bb7f9f34e7346f64ac80f326edd93dc773f9b1cda37b2c20"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/tmdl_use_support_20260728.csv",
+          "sha256": "5d9ded58db9d397b017eb4bfd70ec24a44339500c0da71941a4fc973722dec7b"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/scdes-listed-stations-wgs84-2026/waters_of_concern_2026_draft.csv",
+          "sha256": "b1d47dad5092dacc4880896214bf7f8f58a5ed34488913c68e689e2cec75777a"
+        },
+        {
+          "path": "original/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/source-collection.json",
+          "sha256": "1b29fa81518cb6d0bb816644eca4a371639b0c1e2d32709b79eea4243fb3ac36"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/source-collection.json",
+          "sha256": "116a7c44b2115997410b19a252bf35bc9ce01ea4628f1b5ee08c8ae970acf88c"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/coordinate-derivation.json",
+          "sha256": "eae7d449bb242a6a559c2b090830b9391e9320b99349a5d5e13ec366bbce88d6"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/README.md",
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/build_ecoli_report.mjs",
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/index.html",
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/arjws-results-2021-2025-original.csv",
+          "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/arjws-wbd-original.json",
+          "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2021-original.csv",
+          "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2022-original.csv",
+          "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2023-original.csv",
+          "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2024-original.csv",
+          "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-results-2025-original.csv",
+          "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/prwd-wbd-display.json",
+          "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/stations-original.csv",
+          "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/stations-original.geojson",
+          "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/utility-focus-profile.json",
+          "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/raw/utility-memberships.csv",
+          "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/results-with-provenance.csv",
+          "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/selected-stations.geojson",
+          "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/source-inputs.json",
+          "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/station-membership.csv",
+          "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/station-year-method-summary.csv",
+          "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/summary.json",
+          "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/stations-nad83.geojson",
+          "sha256": "0cb430b3556b7f6e2a92f21c8c38bfd56cea5bd66dfdf52455678b1e4d6b25ce"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/coordinate-derivation.json",
+          "sha256": "eae7d449bb242a6a559c2b090830b9391e9320b99349a5d5e13ec366bbce88d6"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/README.md",
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/build_ecoli_report.mjs",
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/index.html",
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/arjws-results-2021-2025-original.csv",
+          "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/arjws-wbd-original.json",
+          "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2021-original.csv",
+          "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2022-original.csv",
+          "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2023-original.csv",
+          "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2024-original.csv",
+          "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-results-2025-original.csv",
+          "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/prwd-wbd-display.json",
+          "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/stations-original.csv",
+          "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/stations-original.geojson",
+          "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/utility-focus-profile.json",
+          "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/raw/utility-memberships.csv",
+          "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/results-with-provenance.csv",
+          "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/selected-stations.geojson",
+          "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/source-inputs.json",
+          "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/station-membership.csv",
+          "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/station-year-method-summary.csv",
+          "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/summary.json",
+          "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/stations-wgs84.geojson",
+          "sha256": "7eafc3e00b862aded0cdf3289a208e5e004df157007bf282529f106e0ab3c0b7"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/source-collection.json",
+          "sha256": "d4769ef9131abfe1f137d4d0ae11adc7248344aa29d358944d6ab76167750bc2"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/README.md",
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/build_ecoli_report.mjs",
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/index.html",
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/arjws-results-2021-2025-original.csv",
+          "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/arjws-wbd-original.json",
+          "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2021-original.csv",
+          "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2022-original.csv",
+          "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2023-original.csv",
+          "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2024-original.csv",
+          "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-results-2025-original.csv",
+          "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/prwd-wbd-display.json",
+          "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/stations-original.csv",
+          "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/stations-original.geojson",
+          "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/utility-focus-profile.json",
+          "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/raw/utility-memberships.csv",
+          "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/results-with-provenance.csv",
+          "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/selected-stations.geojson",
+          "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/source-inputs.json",
+          "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/station-membership.csv",
+          "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/station-year-method-summary.csv",
+          "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/summary.json",
+          "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/source-collection.json",
+          "sha256": "e11c78fcff11482af17ad2228d9cd7e45f8d0d3ea8f6188fa81551a188a85201"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/domain-summary.json",
+          "sha256": "ccb2776313921db46aef064816f1d8a74d04d8a9e735f0c87d6e3a2fe2f0be42"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/feature-bindings.json",
+          "sha256": "75637c2c977ab022751db0e1a311aedfaf80c6bacc53571aa65a03665fb0c7fb"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/methods/capture_upstream_network.py",
+          "sha256": "bb89a8dbf86f0cf507e75f764cf116a929fd167bd0427cbf42556f091dd67fdc"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/methods/prepare_upstream_domain.py",
+          "sha256": "52092b4f47af2833b66f8bb02478706830d2057f2e8e86b3f59905ef74a53f6b"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/model-domain.esri.json.gz",
+          "sha256": "6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/capture.json",
+          "sha256": "0b1ad80e32a843d547ccb4317a1c4ddec7a7878c52b15d127accf1cb00886aee"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/network-selection.json",
+          "sha256": "c2b3f0f0f3842592984795bffde23c83a1bfd5297ee7ab70c1bff18d8bb27ef4"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/reference/layer-6.json.gz",
+          "sha256": "1d19d8452f609e6fe732f2e0974cc82b776dfe0332457054151310e54d240375"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/reference/layer-6.receipt.json",
+          "sha256": "0e9a40e59caf8f35327529bb49652399b5ab03e02b917d1b825a7979593b70b3"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/reference/selected-four-huc12.json.gz",
+          "sha256": "c5e0af7bd6fb8aa72ebb7283ceae6bb694bc203ce98ef0a0e33ce200800c6806"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/reference/selected-four-huc12.receipt.json",
+          "sha256": "ddc1a24d32b7e720631230e29defc8ebe510184b9627b4c095cb5881ef961e60"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-5ad6403a2d0a750ebdb2/body.json.gz",
+          "sha256": "76836f268955d269e335b00297a38521a84a368ab4379dcb6f63ebc9e6ac3804"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-5ad6403a2d0a750ebdb2/receipt.json",
+          "sha256": "f89024c2152c79d42936743e54df78d039c59ba1a8138cb7bdd71465fa689b63"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-78a86c8742e5a2ca8026/body.json.gz",
+          "sha256": "76836f268955d269e335b00297a38521a84a368ab4379dcb6f63ebc9e6ac3804"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-78a86c8742e5a2ca8026/receipt.json",
+          "sha256": "3b8fc546fb83b576558bbf0f538ffa0ec7993fb8f88b3e21359156d31e143b3a"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-aa67b8bc2b93c9cf2899/body.json.gz",
+          "sha256": "76836f268955d269e335b00297a38521a84a368ab4379dcb6f63ebc9e6ac3804"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/outside-incoming-ids-aa67b8bc2b93c9cf2899/receipt.json",
+          "sha256": "0f625760b9f5cad0213d5460f1f37b32864cd361d26790044dd1f01a35b8cb14"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0000/body.json.gz",
+          "sha256": "65f8c1726f91bef6e8429b3eac149d2feac1cfff990df92a34e3d593324386fe"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0000/receipt.json",
+          "sha256": "9ce1fca1e59070dd4129cb385f78c2a38b50e76193814069a71aa92c720d5084"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0001/body.json.gz",
+          "sha256": "9318c955749f4c1334894201f11a9b20d1dc12af566f9e7fe7963680d1c98913"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0001/receipt.json",
+          "sha256": "8f11109b98ac17b31ac09ca5be8ff03378e07713becd9fcacc4f8894f95d73ce"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0002/body.json.gz",
+          "sha256": "861d2211d5957eb47273d5832c2fa6e1f3e066b7c2eaef31a8ff2fafd42e279e"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0002/receipt.json",
+          "sha256": "354f3a6837a62a65c408ec7ea5229c89b99aea2ba6ee4ef1a63129b3513ffc43"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0003/body.json.gz",
+          "sha256": "c931fc72e6357df0073d8d71f9f40669a9b36ac9712a8bbd054673998ec3db84"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/reporting-context-geometry-0003/receipt.json",
+          "sha256": "dae1aba67f995cbd3bf1f453c8fe88b8ae425be1b460189e4b8d2711e1d89300"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-attributes-0000/body.json.gz",
+          "sha256": "4d9742b72a3bd8002bab01d5ac391b3eed1869f42c792282c4268ec09afb4131"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-attributes-0000/receipt.json",
+          "sha256": "b76a53c3de8070b3fafb7c11613d7f9c469c65d7a8cf31b2c2249a55f27854cf"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-count/body.json.gz",
+          "sha256": "1921ecb766bef03c249523bbe7f6d9e689a9f9235443e2391b266264001ce551"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-count/receipt.json",
+          "sha256": "cf043ae5fb074d63c0ce787789e79bdd3e1d1449dcbfc7d6ff9c27fa6b15aa28"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-ids/body.json.gz",
+          "sha256": "77a330c27c75da32401ca3b2f427eb2763637a20dca82ef9bbbab6bc8730de38"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/savannah-ids/receipt.json",
+          "sha256": "6368e2a940fda07879c5c1ea4025cb9eb097cbcae2a286c4cc9b6980e074e7a2"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/upstream-ancestor-geometry-0000/body.json.gz",
+          "sha256": "3ea2bd940daa14f9a91a6ec9d6792dee88b5594c7c6924ac46d1f8a92ee279b1"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/upstream-ancestor-geometry-0000/receipt.json",
+          "sha256": "753da9f6601d293a73587781a48ba0a7b0b4222b645403df1e7b3890523a59af"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/upstream-ancestor-geometry-0001/body.json.gz",
+          "sha256": "2bd4edbb6bf2019ac3310251eadc5e6b511b44f1f148ba0bd88e4dab27663998"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/responses/upstream-ancestor-geometry-0001/receipt.json",
+          "sha256": "719a546ca0572b3897a22d0f29116d646c6767644b79aa5091a772d685ec27f6"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/sources.json",
+          "sha256": "6ec8b77d75721a42596e8aab49c93f2f52eda2384ed2d563ed3f788c4be36aa3"
+        },
+        {
+          "path": "original/e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023/upstate-wbd-upstream-domain-20261012/original-wbd/topology-records.json",
+          "sha256": "f5a59936ce583b20d26e2173e3b12cb3b1069d5d48824ceda44a9aa449b8383d"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/GEOGRAPHY_README.md",
+          "sha256": "5ea9b11261e9a168fcb4ff7a4ed5d6676cca15b4d6a8c34d57c5b2fa8cf32b26"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/GEOGRAPHY_SOURCES.json",
+          "sha256": "f61581d15b3d960084f0bfdf7497388bacec725cca3b524615fd6445f7ca5c9e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/README.md",
+          "sha256": "593d1308f984829cf6c4965407782d170a73596d680eb3bca66e6e90b2dd91ca"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/SOURCES.json",
+          "sha256": "9be40a48137960488757126962bef008ced3f5e20125e5471e424d52c3627f2e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/assessment-model-context.json",
+          "sha256": "facd4af798a952c0a70e08ea3c2571efd1f828dc8f981eac7d52244b4e58f3e8"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/delistings_2026_draft.csv",
+          "sha256": "8400d4412f6f9e0a0c8d99769375fa57a33b74590dac0369853b7edf0c822f71"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/geography-model-sources.json",
+          "sha256": "ab280c116f2885df2b43f98897c9dc17e3f3a0ce18250b8d225f13697b5bca20"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/geography_coverage.json",
+          "sha256": "42845fa38bd66b9e0d13e8904d5a8317d848a21fedfe9dcff9d5292221ae9993"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/hartwell_nutrient_priority_2026_draft.csv",
+          "sha256": "874279517a03a9aa3c8aa89b72649d8bd9e0cb0baf337f7e77395e4818beb544"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/listed_causes_2026_draft.csv",
+          "sha256": "545a4e1413012b8f17c81c8afe815dd1e225ade5f5b9792ca22e83ef8723307f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/observed_monitoring_sites.geojson",
+          "sha256": "fa007de328e7ecff10910ee8cca56da83e30148d79247c665419f3e59179a098"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/observed_station_coordinates.csv",
+          "sha256": "370649ae30618ef67c6d3fa5ab97f79ea9cc083547edb1b4533b226ca2d2bda4"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/operate_assessment_maps.py",
+          "sha256": "eb9541c6e83bdec3a19cf8f19ffd5598675b5e8a6f3261baa7f11990818d75ba"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/scdes_monitoring_14_original_features.json",
+          "sha256": "9878097972c3a6a9669a9bcdc0e1413e792ae2c37fa7457c8e77caa4ae28722b"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/scdes_monitoring_layer9_metadata.json",
+          "sha256": "f16b3722ce1b84f6785de7e68ff718d1840a71e379494d4687b723b3fd88db12"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/source_field_differences.csv",
+          "sha256": "8267737d5ef11db8731a5460f09d084fc7909eefe33792937ad6e94e45b25439"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/station_inventory_2026.csv",
+          "sha256": "203a0d17b2687cf4f211f90b33232922ad5b7678c6922212b790f4026a4cdde3"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/station_metadata_20261013.json",
+          "sha256": "22baf9cf3c2c33ddddc821ac14bf6da93a4ca3d8875269f38828ef36ebe0d6cd"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/stations_nad83_2026.geojson",
+          "sha256": "a9530935ec79e7e9867d54276f0ae31085269243bd7bf22381c6d32c7b0558ad"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/stations_scdes_utm17n_2026.geojson",
+          "sha256": "c977b37abc4bc2e24fc7f0ff1fde28ee860c0c2cea0c4510b3065d5b4848e0de"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/stations_wgs84_2026.geojson",
+          "sha256": "070ef1609c281a100fee656541717961c99159a6fade4863a3940ab469c7e3d9"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/tmdl_coverage_2026_draft.csv",
+          "sha256": "15bdc9c5e206f655bb7f9f34e7346f64ac80f326edd93dc773f9b1cda37b2c20"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/tmdl_use_support_20260728.csv",
+          "sha256": "5d9ded58db9d397b017eb4bfd70ec24a44339500c0da71941a4fc973722dec7b"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native/waters_of_concern_2026_draft.csv",
+          "sha256": "b1d47dad5092dacc4880896214bf7f8f58a5ed34488913c68e689e2cec75777a"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/38fa4b5e4900865f671f5c1e0ab4807cc92aea4ff83e9fe128521b67684e43cb/native-source-edition.json",
+          "sha256": "30ddb6309a026777488690086b618932722ba47ee647e04d670efca014383573"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/DMR_LOADS.md",
+          "sha256": "fb5b82f3654b14562ed02024308c955e7d081a49d8f8c7b229167cff6ad5d71f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/capture.json",
+          "sha256": "434dd8d458e646581224878cc4f4f110f91100af25048f30b70765c8e872fe9c"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/derived/annual_loads.csv",
+          "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/derived/period_loads.csv",
+          "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/derived/summary.json",
+          "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/dmr_outfalls_2023.geojson",
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/dmr_records.csv",
+          "sha256": "220204d5858981b56a203bb94e3a0a7459706e2ec037bee8b6e12a6503634ac9"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/map-layer-capture.json",
+          "sha256": "c6a83003f474bd031a485f397cfda2e61722ca61cd0fd33a594ea661c56dbb73"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/model-sources.json",
+          "sha256": "3a621b46350c20488ce6410188dce8247e182a44b8519196802f2ea875840d9f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_00530_2023.json",
+          "sha256": "f6d782ebb4512132adef1acac25aa9d68b678e30886b680e7bc7056675d7a9d0"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_00610_2023.json",
+          "sha256": "33e0a6acbf1c21cbf8a1543e8f926d02f7628430e6d12ce83152f3586e0539ee"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_00620_2023.json",
+          "sha256": "aecf79e0f1a2194921879b55dde6a7172ccb41302d543957369ee6768a72548a"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_00665_2023.json",
+          "sha256": "f138da40ca7d73b3f96a901e478446468bbafdc48d3a5cd79c655efe28b41067"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_2023_inventory.json",
+          "sha256": "e7d8ee26dacc939acf25b07de891de1be561f5860deac8c82dec86c403858e3f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0000477_50050_2023.json",
+          "sha256": "48ad94742a16e0d06f78cc94a72e648bed1d309983308ec89ffee13bc359289a"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_00530_2023.json",
+          "sha256": "325975cd22e1d74318f578a9a8f3fcde7dea1e34f3091da92a28847ea33ce413"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_00600_2023.json",
+          "sha256": "955e7700bd4efa980a971e72b88aa91402080f255afb318ef1a8729c51665811"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_00610_2023.json",
+          "sha256": "01b3bb30d74dd2c75d8470eafe800e5cc57c582ba8e4de8e018df703ffb03a25"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_00665_2023.json",
+          "sha256": "99106e19c23fe55a507dc8b7cfa7a4c37f7bf3f78c6c75ca7e729dca3935f3ff"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_2023_inventory.json",
+          "sha256": "8d812c75b4c1185252b8ba0dcf30fe3a03c0fa37bfce84eee909ed97dfdeabf9"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0035700_50050_2023.json",
+          "sha256": "deaca45550a108094158be654e6c8abc5f5f0638b30738d1c24c3e5402b0d9c4"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_00530_2023.json",
+          "sha256": "bb9aa13245f9d1938542ec6dd3174e3e6e948ad59e688b33393dc624b7d28dbf"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_00600_2023.json",
+          "sha256": "a54c2fb1e278e7a28269c215c10962ec557818dcb92d5cbb146d839dc1142fe6"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_00610_2023.json",
+          "sha256": "adec3fb0bd7df3d06da23f4b6d23c74db7eda3e071ec29e8400ec2aaee617407"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_00665_2023.json",
+          "sha256": "a47883f829abe169d618dc79b07d0ecddd6e1c6050e8063e5d62eed338f5dcdb"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_2023_inventory.json",
+          "sha256": "af3f79a8d09fe3d494922b411375a380f876b8e1a91fb9fbeb610911954c69d4"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_2023_january_all_parameters.json",
+          "sha256": "68b577ac0275ad491d154d4cb5932803819bfec82855f9a0bdc5dac7aefc15da"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0042994_50050_2023.json",
+          "sha256": "ba2c20ea9abc201f344c2be9b6444d2a97b2fa48eb7be4c15514f2d3cd71b675"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_00530_2023.json",
+          "sha256": "5a5270796fc2e91206a4db2ac70c605d7edd0833e0568399b2947291607f377e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_00600_2023.json",
+          "sha256": "62775560cf5a0e39f3ac4956285d5b93bb0e4a33be95400c30d51012cd35356f"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_00610_2023.json",
+          "sha256": "6b8b6995af174e32940ce86a4c65b26559d4e089b778c65eb49d3fec4b236eb1"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_00665_2023.json",
+          "sha256": "667e8edd23dc8e50248f74f4f28dc3883b19f1779654e222854e5b227122b204"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_2023_inventory.json",
+          "sha256": "43d195131e1615a1d29244d5e7ba5cea7e3099a2ce7acf80e8ef8cf68a1b704e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_2023_january_all_parameters.json",
+          "sha256": "1cccc9a8bdfe005dc27ee1362469bd2536d020eddfd52ed53e2fa0a04a476e5d"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/SC0047856_50050_2023.json",
+          "sha256": "9f546e57a7a4c1b8c5a70eed279c06cc53358e7511ffa1f7b0bc0430dfe7c0d3"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/des_four_npdes_outfall_features.json",
+          "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/originals/des_npdes_layer21_metadata.json",
+          "sha256": "f1260fda40481fe22524971a144d72002011017c3b2b49f91c325854c56f6ecb"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native/summarize_dmr.mjs",
+          "sha256": "dfd36aae420220a2e34a4bce98f29cd5ad715c20ecded4d6acf8c77924bd53f0"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/originals/5df89a4bb251da62ee0317b9ea2fd2a3be09e892087d7fad808c070b7cc724ed/native-source-edition.json",
+          "sha256": "18655f9f9486ba35488b6c72431163e8a6106d15a63f6a81c512d9eeed0d0fcf"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/planning.json",
+          "sha256": "3742ec3375f1b97a31533561e5bc0d352e23675b0753a62ebd244bb9fba4cfb8"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/station-lineage.json",
+          "sha256": "bd76ed4d798eac9d35272a028f4dbc108be11c1734e5881a3a627929f94f34d0"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/regional-monitoring-stations-224ec0252ecc46868ced/stations-wgs84.geojson",
+          "sha256": "c08b75fdbe7e2cafd374f2d4fdb2ed897f481d8c170779c81a2665af18db43ed"
+        },
+        {
+          "path": "original/fc9898e085bf0c32ffbcd2abaf39b5e20b0aeb439fd46b92612a10917be6178e/source-collection.json",
+          "sha256": "271afbdd3bbb9db76ba175e64bbda8b72221ca84a1ece90204ea6aaed8a6aa16"
+        },
+        {
+          "path": "original-plan-calendars.csv",
+          "sha256": "35a163af5426ad6443d8a1a99e292b1025a25105b7a866644f2468c8d35daa3e"
+        },
+        {
+          "path": "source/build_field_page.py",
+          "sha256": "37ba9a8eb9b7bcc325040b27996ba18a7de7f00a269959036283eb9415573fc6"
+        },
+        {
+          "path": "source/build_field_support.py",
+          "sha256": "df577042f70fc1dfa6c991016f0bc847e8336cc57544bb8f84b0e7658f5bbd8b"
+        },
+        {
+          "path": "source/field_planning.html",
+          "sha256": "4d11998ccf7364acd6df779d82187dba08054dd31d9f2d841e2886632690826c"
+        },
+        {
+          "path": "source/make_field_brief.py",
+          "sha256": "9538361e9dd98514a9a97e481903a979a865f984f52341bb7b1dcd04a13c21a3"
+        },
+        {
+          "path": "source/receive_field_support.py",
+          "sha256": "0c0b4ffaa3d4d58ad40babe385950c74164375348f1ca6bf1a1c40318993f2ea"
+        },
+        {
+          "path": "source-selection.json",
+          "sha256": "b8925db7bba7e8a23bdf974dee41a1b8f6ca2e0dd1acd67e99d9177ec099bdf7"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Original optimized plans and scientific observations remain unchanged.",
+    "The editable field selection retains explicit source-station choices and original calendar slots.",
+    "Current owner direction is retained in full as CURRENT_OWNER_DIRECTION.md, version 2026-10-13.3."
+  ]
+}

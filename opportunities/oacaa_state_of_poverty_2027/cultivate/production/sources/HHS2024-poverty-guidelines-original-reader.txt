@@ -1,0 +1,198 @@
+Federal Register, Volume 89 Issue 11 (Wednesday, January 17, 2024) (https://www.govinfo.gov/content/pkg/FR-2024-01-17/html/2024-00796.htm)
+【turn279view0】 [wordlim: 200] Crawled: 3 days ago; Content type: text/html; Source: open({"ref_id":"https://www.govinfo.gov/content/pkg/FR-2024-01-17/html/2024-00796.htm","lineno":null}); Total lines: 195
+L0: [Federal Register Volume 89, Number 11 (Wednesday, January 17, 2024)]
+L1:     [Notices]
+L2:     [Pages 2961-2963]
+L3:     From the Federal Register Online via the Government Publishing Office [【0†www.gpo.gov†www.gpo.gov】]
+L4:     [FR Doc No: 2024-00796]
+L5: 
+L6: 
+L7:     -----------------------------------------------------------------------
+L8: 
+L9:     DEPARTMENT OF HEALTH AND HUMAN SERVICES
+L10: 
+L11:     Office of the Secretary
+L12: 
+L13: 
+L14:     Annual Update of the HHS Poverty Guidelines
+L15:     AGENCY: Department of Health and Human Services.
+L16: 
+L17:     ACTION: Notice.
+L18: 
+L19:     -----------------------------------------------------------------------
+L20: 
+L21:     SUMMARY: This notice provides an update of the Department of Health and
+L22:     Human Services (HHS) poverty guidelines to account for last calendar
+L23: 
+L24:     [[Page 2962]]
+L25: 
+L26:     year's increase in prices as measured by the Consumer Price Index.
+L27: 
+L28:     DATES: Applicable Date: January 11, 2024 unless an office administering
+L29:     a program using the guidelines specifies a different applicable date
+L30:     for that particular program.
+L31: 
+L32:     ADDRESSES: Office of the Assistant Secretary for Planning and
+L33:     Evaluation, Room 404E, Humphrey Building, Department of Health and
+L34:     Human Services, Washington, DC 20201.
+L35: 
+L36:     FOR FURTHER INFORMATION CONTACT: For information about how the
+L37:     guidelines are used or how income is defined in a particular program,
+L38:     contact the Federal, State, or local office that is responsible for
+L39:     that program. For information about poverty figures for immigration
+L40:     forms, the Hill-Burton Uncompensated Services Program, and the number
+L41:     of people in poverty, use the specific telephone numbers and addresses
+L42:     given below.
+L43:         For general questions about the poverty guidelines themselves,
+L44:     contact Kendall Swenson, Office of the Assistant Secretary for Planning
+L45:     and Evaluation, Room 404E.3, Humphrey Building, Department of Health
+L46:     and Human Services, Washington, DC 20201--telephone: (202) 695-2107--or
+L47:     visit 【1†http://aspe.hhs.gov/poverty/†aspe.hhs.gov】.
+L48:         For general questions about the poverty guidelines themselves,
+L49:     visit 【1†http://aspe.hhs.gov/poverty/†aspe.hhs.gov】.
+L50:         For information about the percentage multiple of the poverty
+L51:     guidelines to be used on immigration forms such as USCIS Form I-864,
+L52:     Affidavit of Support, contact U.S. Citizenship and Immigration Services
+L53:     at 1-800-375-5283. You also may visit 【2†https://www.uscis.gov/i-864†www.uscis.gov】.
+L54:         For information about the Hill-Burton Uncompensated Services
+L55:     Program (free or reduced-fee health care services at certain hospitals
+L56:     and other facilities for persons meeting eligibility criteria involving
+L57:     the poverty guidelines), visit 【3†https://www.hrsa.gov/get-health-care/affordable/hill-burton/index.html†www.hrsa.gov】.
+L58:         For information about the number of people in poverty, visit the
+L59:     Poverty section of the Census Bureau's website at 【4†https://www.census.gov/topics/income-poverty/poverty.html†www.census.gov】 or contact the Census
+L60:     Bureau's Customer Service Center at 1-800-923-8282 (toll-free) or visit
+L61:     【5†https://ask.census.gov†ask.census.gov】 for further information.
+L62:     SUPPLEMENTARY INFORMATION:
+L63: 
+L64:     Background
+L65: 
+L66:         Section 673(2) of the Omnibus Budget Reconciliation Act (OBRA) of
+L67:     1981 (42 U.S.C. 9902(2)) requires the Secretary of the Department of
+L68:     Health and Human Services to update the poverty guidelines at least
+L69:     annually, adjusting them on the basis of the Consumer Price Index for
+L70:     All Urban Consumers (CPI-U). The poverty guidelines are used as an
+L71:     eligibility criterion by Medicaid and a number of other Federal
+L72:     programs. The poverty guidelines issued here are a simplified version
+L73:     of the poverty thresholds that the Census Bureau uses to prepare its
+L74:     estimates of the number of individuals and families in poverty.
+L75:         As required by law, this update is accomplished by increasing the
+L76:     latest published Census Bureau poverty thresholds by the relevant
+L77:     percentage change in the Consumer Price Index for All Urban Consumers
+L78:     (CPI-U). The guidelines in this 2024 notice reflect the 4.1 percent
+L79:     price increase between calendar years 2022 and 2023. After this
+L80:     inflation adjustment, the guidelines are rounded and adjusted to
+L81:     standardize the differences between family sizes. In rare
+L82:     circumstances, the rounding and standardizing adjustments in the
+L83:     formula result in small decreases in the poverty guidelines for some
+L84:     household sizes even when the inflation factor is not negative. In
+L85:     cases where the year-to-year change in inflation is not negative and
+L86:     the rounding and standardizing adjustments in the formula result in
+L87:     reductions to the guidelines from the previous year for some household
+L88:     sizes, the guidelines for the affected household sizes are fixed at the
+L89:     prior year's guidelines. As in prior years, these 2024 guidelines are
+L90:     roughly equal to the poverty thresholds for calendar year 2023 which
+L91:     the Census Bureau expects to publish in final form in September 2024.
+L92:         The poverty guidelines continue to be derived from the Census
+L93:     Bureau's current official poverty thresholds; they are not derived from
+L94:     the Census Bureau's Supplemental Poverty Measure (SPM).
+L95:         The following guideline figures represent annual income.
+L96: 
+L97:     2024 Poverty Guidelines for the 48 Contiguous States and the District of
+L98:                                     Columbia
+L99:     ------------------------------------------------------------------------
+L100:                  Persons in family/ household              Poverty guideline
+L101:     ------------------------------------------------------------------------
+L102:     1....................................................            $15,060
+L103:     2....................................................             20,440
+L104:     3....................................................             25,820
+L105:     4....................................................             31,200
+L106:     5....................................................             36,580
+L107:     6....................................................             41,960
+L108:     7....................................................             47,340
+L109:     8....................................................             52,720
+L110:     ------------------------------------------------------------------------
+L111: 
+L112:         For families/households with more than 8 persons, add $5,380 for
+L113:     each additional person.
+L114:                        2024 Poverty Guidelines for Alaska
+L115:     ------------------------------------------------------------------------
+L116:                  Persons in family/ household              Poverty guideline
+L117:     ------------------------------------------------------------------------
+L118:     1....................................................            $18,810
+L119:     2....................................................             25,540
+L120:     3....................................................             32,270
+L121:     4....................................................             39,000
+L122:     5....................................................             45,730
+L123:     6....................................................             52,460
+L124:     7....................................................             59,190
+L125:     8....................................................             65,920
+L126:     ------------------------------------------------------------------------
+L127: 
+L128:         For families/households with more than 8 persons, add $6,730 for
+L129:     each additional person.
+L130: 
+L131:                        2024 Poverty Guidelines for Hawaii
+L132:     ------------------------------------------------------------------------
+L133:                  Persons in family/ household              Poverty guideline
+L134:     ------------------------------------------------------------------------
+L135:     1....................................................            $17,310
+L136:     2....................................................             23,500
+L137:     3....................................................             29,690
+L138:     4....................................................             35,880
+L139:     5....................................................             42,070
+L140:     6....................................................             48,260
+L141:     7....................................................             54,450
+L142:     8....................................................             60,640
+L143:     ------------------------------------------------------------------------
+L144: 
+L145:         For families/households with more than 8 persons, add $6,190 for
+L146:     each additional person.
+L147:         Separate poverty guideline figures for Alaska and Hawaii reflect
+L148:     Office of Economic Opportunity administrative practice beginning in the
+L149:     1966-1970 period. (Note that the Census Bureau poverty thresholds--the
+L150:     version of the poverty measure used for statistical purposes--have
+L151:     never had separate figures for Alaska and Hawaii.) The poverty
+L152:     guidelines are not defined for Puerto Rico or other outlying
+L153:     jurisdictions. In cases in which a Federal program using the poverty
+L154:     guidelines serves any of those jurisdictions, the Federal office that
+L155:     administers the program is generally responsible for deciding whether
+L156:     to use the contiguous-states-and-DC guidelines for those jurisdictions
+L157:     or to follow some other procedure.
+L158:         Due to confusing legislative language dating back to 1972, the
+L159:     poverty guidelines sometimes have been mistakenly referred to as the
+L160:     ``OMB'' (Office of Management and Budget) poverty guidelines or poverty
+L161:     line. In fact, OMB has never issued the guidelines; the guidelines are
+L162:     issued each year by the Department of Health and Human Services. The
+L163:     poverty
+L164:     [[Page 2963]]
+L165: 
+L166:     guidelines may be formally referenced as ``the poverty guidelines
+L167:     updated periodically in the Federal Register by the U.S. Department of
+L168:     Health and Human Services under the authority of 42 U.S.C. 9902(2).''
+L169:         Some federal programs use a percentage multiple of the guidelines
+L170:     (for example, 125 percent or 185 percent of the guidelines), as noted
+L171:     in relevant authorizing legislation or program regulations. Non-Federal
+L172:     organizations that use the poverty guidelines under their own authority
+L173:     in non-federally-funded activities also may choose to use a percentage
+L174:     multiple of the guidelines.
+L175:         The poverty guidelines do not make a distinction between farm and
+L176:     non-farm families, or between aged and non-aged units. (Only the Census
+L177:     Bureau poverty thresholds have separate figures for aged and non-aged
+L178:     one-person and two-person units.)
+L179:         This notice does not provide definitions of such terms as
+L180:     ``income'' or ``family'' as there is considerable variation of these
+L181:     terms among programs that use the poverty guidelines. The legislation
+L182:     or regulations governing each program define these terms and determine
+L183:     how the program applies the poverty guidelines. In cases where
+L184:     legislation or regulations do not establish these definitions, the
+L185:     entity that administers or funds the program is responsible to define
+L186:     such terms as ``income'' and ``family.'' Therefore, questions such as
+L187:     net or gross income, counted or excluded income, or household size
+L188:     should be directed to the entity that administers or funds the program.
+L189: 
+L190:         Dated: January 11, 2024.
+L191:     Xavier Becerra,
+L192:     Secretary, Department of Health and Human Services.
+L193:     [FR Doc. 2024-00796 Filed 1-16-24; 8:45 am]
+L194:     BILLING CODE 4150-05-P
+

@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "geographic-headwaters",
   "title": "Geographic model case",
-  "version": "3",
+  "version": "4",
   "order": 21,
   "requires_actions": [
     "source.prepare",
@@ -28,7 +28,8 @@
     "actions": [
       "geography.prepare",
       "geography.compose",
-      "geography.adopt-programme"
+      "geography.adopt-programme",
+      "geography.open-programme"
     ],
     "invoke": {
       "handler": "invoke",
@@ -154,7 +155,8 @@
       "toast",
       "navigate",
       "openItem",
-      "showTask"
+      "showTask",
+      "openExtension"
     ],
     "styles": [
       "/web/source_workbench.css",

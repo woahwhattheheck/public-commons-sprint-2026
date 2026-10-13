@@ -17,7 +17,8 @@
         "source_tools/nlcd_static.py",
         "source_tools/nlcd_wcs.py",
         "source_tools/raster_sources.py",
-        "source_tools/source_transfer.py"
+        "source_tools/source_transfer.py",
+        "operator/GEOGRAPHIC_PROGRAMME_OPENING.md"
       ],
       "requires": [
         "source-preparation",

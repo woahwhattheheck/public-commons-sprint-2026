@@ -1,6 +1,6 @@
 {
   "schema": "commons.arches-public-source-manifest.v1",
-  "source_edition": "arches-receiving-20261013",
+  "source_edition": "arches-native-json-20261013",
   "application_license": "MIT",
   "publisher_cohort": "publisher-source/COHORT.json",
   "native_publisher": {
@@ -44,26 +44,26 @@
   "files": [
     {
       "path": "application/arches_workspace.py",
-      "bytes": 35176,
-      "sha256": "b5e1f1dbf89af6ba1507d86bf1ebf6572dbbdc6109fe494a40d1c7564c00886e",
+      "bytes": 37509,
+      "sha256": "10f569d552d25ecfbe7e6e597fa2d4631687cb6f140b7bab662b1153cfd7437d",
       "kind": "application-source"
     },
     {
       "path": "application/arches_app.py",
-      "bytes": 12702,
-      "sha256": "837c8c0ee5f9faf35aa54bfd247754e4fbab5b69dd7d7dd14c84fa7c6eddbabe",
+      "bytes": 14218,
+      "sha256": "3504561f1e07890bc44a32e5e2d79039c6e7ba8da1f2a5829cb730310c97bede",
       "kind": "application-source"
     },
     {
       "path": "application/index.html",
-      "bytes": 30239,
-      "sha256": "9107fdf4455da5311b41fefd16ff9119a8345eb2331b9066c1f26d42ce3f8d8a",
+      "bytes": 31176,
+      "sha256": "fb939525da2934b733ce317d346ac28d4a8fc6ce1f7b6de3c0653c31749c62ef",
       "kind": "application-source"
     },
     {
       "path": "application/OPERATING_GUIDE.md",
-      "bytes": 15195,
-      "sha256": "3795cf665e2996c69668699f8183cfdefd62524e6025e9a8326ae15b7d38542f",
+      "bytes": 17995,
+      "sha256": "254e750ef44dd1e69989a3acae30e1e8bf3f9751f4250a0e88c836b8e6825db3",
       "kind": "application-source"
     },
     {
@@ -74,14 +74,14 @@
     },
     {
       "path": "application/arches_source.py",
-      "bytes": 44251,
-      "sha256": "b55cf6b877b22f5c6bd83cc473c1b74baf4060c6882aab79c22ccaa6eafb0cfe",
+      "bytes": 48286,
+      "sha256": "452350886cfb8034f2d5ec98121bb75a40fd9e5d99c6129be09dfc7541161242",
       "kind": "application-source"
     },
     {
       "path": "application/ARCHES_SOURCE.md",
-      "bytes": 8825,
-      "sha256": "0dfb50bb1778753f5205c45668eee5787510c3a2634e14ee5f8134323efb4317",
+      "bytes": 17837,
+      "sha256": "f48bb774445fea0f7eeab2f4d32c3c5acb6bf0039b4c87e61abfee9efa475060",
       "kind": "application-source"
     },
     {
@@ -164,8 +164,8 @@
     },
     {
       "path": "application/NATIVE_SKOS_RECEIVING.md",
-      "bytes": 8017,
-      "sha256": "bdc3ce575f0a4662f6db187187c841e8a5ce5c328daee23626b2a1ccf8b9d2ac",
+      "bytes": 9490,
+      "sha256": "8bce92d2ba29885696069c637f2f572c77ab4bbf5486b7f51d34fc33fa76648e",
       "kind": "application-source"
     },
     {
@@ -212,8 +212,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 5222,
-      "sha256": "d783a4f66a77a959b9d8950175e2503c8766dac8cf2f30834640c3d476d4b5d9",
+      "bytes": 5597,
+      "sha256": "3059314f67aaa3452eace21220c81397c2a219972332fa6edc611061f8107061",
       "kind": "application-source"
     }
   ]

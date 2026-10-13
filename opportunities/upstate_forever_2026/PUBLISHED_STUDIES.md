@@ -355,3 +355,75 @@ The original stream study now retains its complete paired-sampling sensitivity r
 ## SV-833 original-result cohort (1.9)
 
 Published studies now includes the separate SV-833 physical, nutrient and microbial cohort. All 610 original NarrowResult identifiers remain selectable, with exact activity and reporting-limit source joins. The complete original scientific report and WGS84 station source remain part of each saved edition. See measurement_workspace/SV833_OBSERVATIONS.md for the native import, selected export and reopen workflow and the explicit distinction between 610 source rows and 576 activity-characteristic measurements.
+
+
+## Open original reports and their companion files
+
+The **Original studies and scientific analyses** section and the **Sources** tab
+open a retained report inside the Published studies desk. The viewer keeps the
+exact study edition visible above the report. Original report filters continue to
+operate on that report's stated full observation cohort; they do not silently
+adopt the selected table or saved-review filters in the surrounding desk.
+
+The original lake report includes twelve local source/method links. The nutrient
+report also uses its retained station-context SVG. These files now open through
+the same verified original-source inventory as the report. A nested HTML link
+opens the original companion report; **Previous report** returns through the
+viewer's report history. CSV, JSON, methods and other source links request the
+exact retained download through the authenticated application. The expandable
+**Original companion files** list provides ordinary accessible download controls
+alongside each linked HTML report.
+
+Use **Print this report** to print the report's current original view, including
+its own active filters. Use **Download original HTML** to keep the unchanged
+original HTML bytes. **Export complete study** queues the existing original study
+export, retaining the full source hierarchy, original report files and all their
+companions. Extract that ZIP, open its report with the relative companion
+directories present, and reopen it through the original Published studies intake.
+The derived viewer cache is not the scientific source or the exported original.
+
+Report HTML runs inside an opaque sandbox. It does not gain the operator origin,
+session cookie, network access or permission to change the Workspace. Local
+original images are embedded from verified retained bytes. A small relay sends
+only an inventoried companion ID to the application parent. The parent checks
+the current iframe Window, preview identity, selected study edition and original
+link inventory before opening another report or initiating an original download.
+The parent ignores messages from old frames, other windows, changed study
+editions and detached desks. Selecting another report, changing the Workspace or
+closing the viewer cancels an in-flight companion read.
+
+An unavailable original file or changed source body produces a visible error.
+**Retry opening** repeats only that same read; it does not import a study, run a
+model or modify a saved review. Original reports with separate script graphs or
+stylesheets require their complete offline study export; the currently retained
+lake, trace, microbial and nutrient report editions use inline scripts/styles and
+verified local images. Their original files and the ordinary direct download
+routes remain unchanged.
+
+### Complete source and receiving
+
+The normal installer and Published studies component include:
+- operator/published_report_preview.py
+- operator/delivery_preview.py (the maintained verified image embedding helper)
+- operator/web/published_original_reports.mjs
+- the current complete provider, parent client, stylesheet and descriptor
+- the original safe-viewer route policy and component declaration.
+
+Use the existing installed study and current native/browser receiving course.
+No original observation import or numerical solve is required for this viewer
+repair. At the current equipped save boundary, open the **exact outgoing** edition
+with populated lake, trace and nutrient studies at desktop and 390px width. Operate
+the original report filters, twelve lake companion links, nutrient SVG, nested
+report navigation, close/reopen, print, original HTML and complete-study downloads.
+Change Workspace or study while a slow report read is in flight and confirm that
+the old response cannot reopen it. Exercise an unavailable-source error and its
+retry. Extract the actual exported ZIP, open its original report and files, and
+reimport the original study independently. Return real screenshots and file
+handles for the producing worker's own visual inspection and repair.
+
+The full current owner direction and all-attachments requirement elsewhere in
+this consumed guide remain applicable: seeing and using the final rendered
+product is required before describing the outgoing product as ready. Source
+review and controller checks support the receiving work and do not replace it.
+
+The inline viewer confirms readiness only when the verified opaque document sends its bound ready message. A missing confirmation leaves an explicit error and Retry opening; a browser frame load by itself is not treated as a successfully opened report. Retrying the same document preserves its navigation history.

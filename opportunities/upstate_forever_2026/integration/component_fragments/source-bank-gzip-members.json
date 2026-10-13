@@ -1,0 +1,18 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "source-bank-gzip-members",
+  "source_reference": "source-bank-gzip-members/1.0.0",
+  "extend_components": {
+    "core": {
+      "paths": [
+        "source_tools/source_bank.mjs",
+        "source_tools/source_bank_cli.mjs",
+        "source_tools/archive_codec.mjs",
+        "source_tools/xz_source.mjs",
+        "source_tools/xz_lzma2.mjs",
+        "source_tools/GZIP_SOURCE_MEMBERS.md",
+        "integration/component_fragments/source-bank-gzip-members.json"
+      ]
+    }
+  }
+}

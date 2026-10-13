@@ -64,8 +64,32 @@ FILES = [
     "source/monitoring-chemistry-study/reporting.py",
     "source/monitoring-chemistry-study/run_compound_native.py",
     "source/monitoring-chemistry-study/study.html",
-    "integration/component_fragments/monitoring-chemistry-study.json"
+    "integration/component_fragments/monitoring-chemistry-study.json",
+    "source/monitoring-field-study/source/build_field_page.py",
+    "source/monitoring-field-study/source/build_field_support.py",
+    "source/monitoring-field-study/source/field_planning.html",
+    "source/monitoring-field-study/source/make_field_brief.py",
+    "source/monitoring-field-study/source/receive_field_support.py",
+    "source/monitoring-field-study/README.md",
+    "source/monitoring-field-study/CURRENT_OWNER_DIRECTION.md",
+    "source/monitoring-field-study/source-manifest.json",
+    "integration/component_fragments/monitoring-field-study.json",
+    "source/monitoring-field-study/INSTALLATION.md",
+    "model/monitoring_field_selection.py",
+    "operator/monitoring_field_selection_native.py",
+    "operator/extensions/monitoring-field-selection.json",
+    "operator/web/monitoring-field-selection.mjs",
+    "operator/web/monitoring-field-selection.css",
+    "operator/MONITORING_FIELD_SELECTION.md",
+    "source_tools/monitoring_field_selection_composition.py",
+    "integration/component_fragments/monitoring-field-selection.json",
+    "integrations/monitoring/current_application_files.json",
+    "integrations/monitoring/PREDECESSORS.json",
+    "integrations/monitoring/source_adoption.json",
+    "integration/monitoring_observed_sources.json",
+    "integration/monitoring_study_transfer_sources.json"
 ]
+
 ORIGINAL_SHA256 = {
     "model/chemistry.py": "12189fbe24b700815693ec9ae7d9f08484a1c1ebc67ba04fd825fad38386a6ed",
     "model/chemistry_cli.py": "4cf3e90a83474842cc4da0773c8d7c22fe1ecca2dc189da7347e52d4cc173cf2",
@@ -222,6 +246,60 @@ SHARED_MONITORING_FILES = [
     "model/monitoring_sources.py"
 ]
 
+FIELD_STUDY_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "502aed32b9cdcf893216f7fd2f32f25cfec5332e2019f07b19772301331ede20",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "6329ec1f617597d3fd98ae6c1f290ea1911acce1233c1d94335dfe61ff011c67",
+    "source/monitoring-field-study/source/make_field_brief.py": "9538361e9dd98514a9a97e481903a979a865f984f52341bb7b1dcd04a13c21a3"
+}
+
+SHARED_FIELD_FILES = ("operator/web/monitoring.mjs",)
+FIELD_SELECTION_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "ce29854f5f80cb4514e9a806f925af22218a75fc456a48c520aa1d9189c3f0bf",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "025cadde2ae6301ff0364b13eb83de8dfbbbfbb21e905999c86873df41ddf1a7",
+    "integration/component_fragments/monitoring-field-study.json": "43ef0c65fcf204f7ea36830e1ce00982e721214bb4bec41883e551bd1521fca1",
+    "model/monitoring_field_selection.py": "023bea968c73b23236717cda56507221d9b4a166ebdec77ef2b3cb62202eb715",
+    "operator/monitoring_field_selection_native.py": "0cebcf6944a32648551d8dde22920b0e2efe20e81f6b55dfd93052db375623e5",
+    "operator/extensions/monitoring-field-selection.json": "74108c706cc569c12d578c1672dd7c9c48747702f45d9d402b309906b513d1a9",
+    "operator/web/monitoring-field-selection.mjs": "8a1b5454d28606941130a9bffed158cf4b50da4be27726907ad1d885fba4eb7b",
+    "operator/web/monitoring-field-selection.css": "0b53126ea205d7dcdcda34dec4a4e2ed5b0de6a00b7bc41352f6205efce90a82",
+    "operator/MONITORING_FIELD_SELECTION.md": "3542ff17b34f414ff5a57ade0c0bf10491811fa01fce799790d41921af3f9da0",
+    "source/monitoring-field-study/source/field_planning.html": "4d11998ccf7364acd6df779d82187dba08054dd31d9f2d841e2886632690826c"
+}
+
+FIELD_CUSTODY_PREVIOUS_SHA256 = {
+    "integrations/monitoring/current_application_files.json": "2fe34c5e17280b9ba31a4414bf4a3c9adcdf6354ac0dd852054428669a41d159",
+    "integrations/monitoring/PREDECESSORS.json": "000e0d76be0dd82603a5462e67711c48548290d095a7800a11893fbd74b41e29",
+    "integrations/monitoring/source_adoption.json": "1ea7804b8dc8a8b8438499e41450fdc9875c0548e51d4a864cb610ab4c9bec12",
+    "integration/monitoring_observed_sources.json": "03e80cfd1ccd9e8d22d96b447776e5a8782ba1be8dbdcf24ca79ee62c9105296",
+    "integration/monitoring_study_transfer_sources.json": "022bd02d6d69963386ea549919cb661a0f39a5d437d235ab1b49da977e990e6f"
+}
+
+FIELD_DERIVED_FILES = [
+    "integrations/monitoring/source_adoption.json",
+    "integration/monitoring_observed_sources.json",
+    "integration/monitoring_study_transfer_sources.json",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json"
+]
+
+FIELD_RECEIVING_PREVIOUS_SHA256 = {
+    "source/monitoring-chemistry-study/capture_editable_workspace.py": "213fd73b7a12749c7d60e9c45d5ee36ebb23049048948d26600639758e637b3e",
+    "source/monitoring-chemistry-study/open_completed_study.py": "a58c4e2007b1ea8840292954cff7de9b6cf34b6a8adc3a382c3e835624753732",
+    "source/monitoring-chemistry-study/README.md": "e5a81b7d8bb7e135c2a626bd5b3c1be6b2cd00ce904427e3f77c7caceb284441",
+    "operator/install_chemistry.py": "28f0179dbd2d81040c75af6b94880471c125b704a97eaee61ae041194ae7d921",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "5ded95c23ac431860ef2ae72d70bbe03f6f8e270362893e5cb5ce01c87070094"
+}
+
+FIELD_RACE_PREVIOUS_SHA256 = {
+    "model/monitoring_field_selection.py": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf",
+    "source/monitoring-field-study/source/field_planning.html": "b46469fab2c9c9c0e4a87ecec3613b6c26ef05a43413304df23ce30b4150300e",
+    "integrations/monitoring/source_adoption.json": "a4d141bbc82a5bec3673008537b625606309c1921e2469c645429e70745bfe75",
+    "integration/monitoring_observed_sources.json": "52f038d5dad4ddd5bdf05b0d4f71bcc07f3b1fc77af3f4b93c4bd8a6033dcc7e",
+    "integration/monitoring_study_transfer_sources.json": "cb1bf76f2bce93d89d15aac19ffb2934b89b89b7fa85847e5654e2ac3024a503",
+    "integrations/monitoring/PREDECESSORS.json": "ded24a713479587dea83a23ee954228dc66cbcd44b8650341e2d1e9bea3ba40a",
+    "operator/install_chemistry.py": "0f2749231643587880f074bbac7d04c5a6d08cf9f7bb8c3357220dc4ff83a99a",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "ddaa2b118825fdc4c8ea26f568bbd721a2704542cf75f96b5fd06de1ec7bc5bf"
+}
+
 BANK_SCHEMA = "commons.source-bank/v1"
 BANK_LIMIT = 16 * 1024 * 1024
 
@@ -334,7 +412,8 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
     with lock.open("a+") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
         pending, preimages, shared, inherited = {}, {}, {}, {}
-        for name in [*SHARED_REPORT_FILES, *SHARED_STUDY_FILES, *SHARED_MONITORING_FILES]:
+        derived_rechecks = []
+        for name in [*SHARED_REPORT_FILES, *SHARED_STUDY_FILES, *SHARED_MONITORING_FILES, *SHARED_FIELD_FILES]:
             shared[name] = _snapshot(target, name, required=True)
         for name in FILES:
             current = _snapshot(target, name)
@@ -358,8 +437,12 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      PUBLISHED_INTERVAL_PREVIOUS_SHA256.get(name), COMPOSED_INTERVAL_PREVIOUS_SHA256.get(name),
                      BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
                      STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name),
-                     RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name)}):
-                raise ValueError("Reconcile the independently changed chemistry file: " + name)
+                     RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name),
+                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name)}):
+                if name in FIELD_DERIVED_FILES:
+                    derived_rechecks.append(name)
+                else:
+                    raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = (body, mode), current
         composer = "source_tools/chemistry_study_composition.py"
         namespace = {"__name__": "_chemistry_study_composition", "__file__": str(source / composer)}
@@ -371,6 +454,31 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
         for name, body in joined.items():
             ast.parse(body, filename=name)
             pending[name], preimages[name] = (body.encode("utf-8"), shared[name][1]), shared[name]
+        field_composer = "source_tools/monitoring_field_selection_composition.py"
+        field_namespace = {"__name__": "_monitoring_field_selection_composition",
+                           "__file__": str(source / field_composer)}
+        exec(compile(pending[field_composer][0], field_composer, "exec"), field_namespace)
+        field_joined = field_namespace["compose"]({name: shared[name][0].decode("utf-8")
+                                                   for name in SHARED_FIELD_FILES})
+        if set(field_joined) != set(SHARED_FIELD_FILES):
+            raise ValueError("Field selection composer must preserve its exact shared member set")
+        for name, body in field_joined.items():
+            pending[name], preimages[name] = (body.encode("utf-8"), shared[name][1]), shared[name]
+        custody = field_namespace["bind_custody"]({name: value[0] for name, value in pending.items()},
+                                                  pending["operator/web/monitoring.mjs"][0])
+        if set(custody) != set(FIELD_DERIVED_FILES):
+            raise ValueError("Field custody must preserve the exact accepted metadata member set")
+        for name, body in custody.items():
+            _validate_body(name, body)
+            pending[name] = (body, pending[name][1])
+        for name in derived_rechecks:
+            if preimages[name][0] != pending[name][0]:
+                raise ValueError("Reconcile the independently changed field custody file: " + name)
+        field_descriptor = json.loads(pending["operator/extensions/monitoring-field-selection.json"][0])
+        if (field_descriptor.get("schema") != "upstate.operator-extension/v1"
+                or field_descriptor.get("id") != "monitoring-field-selection"
+                or field_descriptor.get("backend", {}).get("actions") != ["monitoring.field-selection.receive"]):
+            raise ValueError("Select the native retained field-selection registration")
         descriptor = json.loads(pending["operator/extensions/chemistry.json"][0])
         if (descriptor.get("schema") != "upstate.operator-extension/v1"
                 or descriptor.get("id") != "chemistry"

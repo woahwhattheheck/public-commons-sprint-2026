@@ -32,6 +32,8 @@ python3 -B application/operate.py --cohort publisher-source --output /absolute/p
 
 This programme operates the original HTTP application and writes its actual result and complete project archive. A receiving directory belongs to that operation.
 
+The explicit native_json format keeps the resource's stored graph publication separate from the exporter's current publication and requires the selected original graph to match the stored edition. The staff UI exposes this choice, and releases preserve the chosen interpretation for each selected resource/context group, including a mixture retained after rejected changes.
+
 The separate native Arches vocabulary receiver consumes both scheme/concept SKOS and collection-membership SKOS. It preserves Value UUIDs separately from concept UUIDs, original URI subjects and language spelling. Later receiving pins the complete saved manifest, re-resolves originals and verifies the derived context before calling the existing workspace importer.
 
 ```sh
