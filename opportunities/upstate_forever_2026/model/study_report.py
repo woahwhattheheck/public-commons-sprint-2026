@@ -174,8 +174,9 @@ def _shortlist_section(value):
         ])
     return (
         '<section><h2>Alternatives to examine together</h2>'
-        '<p>The physical frontier contains alternatives that no other selected alternative '
-        'lowers at least one selected pollutant without increasing another. Frontier membership is established within '
+        '<p>The physical frontier contains alternatives with no observed dominator. '
+        'A dominator lowers at least one selected pollutant without increasing another. '
+        'Frontier membership is established within '
         'a profile only after every selected opponent has comparable completed results. '
         'An observed dominator can be identified before that full comparison finishes.</p>'
         + _table(["Alternative", "Fully compared profiles", "On frontier", "Dominated",
