@@ -32,6 +32,16 @@ The page intentionally uses a white background, dark text, restrained gray rules
 
 The existing field guide describes the proven original-byte screenshot route for a connector-only reviewer. A screenshot file must be rendered to the reviewing model; a generated image or source inspection is not a substitute for looking at the original outgoing pixels.
 
+## Exact producing source in the handover
+
+The complete package includes the producing opening-page helper at `handover/source/source_tools/simulated_headwaters_handover.py` and its full guide at `handover/source/docs/SIMULATED_HEADWATERS_HANDOVER.md`. Use **Exact opening-page source and guide** on START_HERE.html to download them. The helper contains its complete style, HTML rendering, retained-input checks and original ZIP-member writer; it has only Python standard-library imports.
+
+`handover/contents.json` maps each original application-relative source name to its packaged path, byte count and SHA256 in `source_files`. The same files are also members of the handover index and ordinary DELIVERY.json inventory. The existing publisher verifies their bytes while writing and reopening the content-addressed delivery ZIP. Changing the helper or guide therefore changes the outer handover identity even when the selected scientific report and archive stay the same.
+
+This matters when reopening a completed rehearsal: the original scientific archive correctly retains its original application and selected results, while the installed current helper may improve the opening page. Both source editions remain available and separately identified. The delivered helper and complete guide are sufficient to reproduce the page from the frozen selected-case/receiving JSON and scientific archive, using its existing `build_members` and `write_members` functions. Keep their application-relative layout when importing this helper; retain the original extracted rehearsal inputs and completed checkpoint together. The normal application receiving command remains the operator route.
+
+During the existing recipient walkthrough, expand the source disclosure, download both exact files and compare them with the original file-index descriptors. Open the guide alongside the page and preserve the full scientific archive download. No native calculation, report regeneration or replacement of an older scientific source is needed to regenerate this handover presentation.
+
 ## Source and receiving
 
 The additional source is included by the existing simulated-field-recording component fragment. The final ZIP contains START_HERE.html, handover/contents.json and the original selected report/map directories. Its index records the frozen scientific selection, final working archive, report and delivery IDs, and the exact sizes/hashes of the generated opening page and copied files.
