@@ -11,7 +11,7 @@ PROFILE = {
     "module": "three_twenty_historical_observations",
     "site_id": "SV-833",
     "title": "Three and Twenty Creek original historical observations, 2021–2025",
-    "results": 1502, "activities": 120, "limits": 1492,
+    "results": 1502, "activities": 120, "limits": 1492, "measurements": 1501,
     "parameter": "Escherichia coli", "year": 2023,
 }
 

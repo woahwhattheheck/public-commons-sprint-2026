@@ -95,7 +95,8 @@ def catalog_entry(application=None):
     return {"id": BUILTIN_ID, "title": TITLE,
             "publication": "Original 2021–2025 samples; retained 2026-10-13 edition",
             "counts": {"stations": 3, "original_result_rows": 1502,
-                       "original_activity_count": 120, "paired_characteristic_contrasts": 275}}
+                       "original_activity_count": 120, "statistical_result_rows": 1501,
+                       "statistically_excluded_rows": 1, "paired_characteristic_contrasts": 275}}
 
 
 def build_files(application=None):
@@ -121,18 +122,49 @@ def build_files(application=None):
             or selected.get("date_start") != "2021-01-06" or selected.get("date_end") != "2025-12-02"
             or study.get("study_id") != BUILTIN_ID):
         raise ValueError("The original historical selection or source census changed.")
+    study["observation_statistical_exclusions"] = {
+        "schema": "upstate.original-statistical-exclusions/v1",
+        "observation_index_sha256": _sha(native["observation-sources.json"]),
+        "original_record_count": 1588,
+        "records": [{
+            "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+            "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+            "source_csv_row": 158,
+            "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+            "activity_id": "21SC60WQ_WQX-AF12080",
+            "original_result_identifier": "STORET-1104042240",
+            "reason": (
+                "The original pH value 724 on 2023-11-29 is retained verbatim. "
+                "The source-owned historical analysis flags this exact result as outside "
+                "its pH review range and excludes it from statistical summaries; "
+                "no corrected value is inferred."
+            ),
+        }],
+    }
+    study["content_counts"]["statistical_result_rows"] = 1501
+    study["content_counts"]["statistically_excluded_rows"] = 1
+    study["observation_selection_notes"].append(
+        "All 1,502 original historical results remain available. Statistical summaries "
+        "use 1,501 results after the exact source-bound pH 724 exclusion."
+    )
+    native["study.json"] = _json(study)
     if __package__:
         from .published_studies import _observation_rows
-        from .source_observations import load_observations
+        from .source_observations import load_observations, statistical_rows
     else:
         from published_studies import _observation_rows
-        from source_observations import load_observations
+        from source_observations import load_observations, statistical_rows
     rows = load_observations(native, _observation_rows)
     if (len(rows) != 1502 or len({row["original_result_identifier"] for row in rows}) != 1502
             or len({row["activity_id"] for row in rows}) != 120
             or {row["site_id"] for row in rows} != {"SV-735", "SV-111", "SV-833"}
             or sum("reporting_limit" in row.get("metadata_source_records", {}) for row in rows) != 1492):
         raise ValueError("Native import differs from the original 1502-result / 120-activity / 1492-limit historical cohort.")
+    eligible = statistical_rows(rows, study)
+    excluded = {row["original_result_identifier"] for row in rows} - {
+        row["original_result_identifier"] for row in eligible}
+    if len(eligible) != 1501 or excluded != {"STORET-1104042240"}:
+        raise ValueError("Historical native statistics must exclude exactly the declared original pH 724 result.")
     files = {name: raw for name, raw in native.items() if name != "study-files.json"}
     files.update({ROOT + "/" + name: raw for name, raw in originals.items()})
     original_manifest = json.loads(originals[MANIFEST])
@@ -150,6 +182,7 @@ def build_files(application=None):
                            for name, raw in sorted(files.items()) if name != report_name],
             "metadata": {"media_type": "text/html", "original_report_source_id": entry["id"],
                          "original_result_count": 1502, "original_activity_count": 120,
+                         "statistical_result_count": 1501, "statistically_excluded_count": 1,
                          "source_manifest": ROOT + "/" + MANIFEST,
                          "source_manifest_sha256": _sha(originals[MANIFEST])},
         }]})
@@ -183,7 +216,8 @@ def main(argv=None):
         with output.open("xb") as destination:
             destination.write(body)
     print(json.dumps({"study_id": BUILTIN_ID, "path": str(output), "bytes": len(body),
-                      "sha256": _sha(body), "original_results": 1502, "activities": 120}))
+                      "sha256": _sha(body), "original_results": 1502, "statistical_results": 1501,
+                      "statistically_excluded_results": 1, "activities": 120}))
 
 
 if __name__ == "__main__":
