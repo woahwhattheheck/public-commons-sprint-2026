@@ -12,9 +12,10 @@ import re
 import tempfile
 
 OPERATION = "ES-EXP-2319"
-KNOWN_PRIOR = {"model/experiments.py":["e391a8d01e873ef1dc1d83391ab51807d2d1f1d2389e962cb8930507580d9d5b","cb626fb6216db80052ccaf4f4c91f1f81e7052d44280d2dc9cc072cd9fcf7a5f","e16d9f0ae747640d31b3716697ca83b943132b3ed49495d444fd3f8285a9a37b","feb8e13c6ac00a8d9987d51f0cb1cdedd25d0e733613f7071b92c6f735b1127d"],"model/experiment_cli.py":["0da884c7f3e0fca47390e6ca2d13bdf4616b831168a0213b65a7a98b7038cae9"],"operator/experiment_operator.py":["c02476827809d17025db050fb553ed944def0aade6c70d350c2f342d74676257"],"operator/web/experiments.mjs":["5a1b52d75c6b86c33cac38e415c09dafccbdaacd918e07ae096460b1f3c6c99f"],"operator/web/experiments.css":["24a01272447fe6eef2c4f160ee4b1bd45ed656d5c09a156b4af40012d935dca5"],"operator/EXPERIMENTS.md":["ac49038e6268b8280fa4643afb477e84e5ffaa403bc7a26af3b6686859a73f85"],"source/experiment-methods-20261012.json":["f685b9f417e3dbb8277ba1dee5be48f598ea564e59942d8c48755c1629dddb19"]}
+KNOWN_PRIOR = {"model/experiments.py":["cb626fb6216db80052ccaf4f4c91f1f81e7052d44280d2dc9cc072cd9fcf7a5f","e16d9f0ae747640d31b3716697ca83b943132b3ed49495d444fd3f8285a9a37b","feb8e13c6ac00a8d9987d51f0cb1cdedd25d0e733613f7071b92c6f735b1127d","e391a8d01e873ef1dc1d83391ab51807d2d1f1d2389e962cb8930507580d9d5b","1116c5eeefb495dd7391d7018b6542f4f882d1f992c9a47ec74eb39d30712f61","fe09d098dfe2b3d14b8d40541802e3b893abfcaf719ecf878f92e0776084a38a"],"model/experiment_cli.py":["0da884c7f3e0fca47390e6ca2d13bdf4616b831168a0213b65a7a98b7038cae9"],"operator/experiment_operator.py":["c02476827809d17025db050fb553ed944def0aade6c70d350c2f342d74676257","b23afe5b52c269753b5ba8723a1848df17fd41136358d546ca2f9aaa3611dc30"],"operator/web/experiments.mjs":["5a1b52d75c6b86c33cac38e415c09dafccbdaacd918e07ae096460b1f3c6c99f","944e4bfaa7e5ca8bd21735219b5d7d7b6885802eebc77bf91458bd075399ba4a"],"operator/web/experiments.css":["24a01272447fe6eef2c4f160ee4b1bd45ed656d5c09a156b4af40012d935dca5","8fa0acfe7b03f4cd06a2b0f781a90891fb3e7a13e137af92d5815b6edaa016e4"],"operator/EXPERIMENTS.md":["ac49038e6268b8280fa4643afb477e84e5ffaa403bc7a26af3b6686859a73f85","ebd6469d79795bc15999c477af88c783e0ef2cd18f463edcd3c922a1e87928b6"],"source/experiment-methods-20261012.json":["f685b9f417e3dbb8277ba1dee5be48f598ea564e59942d8c48755c1629dddb19"]}
 LEAVES = (
     "model/experiments.py", "model/experiment_cli.py",
+    "model/EXPERIMENT_MODEL_SELECTION.md",
     "operator/experiment_operator.py", "operator/web/experiments.mjs",
     "operator/web/experiments.css", "operator/EXPERIMENTS.md",
     "source/experiment-methods-20261012.json",
@@ -87,8 +88,11 @@ def server_join(text):
         '                experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}\n'
         '                if url.path in experiment_reads:\n'
         '                    return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],\n'
-        '                        {name: one(name) for name in ("experiment_id", "offset", "limit")}))\n',
+        '                        {name: one(name) for name in ("experiment_id", "offset", "limit", "case_ids")}))\n',
         'experiment_reads = {"/api/experiments/"')
+    text = replace_once(text, '("experiment_id", "offset", "limit")',
+        '("experiment_id", "offset", "limit", "case_ids")',
+        '("experiment_id", "offset", "limit", "case_ids")')
     text = replace_once(text, '            value = self.body()\n',
         '            value = self.body()\n'
         '            if url.path == "/api/experiments/preview":\n'

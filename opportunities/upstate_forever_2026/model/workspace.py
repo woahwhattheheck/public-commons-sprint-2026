@@ -344,6 +344,10 @@ class Workspace:
         from .native import compare_runs
         return compare_runs(self, ids)
 
+    def combine_runs(self, selection, source_runs, *, execute=True):
+        from .run_assembly import combine_runs
+        return combine_runs(self, selection, source_runs, execute=execute)
+
     def import_observations(self, path, metadata):
         from .observations import ingest
         return ingest(self, path, metadata)

@@ -2,12 +2,13 @@
 from __future__ import annotations
 import importlib.util
 import json
+import math
 from pathlib import Path
 import shutil
 import sys
 import xml.etree.ElementTree as ET
 from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
-                     describe_file, digest, held, now, read_json, verify_file)
+                     describe_file, digest, held, identifier, now, read_json, verify_file)
 from . import cartography, portable, rasters
 from .delivery_archive import package_archive
 
@@ -71,8 +72,22 @@ def _overlay(workspace, choice, grid_crs, reporting, *, label):
                         "sha256": entry["body"]["sha256"], "title": entry["title"]},
             "width": .65, "style": "--" if label == "Designated high-quality waters" else "-"}
 
+def _grid_measurements(grid):
+    """Describe the actual retained pixel geometry and physical area."""
+    a, b, _, d, e, _ = (float(value) for value in grid["grid"]["transform"])
+    width, height = math.hypot(a, d), math.hypot(b, e)
+    hectares = abs(a * e - b * d) / 10000.0
+    if not all(math.isfinite(value) and value > 0 for value in (width, height, hectares)):
+        raise ValueError("Delivery requires a finite, nondegenerate projected grid")
+    width_text, height_text, area_text = (format(value, ".12g") for value in (width, height, hectares))
+    pixels = width_text + " x " + height_text
+    resolution = width_text + " m" if width == height else pixels + " m"
+    return {"width": width_text, "height": height_text, "hectares": area_text,
+            "pixels": pixels, "resolution": resolution}
+
 def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, contact):
     from pyproj import CRS, Transformer
+    cells = _grid_measurements(grid)
     crs = CRS.from_user_input(grid["grid"]["crs"])
     transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
     west, south, east, north = transformer.transform_bounds(*grid["grid"]["bounds"], densify_pts=21)
@@ -89,11 +104,11 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     add("idinfo/citation/citeinfo/title", title)
     add("idinfo/citation/citeinfo/geoform", "raster digital data")
     add("idinfo/descript/abstract", title + " modeled with original InVEST " + INVEST_VERSION +
-        " NDR/SDR engines. Values are " + unit + " at actual 30 x 30 metre pixels; native rates "
-        "are multiplied by 0.09 hectares. The selected SC reporting mask preserves original NoData. "
+        " NDR/SDR engines. Values are " + unit + " at actual " + cells["pixels"] + " metre pixels; native rates "
+        "are multiplied by " + cells["hectares"] + " hectares. The selected reporting mask preserves original NoData. "
         "Original run: " + selection["baseline_run_id"] + ". Parameter profile: " + profile["id"] + ".")
-    add("idinfo/descript/purpose", "Upper Savannah source-water and land-conservation analysis using "
-        "the retained source editions, annual N/P/sediment model outputs and explicit reviewed scenarios.")
+    add("idinfo/descript/purpose", selection.get("title", "Watershed source-water and land-conservation analysis") +
+        ": retained source editions, annual N/P/sediment model outputs and explicit reviewed scenarios.")
     add("idinfo/timeperd/timeinfo/sngdate/caldate", day)
     add("idinfo/timeperd/current", "Model derivation date; input observation and publication editions are retained in lineage.")
     add("idinfo/status/progress", "Complete")
@@ -101,15 +116,15 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     for name, value in (("westbc", west), ("eastbc", east), ("northbc", north), ("southbc", south)):
         add("idinfo/spdom/bounding/" + name, value)
     add("idinfo/keywords/theme/themekt", "None")
-    for word in ("watershed", "annual pollutant export", "source water", "Upper Savannah"):
+    for word in ("watershed", "annual pollutant export", "source water", selection.get("title", title)):
         ET.SubElement(root.find("idinfo/keywords/theme"), "themekey").text = word
     add("idinfo/accconst", "Project delivery and original source access conditions apply.")
     add("idinfo/useconst", "Interpret with the delivered source vintages, profile, model assumptions, "
         "observation comparisons and scenario definitions. Quantitative export estimates describe the "
         "selected model; conservation priorities combine explicitly declared normalization and weights.")
     add("dataqual/attracc/attraccr", "The original per-hectare export rate is converted using the actual "
-        "0.09-ha pixel area. Original quantitative values and source bytes remain in the working archive.")
-    add("dataqual/logic", "Native rasters share the selected original 30 m reference pixel alignment. "
+        + cells["hectares"] + "-ha pixel area. Original quantitative values and source bytes remain in the working archive.")
+    add("dataqual/logic", "Native rasters share the selected original " + cells["resolution"] + " reference pixel alignment. "
         "N/P/sediment physical units remain separate; NoData cells retain their native meaning.")
     add("dataqual/complete", "Reporting extent and upstream model-domain context are retained as original "
         "polygon layers; source currency and observations are listed in the accompanying report.")
@@ -124,10 +139,10 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
         ET.SubElement(node, "srccontr").text = "Original source SHA256 " + source["sha256"]
     step = ET.SubElement(lineage, "procstep")
     ET.SubElement(step, "procdesc").text = (
-        "Original InVEST " + INVEST_VERSION + " NDR and SDR execution; source selection, 30 m grid "
+        "Original InVEST " + INVEST_VERSION + " NDR and SDR execution; source selection, " + cells["resolution"] + " grid "
         "alignment, biophysical parameters, explicit land-cover changes and model settings are retained "
         "in the native working archive. Per-hectare rates converted to " + unit +
-        " by multiplication by 0.09. Reporting-mask pixel-centre selection; no interpolated output values.")
+        " by multiplication by " + cells["hectares"] + ". Reporting-mask pixel-centre selection; no interpolated output values.")
     ET.SubElement(step, "procdate").text = day
     add("spdoinfo/direct", "Raster")
     add("spdoinfo/rastinfo/rasttype", "Grid Cell")
@@ -153,8 +168,8 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     else:
         add("spref/horizsys/planar/mapproj/otherprj", crs.to_wkt())
     add("spref/horizsys/planar/planci/plance", "row and column")
-    add("spref/horizsys/planar/planci/coordrep/absres", 30)
-    add("spref/horizsys/planar/planci/coordrep/ordres", 30)
+    add("spref/horizsys/planar/planci/coordrep/absres", cells["width"])
+    add("spref/horizsys/planar/planci/coordrep/ordres", cells["height"])
     add("spref/horizsys/planar/planci/plandu", "meters")
     add("spref/horizsys/geodetic/horizdn", crs.datum.name)
     add("spref/horizsys/geodetic/ellips", crs.ellipsoid.name)
@@ -178,6 +193,33 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
 
 def build(workspace, selection):
     selection = dict(selection)
+    review_ids = selection.get("spatial_review_ids", [])
+    export_ids = selection.get("spatial_export_ids", [])
+    if not isinstance(review_ids, list) or not isinstance(export_ids, list):
+        raise ValueError("Select original saved spatial review and map export IDs")
+    review_ids = [identifier(key) for key in review_ids]
+    export_ids = [identifier(key) for key in export_ids]
+    if len(review_ids) != len(set(review_ids)) or len(export_ids) != len(set(export_ids)):
+        raise ValueError("Select distinct original spatial review and map export IDs")
+    spatial_exports = []
+    if export_ids:
+        from .spatial_exports import SpatialExports
+        exporter = SpatialExports(workspace)
+        for key in export_ids:
+            exported = exporter.inspect(key, verify=True)
+            if exported["state"] != "complete":
+                raise ValueError("Complete each selected saved-map export before delivery")
+            spatial_exports.append(exported)
+            if exported["review_id"] not in review_ids:
+                review_ids.append(exported["review_id"])
+        selection["spatial_review_ids"] = review_ids
+        selection["spatial_export_ids"] = export_ids
+    reviews = [workspace._get("spatial-reviews", key) for key in review_ids]
+    if reviews:
+        from .spatial import SpatialReview
+        reviewer = SpatialReview(workspace)
+        for review in reviews:
+            reviewer.validate_saved(review)
     contact = selection["contact"]
     if any(not isinstance(contact.get(k), str) or not contact[k].strip()
            for k in ("name", "organization", "email")):
@@ -200,8 +242,10 @@ def build(workspace, selection):
         if workspace._get("scenarios", run["selection"]["scenario_id"])["kind"] != "landcover":
             raise ValueError("Future map alternatives must contain explicit source-bound land-cover changes")
     grid = workspace.get_grid(baseline["selection"]["grid_id"])
+    cells = _grid_measurements(grid)
     profile = workspace._get("profiles", baseline["selection"]["profile_id"])
-    key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION})
+    key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION,
+                  "map_renderer": cartography.MAP_RENDERER_VERSION})
     directory = workspace.root / "deliveries" / key
     directory.mkdir(parents=True, exist_ok=True)
     state_path = directory / "delivery-state.json"
@@ -218,6 +262,34 @@ def build(workspace, selection):
             atomic_json(state_path, state)
         try:
             state.pop("error", None)
+            for review in reviews:
+                name = "spatial_review_" + review["id"]
+                if name not in state["files"]:
+                    path = directory / "reviews" / (review["id"] + ".json")
+                    original = workspace.root / "spatial-reviews" / (review["id"] + ".json")
+                    _copy(original, path, describe_file(workspace.root, original))
+                    state["files"][name] = describe_file(directory, path,
+                        title=review["title"], review_id=review["id"], project_id=review["project_id"])
+                    atomic_json(state_path, state)
+                else:
+                    verify_file(directory, state["files"][name])
+            for exported in spatial_exports:
+                source = workspace.root / "spatial-exports" / exported["id"]
+                export_members = {**exported["files"],
+                    "record": describe_file(source, source / "export.json")}
+                for member_key, item in export_members.items():
+                    name = "spatial_export_" + exported["id"] + "_" + member_key
+                    if name not in state["files"]:
+                        original = verify_file(source, item)
+                        target = directory / "spatial-maps" / exported["id"] / item["path"]
+                        _copy(original, target, item)
+                        state["files"][name] = describe_file(directory, target,
+                            title=exported["title"] + " / " + item.get("title", member_key),
+                            export_id=exported["id"], review_id=exported["review_id"],
+                            project_id=exported["project_id"])
+                        atomic_json(state_path, state)
+                    else:
+                        verify_file(directory, state["files"][name])
             from pyproj import CRS
             crs = CRS.from_user_input(grid["grid"]["crs"])
             grid_directory = workspace.root / "grids" / grid["id"]
@@ -265,6 +337,20 @@ def build(workspace, selection):
                 atomic_json(state_path, state)
             comparison = workspace.compare_runs([baseline["id"]] + scenario_ids)
             comparison_root = workspace.root / "comparisons" / comparison["id"]
+            receptor_product = None
+            receptor_overlays = {}
+            if selection.get("receptor_spec"):
+                from .receptors import build_inventory
+                receptor_root = directory / "receptors"
+                receptor_product = build_inventory(workspace, selection["receptor_spec"], grid,
+                    baseline, alternatives, receptor_root, priority_path=priority)
+                state["receptor_inventory"] = receptor_product["inventory"]
+                receptor_overlays = {role: overlay for role, overlay in receptor_product["overlays"].items()
+                                     if overlay["features"]}
+                for name, item in receptor_product["inventory"]["files"].items():
+                    state["files"]["receptor_" + name] = describe_file(directory, receptor_root / item["path"])
+                state["files"]["receptor_inventory"] = describe_file(directory, receptor_root / "inventory.json")
+                atomic_json(state_path, state)
             if "parcels" in overlay_choices and "parcel_priorities" not in state:
                 from .priorities import parcel_inventory
                 if "protected_lands" not in overlays:
@@ -276,16 +362,40 @@ def build(workspace, selection):
                 inventory_root = directory / "priorities"
                 inventory = parcel_inventory(workspace, overlay_choices["parcels"], grid, mass_paths,
                     priority, comparison, inventory_root, protected=overlays["protected_lands"],
-                    drinking_water=overlays["drinking_water"], high_quality_water=overlays["high_quality_waters"])
+                    drinking_water=receptor_overlays.get("drinking_water", overlays["drinking_water"]),
+                    high_quality_water=receptor_overlays.get("high_quality_waters", overlays["high_quality_waters"]))
                 state["parcel_priorities"] = inventory
                 for name, item in inventory["files"].items():
                     state["files"]["parcel_" + name] = describe_file(directory, inventory_root / item["path"])
                 atomic_json(directory / "priorities" / "inventory.json", inventory)
                 state["files"]["parcel_inventory"] = describe_file(directory, directory / "priorities" / "inventory.json")
                 atomic_json(state_path, state)
+            if "map_scales" not in state:
+                map_percentile = settings.get("display_percentile", 98)
+                baseline_scales = {name: cartography.shared_display_scale(
+                    [path], percentile=map_percentile, units=rasters.MASS_UNITS[name])
+                    for name, path in mass_paths.items()}
+                alternative_scales = {}
+                for name in rasters.MASS_UNITS:
+                    paths = [verify_file(comparison_root, alternative["artifacts"][name])
+                             for alternative in comparison["alternatives"]]
+                    alternative_scales[name] = cartography.shared_display_scale(
+                        paths, signed=True, percentile=map_percentile, units=rasters.MASS_UNITS[name])
+                state["map_scales"] = {
+                    "renderer": cartography.MAP_RENDERER_VERSION,
+                    "baseline": baseline_scales, "alternatives": alternative_scales}
+                scale_path = directory / "maps" / "display-scales.json"
+                atomic_json(scale_path, state["map_scales"])
+                state["files"]["display_scales"] = describe_file(directory, scale_path)
+                atomic_json(state_path, state)
             def panel(name):
-                return {"path": mass_paths[name], "label": cartography.LABELS[name], "units": rasters.MASS_UNITS[name]}
-            score_panel = {"path": priority, "label": "Weighted relative export priority", "units": "dimensionless (0–1)"}
+                return {"path": mass_paths[name], "label": cartography.LABELS[name],
+                        "units": rasters.MASS_UNITS[name], "scale": state["map_scales"]["baseline"][name]}
+            score_panel = {"path": priority, "label": "Weighted relative export priority",
+                "units": "dimensionless (0–1)", "scale": {
+                    "minimum": 0.0, "maximum": 1.0, "signed": False,
+                    "units": "dimensionless (0–1)",
+                    "label": "Fixed 0–1 range for the recorded weighted export priority."}}
             all_specs = {
                 "current_nutrient_export": ([panel("nitrogen_export"), panel("phosphorus_export")], []),
                 "current_sediment_export": ([panel("sediment_export")], []),
@@ -294,6 +404,16 @@ def build(workspace, selection):
                                               ([overlays["protected_lands"]] if "protected_lands" in overlays else [])),
                 "high_quality_waters": ([score_panel], [overlays["high_quality_waters"]]),
             }
+            if receptor_product:
+                for role, family in (("drinking_water", "critical_drinking_water"),
+                                     ("high_quality_waters", "high_quality_waters")):
+                    item = receptor_product["inventory"]["priority_rasters"].get(role)
+                    if item:
+                        focused_panel = {**score_panel,
+                            "path": verify_file(receptor_root, item),
+                            "label": "Relative export priority in contributing land"}
+                        all_specs[family] = ([focused_panel],
+                            all_specs[family][1] + [receptor_overlays[role]])
             future_maps = {}
             for alternative in comparison["alternatives"]:
                 scenario = workspace._get("scenarios", alternative["selection"]["scenario_id"])
@@ -301,14 +421,15 @@ def build(workspace, selection):
                 for name, item in alternative["artifacts"].items():
                     selected_panels[name] = {"path": verify_file(comparison_root, item),
                                             "label": cartography.LABELS[name] + " change",
-                                            "units": rasters.MASS_UNITS[name], "signed": True}
+                                            "units": rasters.MASS_UNITS[name], "signed": True,
+                                            "scale": state["map_scales"]["alternatives"][name]}
                 for family, names in (("future_sediment_loss", ["sediment_export"]),
                                        ("future_nutrient_runoff", ["nitrogen_export", "phosphorus_export"])):
                     map_key = family + "-" + alternative["run_id"]
                     all_specs[map_key] = ([selected_panels[n] for n in names],
                                          [overlays["drinking_water"]])
                     future_maps.setdefault(family, []).append(map_key)
-            footer = ("Native InVEST " + INVEST_VERSION + "; original 30 m grid; baseline " + baseline["id"][:12] +
+            footer = ("Native InVEST " + INVEST_VERSION + "; original " + cells["resolution"] + " grid; baseline " + baseline["id"][:12] +
                       "; profile " + profile["title"] + "; source editions and full native outputs in the working archive.")
             for map_key, (panels, selected_overlays) in all_specs.items():
                 if map_key in state["maps"]:
@@ -323,6 +444,10 @@ def build(workspace, selection):
                     subtitle = scenario["title"] + " · alternative minus baseline; positive values indicate greater modeled export."
                 elif family == "combined_pollutant_export":
                     subtitle = "Explicit pollutant weights " + json.dumps(state["priority"]["weights"], sort_keys=True)
+                elif receptor_product and family in ("critical_drinking_water", "high_quality_waters"):
+                    role = "drinking_water" if family == "critical_drinking_water" else "high_quality_waters"
+                    if role in receptor_product["inventory"]["priority_rasters"]:
+                        subtitle = "Upstream-connected source HUC12s inside the reporting area; original whole-basin priority scale."
                 elif selected_overlays:
                     subtitle = " · ".join(o["label"] for o in selected_overlays)
                 target = directory / "maps" / (map_key + ".pdf")
@@ -347,12 +472,12 @@ def build(workspace, selection):
                      "The reporting polygon is retained separately from the model domain and its " +
                      str(grid["spec"]["upstream_buffer_m"]) + " metre context buffer. "
                      "Model outputs and the explicit current-versus-future scenarios use the same original "
-                     "30 m land-cover reference alignment."]),
+                     + cells["resolution"] + " land-cover reference alignment."]),
                     ("Model and units", [
                      "The original InVEST " + INVEST_VERSION + " Nutrient Delivery Ratio and Sediment Delivery Ratio "
                      "engines were executed with the retained inputs and parameter profile. Nitrogen and phosphorus "
                      "are delivered in kg per pixel per year; sediment is in metric tonnes per pixel per year. "
-                     "Native per-hectare rates are multiplied by the actual 0.09-ha cell area.",
+                     "Native per-hectare rates are multiplied by the actual " + cells["hectares"] + "-ha cell area.",
                      "NDR guide: " + NDR_GUIDE, "SDR guide: " + SDR_GUIDE]),
                     ("Selected parameter profile", [profile["title"],
                      json.dumps({"ndr": profile["ndr"], "sdr": profile["sdr"]}, sort_keys=True),
@@ -368,6 +493,18 @@ def build(workspace, selection):
                      "Physical N/P/sediment rasters remain separate. The combined map is a dimensionless "
                      "weighted index, with normalization and weights recorded above. Source-water and "
                      "designated high-quality-water overlays use the original retained source geometry."]),
+                    *([("Source-water contributing land", [
+                        state["receptor_inventory"]["method"],
+                        state["receptor_inventory"]["quantity_basis"],
+                        "Saved area definitions: " + json.dumps([
+                            {"title": area["title"], "anchors": area["anchor_huc12s"],
+                             "huc12_count": area["huc12_count"], "reporting_area_ha": area["reporting_area_ha"]}
+                            for area in state["receptor_inventory"]["areas"]], ensure_ascii=False),
+                        "The contributing-area GIS layers, original network links, upstream memberships "
+                        "and annual scenario quantities are retained under receptors. Scenario differences "
+                        "use the same valid reporting pixels; each row includes its coverage counts. "
+                        "Shared upstream land is retained explicitly and should be combined using its union."])]
+                      if receptor_product else []),
                     ("Observed watershed loads", [
                      json.dumps(v["metrics"], sort_keys=True) + "; observation source " + v["observation_id"]
                      for v in observation_results] or [
@@ -383,6 +520,23 @@ def build(workspace, selection):
                      "Sampling periods, source resolution/vintage, spatial coverage and any point-source "
                      "or impoundment influences must accompany interpretation of modeled export totals."]),
                     ("Project notes", selection.get("notes", [])),
+                    *([("Saved spatial reviews", [
+                        review["title"] + " / " + review["id"] + "; " + review["view"]["crs"]
+                        for review in reviews] + [
+                        "The selected original review JSON files retain the geographic viewport, "
+                        "exact source and run bindings, numeric scales, overlay filters and annotations. "
+                        "They are included with original project assets and the complete working archive."])]
+                      if reviews else []),
+                    *([("Printed saved spatial reviews", [
+                        exported["title"] + " / " + exported["id"] + "; " +
+                        exported["selection"]["paper"].upper() + " landscape, " +
+                        str(exported["selection"]["dpi"]) + " DPI; saved review " + exported["review_id"]
+                        for exported in spatial_exports] + [
+                        "Each selected map pack retains its PDF/SVG/PNG, complete source and legend "
+                        "appendix, exact native point values and feature attributes, original saved "
+                        "review, provenance, application source and ZIP. The original export file "
+                        "hierarchy is retained under spatial-maps and in the working archive."])]
+                      if spatial_exports else []),
                     ("Receiving and reuse", [
                      "The working archive includes original retained source bytes, immutable profile and "
                      "scenario selections, aligned inputs, original native working files, run logs and this "
@@ -413,12 +567,13 @@ def build(workspace, selection):
                 "source_data": records, "rasters": {},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
                 "project_assets": [state["files"]["combined_priority"]["path"],
-                                   state["files"]["working_archive"]["path"]]}
+                                   state["files"]["working_archive"]["path"],
+                                   state["files"]["display_scales"]["path"]]}
             for name in rasters.MASS_UNITS:
                 manifest["rasters"][name] = {"path": state["files"][name]["path"],
                     "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
             manifest["project_assets"].extend(item["path"] for name, item in state["files"].items()
-                                             if name.startswith("parcel_"))
+                                             if name.startswith(("parcel_", "spatial_review_", "spatial_export_", "receptor_")))
             audit_manifest = directory / "delivery.json"
             atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent

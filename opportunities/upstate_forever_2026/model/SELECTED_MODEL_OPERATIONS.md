@@ -93,7 +93,7 @@ Full seven-family delivery requires full_model_outputs. A completed partial run 
 
 A completed native stage is indexed under stage-cache in the same retained workspace. The key contains the model's relevant input bodies, complete original biophysical table, actual native arguments, official model module identities, and the recorded runtime package/environment versions. Output directory paths and the other model's unused parameters are excluded from that key.
 
-The selected grid inputs and original table are verified once before the native operation; their actual retained identities are reused for signature construction. Native stages from older installations without an execution-time input signature retain ordinary original-run reopening and continuation.
+The already-verified grid inputs and original table supply the stage signature without rereading the large raster bodies. Actual native input masks, auxiliary files and Shapefile companions also enter that identity. Grid extension retains any such original raster companions alongside the reused main file. Native stages from older installations without an execution-time input signature retain ordinary original-run reopening and continuation.
 
 A later run first looks for a completed stage with that exact key. It reads the original stage, verifies its complete retained files, retains native sidecar relationships and links/copies those original files under the new run. It keeps the original argument body and source run in the stage record. The original run, archive IDs and result identities remain intact.
 
@@ -102,6 +102,65 @@ A surviving native stage from a run that failed later can be reused. For example
 To extend a nutrient-only study to full delivery, prepare the full grid using its original base_grid_id, then select the actual full profile and scenario. A matching NDR stage is reused; SDR executes against its actual R/K inputs. The result is an ordinary full-model run on the full grid. Full baseline and alternatives can then enter the existing delivery operation.
 
 New runtime or relevant source/table/parameter identities produce a different stage key and a new calculation. A native candidate whose retained files cannot be read is recorded in reuse_observations, and the current calculation follows its own original execution path.
+
+## Combine previously completed NDR and SDR runs
+
+The explicit assembly operation selects the two actual original run IDs. It prepares the ordinary combined run, compares each original model's source and parameter inputs against that selection, retains the complete original native stages and finishes the normal reporting outputs. The resulting full run appears in the existing operator, comparisons, scenario programme and seven-family delivery selectors.
+
+Prepare the combined grid and full profile in the existing Workspace. The full profile selects one retained original biophysical CSV with all required NDR and SDR fields. Use its original table bytes for the selected component runs as well. Extend an existing grid with base_grid_id when adding precipitation or R/K sources; common original preparations then stay byte-identical.
+
+The callable contract is:
+
+    combined = workspace.combine_runs(
+        {"grid_id": actual_full_grid_id,
+         "profile_id": actual_full_profile_id,
+         "scenario_id": actual_scenario_id},
+        {"ndr": actual_completed_ndr_run_id,
+         "sdr": actual_completed_sdr_run_id},
+    )
+
+Both models are implicit in the combined selection, preserving the full-run ID convention. combine_runs returns the ordinary completed run. Its selection contains the actual grid_id/profile_id/scenario_id for the regional consumer. Each adopted stage keeps reused_from.run_id, its original arguments, any previous reuse chain and its original runtime. The assembly record contains the chosen original run IDs and the actual source-to-target input matches. The existing native run lock and writer serialize adoption and continuation.
+
+The source stages may be from two different runs or from one original combined run. A completed model stage inside a run that failed later is also usable. Earlier executions without the newer automatic-cache input_signature can enter this explicit operation: the assembly uses their retained source records, original argument file, actual files and recorded published native implementation. It retains their original runtime information exactly.
+
+The optional execute=False keyword seeds the original complete native stages and returns the prepared full run. A later workspace.run(combined["id"]) finishes its ordinary reporting outputs. The default completes that continuation immediately.
+
+For a native operator, save the real selection and run IDs as two JSON documents:
+
+    {
+      "grid_id": "ACTUAL_FULL_GRID_ID",
+      "profile_id": "ACTUAL_FULL_PROFILE_ID",
+      "scenario_id": "ACTUAL_SCENARIO_ID"
+    }
+
+    {
+      "ndr": "ACTUAL_COMPLETED_NDR_RUN_ID",
+      "sdr": "ACTUAL_COMPLETED_SDR_RUN_ID"
+    }
+
+Then run the installed source:
+
+    python -B -m model.run_assembly --workspace WORKSPACE \
+      --selection COMBINED_SELECTION_JSON --source-runs ORIGINAL_RUN_IDS_JSON \
+      --output COMBINED_RUN_JSON
+
+The command returns the complete original run record, including all native outputs and input matches. Repeating the same completed selection reopens its existing full run.
+
+### What the join compares
+
+The shared native_arguments.py mapping is used by both ordinary execution and assembly. Assembly compares the actual parameter values, physical grid definition, scenario source selections, prepared DEM and land cover, full original biophysical table, model domain, reporting mask, and the relevant precipitation or R/K inputs. It verifies the original argument file against the saved source run. When an original archive has been moved, it remaps only the common original workspace prefix inferred from that run's recorded workspace_dir; every native input must still select the corresponding retained original path.
+
+Matching file bodies and companions take the direct reuse path. For differing GeoTIFF encodings, the fallback reads every cell and mask in fixed windows and compares exact native headers and unrounded value bytes. For differing model-domain container metadata, the vector fallback compares every ordered layer, schema, feature ID, attribute and coordinate. These are complete native-data comparisons. The original source files and their distinct body hashes remain recorded alongside the match. Table bytes and declared physical units must match.
+
+The operation retains original land-cover scenario preparation and its companions when needed. It checks all chosen native output paths before installing files, preserves already completed target stages, and writes each adopted stage into the same run as soon as its complete files are present. Interrupted copying can resume that run. The native report conversion then derives the three actual reporting rasters through the selected reporting mask; its adopted engines are already complete.
+
+The automatic cache remains the strict execution-signature route described above. Explicit assembly is an operator's selection of actual completed stages and records that choice independently. Its use does not manufacture a historical execution signature.
+
+### Regional delivery consumer
+
+The regional finish path consumes this combined run's actual IDs and full source selection. It can call workspace.combine_runs directly for the baseline and each already completed paired scenario. Preserve those results as ordinary full-model native runs on the common full grid, then use the regional consumer's original core-result and finish-plan writers. The combined run's assembly and per-stage origins carry both original component run IDs into the saved Workspace and portable archive.
+
+7F24's complete raster source is included here: rasters.py, raster_stats.py and GRID.md retain its exact windowed statistics and resumable alignment. Workspace.prepare_grid supplies its original source body/companion identity and removes rebuildable alignment tiles only after the complete hashed TIFF has been recorded. Its separate current regional_job.py/regional_scenarios.py/scenario_summary.py continuation remains with the regional producer.
 
 ## CLI, regional jobs and compute programmes
 
@@ -128,3 +187,7 @@ The original portable archive includes model, operator, source_tools, source, or
 Carry this code with the current whole application. A backup created with native intermediates excluded can still reopen its retained final outputs; stage reuse requires the original declared native files to be available. The default complete archive contains them.
 
 Native receiving belongs in the existing equipped application and scientific Workspace. Use the original accepted model case or the current regional source operation; keep its actual source IDs and process/run selection. Exercise profile/grid/model selection, native completion or genuine existing-stage reuse, visible operator review, comparison, full archive and independent reopen in that same operation. Return the actual outputs and any concrete integration exception into the original Upper Savannah thread so source corrections join the same product.
+
+## Publisher-native grid resolution
+
+The current 7F24 native-resolution source is composed into this package as well. An omitted grid_spec.resolution_m preserves Upper Savannah's original 30-metre operation and historical selection. An explicit resolution_m retains a different original publisher-native grid when that separate scientific programme selects it. Output placement uses the selected affine and actual determinant for cell area. Grid extension and completed-stage assembly require the same actual original physical grid; they preserve that field through the normal selection. The source reference for this addition is F0C8N1N4VF0, alongside the exact raster preparation in F0C8JK0F745.

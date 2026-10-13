@@ -413,6 +413,85 @@ def _extract_member(archive, captured, work):
     return native, record
 
 
+
+def _archive_uri(archive, member):
+    path = str(Path(archive).resolve(strict=True))
+    if "{" in path or "}" in path:
+        raise ValueError("Choose an archive path without braces for the native ZIP reader")
+    # GDAL's explicit archive syntax keeps the member boundary unambiguous.
+    return "/vsizip/{" + path + "}/" + member
+
+
+def _archive_member(archive, captured, work):
+    """Hash complete native members while retaining only the original ZIP."""
+    selection = {**_expansion_selection(captured), "read_mode": "archive"}
+    atomic_json(_owned_path(work, "archive-selection.json"), selection, immutable=True)
+    assets = []
+    inventory = {item["name"]: item for item in captured["members"]}
+    for index, name in enumerate(captured["raster_assets"]):
+        receipt_path = _owned_path(work, "archive-asset-" + str(index) + ".json")
+        expected = inventory[name]
+        binding = {"capture_id": captured["capture_id"], "name": name}
+        if receipt_path.exists():
+            record = read_json(receipt_path)
+            if (record.get("state") != "complete" or record.get("selection") != binding
+                    or record.get("bytes") != expected["bytes"]
+                    or record.get("member_crc32") != expected["crc32"]
+                    or not isinstance(record.get("sha256"), str)
+                    or len(record["sha256"]) != 64):
+                raise ValueError("The original archive-member identity differs")
+        else:
+            h, count = hashlib.sha256(), 0
+            with zipfile.ZipFile(archive) as source:
+                item = source.getinfo(name)
+                with source.open(item) as reader:
+                    for block in iter(lambda: reader.read(1024 * 1024), b""):
+                        count += len(block)
+                        if count > item.file_size:
+                            raise ValueError("Original archive member exceeds its native byte count")
+                        h.update(block)
+                    if count != item.file_size:
+                        raise ValueError("The original archive member is incomplete")
+                # Reading to EOF also performs zipfile's native CRC check.
+                record = {"schema": "upstate.original-raster-asset/v1",
+                          "state": "complete", "selection": binding, "name": name,
+                          "path": (PurePosixPath("files") / PurePosixPath(name)).as_posix(),
+                          "member_crc32": f"{item.CRC:08x}", "bytes": count,
+                          "sha256": h.hexdigest(), "received_at": now(),
+                          "storage": "Original member inside the retained national ZIP"}
+            atomic_json(receipt_path, record, immutable=True)
+        assets.append(record)
+    if not assets or assets[0]["name"] != captured["raster_member"]:
+        raise ValueError("The archive selection must retain the original TIFF first")
+    record = {"schema": "upstate.original-raster-member/v1", "state": "complete",
+              "selection": _expansion_selection(captured),
+              "member_crc32": assets[0]["member_crc32"],
+              "bytes": assets[0]["bytes"], "sha256": assets[0]["sha256"],
+              "assets": assets, "received_at": assets[0]["received_at"],
+              "read_mode": "archive",
+              "integrity": "Every selected original member streamed completely through "
+                           "SHA256 and native ZIP CRC verification; no expanded copy"}
+    atomic_json(_owned_path(work, "archive-member.json"), record, immutable=True)
+    return _archive_uri(archive, captured["raster_member"]), record
+
+
+def _opened_archive_members(archive, opened, assets):
+    """Map every GDAL-opened file to its exact already-retained ZIP member."""
+    archive = str(Path(archive).resolve(strict=True))
+    accepted = {}
+    for item in assets:
+        name = item["name"]
+        accepted["/vsizip/{" + archive + "}/" + name] = name
+        accepted["/vsizip/" + archive + "/" + name] = name
+    result = []
+    for name in opened:
+        if name not in accepted:
+            raise ValueError("The native ZIP reader used an unretained external source file")
+        result.append(accepted[name])
+    if not result:
+        raise ValueError("The native ZIP reader did not identify its original source member")
+    return sorted(set(result))
+
 def _retain_member_receipt(directory, record):
     path = _owned_path(directory, "original/native-member.json")
     if path.exists():
@@ -628,9 +707,12 @@ def _verify_entry(directory, entry):
 
 
 def prepare(directory, *, capture_directory, domain, buffer_m=1000, layer=None, where=None,
-            expected_features=None, maximum_clip_pixels=DEFAULT_CLIP_PIXELS, work_directory=None):
+            expected_features=None, maximum_clip_pixels=DEFAULT_CLIP_PIXELS, work_directory=None,
+            read_mode="expanded"):
     """Create a native-grid local clip and the existing NLCD source manifest."""
     import rasterio
+    if read_mode not in ("expanded", "archive"):
+        raise ValueError("Choose expanded or archive native source reading")
     _positive_integer(maximum_clip_pixels, "Maximum local clip pixels")
     if expected_features is not None:
         _positive_integer(expected_features, "Expected native-domain feature count")
@@ -655,6 +737,8 @@ def prepare(directory, *, capture_directory, domain, buffer_m=1000, layer=None, 
             "layer": layer, "where": where,
             "buffer_m": float(buffer_m), "expected_features": expected_features,
             "maximum_clip_pixels": maximum_clip_pixels}
+        if read_mode == "archive":
+            selection["native_read_mode"] = "archive"
         atomic_json(directory / "selection.json", selection, immutable=True)
         work = Path(work_directory).resolve() if work_directory else directory / "working"
         if work == directory or work.is_relative_to(directory / "original"):
@@ -664,7 +748,7 @@ def prepare(directory, *, capture_directory, domain, buffer_m=1000, layer=None, 
             if entry.get("selection_sha256") != digest(selection):
                 raise ValueError("The existing source entry selects another national edition or domain")
             result = _verify_entry(directory, entry)
-            if work.exists():
+            if read_mode == "expanded" and work.exists():
                 with held(_owned_path(work, "native-member.lock"), blocking=False):
                     retained_member = read_json(directory / "original/native-member.json")
                     _cleanup_expansion(work, captured, retained_member)
@@ -688,16 +772,22 @@ def prepare(directory, *, capture_directory, domain, buffer_m=1000, layer=None, 
         # command-private area; the complete ZIP and final clip remain retained.
         work.mkdir(parents=True, exist_ok=True)
         with held(_owned_path(work, "native-member.lock"), blocking=False):
-            native, member_receipt = _extract_member(paths["archive"], captured, work)
+            native, member_receipt = (_archive_member(paths["archive"], captured, work)
+                                      if read_mode == "archive" else
+                                      _extract_member(paths["archive"], captured, work))
             member_receipt = _retain_member_receipt(directory, member_receipt)
             with rasterio.Env(GDAL_CACHEMAX=64*1024*1024), rasterio.open(native) as dataset:
                 native_crs, native_grid = _inspect_grid(dataset, captured["source_contract"])
-                available_assets = {(work / item["path"]).resolve(strict=True): item
-                                    for item in member_receipt["assets"]}
-                opened = [Path(name).resolve(strict=True) for name in dataset.files]
-                if any(path not in available_assets for path in opened):
-                    raise ValueError("The native TIFF reader used an unretained external source file")
-                native_grid["opened_source_members"] = sorted(available_assets[path]["name"] for path in opened)
+                if read_mode == "archive":
+                    native_grid["opened_source_members"] = _opened_archive_members(
+                        paths["archive"], dataset.files, member_receipt["assets"])
+                else:
+                    available_assets = {(work / item["path"]).resolve(strict=True): item
+                                        for item in member_receipt["assets"]}
+                    opened = [Path(name).resolve(strict=True) for name in dataset.files]
+                    if any(path not in available_assets for path in opened):
+                        raise ValueError("The native TIFF reader used an unretained external source file")
+                    native_grid["opened_source_members"] = sorted(available_assets[path]["name"] for path in opened)
                 rows, reader = _domain_geometry(original_domain, layer=layer, where=where,
                                                 target_crs=native_crs)
                 if expected_features is not None and len(rows) != expected_features:
@@ -726,6 +816,9 @@ def prepare(directory, *, capture_directory, domain, buffer_m=1000, layer=None, 
                     "domain_mask": "The original scientific model applies its retained buffered-domain mask after alignment",
                     "expanded_member_bytes": sum(item["bytes"] for item in member_receipt["assets"]),
                     "uncompressed_prepared_pixel_bytes": int(window.width * window.height) * 4}
+                if read_mode == "archive":
+                    plan["native_access"] = "GDAL /vsizip/ over the complete verified local national archive"
+                    plan["scratch_expansion_bytes"] = 0
                 atomic_json(directory / "plan.json", plan, immutable=True)
                 clip = _clip(dataset, window, directory, plan)
             atomic_json(directory / "original" / "native-grid.json", native_grid, immutable=True)
@@ -751,7 +844,8 @@ def prepare(directory, *, capture_directory, domain, buffer_m=1000, layer=None, 
                     describe_file(directory, p) for p in sorted(set(companion_paths))]}
             atomic_json(directory / "source-entry.json", entry, immutable=True)
             result = _verify_entry(directory, entry)
-            _cleanup_expansion(work, captured, member_receipt)
+            if read_mode == "expanded":
+                _cleanup_expansion(work, captured, member_receipt)
             return result
 
 
@@ -779,6 +873,8 @@ def main(argv=None):
     prepare_parser.add_argument("--buffer-m", type=float, default=1000)
     prepare_parser.add_argument("--maximum-clip-pixels", type=int, default=DEFAULT_CLIP_PIXELS)
     prepare_parser.add_argument("--work-directory", help="Declared owned scratch for the sole original TIFF expansion")
+    prepare_parser.add_argument("--read-mode", choices=("expanded", "archive"), default="expanded",
+                                help="Read the verified national ZIP directly or expand its original TIFF")
     prepare_parser.add_argument("--output", required=True)
     args = parser.parse_args(argv)
     if args.command == "receive":
@@ -799,7 +895,8 @@ def main(argv=None):
         value = prepare(args.output, capture_directory=args.capture_directory, domain=args.domain,
                         layer=args.layer, where=json.loads(args.where_json) if args.where_json else None,
                         expected_features=args.expected_features, buffer_m=args.buffer_m,
-                        maximum_clip_pixels=args.maximum_clip_pixels, work_directory=args.work_directory)
+                        maximum_clip_pixels=args.maximum_clip_pixels, work_directory=args.work_directory,
+                        read_mode=args.read_mode)
     print(json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False))
 
 

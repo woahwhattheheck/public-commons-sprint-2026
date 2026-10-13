@@ -3,7 +3,7 @@
 import http from 'node:http';
 import { randomBytes, randomUUID, timingSafeEqual, createHash } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { readFile, mkdir, writeFile, rename, unlink } from 'node:fs/promises';
+import { readFile, mkdir, writeFile, rename, unlink, rm, open } from 'node:fs/promises';
 import { dirname, basename, join, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Transform } from 'node:stream';
@@ -16,6 +16,10 @@ const STATIC = new Map([
   ['/', ['public/index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['public/app.mjs', 'text/javascript; charset=utf-8']],
   ['/style.css', ['public/style.css', 'text/css; charset=utf-8']],
+  ['/osf', ['public/osf.html', 'text/html; charset=utf-8']],
+  ['/osf/', ['public/osf.html', 'text/html; charset=utf-8']],
+  ['/osf.mjs', ['public/osf.mjs', 'text/javascript; charset=utf-8']],
+  ['/osf.css', ['public/osf.css', 'text/css; charset=utf-8']],
 ]);
 const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const failure = (status, code, message) => Object.assign(new Error(message), {status, code});
@@ -82,6 +86,12 @@ function documentPage(title, content) {
     escapeHtml(title) + '</h1>' + content + '</main></body></html>';
 }
 
+async function releaseExport(file) {
+  if(!file.temporary)return;
+  if(file.cleanup_directory)await rm(file.cleanup_directory,{recursive:true,force:true});
+  else if(file.path)await unlink(file.path).catch(()=>{});
+}
+async function syncDirectory(directory){const fd=await open(directory,'r');try{await fd.sync();}finally{await fd.close();}}
 async function sendFile(req, res, file) {
   const name = String(file.filename || 'workspace-download').replace(/[\r\n\x00-\x1f]/g, '_');
   headers(res, file.contentType || 'application/octet-stream');
@@ -89,7 +99,7 @@ async function sendFile(req, res, file) {
   if (file.path) {
     res.writeHead(200, {'Content-Length': file.bytes});
     try { await pipeline(createReadStream(file.path), res); }
-    finally { if (file.temporary) await unlink(file.path).catch(() => {}); }
+    finally { await releaseExport(file); }
   } else {
     const bytes = Buffer.isBuffer(file.bytes) ? file.bytes : Buffer.from(file.bytes);
     res.writeHead(200, {'Content-Length': bytes.length});
@@ -118,8 +128,8 @@ export async function startServer({directory, upstreamRoot, port = 0} = {}) {
   }
   async function saveReceipt(id, receipt) {
     const path = join(receivingPath(id), 'receipt.json');
-    await writeFile(path + '.tmp', JSON.stringify(receipt), {mode:0o600});
-    await rename(path + '.tmp', path);
+    const fd=await open(path+'.tmp','w',0o600);try{await fd.writeFile(JSON.stringify(receipt));await fd.sync();}finally{await fd.close();}
+    await rename(path + '.tmp', path);await syncDirectory(dirname(path));
   }
   async function previewReceived(id) {
     const receipt = await readReceipt(id);
@@ -145,7 +155,7 @@ export async function startServer({directory, upstreamRoot, port = 0} = {}) {
     let temporary;
     try {
       const dir = receivingPath(id);
-      await mkdir(dir, {recursive:true, mode:0o700});
+      await mkdir(dir, {recursive:true, mode:0o700});await syncDirectory(dirname(receivingRoot));await syncDirectory(receivingRoot);
       const prior = await readReceipt(id).catch(error => { if (error.status === 404) return null; throw error; });
       if (prior && (prior.filename !== filename || prior.actor !== metadata.actor)) throw failure(409, 'RECEIVING_CONFLICT', 'This receiving identifier already belongs to another original file or operator.');
       temporary = join(dir, 'incoming-' + randomUUID() + '.part');
@@ -157,7 +167,8 @@ export async function startServer({directory, upstreamRoot, port = 0} = {}) {
       if (prior && (prior.source_sha256 !== sha256 || prior.bytes !== bytes)) throw failure(409, 'RECEIVING_CONFLICT', 'Different archive bytes were sent under the original receiving identifier.');
       if (prior) { await unlink(temporary); temporary = null; }
       else {
-        await rename(temporary, join(dir, 'archive.sqlite')); temporary = null;
+        const fd=await open(temporary,'r');try{await fd.sync();}finally{await fd.close();}
+        await rename(temporary, join(dir, 'archive.sqlite')); temporary = null;await syncDirectory(dir);
         await saveReceipt(id, {receiving_id:id,filename,actor:metadata.actor,source_sha256:sha256,bytes,status:'RECEIVED',received_at:new Date().toISOString()});
       }
       return await previewReceived(id);
@@ -185,6 +196,7 @@ export async function startServer({directory, upstreamRoot, port = 0} = {}) {
     if (closing) throw failure(503, 'CLOSING', 'The workspace is closing. Reopen its saved directory to continue.');
     const bound = server.address();
     const allowedHosts = new Set(['127.0.0.1:' + bound.port, 'localhost:' + bound.port]);
+    if(bound.port===80){allowedHosts.add('127.0.0.1');allowedHosts.add('localhost');}
     if (!allowedHosts.has(req.headers.host)) throw failure(403, 'HOST_REJECTED', 'Open the workspace at its local address.');
     const expectedOrigin = 'http://' + req.headers.host;
     if (req.headers.origin && req.headers.origin !== expectedOrigin) throw failure(403, 'ORIGIN_REJECTED', 'This request did not originate from the local workspace.');
@@ -193,6 +205,7 @@ export async function startServer({directory, upstreamRoot, port = 0} = {}) {
     if (url.pathname.startsWith('/api/')) {
       const supplied = Buffer.from(String(req.headers['x-workspace-token'] || ''));
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes)) throw failure(403, 'SESSION_REQUIRED', 'Reload this workspace to use its current local session.');
+      if(req.headers['x-workspace-id']&&req.headers['x-workspace-id']!==workspace.store.meta('osf_workspace_id'))throw failure(409,'WORKSPACE_CHANGED','The original institutional workspace changed. Open its own launch page.');
       if (req.method === 'GET' && url.pathname === '/api/state') return json(res, 200, workspace.state());
       if (req.method === 'POST' && url.pathname === '/api/receiving/archive') return json(res, 200, await receiveArchive(req));
       const receiptRoute = parts(url.pathname, '/api/receiving/');
@@ -202,7 +215,7 @@ export async function startServer({directory, upstreamRoot, port = 0} = {}) {
         if (typeof input.kind !== 'string' || typeof input.id !== 'string') throw failure(400, 'FILE_REQUIRED', 'Choose the retained file to download.');
         for (const [id, value] of downloadTickets) if (Date.now() - value.created_at > 300000) {
           downloadTickets.delete(id);
-          if (value.file.temporary) await unlink(value.file.path).catch(() => {});
+          await releaseExport(value.file);
         }
         const file = await workspace.exportFile(input.kind, input.id), id = randomUUID();
         downloadTickets.set(id, {file,created_at:Date.now()});
@@ -247,7 +260,10 @@ export async function startServer({directory, upstreamRoot, port = 0} = {}) {
       const [path, type] = STATIC.get(url.pathname);
       bytes = await readFile(join(ROOT, path));
       contentType = type;
-      if (url.pathname === '/') bytes = Buffer.from(bytes.toString('utf8').replace('__SESSION_TOKEN__', token));
+      if (['/','/osf','/osf/'].includes(url.pathname)) bytes = Buffer.from(bytes.toString('utf8').replace('__SESSION_TOKEN__', token));
+    } else if (url.pathname === '/osf-guide') {
+      bytes=Buffer.from(documentPage('OSF transition guide','<p><a href="/osf">Open OSF Institutional Transition</a></p><pre class="guide-text">'+escapeHtml(await readFile(join(ROOT,'OSF_TRANSITION.md'),'utf8'))+'</pre>'));
+      contentType='text/html; charset=utf-8';
     } else if (url.pathname === '/workflow') {
       bytes = Buffer.from(documentPage('Operating guide', '<pre class="guide-text">' + escapeHtml(await readFile(join(ROOT, 'WORKFLOW.md'), 'utf8')) + '</pre>'));
       contentType = 'text/html; charset=utf-8';
@@ -282,7 +298,7 @@ export async function startServer({directory, upstreamRoot, port = 0} = {}) {
       closing = true;
       await new Promise(resolveClose => server.close(resolveClose));
       await Promise.allSettled([...tasks]);
-      for (const ticket of downloadTickets.values()) if (ticket.file.temporary) await unlink(ticket.file.path).catch(() => {});
+      for (const ticket of downloadTickets.values()) await releaseExport(ticket.file);
       downloadTickets.clear();
       await workspace.close();
     },

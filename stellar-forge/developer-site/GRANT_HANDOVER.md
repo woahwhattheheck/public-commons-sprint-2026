@@ -52,6 +52,53 @@ Opening a citation is a normal link. To retain a cited file as evidence, select 
 complete original file and record its description. The source index is not treated
 as a substitute for all the documents it cites.
 
+## Receive and share a source package
+
+A complete reviewer source package carries the application, original source index,
+budget and product/finance companion together. It uses
+`stellar-forge.grant-reviewer-source-package.v1` around the existing source
+bundle, including every original file byte, URL, receiving date and source
+identity. The original draft and source-bundle schemas remain in use.
+
+In **Source editions**, choose **Open source package**. The file opens as an
+incoming edition for comparison. **Receive source and keep edited answers**
+updates untouched answers through the original source receiver, retains each
+edited answer's original baseline and keeps the preceding complete working
+version. The same draft ID, saved browser record and revision, issuer fields,
+native planning, review decisions and frozen prepared editions continue.
+
+A package with the same application can still contain a separately received
+budget, companion or source-index edition. **Use these four reviewer files**
+selects that complete bundle and retains the previous working selection. Repeating
+the same already-selected bundle leaves the draft unchanged.
+
+Each retained source edition lists its complete bundles. **Review these source
+files** opens the chosen bundle for comparison. **Download retained source
+package** exports exactly those four files and their original metadata. The
+incoming edition also has **Download source package**. Full draft export carries
+the received bundle alongside all editorial history, so another operator can
+reopen the working application through the original draft controls.
+
+The file receiver verifies the source package's complete envelope, the original
+bundle body, all four byte identities and the source index's application and
+companion declarations before changing the working draft. The original logical
+16 MiB allowance and encoded complete-file allowance apply. The package reader
+uses its retained bytes without a host refresh. On a host whose current source
+cannot be read, **Open source package** remains available to open its nine answers
+through the existing source-to-draft path.
+
+The existing command-line exporter receives the same package into a saved draft:
+
+~~~sh
+starforge grant-export \
+  --draft /private/scf/saved-submission.json \
+  --receive-source-package /private/scf/source-package.json \
+  --out /private/scf/received-source
+~~~
+
+Its complete output includes the original editable draft, copyable values,
+offline review page and a source package for the selected four-file bundle.
+
 ## Retain exact evidence
 
 In **Submission handover → Retain selected original evidence**:
@@ -260,6 +307,11 @@ server and application-opening command remain the way to run it.
 | Module export | Behavior |
 | --- | --- |
 | `readReviewerSource({baseUrl,fetchImpl?,receivedAt?})` | Reads and verifies the four same-origin reader files; returns `{source,bundle,objects}`. |
+| `verifyReviewerSource(received)` | Verifies and returns the complete original source, bundle and four file objects through the existing model. |
+| `createReviewerSourcePackage(received,{exportedAt?})` | Exports the complete verified four-file source envelope. |
+| `openReviewerSourcePackage(text)` | Opens and verifies that complete envelope from retained bytes. |
+| `reviewerSourceFromDraft(draft,bundleId)` | Selects the exact retained source bundle and its four original file bodies. |
+| `receiveReviewerSource(draft,received,{at?,planningOptions?})` | Receives that source into the same draft, preserving edits and history; a repeated selected bundle returns the unchanged state. |
 | `createSourceBundle(source,{indexBytes,budgetBytes,companionBytes,urls?,receivedAt?})` | Verifies already received exact bytes without fetching another source. |
 | `retainSourceBundle(draft,received,{select?,at?})` | Adds that bundle after its original application has been received through the original editor. |
 | `stageOriginal(draft,bytes,{name,mediaType,forReturn?,sourceUrl?,at?})` | Retains complete file bytes and the corresponding working file selection. |

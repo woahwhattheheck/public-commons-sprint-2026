@@ -89,3 +89,47 @@ The prepared `sources.json` uses the original `upstate.sources/v1` interface. It
 Import this manifest with the existing `Workspace.import_sources` or original operator source-intake action, then select its returned source ID for the existing model's `NLCD` role. The existing source composer can join it with the original reporting basin, upstream domain, regional biophysical table, PRISM precipitation, NOAA R, soil K and remaining selected inputs.
 
 The scientific workspace's portable application now includes the original `source/` dependency alongside `model/`, `operator/` and `source_tools/`. Consequently the delivered original Esri reader and source operating guides are present after receiving. The workspace object store preserves selected original bytes. Continue the single existing native model/operator/backup/receiving programme with its retained IDs; this source adapter creates neither a competing model runner nor a new scientific result.
+
+
+## Read the verified archive without a second national TIFF
+
+The same original preparation now accepts `--read-mode archive`. This uses GDAL's
+native `/vsizip/` reader against the completed local national archive. It performs
+no provider request and keeps the domain selection entirely local.
+
+The archive, capture, source contract, full native member inventory and sidecars
+are unchanged. Each selected TIFF or sidecar is streamed to its end to establish
+its complete SHA-256 and native ZIP CRC. Those original identities are retained
+before the raster is opened. The driver must report only those exact retained
+archive members. The local window then goes through the existing CRS/affine,
+full-domain coverage, original class/NoData, block writing, manifest and receiving
+checks. There is no full-size expanded TIFF on disk.
+
+```bash
+python -m source_tools.nlcd_static prepare \
+  --capture-directory /owned/annual-nlcd-original \
+  --domain /owned/model-domain/model-domain.esri.json.gz \
+  --expected-features 217 --buffer-m 1000 \
+  --read-mode archive \
+  --work-directory /owned/annual-nlcd-member-records \
+  --output /owned/annual-nlcd-upstream-archive-read
+```
+
+Use a fresh output selection when changing the read mode. Its selection and plan
+record the archive access method and zero bytes of full-member scratch expansion.
+The original `expanded` mode remains the default and preserves its existing
+selection and cleanup behavior. The original ZIP must fit, along with the local
+clip, native reader memory and the later source-intake/backup copies. Same-volume
+original retention uses the existing hardlink path.
+
+The archive mode trades expanded disk storage for the native ZIP reader's
+decompression and seek work. A conventional compressed national ZIP can require
+substantial decompression to reach the selected TIFF blocks. Keep the original
+operation running and use the actual measured time. Full member verification is
+retained per member, and an interrupted local clip continues through the same
+original received/rename/complete boundary. Every completed output can be reopened
+without fetching the national product again.
+
+Reference: [GDAL virtual ZIP files and on-the-fly reading](https://gdal.org/en/stable/user/virtual_file_systems.html#vsizip-zip-archives).
+Authored integration: TokenJunkieLabs, original UPSTATE-ORIGINAL-SOURCES-DBC61
+national-source continuation, 405F.

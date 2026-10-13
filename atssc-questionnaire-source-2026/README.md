@@ -54,3 +54,31 @@ The catalogue and CSV files support the maintained questionnaire implementation'
 [Original English Annex A](https://canadabuys.canada.ca/sites/default/files/webform/tender_notice/108603/annex-a---questions-to-industry---citt-online-questionnaire-management-platform.pdf)
 
 All source document URLs and exact acquired archive identities are recorded in `SOURCE_MANIFEST.json`.
+
+## Expand original shared formulas and map dependencies
+
+Run the complete read-only formula projection with Python and `openpyxl` available:
+
+```bash
+python3 classify_atssc_formulas.py originals/ATSSC_Original_Annexes_and_Workbook_Catalogue.zip --output formula-dependencies
+```
+
+The programme verifies the exact source archive and every original workbook. It expands each shared-formula follower from its original master and retains both the original expression and effective cell expression. Structural grouping preserves absolute and relative reference axes, worksheet identity, functions, literals and expression tokens. Each member remains joined by the original workbook SHA, worksheet and cell address.
+
+For each of the five questionnaire families, the output includes:
+
+- Every original formula occurrence, shared-formula origin, effective expression and original cached value.
+- Complete structural-group membership, with the contributing worksheets and functions.
+- All reference tokens and direct formula dependencies, including ranges, full rows/columns, worksheet spans and resolvable defined names.
+- Original reference errors, qualified broken references, unresolved or cyclic names, external references and other source conditions.
+- Worksheet visibility and the complete static dependency closure of visible formulas.
+- Original questionnaire text and cached error cells.
+- For C1, the requested configuration-derived prompts, each original production/confidential/public-summary rule-group representative, and the complete hidden-formula closure.
+
+`ATSSC_Formula_Dependency_Inventory.json` records the parser version, source identities, all family totals and the exact hash/size of every output file. The programme requires all 7,661 original formula occurrences to be retained. The completed collection expands 1,345 shared followers from 223 masters and contains 1,302 workbook-specific structural groups representing 904 structural expression shapes.
+
+The C1 visible questionnaire contains 343 formula occurrences and reaches three formula cells in Variables. Its 337 inherited Prod FY, Fin FY and DataTab formulas remain outside that visible-formula dependency closure. Preserve the complete 12-sheet original and the entire Variables configuration, including literal settings. Review the inherited sheets' intended report and template uses when recording their disposition.
+
+Structural groups are candidates for migration mapping. They do not establish that distinct questions have equivalent business meaning. Static reachability also does not establish that an inherited branch executes for every answer, or that a hidden sheet can be removed. The output preserves those distinctions so the application can join the original calculation, revision and reporting implementation.
+
+The programme projects references and stored source values. Calculation of a respondent's answers stays with the selected application's workbook engine.

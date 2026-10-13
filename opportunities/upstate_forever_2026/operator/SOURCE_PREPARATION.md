@@ -52,6 +52,21 @@ helper. Explicit download mode selects the helper's fixed published national
 archive. The Annual NLCD operation always receives the completed national
 archive and makes its domain clip locally.
 
+The land-cover desk also exposes the native reading mode. Choose **Read the
+original ZIP directly** to use the maintained archive reader, which verifies
+complete TIFF/sidecar hashes and ZIP CRC and reads through GDAL's native
+/vsizip/ path. It retains the complete national archive and local categorical
+clip without a second full national TIFF. Choose **Expand the original
+national TIFF** when that existing read mode is the intended selection. An
+omitted mode preserves earlier task selections and the helper's existing
+expanded behavior. Changing modes creates a new explicit source selection.
+
+Archive reading requires the current source_tools/nlcd_static.py successor
+from F0C88DUTKST, 53,363 bytes, SHA256
+1234d1cc1bb1bc4cbcfe695f7e681ddda807d161ece7eced73126f88416ad24e,
+or its compatible successor. Both modes preserve the original domain, grid,
+classes, NoData, source identity and source-manifest contract.
+
 The national land-cover receiver reads the actual archive byte count from the
 selected retained file. Its TIFF expansion capacity is selected explicitly
 within the operator's configured extraction limit. The original helper reads
@@ -149,6 +164,10 @@ successor. The helper's original completed-result path may return immediately
 without emitting another progress event.
 
 ## Integration contract
+
+The current complete operator uses the shared extension registry. Install these complete source files with the current application, then run its `install_extensions.py` against that application. The existing `operator/extensions/source-preparation.json` descriptor constructs this backend and registers the actions, reads and task decoration. The corresponding native-run-desk descriptor registers the run controls. This is the receiving route for the cumulative application.
+
+The direct integration shown below is the alternative for an application that uses explicit shared-file registrations. Select one registration route so the same action and desk have one owner.
 
 Import the additive module after the operator's registered source manifests
 have been initialized:

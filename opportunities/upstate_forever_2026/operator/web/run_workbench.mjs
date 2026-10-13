@@ -26,7 +26,7 @@ const htmlButton = (action, label, values = {}, disabled = false, primary = fals
 const option = (value, label, selected, disabled = false) =>
   '<option value="' + escapeHTML(value) + '"' + (selected ? ' selected' : '') + (disabled ? ' disabled' : '') + '>' + escapeHTML(label) + '</option>';
 
-export function runDeskRows(snapshot, draft) {
+export function runDeskRows(snapshot, draft, programmeStatuses = []) {
   const data = snapshot?.data || {};
   const profiles = new Map((data.profiles || []).map(row => [row.id, row]));
   const scenarios = new Map((data.scenarios || []).map(row => [row.id, row]));
@@ -48,6 +48,26 @@ export function runDeskRows(snapshot, draft) {
     if (!index.has(key)) index.set(key, []);
     index.get(key).push(task);
   }
+  const programmeByRun = new Map(), programmeBySelection = new Map();
+  const runningTasks = new Map(tasks.filter(task => task.action === 'compute.programme.run' && task.state === 'running').map(task => [task.id, task]));
+  for (const retained of programmeStatuses) {
+    const task = runningTasks.get(retained.task_id), status = retained.status;
+    if (!task || status?.active !== true || !Array.isArray(status.runs)) continue;
+    const requested = new Set(Array.isArray(status.requested_runs) ? status.requested_runs : status.runs.map(row => row.key));
+    if (status.baseline_run) requested.add(status.baseline_run);
+    const currentKey = typeof status.current_run === 'string' ? status.current_run : status.current_run?.key;
+    if (currentKey) requested.add(currentKey);
+    for (const binding of status.runs) {
+      if (!requested.has(binding.key)) continue;
+      const programme = {id: status.programme_id || status.id, key: binding.key, current: binding.key === currentKey, task};
+      if (idPattern.test(binding.run_id || '') && (!programmeByRun.has(binding.run_id) || programme.current))
+        programmeByRun.set(binding.run_id, programme);
+      const selection = binding.native_selection || binding.selection;
+      if (selection && ['grid_id', 'profile_id', 'scenario_id'].every(key => idPattern.test(selection[key] || '')) &&
+          (!programmeBySelection.has(selectionKey(selection)) || programme.current))
+        programmeBySelection.set(selectionKey(selection), programme);
+    }
+  }
   const excluded = new Set(draft.excluded || []);
   const rows = [];
   for (const profileId of draft.profile_ids || []) {
@@ -63,9 +83,11 @@ export function runDeskRows(snapshot, draft) {
       const starts = run ? startByRun.get(run.id) || [] : [];
       const activePreparation = preparations.find(task => activeStates.has(task.state));
       const activeStart = starts.find(task => activeStates.has(task.state));
-      const task = activeStart || activePreparation || starts[0] || preparations[0];
+      const programme = (run && programmeByRun.get(run.id)) || programmeBySelection.get(key);
+      const task = programme?.task || activeStart || activePreparation || starts[0] || preparations[0];
       let state = 'missing', label = 'Needs preparation';
       if (run?.state === 'complete') { state = 'complete'; label = 'Complete'; }
+      else if (programme) { state = programme.current ? 'running' : 'queued'; label = programme.current ? 'Running in programme' : 'Selected in active programme'; }
       else if (activeStart) { state = activeStart.state; label = activeStart.state === 'queued' ? 'Queued to run' : 'Running'; }
       else if (activePreparation) { state = 'preparing'; label = activePreparation.state === 'running' ? 'Preparing' : 'Preparation queued'; }
       else if (run && starts[0] && resumableStates.has(starts[0].state)) { state = 'attention'; label = starts[0].state === 'failed' ? 'Run needs attention' : 'Continuation available'; }
@@ -73,10 +95,10 @@ export function runDeskRows(snapshot, draft) {
       else if (run) { state = 'attention'; label = run.state === 'failed' ? 'Run needs attention' : 'Continuation available'; }
       else if (task && resumableStates.has(task.state)) { state = 'attention'; label = 'Preparation needs attention'; }
       rows.push({
-        key, selection, profile, scenario, run, task, state, label,
+        key, selection, profile, scenario, run, task, state, label, programme,
         selected: !excluded.has(key),
-        preparable: !run && !activePreparation,
-        startable: !!run && run.state !== 'complete' && !activeStart && !activePreparation,
+        preparable: !run && !activePreparation && !programme,
+        startable: !!run && run.state !== 'complete' && !activeStart && !activePreparation && !programme,
         queuedTask: [activeStart, activePreparation].find(value => value?.state === 'queued')
       });
     }
@@ -123,7 +145,7 @@ export function runDeskProgrammes(snapshot, draft, rows = runDeskRows(snapshot, 
       grid_id: draft.grid_id,
       baseline_run: 'baseline',
       runs: [{key: 'baseline', title: title(baseline.scenario), profile_id: profileId, scenario_id: baseline.scenario.id},
-        ...alternatives.map(row => ({key: 'scenario-' + row.scenario.id, title: title(row.scenario),
+        ...alternatives.map(row => ({key: row.scenario.id, title: title(row.scenario),
           profile_id: profileId, scenario_id: row.scenario.id}))]
     };
     programmes.push({profileId, profile: baseline.profile, baseline, selection});
@@ -131,10 +153,61 @@ export function runDeskProgrammes(snapshot, draft, rows = runDeskRows(snapshot, 
   return programmes;
 }
 
-export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, toast}) {
+export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, toast}) {
   let host = null, current = null, workspaceKey = null, draft = null;
   let busy = false, notice = '', page = 0, filter = 'all', search = '';
   let storageMessage = '', submission = null;
+  let programmeStatuses = [], programmeRead = null, programmeEpoch = 0, programmeMessage = '';
+  function programmeOpener() {
+    if (typeof openProgramme === 'function') return openProgramme;
+    const programme = typeof getProgramme === 'function' ? getProgramme() : null;
+    return typeof programme?.create === 'function' ? selection => programme.create({selection}) : null;
+  }
+
+  function resetProgrammeTracking() {
+    programmeEpoch++;
+    programmeStatuses = []; programmeRead = null; programmeMessage = '';
+  }
+  function runningProgrammeTasks(snapshot) {
+    const byProgramme = new Map();
+    const tasks = (snapshot?.tasks || []).filter(task => task.action === 'compute.programme.run' && task.state === 'running' &&
+      (!task.workspace || task.workspace === snapshot.workspace_key) && idPattern.test(task.payload?.programme_id || ''))
+      .sort((left, right) => String(left.started_at || left.created_at || '').localeCompare(String(right.started_at || right.created_at || '')));
+    for (const task of tasks) if (!byProgramme.has(task.payload.programme_id)) byProgramme.set(task.payload.programme_id, task);
+    return [...byProgramme.values()];
+  }
+  async function refreshProgrammeActivity(required = false) {
+    const snapshot = getState(), target = snapshot?.workspace_key;
+    if (!host || !target) return;
+    const tasks = runningProgrammeTasks(snapshot);
+    if (!tasks.length) { resetProgrammeTracking(); return; }
+    const signature = tasks.map(task => task.id + ':' + task.payload.programme_id).sort().join('|');
+    let request = programmeRead;
+    if (!request || request.workspace !== target || request.signature !== signature) {
+      request = {workspace: target, signature, epoch: programmeEpoch, promise: null};
+      programmeRead = request;
+      request.promise = Promise.allSettled(tasks.map(async task => {
+        const path = '/api/programmes/detail?workspace=' + encodeURIComponent(target) + '&programme_id=' + encodeURIComponent(task.payload.programme_id);
+        const status = await api(path);
+        if (!status || !Array.isArray(status.runs) || typeof status.active !== 'boolean' ||
+            (status.programme_id || status.id) !== task.payload.programme_id)
+          throw Error('The programme detail response does not match its retained operation.');
+        return {task_id: task.id, status};
+      })).then(results => {
+        const records = results.filter(row => row.status === 'fulfilled').map(row => row.value);
+        const errors = results.filter(row => row.status === 'rejected').map(row => row.reason?.message || String(row.reason));
+        if (host && programmeRead === request && request.epoch === programmeEpoch && getState()?.workspace_key === target) {
+          programmeStatuses = records;
+          programmeMessage = errors.length ? 'Programme progress could not be refreshed: ' + [...new Set(errors)].join(' ') : '';
+          paint();
+        }
+        return {records, errors};
+      }).finally(() => { if (programmeRead === request) programmeRead = null; });
+    }
+    const result = await request.promise;
+    if (required && result.errors.length) throw Error('Refresh the active programme before queueing these cases. ' + result.errors.join(' '));
+    return result;
+  }
 
   function storageKey(key) { return 'upstate-run-desk-v1:' + key; }
   function initialDraft(snapshot) {
@@ -169,6 +242,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     current = snapshot;
     if (workspaceKey === snapshot.workspace_key && draft) return;
     workspaceKey = snapshot.workspace_key;
+    resetProgrammeTracking();
     draft = initialDraft(snapshot);
     notice = ''; storageMessage = ''; page = 0; filter = 'all'; search = '';
     try {
@@ -208,9 +282,10 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   }
   function stageText(row) {
     const stages = row.run?.stage_summary || row.run?.stages || {};
+    const prefix = row.programme ? 'Programme ' + short(row.programme.id) + ' · ' : '';
     const names = Object.entries(stages).filter(([, value]) => value.completed_at).map(([name]) => name === 'ndr' || name === 'sdr' ? name.toUpperCase() : name.replaceAll('_', ' '));
-    if (names.length) return names.join(' · ') + ' retained';
-    return row.run ? 'Original native stages appear as they complete.' : 'Preparation retains the original input selection.';
+    if (names.length) return prefix + names.join(' · ') + ' retained';
+    return prefix + (row.run ? 'Original native stages appear as they complete.' : 'Preparation retains the original input selection.');
   }
   function tableRows(rows) {
     return rows.map(row => '<tr><td><input type="checkbox" data-rd-row="' + escapeHTML(row.key) + '" data-rd-focus="cell-' +
@@ -251,7 +326,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       htmlButton('delivery', 'Prepare delivery from completed pairs', {profile: group.profileId}, busy || group.runIds.length < 2) + '</div></article>').join('');
   }
   function renderProgrammes(rows) {
-    if (typeof openProgramme !== 'function') return '';
+    if (!programmeOpener()) return '';
     const groups = runDeskProgrammes(current, draft, rows);
     if (!groups.length) return '<div class="section-body"><p class="note">Choose a complete working grid and check an unchanged baseline under a selected profile to open its execution programme.</p></div>';
     return '<div class="section-body"><p class="note">Retain a programme for each profile to prepare and execute its selected runs, reuse completed native stages, and continue from saved progress.</p>' +
@@ -267,7 +342,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const focusKey = focused?.dataset.rdFocus;
     const start = focused?.selectionStart, end = focused?.selectionEnd;
     const scroll = [...host.querySelectorAll('[data-rd-scroll]')].map(node => [node.dataset.rdScroll, node.scrollLeft, node.scrollTop]);
-    const rows = runDeskRows(current, draft), selected = rows.filter(row => row.selected), issues = selectionIssues();
+    const rows = runDeskRows(current, draft, programmeStatuses), selected = rows.filter(row => row.selected), issues = selectionIssues();
     const shown = matchingRows(rows), pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
     page = Math.min(page, pageCount - 1);
     const visible = shown.slice(page * pageSize, (page + 1) * pageSize);
@@ -305,6 +380,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       '<button type="button" data-action="runtime" class="small">Runtime versions</button></div>' +
       '<p class="rd-explanation">Preparation saves the original selections. Queueing starts the existing serial operator queue; queued model runs continue after this tab closes. Continuation reuses the original native stages.</p>' +
       '<div class="rd-notice" role="status" aria-live="polite">' + escapeHTML(submission?.workspace === workspaceKey ? submission.message : notice) + '</div>' +
+      (programmeMessage ? '<div class="rd-notice" role="status">' + escapeHTML(programmeMessage) + '</div>' : '') +
       '<div class="rd-filter-bar"><label>Find a selected scenario or profile<input data-rd-field="search" data-rd-focus="search" value="' + escapeHTML(search) +
       '" type="search" placeholder="Scenario, profile, run ID or status"></label><label>Show<select data-rd-field="filter" data-rd-focus="filter">' +
       [['all','All matrix cells'],['selected','Selected cells'],['missing','Needs preparation'],['ready','Can queue / continue'],['active','Active operations'],['complete','Complete runs'],['attention','Needs attention']]
@@ -333,7 +409,11 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       }
     }
   }
-  function update(snapshot) { synchronize(snapshot); paint(); }
+  function update(snapshot) {
+    synchronize(snapshot);
+    refreshProgrammeActivity().catch(error => { programmeMessage = error.message; paint(); });
+    paint();
+  }
   function change(event) {
     const node = event.target;
     if (node.dataset.rdField) {
@@ -367,6 +447,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   function detach() {
     if (host) { host.removeEventListener('change', change); host.removeEventListener('input', input); }
     host = null;
+    resetProgrammeTracking();
   }
   function assertWorkspace(expected) {
     if (getState()?.workspace_key !== expected) throw Error('Workspace changed. Queued operations remain with their original workspace; reopen its run desk to continue.');
@@ -417,14 +498,18 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     synchronize(getState());
     const issues = selectionIssues();
     if (mode !== 'cancel' && issues.length) throw Error(issues.join(' '));
-    let rows = runDeskRows(current, draft).filter(row => key ? row.key === key : row.selected);
-    rows = rows.filter(row => mode === 'prepare' ? row.preparable : mode === 'start' ? row.startable : !!row.queuedTask);
-    if (!rows.length) { notice = 'The selected cells already reflect the retained operator state.'; paint(); return; }
     const target = current.workspace_key;
     const cancelTasks = new Set();
-    let completed = 0, recovered = 0, reused = 0, alreadyStarted = 0;
-    busy = true; submission = {workspace: target, message: 'Submitting original ' + mode + ' operations…'}; paint();
+    let rows = [], completed = 0, recovered = 0, reused = 0, alreadyStarted = 0;
+    busy = true; submission = {workspace: target, message: 'Reading retained native operation progress…'}; paint();
     try {
+      const activity = mode !== 'cancel' ? await refreshProgrammeActivity(true) : null;
+      assertWorkspace(target);
+      synchronize(getState());
+      rows = runDeskRows(current, draft, activity?.records || programmeStatuses).filter(row => key ? row.key === key : row.selected);
+      rows = rows.filter(row => mode === 'prepare' ? row.preparable : mode === 'start' ? row.startable : !!row.queuedTask);
+      if (!rows.length) { notice = 'The selected cells already reflect the retained operator state.'; return; }
+      submission.message = 'Submitting original ' + mode + ' operations…'; paint();
       for (const row of rows) {
         assertWorkspace(target);
         if (mode === 'cancel') {
@@ -453,7 +538,8 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
         (mode === 'prepare' ? 'When preparation completes, queue the ready runs.' : 'The native server queue carries these runs.');
       toast(notice);
     } catch (error) {
-      notice = completed + ' of ' + rows.length + ' requests completed. ' + error.message + ' Reopen or refresh this desk to continue the retained selection.';
+      notice = (rows.length ? completed + ' of ' + rows.length + ' requests completed. ' : '') + error.message +
+        ' Reopen or refresh this desk to continue the retained selection.';
       throw Error(notice);
     } finally {
       busy = false; submission = null; paint();
@@ -475,7 +561,6 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   async function importSelection(file) {
     if (!file) return;
     if (busy) throw Error('Wait for the current queue request to finish.');
-    if (file.size > 4 * 1024 * 1024) throw Error('Choose the exported run-selection JSON, up to 4 MiB.');
     const target = getState().workspace_key;
     const parsed = JSON.parse(await file.text());
     assertWorkspace(target);
@@ -539,8 +624,9 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       if (issues.length) throw Error(issues.join(' '));
       const group = runDeskProgrammes(current, draft).find(row => row.profileId === button.dataset.profile);
       if (!group) throw Error('Check an unchanged baseline under this profile to open its retained execution programme.');
-      if (typeof openProgramme !== 'function') throw Error('The current application has no programme controls attached.');
-      return openProgramme(group.selection);
+      const open = programmeOpener();
+      if (!open) throw Error('The current application has no programme controls attached.');
+      return open(group.selection);
     }
     if (action === 'compare' || action === 'delivery') return compare(button.dataset.profile, action === 'delivery');
     if (action === 'download-selection') return downloadSelection();

@@ -30,7 +30,7 @@ const terminal = state => ['complete','failed','interrupted','cancelled'].includ
 export function createSourceWorkbench(host) {
   let container = null, workspace = null, catalog = null, loading = false, generation = 0;
   let busy = false, error = '', message = '', currentTask = null, progress = null;
-  let tasksFingerprint = '', progressBusy = false, state = null;
+  let tasksFingerprint = '', sourcesFingerprint = '', progressBusy = false, state = null;
   let selectedMethod = '', drafts = {}, mergeDraft = {title:'', prepared:[], collections:[], registered:[], import_sources:true};
   let requests = [], browser = null, browserGeneration = 0, controls = null;
   const local = () => 'upstate-source-workbench-v1:' + workspace;
@@ -47,7 +47,7 @@ export function createSourceWorkbench(host) {
   const save = () => {
     try {
       sessionStorage.setItem(local(), JSON.stringify({method:selectedMethod, drafts, merge:mergeDraft,
-        requests:requests.slice(-24), task_id:currentTask}));
+        requests, task_id:currentTask}));
     } catch { /* Native tasks remain retained even when browser storage is unavailable. */ }
   };
   const selected = () => list(catalog?.methods).find(method => method.id === selectedMethod);
@@ -60,7 +60,10 @@ export function createSourceWorkbench(host) {
       if (!(field.name in value.options) && field.default !== undefined) value.options[field.name] = field.default;
     }
     for (const field of list(method?.inputs)) {
-      if (!(field.name in value.inputs) && field.default && typeof field.default === 'object') value.inputs[field.name] = field.default;
+      const proposed = value.inputs[field.name] || field.default;
+      const absentBuiltin = proposed?.builtin_id && !list(catalog?.bundled).some(row => row.id === proposed.builtin_id && row.available !== false);
+      if (absentBuiltin && value.inputs[field.name]?.builtin_id) value.inputs[field.name] = null;
+      if (!(field.name in value.inputs) && field.default && typeof field.default === 'object' && !absentBuiltin) value.inputs[field.name] = field.default;
     }
     return value;
   };
@@ -96,7 +99,7 @@ export function createSourceWorkbench(host) {
         add(companion.selector || {collection_id:row.collection_id, source_id:row.source_id, companion_path:companion.path},
           displayLabel(row) + ' / ' + (companion.title || companion.path), 'Original companion files', companion.kind);
     }
-    for (const row of list(catalog?.bundled)) add(row.selector || {builtin_id:row.id}, displayLabel(row), 'Application source metadata', row.kind);
+    for (const row of list(catalog?.bundled).filter(row => row.available !== false)) add(row.selector || {builtin_id:row.id}, displayLabel(row), 'Application source metadata', row.kind);
     for (const row of list(catalog?.uploads)) add(row.selector || {upload_id:row.id}, displayLabel(row) + ' (' + size(row.bytes) + ')', 'Uploaded originals', row.kind);
     const value = draft().inputs[field.name];
     if (value && !rows.some(row => canonical(row.selector) === canonical(value)))
@@ -192,10 +195,14 @@ export function createSourceWorkbench(host) {
       (detail ? '<small>' + escapeHTML(detail) + '</small>' : '') + '</span></label>';
   }
   function mergeForm() {
-    const prepared = ownedTasks().filter(task => task.action === 'source.prepare' && task.state === 'complete');
+    const preparedById = new Map(list(catalog?.prepared).filter(row => row.action === 'source.prepare' && row.state === 'complete')
+      .map(row => [row.task_id, {id:row.task_id, title:row.title, ended_at:row.updated_at, restored:true}]));
+    for (const task of ownedTasks().filter(row => row.action === 'source.prepare' && row.state === 'complete'))
+      preparedById.set(task.id, {...task, title:taskName(task)});
+    const prepared = [...preparedById.values()];
     const collections = list(state?.data?.sources);
     const registered = list(state?.registered_sources);
-    const items = prepared.map(task => selectionBox('prepared', task.id, taskName(task), 'Prepared ' + stamp(task.ended_at), mergeDraft.prepared)).join('') +
+    const items = prepared.map(task => selectionBox('prepared', task.id, task.title, 'Prepared ' + stamp(task.ended_at) + (task.restored ? ' · retained with this study' : ''), mergeDraft.prepared)).join('') +
       collections.map(row => selectionBox('collections', row.id, displayLabel(row), list(row.entries).length + ' original sources', mergeDraft.collections)).join('') +
       registered.map(row => selectionBox('registered', row.id, displayLabel(row), row.entries + ' registered original sources', mergeDraft.registered)).join('');
     return '<details class="sp-merge" data-sp-merge' + (mergeDraft.open ? ' open' : '') + '><summary>Combine prepared inputs and existing source editions</summary>' +
@@ -246,11 +253,23 @@ export function createSourceWorkbench(host) {
     const elapsed = value.elapsed_seconds ?? value.elapsed_s;
     const steps = list(value.stages || value.steps);
     const tail = value.log_tail ?? value.log ?? value.output_tail ?? '';
-    const readable = typeof tail === 'string' ? tail : JSON.stringify(tail, null, 2);
+    const readable = typeof tail === 'string' ? tail : (Array.isArray(tail) ? tail.map(line => typeof line === 'string' ? line : JSON.stringify(line)).join('\n') : JSON.stringify(tail, null, 2));
+    const native = value.native_progress || {}, completed = native.assembled_tiles ?? native.complete_tiles;
+    const total = native.tile_count;
+    const hasTiles = Number.isFinite(total) && total > 0 && Number.isFinite(completed);
+    const details = [['Workers',native.workers],['Reused tiles',native.reused_tiles],['Failed tiles',native.failed_tiles],
+      ['Valid cells',native.valid_cells],['NoData cells',native.nodata_cells]]
+      .filter(([,number]) => Number.isFinite(number))
+      .map(([label,number]) => '<div><dt>' + escapeHTML(label) + '</dt><dd>' + escapeHTML(number.toLocaleString()) + '</dd></div>').join('');
+    const nativeProgress = hasTiles ? '<div class="sp-native-progress"><label for="sp-native-tiles">' +
+      escapeHTML(completed.toLocaleString()) + ' of ' + escapeHTML(total.toLocaleString()) + ' original tiles ' +
+      (native.assembled_tiles != null ? 'assembled' : 'complete') + '</label><progress id="sp-native-tiles" max="' + total + '" value="' +
+      Math.max(0,Math.min(total,completed)) + '"></progress><dl class="sp-native-stats">' + details +
+      (Number.isFinite(native.received_bytes) ? '<div><dt>Original bytes received</dt><dd>' + escapeHTML(size(native.received_bytes)) + '</dd></div>' : '') + '</dl></div>' : '';
     target.innerHTML = '<header class="sp-progress-header"><div><h3>' + escapeHTML(task ? taskName(task) : 'Original source operation') + '</h3>' +
       '<p>' + escapeHTML(value.stage || value.phase || task?.state || 'Reading native progress…') +
       (elapsed != null ? ' · ' + escapeHTML(Number(elapsed).toLocaleString(undefined,{maximumFractionDigits:1})) + ' s elapsed' : '') + '</p></div>' +
-      textButton('refresh-progress','Refresh progress') + '</header>' +
+      textButton('refresh-progress','Refresh progress') + '</header>' + nativeProgress +
       (steps.length ? '<ol class="sp-steps">' + steps.map(step => '<li><strong>' + escapeHTML(step.label || step.name || step.stage || step.id) + '</strong> ' +
         escapeHTML(step.state || step.status || '') + '</li>').join('') + '</ol>' : '') +
       (value.error ? '<p class="sp-inline-error">' + escapeHTML(value.error.message || value.error) + '</p>' : '') +
@@ -267,7 +286,7 @@ export function createSourceWorkbench(host) {
       if (container && expected === workspace && key === currentTask) {
         progress = {error:problem.message}; renderProgress();
       }
-    } finally { progressBusy = false; }
+    } finally { if (version === generation) progressBusy = false; }
   }
   async function loadCatalog(force = false) {
     if (!container || loading) return;
@@ -287,17 +306,17 @@ export function createSourceWorkbench(host) {
       notice();
     } catch (problem) {
       if (expected === workspace && version === generation) setError(problem);
-    } finally { loading = false; }
+    } finally { if (version === generation) loading = false; }
   }
   async function submit(action, payload) {
     if (busy) return;
-    const expected = workspace, requestKey = canonical({action, payload, workspace:expected});
+    const expected = workspace, version = generation, requestKey = canonical({action, payload, workspace:expected});
     let request = requests.find(row => row.key === requestKey);
     if (!request) { request = {key:requestKey, id:'sourceprep-' + crypto.randomUUID(), at:new Date().toISOString()}; requests.push(request); }
     busy = true; error = ''; message = 'Saving this source operation in the native queue…'; save(); renderForm(); notice();
     try {
       const task = await host.api('/api/actions', {method:'POST', body:{workspace:expected, action, payload, operation_id:request.id}});
-      if (workspace !== expected) return;
+      if (workspace !== expected || version !== generation) return;
       currentTask = task.id; progress = null; save();
       message = 'Source operation ' + task.state + '. Its original inputs and task identity are retained.';
       await host.refresh({force:true});
@@ -306,8 +325,8 @@ export function createSourceWorkbench(host) {
       await fetchProgress();
       host.toast('Source operation retained.');
     } catch (problem) {
-      if (workspace === expected) setError(new Error(problem.message + ' The same saved request will be reused when you submit this selection again.'));
-    } finally { busy = false; if (workspace === expected) {renderForm();renderTasks();notice();} }
+      if (workspace === expected && version === generation) setError(new Error(problem.message + ' The same saved request will be reused when you submit this selection again.'));
+    } finally { if (workspace === expected && version === generation) {busy=false;renderForm();renderTasks();notice();} }
   }
   function preparePayload(form) {
     if (!form.reportValidity()) return null;
@@ -374,19 +393,18 @@ export function createSourceWorkbench(host) {
   }
   async function upload(field, file) {
     if (!file) return;
-    const expected = workspace, method = selectedMethod;
+    const expected = workspace, method = selectedMethod, version = generation;
     const max = state?.limits?.upload_bytes;
     if (max && file.size > max) throw new Error('This file exceeds the operator upload limit of ' + size(max) + '. Choose an existing host source file.');
     busy = true; message = 'Retaining ' + file.name + ' (' + size(file.size) + ')…'; error = ''; notice();
     try {
       const result = await host.api('/api/upload', {method:'POST', raw:file, filename:file.name});
-      if (workspace !== expected || selectedMethod !== method) return;
+      if (workspace !== expected || selectedMethod !== method || version !== generation) return;
       draft().inputs[field] = {upload_id:result.id}; save();
       await loadCatalog();
       message = file.name + ' is retained and selected.';
     } finally {
-      busy = false;
-      if (workspace === expected && selectedMethod === method) {renderForm();notice();}
+      if (workspace === expected && version === generation) {busy=false;renderForm();notice();}
     }
   }
   function change(event) {
@@ -398,7 +416,7 @@ export function createSourceWorkbench(host) {
       let value = node.type === 'checkbox' ? node.checked : node.value;
       if (value !== '' && ['number','integer','float'].includes(field?.type)) {
         value = Number(value);
-        if (!Number.isFinite(value) || (field.type === 'integer' && !Number.isInteger(value))) {setError('Enter a valid '+(field.label||field.name)+'.');return;}
+        if (!Number.isFinite(value) || ((field.type === 'integer' || field.integer) && !Number.isInteger(value))) {setError('Enter a valid '+(field.label||field.name)+'.');return;}
       }
       draft().options[node.dataset.spOption]=value;save();renderForm();
     } else if (node.matches('[data-sp-import]')) {draft().import_sources=node.checked;save();}
@@ -467,7 +485,7 @@ export function createSourceWorkbench(host) {
   function mount(target,currentState=host.getState()) {
     const key=host.getWorkspace();
     if(container===target&&workspace===key&&target.querySelector('[data-sp-desk]')){update(currentState);return;}
-    suspend();container=target;state=currentState;workspace=key;generation++;catalog=null;progress=null;loading=false;tasksFingerprint='';error='';message='';
+    suspend();container=target;state=currentState;workspace=key;generation++;catalog=null;progress=null;loading=false;tasksFingerprint='';sourcesFingerprint='';busy=false;error='';message='';
     mergeDraft={title:'',prepared:[],collections:[],registered:[],import_sources:true};storageRead();
     container.innerHTML='<div data-sp-desk class="sp-desk"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>' +
       '<h1>Prepare study inputs</h1><p>Prepare original elevation, land cover, rainfall and soil data, then import a complete source edition for modeling.</p></div><div class="page-actions">' +
@@ -493,6 +511,8 @@ export function createSourceWorkbench(host) {
   function update(currentState=host.getState()) {
     if(!container||workspace!==host.getWorkspace())return;
     state=currentState;
+    const editions=JSON.stringify(list(state?.data?.sources).map(row => row.id));
+    if(editions!==sourcesFingerprint){sourcesFingerprint=editions;if(catalog&&!busy)loadCatalog();}
     const next=JSON.stringify(ownedTasks().map(task=>[task.id,task.state,task.started_at,task.ended_at,task.error?.message,task.result?.source_collection_id]));
     if(next!==tasksFingerprint){
       tasksFingerprint=next;renderTasks();

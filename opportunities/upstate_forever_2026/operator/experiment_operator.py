@@ -11,7 +11,7 @@ import re
 import tempfile
 
 from model import experiments
-from model.common import atomic_json, file_digest, held, now, read_json
+from model.common import atomic_json, digest, file_digest, held, now, read_json
 
 ACTIONS = {"experiment.save", "experiment.run", "experiment.summarize"}
 READS = {"catalog", "inspect", "summary", "axes", "methods"}
@@ -56,7 +56,11 @@ def _text(value):
 
 
 def _number(value):
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+    if isinstance(value, bool):
+        return "—"
+    if type(value) is int:
+        return format(value, ",d")
+    if not isinstance(value, float) or not math.isfinite(value):
         return "—"
     return format(value, ",.6g")
 
@@ -153,6 +157,82 @@ def render_report(summary):
     return "".join(pieces)
 
 
+def _native_execution(workspace, case, cache):
+    """Read existing stage results; never invoke a native model during a page read."""
+    key = _id(case["run_id"])
+    if key in cache:
+        return cache[key]
+    path = workspace.root / "runs" / key / "run.json"
+    if not path.is_file():
+        result = {"run_id": key, "state": "unprepared", "stages": []}
+        cache[key] = result
+        return result
+    run = workspace.inspect_run(key)
+    result = {"run_id": key, "state": run.get("state"), "stages": [],
+              "started_at": run.get("started_at"), "completed_at": run.get("completed_at")}
+    for model, stage in run.get("stages", {}).items():
+        reuse = stage.get("reuse") or {}
+        shared = stage.get("reused_from")
+        if isinstance(shared, dict):
+            reuse = {
+                "mode": "reused", "source_run_id": shared.get("run_id"),
+                "source_stage_started_at": stage.get("started_at"),
+                "source_stage_completed_at": shared.get("stage_completed_at", stage.get("completed_at")),
+                "origin": {"run_id": shared.get("run_id"), "model": shared.get("model", model),
+                           "started_at": stage.get("started_at"), "completed_at": stage.get("completed_at")},
+                "transfer": stage.get("reuse_transfer", stage.get("transfer")),
+            }
+        mode = reuse.get("mode")
+        if mode is None and isinstance(stage.get("input_signature"), dict):
+            mode = "executed"
+        item = {"model": model, "mode": mode if mode in ("executed", "reused", "recovered") else "complete",
+                "started_at": stage.get("reuse_started_at") if isinstance(shared, dict) else stage.get("started_at"),
+                "completed_at": stage.get("reused_at") if isinstance(shared, dict) else stage.get("completed_at")}
+        for field in ("source_run_id", "source_stage_started_at", "source_stage_completed_at"):
+            if reuse.get(field) is not None:
+                item[field] = reuse[field]
+        origin = reuse.get("origin")
+        if isinstance(origin, dict):
+            item["origin"] = {field: origin[field] for field in
+                              ("run_id", "model", "started_at", "completed_at") if field in origin}
+        transfer = reuse.get("transfer")
+        if isinstance(transfer, dict):
+            item["transfer"] = {field: transfer[field] for field in
+                                ("files", "bytes", "methods") if field in transfer}
+        result["stages"].append(item)
+    cache[key] = result
+    return result
+
+
+def _case_ids(value):
+    if value is None or value == "":
+        return []
+    if not isinstance(value, str):
+        raise ValueError("Select case IDs from this saved experiment.")
+    values = list(dict.fromkeys(value.split(",")))
+    if len(values) > 1000:
+        raise ValueError("Request at most 1,000 case details on one result page.")
+    return [_id(key) for key in values]
+
+
+def _retained_case_for_page(workspace, experiment_id, key):
+    scope = workspace.root / "experiments" / _id(experiment_id)
+    path = scope / "cases" / (_id(key) + ".json")
+    if not path.is_file():
+        return None
+    ordinal = read_json(path).get("ordinal")
+    if type(ordinal) is not int or ordinal < 0:
+        raise ValueError("A saved experiment case changed while opening its native execution.")
+    # Rebuild this ordinal from the verified immutable plan. The maintained
+    # reader validates retained native bindings and preserves legacy case IDs
+    # when an old partial-model plan acquires its canonical native selection.
+    page = experiments.expanded_cases(workspace, experiment_id, offset=ordinal, limit=1)
+    rows = page["cases"]
+    if len(rows) != 1 or rows[0]["id"] != key:
+        raise ValueError("The requested case differs from its retained experiment ordinal.")
+    return rows[0]
+
+
 class ExperimentOperator:
     def __init__(self, operator, fault):
         self.app = operator
@@ -173,11 +253,22 @@ class ExperimentOperator:
             raise ValueError("Supply an experiment selection.")
         return _exact_counts(experiments.preview(ws, selection))
 
-    def _decorate(self, workspace, value):
+    def _decorate(self, workspace, value, requested_cases=()):
         result = _exact_counts(json.loads(json.dumps(value)))
         key = _id(result["id"])
         ws = self.app.ws(workspace)
         scope = ws.root / "experiments" / key
+        execution, cache = {}, {}
+        cases = {row["id"]: row for row in result.get("cases", [])}
+        for case_id in requested_cases:
+            if case_id not in cases:
+                row = _retained_case_for_page(ws, key, case_id)
+                if row is not None:
+                    cases[case_id] = row
+        for case_id, row in cases.items():
+            execution[case_id] = _native_execution(ws, row, cache)
+        if "cases" in result or requested_cases:
+            result["native_execution_by_case"] = execution
         result["_downloads"] = self.app._files(workspace, result, scope)
         marker = scope / "operator-report.json"
         summary_path = scope / "summary.json"
@@ -210,7 +301,8 @@ class ExperimentOperator:
                 raise self.Fault("EXPERIMENT_SUMMARY", "Run the experiment or build a report from available cases.", 404)
         else:
             raise self.Fault("EXPERIMENT_READ", "Choose a supported experiment view.", 404)
-        return self._decorate(workspace, record)
+        requested = _case_ids(value.get("case_ids")) if operation == "inspect" else ()
+        return self._decorate(workspace, record, requested)
 
     def _report(self, workspace, key, summary=None):
         ws = self.app.ws(workspace)

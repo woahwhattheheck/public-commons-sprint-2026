@@ -54,6 +54,20 @@ def signature(model, arguments, runtime_source, *, verified_inputs=None):
             inputs[name] = {"bytes": retained["bytes"], "sha256": retained["sha256"]}
         else:
             inputs[name] = {"bytes": path.stat().st_size, "sha256": file_digest(path)}
+        companions = []
+        suffix = path.suffix.lower()
+        if suffix == ".shp":
+            candidates = [item for item in path.parent.glob(path.stem + ".*") if item != path]
+        elif suffix in (".tif", ".tiff"):
+            candidates = [Path(str(path) + tail) for tail in (".aux.xml", ".msk", ".ovr")]
+        else:
+            candidates = []
+        for companion in sorted(candidates):
+            if companion.is_file():
+                companions.append({"name": companion.name, "bytes": companion.stat().st_size,
+                                   "sha256": file_digest(companion)})
+        if companions:
+            inputs[name]["companions"] = companions
     dependencies = ("ndr", "sdr") if model == "ndr" else ("sdr",)
     modules = {name: runtime_source["modules"][name] for name in dependencies}
     selection = {"schema": "upstate.native-stage-inputs/v1", "model": model,

@@ -1,6 +1,6 @@
 # Native MPP operating guide
 
-The product contains the original Charge workflow and recurring **Channel work** in one native console. Sections 1–9 describe the existing product and Charge operation; section 10 carries a selected channel from useful recurring work through its merchant response, funding, collection and close. Both share the same installed runtime, private product and native workspace lease.
+The product contains the original Charge workflow and recurring **Channel work** in one native console. Sections 1–9 describe the existing product and Charge operation; section 10 carries a selected channel from initial code and funding through useful recurring work through its merchant response, funding, collection and close. Both share the same installed runtime, private product and native workspace lease.
 
 ## 1. Select the original runtime and workspace
 
@@ -245,6 +245,23 @@ Use the complete customer and response receiving operations in **[RECEIVING.md](
 
 Open **Channel work** in the original browser. Its task, merchant, purchase, funding, collection, refund and receiving views use the same current product session. The complete [channel work guide](../../stellar/scf-starforge-20261009/mpp-channel/README.md) describes each profile field and the actual pinned protocol.
 
+### Open the customer's channel
+
+Use **Open a channel** to select the actual network, code edition, token, funder, recipient, commitment public key, initial deposit and refund waiting period. Existing-code mode receives the selected WASM from that network; upload mode receives the exact compiled host file and uploads it when required. Preparation retains the whole code and one stable salt before any signature.
+
+Authorize the complete selected setup in the product's terminal. The optional upload and direct channel creation retain separate original signed transactions under the same opening ID and fee authority. Resume that ID after a restart; read `openings` to inspect its current stage. A successful opening installs the actual channel stream and original funder profile in the same workspace.
+
+```sh
+starforge mpp-workspace channel opening-template --dir "$MPP_PRODUCT"
+starforge mpp-workspace channel opening-prepare --dir "$MPP_PRODUCT" \
+  --input "$COMPLETE_OPENING_INPUT"
+starforge mpp-workspace channel opening-execute --dir "$MPP_PRODUCT" \
+  --input "$ORIGINAL_OPENING_ID_INPUT"
+starforge mpp-workspace channel openings --dir "$MPP_PRODUCT" --id "$ORIGINAL_OPENING_ID"
+```
+
+The [complete opening workflow](../../stellar/scf-starforge-20261009/mpp-channel/README.md#open-and-initially-fund-a-channel) defines every field, stage, fee review, code reception and same-envelope recovery path. Download the actual returned channel identity for merchant setup. A prepared or interrupted opening can move through the existing complete channel handover with its code, salt and signed stages.
+
 ### Select and run a task
 
 Start with the merchant's actual channel contract at `/_mpp/channel-contract`, or load its complete retained contract file. Choose the useful priced route and authorized source edition. The task binds the original channel address, network, token, funder, recipient, commitment key, deployed WASM digest, endpoint, selected merchant profile and offer.
@@ -293,8 +310,8 @@ The typed `connectMppChannel` client attaches to this same product. It exposes s
 
 | Tool | Operation |
 |---|---|
-| `merchant_mpp_channel_status` | Read current tasks, budgets, merchants, deliveries, funding, collections, refunds and receiving |
-| `merchant_mpp_channel_record` | Reopen the selected original task, purchase, merchant contract, funder profile, financial operation or chain observation |
+| `merchant_mpp_channel_status` | Read current openings, tasks, budgets, merchants, deliveries, funding, collections, refunds and receiving |
+| `merchant_mpp_channel_record` | Reopen the selected original opening, task, purchase, merchant contract, funder profile, financial operation or chain observation |
 | `merchant_mpp_channel_operate` | Dispatch the selected native operation and retain its original job |
 | `merchant_mpp_channel_file` | Receive an exact paid response or complete operating handover |
 

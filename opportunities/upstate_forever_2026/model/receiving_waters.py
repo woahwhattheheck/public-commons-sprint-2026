@@ -69,28 +69,75 @@ def _field(properties, requested):
     return matches[0]
 
 
-def _source(workspace, selection, crs):
-    """Read one retained vector selection; preserve its exact original identity."""
+def _source(workspace, selection, crs, *, cache=None):
+    """Select retained vectors, reading each original body once within a plan."""
+    import fiona
+    from pyproj import CRS, Transformer
+    from shapely.geometry import shape
+    from shapely.ops import transform
     selection = _json_copy(selection)
     collection = identifier(selection["source_collection_id"])
     source_id = _title(selection["source_id"], "source ID")
-    path, entry = workspace.source_file(collection, source_id)
-    if entry["kind"] != "vector":
-        raise ValueError("Receiving waters and catchments require retained vector sources")
     if selection.get("where") is not None and not isinstance(selection["where"], dict):
         raise ValueError("Source where must contain exact original field/value pairs")
-    rows, _ = rasters.vector_geometry(
-        path, layer=selection.get("layer") or entry.get("layer"),
-        where=selection.get("where"), target_crs=crs,
-    )
     wanted = selection.get("feature_ids")
     if wanted is not None:
         if not isinstance(wanted, list) or not wanted or len(set(map(str, wanted))) != len(wanted):
             raise ValueError("Select distinct original native feature IDs")
         wanted = set(map(str, wanted))
-        rows = [row for row in rows if row["id"] in wanted]
-        if {row["id"] for row in rows} != wanted:
-            raise ValueError("One or more selected native feature IDs are absent")
+    cache = {} if cache is None else cache
+    asset_key = ("asset", collection, source_id)
+    if asset_key not in cache:
+        cache[asset_key] = workspace.source_file(collection, source_id)
+    path, entry = cache[asset_key]
+    if entry["kind"] != "vector":
+        raise ValueError("Receiving waters and catchments require retained vector sources")
+    layer = selection.get("layer") or entry.get("layer")
+    vector_key = ("vector", collection, source_id, layer, str(crs))
+    if vector_key not in cache:
+        raw_rows, native_ids = [], defaultdict(list)
+        with rasters.vector_environment(), fiona.open(
+            rasters.native_vector_path(path), **({"layer": layer} if layer else {})
+        ) as original:
+            native = CRS.from_user_input(original.crs_wkt or original.crs)
+            target = CRS.from_user_input(crs)
+            project = Transformer.from_crs(native, target, always_xy=True)
+            for feature in original:
+                if not feature["geometry"]:
+                    continue
+                row = {"id": str(feature.id), "properties": dict(feature["properties"]),
+                       "native_geometry": feature["geometry"]}
+                native_ids[row["id"]].append(len(raw_rows))
+                raw_rows.append(row)
+        cache[vector_key] = {
+            "rows": raw_rows, "native_ids": dict(native_ids), "geometries": {},
+            "project": project, "transform_required": native != target,
+        }
+    retained = cache[vector_key]
+    if wanted is None:
+        positions = range(len(retained["rows"]))
+    else:
+        positions = sorted(position for native_id in wanted
+                           for position in retained["native_ids"].get(native_id, ()))
+    rows = []
+    where = selection.get("where") or {}
+    for position in positions:
+        original = retained["rows"][position]
+        if any(original["properties"].get(key) != value for key, value in where.items()):
+            continue
+        if position not in retained["geometries"]:
+            geometry = shape(original["native_geometry"])
+            if not geometry.is_empty and not geometry.is_valid:
+                raise ValueError("Source feature " + original["id"] + " requires an explicit geometry correction")
+            if not geometry.is_empty and retained["transform_required"]:
+                geometry = transform(retained["project"].transform, geometry)
+            retained["geometries"][position] = geometry
+        geometry = retained["geometries"][position]
+        if not geometry.is_empty:
+            rows.append({"id": original["id"], "properties": original["properties"],
+                         "geometry": geometry})
+    if wanted is not None and {row["id"] for row in rows} != wanted:
+        raise ValueError("One or more selected native feature IDs are absent")
     if not rows:
         raise ValueError("The retained source selection contains no geometry")
     identity = {
@@ -264,11 +311,12 @@ def prepare(workspace, selection):
     if not crs.is_projected or any(abs(a.unit_conversion_factor - 1) > 1e-12 for a in crs.axis_info[:2]):
         raise ValueError("Receiving-water geometry requires a projected analysis CRS in metres")
     graph, catchment_geometry, source_records = None, {}, []
+    source_cache = {}
     if any(row.get("relation", {}).get("method") == "upstream_huc" for row in requested):
         choice = selection.get("catchments")
         if not isinstance(choice, dict):
             raise ValueError("Select the retained HUC/ToHUC vector source for upstream association")
-        rows, identity = _source(workspace, choice, crs)
+        rows, identity = _source(workspace, choice, crs, cache=source_cache)
         graph = huc_graph(rows, id_field=choice.get("id_field", "huc12"),
                           downstream_field=choice.get("downstream_field", "tohuc"))
         for row in rows:
@@ -290,7 +338,7 @@ def prepare(workspace, selection):
         if method not in ("upstream_huc", "source_area", "geometric_context"):
             raise ValueError("Choose upstream_huc, source_area or geometric_context explicitly")
         _title(relation.get("rationale"), "the source/relationship rationale")
-        original_rows, original = _source(workspace, descriptor["source"], crs)
+        original_rows, original = _source(workspace, descriptor["source"], crs, cache=source_cache)
         receptor = unary_union([row["geometry"] for row in original_rows])
         source_records.append(original)
         seeds, associated, touches = [], [], []

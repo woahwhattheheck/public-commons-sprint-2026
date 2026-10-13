@@ -58,7 +58,7 @@ const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>worksp
  openForm,submitAction,detail,fileList,uploadFile,
  closeDetail:()=>{detailDialog.close();detailContext=null;},
  openDelivery:selection=>deliveryForm(undefined,selection),
- openProgramme:selection=>typeof programmes!=='undefined'?programmes.create({selection}):extensions.openExtension('programmes','create',{selection})});
+ getProgramme:()=>typeof programmes==='undefined'?null:programmes});
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,5500);}
 function globalError(error){$('#global-error').textContent=error.message||String(error);$('#global-error').hidden=false;}
 function clearError(){$('#global-error').hidden=true;$('#global-error').textContent='';}
@@ -330,7 +330,7 @@ async function submitAction(action,payload){
   const result=await api('/api/actions',{method:'POST',body:{workspace,action,payload,operation_id:formContext?.operation_id||crypto.randomUUID()}});
   formDialog.close();formContext=null;
   taskPanel=true;$('#task-panel').hidden=false;
-  toast((actionLabels[action]||action)+' retained.');
+  toast((actionLabels[action] || action)+' retained.');
   await refresh({force:true});
   await showTask(result.id);
   return result;
@@ -802,8 +802,8 @@ async function navigate(next){
  view=next;history.replaceState(null,'','#'+next);lastRendered='';render();$('#main').focus();
 }
 async function selectWorkspace(id){
- extensions.detach();
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
+ extensions.detach();
  spatialWorkspace.suspend();programmes.detach();community.detach();customerReviews.detach();experiments.detach();workspace=id;state=null;sessionStorage.setItem('upstate-selected-workspace',id);
  detailDialog.close();detailContext=null;lastRendered='';$('#content').innerHTML='<div class="empty"><h2>Opening selected workspace…</h2></div>';await refresh({force:true});
 }
