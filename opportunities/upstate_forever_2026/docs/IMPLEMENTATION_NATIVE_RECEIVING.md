@@ -82,3 +82,30 @@ The small `state.json` contains actual progress, attempts and the last concrete 
 ## Existing swarm receiving
 
 This is one continuation of the existing Ecosystem profile/Community/utility operation. Bind the command to the accepting host's actual Workspace and output path, then return its stdout or first exception and `receiving.json`. The receiver requires no new original county download, parcel inference or native NDR/SDR run.
+
+## Receive an existing fieldwork plan
+
+The same full report and Workspace receiving course accepts an original saved plan:
+
+```sh
+python -B source_tools/receive_implementation.py \
+  --workspace ACTUAL_WORKSPACE \
+  --operation ACTUAL_OPERATION/existing-fieldwork \
+  --plan-id ACTUAL_PLAN_ID --revision ACTUAL_REVISION
+```
+
+The explicit revision stays selected across interruptions. Omitting `--revision` selects the current saved revision on the first attempt. All local-file sources of that selected plan travel with its history and retained report. The original Greenwood course remains the default when `--plan-id` is omitted.
+
+## Continue an actual Monitoring campaign
+
+Use the campaign and revision displayed in the original Monitoring workspace. This course runs the maintained handoff, checks every member of its original source ZIP, retains the exact Implementation report, captures the complete Workspace, restores it into a fresh directory and reopens the same fieldwork revision and source package.
+
+```sh
+python -B source_tools/receive_monitoring_fieldwork.py \
+  --workspace ACTUAL_WORKSPACE \
+  --operation ACTUAL_OPERATION/monitoring-fieldwork \
+  --campaign-id ACTUAL_CAMPAIGN_ID \
+  --revision-id ACTUAL_SAVED_REVISION_ID
+```
+
+The operation directory holds the immutable selection and handoff, native state/progress and final `receiving.json`. Its `fieldwork` directory holds the complete original report/capture/restore course. Repeat the exact command to continue an interrupted operation. A saved handoff keeps its original fieldwork revision even when later edits have advanced the live plan. The original scientific scenario, model parameters and campaign events remain those selected in the actual workspace.
