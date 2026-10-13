@@ -199,3 +199,10 @@ Receive this source with the existing complete application installer and
 its saved campaign revision. After receiving, the original complete-application
 inspection can import the compatibility module; the existing Monitoring export
 and independent Workspace receiving course uses the maintained backup producer.
+
+
+## Receive only the selected editable Monitoring study
+
+Add `"archive_scope": "selected"` to the same original receiving selection to create an original selected-study archive from its saved campaign and optional observational context. The existing receiver keeps one receipt/output lock, restores the archive through the original Workspace writer, compares the same native records, appends its independent receiving revision, and verifies retained campaign/replay identities again. The default remains `"complete"`. Use a new output directory when changing this explicit selection.
+
+The Monitoring browser now offers **Transfer editable study** alongside existing exports and report controls. Its original Study transfer preview includes the full parent/event/source dependency closure and related completed Monitoring report. The exact workflow and current source composition are in [MONITORING_STUDY_TRANSFER.md](../../model/MONITORING_STUDY_TRANSFER.md).
