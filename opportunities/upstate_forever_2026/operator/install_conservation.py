@@ -1019,6 +1019,17 @@ def read_packet(path):
         "source_tools/source_response_reuse.py",
         "source_tools/soil_sources.py",
     }
+    producer_tree = ast.parse(files.get("model/conservation_report_source.py", ""))
+    maps_requested = any(
+        isinstance(node, ast.ImportFrom) and node.level == 1 and node.module is None
+        and any(alias.name == "conservation_report_maps" for alias in node.names)
+        for node in ast.walk(producer_tree))
+    if maps_requested:
+        needed.update({
+            "model/conservation_report_maps.py",
+            "model/CONSERVATION_REPORT_MAPS.md",
+            "integration/conservation_report_map_composition.json",
+        })
     if needed - set(files):
         raise ValueError("The complete backend, CLI and operator source must travel together")
     return value
@@ -1039,6 +1050,15 @@ def verify_application_dependencies(application, incoming):
                if name not in incoming and not (application / name).is_file()]
     if missing:
         raise ValueError("Receive the current complete application sources: " + ", ".join(missing))
+    if ("model/conservation_report_maps.py" in incoming
+            or (application / "model/conservation_report_maps.py").is_file()):
+        renderer_text = incoming.get("model/scientific_map_figures.py")
+        if renderer_text is None:
+            renderer_text = (application / "model/scientific_map_figures.py").read_text(encoding="utf-8")
+        renderer_tree = ast.parse(renderer_text)
+        if not any(isinstance(node, ast.FunctionDef) and node.name == "_role_labels"
+                   for node in renderer_tree.body):
+            raise ValueError("Receive the maintained scientific-map renderer with original role-label support.")
     server = (application / "operator/server.py").read_text(encoding="utf-8")
     required_registrations = (
         "from extension_registry import ExtensionRegistry",
