@@ -1,0 +1,97 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "highway-field-operations",
+  "heading": "## Highway field operations: original assets, field work, crew dispatch and source-native reconciliation",
+  "sources": [
+    {
+      "id": "highway-field-operator",
+      "label": "Complete staff, source and independent receiving workflow",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/geocove_highway_field_operations_20261013/OPERATING.md",
+      "editions": [
+        {
+          "commit": "1f079bc12859cb9baff21cdf8bdb92c8a6e25342",
+          "bytes": 14331,
+          "sha256": "55fa56fb73e392fb57bedbe242e5b47f49898e2fce82ef6ed8b62b7a98a0057f",
+          "git_blob": "2b9539a9907343484241463701ab376b92916cee"
+        }
+      ]
+    },
+    {
+      "id": "highway-field-domain",
+      "label": "Typed field inspection, supervisor decisions and source refresh",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/geocove_highway_field_operations_20261013/DOMAIN_GUIDE.md",
+      "editions": [
+        {
+          "commit": "1f079bc12859cb9baff21cdf8bdb92c8a6e25342",
+          "bytes": 9468,
+          "sha256": "81858df0c21cf986e389c2c71d9d5d6c364e59029aba2141a138b68b857315c9",
+          "git_blob": "8cc3a495c3b7b9cd9cdfa488863058c16673a512"
+        }
+      ]
+    },
+    {
+      "id": "highway-field-dispatch",
+      "label": "Crew assignments, actual effort and supervisor follow-through",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/geocove_highway_field_operations_20261013/DISPATCH_OPERATING.md",
+      "editions": [
+        {
+          "commit": "1f079bc12859cb9baff21cdf8bdb92c8a6e25342",
+          "bytes": 6573,
+          "sha256": "326ae34d063a25749d8fc980a8b73f7b2eb28706a368a474e7d02bab25c3d493",
+          "git_blob": "f00030f9568833e3ef4c4406ad628794669a7057"
+        }
+      ]
+    },
+    {
+      "id": "highway-field-paired",
+      "label": "Original paired dataset engine and complete native receiving",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/geocove_highway_field_operations_20261013/PAIRED_REVIEW.md",
+      "editions": [
+        {
+          "commit": "1f079bc12859cb9baff21cdf8bdb92c8a6e25342",
+          "bytes": 6981,
+          "sha256": "3fe5bdf334c9572b3cc5ee3cb53a648c3e7429b84affd33b354300ec536f7502",
+          "git_blob": "76db3018eaca9114db385392fc0de276a64c07e8"
+        }
+      ]
+    },
+    {
+      "id": "highway-field-producer",
+      "label": "Original SF30 CSV and SF100 finalized delivery contracts",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/geocove_highway_field_operations_20261013/ORIGINAL_LOCAL_DATASET_PRODUCER.md",
+      "editions": [
+        {
+          "commit": "1f079bc12859cb9baff21cdf8bdb92c8a6e25342",
+          "bytes": 5651,
+          "sha256": "5f5ca859960b13feeb3421650ec72f6777f27415f9bb7b2975f53217076e7ebf",
+          "git_blob": "ce51fd9c8da91d01c403b0d4629d23229a5ee561"
+        }
+      ]
+    },
+    {
+      "id": "highway-field-capture",
+      "label": "Complete original ArcGIS source acquisition and recovery",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/geocove_highway_field_operations_20261013/highway/CAPTURE.md",
+      "editions": [
+        {
+          "commit": "1f079bc12859cb9baff21cdf8bdb92c8a6e25342",
+          "bytes": 9673,
+          "sha256": "e104f4bdc937363d1354fe33b8e189dd7796e0d4cdfba663118ab5c07071bbea",
+          "git_blob": "6c0a84a8ed0dba90c44150596eec7aa660acf6c7"
+        }
+      ]
+    }
+  ]
+}
