@@ -45,10 +45,12 @@ METHOD = {
         {"name": "utility_where", "label": "Utility source attribute selection", "type": "textarea", "default": "{}"},
         {"name": "additional_utility_focus", "label": "Additional original utility source selections", "type": "textarea", "default": "[]",
          "help": "Optional complete source_collection_id/source_id selectors with layer, part and exact where values. Original source identifiers are available in Sources."},
+        {"name": "intakes", "label": "Original intake point selections", "type": "textarea", "default": "[]",
+         "help": "Optional original point source_collection_id/source_id selectors, with layer, part and exact where values. These remain distinct from utility protection polygons."},
         {"name": "utility_label", "label": "Utility focus description", "type": "text", "required": True},
         {"name": "seed", "label": "Deterministic simulated field seed", "type": "integer", "default": 20261013, "min": 0, "max": 4294967295},
-        {"name": "corridor_width_m", "label": "Assumed restoration corridor width (m)", "type": "number", "default": 90, "min": 0,
-         "help": "Positive authored width. The prepared source preserves the exact assumption and resulting changed-cell footprint."},
+        {"name": "corridor_width_m", "label": "Corridor buffer on each side (m)", "type": "number", "default": 90, "min": 0,
+         "help": "Positive per-side buffer: 90 m means a nominal 180 m total corridor. The prepared source retains the exact assumption and changed-cell footprint."},
     ],
 }
 
@@ -116,7 +118,9 @@ def selection(payload):
         "reporting_boundary": _selector(inputs.get("reporting_boundary"), options, "reporting"),
         "reporting_boundary_description": options.get("reporting_boundary_description", ""),
         "utility_focus": [_selector(inputs.get("utility_focus"), options, "utility"), *additional],
-        "utility_label": options.get("utility_label", ""), "seed": seed, "corridor_width_m": width,
+        "utility_label": options.get("utility_label", ""),
+        "intakes": _object_text(options.get("intakes", "[]"), "Original intake point selections", list),
+        "seed": seed, "corridor_width_m": width,
     })
 
 
