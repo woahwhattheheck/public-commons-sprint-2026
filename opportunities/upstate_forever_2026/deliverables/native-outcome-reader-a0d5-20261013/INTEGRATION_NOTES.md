@@ -2,9 +2,9 @@
 
 ## Destination and source
 
-Join this complete package to the existing completed-native-results entry in the Call Desk and the original Eco application handover. Keep its seven original source files byte-identical; add the exact original consumer packet, reading data, manifest, START_HERE.md and current owner direction together. Preserve the pre-existing Call Desk reader block `8c8966f5-0df7-48fa-a713-2354136a8bd9`; place the usable standalone/ZIP links beside that original entry.
+Join this complete package to the existing completed-native-results entry in the Call Desk and the original Eco application handover. Keep its seven source files byte-identical to the complete edition-4 source bank F0C8R4V2BEH; add the exact original consumer packet, reading data, manifest, START_HERE.md and current owner direction together. Preserve the pre-existing Call Desk reader block `8c8966f5-0df7-48fa-a713-2354136a8bd9`; place the usable standalone/ZIP links beside that original entry.
 
-The selected packet is 1,066,937 UTF-8 bytes, SHA256 `75d157b8540900cd97d42f35a1ca48de2f7dd33dc6153eecf7b27fb7eeaea572`. The original wrapped index is 236,652 bytes, SHA256 `9d6badb3d612d8a058c6855d1d8ce50112fa27dbfc9aaeacb9a749f01196b6c3`. All twelve native selections, 24 land-cover comparisons, nine parameter comparisons and twelve descriptive support groups are retained. This file is the simulated 1,296-hectare teaching case; keep the separately owned regional Upper Savannah records and model outputs distinct.
+The selected packet is 1,066,937 UTF-8 bytes, SHA256 `75d157b8540900cd97d42f35a1ca48de2f7dd33dc6153eecf7b27fb7eeaea572`. The edition-4 wrapped index is 237,056 bytes, SHA256 `7ba6ed17ff2eac261be022fd5b6f31d56e9cd7f7c1c5a74da4ea33d09c0e3c14`. All twelve native selections, 24 land-cover comparisons, nine parameter comparisons and twelve descriptive support groups are retained. This file is the simulated 1,296-hectare teaching case; keep the separately owned regional Upper Savannah records and model outputs distinct.
 
 ## Existing receiving boundary
 
@@ -20,4 +20,4 @@ An application integration should link or host the selected standalone file with
 
 ## Direction and handoff
 
-CURRENT_OWNER_DIRECTION.md 2026-10-13.4 supersedes the earlier cutoff wording retained in the historical NATIVE_OUTCOME_READING.md. Read START_HERE.md as the current package entry and keep the historical source file unchanged. The owner's renewed work order is https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791903146158779?thread_ts=1791724121.853269 . The package should travel through that same original project and receiving thread. Source authors retain repairs; the original relationship owner retains any prospect message, with Bryce's individual approval after positive human contact.
+CURRENT_OWNER_DIRECTION.md 2026-10-13.4 supersedes the earlier cutoff wording retained in the historical NATIVE_OUTCOME_READING.md. Read START_HERE.md as the current package entry and keep the source owner's complete current NATIVE_OUTCOME_READING.md unchanged. The owner's renewed work order is https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791903146158779?thread_ts=1791724121.853269 . The package should travel through that same original project and receiving thread. Source authors retain repairs; the original relationship owner retains any prospect message, with Bryce's individual approval after positive human contact.
