@@ -91,6 +91,18 @@ use **Pub - Purch!40,44,48**, with the original fixed labels in column B and
 entered values in columns C/G. The earlier source publication and frozen
 reports remain in history. `HANDOVER.json` lists the actual editions.
 
+## Original formula library
+
+The **Workbooks** page also opens the complete **Original formula library**.
+Filter its original workbook, worksheet, source cell, function or question ID.
+Open a group, inspect a physical source cell, and choose a retained native
+calculation edition. The original formula, shared expression, source cache and
+actual native outcome remain separate. Language changes retain the selected
+filters and calculation edition. The complete five-workbook collection and all
+7,661 original/native formula joins reopen from this workspace. See
+`application/SOURCE_FORMULAS.md` for the whole source programme and shipped
+offline reader runtime.
+
 ## Respondent progress, corrections and downloads
 
 Open **Respondents**, select the intended publication and create an invitation.

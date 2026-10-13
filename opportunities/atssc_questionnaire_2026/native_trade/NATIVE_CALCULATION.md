@@ -116,6 +116,29 @@ the original percentage unit headers to type blank General-format inputs,
 including unscaled E97. Earlier native attempts and corrected successor
 definitions remain in the same workspace history.
 
+Compiler version 4 derives presentation from the original sheet geometry and
+the retained complete native source calculation. It distinguishes annual
+columns from January–June columns, keeps country and production subgroups
+separate from years, and uses the original French row and section labels.
+Numeric formula caches, zero and no-data markers are never translated labels
+or period headers. A readonly source metric identifies its original period;
+for example, the C38 production total is the 2018 total.
+
+Original exporter/customer name-row headings retain their fixed group identity
+without copying a respondent's entered name into public static context. French
+prompts are paired with their original English label row, even when the bound
+answer is on a later row. Original certification checkboxes retain their X
+keys; their physical Yes/Oui and No/Non rows supply distinct display labels.
+
+Existing immutable publications keep their original answer schemas and source
+bindings. `get_respondent` additionally returns `display_definition`, a static
+source presentation with identical question/column IDs, types, calculations,
+units and disclosure rules. A new report can select
+`refresh_source_context: true` to freeze that presentation around the same
+accepted revisions. Earlier sealed report files remain retained. Public
+presentation includes the original stems, row translations and semantic
+context; source-cell geometry remains in the protected source catalogue.
+
 ## Authoritative response calculation and disclosure
 
 Saving progress retains entered answers without running office calculation.

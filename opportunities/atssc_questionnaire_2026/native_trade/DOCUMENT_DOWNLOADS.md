@@ -33,6 +33,11 @@ See [Reading retained documents](DOCUMENT_READING.md) for source references,
 current draft versus submitted response behavior, English/French selection,
 and the complete retained-document workflow.
 
+Saved report charts remain editable native Word charts with embedded Excel
+data. The PDF edition contains the same selected chart values as vector
+graphics. Unavailable periods remain gaps, and the complete tables retain the
+selected groups, original units and disclosure-specific statistics.
+
 ## Install the delivered offline document runtime
 
 The complete customer package includes six pinned wheels for Linux x86_64 with
