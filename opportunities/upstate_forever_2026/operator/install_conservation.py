@@ -160,6 +160,7 @@ KNOWN_PRIOR = {
         "5e9c5259ec989f3ee0bbe7c3a324e398e37ec6acd6bb1985b6c5f7e2b7629481"
     ],
     "operator/web/conservation.mjs": [
+        "ba982dccfa2fc2395d7a2da8dc09e1810f2cb1f0e5978ef36b2c5af3760adf26",
         "7f0125d0000352f5d4c08171439300fecec098210b7f8fde2278831c73caa40b",
         "939a9a7b882c04d2b2715b6c0eedcd4bef33ab6a0c5bdb52c4e2db57ea333e49",
         "7857010fbb286a33bde354715d067ee649304f51ce86b4c642a1bcd34f400c65",
@@ -313,6 +314,7 @@ KNOWN_PRIOR = {
         "5cf6d37ed965d78f3d4a63ad6901812af959e0afe45448e7309b8c4257a0fe72"
     ],
     "model/CONSERVATION_OPTIMIZATION.md": [
+        "e20da8003af632f075a3adcacb2aeed37b1c0af86fc7f9fd5734a179c85dab8c",
         "49ef6518d33d2d7ceec098efadb43c61d02c367874c1e4555f61596ba7ab641c",
         "0e480f5e995e9b8a9e96b5c40d641342092f303dc686eb506793d6cc25ac9c67",
         "2a1f19d4310ec23436d154e5c0f8c6960e784becef69503d43744a2f5fae2236",

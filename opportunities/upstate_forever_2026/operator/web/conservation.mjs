@@ -1298,6 +1298,70 @@ export function attachConservation({
       }).join("") +
       button("optimization-add-criterion", "Add decision criterion") + '</fieldset>';
   }
+  function familyCaseChoices(draft) {
+    const criteria = (draft.criteria || []).filter(row => matchedKind(row.kind));
+    const selection = draft.family_case_selection || { criterion_ids: [], family_ids: [] };
+    return { criteria, families: matchedFamilies(), selection };
+  }
+  function familyCaseForm(draft) {
+    const scope = familyCaseChoices(draft);
+    if (!scope.criteria.length || !scope.families.length) return "";
+    const checks = (rows, selected, attribute) => rows.map(row =>
+      '<label class="cons-check"><input type="checkbox" ' + attribute + '="' + h(row.id) + '"' +
+      (selected.includes(row.id) ? ' checked' : '') + '> <span>' + h(row.label || row.id) +
+      '<span class="cons-metric-note">' + h(row.id) + '</span></span></label>').join("");
+    return '<details class="cons-disclosure"><summary>Add comparisons across matched families</summary>' +
+      '<p>Choose the criteria to vary together, then the retained families to compare. Each new comparison replaces those criteria’s ' +
+      'complete baseline/treatment pair with one selected family. Other criteria keep their selected values; weights and limits stay fixed.</p>' +
+      '<div class="cons-grid"><fieldset><legend>Matched criteria to vary</legend>' +
+      checks(scope.criteria, scope.selection.criterion_ids, "data-family-case-criterion") +
+      '</fieldset><fieldset><legend>Original families to compare</legend>' +
+      checks(scope.families, scope.selection.family_ids, "data-family-case-family") + '</fieldset></div>' +
+      '<div class="cons-actions">' + button("optimization-family-cases-select", "Select all shown criteria and families") +
+      button("optimization-family-cases-clear", "Clear batch choices") +
+      button("optimization-family-cases-add", "Add reviewed family comparisons") + '</div>' +
+      '<p class="cons-help">The selected case and equivalent authored comparison maps are recognized. ' +
+      'New cases join the editable comparison list below, where each criterion can be refined independently.</p></details>';
+  }
+  function addFamilyCases(draft = memory().optimization) {
+    if (draft?.kind !== "multi-criteria") throw new Error("Choose a multi-criteria decision before adding family comparisons.");
+    const scope = familyCaseChoices(draft), chosen = scope.selection;
+    const criteria = mixedObjective(draft);
+    const criterionIds = [...new Set(chosen.criterion_ids)], familyIds = [...new Set(chosen.family_ids)];
+    if (!criterionIds.length || !familyIds.length)
+      throw new Error("Choose at least one matched criterion and one original family to compare.");
+    if (criterionIds.some(id => !scope.criteria.some(row => row.id === id)) ||
+        familyIds.some(id => !scope.families.some(row => row.id === id)))
+      throw new Error("Review the batch choices against the current criteria and retained families.");
+    const varying = criteria.filter(row => criterionIds.includes(row.id));
+    for (const familyId of familyIds) for (const criterion of varying) {
+      if (!criterionAxes({ ...criterion, family_id: familyId }).some(([axis]) => axis === criterion.axis))
+        throw new Error((scope.families.find(row => row.id === familyId)?.label || familyId) +
+          " has no shared original quantity for " + criterion.label + ".");
+    }
+    const paired = criteria.filter(row => ["restoration", "avoided-conversion"].includes(row.kind) || matchedKind(row.kind));
+    const signature = item => JSON.stringify(paired.map(row => [row.id, row.kind, matchedKind(row.kind)
+      ? (item.family_ids?.[row.id] || row.family_id)
+      : (item.scenario_run_ids?.[row.id] || row.scenario_run_id)]).sort((a,b) => a[0].localeCompare(b[0])));
+    const existing = draft.scenario_cases || [];
+    const seen = new Set([signature({}), ...existing.map(signature)]);
+    const names = new Set(["Selected case", ...existing.map(row => String(row.name || "").trim())]);
+    const additions = [];
+    for (const familyId of familyIds) {
+      const item = { name: "", scenario_run_ids: {},
+        family_ids: Object.fromEntries(criterionIds.map(id => [id, familyId])) };
+      const key = signature(item);
+      if (seen.has(key)) continue;
+      const family = scope.families.find(row => row.id === familyId);
+      const title = String(family.label || family.id).trim() || family.id;
+      let name = title, ordinal = 2;
+      while (names.has(name)) name = title + " (" + ordinal++ + ")";
+      item.name = name; names.add(name); seen.add(key); additions.push(item);
+    }
+    draft.scenario_cases = [...existing, ...additions];
+    draft.family_case_selection = { criterion_ids: [...criterionIds], family_ids: [] };
+    return additions.length;
+  }
   function caseComparisonForm(draft) {
     if (draft.kind !== "multi-criteria") return "";
     const paired = (draft.criteria || []).filter(row => ["restoration", "avoided-conversion"].includes(row.kind) || matchedKind(row.kind));
@@ -1306,7 +1370,7 @@ export function attachConservation({
     return '<fieldset><legend>Native case comparisons</legend><p>Hold weights and resource limits fixed while replacing the explicitly selected native alternatives. ' +
       'Choose cases representing the scientific assumptions you want to compare; each row retains its own modeled quantities and coverage. ' +
       'Normalization uses one fixed scale per criterion across all selected cases; adding a case can change that scale and the ranking.</p>' +
-      (draft.scenario_cases || []).map((item, index) => '<fieldset><legend>Case comparison ' + (index + 1) +
+      familyCaseForm(draft) + (draft.scenario_cases || []).map((item, index) => '<fieldset><legend>Case comparison ' + (index + 1) +
         '</legend><div class="cons-grid">' +
         input("optimization.case." + index + ".name", "Comparison name", item.name) +
         paired.map(row => matchedKind(row.kind)
@@ -1476,6 +1540,7 @@ export function attachConservation({
       purpose: request?.purpose || "Select land priorities under explicit area, cost and coverage limits.",
       kind, basis: request?.objective?.basis || "total",
       criteria: (request?.objective?.criteria || []).map(row => ({ ...row, weight: String(request?.weights?.[row.id] ?? 0) })),
+      family_case_selection: { criterion_ids: [], family_ids: [] },
       scenario_cases: (request?.scenario_stability?.cases || []).map(row => ({ name: row.name,
         scenario_run_ids: { ...row.scenario_run_ids }, family_ids: { ...row.family_ids } })),
       family_id: request?.objective?.family_id || matchedFamilies(study)[0]?.id || "",
@@ -2737,7 +2802,7 @@ export function attachConservation({
       node.querySelector(":scope > summary")?.textContent?.trim()).filter(Boolean));
     const active = document.activeElement;
     if (!active || !mounted.contains(active)) return null;
-    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile", "data-optimization-filter", "data-catalog-range", "data-catalog-metric", "data-family-treatment", "data-family-pair"].find(name => active.hasAttribute?.(name));
+    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile", "data-optimization-filter", "data-catalog-range", "data-catalog-metric", "data-family-treatment", "data-family-pair", "data-family-case-criterion", "data-family-case-family"].find(name => active.hasAttribute?.(name));
     if (!key) return null;
     return { key, value: active.getAttribute(key),
       start: typeof active.selectionStart === "number" ? active.selectionStart : null,
@@ -2751,7 +2816,7 @@ export function attachConservation({
       if (ui.openDetails?.has(title)) node.open = true;
     }
     if (!focus) return;
-    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile],[data-optimization-filter],[data-catalog-range],[data-catalog-metric],[data-family-treatment],[data-family-pair]")]
+    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile],[data-optimization-filter],[data-catalog-range],[data-catalog-metric],[data-family-treatment],[data-family-pair],[data-family-case-criterion],[data-family-case-family]")]
       .find(node => node.getAttribute(focus.key) === focus.value);
     if (target) {
       target.focus({ preventScroll: true });
@@ -2845,6 +2910,18 @@ export function attachConservation({
       if (!row || row.alreadyAdded) return;
       ui.draft.family_cohort.choices[row.key] = { ...ui.draft.family_cohort.choices[row.key], included: target.checked };
       return;
+    }
+    for (const [attribute, field] of [["data-family-case-criterion", "criterion_ids"],
+      ["data-family-case-family", "family_ids"]]) {
+      if (target.hasAttribute(attribute) && event.type === "change") {
+        if (!ui.optimization) return;
+        ui.optimization.family_case_selection ||= { criterion_ids: [], family_ids: [] };
+        const selected = new Set(ui.optimization.family_case_selection[field]);
+        const id = target.getAttribute(attribute);
+        if (target.checked) selected.add(id); else selected.delete(id);
+        ui.optimization.family_case_selection[field] = [...selected];
+        paint(); return;
+      }
     }
     const name = target.getAttribute("data-field");
     if (!name) return;
@@ -2993,6 +3070,21 @@ export function attachConservation({
           if (removed) for (const item of ui.optimization.scenario_cases || []) {
             delete item.scenario_run_ids?.[removed.id]; delete item.family_ids?.[removed.id];
           }
+          paint(); break;
+        }
+        case "optimization-family-cases-select":
+        case "optimization-family-cases-clear": {
+          const scope = familyCaseChoices(ui.optimization);
+          ui.optimization.family_case_selection = name === "optimization-family-cases-select"
+            ? { criterion_ids: scope.criteria.map(row => row.id), family_ids: scope.families.map(row => row.id) }
+            : { criterion_ids: [], family_ids: [] };
+          paint(); break;
+        }
+        case "optimization-family-cases-add": {
+          const count = addFamilyCases();
+          ui.notice = { kind: "status", message: count
+            ? count + " original family comparisons added to the decision draft."
+            : "These selected family comparisons are already represented by the selected case or authored comparisons." };
           paint(); break;
         }
         case "optimization-add-case":
