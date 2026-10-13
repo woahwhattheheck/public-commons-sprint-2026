@@ -1,0 +1,272 @@
+{
+  "schema": "reach-chemistry/1",
+  "title": "Four-reach editable chemistry demonstration",
+  "provenance": {
+    "kind": "constructed-reference",
+    "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+  },
+  "species": [
+    {
+      "id": "ammonium_n",
+      "basis": "N",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "nitrate_n",
+      "basis": "N",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "dissolved_p",
+      "basis": "P",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "particulate_p",
+      "basis": "P",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    }
+  ],
+  "reaches": [
+    {
+      "id": "tributary_a",
+      "volume_m3": 1000,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "tributary_b",
+      "volume_m3": 800,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "confluence",
+      "volume_m3": 2000,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "reservoir",
+      "volume_m3": 6000,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    }
+  ],
+  "flows": [
+    {
+      "id": "boundary_a",
+      "source": null,
+      "target": "tributary_a",
+      "m3_day": 1000,
+      "concentration_mg_l": {
+        "ammonium_n": 0.2,
+        "nitrate_n": 0.4
+      },
+      "source_tag": "upstream",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "boundary_b",
+      "source": null,
+      "target": "tributary_b",
+      "m3_day": 400,
+      "concentration_mg_l": {
+        "nitrate_n": 0.12
+      },
+      "source_tag": "upstream",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "a_to_c",
+      "source": "tributary_a",
+      "target": "confluence",
+      "m3_day": 1000,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "b_to_c",
+      "source": "tributary_b",
+      "target": "confluence",
+      "m3_day": 400,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "c_to_r",
+      "source": "confluence",
+      "target": "reservoir",
+      "m3_day": 1400,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "outlet",
+      "source": "reservoir",
+      "target": null,
+      "m3_day": 1400,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    }
+  ],
+  "exchanges": [
+    {
+      "id": "reservoir_exchange",
+      "a": "confluence",
+      "b": "reservoir",
+      "m3_day": 200,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    }
+  ],
+  "reactions": [
+    {
+      "id": "nitrification",
+      "source": "ammonium_n",
+      "products": {
+        "nitrate_n": 1.0
+      },
+      "rate_day": 0.15,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "denitrification",
+      "source": "nitrate_n",
+      "products": {},
+      "rate_day": 0.035,
+      "sink_label": "untracked nitrogen gas",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "sorption",
+      "source": "dissolved_p",
+      "products": {
+        "particulate_p": 1.0
+      },
+      "rate_day": 0.08,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "release",
+      "source": "particulate_p",
+      "products": {
+        "dissolved_p": 1.0
+      },
+      "rate_day": 0.02,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "settling",
+      "source": "particulate_p",
+      "products": {},
+      "rate_day": 0.04,
+      "sink_label": "untracked deposited phosphorus",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    }
+  ],
+  "loads": [
+    {
+      "id": "point_n",
+      "reach": "tributary_a",
+      "species": "ammonium_n",
+      "kg_day": 10.0,
+      "source_tag": "point-source",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    },
+    {
+      "id": "runoff_p",
+      "reach": "tributary_b",
+      "species": "dissolved_p",
+      "kg_day": 0.2,
+      "source_tag": "diffuse-source",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    }
+  ],
+  "initial": [
+    {
+      "id": "initial_n",
+      "reach": "reservoir",
+      "species": "nitrate_n",
+      "kg": 2,
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "TokenJunkieLabs authored four-reach mathematical example; coefficients are editable and are not site estimates."
+      }
+    }
+  ],
+  "phases": [
+    {
+      "until_day": 3
+    },
+    {
+      "until_day": 10,
+      "load_multipliers": {
+        "runoff_p": 2
+      }
+    },
+    {
+      "until_day": 20,
+      "load_multipliers": {
+        "point_n": 0.5
+      }
+    }
+  ]
+}
