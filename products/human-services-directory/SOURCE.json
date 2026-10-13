@@ -120,7 +120,12 @@
     "correctionWorksheetsOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-correction-worksheets.mjs",
     "correctionWorksheetsCustomer": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-correction-worksheet-customer.html",
     "correctionWorksheetsNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_correction_worksheets.py",
-    "correctionWorksheetsClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_correction_worksheet_clients.mjs"
+    "correctionWorksheetsClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_correction_worksheet_clients.mjs",
+    "worksheetReconciliationCatalogue": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-correction-worksheet-reconciliation-schema.json",
+    "worksheetReconciliationNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_correction_worksheet_reconciliation.py",
+    "worksheetReconciliationOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-worksheet-reconciliation.mjs",
+    "worksheetReconciliationNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_correction_worksheet_reconciliation.py",
+    "worksheetReconciliationClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_correction_worksheet_reconciliation_clients.mjs"
   },
   "limits": {
     "nativeArchiveBytes": 2147483648,
@@ -141,7 +146,12 @@
     "worksheetSelectedValueBytes": 16777216,
     "worksheetCompleteChangesBytes": 268435456,
     "worksheetRows": 10000,
-    "worksheetChanges": 10000
+    "worksheetChanges": 10000,
+    "worksheetReconciliationInputBytes": 33554432,
+    "worksheetReconciliationValueBytes": 16777216,
+    "worksheetReconciliationFileBytes": 268435456,
+    "worksheetReconciliationRows": 10000,
+    "worksheetReconciliationChanges": 10000
   },
   "guides": {
     "operating": "products/human-services-directory/OPERATING.md",
@@ -158,7 +168,10 @@
     "correctionsClients": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_CLIENTS.md",
     "correctionWorksheets": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEETS.md",
     "correctionWorksheetsNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEETS_OPERATING.md",
-    "correctionWorksheetsClients": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEET_CLIENTS.md"
+    "correctionWorksheetsClients": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEET_CLIENTS.md",
+    "worksheetReconciliation": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/WORKSHEET_RECONCILIATION.md",
+    "worksheetReconciliationNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEET_RECONCILIATION_OPERATING.md",
+    "worksheetReconciliationClients": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEET_RECONCILIATION_CLIENTS.md"
   },
   "nativeReceivingOperation": {
     "operation": "SCF-HUMAN-SERVICES-DIRECTORY-RECEIVING-450E-20261012",
@@ -368,5 +381,26 @@
     "nativeOperation": "SCF-DIRECTORY-WORKSHEETS-450E-20261013",
     "clientOperation": "SCF-DIRECTORY-WORKSHEET-CLIENTS-450E-20261013",
     "semantics": "Selected complete original HSDS rows and offline editor assets travel in a portable package. Exact original returned bytes produce typed field/presence changes. Every change requires an explicit accept or keep-original choice. An accepted review prepares the original correction plan; preview and acceptance remain separate. Complete customer receiving preserves every source and record."
+  },
+  "worksheetReconciliation": {
+    "schema": "stellar-forge.directory-worksheet-reconciliation-source.v1",
+    "baseline": {
+      "capsule": "cff43ff39c2d8c138ce91c92ac35478b8616ba40",
+      "publicMerge": "8306774f2ace6aba068f6f8d3b94fdfcf9c4eaa5",
+      "productMerge": "305d54e216ad30705dcc6435e8ca41620090b164"
+    },
+    "nativeSource": {
+      "capsule": "52d207e650e9d33ed9dfe97fb9673e08e2fc8d04",
+      "bytes": 53917,
+      "sha256": "d681bec675ce6e80ad13c85ba5730a0e4f7dd91fdfa7876b642e86f92457f269"
+    },
+    "collections": [
+      "correctionWorksheetReconciliations",
+      "correctionWorksheetReconciliationReviews"
+    ],
+    "nativeOperation": "SCF-DIRECTORY-WORKSHEET-RECONCILIATION-450E-20261013",
+    "clientOperation": "SCF-DIRECTORY-WORKSHEET-RECONCILIATION-CLIENTS-450E-20261013",
+    "semantics": "Every original worksheet row retains an explicit current-row binding or unbound reason. Exact typed base/proposed/current comparisons require a decision for every proposed change. Structural conflicts retain explicit full current-row resolution. The resulting ordinary correction plan uses the chosen current edition and separate preview/accept. Original returned bytes and all source/record histories survive complete customer receiving.",
+    "execution": "Source publication and source-only checks are distinct from actual native/browser/customer operation. Completed results, journals and verified full files carry execution evidence."
   }
 }

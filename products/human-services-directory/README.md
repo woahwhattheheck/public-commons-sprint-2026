@@ -52,3 +52,9 @@ The same feature is exposed through native CLI/HTTP, typed SDK and MCP, with ful
 Select complete original rows, send a self-contained offline customer worksheet, receive the unchanged returned file and review every typed field/presence change. The review prepares the existing correction plan; preview and acceptance remain separate operator actions. Complete source files, offline editor assets, original reasons, explicit decisions and accepted editions survive cold customer receiving.
 
 [Worksheet workflow](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEETS.md), [native course](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEETS_OPERATING.md), and [operator/customer/Merchant course](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEET_CLIENTS.md) cover the complete installed feature.
+
+## Three-way customer review
+
+Use **Three-way review** when a returned worksheet belongs to an older edition. Explicitly match every original row to the selected current edition, review full base/customer/current values, and record each decision. Structural differences can use a complete current-row replacement. The saved review prepares an ordinary correction plan; preview and acceptance remain separate. Full source, return, comparison and review files travel in the editable customer packet.
+
+See [WORKSHEET_RECONCILIATION.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/WORKSHEET_RECONCILIATION.md), [native receiving](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEET_RECONCILIATION_OPERATING.md), and [browser/Merchant/customer receiving](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_WORKSHEET_RECONCILIATION_CLIENTS.md).
