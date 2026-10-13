@@ -1,0 +1,1009 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:tjlabs:scc:application-input:v1",
+  "title": "Original-form application selection and complete reviewed inputs",
+  "description": "The pure Python mapper is authoritative for byte identity, native relationships, exact money reconciliation and review-basis checks. This document describes editor structure; it does not infer eligibility or permission to submit.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "answer_source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "form_source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rfp_source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "edition_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "engineering_budget_row": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 199
+        },
+        "evidence_source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 1000,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "answer_source_id",
+        "form_source_id",
+        "rfp_source_id",
+        "edition_id",
+        "engineering_budget_row"
+      ]
+    },
+    "reviewed": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authoring": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "$ref": "#/$defs/text"
+            },
+            "title": {
+              "$ref": "#/$defs/text"
+            },
+            "proposalTitle": {
+              "$ref": "#/$defs/text"
+            },
+            "frenchTitle": {
+              "$ref": "#/$defs/text"
+            },
+            "responseMarkdown": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8388608
+            },
+            "outlineTable": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8388608
+            },
+            "sourceForm": {
+              "$ref": "#/$defs/text"
+            },
+            "sourceFormSha256": {
+              "const": "145a7cc034da6928f405a9bd07e01e25eaeae1a6c6a5dffcc27b9055c53bff09"
+            },
+            "sourceRfp": {
+              "$ref": "#/$defs/text"
+            },
+            "baseBudget": {
+              "$ref": "#/$defs/money"
+            },
+            "olaMaximum": {
+              "$ref": "#/$defs/money"
+            },
+            "maximumBudget": {
+              "$ref": "#/$defs/money"
+            },
+            "engineeringFee": {
+              "$ref": "#/$defs/money"
+            },
+            "phaseAmounts": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "$ref": "#/$defs/money"
+              }
+            },
+            "subcontractMilestones": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 24,
+              "items": {
+                "$ref": "#/$defs/money"
+              }
+            },
+            "engineeringWeeks": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 104
+              }
+            },
+            "selectedReviewDays": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "selectedReviewStart": {
+              "$ref": "#/$defs/text"
+            },
+            "selectedReviewEnd": {
+              "$ref": "#/$defs/text"
+            },
+            "budgetRows": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 200,
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "$ref": "#/$defs/money"
+                  },
+                  {
+                    "$ref": "#/$defs/money"
+                  },
+                  {
+                    "$ref": "#/$defs/money"
+                  },
+                  {
+                    "$ref": "#/$defs/money"
+                  }
+                ],
+                "items": false,
+                "minItems": 5,
+                "maxItems": 5
+              }
+            }
+          },
+          "required": [
+            "date",
+            "title",
+            "proposalTitle",
+            "frenchTitle",
+            "responseMarkdown",
+            "outlineTable",
+            "sourceForm",
+            "sourceFormSha256",
+            "sourceRfp",
+            "baseBudget",
+            "olaMaximum",
+            "maximumBudget",
+            "engineeringFee",
+            "phaseAmounts",
+            "subcontractMilestones",
+            "engineeringWeeks",
+            "selectedReviewDays",
+            "selectedReviewStart",
+            "selectedReviewEnd",
+            "budgetRows"
+          ]
+        },
+        "applicant": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "proposed",
+                "confirmed"
+              ]
+            },
+            "legal_name": {
+              "$ref": "#/$defs/text"
+            },
+            "country": {
+              "$ref": "#/$defs/text"
+            },
+            "establishment": {
+              "$ref": "#/$defs/text"
+            },
+            "signers": {
+              "type": "array",
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/$defs/applicantContact"
+              }
+            },
+            "contacts": {
+              "type": "array",
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/$defs/applicantContact"
+              }
+            },
+            "source_ids": {
+              "$ref": "#/$defs/sourceIds"
+            }
+          },
+          "required": [
+            "status",
+            "legal_name",
+            "country",
+            "establishment",
+            "signers",
+            "contacts",
+            "source_ids"
+          ]
+        },
+        "roles": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "role": {
+                "enum": [
+                  "applicant_prime",
+                  "project_leader",
+                  "standards_secretariat",
+                  "canadian_subject_expert",
+                  "technical_author_engineer",
+                  "professional_french_reviewer",
+                  "substitute_resource",
+                  "independent_procedural_reviewer",
+                  "publication_authority"
+                ]
+              },
+              "person_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "enum": [
+                  "proposed",
+                  "confirmed"
+                ]
+              },
+              "source_ids": {
+                "$ref": "#/$defs/sourceIds"
+              },
+              "notes": {
+                "$ref": "#/$defs/text"
+              }
+            },
+            "required": [
+              "role",
+              "person_id",
+              "status",
+              "source_ids",
+              "notes"
+            ]
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "enum": [
+                  "M1",
+                  "M2",
+                  "M3",
+                  "M4",
+                  "M5",
+                  "M6",
+                  "M7"
+                ]
+              },
+              "status": {
+                "enum": [
+                  "not_reviewed",
+                  "evidence_received",
+                  "reviewed"
+                ]
+              },
+              "explanation": {
+                "$ref": "#/$defs/text"
+              },
+              "source_ids": {
+                "$ref": "#/$defs/sourceIds"
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "explanation",
+              "source_ids"
+            ]
+          }
+        },
+        "supporters": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "organization": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "enum": [
+                  "prospective",
+                  "confirmed"
+                ]
+              },
+              "contacts": {
+                "type": "array",
+                "maxItems": 2,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "$ref": "#/$defs/text"
+                    },
+                    "email": {
+                      "$ref": "#/$defs/text"
+                    },
+                    "role": {
+                      "$ref": "#/$defs/text"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "email",
+                    "role"
+                  ]
+                }
+              },
+              "source_ids": {
+                "$ref": "#/$defs/sourceIds"
+              }
+            },
+            "required": [
+              "organization",
+              "status",
+              "contacts",
+              "source_ids"
+            ]
+          }
+        },
+        "schedule": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "start_month": {
+              "type": "string",
+              "pattern": "^(?:[0-9]{4}-(?:0[1-9]|1[0-2]))?$"
+            },
+            "months": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 60
+            },
+            "phase_months": {
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "phase": {
+                    "enum": [
+                      "1",
+                      "2",
+                      "3",
+                      "4"
+                    ]
+                  },
+                  "start": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 60
+                  },
+                  "end": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 60
+                  }
+                },
+                "required": [
+                  "phase",
+                  "start",
+                  "end"
+                ]
+              }
+            },
+            "hours_per_week": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^[0-9]+(?:\\.[0-9]{1,4})?$"
+                }
+              ]
+            },
+            "engineering_hours": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^[0-9]+(?:\\.[0-9]{1,4})?$"
+                }
+              ]
+            },
+            "review_basis": {
+              "$ref": "#/$defs/text"
+            },
+            "activities": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "months": {
+                    "type": "array",
+                    "maxItems": 60,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 300
+                    }
+                  },
+                  "responsibility": {
+                    "$ref": "#/$defs/text"
+                  }
+                },
+                "required": [
+                  "label",
+                  "months",
+                  "responsibility"
+                ]
+              }
+            }
+          },
+          "required": [
+            "start_month",
+            "months",
+            "phase_months",
+            "hours_per_week",
+            "engineering_hours",
+            "review_basis",
+            "activities"
+          ]
+        },
+        "commercial": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "proposed",
+                "confirmed"
+              ]
+            },
+            "provider": {
+              "$ref": "#/$defs/text"
+            },
+            "currency": {
+              "const": "CAD"
+            },
+            "tax_basis": {
+              "const": "excluding_hst"
+            },
+            "milestones": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 24,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "amount_cad": {
+                    "$ref": "#/$defs/money"
+                  },
+                  "trigger": {
+                    "$ref": "#/$defs/text"
+                  }
+                },
+                "required": [
+                  "title",
+                  "amount_cad",
+                  "trigger"
+                ]
+              }
+            },
+            "invoice_due_days": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 365
+            },
+            "defect_correction_days": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3650
+            },
+            "included": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "excluded": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "responsibilities": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "source_ids": {
+              "$ref": "#/$defs/sourceIds"
+            }
+          },
+          "required": [
+            "status",
+            "provider",
+            "currency",
+            "tax_basis",
+            "milestones",
+            "invoice_due_days",
+            "defect_correction_days",
+            "included",
+            "excluded",
+            "responsibilities",
+            "source_ids"
+          ]
+        },
+        "formFields": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "applicant_organization": {
+              "$ref": "#/$defs/field"
+            },
+            "signer_primary": {
+              "$ref": "#/$defs/field"
+            },
+            "signer_alternate": {
+              "$ref": "#/$defs/field"
+            },
+            "signer_primary_title": {
+              "$ref": "#/$defs/field"
+            },
+            "signer_alternate_title": {
+              "$ref": "#/$defs/field"
+            },
+            "contact_primary": {
+              "$ref": "#/$defs/field"
+            },
+            "contact_alternate": {
+              "$ref": "#/$defs/field"
+            },
+            "contact_primary_title": {
+              "$ref": "#/$defs/field"
+            },
+            "contact_alternate_title": {
+              "$ref": "#/$defs/field"
+            },
+            "email_primary": {
+              "$ref": "#/$defs/field"
+            },
+            "email_alternate": {
+              "$ref": "#/$defs/field"
+            },
+            "address_primary": {
+              "$ref": "#/$defs/field"
+            },
+            "address_alternate": {
+              "$ref": "#/$defs/field"
+            },
+            "start_month": {
+              "$ref": "#/$defs/field"
+            },
+            "duration": {
+              "$ref": "#/$defs/field"
+            },
+            "standards_evidence": {
+              "$ref": "#/$defs/field"
+            },
+            "team_evidence": {
+              "$ref": "#/$defs/field"
+            },
+            "roadmap": {
+              "$ref": "#/$defs/field"
+            },
+            "language": {
+              "$ref": "#/$defs/field"
+            },
+            "application_completeness": {
+              "$ref": "#/$defs/field"
+            },
+            "canadian_eligibility": {
+              "$ref": "#/$defs/field"
+            },
+            "budget": {
+              "$ref": "#/$defs/field"
+            },
+            "attachments": {
+              "$ref": "#/$defs/field"
+            },
+            "proposal_title": {
+              "$ref": "#/$defs/field"
+            },
+            "scope": {
+              "$ref": "#/$defs/field"
+            },
+            "sector": {
+              "$ref": "#/$defs/field"
+            },
+            "standard_type": {
+              "$ref": "#/$defs/field"
+            },
+            "process": {
+              "$ref": "#/$defs/field"
+            },
+            "outline": {
+              "$ref": "#/$defs/field"
+            },
+            "related_standards": {
+              "$ref": "#/$defs/field"
+            },
+            "gap": {
+              "$ref": "#/$defs/field"
+            },
+            "roadmap_mechanisms": {
+              "$ref": "#/$defs/field"
+            },
+            "audience": {
+              "$ref": "#/$defs/field"
+            },
+            "source_evidence": {
+              "$ref": "#/$defs/field"
+            },
+            "stakeholder_support": {
+              "$ref": "#/$defs/field"
+            },
+            "benefits": {
+              "$ref": "#/$defs/field"
+            },
+            "schedule": {
+              "$ref": "#/$defs/field"
+            },
+            "promotion_experience": {
+              "$ref": "#/$defs/field"
+            },
+            "promotion_plan": {
+              "$ref": "#/$defs/field"
+            },
+            "measurement": {
+              "$ref": "#/$defs/field"
+            }
+          },
+          "required": [
+            "applicant_organization",
+            "signer_primary",
+            "signer_alternate",
+            "signer_primary_title",
+            "signer_alternate_title",
+            "contact_primary",
+            "contact_alternate",
+            "contact_primary_title",
+            "contact_alternate_title",
+            "email_primary",
+            "email_alternate",
+            "address_primary",
+            "address_alternate",
+            "start_month",
+            "duration",
+            "standards_evidence",
+            "team_evidence",
+            "roadmap",
+            "language",
+            "application_completeness",
+            "canadian_eligibility",
+            "budget",
+            "attachments",
+            "proposal_title",
+            "scope",
+            "sector",
+            "standard_type",
+            "process",
+            "outline",
+            "related_standards",
+            "gap",
+            "roadmap_mechanisms",
+            "audience",
+            "source_evidence",
+            "stakeholder_support",
+            "benefits",
+            "schedule",
+            "promotion_experience",
+            "promotion_plan",
+            "measurement"
+          ]
+        },
+        "outlineMarkdown": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8388608
+        },
+        "scheduleMarkdown": {
+          "type": "string",
+          "maxLength": 8388608
+        },
+        "offerMarkdown": {
+          "type": "string",
+          "maxLength": 8388608
+        },
+        "narrativeReviewed": {
+          "type": "boolean"
+        },
+        "narrativeBasisSha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "renderPresentation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "date": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "author": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "footer": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "formFooter": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "financialFooter": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "documentTitles": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "application": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "responses": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "attachments": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "financial": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "offer": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                }
+              },
+              "required": [
+                "application",
+                "responses",
+                "attachments",
+                "financial",
+                "offer"
+              ]
+            }
+          },
+          "required": []
+        }
+      },
+      "required": [
+        "authoring",
+        "applicant",
+        "roles",
+        "requirements",
+        "supporters",
+        "schedule",
+        "commercial",
+        "formFields",
+        "outlineMarkdown",
+        "scheduleMarkdown",
+        "offerMarkdown",
+        "narrativeReviewed",
+        "narrativeBasisSha256",
+        "renderPresentation"
+      ]
+    }
+  },
+  "required": [
+    "selection",
+    "reviewed"
+  ],
+  "x-runtime-module": "application_intake.py",
+  "x-entrypoints": [
+    "inspect_application_input(state, selection, read_source)",
+    "prepare_renderer_inputs(intake, reviewed)"
+  ],
+  "x-renderer-schema": "scc.application-renderer-inputs.v1",
+  "x-confirmation-is-not-signature": true,
+  "$defs": {
+    "sourceIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 250,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "money": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]+(?:\\.[0-9]{1,2})?$"
+        }
+      ]
+    },
+    "field": {
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 100000
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "type": "string",
+              "maxLength": 100000
+            },
+            "references": {
+              "type": "array",
+              "maxItems": 30,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "section": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "token",
+                  "section"
+                ]
+              }
+            }
+          },
+          "required": [
+            "text",
+            "references"
+          ]
+        }
+      ]
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 10000
+    },
+    "applicantContact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 10000
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 10000
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 10000
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 10000
+        }
+      },
+      "required": [
+        "name",
+        "role",
+        "email",
+        "address"
+      ]
+    }
+  }
+}

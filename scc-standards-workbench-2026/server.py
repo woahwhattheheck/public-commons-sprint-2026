@@ -8,17 +8,17 @@ from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs,unquote,urlsplit
 if __package__:
-    from . import engine,exports,consultation,ballot_exchange
+    from . import engine,exports,consultation,ballot_exchange,applications
     from .workspace import Workspace,Conflict,json_read,SCHEMA
 else:
-    import engine,exports,consultation,ballot_exchange
+    import engine,exports,consultation,ballot_exchange,applications
     from workspace import Workspace,Conflict,json_read,SCHEMA
 ROOT=Path(__file__).resolve().parent
 MAX_JSON_BYTES=48*1024*1024
 MAX_RESTORE_BYTES=512*1024*1024+4096
 OPERATIONS=["record.save","record.remove","project.rename","source.add","records.import","edition.freeze","language.record",
             "comment.carry","decision.record","ballot.open","ballot.close","procedure.review","phase.freeze","phase.response","invoice.prepare",
-            "invoice.response","payment.record","delivery.register",*consultation.OPERATIONS,*ballot_exchange.OPERATIONS]
+            "invoice.response","payment.record","delivery.register",*consultation.OPERATIONS,*ballot_exchange.OPERATIONS,*applications.OPERATIONS]
 
 def seed(workspace,kind):
     if __package__:from . import demo
@@ -26,7 +26,7 @@ def seed(workspace,kind):
     return demo.seed_demo(workspace,kind)
 
 def catalog():
-    return {**engine.schema(),"workspace_schema":SCHEMA,"operations":OPERATIONS,"audiences":["private_restore","edition","management","consultation","review_response","ballot_member","ballot_decision"],
+    return {**engine.schema(),"workspace_schema":SCHEMA,"operations":OPERATIONS,"audiences":["private_restore","edition","management","consultation","review_response","ballot_member","ballot_decision","application"],
             "limits":{"source_bytes":32*1024*1024,"original_bytes_per_project":192*1024*1024,
                       "state_bytes":64*1024*1024,"records_per_collection":20000,"preview_records":200,"page_records":500,"review_response_bytes":consultation.MAX_RESPONSE_BYTES,"review_comments_per_response":consultation.MAX_COMMENTS},
             "operation_payload":{"operation":"record.save","payload":{"collection":"clauses","record":{}},"expected_revision":1,"request_id":"request-unique","actor":"Operator"},
@@ -35,6 +35,8 @@ def catalog():
                                "json":["format","encoding","records_path"],"xlsx":["format","sheet","header_row","header_rows","data_start_row","data_end_row"],
                                "text":["encoding"],"docx":[]},
             "workflow_templates":{
+             "application.save":{"title":"","selection":{"answer_source_id":"","form_source_id":"","rfp_source_id":"","edition_id":"","engineering_budget_row":0,"evidence_source_ids":[]},"reviewed":{},"include_source_ids":[],"predecessor_id":""},
+             "application.freeze":{"draft_id":"","title":"","review_note":""},
              "ballot.packet":{"ballot_id":"","person_id":"","title":"","instructions_en":"","instructions_fr":"","reply_route_en":"","reply_route_fr":""},
              "ballot.receive":{"packet_id":"","filename":"","content_base64":"","receipt_note":""},
              "ballot.adopt":{"return_id":"","expected_vote_sha256":"","verification_note":""},
@@ -96,9 +98,9 @@ def handler_for(workspace):
                 self.local_origin();url=urlsplit(self.path);bits=[unquote(x) for x in url.path.split("/") if x]
                 q={k:v[0] for k,v in parse_qs(url.query).items()}
                 if not bits or bits==["index.html"]:return self.send((ROOT/"web/index.html").read_bytes(),content_type="text/html; charset=utf-8")
-                if len(bits)==1 and bits[0] in ("app.js","style.css","consultation.js","consultation.css","ballot-exchange.js","ballot-exchange.css"):
+                if len(bits)==1 and bits[0] in ("app.js","style.css","consultation.js","consultation.css","ballot-exchange.js","ballot-exchange.css","application.js","application.css"):
                     return self.send((ROOT/"web"/bits[0]).read_bytes(),content_type="application/javascript; charset=utf-8" if bits[0].endswith(".js") else "text/css; charset=utf-8")
-                if bits==["api","status"]:return self.send({"workspace_schema":SCHEMA,"engine_schema":engine.SCHEMA,"mode":"local_operator","network_clients":0,"publisher_dependencies":["python-docx>=1.2,<2","reportlab>=4.4,<5"]})
+                if bits==["api","status"]:return self.send({"workspace_schema":SCHEMA,"engine_schema":engine.SCHEMA,"mode":"local_operator","network_clients":0,"publisher_dependencies":["python-docx==1.2.0","reportlab==4.4.9"],"application_dependencies":["pypdf==6.20.1","pdfplumber==0.11.10"]})
                 if bits==["api","catalog"]:return self.send(catalog())
                 if bits==["api","projects"]:return self.send(workspace.list_projects())
                 if len(bits)>=3 and bits[:2]==["api","projects"]:
@@ -106,6 +108,8 @@ def handler_for(workspace):
                     if len(bits)==3:return self.send(workspace.get(pid))
                     if bits[3:]==["ballot-exchange","status"]:
                         return self.send(ballot_exchange.status(workspace.full_state(pid),q.get("ballot_id")))
+                    if bits[3:]==["application","status"]:
+                        return self.send(applications.status(workspace.full_state(pid)))
                     if bits[3:]==["analysis"]:return self.send(engine.analyze(workspace.full_state(pid)))
                     if bits[3:]==["review","status"]:return self.send(consultation.analyze(workspace.full_state(pid)))
                     if len(bits)==6 and bits[3:5]==["review","clauses"]:
@@ -128,7 +132,7 @@ def handler_for(workspace):
                     if bits[3:]==["export"]:
                         audience=q.get("audience","private_restore")
                         raw,manifest=exports.export_project(workspace,pid,audience,q.get("edition_id"),q.get("publication_id"),q.get("comparison_edition_id"),
-                                                          [x for x in q.get("include_source_ids","").split(",") if x],q.get("packet_id"),q.get("response_id"),q.get("ballot_id"))
+                                                          [x for x in q.get("include_source_ids","").split(",") if x],q.get("packet_id"),q.get("response_id"),q.get("ballot_id"),q.get("application_id"))
                         return self.send(raw,content_type="application/zip",filename=f"standards-{audience}-{pid}-r{manifest['revision']}.zip")
                 return self.send({"error":"Resource not found."},404)
             except Exception as exc:self.error(exc)
@@ -143,6 +147,10 @@ def handler_for(workspace):
                     return self.send(exports.import_project(workspace,raw))
                 if len(bits)==4 and bits[:2]==["api","projects"] and bits[3]=="operations":
                     return self.send(workspace.apply(bits[2],data.get("operation"),data.get("payload",{}),data.get("expected_revision"),data.get("request_id"),data.get("actor","Operator")))
+                if len(bits)==5 and bits[:2]==["api","projects"] and bits[3:]==["application","inspect"]:
+                    return self.send(workspace.application_inspect(bits[2],data))
+                if len(bits)==5 and bits[:2]==["api","projects"] and bits[3:]==["application","request"]:
+                    return self.send(workspace.application_request(bits[2],data))
                 if len(bits)==5 and bits[:2]==["api","projects"] and bits[3:]==["ballot-exchange","preview"]:
                     encoded=data.get("content_base64","")
                     if not isinstance(encoded,str) or len(encoded)>ballot_exchange.MAX_RETURN_BYTES*4//3+16:
@@ -181,7 +189,8 @@ def main(argv=None):
     parser.add_argument("--restore",type=Path)
     parser.add_argument("--list",action="store_true")
     parser.add_argument("--export",metavar="PROJECT_ID")
-    parser.add_argument("--audience",choices=("private_restore","edition","management","consultation","review_response","ballot_member","ballot_decision"),default="private_restore")
+    parser.add_argument("--audience",choices=("private_restore","edition","management","consultation","review_response","ballot_member","ballot_decision","application"),default="private_restore")
+    parser.add_argument("--application-id")
     parser.add_argument("--ballot-id");parser.add_argument("--packet-id");parser.add_argument("--response-id");parser.add_argument("--edition-id");parser.add_argument("--comparison-edition-id");parser.add_argument("--publication-id")
     parser.add_argument("--include-source-id",action="append",default=[])
     parser.add_argument("--output",type=Path)
@@ -194,7 +203,7 @@ def main(argv=None):
     if args.list:print(json.dumps(workspace.list_projects(),ensure_ascii=False))
     if args.export:
         if not args.output:parser.error("--export requires --output")
-        raw,manifest=exports.export_project(workspace,args.export,args.audience,args.edition_id,args.publication_id,args.comparison_edition_id,args.include_source_id,args.packet_id,args.response_id,args.ballot_id)
+        raw,manifest=exports.export_project(workspace,args.export,args.audience,args.edition_id,args.publication_id,args.comparison_edition_id,args.include_source_id,args.packet_id,args.response_id,args.ballot_id,args.application_id)
         args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_bytes(raw)
         print(json.dumps({"path":str(args.output),"bytes":len(raw),"project_id":manifest["project_id"],"revision":manifest["revision"],"audience":manifest["audience"]}))
         return
