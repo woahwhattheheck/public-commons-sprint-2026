@@ -58,7 +58,7 @@ function sha256Bytes(bytes) {
   // Hash complete blocks in place; only the final one or two blocks need padding.
   const complete=bytes.length-bytes.length%64;
   const tail=new Uint8Array(bytes.length%64<56?64:128);
-  tail.set(bytes.subarray(complete));tail[bytes.length-complete]=128;
+  tail.set(typeof bytes.subarray==="function"?bytes.subarray(complete):bytes.slice(complete));tail[bytes.length-complete]=128;
   let bitLength=bytes.length*8;
   for(let i=0;i<8;i++){tail[tail.length-1-i]=bitLength%256;bitLength=Math.floor(bitLength/256);}
   const words=new Uint32Array(64),rotate=(x,n)=>(x>>>n)|(x<<(32-n));
