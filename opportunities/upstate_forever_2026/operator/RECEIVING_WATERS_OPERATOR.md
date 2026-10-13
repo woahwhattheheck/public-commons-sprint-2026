@@ -355,3 +355,75 @@ journey retains its original map/archive result directory; the browser owner
 retains its own browser receiving output. Existing upstream HUC network and
 scenario-source operations can enrich the same Workspace without replacing the
 published utility source boundaries.
+
+
+## Nested catchments, intake totals and reservoir domains
+
+In **Analyze model results**, open **Nested catchments and reservoirs**. Add a
+catchment group, name it, and choose the downstream total from the original
+receiving areas in the saved source plan. Mark its contributing upstream areas
+as **Upstream catchment** or **Reservoir catchment**. Retain the original source
+URLs or citations and the rationale for those relationships.
+
+A group uses the plan's original contribution boundaries and relationship
+precision. Published source-area polygons preserve their actual geometry;
+HUC/ToHUC associations retain catchment-scale precision. An intake point alone
+does not define its complete contributing catchment. Prepare that source
+relationship in the existing source-plan workflow before selecting the group.
+Changing the source plan clears groups that refer to the previous plan.
+
+The analysis forms each upstream union once. On the original native grid, it
+separates the parent mask into upstream land and the remaining incremental land.
+Where reservoirs are selected, the disjoint partition is above-reservoir land,
+other upstream land and downstream incremental land. The upstream union remains
+a useful subtotal. The complete downstream total and its upstream subtotal must
+not be added together.
+
+**Open accounting** beside a completed group shows the saved per-pollutant
+quantities, valid-cell coverage, selected-cell partition and mass reconciliation.
+Baseline and alternative export are reported separately. Signed change, increased
+export, avoided export and common-cell baseline/alternative quantities preserve
+the same valid support as the original paired analysis. Every accounting area
+also appears in the main result table under **Catchment accounting partition**.
+Its physical details and available maps use the normal operator controls.
+
+The saved closure records the sum of disjoint partitions, its residual from the
+downstream total, valid-cell residual and the floating-point summation allowance.
+An area without valid pixels has no numerical export estimate. Coverage remains
+specific to the selected pollutant and run.
+
+The complete model exports source-linked accounting records, ordinary quantity
+CSV rows and receiving-area GeoPackage features. **Maps and delivery** preserves
+these records, the original source plan and the scientific files; the report
+includes the group definitions and physical partition quantities. Complete
+workspace transfers retain the same analysis identities.
+
+### Scientific interpretation
+
+Nutrient and sediment values describe modeled land export to streams within
+the selected catchments. Above-reservoir land is a reporting partition.
+Transport, retention and release through a reservoir require additional sourced
+modelling. The calculation applies no reservoir retention coefficient.
+
+The model basis is documented in the pinned original guides:
+- [InVEST 3.20 NDR](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html)
+- [InVEST 3.20 SDR](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html)
+
+Nitrogen and phosphorus remain in kg/year and sediment in metric tonnes/year.
+The native output's mass-per-pixel basis and retained pixel area govern each sum.
+
+### API selection
+
+The existing receiving.water.analyze request accepts an optional accounting
+object with a groups array. Each group contains id, title, parent_receptor_id,
+upstream_receptor_ids, reservoir_receptor_ids, references and rationale.
+All receptor IDs refer to that request's saved source plan. Reservoir IDs are
+a subset of its declared upstream IDs. Group IDs are unique, up to 128 characters,
+and use letters, digits, periods, underscores or hyphens with an alphanumeric
+first character.
+
+The resulting analysis.accounting retains the normalized groups, original
+source relationships, subject IDs by role, selected-cell counts and quantity
+closure rows. Accounting subjects use kind=accounting and preserve the existing
+metrics interface. Delivery requests that prepare an analysis from a plan can
+supply this same accounting object inside receiving_waters.
