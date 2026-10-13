@@ -28,7 +28,7 @@ from model import decision_analysis, scenario_footprint
 from economic_workbench import EconomicWorkbench
 
 SCHEMA = "upstate.simulated-restoration-binding/v1"
-EDITION = "simulated-restoration-programme-20261013-v1"
+EDITION = "simulated-restoration-programme-20261013-v2-native-context"
 DEFAULT = "source_data/simulated_restoration_programme_20261013/programme.json"
 CATALOGUE = "source_data/sc_conservation_costs_20261013/catalogue.json"
 ACRE_M2 = Decimal("4046.8564224")
@@ -231,6 +231,73 @@ def _footprint(workspace, run_id, programme, footprint_id):
     return footprint
 
 
+def _native_model_context(workspace, packet, alternative, footprint, binding):
+    """Snapshot declared native configuration; no raster or model recalculation."""
+    grid = workspace.get_grid(alternative["grid_id"])
+    profile = workspace._get("profiles", alternative["profile_id"])
+    scenario = workspace._get("scenarios", alternative["scenario_id"])
+    require(profile["id"] == alternative["profile_id"]
+            and grid["id"] == alternative["grid_id"]
+            and scenario["id"] == alternative["scenario_id"],
+            "The native configuration differs from the completed physical source.")
+    requests = []
+    collection_id = grid["spec"]["source_collection_id"]
+    for role, source_id in grid["spec"]["input_sources"].items():
+        requests.append((collection_id, source_id, "grid input " + role))
+    for role in ("model_domain", "reporting_area"):
+        requests.append((collection_id, grid["spec"][role]["source_id"], role))
+    requests.append((profile["source_collection_id"], profile["biophysical_source_id"], "biophysical table"))
+    for patch in scenario.get("patches", []):
+        requests.append((scenario["source_collection_id"], patch["mask_source_id"], "scenario mask"))
+    collections, declarations, sources = {}, {}, {}
+    for cid, sid, role in requests:
+        if cid not in collections:
+            collections[cid] = workspace._get("sources", cid)
+            manifest = collections[cid]["original_manifest"]
+            original_document = read(verify_file(workspace.root, {**manifest, "path": manifest["object"]}))
+            declarations[cid] = {key: deepcopy(value) for key, value in original_document.items()
+                                 if key != "entries"}
+        matches = [item for item in collections[cid]["entries"] if item["id"] == sid]
+        require(len(matches) == 1, "The selected native source descriptor is absent or ambiguous.")
+        key = (cid, sid)
+        if key not in sources:
+            original = collections[cid]
+            sources[key] = {"source_collection_id": cid, "source_id": sid, "roles": [],
+                            "entry": deepcopy(matches[0]),
+                            "original_manifest": deepcopy(original["original_manifest"]),
+                            "original_manifest_context": deepcopy(declarations[cid]),
+                            "collection_scope": deepcopy(original.get("scope", {})),
+                            "collection_notes": deepcopy(original.get("notes", []))}
+        if role not in sources[key]["roles"]:
+            sources[key]["roles"].append(role)
+    profile_source = sources[(profile["source_collection_id"], profile["biophysical_source_id"])]["entry"]
+    require(profile_source["body"]["sha256"] == profile["table_summary"]["sha256"]
+            == footprint["request"]["coefficient_body"]["sha256"],
+            "The retained coefficient source differs from the completed profile and footprint.")
+    context = {
+        "schema": "upstate.restoration-native-model-context/v1",
+        "binding": deepcopy(binding),
+        "grid": {key: deepcopy(grid[key]) for key in ("id", "spec", "grid", "inputs", "files")},
+        "profile": deepcopy(profile),
+        "scenario": deepcopy(scenario),
+        "physical_source": deepcopy(packet["physical_source"]),
+        "baseline": deepcopy(packet["comparisons"][0]["baseline"]),
+        "alternative": {key: deepcopy(alternative.get(key)) for key in
+                        ("run_id", "scenario_id", "profile_id", "grid_id",
+                         "invest_version", "model_versions", "comparison_kind", "label")},
+        "coefficient_columns": deepcopy(footprint["coefficient_columns"]),
+        "coefficient_rows": deepcopy(footprint["coefficient_rows"]),
+        "sources": [sources[key] for key in sorted(sources)],
+        "semantics": [
+            "Profile parameters are the exact saved declarations selected by the completed run; observed stage versions remain separate.",
+            "The retained model domain supplies computational context. The reporting area and the selected reporting zone define summaries, not intervention hectares.",
+            "Grid bounds describe the rectangular raster extent, not polygon area or a surveyed project boundary.",
+            "Source descriptors identify original retained data and assumptions; this metadata snapshot does not assert a new copy of each raster or a current external measurement.",
+        ],
+    }
+    return {**context, "sha256": document_digest(context)}
+
+
 def prepare(workspace, programme, *, report_id, zone_id, run_id,
             catalogue=None, footprint_id=None, existing_selection=None):
     catalogue = catalogue or read(APP / CATALOGUE)
@@ -254,6 +321,7 @@ def prepare(workspace, programme, *, report_id, zone_id, run_id,
                "net_change_mask": deepcopy(footprint["files"]["net_change_mask"]),
                "grid_id": alternative["grid_id"], "profile_id": alternative["profile_id"],
                "scenario_id": alternative["scenario_id"]}
+    model_context = _native_model_context(workspace, packet, alternative, footprint, binding)
     scope = {"kind": "whole_scenario", "producer_report_id": report_id, "zone_id": zone_id,
              "run_id": run_id, "area_ha": float(priced["treatment_hectares"]),
              "footprint_id": footprint["id"], "scenario_role": programme["scenario_role"],
@@ -267,7 +335,8 @@ def prepare(workspace, programme, *, report_id, zone_id, run_id,
                        "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source_data/simulated_restoration_programme_20261013",
                        "as_of": "2026-10-13"},
             "note": "Planning simulation; FY25 benchmark plus explicitly authored allowances. Assistance and stock-only comparison are separate; no observed expenditure.",
-            "programme": deepcopy(programme), "priced_basis": deepcopy(priced), "native_binding": binding}
+            "programme": deepcopy(programme), "priced_basis": deepcopy(priced), "native_binding": binding,
+            "native_model_context": model_context}
     if existing_selection is not None:
         selection = deepcopy(existing_selection)
         require(selection.get("comparison_id") == comparison["id"],
@@ -298,6 +367,7 @@ def prepare(workspace, programme, *, report_id, zone_id, run_id,
             "pricing": priced, "footprint": footprint, "economic_input": retained,
             "original_physical_outputs": deepcopy(alternative["outputs"]),
             "original_scenario_definition": deepcopy(alternative.get("scenario_definition")),
+            "native_model_context": deepcopy(model_context),
             "economic_preview": economic,
             "replaced_original_cost": next((deepcopy(r) for r in original_costs if r["run_id"] == run_id), None)}
 
@@ -353,6 +423,7 @@ def apply(workspace, programme, *, report_id, zone_id, run_id, expected_operatio
         save(directory / "identity.json", preview["identity"])
         for name, value in (("programme.json", programme), ("pricing.json", preview["pricing"]),
                             ("footprint.json", preview["footprint"]),
+                            ("native-model-context.json", preview["native_model_context"]),
                             ("scenario-definition.json", preview["original_scenario_definition"]), ("economic-input.json", preview["economic_input"]),
                             ("selection.json", preview["economic_input"]["selection"]),
                             ("physical-outputs.json", preview["original_physical_outputs"])):
