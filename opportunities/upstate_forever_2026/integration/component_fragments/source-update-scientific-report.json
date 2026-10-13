@@ -1,0 +1,64 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "source-update-scientific-report",
+  "extend_components": {
+    "source-updates": {
+      "paths": [
+        "SOURCE_REFRESH.md",
+        "docs/source-refresh-compatibility.md",
+        "docs/source-refresh-scientific-report.md",
+        "docs/source-refresh.md",
+        "install_source_refresh.py",
+        "integration/component_fragments/source-update-scientific-report.json",
+        "model/native_versions.py",
+        "model/scientific_report_study_transfer.py",
+        "model/source_refresh.py",
+        "model/source_refresh_cli.py",
+        "model/source_refresh_comparison.py",
+        "model/source_refresh_compat.py",
+        "model/source_refresh_legacy.py",
+        "model/source_refresh_legacy_cli.py",
+        "model/source_refresh_receiving.py",
+        "model/source_refresh_report_source.py",
+        "model/source_refresh_report_transfer.py",
+        "model/study_transfer.py",
+        "operator/SOURCE_UPDATES.md",
+        "operator/extensions/source-updates.json",
+        "operator/install_source_refresh.py",
+        "operator/source_refresh.py",
+        "operator/source_refresh_legacy.py",
+        "operator/source_refresh_native.py",
+        "operator/source_refresh_server.py",
+        "operator/web/source-refresh-legacy/source-refresh-nav.css",
+        "operator/web/source-refresh-legacy/source-refresh.css",
+        "operator/web/source-refresh-legacy/source-refresh.html",
+        "operator/web/source-refresh-legacy/source-refresh.mjs",
+        "operator/web/source-refresh-nav.mjs",
+        "operator/web/source-refresh.css",
+        "operator/web/source-refresh.html",
+        "operator/web/source-refresh.mjs",
+        "source/landcover-change/METHOD.md",
+        "source/run_source_updates_browser.mjs",
+        "source/source-refresh-report-integration.json",
+        "source_tools/landcover_change.py",
+        "source_tools/receive_source_refresh_report.py"
+      ],
+      "requires": [
+        "scientific-report-review",
+        "study-transfer"
+      ]
+    }
+  },
+  "required_components": [
+    "source-updates"
+  ],
+  "source_reference": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "revision": "ad1685f7550c5cf52d139cce711f521b1ab27be9",
+    "pull_request": 3990,
+    "complete_component": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8VPYG02V",
+    "installer": "install_source_refresh.py",
+    "consumer_joins": "source/source-refresh-report-integration.json",
+    "purpose": "Retain the complete Source Updates report, original review and editable Study continuation in current application assembly."
+  }
+}
