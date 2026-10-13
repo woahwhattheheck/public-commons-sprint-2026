@@ -9,9 +9,9 @@
       "kind": "document",
       "role": "monitoring_observed_context",
       "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/monitoring-context.json",
-      "bytes": 1719021,
-      "sha256": "def4f656870c352fb5bbacb2af8f318e10785276e83bdf0b1bda2a5935a14e14",
-      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/7b01678569f6560095bf64250c6b1669977620a4/opportunities/upstate_forever_2026/source/ecoli_temporal_analysis/20261013/monitoring-context/monitoring-context.json",
+      "bytes": 1747524,
+      "sha256": "f1be7772c3a256ab47575cdd265ada9ef0d1b3877fb4f9e038dc2631ceae39c2",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/eb118f4c95d3a54b54b89c2a4f9371c63249788b/opportunities/upstate_forever_2026/source/ecoli_temporal_analysis/20261013/monitoring-context/monitoring-context.json",
       "vintage": "2021–2025 observations; original 2022 Chattooga flow; source edition 2026-10-13",
       "metadata": {
         "source_schema": "upstate.monitoring-observed-source/v2",
@@ -39,16 +39,6 @@
       },
       "companions": [
         {
-          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
-          "bytes": 55405,
-          "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
-        },
-        {
-          "path": "source/ecoli_temporal_analysis/20261013/analysis.mjs",
-          "bytes": 20084,
-          "sha256": "4c00450d05f8e6509ea300af53aeca2cbbb17f87bbd1584fa1353919a8829e0b"
-        },
-        {
           "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/build-microbial-monitoring.mjs",
           "bytes": 1570,
           "sha256": "ac52aaf242865586913a51c0392d955c479a0fae33d0f1ef20e7bcc20c47943c"
@@ -60,18 +50,18 @@
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/derive-microbial-monitoring.mjs",
-          "bytes": 9949,
-          "sha256": "60467f067e44d3a901eb12fa8a5bca69771de4e2597e3490e833884c53afc1a2"
+          "bytes": 10004,
+          "sha256": "c31b455245843202540e91991f4fd6577a50dca50aa0b10e0e435507eeeaa062"
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/input-manifest.json",
-          "bytes": 1842,
-          "sha256": "fc76ae4a8029547a8e90eb7ebe0b4075eb45f9c4cd3cad0eca573f8def472ab6"
+          "bytes": 2605,
+          "sha256": "36964eca63d021311328fb64712c321c31a7316cba03e93ca081180f5c0bb401"
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/MONITORING_MICROBIAL.md",
-          "bytes": 7138,
-          "sha256": "8f0f598b229ed866e453da3a2b4065d061488f508480af59c3f86d69b4fe2d09"
+          "bytes": 7461,
+          "sha256": "500cdde553c2920c99bd3b19861b4d0046077faba983a5c5fe0708922a859eda"
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/monitoring-activities.csv",
@@ -84,107 +74,128 @@
           "sha256": "a1a07b418649766fc607f78838249abb90e23faf61fcec8f673f32e3ea144ebe"
         },
         {
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-analysis/analysis.mjs",
+          "bytes": 20084,
+          "sha256": "4c00450d05f8e6509ea300af53aeca2cbbb17f87bbd1584fa1353919a8829e0b"
+        },
+        {
           "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-stations.csv",
           "bytes": 14190,
           "sha256": "31a99c542c8abd4185f6f7de2f30edc34514ee3c6c7f5b60fbd30070a6439f97"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-usgs/usgs_02177000_2022_2023.json",
+          "bytes": 55405,
+          "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
+        },
+        {
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/build_ecoli_report.mjs",
+          "bytes": 45810,
           "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/index.html",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/index.html",
+          "bytes": 568315,
           "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/arjws-results-2021-2025-original.csv",
           "bytes": 68038,
           "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/arjws-wbd-original.json",
+          "bytes": 183656,
           "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/prwd-results-2021-original.csv",
           "bytes": 65619,
           "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/prwd-results-2022-original.csv",
           "bytes": 39899,
           "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/prwd-results-2023-original.csv",
           "bytes": 44379,
           "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/prwd-results-2024-original.csv",
           "bytes": 53715,
           "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/prwd-results-2025-original.csv",
           "bytes": 73283,
           "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/prwd-wbd-display.json",
+          "bytes": 59535,
           "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/stations-original.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/stations-original.csv",
           "bytes": 21317,
           "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/stations-original.geojson",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/stations-original.geojson",
+          "bytes": 46598,
           "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/utility-focus-profile.json",
+          "bytes": 2169,
           "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/raw/utility-memberships.csv",
+          "bytes": 8731,
           "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/README.md",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/README.md",
+          "bytes": 7374,
           "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/results-with-provenance.csv",
           "bytes": 368696,
           "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/selected-stations.geojson",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/selected-stations.geojson",
+          "bytes": 106741,
           "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/source-inputs.json",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/source-inputs.json",
           "bytes": 8181,
           "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/source-manifest.json",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/source-manifest.json",
           "bytes": 23194,
           "sha256": "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/station-membership.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/station-membership.csv",
           "bytes": 6909,
           "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/station-year-method-summary.csv",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/station-year-method-summary.csv",
+          "bytes": 9986,
           "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2"
         },
         {
-          "path": "source/ecoli_utility_context/20261013/summary.json",
+          "path": "source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/summary.json",
+          "bytes": 3448,
           "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d"
         }
       ]
@@ -193,6 +204,7 @@
   "notes": [
     "Version2 declares explicit original station flow scope; use the maintained Monitoring observed-context receiver supporting this schema.",
     "Original publisher input bodies, request URLs, analytical qualifications and source row identities accompany the derived monitoring document.",
-    "The exact saved native network, plan and campaign revision determine station/calendar matching."
+    "The exact saved native network, plan and campaign revision determine station/calendar matching.",
+    "The entire original utility edition, USGS response and analysis module are retained in immutable source-edition subdirectories; later changes in the wider utility application do not change this context."
   ]
 }
