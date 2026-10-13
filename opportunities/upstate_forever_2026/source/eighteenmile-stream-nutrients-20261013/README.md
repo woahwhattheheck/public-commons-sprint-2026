@@ -15,6 +15,8 @@ The two complementary publisher date queries contain **589 result rows across 15
 
 The original nutrient characteristics are ammonia (124 rows), nitrate + nitrite (153), Kjeldahl nitrogen (153), phosphorus (153), and nitrogen (6). There are 408 numeric results in mg/L and 181 entries marked `Present Below Quantification Limit`. Each censored entry retains its exact original limit value, limit type and limit unit. A blank measured value remains blank.
 
+Six original `Nitrogen` rows are labeled `Calculated` and have method name `Total Nitrogen`. Each is lower than its same-activity nitrate + nitrite value; two equal the paired numeric Kjeldahl result, and four equal its reporting limit. The normalized `result_type`, method and activity IDs preserve this source inconsistency for the maintained component-consistency analysis. Source values remain unchanged.
+
 The original Seneca station query contains 47 locations: 20 streams and 27 lakes. This package selects the four actual Eighteenmile stream identifiers explicitly; the lake locations retain their separate study/source relationship.
 
 ## Geography
