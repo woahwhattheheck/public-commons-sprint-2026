@@ -1549,7 +1549,28 @@ def _decision_comparison(workspace, record, run, value):
         if (comparison.get("schema") != "upstate.run-comparison/v1"
                 or comparison.get("id") != comparison_id
                 or comparison.get("direction") != "alternative minus baseline"
-                or digest({"runs": run_ids, "direction": comparison["direction"]}) != comparison_id):
+                or len(run_ids) < 2 or len(set(run_ids)) != len(run_ids)):
+            raise ValueError("Select the original completed native comparison")
+        identity = {"runs": run_ids, "direction": comparison["direction"]}
+        if "native_version_provenance" in comparison:
+            # Current native comparisons bind the executed per-model versions.
+            # Recompute that binding from the original completed runs; legacy
+            # comparisons retain their original two-field identity unchanged.
+            from .model_selection import common_comparison_outputs
+            from .native_versions import comparison_versions, models_for_outputs
+            compared_runs = [workspace.inspect_run(identifier(key)) for key in run_ids]
+            if any(item.get("state") != "complete" for item in compared_runs):
+                raise ValueError("Complete the original native runs before reopening their comparison")
+            common_outputs = common_comparison_outputs(compared_runs)
+            provenance = comparison_versions(compared_runs, models_for_outputs(common_outputs))
+            if (comparison.get("common_artifacts") != list(common_outputs)
+                    or comparison.get("native_version_provenance") != provenance):
+                raise ValueError("The retained comparison differs from its original native version provenance")
+            if any(item["selection"]["grid_id"] != compared_runs[0]["selection"]["grid_id"]
+                   for item in compared_runs[1:]):
+                raise ValueError("The retained native comparison uses different reporting/model grids")
+            identity["native_version_provenance"] = provenance
+        if digest(identity) != comparison_id:
             raise ValueError("Select the original completed native comparison")
         if run["id"] not in run_ids[1:]:
             raise ValueError("The decision comparison must contain the selected portfolio evaluation")
