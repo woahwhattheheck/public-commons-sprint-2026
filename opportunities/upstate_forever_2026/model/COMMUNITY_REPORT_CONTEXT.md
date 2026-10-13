@@ -22,6 +22,41 @@ Entered-estimate totals and their difference carry the number of interventions w
 
 The report retains `previous-plan.json`, `plan-revision-summary.json` and `plan-revision-changes.csv`. The CSV stores exact before/after values as JSON. Preparing this report as a scientific source carries those same original files and register sections into the ordered composer. Initial plans and reports created before this register retain their existing content; a new report edition adds the register without changing an earlier report.
 
+## Export and receive one complete source handover
+
+Open **Communities → Reports**, open the retained report, and choose **Export source handover**. The form identifies the original project, report and report edition. Choose **Export complete source handover** to queue the export. When it completes, **Open source handover** offers one `community-source-handover.zip` through the operator's normal downloads.
+
+The file carries the byte-exact original report ZIP, original saved report record and a handover manifest binding their identities. Its original report edition stays visible. The existing **Transfer editable study** action remains available when the recipient needs to continue the editable plans and their full study history.
+
+In the destination Workspace:
+
+1. Open **Communities → Reports → Receive source handover**. This control is available before any Community tables or plans have been imported locally.
+2. Choose the exported handover ZIP and **Review original report**. The operator retains the actual file and verifies its complete identity before displaying the original title, project, report edition, plan, table and member count.
+3. Choose **Prepare a new report selection**, or select an existing retained delivery. The latter keeps its original runs, maps and ordered report sources.
+4. Choose **Receive original report source**. The queued operation remains bound to that original upload and selected destination Workspace. Closing or replacing the form, changing the file or switching workspaces invalidates an unfinished preview.
+5. On the completed task, choose **Open scientific report**. The current scientific composer receives the original ordered selection with this report appended once and preserves its existing draft. Review the source order and report details, then preview and build.
+6. **Open retained report source** inspects the received originals. **Open prepared delivery form** continues the existing mapped-delivery workflow.
+
+The completed task and its download/source buttons remain available after reopening the operator. Ordinary task recovery reuses the same selected original file. The receiving Workspace owns the imported source; the source retains the donor's original project, report, plan and table identities. Earlier report editions retain their original content.
+
+The same operation is available to a native receiver through the maintained model API:
+
+```python
+from model import community_report_handover
+
+exported = community_report_handover.export(
+    original_workspace, original_report_id,
+    report_sha256=original_report_json_sha256)
+metadata = community_report_handover.inspect_archive(
+    retained_handover_path, expected_sha256=original_handover_sha256)
+received = community_report_handover.receive(
+    receiving_workspace, retained_handover_path,
+    expected_sha256=original_handover_sha256,
+    delivery_id=existing_delivery_id_or_none)
+```
+
+The export returns normal Workspace-relative file descriptors. Inspection reads the complete original archive without creating a receiving source. Receiving returns the same `source`, `delivery_selection` and retained-file contract as the original archive intake below; the existing scientific renderer and portable receiving continue from that result.
+
 ## Native course
 
 From the maintained application root, use the actual saved report ID and its `files["community-report.json"]["sha256"]`:
@@ -57,7 +92,7 @@ Every original file is copied unchanged beneath the existing report directory’
 
 The recipe uses `upstate.observed-report/v1` with `report_context_kind=community_planning`. It is imported through the existing `upstate.sources/v1` document/companion mechanism, and the consumer verifies every recipe input against the imported original member. The operation identity binds the project, saved report, original file inventory, producer source and current consumer edition.
 
-The producer lives inside the original Community report root; imported sources and the full Community report root are retained by ordinary Workspace backup/restore. This adds one backend-only operator extension and uses the existing Community desk and task queue.
+The producer lives inside the original Community report root; imported sources and the full Community report root are retained by ordinary Workspace backup/restore. The maintained operator extension uses the existing Community desk and task queue, with a focused source-handover controller for complete original-file receiving.
 
 ## Reading the scientific context
 
