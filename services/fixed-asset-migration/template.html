@@ -12,7 +12,7 @@ const engineURL=URL.createObjectURL(new Blob([engineSource],{type:'text/javascri
 const appURL=URL.createObjectURL(new Blob([data.appSource],{type:'text/javascript'}));
 const issuerURL=URL.createObjectURL(new Blob([data.issuerSource],{type:'text/javascript'}));
 const issuerUIURL=URL.createObjectURL(new Blob([data.issuerUISource],{type:'text/javascript'}));
-let workOrderURL=null,workOrderUIURL=null;
+let workOrderURL=null,workOrderUIURL=null,applicationSourceURL=null;
 try{
 const [engine,app,sha,issuer,issuerUI]=await Promise.all([import(engineURL),import(appURL),import(shaURL),import(issuerURL),import(issuerUIURL)]);
 let extensions=null;
@@ -23,7 +23,13 @@ workOrderUIURL=URL.createObjectURL(new Blob([data.workOrderUISource],{type:'text
 const [workOrders,ui]=await Promise.all([import(workOrderURL),import(workOrderUIURL)]);
 extensions={workOrders,createWorkOrderPanel:ui.createWorkOrderPanel};
 }
+if(data.applicationSourceModule){
+applicationSourceURL=URL.createObjectURL(new Blob([data.applicationSourceModule],{type:'text/javascript'}));
+const source=await import(applicationSourceURL),applicationSource=source.createApplicationSource(sha);
+applicationSource.assertRuntime(data.applicationSource,data);
+extensions={...extensions,applicationSource};
+}
 await app.mountFixedAssetWorkspace(engine,data,issuer.createIssuerAnnex(engine,sha),issuerUI.createIssuerUI,extensions);
 }catch(error){document.querySelector('#app').textContent='Unable to open this complete workspace: '+error.message;}
-finally{if(workOrderURL)URL.revokeObjectURL(workOrderURL);if(workOrderUIURL)URL.revokeObjectURL(workOrderUIURL);URL.revokeObjectURL(engineURL);URL.revokeObjectURL(appURL);URL.revokeObjectURL(shaURL);URL.revokeObjectURL(issuerURL);URL.revokeObjectURL(issuerUIURL);}
+finally{if(applicationSourceURL)URL.revokeObjectURL(applicationSourceURL);if(workOrderURL)URL.revokeObjectURL(workOrderURL);if(workOrderUIURL)URL.revokeObjectURL(workOrderUIURL);URL.revokeObjectURL(engineURL);URL.revokeObjectURL(appURL);URL.revokeObjectURL(shaURL);URL.revokeObjectURL(issuerURL);URL.revokeObjectURL(issuerUIURL);}
 </script></body></html>
