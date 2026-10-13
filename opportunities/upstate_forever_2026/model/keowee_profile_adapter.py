@@ -304,6 +304,41 @@ def observation_bundle(candidate, table, *, score, identity, profile_state=None)
                 continue
             detail["conversion"] = {"from": "metre", "to": "mile", "divisor": 1609.344}
         put(name, value, detail)
+    # Preserve numeric source bounds as bounds, including an unresolved exact
+    # value. The original published scalar profile remains unchanged; the
+    # evaluator accepts this optional, source-described observation extension.
+    numeric_intervals = point.get("metric_bounds", {})
+    for item in mapping["fields"]:
+        name, source = item["profile_field"], item["native_metric"]
+        if source is None or source not in numeric_intervals:
+            continue
+        field = field_definitions[name]
+        if field["type"] != "number":
+            continue
+        original_interval = _copy(numeric_intervals[source])
+        interval = _copy(original_interval)
+        if interval.get("unit") == "acres" and field["unit"] == "acre":
+            interval["original_unit"] = interval["unit"]
+            interval["unit"] = "acre"
+            interval["unit_interpretation"] = "Canonical acre spelling; numeric endpoints unchanged"
+        if interval.get("unit") != field["unit"]:
+            raise ValueError("The source interval unit differs from its profile observation: " + name)
+        selected = resolved_sources.get(source, {})
+        observation = observations.setdefault(name, {
+            "value": None, "unit": field["unit"],
+            "original_fields": [selected.get("field", source)],
+            "method": "Actual retained closed source interval",
+            "source_binding": _copy(selected),
+        })
+        observation["interval"] = interval
+        observation["original_numeric_interval"] = original_interval
+        observation["numeric_interval_source"] = "point_score.metric_bounds." + source
+        if source in ("hydric_soil_acres", "sensitive_riparian_acres"):
+            observation["spatial_scope"] = {
+                "area_basis": interval.get("area_basis"),
+                "meaning": "Area of the selected criterion footprint intersected with the retained parcel analysis geometry",
+                "bound_applies_to": "In-parcel intersections only",
+            }
     if ("parcel_area_acres" not in observations and "parcel_acres" not in resolved_metrics
             and candidate.get("area_ha") is not None):
         put("parcel_area_acres", candidate["area_ha"] * 10000 / 4046.8564224, {
