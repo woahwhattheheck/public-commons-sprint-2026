@@ -40,7 +40,8 @@
     "The classified-reach CSV contains original source attributes. Geographic intersections and contributing land use the existing retained SCDES geometry entry and native receiving-water model.",
     "Original domain-coverage queries confirm the same 1886 classified feature IDs across the full selected domain. The unchanged coverage companion preserves request URLs, response hashes and the original geometry reference.",
     "The full-domain context is the exact retained 152659-byte source document; its complete JSON and serialized bytes were independently reproduced with the retained water_context.mjs implementation.",
-    "The coverage document's historical response filenames identify the original source capture; its associated query URLs and response hashes remain explicit. The import companions enumerate every locally supplied file."
+    "The coverage document's historical response filenames identify the original source capture; its associated query URLs and response hashes remain explicit. The import companions enumerate every locally supplied file.",
+    "The native-network.json companion preserves the original USGS 303-row huc12/tohuc topology unchanged. Every selected model-domain HUC is represented; the established watershed-context loader receives this companion directly."
   ],
   "entries": [
     {
@@ -157,8 +158,25 @@
           "bytes": 7043,
           "sha256": "2ed2f1bd402437d91aa8c1544d583dd5ceaf7da7e202aed1252f1b3ea47b3bcb",
           "media_type": "application/json"
+        },
+        {
+          "path": "20261013/native-network.json",
+          "bytes": 71787,
+          "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
+          "media_type": "application/json"
         }
-      ]
+      ],
+      "native_network_reference": {
+        "id": "usgs-wbd-savannah-original-topology-20261013",
+        "title": "USGS original Savannah subwatershed topology",
+        "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6/query?f=json&where=huc12%20LIKE%20'030601%25'&outFields=objectid%2Chuc12%2Cname%2Ctohuc%2Careasqkm%2Careaacres%2Cstates%2Chutype%2Chumod%2Cnoncontributingareasqkm&returnGeometry=false&orderByFields=huc12&resultRecordCount=2000",
+        "vintage": "2026-10-13",
+        "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
+        "original_repository_path": "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
+        "native_huc_rows": 303,
+        "selected_domain_huc_rows": 217,
+        "selected_domain_huc_rows_missing": 0
+      }
     }
   ]
 }

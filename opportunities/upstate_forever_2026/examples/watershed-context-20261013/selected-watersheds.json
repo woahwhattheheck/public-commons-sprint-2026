@@ -1,0 +1,226 @@
+{
+  "classification_coverage": {
+    "additional_huc8_response": {
+      "bytes": 11,
+      "count": 0,
+      "huc8": [
+        "03060104",
+        "03060105",
+        "03060106",
+        "03060107"
+      ],
+      "path": "scdes-huc8-03060104-to-07-target-class-count.json",
+      "request_url": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2/query?where=(HUC_12%20LIKE%20'03060104%25'%20OR%20HUC_12%20LIKE%20'03060105%25'%20OR%20HUC_12%20LIKE%20'03060106%25'%20OR%20HUC_12%20LIKE%20'03060107%25')%20AND%20H2OCLASS%20IN%20('ORW'%2C'ONRW'%2C'TN'%2C'TPGT'%2C'TPT')&returnCountOnly=true&f=json",
+      "sha256": "618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c"
+    },
+    "assignment": "publisher_huc12_attribute",
+    "captured_at": "2026-10-13 00:37:00 UTC",
+    "captured_geometry": {
+      "attribute_csv_sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18",
+      "bytes": 4978867,
+      "features": 1886,
+      "original_capture_filter": "(HUC_12 LIKE '03060101%' OR HUC_12 LIKE '03060102%' OR HUC_12 LIKE '03060103%') AND H2OCLASS IN ('ORW','ONRW','TN','TPGT','TPT')",
+      "source_id": "scdes-classified-streams-upper-savannah-20261012",
+      "source_reference": "notion-file-block://01f75572-2592-4bc8-93eb-8b7b81bd46de/3bb73060-7dad-4016-b1fd-bd58cfd5bb17?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=scdes-classified-streams-upper-savannah-original-esri.json"
+    },
+    "complete_domain_query": true,
+    "domain_membership_matches": true,
+    "layer_url": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+    "membership_source": {
+      "bytes": 13248,
+      "count": 1886,
+      "path": "scdes-original-domain217-classified-objectids.json",
+      "request_url": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2/query?where=HUC_12%20IN%20('030601010101'%2C'030601010102'%2C'030601010103'%2C'030601010104'%2C'030601010105'%2C'030601010201'%2C'030601010202'%2C'030601010203'%2C'030601010204'%2C'030601010301'%2C'030601010302'%2C'030601010303'%2C'030601010304'%2C'030601010305'%2C'030601010306'%2C'030601010401'%2C'030601010402'%2C'030601010403'%2C'030601010404'%2C'030601010405'%2C'030601010406'%2C'030601010407'%2C'030601010408'%2C'030601010501'%2C'030601010502'%2C'030601010503'%2C'030601010601'%2C'030601010602'%2C'030601010701'%2C'030601010702'%2C'030601010703'%2C'030601010704'%2C'030601010801'%2C'030601010802'%2C'030601010803'%2C'030601010804'%2C'030601020101'%2C'030601020102'%2C'030601020103'%2C'030601020104'%2C'030601020105'%2C'030601020106'%2C'030601020107'%2C'030601020108'%2C'030601020201'%2C'030601020202'%2C'030601020203'%2C'030601020204'%2C'030601020205'%2C'030601020206'%2C'030601020207'%2C'030601020208'%2C'030601020209'%2C'030601020210'%2C'030601020301'%2C'030601020302'%2C'030601020303'%2C'030601020304'%2C'030601020401'%2C'030601020402'%2C'030601020403'%2C'030601020501'%2C'030601020502'%2C'030601020503'%2C'030601020504'%2C'030601020505'%2C'030601020506'%2C'030601020507'%2C'030601030100'%2C'030601030201'%2C'030601030202'%2C'030601030203'%2C'030601030204'%2C'030601030205'%2C'030601030206'%2C'030601030207'%2C'030601030301'%2C'030601030302'%2C'030601030303'%2C'030601030401'%2C'030601030402'%2C'030601030403'%2C'030601030404'%2C'030601030405'%2C'030601030406'%2C'030601030407'%2C'030601030408'%2C'030601030409'%2C'030601030410'%2C'030601030411'%2C'030601030501'%2C'030601030502'%2C'030601030503'%2C'030601030504'%2C'030601030505'%2C'030601030506'%2C'030601030507'%2C'030601030508'%2C'030601030509'%2C'030601030510'%2C'030601030511'%2C'030601030512'%2C'030601030513'%2C'030601030601'%2C'030601030602'%2C'030601030603'%2C'030601030604'%2C'030601030605'%2C'030601030606'%2C'030601030607'%2C'030601030608'%2C'030601030609'%2C'030601030701'%2C'030601030702'%2C'030601030703'%2C'030601030704'%2C'030601030705'%2C'030601030706'%2C'030601030707'%2C'030601030708'%2C'030601030709'%2C'030601030710'%2C'030601030711'%2C'030601030712'%2C'030601030713'%2C'030601040101'%2C'030601040102'%2C'030601040103'%2C'030601040104'%2C'030601040105'%2C'030601040106'%2C'030601040107'%2C'030601040108'%2C'030601040109'%2C'030601040201'%2C'030601040202'%2C'030601040203'%2C'030601040204'%2C'030601040205'%2C'030601040206'%2C'030601040207'%2C'030601040208'%2C'030601040209'%2C'030601040210'%2C'030601040211'%2C'030601040301'%2C'030601040302'%2C'030601040303'%2C'030601040304'%2C'030601040401'%2C'030601040402'%2C'030601040403'%2C'030601040404'%2C'030601040405'%2C'030601040406'%2C'030601040501'%2C'030601040502'%2C'030601040503'%2C'030601040504'%2C'030601040505'%2C'030601040506'%2C'030601040507'%2C'030601040601'%2C'030601040602'%2C'030601040603'%2C'030601040604'%2C'030601040605'%2C'030601040606'%2C'030601050101'%2C'030601050102'%2C'030601050103'%2C'030601050104'%2C'030601050105'%2C'030601050201'%2C'030601050202'%2C'030601050203'%2C'030601050204'%2C'030601050205'%2C'030601050206'%2C'030601050301'%2C'030601050302'%2C'030601050303'%2C'030601050401'%2C'030601050402'%2C'030601050403'%2C'030601050404'%2C'030601060101'%2C'030601060102'%2C'030601060103'%2C'030601060104'%2C'030601060105'%2C'030601060201'%2C'030601060204'%2C'030601060601'%2C'030601070101'%2C'030601070102'%2C'030601070103'%2C'030601070104'%2C'030601070105'%2C'030601070106'%2C'030601070107'%2C'030601070108'%2C'030601070201'%2C'030601070202'%2C'030601070203'%2C'030601070204'%2C'030601070205'%2C'030601070206'%2C'030601070207'%2C'030601070208'%2C'030601070301'%2C'030601070302'%2C'030601070303'%2C'030601070304'%2C'030601070305'%2C'030601070306'%2C'030601070307')%20AND%20H2OCLASS%20IN%20('ORW'%2C'ONRW'%2C'TN'%2C'TPGT'%2C'TPT')&returnIdsOnly=true&f=json",
+      "sha256": "f30b8191b0fa0d044514dbe773e86fddf07192566e1c3c4714d477db2f4ceeab",
+      "unique_ids": 1886
+    },
+    "model_domain_huc_count": 217,
+    "operation_id": "ECO-SOURCE12",
+    "publisher_huc_count": 19,
+    "query_url": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2/query?where=HUC_12%20IN%20('030601010101'%2C'030601010102'%2C'030601010103'%2C'030601010104'%2C'030601010105'%2C'030601010201'%2C'030601010202'%2C'030601010203'%2C'030601010204'%2C'030601010301'%2C'030601010302'%2C'030601010303'%2C'030601010304'%2C'030601010305'%2C'030601010306'%2C'030601010401'%2C'030601010402'%2C'030601010403'%2C'030601010404'%2C'030601010405'%2C'030601010406'%2C'030601010407'%2C'030601010408'%2C'030601010501'%2C'030601010502'%2C'030601010503'%2C'030601010601'%2C'030601010602'%2C'030601010701'%2C'030601010702'%2C'030601010703'%2C'030601010704'%2C'030601010801'%2C'030601010802'%2C'030601010803'%2C'030601010804'%2C'030601020101'%2C'030601020102'%2C'030601020103'%2C'030601020104'%2C'030601020105'%2C'030601020106'%2C'030601020107'%2C'030601020108'%2C'030601020201'%2C'030601020202'%2C'030601020203'%2C'030601020204'%2C'030601020205'%2C'030601020206'%2C'030601020207'%2C'030601020208'%2C'030601020209'%2C'030601020210'%2C'030601020301'%2C'030601020302'%2C'030601020303'%2C'030601020304'%2C'030601020401'%2C'030601020402'%2C'030601020403'%2C'030601020501'%2C'030601020502'%2C'030601020503'%2C'030601020504'%2C'030601020505'%2C'030601020506'%2C'030601020507'%2C'030601030100'%2C'030601030201'%2C'030601030202'%2C'030601030203'%2C'030601030204'%2C'030601030205'%2C'030601030206'%2C'030601030207'%2C'030601030301'%2C'030601030302'%2C'030601030303'%2C'030601030401'%2C'030601030402'%2C'030601030403'%2C'030601030404'%2C'030601030405'%2C'030601030406'%2C'030601030407'%2C'030601030408'%2C'030601030409'%2C'030601030410'%2C'030601030411'%2C'030601030501'%2C'030601030502'%2C'030601030503'%2C'030601030504'%2C'030601030505'%2C'030601030506'%2C'030601030507'%2C'030601030508'%2C'030601030509'%2C'030601030510'%2C'030601030511'%2C'030601030512'%2C'030601030513'%2C'030601030601'%2C'030601030602'%2C'030601030603'%2C'030601030604'%2C'030601030605'%2C'030601030606'%2C'030601030607'%2C'030601030608'%2C'030601030609'%2C'030601030701'%2C'030601030702'%2C'030601030703'%2C'030601030704'%2C'030601030705'%2C'030601030706'%2C'030601030707'%2C'030601030708'%2C'030601030709'%2C'030601030710'%2C'030601030711'%2C'030601030712'%2C'030601030713'%2C'030601040101'%2C'030601040102'%2C'030601040103'%2C'030601040104'%2C'030601040105'%2C'030601040106'%2C'030601040107'%2C'030601040108'%2C'030601040109'%2C'030601040201'%2C'030601040202'%2C'030601040203'%2C'030601040204'%2C'030601040205'%2C'030601040206'%2C'030601040207'%2C'030601040208'%2C'030601040209'%2C'030601040210'%2C'030601040211'%2C'030601040301'%2C'030601040302'%2C'030601040303'%2C'030601040304'%2C'030601040401'%2C'030601040402'%2C'030601040403'%2C'030601040404'%2C'030601040405'%2C'030601040406'%2C'030601040501'%2C'030601040502'%2C'030601040503'%2C'030601040504'%2C'030601040505'%2C'030601040506'%2C'030601040507'%2C'030601040601'%2C'030601040602'%2C'030601040603'%2C'030601040604'%2C'030601040605'%2C'030601040606'%2C'030601050101'%2C'030601050102'%2C'030601050103'%2C'030601050104'%2C'030601050105'%2C'030601050201'%2C'030601050202'%2C'030601050203'%2C'030601050204'%2C'030601050205'%2C'030601050206'%2C'030601050301'%2C'030601050302'%2C'030601050303'%2C'030601050401'%2C'030601050402'%2C'030601050403'%2C'030601050404'%2C'030601060101'%2C'030601060102'%2C'030601060103'%2C'030601060104'%2C'030601060105'%2C'030601060201'%2C'030601060204'%2C'030601060601'%2C'030601070101'%2C'030601070102'%2C'030601070103'%2C'030601070104'%2C'030601070105'%2C'030601070106'%2C'030601070107'%2C'030601070108'%2C'030601070201'%2C'030601070202'%2C'030601070203'%2C'030601070204'%2C'030601070205'%2C'030601070206'%2C'030601070207'%2C'030601070208'%2C'030601070301'%2C'030601070302'%2C'030601070303'%2C'030601070304'%2C'030601070305'%2C'030601070306'%2C'030601070307')%20AND%20H2OCLASS%20IN%20('ORW'%2C'ONRW'%2C'TN'%2C'TPGT'%2C'TPT')&returnIdsOnly=true&f=json",
+    "selected_classes": [
+      "ORW",
+      "ONRW",
+      "TN",
+      "TPGT",
+      "TPT"
+    ],
+    "selected_feature_count": 1886,
+    "source_jurisdiction": "South Carolina",
+    "status": "complete_domain_query"
+  },
+  "context_canonical_sha256": "7126b91bf0dbbf40c928953e216fb8d61c016131ed027d0cf34e10dfb256700f",
+  "context_id": "watershed-4592eb077b7164d59ba4",
+  "hucs": [
+    {
+      "area_acres": 59689.69,
+      "area_km2": 241.55560532756508,
+      "class_counts": {},
+      "classification_assignment": "publisher_huc12_attribute",
+      "classification_count": 0,
+      "classification_coverage": "queried_no_target_reaches",
+      "classification_query_coverage": "complete_domain_query",
+      "classification_scope": "south_carolina",
+      "cross_state": true,
+      "downstream_huc12": null,
+      "huc12": "030601020507",
+      "huc8": "03060102",
+      "known_state_portion_acres": 59689.71374627,
+      "name": "Lower Tugaloo River",
+      "named_class_counts": {},
+      "network": null,
+      "nrcs_coverage": "matched_source_rows",
+      "nrcs_edition": "FY26",
+      "nrcs_state_row_count": 2,
+      "nrcs_state_rows": [
+        {
+          "OBJECTID": 47889,
+          "fy26_status": "High Priority Area",
+          "huc12_ac": 59689.69,
+          "huc12_code": "030601020507",
+          "huc12_name": "Lower Tugaloo River",
+          "huc12_states": "GA,SC",
+          "last_edited_date": 1763749802000,
+          "resource_concern": "Water Quality",
+          "st_ac": 38264.28633246,
+          "st_usps": "GA",
+          "system_type": "Ground"
+        },
+        {
+          "OBJECTID": 49922,
+          "fy26_status": "High Priority Area",
+          "huc12_ac": 59689.69,
+          "huc12_code": "030601020507",
+          "huc12_name": "Lower Tugaloo River",
+          "huc12_states": "GA,SC",
+          "last_edited_date": 1763749802000,
+          "resource_concern": "Water Quality",
+          "st_ac": 21425.42741381,
+          "st_usps": "SC",
+          "system_type": "Ground"
+        }
+      ],
+      "priority": true,
+      "priority_reasons": [
+        "GA: FY26 High Priority Area; Ground; Water Quality",
+        "SC: FY26 High Priority Area; Ground; Water Quality"
+      ],
+      "priority_state_portion_acres": 59689.71374627,
+      "priority_state_row_count": 2,
+      "priority_states": [
+        "GA",
+        "SC"
+      ],
+      "priority_statuses": [
+        "High Priority Area"
+      ],
+      "resource_concerns": [
+        "Water Quality"
+      ],
+      "role": "model_domain",
+      "selected_classes": [],
+      "selected_classification_count": 0,
+      "source_references": [
+        "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2"
+      ],
+      "state_area_minus_huc_area_acres": 0.023746269995172042,
+      "state_portion_acres": 59689.71374627,
+      "state_portions_acres": {
+        "GA": 38264.28633246,
+        "SC": 21425.42741381
+      },
+      "states": [
+        "GA",
+        "SC"
+      ],
+      "system_types": [
+        "Ground"
+      ]
+    }
+  ],
+  "methods": {
+    "classified_water": "Counts use retained publisher HUC12 attributes for ORW, ONRW, TN, TPGT and TPT. A complete exact-domain membership query supports zero matches for these selected classes. South Carolina jurisdiction is shown separately.",
+    "geometry": "Native receiving-water geometry intersections and routed load associations are computed by the receiving-water engine. Source attribute counts remain available for regional context and source inspection.",
+    "hashes": "canonical_sha256 hashes sorted compact UTF-8 JSON values. Source-byte membership hashes are preserved separately from the publisher companion.",
+    "priority": "A HUC12 is priority when at least one NRCS state row has FY26 status High Priority Area. Priority watershed area includes that whole HUC once; priority state area includes only designated state portions.",
+    "roles": "All original model-domain HUC12s are retained. Reporting and upstream roles are used only when explicitly supplied with native network records.",
+    "state_area": "NRCS st_ac is summed once per state/HUC12. State portions and watershed totals retain their published rounding or vintage differences.",
+    "watershed_area": "NRCS huc12_ac is counted once per HUC12. Repeated values across state records must agree. Acres convert to km2 using 0.0040468564224."
+  },
+  "model_domain_huc_count": 217,
+  "network": {
+    "method": "native_ToHUC",
+    "status": "not_supplied"
+  },
+  "schema": "upstate.selected-watersheds/v1",
+  "selected_huc12s": [
+    "030601020507"
+  ],
+  "sources": [
+    {
+      "canonical_sha256": "074098e55e11607ec6e4ec0cf06a56eee72c3ec649d255832cc147a3469732c8",
+      "reference": {
+        "classified": {
+          "csv_sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18",
+          "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2"
+        },
+        "domain": {
+          "body_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+          "original_path": "/dev/shm/dbc61-upstate-model-domain-20261012/model-domain.esri.json.gz",
+          "selected_huc12_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+          "uri": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791850636130089"
+        },
+        "implementation": {
+          "path": "source_tools/water_context.mjs",
+          "sha256": "45d2485d7dc0613d7fc227316e660e9a43643622358e63bb727da378d9137fbe"
+        },
+        "nrcs": {
+          "csv_sha256": "27e4169e5ddbd3607c660904e94d2dc938e663a3649734f67353d93e636f09af",
+          "original_body_sha256": "8a5d612f0869eab7011ceeaf116c3150b4717788ae6fe30617ec260c4eca3dcd",
+          "uri": "https://services.arcgis.com/SXbDpmb7xQkk44JV/ArcGIS/rest/services/Source_Water_Protection_Resource_Concern_FY26/FeatureServer/7"
+        }
+      },
+      "schema": "upstate.water-context/v1",
+      "source_id": "water_context",
+      "title": "Upper Savannah original 217-HUC domain: FY26 source-water priorities"
+    },
+    {
+      "canonical_sha256": "706c87be307a62b38fb7d8029d05b21bef96abe8676a5277f805a326e9790994",
+      "captured_at": "2026-10-13 00:37:00 UTC",
+      "membership_sha256": "f30b8191b0fa0d044514dbe773e86fddf07192566e1c3c4714d477db2f4ceeab",
+      "operation_id": "ECO-SOURCE12",
+      "reference": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+      "schema": "upstate.classification-source-coverage/v1",
+      "source_id": "classification_coverage"
+    }
+  ],
+  "summary": {
+    "area_acres": 59689.69,
+    "area_km2": 241.55560532756508,
+    "class_counts": {},
+    "classified_huc_count": 0,
+    "complete_query_huc_count": 1,
+    "cross_state_huc_count": 1,
+    "huc_count": 1,
+    "hucs_with_area_count": 1,
+    "outside_south_carolina_huc_count": 0,
+    "priority_and_classified_huc_count": 0,
+    "priority_area_acres": 59689.69,
+    "priority_huc_count": 1,
+    "priority_state_portion_acres": 59689.71374627,
+    "priority_state_row_count": 2,
+    "priority_without_selected_classes_huc_count": 1,
+    "queried_zero_target_huc_count": 1,
+    "sc_huc_count": 1,
+    "selected_classification_count": 0,
+    "state_area_minus_huc_area_acres": 0.023746269995172042,
+    "state_portion_acres": 59689.71374627,
+    "state_row_count": 2,
+    "states": [
+      "GA",
+      "SC"
+    ],
+    "unknown_priority_huc_count": 0,
+    "unverified_zero_target_huc_count": 0
+  }
+}
