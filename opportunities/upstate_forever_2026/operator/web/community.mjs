@@ -55,10 +55,145 @@ export function summarizeCommunityGroups(groups){
     below_state_median:uniqueGroups.filter(g=>g.below_state_median_income===true).length};
 }
 
+
+const interventionFields=['id','title','priority','strategy','status','utility_id','watershed_id','geoids','reason','owner','next_step','cost_estimate_usd','notes'];
+const interventionDerivedColumns=['position','population_context','household_context'];
+const interventionRequiredColumns=['id','title','utility_id','watershed_id','reason'];
+
+export function parseCommunityCsv(source){
+  if(typeof source!=='string'||source.includes('\0'))throw Error('Choose a UTF-8 intervention CSV without null characters.');
+  const text=source.replace(/^\uFEFF/,''),rows=[];
+  let row=[],value='',quoted=false,closed=false,line=1,start=1;
+  const finish=()=>{row.push(value);rows.push({line:start,cells:row});row=[];value='';closed=false;};
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(quoted){
+      if(ch==='"'){
+        if(text[i+1]==='"'){value+='"';i++;}else{quoted=false;closed=true;}
+      }else{
+        value+=ch;
+        if(ch==='\r'){if(text[i+1]==='\n'){value+='\n';i++;}line++;}
+        else if(ch==='\n')line++;
+      }
+      continue;
+    }
+    if(closed&&ch!==','&&ch!=='\r'&&ch!=='\n')throw Error('CSV row '+start+': unexpected character after a closing quote.');
+    if(ch==='"'&&!value&&!closed){quoted=true;continue;}
+    if(ch===','){row.push(value);value='';closed=false;continue;}
+    if(ch==='\r'||ch==='\n'){
+      finish();if(ch==='\r'&&text[i+1]==='\n')i++;line++;start=line;continue;
+    }
+    value+=ch;
+  }
+  if(quoted)throw Error('CSV row '+start+': a quoted field is not closed.');
+  if(row.length||value.length||closed)finish();
+  return rows;
+}
+
+function interventionText(value,previous){
+  if(typeof previous==='string'){
+    const trimmed=previous.trimStart();
+    const escaped=/^[=+@]/.test(trimmed)||trimmed.startsWith('-')&&!/^-\d+(?:\.\d+)?$/.test(previous.trim())?"'"+previous:previous;
+    if(value===escaped)return previous;
+  }
+  return value;
+}
+
+function interventionChanges(before,after){
+  const left=new Map(list(before).map(row=>[row.id,row])),right=new Map(after.map(row=>[row.id,row]));
+  const same=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
+  const changed=[...right.keys()].filter(id=>left.has(id)&&['position',...interventionFields].some(field=>!same(left.get(id)[field],right.get(id)[field])));
+  return {added_ids:[...right.keys()].filter(id=>!left.has(id)).sort(),
+    removed_ids:[...left.keys()].filter(id=>!right.has(id)).sort(),changed_ids:changed.sort(),
+    unchanged_ids:[...right.keys()].filter(id=>left.has(id)&&!changed.includes(id)).sort()};
+}
+
+function interventionCost(value){
+  let text=String(value??'').trim();
+  if(!text)return null;
+  text=text.replace(/[,$]/g,'');
+  if(text.length>100||!/^\+?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text))throw Error('Cost must be a nonnegative decimal USD amount.');
+  const [whole,fraction='']=text.replace(/^\+/,'').split('.');
+  if(/[1-9]/.test(fraction.slice(2)))throw Error('Cost estimates use at most two decimal places.');
+  return BigInt(whole||'0').toString()+'.'+fraction.padEnd(2,'0').slice(0,2);
+}
+
+export function readInterventionCsv(source,table,previous=[],sourceSha256='',selection={}){
+  if(!/^[0-9a-f]{64}$/.test(sourceSha256))throw Error('The received CSV needs its exact SHA-256.');
+  const parsed=parseCommunityCsv(source);
+  if(!parsed.length)throw Error('The intervention CSV has no column headings.');
+  const headers=parsed.shift().cells;
+  if(headers.some(column=>!column)||new Set(headers).size!==headers.length)throw Error('The intervention CSV needs distinct, nonempty column headings.');
+  const missing=interventionRequiredColumns.filter(column=>!headers.includes(column));
+  if(missing.length)throw Error('The intervention CSV lacks columns: '+missing.join(', ')+'.');
+  const groups=selectCommunityGroups(table?.groups,selection),geoids=new Set(list(table?.groups).map(group=>group.geoid));
+  const watersheds=new Set(list(table?.groups).flatMap(group=>list(group.memberships).map(member=>member.watershed_id)));
+  const prior=new Map(list(previous).map(row=>[row.id,row])),seen=new Set(),records=[],sourceRows=[],errors=[],normalizedGeographies=[];
+  let ordinal=0;
+  function geography(value,available,line,column){
+    const original=String(value??'').trim();
+    if(!available.has(original)&&/^\d{1,12}$/.test(original)){
+      const resolved=original.padStart(12,'0');
+      if(available.has(resolved)){normalizedGeographies.push({row:line,column,original,resolved});return resolved;}
+    }
+    return original;
+  }
+  for(const parsedRow of parsed){
+    const {line,cells}=parsedRow;
+    if(cells.every(value=>!value.trim()))continue;
+    ordinal++;
+    if(cells.length!==headers.length){errors.push('CSV row '+line+': expected '+headers.length+' columns; received '+cells.length+'.');continue;}
+    const original=Object.fromEntries(headers.map((column,index)=>[column,cells[index]]));
+    const id=original.id.trim()||'I-CSV-'+sourceSha256.slice(0,16)+'-'+ordinal;
+    try{
+      if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(id))throw Error('Use a portable intervention identifier with letters, digits, dots, underscores or hyphens.');
+      if(seen.has(id))throw Error('Intervention identifier repeats: '+id+'.');
+      seen.add(id);
+      const old=prior.get(id)||{},record={id};
+      for(const field of interventionFields){
+        if(field==='id'||field==='geoids'||field==='cost_estimate_usd')continue;
+        record[field]=String(interventionText(original[field]??'',old[field])).trim();
+      }
+      for(const [field,choices,fallback]of [['priority',['high','medium','low','watch'],'medium'],['strategy',['protect','restore','monitor','investigate','other'],'investigate'],['status',['proposed','selected','in_progress','complete'],'proposed']]){
+        record[field]||=fallback;if(!choices.includes(record[field]))throw Error(field+' must be one of '+choices.join(', ')+'.');
+      }
+      for(const field of ['title','utility_id','watershed_id','reason'])if(!record[field])throw Error(field.replaceAll('_',' ')+' is required.');
+      for(const field of ['title','utility_id','watershed_id','reason','owner','next_step','notes']){
+        const maximum=field==='title'?300:['utility_id','watershed_id'].includes(field)?100:20000;
+        if(record[field].length>maximum)throw Error(field.replaceAll('_',' ')+' exceeds '+maximum+' characters.');
+      }
+      record.watershed_id=geography(record.watershed_id,watersheds,line,'watershed_id');
+      record.geoids=unique((original.geoids||'').split(';').filter(value=>value.trim()).map(value=>geography(value,geoids,line,'geoids')));
+      const members=groups.filter(group=>list(group.memberships).some(member=>member.utility_id===record.utility_id&&member.watershed_id===record.watershed_id));
+      if(!members.length)throw Error('The utility and HUC12 have no membership in this retained community table; keep full geographic identifiers as text.');
+      if(!record.geoids.length)record.geoids=members.map(group=>group.geoid);
+      const allowed=new Set(members.map(group=>group.geoid));
+      const outside=record.geoids.filter(id=>!allowed.has(id));
+      if(outside.length)throw Error('Block groups outside this utility/watershed membership: '+outside.join(', ')+'.');
+      record.cost_estimate_usd=interventionCost(original.cost_estimate_usd);
+      record.position=records.length+1;
+      records.push(record);sourceRows.push({record:ordinal,source_line:line,id});
+    }catch(error){errors.push('CSV row '+line+' ['+id+']: '+error.message);}
+  }
+  if(errors.length){const error=Error('Correct '+errors.length+' intervention CSV '+(errors.length===1?'row':'rows')+' before importing.');error.rowErrors=errors;throw error;}
+  if(!records.length)throw Error('The intervention CSV contains no intervention rows.');
+  const ignored=headers.filter(column=>!interventionFields.includes(column));
+  const cents=records.filter(row=>row.cost_estimate_usd!==null).reduce((sum,row)=>sum+BigInt(row.cost_estimate_usd.replace('.','')),0n);
+  const centsText=cents.toString().padStart(3,'0');
+  return {records,rows:sourceRows,summary:{row_count:records.length,...interventionChanges(previous,records),
+    normalized_geographies:normalizedGeographies,derived_columns:ignored.filter(column=>interventionDerivedColumns.includes(column)),
+    additional_columns:ignored.filter(column=>!interventionDerivedColumns.includes(column)),
+    known_estimate_count:records.filter(row=>row.cost_estimate_usd!==null).length,
+    known_estimate_total:centsText.slice(0,-2)+'.'+centsText.slice(-2),
+    order_basis:'Received CSV row order; derived context is recalculated from the saved plan'}};
+}
+
+
 /** Host-owned callbacks retain original workspace, task and dialog semantics. */
 export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem}){
   const cache=new Map(),pending=new Map();
   let activeWorkspace=null,container=null,mountController=null,loadError='',formTable=null,formWorkspace=null;
+  let formPlanPrevious=null,formCsvPreview=null,formInterventionImport=null,formCsvEpoch=0;
   let local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[]};
   const current=()=>getState();
   const data=()=>current()?.data??{};
@@ -362,6 +497,75 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       field('Next work step',input('intervention_next_step',value.next_step||'','maxlength="1200"'))+
       field('Notes',textarea('intervention_notes',value.notes||'','rows="2"'),'',true)+'</div></fieldset>';
   }
+
+  function interventionImportForm(){
+    return '<fieldset class="full"><legend>Receive an edited intervention programme</legend>'+
+      '<p class="note">Choose the exported interventions.csv, review its changes, then load the rows into this plan. Saving keeps the received file and this complete revision together. Row order becomes programme order; population and household context are recalculated from the retained communities.</p>'+
+      field('Edited intervention CSV','<input type="file" name="community_intervention_csv" accept=".csv,text/csv">','Quoted commas, multiline notes and spreadsheet HUC12 values are supported.',true)+
+      '<div class="page-actions">'+button('intervention-import-preview','Preview CSV changes','','small')+'</div>'+
+      '<div id="community-import-error" class="notice error" role="alert" hidden></div>'+
+      '<div id="community-import-preview"></div><p id="community-import-applied" class="note" role="status"></p></fieldset>';
+  }
+  function interventionImportSummary(result,source){
+    const s=result.summary;
+    const rows=result.records.map((row,index)=>'<tr><td>'+e(result.rows[index].source_line)+'</td><th scope="row">'+e(row.title)+'<small>'+e(row.id)+'</small></th>'+
+      '<td>'+e(row.utility_id)+'<small>'+e(row.watershed_id)+'</small></td><td>'+e(row.geoids.join(', '))+'</td><td>'+e(human(row.status))+'</td><td>'+e(row.owner||'Unassigned')+'</td><td class="number-cell">'+usd(row.cost_estimate_usd)+'</td></tr>');
+    return '<h3>'+e(source.filename)+'</h3><p>'+n(s.row_count)+' intervention rows; '+n(s.added_ids.length)+' added, '+n(s.changed_ids.length)+' changed, '+
+      n(s.removed_ids.length)+' removed and '+n(s.unchanged_ids.length)+' unchanged compared with the saved plan.</p>'+
+      '<p>'+usd(s.known_estimate_total)+' across '+n(s.known_estimate_count)+' entered estimates.</p>'+
+      (s.normalized_geographies.length?'<p class="note">Restored original geographic identifiers: '+s.normalized_geographies.map(row=>'row '+row.row+' '+e(row.original)+' → '+e(row.resolved)).join('; ')+'.</p>':'')+
+      (s.additional_columns.length?'<p class="note">Additional columns retained in the received CSV: '+e(s.additional_columns.join(', '))+'.</p>':'')+
+      '<details class="technical"><summary>Review all '+n(s.row_count)+' intervention rows</summary>'+table(['CSV row','Intervention','Utility / HUC12','Block groups','Status','Owner','Estimate'],rows)+'</details>'+
+      '<div class="page-actions">'+button('intervention-import-apply','Load these intervention rows','','primary')+'</div>';
+  }
+  async function previewInterventionImport(){
+    ensureFormWorkspace();
+    const host=form(),target=host?.querySelector('#community-import-preview'),errorNode=host?.querySelector('#community-import-error');
+    if(!target||!formTable)throw Error('Open the intervention plan before receiving a CSV.');
+    const file=host.querySelector('[name="community_intervention_csv"]')?.files?.[0],epoch=++formCsvEpoch;
+    formCsvPreview=null;target.innerHTML='';errorNode.hidden=true;errorNode.textContent='';
+    try{
+      if(!file)throw Error('Choose the edited interventions.csv file.');
+      if(!file.name||file.name.length>255||/[\\/\0]/.test(file.name))throw Error('Choose the original CSV filename without a directory.');
+      target.innerHTML='<p class="note" role="status">Reading '+e(file.name)+'…</p>';
+      const bytes=await file.arrayBuffer();
+      const raw=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+      const digest=await crypto.subtle.digest('SHA-256',bytes);
+      const checksum=[...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
+      if(epoch!==formCsvEpoch||form()!==host)return;
+      ensureFormWorkspace();
+      const result=readInterventionCsv(raw,formTable,list(formPlanPrevious?.interventions),checksum,readSelection());
+      const source={filename:file.name,media_type:'text/csv; charset=utf-8',bytes:bytes.byteLength,sha256:checksum,text:raw};
+      formCsvPreview={result,source};target.innerHTML=interventionImportSummary(result,source);
+    }catch(error){
+      if(epoch!==formCsvEpoch||form()!==host)return;
+      target.innerHTML='';errorNode.hidden=false;
+      errorNode.innerHTML='<strong>'+e(error.message)+'</strong>'+(error.rowErrors?.length?'<ul>'+error.rowErrors.map(message=>'<li>'+e(message)+'</li>').join(''):'');
+    }
+  }
+  function applyInterventionImport(){
+    ensureFormWorkspace();
+    if(!formCsvPreview)throw Error('Preview the edited CSV before loading its rows.');
+    const host=form(),{source}=formCsvPreview;
+    let result;
+    try{result=readInterventionCsv(source.text,formTable,list(formPlanPrevious?.interventions),source.sha256,readSelection());}
+    catch(error){const node=host.querySelector('#community-import-error');node.hidden=false;node.innerHTML='<strong>'+e(error.message)+'</strong>'+(error.rowErrors?.length?'<ul>'+error.rowErrors.map(message=>'<li>'+e(message)+'</li>').join(''):'');return;}
+    const selected=selectCommunityGroups(formTable.groups,readSelection()),allowed=new Map(selected.map(group=>[group.geoid,group]));
+    const outside=result.records.filter(row=>row.geoids.some(id=>!allowed.has(id)||!list(allowed.get(id).memberships).some(member=>member.utility_id===row.utility_id&&member.watershed_id===row.watershed_id)));
+    if(outside.length){
+      const node=host.querySelector('#community-import-error');node.hidden=false;
+      node.innerHTML='<strong>Include the imported communities in this plan selection.</strong><ul>'+outside.map(row=>'<li>'+e(row.id)+': '+e(row.title)+' uses groups outside the selected utility, watershed or census geography.</li>').join('')+'</ul>';
+      return;
+    }
+    host.querySelector('#community-import-error').hidden=true;
+    host.querySelector('#community-interventions').innerHTML=result.records.map(row=>interventionRow(formTable,row)).join('');
+    formInterventionImport={schema:'upstate.intervention-csv-import/v1',source,selection:readSelection()};
+    host.querySelector('#community-import-preview').innerHTML='';
+    host.querySelector('#community-import-applied').textContent=result.records.length+' interventions loaded from '+source.filename+'. Review or edit the rows below, then save the complete plan revision.';
+    formCsvPreview=null;
+    host.querySelector('#community-interventions [name="intervention_title"]')?.focus({preventScroll:true});
+  }
+
   function readSelection(){
     return {utility_ids:checked('community_plan_utilities'),watershed_ids:checked('community_plan_watersheds'),geoids:checked('community_plan_geoids')};
   }
@@ -436,6 +640,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     const tableId=old?.table_id||local.table||tables()[0].id;
     const t=await get('community_tables',tableId);
     formTable=t;formWorkspace=workspace();
+    formPlanPrevious=old;formCsvPreview=null;formInterventionImport=null;formCsvEpoch++;
     const selection=old?.selection||(fromSelection?{
       utility_ids:local.utility?[local.utility]:[],watershed_ids:local.watershed?[local.watershed]:[],
       geoids:local.compare.length?list(local.compare):local.query.trim()?filtered(t).map(g=>g.geoid):[]
@@ -449,6 +654,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       '<div class="full community-form-source"><strong>'+e(t.title)+'</strong><p>'+reference(t.source?.uri)+'</p><small>Original table '+e(short(t.id))+' · '+e(t.source?.vintage||'')+'</small></div></div>'+
       '<fieldset><legend>Community selection</legend>'+planSelectionForm(t,selection)+'</fieldset>'+
       '<fieldset><legend>Original scientific context</legend><p class="note">Choose existing source editions and completed model results to accompany the community plan. The original model coverage and physical units remain part of the report.</p>'+contextForm(old?.context)+'</fieldset>'+
+      interventionImportForm()+
       '<div class="subheading"><h3>Interventions</h3>'+button('intervention-add','Add intervention','','small')+'</div>'+
       '<div id="community-interventions">'+list(old?.interventions).map(v=>interventionRow(t,v)).join('')+'</div>'+
       field('Plan notes',textarea('community_plan_notes',old?.notes||'','rows="3"'),'One note per line.',true)+
@@ -459,7 +665,8 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
         if(!selectCommunityGroups(formTable.groups,selected).length)throw Error('Choose at least one original community through the utility, watershed and geography selections.');
         const payload={title:value('community_plan_title').trim(),purpose:value('community_plan_purpose').trim(),table_id:formTable.id,selection:selected,
           context:readContext(),interventions:readInterventions(),notes:value('community_plan_notes').split(/\r?\n/).map(s=>s.trim()).filter(Boolean),
-          ...(old?{previous_plan_id:old.id}:{})};
+          ...(old?{previous_plan_id:old.id}:{}),
+          ...(formInterventionImport?{intervention_import:formInterventionImport}:{})};
         return submitAction('community.plan.save',payload);
       },bindPlan);
   }
@@ -489,6 +696,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       '<p class="community-intro">'+e(p.purpose)+'</p><div class="community-detail-actions">'+button('plan-revise','Revise plan','data-id="'+e(p.id)+'"')+button('report-new','Build complete report','data-id="'+e(p.id)+'"','primary')+'</div>'+
       metrics(groups)+section('Selected communities',t.title,groupTable(groups,t))+
       section('Intervention work program','Retained priorities, work owners, intended benefits and costs.',interventionTable(p.interventions,t))+
+      (p.intervention_import?section('Received intervention programme',p.intervention_import.source.filename,'<div class="section-body"><p>'+n(p.intervention_import.summary.row_count)+' original CSV rows retained with this revision. '+n(p.intervention_import.summary.added_ids.length)+' added, '+n(p.intervention_import.summary.changed_ids.length)+' changed and '+n(p.intervention_import.summary.removed_ids.length)+' removed from the preceding saved plan.</p><p class="note">Build the complete report to download the original received CSV beside the current editable programme.</p></div>'):'')+
       section('Original scientific context','Selected original results retain their model coverage and physical units.',contextDetails(p))+
       (text(p.notes)?'<section class="section"><div class="section-body"><h2>Plan notes</h2><p class="community-prewrap">'+e(text(p.notes))+'</p></div></section>':'')+
       (p.previous_plan_id?'<div class="community-detail-actions">'+button('plan-open','Open previous revision','data-id="'+e(p.previous_plan_id)+'"','small')+'</div>':'')+
@@ -544,6 +752,8 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     if(action==='report-open')return reportDetail(node.dataset.id);
     if(action==='report-preview')return reportDetail(node.dataset.id,{preview:node.dataset.preview==='true'});
     if(action==='native-item')return nativeItem(node);
+    if(action==='intervention-import-preview')return previewInterventionImport();
+    if(action==='intervention-import-apply')return applyInterventionImport();
     if(action==='intervention-add'){
       ensureFormWorkspace();const target=form().querySelector('#community-interventions');
       if(!target)throw Error('Open a community plan before adding an intervention.');
