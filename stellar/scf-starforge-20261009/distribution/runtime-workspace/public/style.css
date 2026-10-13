@@ -7,3 +7,11 @@
 #applications-workspace .columns{grid-template-columns:repeat(2,minmax(0,1fr))}
 #applications-workspace .columns>*{min-width:0}
 @media(max-width:950px){#applications-workspace .columns{grid-template-columns:minmax(0,1fr)}}
+
+/* Retained operation history and full original fields stay readable on narrow screens. */
+#operations .columns{grid-template-columns:repeat(3,minmax(0,1fr))}
+#operations .columns>*{min-width:0}
+#operations .operation[aria-current=true]{border-color:var(--ink);box-shadow:inset 3px 0 var(--ink)}
+#operations p,#operations h3{overflow-wrap:anywhere}
+#operations .section-title{flex-wrap:wrap}
+@media(max-width:950px){#operations .columns{grid-template-columns:minmax(0,1fr);gap:0}}
