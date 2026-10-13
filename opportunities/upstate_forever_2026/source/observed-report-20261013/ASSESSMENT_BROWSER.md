@@ -21,7 +21,7 @@ Use them with the original 705-station, WQP and 101-row draft inputs from that
 guide. Preparation remains the owner of source import, geographic calculation
 and independent context receiving.
 
-If the maintained report helper changes from 1.0.0 to 1.1.0, select a new
+When the maintained report helper advances its source edition, select a new
 preparation output directory. The original station and context editions are
 reused through their maintained identity; the updated report sections receive
 a new immutable report-source identity. Keep the prior preparation's original
@@ -33,6 +33,14 @@ version. When source has been installed over a running operator, restart that sa
 operator before continuing so its loaded report module matches the preparation.
 
 ## Join the already operating browser receiver
+
+Use the existing Node interpreter and its installed Playwright/Chromium runtime.
+The receiver resolves Playwright from the application's normal package location
+first. When the application is installed separately from the supplied runtime,
+it uses that runtime's `CODEX_PRIMARY_RUNTIME_NODE_MODULES` directory. Keep this
+variable set to the actual existing module directory; selecting a Node executable
+alone does not change where an application resolves its packages. Browser channel,
+headless choice, downloads and the existing recording remain unchanged.
 
 For the receiver's existing live server and completed native report receipt:
 
