@@ -16,6 +16,29 @@ const bytes = value => {
 const when = value => value ? new Date(value).toLocaleString() : '—';
 const button = (action,label,id,disabled=false) => '<button type="button" data-action="native-job-'+action+'" data-id="'+esc(id)+'" '+(disabled?'disabled':'')+'>'+esc(label)+'</button>';
 
+function reuseMarkup(native){
+  const row=native.native_execution?.stage_reuse;
+  if(!row)return '';
+  const labels={searching:'Finding a retained stage',checking:'Checking original stage identity',
+    comparing_original_inputs:'Comparing original scientific inputs',transferring:'Retaining verified outputs',
+    complete:'Original stage retained',no_matching_stage:'Native calculation required'};
+  const source=row.source_run_id?'<p>Original run <code>'+esc(row.source_run_id)+'</code></p>':'';
+  const file=row.current_file?'<p>Current original file <code>'+esc(row.current_file)+'</code></p>':'';
+  const scope=row.candidate_kind==='exact_index'?'Exact content-signature index':
+    row.candidate_kind==='explicit_source'?'Explicit original source comparison':'Exact index, then selected original sources';
+  const count=value=>Number.isInteger(value)?value.toLocaleString():'—';
+  return '<h3>'+esc((row.model||'').toUpperCase())+' · '+esc(labels[row.phase]||row.phase)+'</h3>'+
+    '<p class="note">'+esc(scope)+'</p>'+source+file+
+    '<div class="native-metrics"><dl><dt>Verified files</dt><dd>'+count(row.files_completed)+' / '+count(row.files_total)+'</dd></dl>'+
+    '<dl><dt>Verified output bytes</dt><dd>'+bytes(row.logical_bytes_completed)+' / '+bytes(row.logical_bytes_total)+'</dd></dl>'+
+    '<dl><dt>Exact index candidates</dt><dd>'+count(row.index_candidates_checked)+'</dd></dl>'+
+    '<dl><dt>Explicit source candidates</dt><dd>'+count(row.explicit_candidates_checked)+'</dd></dl>'+
+    '<dl><dt>Reuse lookup and transfer</dt><dd>'+duration(row.elapsed_seconds)+'</dd></dl></div>'+
+    (row.last_rejection?'<details><summary>Last unavailable original source</summary><p>'+
+      esc(row.last_rejection.reason)+'</p></details>':'')+
+    '<p class="note">Byte counts are complete, independently retained and verified files. Copy, reflink and already-retained files keep their original source identities.</p>';
+}
+
 export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDetailContext,openItem,toast,getState}){
   let selected=null,workspace=null,timer=null,controller=null,offset=0,stream='native',snapshot=null,busy=false,generation=0;
   const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./jobs.css',import.meta.url);document.head.append(style);
@@ -33,7 +56,14 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
   function phase(native){
     if(native.stop_requested&&native.alive)return 'Stopping the selected calculation';
     if(native.run_state==='complete')return 'Calculation complete';
-    if(native.alive)return native.programme_context?'Programme native calculation running':'Native model calculation running';
+    if(native.alive){
+      const execution=native.native_execution;
+      if(execution?.phase==='stage_reuse')return 'Reusing original '+(execution.model||'native').toUpperCase()+' stage';
+      if(execution?.phase==='waiting_stage')return 'Waiting for the matching original stage';
+      if(execution?.phase==='native')return 'Calculating original '+(execution.model||'native').toUpperCase()+' model';
+      if(execution?.phase==='export')return 'Retaining physical export rasters';
+      return native.programme_context?'Programme native calculation running':'Native model calculation running';
+    }
     if(native.task_state==='queued')return 'Waiting in the operator queue';
     if(native.task_state==='interrupted')return 'Operator reopened — retained work available';
     if(native.task_state==='cancelled')return 'Calculation stopped — retained work available';
@@ -64,10 +94,14 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     node.querySelector('[data-native-selection]').textContent=pretty({
       selection:native.selection,native_run_id:native.run_id,execution_id:native.execution_id,
       programme:native.programme_context});
-    const issue=(task.error?.code==='NATIVE_DETACHED'?null:task.error?.message)||native.failure?.message;
+    const reuse=node.querySelector('[data-native-reuse]');
+    reuse.innerHTML=reuseMarkup(native);reuse.hidden=!reuse.innerHTML;
+    const issue=native.run_error?.message||(task.error?.code==='NATIVE_DETACHED'?null:task.error?.message)||native.failure?.message;
     const error=node.querySelector('[data-native-error]');error.hidden=!issue;error.textContent=issue||'';
     const carry=node.querySelector('[data-native-continuation]');
-    carry.textContent=native.alive&&task.state==='interrupted'
+    carry.textContent=native.run_error?.kind==='storage_exhausted'&&!native.alive
+      ?native.run_error.recovery||'Make space on the recorded Workspace filesystem, then resume this same retained run.'
+      :native.alive&&task.state==='interrupted'
       ?'The original calculation is still running. Reconnect to follow the same worker.'
       :native.stop_requested&&native.alive
       ?'Stop requested for this calculation. Completed native stages remain saved while the worker closes.'
@@ -117,6 +151,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
       '<dl><dt>Last worker update</dt><dd data-native-heartbeat>—</dd></dl></div>'+
       '<div class="page-actions" data-native-controls></div>'+
       '<div class="notice error" data-native-error hidden></div>'+
+      '<section data-native-reuse aria-live="polite" hidden></section>'+
       '<div class="table-scroll"><table><thead><tr><th>Native stage</th><th>Status</th><th>Saved at</th><th>Retained files</th></tr></thead><tbody data-native-stages></tbody></table></div>'+
       '<h3>Original worker output</h3><div class="native-log-controls">'+
       '<label>Log stream<select data-native-stream><option value="native">Native model log</option><option value="process">Worker process output</option></select></label>'+
