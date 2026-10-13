@@ -11,8 +11,8 @@ const {zip}=require('./localization/zip.cjs');
 const api=createLocalizationCore(sha),root=__dirname,out=path.resolve(process.argv[2]||path.join(root,'localization-output'));
 if(fs.existsSync(out))throw Error('Choose a new complete output directory');
 const read=name=>fs.readFileSync(path.join(root,name),'utf8');
-const original=JSON.parse(read('source/pre-recovery-working-record.json'));
-const records=JSON.parse(read('source-records.json')).records,at='2026-10-13T15:00:00.000Z';
+const original=JSON.parse(read('source/pre-receiving-working-record.json'));
+const records=JSON.parse(read('source-records.json')).records,at='2026-10-13T15:55:00.000Z';
 const guide=read('localization/README.txt'),customerFiles={'customer/localization-README.txt':guide},examples={};
 const sourceContent={
  'localization-core.cjs':read('localization/localization-core.cjs'),

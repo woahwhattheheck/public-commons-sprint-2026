@@ -12,9 +12,14 @@
   },
   "files": [
     {
+      "path": "browser-packages.mjs",
+      "bytes": 11266,
+      "sha256": "84e61ffcc1d1dd19ff6cc3413c0decbc64c14220a29172c740b7b8591e913f3d"
+    },
+    {
       "path": "build-localization.cjs",
-      "bytes": 4693,
-      "sha256": "1e42208dda32582852c4629d6ba178b9d439ac6f1705e74f3a41c001f4272102"
+      "bytes": 4694,
+      "sha256": "a7eb07407d17fed0014e0fcdb4010598226279a6c90be544e2419827cd078862"
     },
     {
       "path": "build-package-documents.mjs",
@@ -28,8 +33,8 @@
     },
     {
       "path": "complete-document-receipt.json",
-      "bytes": 16556,
-      "sha256": "75193cbd33cebe499177f48a738e16398a4e564da33fb74b2b3f47a448c2cfd3"
+      "bytes": 17724,
+      "sha256": "34791027c77ee4058d2018d57ba5570f65d0658a207ec9caa984ed9d11d125bd"
     },
     {
       "path": "customer-package-receipt.json",
@@ -48,13 +53,13 @@
     },
     {
       "path": "customer/localization-paid/app.html",
-      "bytes": 228428,
-      "sha256": "0cf942f7105a1434b6bd028bd2bc1add1c2365dd6941626f765086af828386d3"
+      "bytes": 230922,
+      "sha256": "1941e306c633c7e553b4c4e4c3c831f5b845d41ce56ae7d401fcf0a7c444b830"
     },
     {
       "path": "customer/localization-paid/application-source.json",
-      "bytes": 119870,
-      "sha256": "fd912f8693147a87a982c824c9eb0b6fbf20023cad9d06c22a68cf1c448d209a"
+      "bytes": 121133,
+      "sha256": "129508f2efe76e302d6fb51c7782c17c3c1838d0dfcdbc1792b4fdec289e1135"
     },
     {
       "path": "customer/localization-paid/working.json",
@@ -63,18 +68,18 @@
     },
     {
       "path": "customer/localization-README.txt",
-      "bytes": 2989,
-      "sha256": "3d4bbd5439fa9f279437db87f391067536b4f6d3be7410bec613856c6718d903"
+      "bytes": 3506,
+      "sha256": "e0bd9ce94ec7dfb2a23c822f16aaec4684997e1ee00784d04ad3ada8a3db4ba8"
     },
     {
       "path": "customer/localization-sample/app.html",
-      "bytes": 172431,
-      "sha256": "c80ae205dad2c1bf316919d3d24d1d803032f7e4b38ef9e1dd8cc27e17a2fb30"
+      "bytes": 174925,
+      "sha256": "8dce3504210b8e38bb304212796cb4b1c81600ad923f11215bcc07d726fc4a8d"
     },
     {
       "path": "customer/localization-sample/application-source.json",
-      "bytes": 88362,
-      "sha256": "40271c7e70ed5adecfe7449ad683bbfc3e14d044ee116fdf1f5f444c98d8e343"
+      "bytes": 89625,
+      "sha256": "3dacb076fe95c62a68dff4114e6df6b93b63e5a7690d30f2c202912ac1e6db91"
     },
     {
       "path": "customer/localization-sample/working.json",
@@ -117,14 +122,19 @@
       "sha256": "71c5e2a7ca715f981add6f28cf5de95111eda1456be6eb92bea22312e15f7787"
     },
     {
+      "path": "customer/Unlost-complete-packages.html",
+      "bytes": 418450,
+      "sha256": "fe76422a26f5a2ff57896fb1c55f0e132d5a2d7bc77d2eb48ee858d6fdb19a48"
+    },
+    {
       "path": "customer/Unlost-complete-paid-documents.html",
-      "bytes": 241122,
-      "sha256": "191015d229c34b71f3ab6a91b1089ca1b8be968da6bb26e225e8b9070d1705e4"
+      "bytes": 247652,
+      "sha256": "798d93c868b4c18da0191f987222d23d21916511b8c21c4a2fc937a97bc0e5bb"
     },
     {
       "path": "customer/Unlost-complete-sample-documents.html",
-      "bytes": 184836,
-      "sha256": "3526dd4f272c696d8f89a954150bd79a47bcb20150f3108dfb483e8a022dcf98"
+      "bytes": 189270,
+      "sha256": "48c122c929f4c77442060b2a84fe40a39d264d5038978c095d9764d5d539ad97"
     },
     {
       "path": "first-offer.json",
@@ -138,18 +148,23 @@
     },
     {
       "path": "localization-package-receipt.json",
-      "bytes": 2490,
-      "sha256": "3e8b3bedf6cd0458f1ca44065b02859bf809452ae802e77992dbff5a1f23e861"
+      "bytes": 2901,
+      "sha256": "3beb4c3a98e0b153a3477d9f68f21b4fe09b536a8b8c457b791e6bb37ab03150"
     },
     {
       "path": "localization/browser-originals.json",
-      "bytes": 417619,
-      "sha256": "495185479830d8397cd9def3946ea6f5d16f4fbc547ed675138810bbc02ede73"
+      "bytes": 422715,
+      "sha256": "e655151142e9b4f426ae020251eac225ae5f932a5a3db39e4f6c724097672ed4"
+    },
+    {
+      "path": "localization/complete-package-viewer.mjs",
+      "bytes": 4713,
+      "sha256": "f768249da6459c9c9938c6c2e0dab419279c8ac0595eb67702ecd145a961a969"
     },
     {
       "path": "localization/compose.cjs",
-      "bytes": 5602,
-      "sha256": "ff75d1a6f36356116ac9a93dc3669daf97dadb82dbaef6af9cbeb46e3ef3b0eb"
+      "bytes": 5665,
+      "sha256": "0e1ea88be54f262924c444c943055e1b525474f916d0d72a22e3c65c891e5540"
     },
     {
       "path": "localization/customer-document-viewer.mjs",
@@ -168,8 +183,8 @@
     },
     {
       "path": "localization/localization-view.cjs",
-      "bytes": 40941,
-      "sha256": "c54f2ea86f67ef9217dda8f9b05561ef67149720c818bb7c9dec3a588b200296"
+      "bytes": 41668,
+      "sha256": "4b76a626552b79b1d5e7f849b4a5f243621743960985cfb340f30b9cd0cdcabd"
     },
     {
       "path": "localization/operate-example.cjs",
@@ -178,8 +193,8 @@
     },
     {
       "path": "localization/package-documents.mjs",
-      "bytes": 4586,
-      "sha256": "2abaaf503a955571f1b6adb23d41210baee5208568db71e4b5d22f43a04470dc"
+      "bytes": 5666,
+      "sha256": "b36afc0a77c1538fc327c2bb88a8fb8caff134a1036b273b27a2669ad480e1d1"
     },
     {
       "path": "localization/product-context.json",
@@ -188,8 +203,8 @@
     },
     {
       "path": "localization/README.txt",
-      "bytes": 2989,
-      "sha256": "3d4bbd5439fa9f279437db87f391067536b4f6d3be7410bec613856c6718d903"
+      "bytes": 3506,
+      "sha256": "e0bd9ce94ec7dfb2a23c822f16aaec4684997e1ee00784d04ad3ada8a3db4ba8"
     },
     {
       "path": "localization/rebuild.cjs",
@@ -198,8 +213,8 @@
     },
     {
       "path": "localization/run-existing-browser.mjs",
-      "bytes": 21797,
-      "sha256": "cd27bb533da1d636bf420882c00d9911b442f5cbe885588265d4f6dae9af910f"
+      "bytes": 23703,
+      "sha256": "eaced8350f85d7ac20bc1708104b7503d0366abc7054f41e8ca4b134f0093c91"
     },
     {
       "path": "localization/zip.cjs",
@@ -213,8 +228,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 15072,
-      "sha256": "2b01cf0c72e7e7fef4e9e62ba7c65e380bdef14e44062a468c228ff96a4ef270"
+      "bytes": 17592,
+      "sha256": "15406bec30d1f48c6ab2d9468519d625cf9b4e1cec79f54f03267ad658cd3f3e"
     },
     {
       "path": "rebuild-original.cjs",
@@ -292,6 +307,11 @@
       "sha256": "14485668020aae2e4012e1d481c8abf756c347b1c45fe306a402a96e5efdfa7b"
     },
     {
+      "path": "source/pre-receiving-working-record.json",
+      "bytes": 1808543,
+      "sha256": "f50639481ce164cacd34113fc3ca69668c43c9727a406601d0893d9652b97d5a"
+    },
+    {
       "path": "source/pre-recovery-working-record.json",
       "bytes": 913538,
       "sha256": "8981598331a515c51e0172bf1eafc3890f2e2287a7fef2681171654bc95752f5"
@@ -333,8 +353,8 @@
     },
     {
       "path": "working-record.json",
-      "bytes": 1808543,
-      "sha256": "f50639481ce164cacd34113fc3ca69668c43c9727a406601d0893d9652b97d5a"
+      "bytes": 2715431,
+      "sha256": "e5687bb660aee9e3eeb9c6a50fa9844ac797da58d566fc181cc46acc7b01e8dc"
     }
   ],
   "ownerInstruction": "Bryce requires the producing peer to open and use the exact final application, download and reopen the complete customer artifacts, and personally view every actual desktop and narrow-screen image before marking the package visually reviewed. Retain the original source and current customer record. Fix visible defects in the same original product; do not replace this operation with a screenshot-only claim or a parallel application.",
@@ -344,18 +364,24 @@
     "archive_member_occurrences": 16,
     "source_module": "localization/package-documents.mjs",
     "receipt": "complete-document-receipt.json",
-    "complete_package_root_styles": true
+    "complete_package_root_styles": true,
+    "readable_exact_app_openings": true,
+    "actual_member_download_course": "browser-packages.mjs"
   },
   "recovery": {
     "schema": "tjlabs.merchant-localization-recovery.v1",
-    "original_working_record": "source/pre-recovery-working-record.json",
-    "original_customer_files_preserved": 14,
-    "original_packages_preserved": 4,
-    "current_customer_files": 21,
-    "current_packages": 6,
+    "original_working_record": "source/pre-receiving-working-record.json",
+    "original_customer_files_preserved": 21,
+    "original_packages_preserved": 6,
+    "current_customer_files": 28,
+    "current_packages": 8,
     "initial_working_files_unchanged": true,
     "raw_draft_values_separate": true,
     "live_revision_guard_preserved": true,
-    "actual_browser_visual_result": "Pending same existing equipped receiving course"
+    "actual_browser_visual_result": "Pending same existing equipped receiving course",
+    "async_read_preserves_current_edits": true,
+    "complete_export_reopens_without_reader_only_cap": true,
+    "storage_warning_preserved": true,
+    "meaningful_scripted_app_preview": true
   }
 }
