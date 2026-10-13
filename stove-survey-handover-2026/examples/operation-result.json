@@ -1,0 +1,30 @@
+{
+  "schema": "commons.stove-operated-source.v1",
+  "revision": 121,
+  "summary": {
+    "sites": 6,
+    "appliances": 6,
+    "enquiries": 6,
+    "openEnquiries": 6,
+    "surveys": 6,
+    "finalSurveys": 6,
+    "quotes": 6,
+    "acceptedQuotes": 6,
+    "jobs": 8,
+    "openJobs": 5,
+    "visits": 7,
+    "confirmedVisits": 0,
+    "findings": 2,
+    "openBlockingFindings": 2,
+    "handovers": 3,
+    "servicePlans": 3,
+    "dueServicePlans": 0,
+    "attachments": 12,
+    "imports": 6
+  },
+  "bytes": 727037,
+  "sha256": "c6e6029e9c3e81725873037db074116362821a5eb3c2c0e2d412ce4dcb2b6089",
+  "exactReopen": true,
+  "sourceOperationOnly": true,
+  "renderedAcceptance": false
+}
