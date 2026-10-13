@@ -25,7 +25,7 @@ def main():
         raise ValueError("Keep the original input beside its retained receiving programs")
     host = pathlib.Path(args.host_root).resolve(strict=True)
     sys.path.insert(0, str(host))
-    from native_foreground import load_native, ForegroundLaunch
+    from native_foreground import load_native, start_foreground
     node, npm = shutil.which("node"), shutil.which("npm")
     if not node or not npm:
         raise RuntimeError("Use the receiving host's existing Node and npm runtime")
@@ -61,17 +61,10 @@ def main():
         runtime_path=retained, runtime_consumers_root=None,
     )
     native = load_native(str(host))
-    launcher = ForegroundLaunch(native)
-    report = native.start(specification, launcher=launcher)
-    try:
-        print(json.dumps({key: report.get(key) for key in (
-            "operation_id", "status", "reused", "supervisor_acquired", "record", "root"
-        )}), flush=True)
-    finally:
-        if launcher.root is not None:
-            result = launcher.handoff()
-            if result is not None:
-                raise SystemExit(result)
+    report = start_foreground(native, specification, report_format="summary")
+    if report.get("reused"):
+        from native_result_view import select
+        print(json.dumps(select(report, "summary")), flush=True)
     return report
 
 
