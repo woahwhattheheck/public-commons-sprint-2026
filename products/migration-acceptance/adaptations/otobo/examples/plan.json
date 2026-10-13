@@ -1,0 +1,132 @@
+{
+  "schema": "otobo.handover-plan.v1",
+  "caseId": "otobo-configuration-reference",
+  "sourceCaptureId": "3ef3a143e226e52c7bd9afa1e2bc116db1c79de6de35d3f8ed3a816481b11c5c",
+  "targetCaptureId": "b0bcf19baad4a82f34fc4a2ff94b829ab88950d089d2c923e5bcee4272c98314",
+  "expectedParser": {
+    "module": "YAML::XS",
+    "version": "authored-reference",
+    "profile": "authored typed reference; actual native helper records installed version"
+  },
+  "reviewer": "Authored reference reviewer",
+  "reviewedAt": "2026-10-13T12:10:00Z",
+  "decisions": [
+    {
+      "sourceFileId": "file-Groups",
+      "family": "Groups",
+      "name": "support",
+      "action": "keep-target",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-Roles",
+      "family": "Roles",
+      "name": "agents",
+      "action": "keep-target",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-Types",
+      "family": "Types",
+      "name": "Incident",
+      "action": "keep-target",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-Templates",
+      "family": "Templates",
+      "name": "Reply",
+      "action": "keep-target",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-Services",
+      "family": "Services",
+      "name": "Support",
+      "action": "keep-target",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-Services",
+      "family": "Services",
+      "name": "Support::Premium",
+      "action": "create",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-SLAs",
+      "family": "SLAs",
+      "name": "Gold",
+      "action": "create",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-Queues",
+      "family": "Queues",
+      "name": "SupportQ",
+      "action": "overwrite",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-QueueTemplates",
+      "family": "QueueTemplates",
+      "name": "SupportQ",
+      "action": "add-links",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-RoleGroups",
+      "family": "RoleGroups",
+      "name": "agents",
+      "action": "replace-pair-permissions",
+      "reason": "Authored review of exact selected configuration"
+    },
+    {
+      "sourceFileId": "file-GenericAgents",
+      "family": "GenericAgents",
+      "name": "Weekly",
+      "action": "create",
+      "reason": "Authored review of exact selected configuration",
+      "genericAgentReviewed": true
+    }
+  ],
+  "importOrder": [
+    {
+      "family": "Services",
+      "name": "Support::Premium",
+      "sourceFileId": "file-Services",
+      "action": "create"
+    },
+    {
+      "family": "SLAs",
+      "name": "Gold",
+      "sourceFileId": "file-SLAs",
+      "action": "create"
+    },
+    {
+      "family": "Queues",
+      "name": "SupportQ",
+      "sourceFileId": "file-Queues",
+      "action": "overwrite"
+    },
+    {
+      "family": "QueueTemplates",
+      "name": "SupportQ",
+      "sourceFileId": "file-QueueTemplates",
+      "action": "add-links"
+    },
+    {
+      "family": "RoleGroups",
+      "name": "agents",
+      "sourceFileId": "file-RoleGroups",
+      "action": "replace-pair-permissions"
+    },
+    {
+      "family": "GenericAgents",
+      "name": "Weekly",
+      "sourceFileId": "file-GenericAgents",
+      "action": "create"
+    }
+  ],
+  "planId": "20be2c28a18b8f0c898191e3243c2e8d644298bf2e791f0efe84c336780e1cfa"
+}
