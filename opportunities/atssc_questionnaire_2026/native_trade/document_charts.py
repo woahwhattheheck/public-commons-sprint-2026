@@ -56,6 +56,10 @@ def chart_panels(spec, categories_per_panel=12):
         for value in item["values"]:
             if value is not None and not math.isfinite(float(Decimal(str(value)))):
                 raise ValueError("Chart values must be finite numbers")
+    # The complete statistics and grouped tables already describe an edition
+    # with no visible answers. Do not add a blank numerical axis to that case.
+    if not any(value is not None for item in series for value in item["values"]):
+        return []
     result = []
     for series_start in range(0,len(series),4):
         series_end = min(len(series),series_start+4)
@@ -276,10 +280,17 @@ def pdf_chart(spec, width=511.2, height=220):
     if spec["series"]:
         for index,series in enumerate(spec["series"]):
             lines, line = [], ""
-            for char in series["name"]:
-                if line and stringWidth(line+char,"QuestionnaireSans",8)>legend_width-14:
+            for word in series["name"].split():
+                candidate = (line+" "+word).strip()
+                if line and stringWidth(candidate,"QuestionnaireSans",8)>legend_width-14:
                     lines.append(line); line = ""
-                line += char
+                if stringWidth(word,"QuestionnaireSans",8)>legend_width-14:
+                    for char in word:
+                        if line and stringWidth(line+char,"QuestionnaireSans",8)>legend_width-14:
+                            lines.append(line); line = ""
+                        line += char
+                else:
+                    line = (line+" "+word).strip()
             lines.append(line)
             legend_entries.append((index,lines))
     legend_rows = []
