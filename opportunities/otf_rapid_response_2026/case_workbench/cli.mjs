@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {randomUUID} from "node:crypto";
-import {createLedger,readLedger,applyOperation,receiveLedger,ledgerText,LIMITS,decodeJSON,documentFromBytes} from "./model.mjs";
+import {createLedger,readLedger,applyOperation,receiveLedger,ledgerText,LIMITS,decodeJSON,documentFromBytes,operationRequest} from "./model.mjs";
 import {reviewVendorOriginal} from "./vendor-review.mjs";
 import {buildExample} from "./example.mjs";
 import {workspaceHTML,invoiceHTML,invoiceCSV,handoverEntries,handoverZIP} from "./reports.mjs";
@@ -25,10 +25,11 @@ try {
  else if(command==="example"){const result=await buildExample(),root=privateDirectory(required("directory"));exactOutput(path.join(root,"workbook.json"),ledgerText(result.ledger));exactOutput(path.join(root,"requests.json"),JSON.stringify(result.requests,null,2)+"\n");exactOutput(path.join(root,"handover.zip"),await handoverZIP(result.ledger));}
  else if(command==="init"){const value=await createLedger(json(required("input")));exactOutput(required("output"),ledgerText(value));}
  else if(command==="apply"){const request=await requestFrom(required("request"),options.sources),value=await applyOperation(json(required("workbook")),request);if(options["request-output"])exactOutput(options["request-output"],JSON.stringify(request,null,2)+"\n");exactOutput(required("output"),ledgerText(value.ledger));}
+ else if(command==="request"){const request=await operationRequest(json(required("workbook")),required("operation"));exactOutput(required("output"),JSON.stringify(request,null,2)+"\n");}
  else if(command==="receive"){const value=await receiveLedger(options.workbook?json(options.workbook):null,json(required("input")));exactOutput(required("output"),ledgerText(value.ledger));}
  else if(command==="summary"){const value=await readLedger(json(required("workbook")));process.stdout.write(JSON.stringify(value.view,null,2)+"\n");}
  else if(command==="report"){exactOutput(required("output"),await workspaceHTML(json(required("workbook")),{standalone:true}));}
  else if(command==="invoice"){const input=json(required("workbook")),format=options.format??"html";if(!["html","csv"].includes(format))throw new Error("--format must be html or csv");exactOutput(required("output"),await (format==="html"?invoiceHTML:invoiceCSV)(input,required("case"),required("invoice"),{standalone:true}));}
  else if(command==="handover"){const input=json(required("workbook"));if(options.zip)exactOutput(options.zip,await handoverZIP(input));else{const root=privateDirectory(required("directory")),entries=await handoverEntries(input);for(const e of entries){const output=path.resolve(root,e.name);if(!output.startsWith(root+path.sep))throw new Error("Invalid output member");exactOutput(output,e.data);}}}
- else throw new Error("Commands: init --input descriptor.json --output workbook.json; apply --workbook workbook.json --request operation.json --output successor.json; receive --input incoming.json [--workbook current.json] --output received.json; summary --workbook workbook.json; report --workbook workbook.json --output index.html; invoice --workbook workbook.json --case ID --invoice ID --format html|csv --output FILE; handover --workbook workbook.json --directory PRIVATE_DIR | --zip PRIVATE_PATH");
+ else throw new Error("Commands: request --workbook workbook.json --operation OPERATION_ID --output request.json; init --input descriptor.json --output workbook.json; apply --workbook workbook.json --request operation.json --output successor.json; receive --input incoming.json [--workbook current.json] --output received.json; summary --workbook workbook.json; report --workbook workbook.json --output index.html; invoice --workbook workbook.json --case ID --invoice ID --format html|csv --output FILE; handover --workbook workbook.json --directory PRIVATE_DIR | --zip PRIVATE_PATH");
 } catch(e){process.stderr.write((e.code?e.code+": ":"")+e.message+"\n");process.exitCode=1;}
