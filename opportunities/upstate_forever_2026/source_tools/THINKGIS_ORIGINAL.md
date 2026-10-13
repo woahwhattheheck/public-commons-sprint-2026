@@ -109,7 +109,7 @@ Pass it through `--ring-assignments`. Assign every original path once. Indices a
 
 ## GeoJSON contract for tract tools and native source consumers
 
-Both outputs are standard RFC 7946-style WGS84 longitude/latitude FeatureCollections:
+Both outputs are GeoJSON FeatureCollections with WGS84 longitude/latitude coordinates. Original ring order and orientation remain intact:
 
 - `boundaries.geojson`: one original LineString or MultiLineString per received FID, with `feature_role=county_parcel_boundary`.
 - `parcels.geojson`: one whole Polygon or MultiPolygon per successfully resolved FID, with `feature_role=county_parcel`. This file is present when at least one original feature forms a valid polygon.
@@ -166,3 +166,24 @@ Original page endpoint: <https://mccormicksc.wthgis.com/tgis/index.ashx?action=g
 The retained decoder edition is 151,707 bytes, SHA-256 `356edc204ad4606dffe5bc846840ead10c1f4a7efb285e99f73712426e9b05e4`. Its actual drawing operation is a polyline. The complete McCormick source manifest, raw index pages and final reviewed forestry queue remain in the existing source delivery, separate from this reusable code.
 
 Owned operation: ECO12-THINKGIS-ORIGINAL-20261013. The current ArcGIS source collector remains the owner of its existing county pipelines.
+
+
+## Reproduce the completed forestry screening join
+
+The same retained county index can reproduce the full forestry work queue from the original SCFC grouped response. This stage needs only the standard library and complete original inputs:
+
+```bash
+python -m source_tools.thinkgis_original join-screen \
+  --index /data/mccormick/prepared-index \
+  --screen /data/mccormick/original/scfc-grouped-screen.json \
+  --county 'McCormick County' \
+  --output /data/mccormick/prepared-screen
+```
+
+The source response must contain one original grouped row per tax-map reference and the exact original county value. The command preserves every input screen row; it does not reapply or invent a forestry eligibility criterion. Incomplete provider responses with `exceededTransferLimit` are rejected.
+
+Outputs include a working queue CSV, a complete match-by-match CSV with all original county attributes, the full structured source join, a summary and an ordinary `role=PARCEL_SCREEN` source manifest. Both the original grouped response and all county originals remain companions. Feature IDs, original data-row selectors, source-page hashes and exact whole-feature URLs allow direct original-record reopening.
+
+On the completed original McCormick source, 247 grouped forestry references match 249 native features across 246 references. Three references have two county FIDs; their recorded acreage values repeat and must not be added. Original reference `112-08-01-002.` remains unmatched in the complete index. These are observations of this retained source edition, not hardcoded expectations in the adapter.
+
+The source queue is immediately importable through the existing source manifest path. It can be regenerated on a receiving host without depending on the session that first calculated the screening join.
