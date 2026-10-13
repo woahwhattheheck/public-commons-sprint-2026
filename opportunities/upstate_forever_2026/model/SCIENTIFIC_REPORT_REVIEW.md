@@ -10,7 +10,7 @@ The source edition stays fixed throughout review. The operator chooses the revie
 2. Choose Prepare customer review. The existing editor opens as Review saved scientific report and fixes its selected source to that exact edition.
 3. Enter Review title and Purpose. Add explicit review requirements and Notes as needed.
 4. Choose Retain review. The operator verifies the exact edition and complete member inventory, then queues review creation with the normalized current fields, preview operation ID and task's original creation timestamp. Editing the fields during verification asks you to submit those current fields again.
-5. Choose Open retained review from the completed task. In the existing Customer review desk, use Export current review to prepare the complete reviewer package.
+5. Choose Open retained review from the completed task. In Files, the original scientific report appears above its full file inventory. Choose Read original PDF to read the complete compiled report, or Download original PDF to retain that file. Export complete review (also available as Export current review) prepares the full reviewer package with the linked HTML, figures, data and exact response history.
 6. Use Receive response for the actual returned feedback. Current requests keeps questions, requested changes and the existing engineering response/reconciliation workflow available.
 
 A source change or an edited review draft requires a fresh preview. An interrupted queued request uses its original task identity and creation time; it reuses the same retained source and review edition.
@@ -41,6 +41,8 @@ The adapter retains one source entry:
 The copied report tree is unchanged. Its HTML can still resolve its original figures and linked data within the source view and exported review package. The compiled source has schema upstate.scientific-report-edition/v1 in its metadata; it is not registered as another observed-report recipe.
 
 The underlying original observed studies keep their separate source collection/document identities. The compiled report source records those exact ordered bindings.
+
+The Customer review report card identifies the compiled PDF through the declared original `report.pdf` member, its source part, artifact identity and authenticated download ticket. PDFs embedded in the original studies remain in the complete file inventory and are not substituted for the compiled report. The card shows the retained report title and available study/figure counts; its saved-edition identity and PDF checksum remain available in details.
 
 ## Backend API
 

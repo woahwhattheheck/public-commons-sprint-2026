@@ -9,7 +9,7 @@ from model.common import identifier, read_json, verify_file
 from model.model_selection import selected
 
 ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize"}
-READS = {"catalog", "results", "calibration"}
+READS = {"catalog", "results", "calibration", "execution"}
 
 
 class ParameterStudyAPI:
@@ -42,6 +42,13 @@ class ParameterStudyAPI:
 
     def read(self, workspace_id, operation, payload):
         workspace = self.operator.ws(workspace_id)
+        if operation == "execution":
+            from model.parameter_case_status import read
+            return read(workspace, identifier(payload.get("id")),
+                        identifier(payload.get("run_id")),
+                        **{name: payload[name] for name in (
+                            "attempt_id", "stream", "log_offset", "expected_attempt_id",
+                            "history_offset", "limit") if payload.get(name) not in (None, "")})
         if operation == "catalog":
             return experiments.catalog(workspace, identifier(payload.get("baseline_run_id")))
         if operation == "calibration":

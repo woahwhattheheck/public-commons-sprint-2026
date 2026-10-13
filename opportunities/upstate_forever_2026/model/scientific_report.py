@@ -18,7 +18,7 @@ from .model_selection import run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v13-execution-observation-diagnostics-v1"
+REPORT_VERSION = "upstate.scientific-report/v15-original-context-footprints-readable-tables-v1"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -277,6 +277,100 @@ def _profile(profile, workspace, *, execution_versions=None):
     return blocks
 
 
+def _scenario_patch_context(scenario, retained_edits):
+    """Read original native patch accounting without recomputing raster values."""
+    patches = scenario.get("patches", [])
+    if not patches:
+        return ["This scenario declares no land-cover patches."]
+    by_index = {row.get("index"): row for row in retained_edits}
+    blocks, declared, accounting, areas, support, transitions, legacy = [], [], [], [], [], [], []
+    modern = []
+    modern_fields = ("eligible_cells", "already_destination_cells", "changed_cells",
+                     "final_owned_cells", "eligible_hectares", "changed_hectares",
+                     "final_owned_hectares")
+    for index, patch in enumerate(patches):
+        label = "P" + str(index + 1)
+        edit = by_index.get(index, {})
+        declared.append([label, patch["mask_source_id"],
+                         ", ".join(str(code) for code in patch["from_codes"])
+                         + " to " + str(patch["to_code"]), str(patch["reason"])])
+        is_modern = all(_finite(edit.get(field)) and edit[field] >= 0 for field in modern_fields)
+        if not is_modern:
+            legacy.append([label, _count(edit.get("changed_cells")),
+                           _number(edit.get("changed_hectares")),
+                           "No complete retained eligible/unchanged/final-owned accounting"])
+            continue
+        modern.append(edit)
+        accounting.append([label, _count(edit["eligible_cells"]),
+                           _count(edit["already_destination_cells"]), _count(edit["changed_cells"]),
+                           _count(edit["final_owned_cells"])])
+        areas.append([label, _number(edit["eligible_hectares"]),
+                      _number(edit["changed_hectares"]), _number(edit["final_owned_hectares"])])
+        support.append([label, _count(edit.get("valid_mask_cells")),
+                        _count(edit.get("nodata_mask_cells")),
+                        _count(edit.get("overlap_with_earlier_masks_cells")),
+                        _count(edit.get("changed_earlier_cells")),
+                        _count(edit.get("cascaded_change_cells")),
+                        _count(edit.get("reverted_to_baseline_cells"))])
+        for row in edit.get("transitions", []):
+            transitions.append([label, str(row["from_code"]), str(row["to_code"]),
+                                _count(row["cells"]), _number(row["hectares"])])
+        if edit.get("source"):
+            blocks.append(_table(["Patch", "Original mask source property", "Retained value"],
+                                 [[label, name, value] for name, value in _retained_rows(edit["source"])],
+                                 widths=[.5, 1.8, 3.7]))
+    declaration = _table(["Patch", "Original mask source", "Declared land-cover codes", "Purpose"],
+                         declared, widths=[.5, 1.5, 1.4, 2.6],
+                         caption="P1, P2 and subsequent labels follow the original declared application order. "
+                                 "Each source-code predicate sees the values left by preceding patches.")
+    # The human-readable tables and complete original native edit records travel together.
+    declaration["retained_native_edits"] = retained_edits
+    result = [declaration]
+    if accounting:
+        result.append(_table(["Patch", "Eligible cells", "Already destination",
+                              "Immediate value changes", "Final changed cells owned"],
+                             accounting, widths=[.5, 1.2, 1.3, 1.5, 1.5],
+                             caption="Eligible cells include those already carrying the destination code. "
+                                     "Immediate changes count only actual value changes at that patch. "
+                                     "Final ownership assigns each cell still different from baseline to its "
+                                     "last value-changing patch, making those final sets disjoint."))
+        result.append(_table(["Patch", "Eligible area (ha)", "Immediate changed area (ha)",
+                              "Final owned changed area (ha)"],
+                             areas, widths=[.5, 1.6, 1.9, 2.0],
+                             caption="Retained areas use the original projected model grid. Eligible and "
+                                     "immediate-change areas can overlap across patches and are not added."))
+        result.append(_table(["Patch", "Valid mask cells", "Original NoData cells",
+                              "Earlier mask overlap", "Cells changed earlier",
+                              "Cascaded changes", "Reversions at this patch"],
+                             support,
+                             caption="These are original patch-stage counts. Overlap, cascades and reversions "
+                                     "describe the ordered editing process, not additive final areas. "
+                                     "Original NoData remains outside the valid categorical footprint."))
+        if len(modern) == len(patches) and len(by_index) == len(patches):
+            result.append(
+                "Final net land-cover footprint across all declared patches: "
+                + _count(sum(row["final_owned_cells"] for row in modern)) + " cells; "
+                + _number(sum(row["final_owned_hectares"] for row in modern)) + " ha. "
+                "This total sums only the disjoint retained final-owned sets. It describes land-cover "
+                "change, while the paired native outputs below describe modeled export change."
+            )
+        if transitions:
+            result.append(_table(["Patch", "Previous code", "Assigned code", "Eligible assignments", "Assigned ha"],
+                                 transitions, widths=[.5, 1.3, 1.3, 1.45, 1.45],
+                                 caption="Original eligible assignments at each patch, including same-code rows "
+                                         "whose values remain unchanged. A cell can occur again after a later patch."))
+    if legacy:
+        result.append(_table(["Patch", "Retained counter", "Retained counter area (ha)", "Available accounting"],
+                             legacy, widths=[.5, 1.1, 1.5, 2.9],
+                             caption="Earlier native records lack complete current footprint fields. "
+                                     "Their saved counters are displayed as recorded; they do not establish "
+                                     "actual immediate changes or a final net changed area."))
+        result.append("The final net footprint remains unavailable from these retained patch records. "
+                      "The paired model comparison below keeps its original valid-cell support.")
+    result.extend(blocks)
+    return result
+
+
 def _scenario_sections(workspace, alternatives, comparison):
     blocks = [
         "Each alternative uses its retained land-cover assumptions. Changes are alternative minus baseline "
@@ -287,27 +381,8 @@ def _scenario_sections(workspace, alternatives, comparison):
     for run in alternatives:
         scenario = workspace._get("scenarios", run["selection"]["scenario_id"])
         blocks.extend([str(scenario["title"]), str(scenario["reason"])])
-        edits = {row.get("index"): row for row in run.get("stages", {}).get("landcover", {}).get("edits", [])}
-        patch_rows = []
-        for index, patch in enumerate(scenario.get("patches", [])):
-            edit = edits.get(index, {})
-            patch_rows.append([
-                patch["mask_source_id"],
-                ", ".join(str(code) for code in patch["from_codes"]) + " to " + str(patch["to_code"]),
-                _count(edit.get("changed_cells")), _number(edit.get("changed_hectares")),
-                str(patch["reason"]),
-            ])
-        if patch_rows:
-            blocks.append(_table(
-                ["Source area", "Land-cover codes", "Patch cells", "Patch ha", "Purpose"],
-                patch_rows, widths=[1.2, 1.0, .85, .85, 2.0],
-                caption="Retained native patch counts in declared application order. Overlapping patches "
-                        "can count the same cell more than once; these counts are not the final net changed area.",
-            ))
-        if any(patch["to_code"] in patch["from_codes"] for patch in scenario.get("patches", [])):
-            blocks.append("A destination code is also included among the selected source codes. "
-                          "The retained native patch counter can include cells already assigned that destination; "
-                          "the saved scenario raster and paired export changes retain the resulting land-cover effect.")
+        retained_edits = run.get("stages", {}).get("landcover", {}).get("edits", [])
+        blocks.extend(_scenario_patch_context(scenario, retained_edits))
         rows = []
         for pollutant, item in compared.get(run["id"], {}).get("artifacts", {}).items():
             if pollutant not in rasters.MASS_UNITS:
@@ -355,6 +430,146 @@ def _priorities(priority):
     return blocks
 
 
+def _context_source_links(value):
+    """Retain distinct publisher URLs from original contextual source records."""
+    found = {}
+    def visit(item):
+        if isinstance(item, dict):
+            for key, child in item.items():
+                if isinstance(child, str) and (child.startswith("https://") or child.startswith("http://")):
+                    label = str(item.get("source_response_id") or item.get("title") or _label(key))
+                    found.setdefault(child, label)
+                else:
+                    visit(child)
+        elif isinstance(item, (list, tuple)):
+            for child in item:
+                visit(child)
+    visit(value)
+    return [link(label, target) for target, label in found.items()]
+
+
+def _observation_context(result):
+    """Present original non-fit quantities without converting their support."""
+    blocks = []
+    summary = result.get("support_summary", {})
+    counts = summary.get("counts", {})
+    if counts:
+        titles = summary.get("titles", {})
+        blocks.append(_table(
+            ["Original imported measurement support", "Source rows"],
+            [[titles.get(key, _label(key)), _count(value)] for key, value in counts.items()],
+            widths=[4.6, 1.0],
+            caption="Counts describe the imported source edition before catchment matching. "
+                    "Only the separately listed admitted catchment comparisons enter fit metrics.",
+        ))
+    if result.get("measurement_support_basis"):
+        blocks.append(str(result["measurement_support_basis"]))
+    context = result.get("context_rows", [])
+    if not context:
+        return blocks
+    blocks.append(
+        "Original measurements retained as context: " + _count(len(context)) + ". "
+        "The following values keep their original species, units, dates, qualifiers and reporting support. "
+        "They are neither converted to annual landscape exports nor substituted into catchment residuals. "
+        "An unquantified source value remains unquantified."
+    )
+    groups = {}
+    for index, row in enumerate(context, 1):
+        source = row.get("source_records")
+        source = source if isinstance(source, dict) else {}
+        key = tuple(_plain(row.get(name)) for name in (
+            "measurement_support", "station_id", "catchment_id", "facility_id", "outfall_id",
+            "reporting_feature", "species", "original_parameter", "unit", "quantity_basis"))
+        groups.setdefault(key, []).append((index, row, source))
+    for group in groups.values():
+        first, source = group[0][1], group[0][2]
+        support = first.get("measurement_support") or "other_context"
+        name = summary.get("titles", {}).get(support, _label(support))
+        blocks.append(name + " — " + str(first.get("station_id") or first.get("facility_id")
+                                       or first.get("catchment_id") or "Original source"))
+        identity = [
+            ["Original station", first.get("station_id")],
+            ["Original catchment identifier / context", first.get("catchment_id")],
+            ["Original parameter", first.get("original_parameter")],
+            ["Retained species", first.get("species")],
+            ["Quantity basis", first.get("quantity_basis")],
+            ["Original unit", first.get("unit")],
+        ]
+        for field in ("facility_id", "facility_name", "outfall_id", "reporting_feature",
+                      "monitoring_location", "parameter_code", "gauge_id", "gauge_relation", "relation_method"):
+            if first.get(field) not in (None, ""):
+                identity.append([_label(field), first[field]])
+        for field in ("source_kind", "permit_id", "reporting_feature", "parameter_code",
+                      "parameter_name", "catchment_reference", "state_mapped_outfall"):
+            values = list(dict.fromkeys(_plain(record.get(field)) for _, _, record in group
+                                        if record.get(field) not in (None, "")))
+            if values:
+                identity.append(["Original source: " + _label(field), "; ".join(values)])
+        blocks.append(_table(["Retained context", "Original value"],
+                             [[name, _plain(value)] for name, value in identity],
+                             widths=[1.8, 4.2]))
+        quantities, qualifications, provenance = [], [], []
+        for index, row, source in group:
+            label = "C" + str(index)
+            period = str(row.get("period_start") or "Unspecified")
+            if row.get("period_end"):
+                period += " to " + str(row["period_end"])
+            original = row.get("value_text")
+            value = original if original not in (None, "") else "Unquantified"
+            qualifier = row.get("qualifier")
+            quantity = (str(qualifier) + " " if qualifier not in (None, "", "=") else "") + str(value)
+            coverage = []
+            if row.get("coverage_days") is not None:
+                coverage.append("Represented days: " + _count(row["coverage_days"]))
+            if row.get("expected_days") is not None:
+                coverage.append("Expected days: " + _count(row["expected_days"]))
+            if row.get("coverage_complete") is not None:
+                coverage.append("Source complete: " + _plain(row["coverage_complete"]))
+            if source.get("calendar_days") not in (None, ""):
+                coverage.append("Original calendar days: " + str(source["calendar_days"]))
+            if source.get("period_status") not in (None, ""):
+                coverage.append("Original reporting status: " + str(source["period_status"]))
+            quantities.append([label, period, quantity, _unit(row.get("unit")),
+                               "\n".join(coverage) or "Unspecified"])
+            qualifications.append([
+                label, _plain(row.get("method")), _plain(qualifier) if qualifier not in (None, "") else "None recorded",
+                _plain(row.get("uncertainty")), _plain(row.get("comparison_issues", [])),
+            ])
+            provenance.append([label, str(row["observation_id"]),
+                               _plain(source.get("selected_dmr_value_ids") or source.get("result_ids")
+                                      or source.get("result_id") or source.get("activity_id"))])
+        table = _table(["Context row", "Original period", "Original quantity", "Unit",
+                        "Retained temporal coverage / status"],
+                       quantities, widths=[.55, 1.2, 1.0, .8, 2.45],
+                       caption="Dates retain the source interval convention. Each row is one original "
+                               "measurement or reporting period; its displayed quantity is not annualized.")
+        # Complete originals travel in the downloadable report data alongside
+        # their readable rows; the PDF/HTML render only the typed display fields.
+        table["retained_context_records"] = [row for _, row, _ in group]
+        blocks.append(table)
+        blocks.append(_table(["Context row", "Method", "Original qualifier", "Source uncertainty",
+                              "Reason retained outside annual fit"],
+                             qualifications, widths=[.55, 1.4, .7, 1.1, 2.25]))
+        blocks.append(_table(["Context row", "Original observation ID", "Selected original result IDs"],
+                             provenance, widths=[.55, 3.4, 2.05],
+                             caption="Context row labels follow the original retained row order. "
+                                     "Complete unchanged context records, original source objects and row values "
+                                     "are included in report-data.json under retained_context_records."))
+        references = _context_source_links([row.get("source_records") for _, row, _ in group])
+        if references:
+            blocks.append(_table(["Original publisher reference"], [[item] for item in references]))
+        extra = []
+        for index, row, _ in group:
+            for field in ("coverage_detail", "source_quantity"):
+                if row.get(field) not in (None, ""):
+                    extra.extend([["C" + str(index), name, value]
+                                  for name, value in _retained_rows(row[field], _label(field))])
+        if extra:
+            blocks.append(_table(["Context row", "Original quantity / coverage field", "Saved value"],
+                                 extra, widths=[.55, 1.8, 3.65]))
+    return blocks
+
+
 def _observations(results):
     if not results:
         return [
@@ -370,6 +585,7 @@ def _observations(results):
     for result in results:
         blocks.append("Observation edition " + str(result["observation_id"])
                       + "; selected run " + str(result["run_id"]) + ".")
+        blocks.extend(_observation_context(result))
         rows = []
         for parameter, metrics in result.get("metrics", {}).items():
             rows.append([
@@ -389,7 +605,9 @@ def _observations(results):
         blocks.extend(observation_diagnostics.build(result)["blocks"])
         methods = result.get("observation_method", {})
         if methods:
-            blocks.append("Observation method and original references: " + _plain(methods))
+            blocks.append(_table(["Observation source / method field", "Retained value"],
+                                 list(_retained_rows(methods)), widths=[1.7, 4.3],
+                                 caption="Original observation metadata and source references."))
         for parameter in ("nitrogen", "phosphorus", "sediment"):
             selected = [row for row in result.get("comparisons", []) if row.get("parameter") == parameter]
             if not selected:
@@ -976,25 +1194,10 @@ def report_pdf(path, title, sections, *, contact, source_records,
         elif isinstance(block, dict) and block.get("kind") == "table":
             if block.get("caption"):
                 story.extend([paragraph(block["caption"]), Spacer(1, .05 * inch)])
-            widths = block.get("widths") or [1.0] * len(block["columns"])
-            total = sum(widths)
-            rows = [[paragraph(value, cell_style) for value in block["columns"]]]
-            rows.extend([paragraph(value, cell_style) for value in row] for row in block["rows"])
-            # Keep ordinary records together when possible. An original source
-            # cell can exceed one page (for example, a complete feature-ID list);
-            # ReportLab must be allowed to continue its Paragraph on later pages.
-            # This changes pagination only: every original cell and link is retained.
-            table = Table(rows, colWidths=[7.1 * inch * value / total for value in widths],
-                          repeatRows=1, splitByRow=1, splitInRow=1, hAlign="LEFT")
-            table.setStyle(TableStyle([
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eeeeee")),
-                ("LINEBELOW", (0, 0), (-1, 0), .6, colors.black),
-                ("LINEBELOW", (0, 1), (-1, -1), .25, colors.HexColor("#cccccc")),
-                ("TOPPADDING", (0, 0), (-1, -1), 5),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ]))
-            story.append(table)
+            from .scientific_tables import pdf_table_flowables
+            story.extend(pdf_table_flowables(
+                block, width=7.1 * inch, paragraph=paragraph, cell_style=cell_style,
+            ))
         else:
             story.append(paragraph(block))
         story.append(Spacer(1, .08 * inch))
