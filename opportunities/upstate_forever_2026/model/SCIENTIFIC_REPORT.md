@@ -150,6 +150,26 @@ For annual-reference weighting, original cohort membership and JSON export, use
 For received projects and retained original versus derived navigation, use
 [Reopen a scientific delivery](RECEIVED_DELIVERY_NAVIGATION.md).
 
+## Revising an original native-study delivery
+
+Use **Revise delivery choices** from the existing delivery. The form displays the
+retained study title, purpose and reference and carries the same
+`delivery_mode: native_study` and `native_study` metadata into the new selection.
+Its original native baseline, alternatives, attached analysis, saved report and
+economic edition remain connected through their existing selectors and bindings.
+
+Regional supporting sources and source-water overlays are optional for this mode.
+An existing selected source stays selected; disabling one removes only that
+optional selection. Native-study contact metadata can be left empty. The regional
+delivery form continues to require its regional source editions, water-designation
+overlays and contact fields. Both modes use the existing completed NDR and SDR
+cohort contract.
+
+The ordered retained-study selector carries each selected original report,
+figures, measurements and source files in the chosen order. Rebuilding then uses
+the maintained delivery pipeline described above to produce the current scientific
+and client companions, final atlas and editable Workspace snapshot together.
+
 ## Open, print and reopen
 
 report.pdf uses the existing ReportLab dependency, repeating table headers and
