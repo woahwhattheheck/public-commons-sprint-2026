@@ -185,7 +185,7 @@ export function renderScopeComparison(value,{analyses=[],runTitle=id=>id.slice(0
       '<th scope="col">'+(run?'Paired':'Valid')+' / selected cells</th><th scope="col">Original record</th></tr></thead><tbody>'+cells+'</tbody></table></div>'+
       '<p class="water-note">'+esc(row.relationship_precision)+(row.accounting_role?' · '+esc(row.accounting_role):'')+'</p></article>';
   }).join('');
-  return '<section data-water-scope-comparison data-reporting="'+esc(value.reporting.id)+'" data-domain="'+esc(value.model_domain.id)+'">'+
+  return '<section data-water-scope-comparison data-reporting="'+esc(value.reporting.id)+'" data-domain="'+esc(value.model_domain.id)+'" data-page="'+page+'">'+
     '<header class="water-section-heading"><div><p class="eyebrow">SAME MODEL COHORT · TWO QUANTITY SUPPORTS</p><h2>Compare reporting and model-domain exports</h2><p>'+esc(value.reporting.title)+'</p></div></header>'+
     '<p>Annual land export reaching streams within each selected receiving area. Both analyses use the same original source plan, grid and saved model artifacts.</p>'+
     (value.method_differences.length?'<p class="water-error" role="status">The saved analysis methods differ ('+esc(value.method_differences.join(', '))+'). These are two retained results; differences cannot be attributed to quantity support alone.</p>':'')+

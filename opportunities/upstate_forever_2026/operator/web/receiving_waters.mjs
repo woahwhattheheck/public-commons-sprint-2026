@@ -1100,7 +1100,7 @@ export function attachReceivingWaters(context){
       const target=host?.querySelector('#water-selected');if(!target?.querySelector('[data-water-scope-comparison]'))throw Error('Open the current quantity-support comparison.');
       return openScopeComparison(value('scope_compare_reporting',target),value('scope_compare_model_domain',target));
     }
-    if(action==='water-scope-page'){scopeComparisonRecord();const direction=Number(button.dataset.direction);if(![-1,1].includes(direction))throw Error('Choose a comparison page.');display.scopePage=Math.max(0,(display.scopePage||0)+direction);updateScopeComparison();return;}
+    if(action==='water-scope-page'){scopeComparisonRecord();const direction=Number(button.dataset.direction);if(![-1,1].includes(direction))throw Error('Choose a comparison page.');const page=Number(host?.querySelector('[data-water-scope-comparison]')?.dataset.page)||0;display.scopePage=Math.max(0,page+direction);updateScopeComparison();return;}
     if(action==='water-scope-json')return scopeComparisonDownload('json');
     if(action==='water-scope-csv')return scopeComparisonDownload('csv');
     if(action==='water-compare-apply'){

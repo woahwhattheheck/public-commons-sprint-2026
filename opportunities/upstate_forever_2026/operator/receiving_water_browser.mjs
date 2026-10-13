@@ -59,7 +59,7 @@ if (selection.editable_selection) applicationNames.push(
   'model/receiving_water_accounting.py', 'model/spatial_esri.py', 'source/capture_upstream_network.py');
 if (selection.scope_analysis_id) applicationNames.push('operator/web/receiving_water_scope_compare.mjs',
   'operator/web/receiving_waters.css','operator/web/receiving_waters_extension.mjs','operator/extensions/receiving-waters.json');
-const applicationFiles = await Promise.all(applicationNames.map(async name =>
+const applicationFiles = await Promise.all([...new Set(applicationNames)].map(async name =>
   ({name, ...await fileRecord(path.join(applicationRoot, name))})));
 const applicationIdentity = caseHash(applicationFiles.map(({name, bytes, sha256}) => ({name, bytes, sha256})));
 const identity = caseHash({selection, application_identity: applicationIdentity});
