@@ -326,8 +326,13 @@ def prepare(workspace, plan_id, revision, selection, *, expected_id):
         # Retain the complete existing offline editor from the exact reviewed installed sources.
         from build_implementation_offline import build
         built_path = directory / "field-workbench.html"
-        built = build(APPLICATION, built_path)
-        atomic_json(directory / "offline-build.json", {name: built[name] for name in ("schema", "bytes", "sha256", "inputs")}, immutable=True)
+        built = build(APPLICATION, built_path, field_packet={
+            "schema": "upstate.offline-field-packet/v1",
+            "workspace_id": workspace.project["id"], "deployment_id": context["id"],
+            "plan": context["original_plan"], "visit_ids": context["selection"]["visit_ids"],
+        }, field_files=context["attachment_files"])
+        atomic_json(directory / "offline-build.json", {name: built[name] for name in
+                    ("schema", "bytes", "sha256", "inputs", "field_packet")}, immutable=True)
         for name, descriptor in context["identity"]["offline_application_sources"].items():
             verify_file(APPLICATION, descriptor)
         for path, descriptor in context["attachment_files"]:
