@@ -132,7 +132,7 @@ export function attachNorthCarolinaGeography(bank,relations,domainHucs) {
   }
   const units=bank.assessment_units.map(u=>({...u,geometry_huc12s:[...byUnit.get(u.native_reach_id)].sort(),intersects_model_domain:byUnit.get(u.native_reach_id).size>0}));
   const inDomain=new Set(units.filter(u=>u.intersects_model_domain).map(u=>u.native_reach_id));
-  return {...bank,assessment_units:units,geometry_relations:relations,summary:{...bank.summary,domain_huc_count:allowed.size,intersecting_assessment_unit_count:inDomain.size,intersecting_parameter_record_count:bank.parameter_records.filter(r=>inDomain.has(r.native_reach_id)).length,intersected_huc12_count:new Set(units.flatMap(u=>u.geometry_huc12s)).size},geography_basis:'Original assessment reach and lake geometries intersect original model HUC polygons with positive length or area; boundary-only contacts remain explicit relations.'};
+  return {...bank,assessment_units:units,geometry_relations:relations,summary:{...bank.summary,domain_huc_count:allowed.size,intersecting_assessment_unit_count:inDomain.size,intersecting_parameter_record_count:bank.parameter_records.filter(r=>inDomain.has(r.native_reach_id)).length,intersected_huc12_count:new Set(units.flatMap(u=>u.geometry_huc12s)).size},geography_basis:'Original assessment stream and polygon geometries intersect original model HUC polygons with positive length or area; boundary-only contacts remain explicit relations.'};
 }
 export function northCarolinaReportSection(bank) {
   const s=bank.summary, byUnit=new Map(bank.assessment_units.map(u=>[u.native_reach_id,u]));
@@ -150,7 +150,7 @@ export function northCarolinaReportSection(bank) {
     {kind:'table',columns:['Assessment unit','Waterbody','Parameter','Category','Criteria status','Collection year'],rows:bank.parameter_records.map(r=>{const u=byUnit.get(r.native_reach_id);return [u.native_unit_number,u.names.join('; '),r.parameter_raw??'',r.category_raw??'',r.criteria_status_raw??'',r.collection_year_raw??''].map(String);}),widths:[1.1,2.1,2.2,.7,1.5,1]},
     'Original NCDEQ methodology: '+METHOD.url
   ];
-  if(s.intersecting_assessment_unit_count!==undefined) blocks.splice(3,0,'Exact original reach/lake intersections place '+s.intersecting_assessment_unit_count+' assessment units and '+s.intersecting_parameter_record_count+' parameter records in '+s.intersected_huc12_count+' of the '+s.domain_huc_count+' model watersheds. Boundary-only contacts are retained separately.');
+  if(s.intersecting_assessment_unit_count!==undefined) blocks.splice(3,0,'Exact original stream/polygon intersections place '+s.intersecting_assessment_unit_count+' assessment units and '+s.intersecting_parameter_record_count+' parameter records in '+s.intersected_huc12_count+' of the '+s.domain_huc_count+' model watersheds. Boundary-only contacts are retained separately.');
   return ['North Carolina waterbody assessments',blocks];
 }
 export function createNorthCarolinaDelivery(bank,files,config,identify) {
