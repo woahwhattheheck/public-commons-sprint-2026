@@ -1,20 +1,20 @@
 {
   "schema": "upstate.measurements-source-upgrade/v1",
-  "source_commit": "b180f02dfed49aff4dee68b5c6894f57530ce1cc",
+  "source_commit": "05fe5871aea9c5cb07e3c29a8298bacd30bf0dd0",
   "source_root": "opportunities/upstate_forever_2026",
   "operation_id": "ECO13-MEASUREMENTS-COMPLETE-DD6B-20261013",
   "installer": "operator/install_measurements.py",
   "inventory": "integration/measurements/INSTALLATION.json",
   "source_files": 57,
   "installed_files": 55,
-  "source_bytes": 698060,
+  "source_bytes": 698494,
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 280691,
-      "sha256": "0d41d97e14b935e4ce3650b2d23aebf8d49c247919c3da439d96f48249f15376",
+      "bytes": 281271,
+      "sha256": "399907a3164b29330cb4dc6845167f63c3b2e84e6d002b3133a00604e106ad0d",
       "members": 22,
-      "source_bytes": 206971
+      "source_bytes": 207405
     },
     {
       "path": "source-02.json",
@@ -78,7 +78,7 @@
     {
       "path": "integration/measurements/INSTALLATION.json",
       "bytes": 20351,
-      "sha256": "410636c785b328e44b64053da24c4875f555863bc4f4046b68bfb5c84bb7d52e",
+      "sha256": "5d310c984e18b3bdbaf3689dc3e3b9455450326ffded123db473ef12e32fb7ac",
       "role": "installed_component"
     },
     {
@@ -102,7 +102,7 @@
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
       "bytes": 7710,
-      "sha256": "7a82815c48f5bde8c0120cce19c7db9221fa0e88145826106b3787487bc26356",
+      "sha256": "9f34e3a87fb8b77a76d66a0c5e8a944e4bb65c68fe46013b4c72928d4658a61d",
       "role": "installed_component"
     },
     {
@@ -137,8 +137,8 @@
     },
     {
       "path": "measurement_workspace/engine/cli.mjs",
-      "bytes": 7455,
-      "sha256": "14b5500ba2f08a45560581e81b1d8c17340b93b48541ba79c6702911bc806d59",
+      "bytes": 7889,
+      "sha256": "d2e5127f5d0df6a703c7d56047240304e872ee2e00825daea8ec7d9bc38a84a3",
       "role": "installed_component"
     },
     {

@@ -14,9 +14,9 @@ Tim remains the scientific lead and retains scientific direction, review and the
 
 This complete successor includes the original Measurements1.2 incremental intake, original source chunks/rejections, disk-backed complete population export, independent editable receiving and browser pane. The original1.2 standalone Chemistry compiler remains byte-preserved under `measurement_workspace/legacy_chemistry.py`; the active native compound/interval binding remains current. Streamed source hydration now takes place inside the original atomic snapshot transaction, so reviewed record/source editions and original collection exports remain identical.
 
-The frozen source parts contain 57 complete UTF-8 members / 698,060 source bytes. They include the original 23-file core, the complete current binding and interface, the original stoichiometry helper used for exact source intervals and derived nitrogen, the atomic snapshot guide, and the scoped installation inventory and writer. The package initializer is carried as a reference to the preserved base; the installer does not replace it.
+The frozen source parts contain 57 complete UTF-8 members / 698,494 source bytes. They include the original 23-file core, the complete current binding and interface, the original stoichiometry helper used for exact source intervals and derived nitrogen, the atomic snapshot guide, and the scoped installation inventory and writer. The package initializer is carried as a reference to the preserved base; the installer does not replace it.
 
-The source pin is `b180f02dfed49aff4dee68b5c6894f57530ce1cc`. Every member and source part has its exact byte count and SHA in `manifest.json`. The separate bootstrap holds the complete unchanged original application assembler, its matching component reader and the required component-fragment helper. The stager checks all three byte identities, loads the fragment helper before the component reader and assembler, and uses their original source-bank reader and file publisher. It works independently of the base application's assembler edition. The complete current AGENTS instruction is also verified and retained at the stage root.
+The source pin is `05fe5871aea9c5cb07e3c29a8298bacd30bf0dd0`. Every member and source part has its exact byte count and SHA in `manifest.json`. The separate bootstrap holds the complete unchanged original application assembler, its matching component reader and the required component-fragment helper. The stager checks all three byte identities, loads the fragment helper before the component reader and assembler, and uses their original source-bank reader and file publisher. It works independently of the base application's assembler edition. The complete current AGENTS instruction is also verified and retained at the stage root.
 
 Use the existing full Upper Savannah application with its installed extension registry, native Workspace APIs, Published Studies and maintained Chemistry 0.3 compound/interval component. If the receiving application predates Chemistry 0.3, install the complete `deliverables/eco13-chemistry-compound-upgrade-20261013` release first using its original guarded installer. The measurement package preserves that engine and its current reporting consumers.
 
@@ -83,7 +83,16 @@ The existing Ecosystem sprint cutoff is **October 13, 2026, 14:00 UTC** (10:00 a
 
 ## Continue original streamed sources
 
-After installing this complete edition, use the existing Large files and complete handovers pane or original `node measurement_workspace/engine/cli.mjs large-prepare / large-commit / large-export / large-receive` commands documented in `MEASUREMENT_LARGE_FILES.md`. Their input is the actual retained original CSV or editable archive, and their `--workspace` path is the native Measurements directory. Preserve the original source/parser/record identities and existing selected 533-row receiving operation. Use separate owned copies at an ordinary operation boundary.
+After installing this complete edition, use the existing Large files and complete handovers pane or the original commands documented in `MEASUREMENT_LARGE_FILES.md`:
+
+```sh
+node "$APP/measurement_workspace/engine/cli.mjs" large-prepare --workspace "$MEASUREMENTS" --file "$ORIGINAL_CSV" --kind wqp --label "Retained source"
+node "$APP/measurement_workspace/engine/cli.mjs" large-commit --workspace "$MEASUREMENTS" --intake "$INTAKE_ID" --expected-revision "$REVIEWED_REVISION"
+node "$APP/measurement_workspace/engine/cli.mjs" large-export --workspace "$MEASUREMENTS" --output "$EDITION_DIRECTORY"
+node "$APP/measurement_workspace/engine/cli.mjs" large-receive --workspace "$EMPTY_MEASUREMENTS" --file "$EDITION_DIRECTORY/project.zip"
+```
+
+Use the actual returned intake ID and reviewed revision; the receive target is an independently owned empty Measurements directory. Their input is the actual retained original CSV or editable archive, and their `--workspace` path is the native Measurements directory. Preserve the original source/parser/record identities and existing selected 533-row receiving operation. Use separate owned copies at an ordinary operation boundary.
 
 For a streamed source already committed in the active Measurements directory, the original authenticated `GET snapshot` now includes the exact source content and rejected rows inside the same native read transaction as the records, revision and portable tables. The original collection publication must match that reviewed portable document and native domain before the existing Chemistry binding captures the complete companion ZIP. The snapshot is still a complete original document; the large-file APIs remain the efficient route for streaming large population transfers.
 
