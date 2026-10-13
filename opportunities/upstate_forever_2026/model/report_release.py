@@ -62,7 +62,7 @@ def _cohort(workspace, report_id, *, packet=None):
                            if name not in scope["completed_models"]]
                 issue("native_models",
                       "Complete " + (", ".join(missing) or "the selected native stages")
-                      + " for " + case["title"] + " before building the seven-map release.", run_id)
+                      + " for " + case["title"] + " before building the selected map release.", run_id)
             if run.get("runtime", {}).get("version") != INVEST_VERSION:
                 issue("native_version",
                       "Use the original InVEST " + INVEST_VERSION + " outputs for " + case["title"] + ".", run_id)
@@ -106,6 +106,10 @@ def _cohort(workspace, report_id, *, packet=None):
         "scenario_run_ids": list(ids[1:]),
         "title": report["title"],
     }
+    context = scenario_decisions.delivery_context(selected)
+    if context:
+        binding["delivery_context"] = context
+        selection.update(context)
     return packet, binding, selection, cases, problems
 
 
