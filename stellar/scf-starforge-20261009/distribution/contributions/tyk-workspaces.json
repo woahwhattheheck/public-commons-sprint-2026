@@ -15,10 +15,12 @@
     "./seller/tyk/workspace/actions": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/actions.mjs",
     "./seller/tyk/workspace/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/http-client.mjs",
     "./seller/tyk/workspace/delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/delivery.mjs",
-    "./merchant/tyk/review": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/review.mjs"
+    "./merchant/tyk/review": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/review.mjs",
+    "./seller/tyk/workspace/commissioning": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/commissioning.mjs"
   },
   "supportFiles": [
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/README.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/README.md",
+    "products/tyk-merchant/OPERATING.md"
   ],
   "browserAssets": [
     {
