@@ -1,6 +1,6 @@
 """Measure prepared native soil coverage by the original Upper Savannah HUC12s.
 
-Run after source_tools.soil_sources has completed. This reads the prepared
+Run after either maintained native soil preparation has completed. This reads the prepared
 physical K raster and the same numeric land-cover source; it does not run InVEST.
 """
 from __future__ import annotations
@@ -52,19 +52,22 @@ def bound_file(path, expected_sha=None, expected_bytes=None):
 
 
 def source_context(root, plan, entry):
-    """Resolve the actual maintained source plan without rewriting its schema."""
+    """Resolve both maintained preparations and their retained original domain."""
     if plan.get("schema") == "upstate.sda-whole-soil-source/v1":
         return {**plan, "domain_reader": "native-vector"}, {}
     if plan.get("schema") != "upstate.regional-soil-preparation/v1":
         raise ValueError("Select a completed maintained native K preparation")
-    members = {item["path"]: item for item in entry["companions"]}
+    capture_root = (root / "capture").resolve(strict=True)
     inputs = {}
     for key, name in (("regional_capture", "capture/capture.json"),
                       ("regional_plan", "capture/plan.json")):
-        item = members[name]
+        members = [item for item in entry["companions"] if item["path"] == name]
+        if len(members) != 1:
+            raise ValueError("Regional K entry lacks one retained companion: " + name)
+        item = members[0]
         inputs[key] = bound_file(root / name, item["sha256"], item["bytes"])
-    capture = read_json(root / "capture/capture.json")
-    captured_plan = read_json(root / "capture/plan.json")
+    capture = read_json(capture_root / "capture.json")
+    captured_plan = read_json(capture_root / "plan.json")
     if (capture.get("schema") != "upstate.regional-soil-capture/v1"
             or capture.get("state") != "complete"
             or inputs["regional_capture"]["sha256"] != plan["capture_sha256"]
@@ -75,14 +78,50 @@ def source_context(root, plan, entry):
             or captured_plan["target_units"] != entry["units"]
             or captured_plan["vintage"] != entry["vintage"]):
         raise ValueError("Regional soil context has different physical units or vintage")
+
+    def retained(name):
+        members = [item for item in capture["files"] if item["path"] == name]
+        if len(members) != 1:
+            raise ValueError("Regional capture lacks one original binding: " + name)
+        path = (capture_root / name).resolve(strict=True)
+        if not path.is_relative_to(capture_root):
+            raise ValueError("Regional companion is outside its captured source directory")
+        item = members[0]
+        return bound_file(path, item["sha256"], item["bytes"])
+
+    inputs["regional_plan"] = retained("plan.json")
+    manifest_name = capture["domain_manifest"]
+    inputs["regional_domain_manifest"] = retained(manifest_name)
+    manifest = read_json(inputs["regional_domain_manifest"]["path"])
+    if manifest.get("schema") != "upstate.sources/v1":
+        raise ValueError("Select the regional capture's retained domain manifest")
+    source_id = captured_plan["domain"]["source_id"]
+    matches = [item for item in manifest["entries"] if item["id"] == source_id]
+    if (len(matches) != 1 or matches[0].get("kind") != "vector"
+            or matches[0]["sha256"] != captured_plan["domain"]["source_sha256"]):
+        raise ValueError("Regional soil domain differs from its original selected source")
+    domain_entry = matches[0]
+    binding_name = domain_entry["metadata"]["binding_file"]
+    bindings = [item for item in domain_entry["companions"]
+                if item["path"] == binding_name]
+    if len(bindings) != 1:
+        raise ValueError("Original regional domain lacks one feature-binding companion")
+    binding_member = bindings[0]
+    retained_name = (Path(manifest_name).parent / binding_name).as_posix()
+    inputs["regional_domain_bindings"] = retained(retained_name)
+    if (inputs["regional_domain_bindings"]["sha256"] != binding_member["sha256"]
+            or inputs["regional_domain_bindings"]["bytes"] != binding_member["bytes"]):
+        raise ValueError("Captured feature bindings differ from the selected original domain")
     return {
-        "domain_sha256": captured_plan["domain"]["source_sha256"],
+        "domain_sha256": domain_entry["sha256"],
+        "domain_source_id": source_id,
+        "domain_bindings_sha256": binding_member["sha256"],
+        "domain_bindings_bytes": binding_member["bytes"],
         "domain_layer": None, "domain_filter": None,
         "buffer_m": captured_plan["buffer_m"],
         "vintage": captured_plan["vintage"], "source": captured_plan["source"],
         "domain_reader": "regional-original-esri",
     }, inputs
-
 
 def regional_domain_rows(path, target_crs):
     """Use the same retained Esri-ring method as regional soil preparation."""
@@ -236,7 +275,8 @@ def build(soil_source, domain, bindings, reference, output, *,
         "soil_plan": bound_file(soil_source / "plan.json"),
         "soil_entry": bound_file(soil_source / "source-entry.json"),
         "domain": bound_file(domain, context["domain_sha256"]),
-        "domain_bindings": bound_file(bindings),
+        "domain_bindings": bound_file(bindings, context.get("domain_bindings_sha256"),
+                                      context.get("domain_bindings_bytes")),
         "reference": bound_file(reference, plan["reference_sha256"]),
     }
     source_coverage = read_json(soil_source / "coverage.json")
@@ -247,6 +287,8 @@ def build(soil_source, domain, bindings, reference, output, *,
     binding = read_json(bindings)
     if binding.get("schema") != "upstate.wbd-domain-bindings/v1":
         raise ValueError("Select the retained original WBD feature bindings")
+    if context.get("domain_source_id") is not None and binding["source_id"] != context["domain_source_id"]:
+        raise ValueError("Feature bindings select another original domain source")
     by_huc = {row["huc12"]: row for row in binding["features"]}
     if len(by_huc) != binding["feature_count"] or len(by_huc) != len(binding["features"]):
         raise ValueError("Original HUC12 feature bindings are not unique and complete")
