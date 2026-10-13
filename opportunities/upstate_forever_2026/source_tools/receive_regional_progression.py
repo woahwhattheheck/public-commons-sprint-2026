@@ -18,6 +18,7 @@ APP = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(APP), str(APP / "operator")]
 from model.common import atomic_bytes, atomic_json, describe_file, digest, held, now, read_json
 from model.workspace import Workspace
+from model.model_selection import run_models
 from model import source_refresh
 from source_tools import open_regional_workflow as regional
 
@@ -198,24 +199,33 @@ class Progression:
     def baseline(self, opening):
         if self.args.prepare_only:
             return None
+        workspace = self.operator.ws(self.key)
+        retained_run = None
         if self.args.run_selection:
             selected = read_json(self.frozen_input(
                 self.request["documents"]["run_selection"], "native-run-selection.json"))
         else:
-            run_id = opening.get("alternative_run_id") or opening.get("baseline_run_id")
             previous = (self.state.get("original_saved_view") or {}).get("journey", {}).get("selection", {})
-            run_id = run_id or previous.get("run_id") or previous.get("baseline_run_id")
-            selected = (self.operator.ws(self.key).inspect_run(run_id)["selection"]
-                        if run_id else previous)
+            # The original baseline remains the reference when a saved opening
+            # also carries a land-cover alternative. Never promote that
+            # alternative to baseline or substitute another profile silently.
+            run_id = opening.get("baseline_run_id") or previous.get("baseline_run_id")
+            run_id = run_id or opening.get("alternative_run_id") or previous.get("run_id")
+            retained_run = workspace.inspect_run(run_id) if run_id else None
+            selected = retained_run["selection"] if retained_run else previous
         require(isinstance(selected, dict) and selected.get("grid_id") and selected.get("scenario_id"),
                 "Choose an actual retained grid/scenario through --run-selection or the original saved view/run selection")
-        payload = {key: selected[key] for key in ("grid_id", "scenario_id")}
-        payload["profile_id"] = opening["profile_id"]
-        if selected.get("models"):
-            payload["models"] = deepcopy(selected["models"])
-        prepared = self.queued("baseline_prepare", "run.prepare", payload)
-        run_id = prepared["id"]
-        workspace = self.operator.ws(self.key)
+        if retained_run is not None:
+            # Reopening an existing run also preserves its exact legacy/native
+            # selection identity; prepare_run belongs to an explicit new selection.
+            run_id = retained_run["id"]
+        else:
+            payload = {key: selected[key] for key in ("grid_id", "scenario_id")}
+            payload["profile_id"] = selected.get("profile_id") or opening["profile_id"]
+            if selected.get("models"):
+                payload["models"] = deepcopy(selected["models"])
+            prepared = self.queued("baseline_prepare", "run.prepare", payload)
+            run_id = prepared["id"]
         if workspace.inspect_run(run_id)["state"] != "complete":
             self.queued("baseline_run", "run.start", {"run_id": run_id})
         run = workspace.inspect_run(run_id)
@@ -223,7 +233,75 @@ class Progression:
         self.record("baseline", {"run_id": run_id, "selection": run["selection"]})
         return run_id
 
+    def browser_identity(self, name, script, arguments, workspace, journal, bound):
+        """Bind a finished original browser journal to this receiving stage."""
+        require(journal.get("status") == "complete" and not journal.get("browser_errors"),
+                "Open a completed original browser journal without application errors")
+        choices = {arguments[index]: arguments[index + 1]
+                   for index in range(len(arguments) - 1)
+                   if arguments[index].startswith("--") and
+                   not arguments[index + 1].startswith("--")}
+        if script == "source/run_profile_workbench_browser.mjs":
+            require(journal.get("schema") == "upstate.profile-workbench-journey/v1"
+                    and journal.get("workspace_id") == workspace
+                    and journal.get("baseline_profile_id") == choices.get("--profile")
+                    and journal.get("title") ==
+                        "Working source alternative · Cape Fear corn C=0.25 · " + choices["--run-label"],
+                    "The completed profile browser belongs to another original selection")
+            require(journal.get("saved_profile_id") and journal.get("save_task_id"),
+                    "The completed profile browser has no retained save identity")
+            for profile_id, field in (
+                    (journal["baseline_profile_id"], "baseline_table_sha256"),
+                    (journal["saved_profile_id"], "saved_table_sha256")):
+                actual = self.operator.extensions.read(
+                    "GET", "/api/profile-workbench/inspect", workspace,
+                    {"profile_id": profile_id})
+                require(actual["table"]["sha256"] == journal.get(field),
+                        "The completed profile browser differs from its retained table")
+        elif script == "source/run_source_updates_browser.mjs":
+            require(journal.get("schema") == "upstate.source-updates-browser/v1"
+                    and journal.get("workspace_key") == workspace and journal.get("plan_id"),
+                    "The completed source browser belongs to another Workspace or plan")
+            expected = {"from_collection_id": choices["--from-collection"],
+                        "to_collection_id": choices["--to-collection"],
+                        "source_id_map": read_json(choices["--mapping"]),
+                        "title": choices["--title"]}
+            plan = source_refresh.get_plan(self.operator.ws(workspace), journal["plan_id"])
+            require(plan["selection"] == expected,
+                    "The completed source browser selected other retained source editions")
+            require(plan.get("state", {}).get("state") ==
+                    ("complete" if "--run-models" in arguments else "prepared"),
+                    "The completed source browser has unfinished original native work")
+        elif script == "source/run_saved_regional_view_browser.mjs":
+            opening = read_json(choices["--opening"])
+            require(journal.get("schema") == "upstate.regional-saved-view-browser-journey/v1"
+                    and journal.get("operator_workspace_key") == workspace
+                    and journal.get("workspace_id") == self.operator.ws(workspace).project["id"]
+                    and journal.get("opening") == opening,
+                    "The completed saved-view browser belongs to another retained opening")
+        elif script == "source/run_chemistry_browser.mjs":
+            if not bound:
+                return False
+            require(journal.get("schema") == "upstate.chemistry-browser/v1"
+                    and journal.get("workspace_key") == workspace,
+                    "The completed chemistry browser belongs to another retained request")
+        else:
+            # Optional browser integrations retain the exact invocation before
+            # dispatch; older unbound journals keep their original retry path.
+            if not bound:
+                return False
+        task_ids = {row.get("task_id") for row in journal.get("steps", [])
+                    if row.get("task_id")}
+        if journal.get("save_task_id"):
+            task_ids.add(journal["save_task_id"])
+        for task_id in task_ids:
+            task = self.operator.task(task_id)
+            require(task["workspace"] == workspace and task["state"] == "complete",
+                    "The completed browser journal has an unfinished or foreign task")
+        return True
+
     def browser(self, name, script, arguments, *, workspace=None):
+        self.current_step = name
         report_path = self.output / name / "journey.json"
         report_path.parent.mkdir(parents=True, exist_ok=True)
         key = workspace or self.key
@@ -234,7 +312,6 @@ class Progression:
         previous_intent = item(intent_path)
         require(previous_intent is None or previous_intent == intent,
                 "This browser output retains another native request: " + name)
-        atomic_json(intent_path, intent, immutable=True)
         if name in self.state["steps"]:
             saved = self.state["steps"][name]
             require(describe_file(self.output, report_path) == saved["journal"],
@@ -242,28 +319,13 @@ class Progression:
             return read_json(report_path)
         # Resume the same native queue requests recorded before a prior browser exit.
         previous = item(report_path) or {}
-        if previous.get("status") == "complete":
-            require(previous_intent == intent, "Adopt only the original browser request")
-            schemas = {
-                "profile-browser": ("upstate.profile-workbench-journey/v1", "workspace_id"),
-                "source-updates": ("upstate.source-updates-browser/v1", "workspace_key"),
-                "chemistry": ("upstate.chemistry-browser/v1", "workspace_key"),
-                "saved-view": ("upstate.regional-saved-view-browser-journey/v1", "operator_workspace_key"),
-                "received-view": ("upstate.regional-saved-view-browser-journey/v1", "operator_workspace_key"),
-            }
-            schema, workspace_field = schemas[name]
-            require(previous.get("schema") == schema and previous.get(workspace_field) == key,
-                    "The completed browser journal belongs to another native Workspace")
-            if name == "profile-browser":
-                require(previous.get("baseline_profile_id") == arguments[arguments.index("--profile") + 1],
-                        "The completed profile journal edited another baseline")
-            if name in {"saved-view", "received-view"}:
-                expected_opening = read_json(Path(arguments[arguments.index("--opening") + 1]))
-                require(previous.get("opening") == expected_opening,
-                        "The completed saved-view journal opened another regional selection")
+        if previous.get("status") == "complete" and self.browser_identity(
+                name, script, arguments, key, previous, previous_intent == intent):
+            atomic_json(intent_path, intent, immutable=True)
             self.record(name, {"adopted_completed_journal": True,
                                "journal": describe_file(self.output, report_path)})
             return previous
+        atomic_json(intent_path, intent, immutable=True)
         task_ids = {row.get("task_id") for row in previous.get("steps", []) if row.get("task_id")}
         if previous.get("save_task_id"):
             task_ids.add(previous["save_task_id"])
@@ -289,6 +351,8 @@ class Progression:
         journal = read_json(report_path)
         require(journal.get("status") == "complete",
                 name + " retained an incomplete journey: " + str(report_path))
+        require(self.browser_identity(name, script, arguments, key, journal, True),
+                "The completed browser did not retain its original selection")
         self.record(name, {**result, "journal": describe_file(self.output, report_path)})
         return journal
 
@@ -383,15 +447,54 @@ class Progression:
                       profile_table_sha256=inspected["table"]["sha256"])
         result["source_update_plan_id"] = plan["id"]
         result["working_profile_revision_id"] = self.state["steps"]["source_selection"]["saved_profile_id"]
-        for key in ("baseline_run_id", "alternative_run_id",
-                    "baseline_run_selection", "alternative_run_selection"):
+        original_fields = ("baseline_run_id", "alternative_run_id",
+                           "baseline_run_selection", "alternative_run_selection")
+        result["source_update_original_native_selection"] = {
+            key: deepcopy(opening[key]) for key in original_fields if key in opening}
+        for key in original_fields:
             result.pop(key, None)
         if not self.args.prepare_only:
             baseline = self.state["steps"]["baseline"]["run_id"]
             refreshed = state["mappings"]["runs"][baseline]
             before = self.operator.ws(self.key).inspect_run(baseline)
             after = self.operator.ws(self.key).inspect_run(refreshed)
-            if before["selection"]["grid_id"] == after["selection"]["grid_id"]:
+            original_alternative = opening.get("alternative_run_id")
+            if (opening.get("baseline_run_id") == baseline and original_alternative
+                    and original_alternative != baseline):
+                # Source updates already retain all affected runs. Keep the
+                # selected scenario comparison as a pair at its mapped source
+                # editions; its separate old/new-source comparisons remain in
+                # the original source-update plan and reports.
+                original_pair = {"baseline": baseline, "alternative": original_alternative}
+                mapped_pair = {}
+                lineage = {}
+                for role, original_id in original_pair.items():
+                    original_run = self.operator.ws(self.key).inspect_run(original_id)
+                    mapped_id = state["mappings"]["runs"].get(original_id, original_id)
+                    mapped_run = self.operator.ws(self.key).inspect_run(mapped_id)
+                    require(mapped_run["state"] == "complete",
+                            "The selected " + role + " has no complete mapped native run")
+                    expected = {}
+                    for kind in ("grids", "profiles", "scenarios"):
+                        field = kind[:-1] + "_id"
+                        original_value = original_run["selection"][field]
+                        expected[field] = state["mappings"][kind].get(original_value, original_value)
+                    require(all(mapped_run["selection"].get(field) == value
+                                for field, value in expected.items()) and
+                            run_models(mapped_run) == run_models(original_run),
+                            "The selected " + role + " changed its original model scope or source mapping")
+                    mapped_pair[role] = mapped_run
+                    lineage[role] = {"from_run_id": original_id, "to_run_id": mapped_id}
+                require(mapped_pair["baseline"]["selection"]["grid_id"] ==
+                        mapped_pair["alternative"]["selection"]["grid_id"],
+                        "The mapped scenario pair requires its original common grid")
+                result.update(
+                    baseline_run_id=mapped_pair["baseline"]["id"],
+                    baseline_run_selection=mapped_pair["baseline"]["selection"],
+                    alternative_run_id=mapped_pair["alternative"]["id"],
+                    alternative_run_selection=mapped_pair["alternative"]["selection"],
+                    source_update_selected_run_mappings=lineage)
+            elif before["selection"]["grid_id"] == after["selection"]["grid_id"]:
                 result.update(baseline_run_id=baseline,
                               baseline_run_selection=before["selection"],
                               alternative_run_id=refreshed,
@@ -450,21 +553,100 @@ class Progression:
         if previous:
             require(describe_file(self.output, report) == previous["journal"],
                     "The retained monitoring continuation changed")
-            return
-        selected = self.frozen_input(self.request["documents"]["monitoring_selection"],
-                                     "monitoring-selection.json")
-        result = self.command("monitoring", [
-            sys.executable, "-B", str(APP / "operator/monitoring_receiving.py"),
-            "--workspace", str(self.workspace), "--selection", str(selected),
-            "--output", str(report.parent)])
+            result = {key: value for key, value in previous.items()
+                      if key not in {"journal", "outcome"}}
+        else:
+            selected = self.frozen_input(self.request["documents"]["monitoring_selection"],
+                                         "monitoring-selection.json")
+            result = self.command("monitoring", [
+                sys.executable, "-B", str(APP / "operator/monitoring_receiving.py"),
+                "--workspace", str(self.workspace), "--selection", str(selected),
+                "--output", str(report.parent)])
         require(report.is_file(), "Open the original monitoring receiving result")
-        outcome = read_json(report)
-        if not (outcome.get("summary") or {}).get("complete"):
-            self.record("monitoring_outcome", {"journal": describe_file(self.output, report),
-                        "design_outcome": outcome.get("design_outcome")})
-            raise ValueError("Monitoring retained its original design outcome instead of a complete campaign: " +
-                             json.dumps(outcome.get("design_outcome", {})))
-        self.record("monitoring", {**result, "journal": describe_file(self.output, report)})
+        retained = read_json(report)
+        if (retained.get("summary") or {}).get("complete") is True:
+            require(retained.get("campaign_id") and retained.get("received")
+                    and retained.get("independent_revision"),
+                    "The monitoring campaign has no complete independent receiving record")
+            outcome = {"kind": "campaign_received", "campaign_created": True,
+                       "network_id": retained["network_id"], "plan_id": retained["plan_id"],
+                       "campaign_id": retained["campaign_id"],
+                       "independent_revision": retained["independent_revision"]}
+        else:
+            design = retained.get("design_outcome")
+            require(isinstance(design, dict) and design.get("status")
+                    and design["status"] not in {"optimal", "feasible"},
+                    "The monitoring result has neither a received campaign nor its original design diagnostic")
+            outcome = {"kind": "design_diagnostic", "design_status": design["status"],
+                       "network_id": retained["network_id"], "plan_id": retained["plan_id"],
+                       "campaign_created": False}
+        if not previous or previous.get("outcome") != outcome:
+            self.record("monitoring", {**result, "journal": describe_file(self.output, report),
+                                      "outcome": outcome})
+        return outcome
+
+    def completed_transfer(self, opening, saved_view, plan):
+        """Reopen a finished receiving task without staging its archive again."""
+        output = self.output / "complete-transfer"
+        outcome = item(output / "received-project.json")
+        if outcome is None:
+            return None
+        original = self.operator.ws(self.key)
+        intent = {"schema": "upstate.regional-opening-transfer/v1",
+                  "workspace_id": original.project["id"],
+                  "opening": {name: value for name, value in opening.items()
+                              if name not in {"operator_workspace_key", "workspace"}},
+                  "saved_view_revision": saved_view["revision"]}
+        require(item(output / "selection.json") == intent,
+                "The retained complete transfer belongs to another opening")
+        require(outcome.get("schema") == "upstate.regional-opening-received/v1"
+                and outcome.get("opening") == opening
+                and outcome.get("saved_view_revision") == saved_view["revision"],
+                "The completed receiving receipt differs from this original saved view")
+        operation = "regional_transfer_" + digest({
+            "destination": str(output.resolve()), "selection": intent})
+        backup = self.operator.task(outcome["backup_task_id"])
+        restored = self.operator.task(outcome["receive_task_id"])
+        for task, action, suffix in ((backup, "workspace.backup", "_backup"),
+                                     (restored, "workspace.restore", "_receive")):
+            require(task["workspace"] == self.key and task["action"] == action
+                    and task["operation_id"] == operation + suffix
+                    and task["state"] == "complete",
+                    "The original archive/receiving task is not this completed transfer")
+        archive = outcome["archive"]
+        require(backup["payload"] == {"include_intermediates": True}
+                and {key: backup["result"][key] for key in ("bytes", "sha256")} == archive,
+                "The retained receiving archive differs from its complete backup")
+        result = outcome["receiving"]
+        require(restored["result"] == result and result.get("identity") == "MATCH"
+                and result.get("archive_sha256") == archive["sha256"]
+                and result.get("workspace_key") != self.key,
+                "The completed restore task identifies another receiving project")
+        received = self.operator.ws(result["workspace_key"])
+        require(received.project == original.project and received.root != original.root,
+                "Open the original independent receiving project")
+        require(read_json(received.root / "regional-workflow-opening.json") == opening,
+                "The receiving project's retained opening changed")
+        inspected = self.operator.extensions.read(
+            "GET", "/api/watershed-context/export", result["workspace_key"],
+            {"export_id": opening["watershed_export_id"]})
+        require(inspected["report_id"] == opening["watershed_report_id"]
+                and inspected["report_sha256"] == opening["watershed_report_sha256"]
+                and sorted(inspected["huc12s"]) == opening["selected_huc12s"],
+                "The receiving project selected different original watersheds")
+        profile = self.operator.extensions.read(
+            "GET", "/api/profile-workbench/inspect", result["workspace_key"],
+            {"profile_id": opening["profile_id"]})
+        require(profile["profile_id"] == opening["profile_id"]
+                and profile["table"]["sha256"] == opening["profile_table_sha256"],
+                "The receiving project's retained scientific profile changed")
+        reopened_view = self.operator.operator_session(result["workspace_key"])
+        require(reopened_view is not None and reopened_view.get("journey") == saved_view["journey"],
+                "The receiving project's saved scientific view or notes changed")
+        reopened = source_refresh.get_plan(received, plan["id"])
+        require(reopened["selection"] == plan["selection"] and reopened["state"] == plan["state"],
+                "The received source plan or native execution state differs")
+        return result
 
     def run(self):
         if self.state.get("status") == "complete":
@@ -478,7 +660,7 @@ class Progression:
         plan = self.refresh(selection)
         refreshed = self.updated_opening(opening, plan)
         self.chemistry()
-        self.monitoring()
+        monitoring_outcome = self.monitoring()
         self.browser("saved-view", "source/run_saved_regional_view_browser.mjs",
             ["--opening", str(self.output / "refreshed-opening.json"), "--skip-transfer",
              "--task-timeout-seconds", str(self.args.timeout)])
@@ -496,9 +678,11 @@ class Progression:
                         "The native saved view changed during this retained transfer; inspect its original task before continuing")
             else:
                 atomic_json(view_path, saved_view, immutable=True)
-            receiving = regional.transfer(self.operator, self.key, refreshed,
-                                          self.output / "complete-transfer",
-                                          self.args.timeout, saved_view)
+            receiving = self.completed_transfer(refreshed, saved_view, plan)
+            if receiving is None:
+                receiving = regional.transfer(self.operator, self.key, refreshed,
+                                              self.output / "complete-transfer",
+                                              self.args.timeout, saved_view)
             self.record("complete_transfer", receiving)
         received = self.operator.ws(receiving["workspace_key"])
         reopened = source_refresh.get_plan(received, plan["id"])
@@ -512,6 +696,8 @@ class Progression:
                   "journal": str(self.path), "workspace_key": self.key,
                   "source_update_plan_id": plan["id"],
                   "receiving_workspace_key": receiving["workspace_key"]}
+        if monitoring_outcome is not None:
+            result["monitoring_outcome"] = monitoring_outcome
         self.state["status"] = "complete"
         self.state["result"] = result
         self.state.pop("error", None)
