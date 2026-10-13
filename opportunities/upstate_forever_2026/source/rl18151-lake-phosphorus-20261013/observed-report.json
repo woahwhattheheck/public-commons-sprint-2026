@@ -4,6 +4,26 @@
   "station_id": "21SC60WQ_WQX-RL-18151",
   "inputs": [
     {
+      "path": "README.md",
+      "bytes": 9886,
+      "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
+    },
+    {
+      "path": "RL_NATIVE_RECEIVING.md",
+      "bytes": 5488,
+      "sha256": "7d0862fcf9e16ad725dfa12f2c3e6b32531eb4e3bed82b482a0f597b3d4acb16"
+    },
+    {
+      "path": "SAMPLING_SUPPORT.md",
+      "bytes": 7388,
+      "sha256": "ff51f08c1a217fad972b62ca79ed2bc65cb056c70cf7138cf113d93a95824d72"
+    },
+    {
+      "path": "SOURCE_CAPTURE.md",
+      "bytes": 3129,
+      "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
+    },
+    {
       "path": "acquisition-plan.json",
       "bytes": 9199,
       "sha256": "472cd98e720add432fd750ec69ab93c8540395bb527cd5abf5a30826fa36e3c4"
@@ -14,19 +34,24 @@
       "sha256": "abdc4ae6b4c3928c05831264e076f7be0cd25d8b2d5c324164d4b569b3526042"
     },
     {
+      "path": "build-sampling-support.mjs",
+      "bytes": 10853,
+      "sha256": "9ba124f7805b9db10372b153d20031b15890fa5b7780b810c98507843c72ce6d"
+    },
+    {
       "path": "build-study.mjs",
       "bytes": 9606,
       "sha256": "1125e1f04f7c4b9d8a91548fb31c86d56e4f41c9c902b326153e80542f396f81"
     },
     {
-      "path": "capture_rl18151.py",
-      "bytes": 18835,
-      "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
-    },
-    {
       "path": "capture-manifest.json",
       "bytes": 47483,
       "sha256": "e8eedb832f5d6b117a2280282bd1ba7ddd153626e53a1a7d3faceeb19a7fb9b8"
+    },
+    {
+      "path": "capture_rl18151.py",
+      "bytes": 18835,
+      "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
     },
     {
       "path": "derived/annual-cohorts.csv",
@@ -62,6 +87,21 @@
       "path": "derived/observed-records.json",
       "bytes": 1212237,
       "sha256": "4b867f9f45dc5ced7c6e0a3bd4541c688d1ff33c59878bb7b6aecd6c33f55374"
+    },
+    {
+      "path": "derived/sampling-activity-sensitivity.csv",
+      "bytes": 220883,
+      "sha256": "e2430a10f8002bb671cb4c34dd39fc4f8c9983c32078e591c683a00a7cc2b25b"
+    },
+    {
+      "path": "derived/sampling-calendar.csv",
+      "bytes": 49405,
+      "sha256": "abff1640d9e06d1f87891b9b7c9123b66ad698c088a9dad38cabc914138ce537"
+    },
+    {
+      "path": "derived/sampling-cohorts.csv",
+      "bytes": 47520,
+      "sha256": "503de3ee520edad955d948c8b25a94d7eba69be0c8bad71ad22eb6d1932f5994"
     },
     {
       "path": "derived/station.geojson",
@@ -164,11 +204,6 @@
       "sha256": "45829fab069ef23454a949aa2469ed947ade8cbee08387a9d23f56cf51931d50"
     },
     {
-      "path": "README.md",
-      "bytes": 9886,
-      "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
-    },
-    {
       "path": "render-report.mjs",
       "bytes": 19383,
       "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
@@ -179,14 +214,24 @@
       "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
     },
     {
-      "path": "RL_NATIVE_RECEIVING.md",
-      "bytes": 5488,
-      "sha256": "7d0862fcf9e16ad725dfa12f2c3e6b32531eb4e3bed82b482a0f597b3d4acb16"
+      "path": "sampling-review.html",
+      "bytes": 1769795,
+      "sha256": "769e0212e3a83b49bd774708013dcb0aa8d95e648335209bdf87ed68d627eca7"
     },
     {
-      "path": "SOURCE_CAPTURE.md",
-      "bytes": 3129,
-      "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
+      "path": "sampling-review.json",
+      "bytes": 1758536,
+      "sha256": "640ce75767640e6793e2deb6101a81346f9cd13208fd22f5b457ede5310848eb"
+    },
+    {
+      "path": "sampling-support-view.mjs",
+      "bytes": 11135,
+      "sha256": "1d892388d948f5ac101807a56e53aaab7e75e99b7afd4354e65496b634c7ff6b"
+    },
+    {
+      "path": "sampling-support.mjs",
+      "bytes": 10219,
+      "sha256": "16c65ff05ce1c2f2d9cd586cc611da50897bbf36453ca0175d65f1a3954e1be5"
     },
     {
       "path": "supplemental-requests.json",
@@ -218,7 +263,13 @@
     "original/physical-narrow-results.csv",
     "original/microbiological-narrow-results.csv",
     "README.md",
-    "RL_NATIVE_RECEIVING.md"
+    "RL_NATIVE_RECEIVING.md",
+    "sampling-review.json",
+    "sampling-review.html",
+    "derived/sampling-cohorts.csv",
+    "derived/sampling-activity-sensitivity.csv",
+    "derived/sampling-calendar.csv",
+    "SAMPLING_SUPPORT.md"
   ],
   "sections": [
     [
@@ -438,6 +489,98 @@
             {
               "title": "Run the original station and ordered-report receiving workflow",
               "path": "RL_NATIVE_RECEIVING.md"
+            }
+          ]
+        }
+      ]
+    ],
+    [
+      "RL-18151 sampling support and activity sensitivity",
+      [
+        "498 original results remain attached to 40 original activities. The 83 exact source cohorts remain available beside 66 explicitly compatible measurement cohorts.",
+        "Separate source cohorts remain unchanged. Compatible measurement summaries require exact agreement on selected year, characteristic, fraction, quantitative unit inherited from the maintained interval, chemical basis, medium, activity type, both sampling depths and references, analytical method/context/name, result basis, time/weight/temperature/particle basis, statistical base, qualifier and status. Original unit and interval-unit provenance are retained as complete member sets within every compatible cohort. No chemical conversion, missing-depth substitution or cross-year pooling is performed.",
+        "Equal-activity means average each activity's original result intervals, then weight activities equally. Result-weighted means weight every original assay equally. Difference bounds retain each unknown censored value in both estimands. These are descriptive interval bounds, not sampling confidence intervals.",
+        "The compatible review retains 31 repeated activity/cohort groups; 31 have agreeing quantitative values. Metadata agreement is shown separately. No original identifier is collapsed.",
+        {
+          "kind": "table",
+          "columns": [
+            "Year",
+            "Depth",
+            "Results",
+            "Activities",
+            "Equal-activity phosphorus bounds",
+            "Unit / chemical basis"
+          ],
+          "rows": [
+            [
+              "2018",
+              "not supplied",
+              "12",
+              "12",
+              "[0.0264167, 0.0414167)",
+              "mg/L as P"
+            ],
+            [
+              "2024",
+              "not supplied",
+              "9",
+              "9",
+              "[0.00311111, 0.0208889)",
+              "mg/L as P"
+            ],
+            [
+              "2024",
+              "0.3 m",
+              "2",
+              "2",
+              "[0, 0.02)",
+              "mg/L as P"
+            ],
+            [
+              "2025",
+              "not supplied",
+              "11",
+              "11",
+              "[0, 0.02)",
+              "mg/L as P"
+            ],
+            [
+              "2026",
+              "not supplied",
+              "7",
+              "4",
+              "[0, 0.02)",
+              "mg/L as P"
+            ]
+          ]
+        },
+        "The retained calendar explicitly covers every programme/month through 13 October 2026. It has no returned measurements in 2019–2023. Leave-one-activity-out values describe the sensitivity of the observed campaign; no continuous trend, treatment effect, annual mass load or missing-day value is inferred. Zero lower censor bounds are mathematical bounds, not measured zeros.",
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Interactive sampling calendar, mean comparison and full sensitivity explorer",
+              "path": "sampling-review.html"
+            },
+            {
+              "title": "Complete review with original ResultIdentifiers and response row bindings",
+              "path": "sampling-review.json"
+            },
+            {
+              "title": "Both cohort modes with exact interval endpoints",
+              "path": "derived/sampling-cohorts.csv"
+            },
+            {
+              "title": "Every leave-one-activity-out selection",
+              "path": "derived/sampling-activity-sensitivity.csv"
+            },
+            {
+              "title": "Complete monitoring calendar",
+              "path": "derived/sampling-calendar.csv"
+            },
+            {
+              "title": "Sampling calculation and receiving guide",
+              "path": "SAMPLING_SUPPORT.md"
             }
           ]
         }
