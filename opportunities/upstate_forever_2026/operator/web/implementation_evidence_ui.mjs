@@ -43,6 +43,7 @@ class EvidencePanel {
   references(id){
     const result=[];for(const collection of ['tasks','visits','activities','observations','sites','monitoring_plans','candidates'])for(const row of this.w.plan[collection]||[])if(implementationSourceRefs(row).includes(id))result.push(collection.replaceAll('_',' ')+' · '+(row.label||row.title||row.sample_id||row.id));
     for(const row of this.w.plan.field12_lab_imports||[])if(implementationSourceRefs(row).includes(id))result.push('Original laboratory import · '+(row.operation_id||row.id||'retained revision'));
+    for(const row of this.w.plan.field12_site_visit_imports||[])if(implementationSourceRefs(row).includes(id))result.push('Original site / visit CSV import · '+(row.operation_id||'retained draft'));
     return result;
   }
   openCapture(collection='',id=''){

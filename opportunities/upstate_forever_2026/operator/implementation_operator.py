@@ -29,9 +29,9 @@ ACTIONS = frozenset({
     "implementation.evidence.import", "implementation.evidence.export",
     "implementation.observations.import", "implementation.lab.import", "implementation.briefing.import",
     "implementation.lab.dispatch", "implementation.lab.dispatch-report",
-    "implementation.reconciliation.apply",
+    "implementation.reconciliation.apply", "implementation.site-visit.import",
 })
-READS = frozenset({"selection-preview", "list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "briefing-catalog", "briefing-preview", "reconciliation-conflicts", "reconciliation-preview"})
+READS = frozenset({"selection-preview", "list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "briefing-catalog", "briefing-preview", "reconciliation-conflicts", "reconciliation-preview", "site-visit-inspect", "site-visit-preview"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -49,6 +49,7 @@ WRITE_ROUTES = {
     "dispatch": "implementation.lab.dispatch",
     "dispatch-report": "implementation.lab.dispatch-report",
     "reconciliation-apply": "implementation.reconciliation.apply",
+    "site-visit-import": "implementation.site-visit.import",
 }
 
 
@@ -238,6 +239,8 @@ class ImplementationOperator:
         payload = payload or {}
         if not isinstance(payload, dict):
             raise self.Fault("IMPLEMENTATION_INPUT", "Supply implementation read parameters.")
+        if operation in ("site-visit-inspect", "site-visit-preview"):
+            return self._site_visit(workspace, payload, operation=operation)
         if operation in ("reconciliation-conflicts", "reconciliation-preview"):
             return self._reconciliation(workspace, payload, operation=operation)
         if operation == "briefing-catalog":
@@ -1038,6 +1041,149 @@ class ImplementationOperator:
             evidence=descriptor, _downloads=[download],
         )
 
+    def _site_visit_result(self, workspace, value):
+        """Reconnect original site/visit source files and the applied revision."""
+        result = dict(value)
+        plan = validate_plan(result["plan"])
+        store = self.store(workspace)
+        saved = store.get(plan["id"], plan["revision"])
+        if document_digest(saved) != document_digest(plan):
+            raise ImplementationError("The original site/visit import revision changed.")
+        operation_id = result.get("operation_id")
+        if not isinstance(operation_id, str) or not re.fullmatch(r"[a-f0-9]{64}", operation_id):
+            raise ImplementationError("The site/visit import needs its original operation identity.")
+        history = [row for row in saved.get("field12_site_visit_imports", [])
+                   if isinstance(row, dict) and row.get("operation_id") == operation_id]
+        if len(history) != 1:
+            raise ImplementationError("The original site/visit import history is unavailable.")
+        source_ids = [*history[0].get("source_link_ids", []), history[0].get("audit_source_link_id")]
+        sources = {row["id"]: row for row in saved["source_links"]}
+        attachment_bank = store._directory(saved["id"]) / "attachments"
+        operation_bank = store.root / "implementation" / "site-visit-imports" / operation_id
+        downloads = [self._snapshot_download(workspace, saved)]
+        ticketed = set()
+        for source_id in source_ids:
+            if not isinstance(source_id, str) or source_id not in sources:
+                raise ImplementationError("An original site/visit source link is missing.")
+            source = sources[source_id]
+            relative = Path(source.get("reference", ""))
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ImplementationError("The original intake source must remain workspace-relative.")
+            path = store.root / relative
+            if (source.get("kind") != "local_file" or path.resolve() != path.absolute()
+                    or path.parent != attachment_bank):
+                raise ImplementationError("The original intake file leaves its plan attachment bank.")
+            if str(path) not in ticketed:
+                downloads.append(self._ticket(workspace, path, source.get("label") or path.name, source))
+                ticketed.add(str(path))
+        allowed = {"identity.json", "preview.json", "row-decisions.json", "import.json"}
+        for item in result.get("files", []):
+            if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+                raise ImplementationError("The retained site/visit audit descriptor is invalid.")
+            relative = Path(item["path"])
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ImplementationError("The intake audit must remain workspace-relative.")
+            path = store.root / relative
+            if path.resolve() != path.absolute():
+                raise ImplementationError("The intake audit must not traverse a symlink.")
+            if path.parent == operation_bank and path.name in allowed:
+                pass
+            elif path.parent == attachment_bank and str(path) in ticketed:
+                continue
+            else:
+                raise ImplementationError("The intake audit leaves its original operation.")
+            if str(path) not in ticketed:
+                downloads.append(self._ticket(workspace, path, item.get("name") or path.name, item))
+                ticketed.add(str(path))
+        receipt = operation_bank / "import.json"
+        if (result.get("receipt_path") != receipt.relative_to(store.root).as_posix()
+                or receipt.resolve() != receipt.absolute()):
+            raise ImplementationError("The original intake receipt leaves its operation.")
+        if str(receipt) not in ticketed:
+            with receipt.open("rb") as handle:
+                retained = load_json(handle.read(MAX_JSON_BYTES + 1))
+            keys = ("schema", "edition", "operation_id", "plan_id", "base_revision",
+                    "applied_revision", "applied_document_digest", "source_link_ids",
+                    "audit_source_link_id", "sources", "summary", "files", "receipt_path")
+            if not isinstance(retained, dict) or any(
+                    not _same_json(retained.get(key), result.get(key)) for key in keys):
+                raise ImplementationError("The original intake receipt differs from its completed operation.")
+            downloads.append(self._ticket(workspace, receipt, "Site/visit import receipt"))
+        current = store.get(saved["id"])
+        result.update(
+            workspace_key=workspace, id=saved["id"], plan_id=saved["id"],
+            revision=saved["revision"], applied_revision=saved["revision"],
+            current_revision=current["revision"], current_sha256=document_digest(current),
+            _downloads=downloads,
+        )
+        return result
+
+    def _site_visit(self, workspace, value, *, operation, actor=""):
+        from model.implementation_site_visit_intake import (
+            inspect_site_visit_csv, preview_site_visit_intake, import_site_visit_intake,
+        )
+        if not isinstance(value, dict):
+            raise ImplementationError("Supply the original site/visit CSV selection.")
+        if any(key in value for key in ("path", "csv_path", "document", "source_document")):
+            raise ImplementationError("Use original upload tickets and a saved native plan revision.")
+        ws = self.operator.ws(workspace)
+        if operation == "site-visit-inspect":
+            kind = value.get("kind")
+            if kind not in ("sites", "visits"):
+                raise ImplementationError("Choose sites or visits for this original CSV.")
+            upload_id = value.get("upload_id")
+            if not isinstance(upload_id, str) or not upload_id:
+                raise ImplementationError("Upload the original sites or visits CSV.")
+            upload = self.operator.upload(upload_id)
+            result = inspect_site_visit_csv(
+                Path(upload["path"]), filename=upload["filename"],
+                delimiter=value.get("delimiter", ","),
+                encoding=value.get("encoding", "utf-8-sig"),
+            )
+            return dict(result, workspace_key=workspace, kind=kind, upload_id=upload_id)
+        plan_id = self._id(value.get("id", value.get("plan_id")))
+        revision = self._integer(value.get("revision"), "revision")
+        document = self.store(workspace).get(plan_id, revision)
+        digest = document_digest(document)
+        if value.get("document_digest") != digest:
+            raise self.Fault("IMPLEMENTATION_SITE_VISIT_BINDING",
+                             "Review the exact saved revision before importing sites or visits.", 409)
+        selected = value.get("inputs")
+        if not isinstance(selected, list) or not 1 <= len(selected) <= 2:
+            raise ImplementationError("Select one sites CSV, one visits CSV, or both in the same batch.")
+        inputs, kinds = [], set()
+        for item in selected:
+            if (not isinstance(item, dict) or set(item) - {"kind", "upload_id", "mapping"}
+                    or item.get("kind") not in ("sites", "visits")):
+                raise ImplementationError("Each input needs its original sites/visits kind, upload and mapping.")
+            kind = item["kind"]
+            if kind in kinds:
+                raise ImplementationError("Each batch can include one original CSV per table.")
+            kinds.add(kind)
+            upload_id, mapping = item.get("upload_id"), item.get("mapping")
+            if not isinstance(upload_id, str) or not upload_id or not isinstance(mapping, dict):
+                raise ImplementationError("Upload each original CSV and choose its columns explicitly.")
+            upload = self.operator.upload(upload_id)
+            inputs.append({"kind": kind, "path": Path(upload["path"]),
+                           "filename": upload["filename"], "mapping": mapping})
+        if operation == "site-visit-preview":
+            result = preview_site_visit_intake(ws, document, inputs)
+            return dict(result, workspace_key=workspace, plan_id=plan_id, revision=revision,
+                        document_digest=digest)
+        if operation != "site-visit-import":
+            raise ImplementationError("Choose an original site/visit intake operation.")
+        operation_id = value.get("expected_operation_id")
+        if not isinstance(operation_id, str) or not re.fullmatch(r"[a-f0-9]{64}", operation_id):
+            raise ImplementationError("Preview the original CSV batch before importing it.")
+        result = import_site_visit_intake(
+            ws, document, inputs, expected_operation_id=operation_id, actor=actor)
+        if (not isinstance(result, dict)
+                or result.get("schema") != "upstate.implementation-site-visit-import/v1"
+                or result.get("operation_id") != operation_id
+                or result.get("plan", {}).get("id") != plan_id):
+            raise ImplementationError("The site/visit import differs from its reviewed original batch.")
+        return self._site_visit_result(workspace, result)
+
     def _reconciliation_result(self, workspace, value):
         """Expose only verified retained files under the original plan bank."""
         result = dict(value)
@@ -1120,7 +1266,7 @@ class ImplementationOperator:
         if (action not in ("implementation.plan.report", "implementation.evidence.export", "implementation.observations.import",
                            "implementation.lab.import", "implementation.lab.dispatch",
                            "implementation.lab.dispatch-report", "implementation.briefing.import",
-                           "implementation.reconciliation.apply")
+                           "implementation.reconciliation.apply", "implementation.site-visit.import")
                 and (not task.get("attempts") or len(task["attempts"]) > 1)):
             replay = self._replay(store, plan_id, actor)
             if replay is not None:
@@ -1128,6 +1274,8 @@ class ImplementationOperator:
                     workspace, replay, status="reused", reused_completed_output=True,
                 )
         try:
+            if action == "implementation.site-visit.import":
+                return self._site_visit(workspace, value, operation="site-visit-import", actor=actor)
             if action == "implementation.reconciliation.apply":
                 return self._reconciliation(workspace, value, operation="reconciliation-apply", actor=actor)
             if action == "implementation.plan.create":
@@ -1187,7 +1335,11 @@ class ImplementationOperator:
         workspace = task["workspace"]
         if task.get("state") == "complete":
             result = task.get("result", {})
-            if task["action"] == "implementation.reconciliation.apply":
+            if task["action"] == "implementation.site-visit.import":
+                refreshed = self._site_visit_result(workspace, result)
+                task["result"] = refreshed
+                task["_downloads"] = refreshed["_downloads"]
+            elif task["action"] == "implementation.reconciliation.apply":
                 refreshed = self._reconciliation_result(workspace, result)
                 task["result"] = refreshed
                 task["_downloads"] = refreshed["_downloads"]

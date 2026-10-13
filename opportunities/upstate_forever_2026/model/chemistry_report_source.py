@@ -13,7 +13,8 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      file_digest, held, identifier, read_json, verify_file)
 from . import chemistry_reports as reports
 from . import observed_context
-from .reach_chemistry.reporting import PARAMETER_UNITS, _parameters, _species, _text
+from .reach_chemistry.reporting import (PARAMETER_UNITS, OBSERVATION_FIELDS, _parameters,
+                                      _species, _text, _observation_groups)
 from .scientific_figures import _validate_figure
 
 VERSION = 1
@@ -108,62 +109,71 @@ def _figures(project, result):
                                        "concentration range. Lines join retained output times for reading; "
                                        "they do not add calculated states between samples.",
                             "panels": panels})
-        exact = [row for row in result.get("observations", [])
-                 if row["species"] == sid and row.get("qualifier", "equal") == "equal"]
-        if exact:
-            axis = _axis("Original reference", "mg " + species["basis"] + "/L",
-                         [row[key] for row in exact for key in ("observed_mg_l", "predicted_mg_l")])
-            lo, hi = axis["domain"]
-            series = [{"geometry": "line", "label": "Equality", "markers": False,
-                       "points": [{"x": lo, "y": lo}, {"x": hi, "y": hi}]}]
-            for role, marker, label in (("fit", "circle", "Fit"), ("holdout", "square-open", "Held out")):
-                points = [{"x": row["observed_mg_l"], "y": row["predicted_mg_l"],
-                           "record_id": row["id"], "reach": row["reach"], "day": row["day"], "role": role}
-                          for row in exact if row.get("role", "fit") == role]
-                if points:
-                    series.append({"geometry": "scatter", "marker": marker, "label": label, "points": points})
-            figures.append({"id": _figure_id("fit", sid),
-                            "title": "Original reference and fitted prediction: " + sid,
-                            "caption": "One point per original exact-valued reference record; identical axis "
-                                       "ranges retain mg of " + species["basis"] + "/L. Filled circles were "
-                                       "used in fitting; open squares were held out. The full original "
-                                       "provenance determines empirical independence. Below-limit records "
-                                       "remain in the original table and are not plotted as exact values.",
-                            "panels": [{"id": sid, "title": sid, "x": axis,
-                                        "y": {**axis, "label": "Retained fitted prediction"}, "series": series}]})
-        quantiles = [{**item["observation"], **{key: value for key, value in item.items() if key != "observation"}}
-                     for item in result.get("summaries", []) if item["observation"]["species"] == sid]
-        if quantiles:
-            for row in quantiles:
-                bounds = [_finite(row[key]) for key in ("p05_mg_l", "median_mg_l", "p95_mg_l")]
-                if bounds != sorted(bounds):
-                    raise ValueError("Original Chemistry uncertainty quantiles are not ordered")
-            x = _axis("Target model day", "day", [row["day"] for row in quantiles])
-            y = _axis("Parameter-prior concentration", "mg " + species["basis"] + "/L",
-                      [row[key] for row in quantiles for key in ("p05_mg_l", "median_mg_l", "p95_mg_l")])
-            panels = []
-            for reach in project.reaches:
-                rows = [row for row in quantiles if row["reach"] == reach]
-                if not rows:
-                    continue
-                series = [{"geometry": "line", "label": "5th–95th percentile" if index == 0 else "",
-                           "markers": False, "points": [
-                               {"x": row["day"], "y": row["p05_mg_l"], "record_id": row["id"]},
-                               {"x": row["day"], "y": row["p95_mg_l"], "record_id": row["id"]}]}
-                          for index, row in enumerate(rows)]
-                series.append({"geometry": "scatter", "label": "Median", "marker": "diamond",
-                               "points": [{"x": row["day"], "y": row["median_mg_l"],
-                                           "record_id": row["id"]} for row in rows]})
-                panels.append({"id": reach, "title": str(reach), "x": x, "y": y, "series": series})
-            figures.append({"id": _figure_id("prior", sid),
-                            "title": "Original parameter-prior quantiles: " + sid,
-                            "caption": "Vertical segments retain each original target's 5th and 95th "
-                                       "percentiles; diamonds retain its median. These are pointwise "
-                                       "summaries of the supplied parameter-prior draws, not a simultaneous "
-                                       "band or a measurement-error confidence interval. The supplied "
-                                       "priors, bounds, latent correlation, seed and completed draw count "
-                                       "remain in the report. Shared reach panels use one physical scale.",
-                            "panels": panels})
+    exact = [row for row in result.get("observations", [])
+             if row.get("qualifier", "equal") == "equal"]
+    for operator in _observation_groups(project, exact):
+        rows, basis, label = operator["rows"], operator["basis"], operator["label"]
+        axis = _axis("Original reference", "mg " + basis + "/L",
+                     [row[key] for row in rows for key in ("observed_mg_l", "predicted_mg_l")])
+        lo, hi = axis["domain"]
+        series = [{"geometry": "line", "label": "Equality", "markers": False,
+                   "points": [{"x": lo, "y": lo}, {"x": hi, "y": hi}]}]
+        for role, marker, legend in (("fit", "circle", "Fit"), ("holdout", "square-open", "Held out")):
+            points = [{"x": row["observed_mg_l"], "y": row["predicted_mg_l"],
+                       "record_id": row["id"], "reach": row["reach"], "day": row["day"], "role": role}
+                      for row in rows if row.get("role", "fit") == role]
+            if points:
+                series.append({"geometry": "scatter", "marker": marker, "label": legend, "points": points})
+        key = _figure_id("fit", operator["identity"])
+        figures.append({"id": key,
+                        "title": "Original reference and fitted prediction: " + label,
+                        "caption": "One point per original exact-valued reference record for "
+                                   + operator["expression"] + ". Identical axis ranges retain mg of "
+                                   + basis + "/L. Filled circles were used in fitting; open squares "
+                                   "were held out. The original source-derived sampling design "
+                                   "determines independence. Below-limit records remain in the "
+                                   "original table and are not plotted as exact values. Different "
+                                   "observation operators have separate panels, even on one mass basis.",
+                        "panels": [{"id": key, "title": label, "x": axis,
+                                    "y": {**axis, "label": "Retained fitted prediction"}, "series": series}]})
+
+    quantiles = [{**item["observation"], **{key: value for key, value in item.items() if key != "observation"}}
+                 for item in result.get("summaries", [])]
+    for operator in _observation_groups(project, quantiles):
+        rows, basis, label = operator["rows"], operator["basis"], operator["label"]
+        for row in rows:
+            bounds = [_finite(row[key]) for key in ("p05_mg_l", "median_mg_l", "p95_mg_l")]
+            if bounds != sorted(bounds):
+                raise ValueError("Original Chemistry uncertainty quantiles are not ordered")
+        x = _axis("Target model day", "day", [row["day"] for row in rows])
+        y = _axis("Parameter-prior concentration", "mg " + basis + "/L",
+                  [row[key] for row in rows for key in ("p05_mg_l", "median_mg_l", "p95_mg_l")])
+        panels = []
+        for reach in project.reaches:
+            selected = [row for row in rows if row["reach"] == reach]
+            if not selected:
+                continue
+            series = [{"geometry": "line", "label": "5th–95th percentile" if index == 0 else "",
+                       "markers": False, "points": [
+                           {"x": row["day"], "y": row["p05_mg_l"], "record_id": row["id"]},
+                           {"x": row["day"], "y": row["p95_mg_l"], "record_id": row["id"]}]}
+                      for index, row in enumerate(selected)]
+            series.append({"geometry": "scatter", "label": "Median", "marker": "diamond",
+                           "points": [{"x": row["day"], "y": row["median_mg_l"],
+                                       "record_id": row["id"]} for row in selected]})
+            panels.append({"id": reach, "title": str(reach), "x": x, "y": y, "series": series})
+        figures.append({"id": _figure_id("prior", operator["identity"]),
+                        "title": "Original parameter-prior quantiles: " + label,
+                        "caption": "Original observation operator: " + operator["expression"] + ". "
+                                   "Vertical segments retain each original target's 5th and 95th "
+                                   "percentiles; diamonds retain its median. These are pointwise "
+                                   "summaries of the supplied parameter-prior draws, not a simultaneous "
+                                   "band or a measurement-error confidence interval. Composite target "
+                                   "quantiles come from the original joint per-draw operator; marginal "
+                                   "species quantiles are never added. Supplied priors, bounds, latent "
+                                   "correlation, seed and completed draw count remain in the report. "
+                                   "Reach panels share one physical scale for this same operator.",
+                        "panels": panels})
     for figure in figures:
         _validate_figure(figure)
     return figures
@@ -327,12 +337,12 @@ def _sections(project, result, request, report, add):
                       "The engine's RMSE and mean modeled-minus-reference bias use exact-valued "
                       "records only. Below-limit records are excluded from these summaries.",
                       [_species(project, row) for row in result.get("scores", [])],
-                      [("role", "Role"), ("species", "Species"), ("basis", "Basis"), ("count", "Records"),
+                      [("role", "Role"), *OBSERVATION_FIELDS, ("count", "Records"),
                        ("rmse_mg_l", "RMSE mg basis/L"), ("bias_mg_l", "Bias mg basis/L")])
         table_section("references", "Every original reference and retained prediction",
                       "Original qualifiers, assumed error scales and record provenance remain visible.",
                       [_species(project, row) for row in result["observations"]],
-                      [("id", "Record"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
+                      [("id", "Record"), ("reach", "Reach"), *OBSERVATION_FIELDS,
                        ("day", "Model day"), ("role", "Role"), ("qualifier", "Qualifier"),
                        ("observed_mg_l", "Reference or limit mg basis/L"),
                        ("predicted_mg_l", "Prediction mg basis/L"), ("sigma_mg_l", "Error scale mg basis/L"),
@@ -346,7 +356,7 @@ def _sections(project, result, request, report, add):
                        "predicted_mg_l": row["predicted_mg_l"],
                        "parameter_units": PARAMETER_UNITS.get(derivative.get("parameter_kind"))})
                        for row in result["rows"] for derivative in row["derivatives"]],
-                      [("id", "Target"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
+                      [("id", "Target"), ("reach", "Reach"), *OBSERVATION_FIELDS,
                        ("day", "Day"), ("parameter", "Parameter"), ("parameter_kind", "Physical field"),
                        ("parameter_units", "Parameter units"),
                        ("predicted_mg_l", "Prediction mg basis/L"),
@@ -370,8 +380,7 @@ def _sections(project, result, request, report, add):
                       [_species(project, {**row["candidate"], "order": row["order"],
                        "predicted_mg_l": row["predicted_mg_l"],
                        "incremental_logdet_gain": row["incremental_logdet_gain"]}) for row in result["selected"]],
-                      [("order", "Order"), ("id", "Candidate"), ("reach", "Reach"), ("species", "Species"),
-                       ("basis", "Basis"), ("day", "Day"), ("sigma_mg_l", "Error scale mg basis/L"),
+                      [("order", "Order"), ("id", "Candidate"), ("reach", "Reach"), *OBSERVATION_FIELDS, ("day", "Day"), ("sigma_mg_l", "Error scale mg basis/L"),
                        ("predicted_mg_l", "Prediction mg basis/L"), ("incremental_logdet_gain", "Incremental logdet gain")])
     if "summaries" in result:
         items("ensemble", "Original parameter-prior ensemble",
@@ -389,10 +398,10 @@ def _sections(project, result, request, report, add):
                       [("id", "Parameter"), ("target", "Target"), ("parameter_units", "Units"), ("basis", "Basis"),
                        ("lower", "Lower"), ("upper", "Upper"), ("distribution", "Original distribution")])
         table_section("ensemble-quantiles", "Original target-by-target prior quantiles",
-                      "Pointwise original summaries retain each target reach, species, basis and day.",
+                      "Pointwise original summaries retain each target reach, observation operator, basis and day; composite quantiles are the original joint-draw results, not sums of species quantiles.",
                       [_species(project, {**row["observation"], **{k: v for k, v in row.items() if k != "observation"}})
                        for row in result["summaries"]],
-                      [("id", "Target"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
+                      [("id", "Target"), ("reach", "Reach"), *OBSERVATION_FIELDS,
                        ("day", "Day"), ("p05_mg_l", "5th percentile mg basis/L"),
                        ("median_mg_l", "Median mg basis/L"), ("p95_mg_l", "95th percentile mg basis/L"),
                        ("mean_mg_l", "Mean mg basis/L")])

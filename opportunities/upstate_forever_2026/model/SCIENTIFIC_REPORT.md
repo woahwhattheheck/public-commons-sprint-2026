@@ -352,3 +352,22 @@ selection creates a new formatter-bound edition; keep earlier captured reports
 with their original identities. Continue the original report/Workspace export
 and independent receiving operation using its retained source selections and
 task IDs.
+
+## Readable source links in PDF
+
+PDF source links display their original human-readable title and retain the exact
+relative hyperlink target. When a generated title is itself the source path, the
+PDF shows its filename, adding the shortest parent suffix needed to distinguish
+other source files in that list. Explicit descriptive titles remain unchanged. Long companion paths remain in the HTML and Markdown
+links and in the complete structured report data; the PDF avoids repeating each
+path beneath its title. This keeps source directories from displacing the
+scientific tables and figures. The v17 rendering identity includes this layout
+edition and preserves the v16 original reference-basis interpretation.
+
+The maintained scientific_tables helper measures the complete displayed numeric
+string before allocating ordinary table columns. Adopt that helper and the
+current complete report component when refreshing older reports with wrapped
+coordinates; retain the original coordinate strings and source CSV. An existing
+completed report stays available under its original rendering identity. A new
+selected rendering receives its own identity through the maintained report
+workflow.

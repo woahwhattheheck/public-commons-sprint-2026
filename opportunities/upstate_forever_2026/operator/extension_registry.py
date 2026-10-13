@@ -387,8 +387,12 @@ class ExtensionRegistry:
                 raise ValueError("Item kind registration collides: " + kind)
             items[kind] = (self._binding(item, provider), item.get("operation"))
         state = None
+        state_when_missing = False
         if backend.get("state"):
             specification = backend["state"]
+            state_when_missing = specification.get("when_missing", False)
+            if not isinstance(state_when_missing, bool):
+                raise ValueError("State when_missing must be an explicit boolean.")
             key = specification.get("key", "")
             if (not isinstance(key, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", key)
                     or key in self._state_keys or key in self._builtin_kinds):
@@ -418,7 +422,8 @@ class ExtensionRegistry:
         entry = {
             "id": extension_id, "manifest": deepcopy(manifest), "provider": provider,
             "invoke": invoke, "actions": actions, "routes": routes, "file_routes": file_routes, "items": items,
-            "state": state, "decorate": decorate, "verify": verify, "client": client,
+            "state": state, "state_when_missing": state_when_missing,
+            "decorate": decorate, "verify": verify, "client": client,
         }
         self._extensions[extension_id] = entry
         self._actions.update({name: entry for name in actions})
@@ -524,6 +529,9 @@ class ExtensionRegistry:
             key, binding = entry["state"]
             try:
                 if key in result:
+                    if entry["state_when_missing"]:
+                        self._clear_issue(entry["id"], "state")
+                        continue
                     raise ValueError("Extension state would overwrite existing data: " + key)
                 result[key] = self._call(binding, context)
                 self._clear_issue(entry["id"], "state")

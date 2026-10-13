@@ -16,6 +16,8 @@ PARTS = {
     "evidence_ui": "operator/web/implementation_evidence_ui.mjs",
     "results": "operator/web/implementation_results.mjs",
     "briefing": "operator/web/implementation_briefing.mjs",
+    "site_visit_csv": "operator/web/implementation_site_visit_csv.mjs",
+    "site_visit": "operator/web/implementation_site_visit.mjs",
     "ui": "operator/web/implementation.mjs",
     "css": "operator/web/implementation.css",
     "catalog": "operator/web/implementation_catalog.json",
@@ -55,12 +57,22 @@ def build(application: Path, output: Path | None = None) -> dict:
         "./implementation_core.mjs": "IMPLEMENTATION_CORE",
         "./implementation_evidence.mjs": "IMPLEMENTATION_EVIDENCE",
     })
+    script += _module(sources["site_visit_csv"], "IMPLEMENTATION_SITE_VISIT_CSV", {
+        "./implementation_core.mjs": "IMPLEMENTATION_CORE",
+        "./implementation_evidence.mjs": "IMPLEMENTATION_EVIDENCE",
+    })
+    script += _module(sources["site_visit"], "IMPLEMENTATION_SITE_VISIT", {
+        "./implementation_core.mjs": "IMPLEMENTATION_CORE",
+        "./implementation_evidence.mjs": "IMPLEMENTATION_EVIDENCE",
+        "./implementation_site_visit_csv.mjs": "IMPLEMENTATION_SITE_VISIT_CSV",
+    })
     script += _module(sources["ui"], "IMPLEMENTATION_UI", {
         "./implementation_core.mjs": "IMPLEMENTATION_CORE",
         "./implementation_forms.mjs": "IMPLEMENTATION_FORMS",
         "./implementation_results.mjs": "IMPLEMENTATION_RESULTS",
         "./implementation_briefing.mjs": "IMPLEMENTATION_BRIEFING",
         "./implementation_evidence_ui.mjs": "IMPLEMENTATION_EVIDENCE_UI",
+        "./implementation_site_visit.mjs": "IMPLEMENTATION_SITE_VISIT",
     })
     script += "\nconst catalog = " + json.dumps(catalog, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c") + ";\n"
     script += "window.implementationWorkbench = IMPLEMENTATION_UI.mountPortableImplementation(document.getElementById('implementation-root'), catalog);\n"
