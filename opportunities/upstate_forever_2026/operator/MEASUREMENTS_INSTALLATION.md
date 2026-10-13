@@ -83,3 +83,5 @@ python -B STAGE/checks/measurement_returned_reviews_operator.py --application AP
 ```
 
 The original directory must contain `input-archives/baseline.zip`, `input-archives/returned.zip`, `input-archives/current.zip`, `comparison/plan.json` and `decisions.json`. It reuses their exact native plan identity, title, decisions and archive bytes. Use the existing producer's retained original case; no recreated population or capacity run is required. Output is outside the application, scientific Workspace and original case. Keep the same output for an interrupted course. The original decision HTML still requires actual permitted desktop/narrow operation and attachment viewing before client readiness.
+
+Whole-Workspace transfer captures the independent reviewed project's exact owned database path (`measurement-returned-reviews/results/<64-hex-id>/result/measurements/measurements.sqlite`) through the original SQLite online-backup mechanism. This includes committed WAL edits while preserving unrelated SQLite source files byte-exact.

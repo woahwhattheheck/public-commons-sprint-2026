@@ -215,8 +215,8 @@
     {
       "path": "model/portable_databases.py",
       "role": "native",
-      "bytes": 7984,
-      "sha256": "b15b5c7a26cbb39d686ec746d96f7ca51e33a96a60f35218983edd7cd5f61871"
+      "bytes": 8315,
+      "sha256": "cef958863d57ea3c196413fb14fcee4411a5d40681b06caad27c593e676b1ca2"
     },
     {
       "path": "model/MEASUREMENTS_PORTABLE.md",
@@ -253,7 +253,8 @@
       "engine_commit": "c2579cad55bd617085e769400c26eb60a705c017",
       "provider_commit": "8caee9462899baa0003f92e42330c0791800cbf0",
       "panel_commit": "0b93b60b53318c2a996b24e5cf965921bea4ced7",
-      "note": "Original returned-review engine is unchanged; the original registered operator mounts a native queue panel."
+      "note": "Original returned-review engine is unchanged; the original registered operator mounts a native queue panel.",
+      "database_capture_commit": "03c7623983d0437f0fc2c8eab9bf91800caee055"
     }
   }
 }

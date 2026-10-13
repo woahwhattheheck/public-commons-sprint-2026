@@ -15,7 +15,8 @@
     "returned_review_engine_commit": "c2579cad55bd617085e769400c26eb60a705c017",
     "returned_review_provider_commit": "8caee9462899baa0003f92e42330c0791800cbf0",
     "returned_review_panel_commit": "0b93b60b53318c2a996b24e5cf965921bea4ced7",
-    "returned_review_receiving_commit": "3cc2c54194124ef3644d66f1e389848ed13a4409"
+    "returned_review_receiving_commit": "3cc2c54194124ef3644d66f1e389848ed13a4409",
+    "returned_review_database_capture_commit": "03c7623983d0437f0fc2c8eab9bf91800caee055"
   },
   "files": [
     {
@@ -45,8 +46,8 @@
     },
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 9271,
-      "sha256": "9f7740f9043d79f54810362a502be56ea3fef20ecae286dd6a54d55e7b54d696"
+      "bytes": 9348,
+      "sha256": "151f45cc189e766f3b8e47f7f86cd68050ed408f46cf39b5f36e55d2e5f19676"
     },
     {
       "path": "MEASUREMENT_RETURNED_REVIEWS.md",
@@ -290,8 +291,8 @@
     },
     {
       "path": "model/portable_databases.py",
-      "bytes": 7984,
-      "sha256": "b15b5c7a26cbb39d686ec746d96f7ca51e33a96a60f35218983edd7cd5f61871"
+      "bytes": 8315,
+      "sha256": "cef958863d57ea3c196413fb14fcee4411a5d40681b06caad27c593e676b1ca2"
     },
     {
       "path": "observations/eighteenmile_stoichiometry_20261013/stoichiometry.py",
@@ -305,8 +306,8 @@
     },
     {
       "path": "operator/MEASUREMENTS_INSTALLATION.md",
-      "bytes": 12775,
-      "sha256": "cb7387d6ee2340f85cf0c7c42c0de3c9d490c1d7863091f93c237f2e23c88d15"
+      "bytes": 13110,
+      "sha256": "fd6c0f23a5e7569ad92890f91b7b4e1cee9d0cf6471dc93a3865c36c5b95260c"
     },
     {
       "path": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
