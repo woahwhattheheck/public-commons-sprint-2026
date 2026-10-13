@@ -198,7 +198,7 @@ def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, d
         if path is not None:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
             fig.savefig(path, format="pdf", dpi=dpi, metadata={"Title": title, "Subject": subtitle,
-                                               "Creator": "Upper Savannah scientific workbench"})
+                                               "Creator": "Scientific Workbench"})
         if pdf_pages is not None:
             pdf_pages.savefig(fig, dpi=dpi)
     finally:
@@ -244,7 +244,7 @@ def report_pdf(path, title, sections, *, contact, source_records):
     def page_number(canvas, document):
         canvas.saveState()
         canvas.setFont("Helvetica", 7)
-        canvas.drawString(.7 * inch, .42 * inch, "Upper Savannah · retained model and source editions")
+        canvas.drawString(.7 * inch, .42 * inch, "Scientific study · retained model and source editions")
         canvas.drawRightString(7.8 * inch, .42 * inch, str(document.page))
         canvas.restoreState()
     Path(path).parent.mkdir(parents=True, exist_ok=True)

@@ -18,6 +18,7 @@ APPLICATION_FILES = (
     "README.md",
     "PACKAGING_LIMITS.md",
     "audit.py",
+    "native_study_audit.py",
     "raster_checks.py",
     "package_delivery.py",
     "delivery_snapshot.py",

@@ -274,7 +274,13 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
             _unchanged(root, relative, info)
     require(_read_manifest(root, manifest_name, state, limits) == raw_manifest,
             'Manifest changed during capture')
-    index = {'schema': 'upstate-ec-sdc-2026/package-v1', 'manifestPath': 'delivery/' + manifest_name,
+    manifest_schema = json.loads(raw_manifest.decode('utf-8-sig')).get('schema')
+    study = manifest_schema == 'commons.native-study-delivery/v1'
+    index = {'schema': ('commons.native-study-package/v1' if study
+                        else 'upstate-ec-sdc-2026/package-v1'),
+             'manifestSchema': manifest_schema,
+             'auditProfile': 'original-native-study-grid' if study else 'regional-rfp',
+             'manifestPath': 'delivery/' + manifest_name,
              'artifacts': artifacts, 'missing': missing,
              'captureLimits': limits, 'declaredReferenceCount': len(references),
              'capturedSourceBytes': total, 'storage': storage}
@@ -285,7 +291,8 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
 def verify_capture(out_dir: Path, index: dict, *, limits=None) -> None:
     """Check catalogued bytes with caller budgets, never limits trusted from JSON."""
     limits = capture_limits(limits)
-    require(isinstance(index, dict) and index.get('schema') == 'upstate-ec-sdc-2026/package-v1',
+    require(isinstance(index, dict) and index.get('schema') in (
+            'upstate-ec-sdc-2026/package-v1', 'commons.native-study-package/v1'),
             'Unsupported package index')
     require(index.get('packageSha256') == fingerprint(index), 'Package index fingerprint differs')
     artifacts = index.get('artifacts')
