@@ -21,11 +21,50 @@ INVEST_SOURCE = {
     "sdr_blob": "0cac27add172011df367ff8026427dbbdbcda5b2",
 }
 ROLES = ("DEM", "NLCD", "PRECIPITATION", "R_FACTOR", "K_FACTOR")
+MODELS = ("ndr", "sdr")
+MODEL_ROLES = {
+    "ndr": ("DEM", "NLCD", "PRECIPITATION"),
+    "sdr": ("DEM", "NLCD", "R_FACTOR", "K_FACTOR"),
+}
+MODEL_OUTPUTS = {
+    "nitrogen_export": ("ndr", "n_total_export"),
+    "phosphorus_export": ("ndr", "p_surface_export"),
+    "sediment_export": ("sdr", "sed_export"),
+}
 SOURCE_IDS = ROLES + ("PROTECTED_LANDS", "PARCEL", "NHD", "NWI", "LS_FACTOR")
 MAP_IDS = ("future_sediment_loss", "future_nutrient_runoff",
            "critical_drinking_water", "high_quality_waters",
            "current_nutrient_export", "current_sediment_export",
            "combined_pollutant_export")
+
+def selected_models(value=None):
+    """Return selected native models in their stable execution order.
+
+    An omitted selection preserves the original combined NDR/SDR behavior.
+    The explicit selection is carried by a profile, grid or run's models field.
+    """
+    values = value.get("models", MODELS) if isinstance(value, dict) else value
+    if values is None and value is None:
+        values = MODELS
+    if not isinstance(values, (list, tuple)) or not values:
+        raise ValueError("Select a nonempty list of native models: ndr, sdr")
+    if any(not isinstance(name, str) for name in values):
+        raise ValueError("Native model names must be ndr or sdr")
+    names = [name.strip().lower() for name in values]
+    if len(names) != len(set(names)) or set(names) - set(MODELS):
+        raise ValueError("Select each native model once from ndr, sdr")
+    return [name for name in MODELS if name in names]
+
+def required_roles(value=None):
+    """Physical inputs required by the selected native models."""
+    models = selected_models(value)
+    return tuple(role for role in ROLES
+                 if any(role in MODEL_ROLES[model] for model in models))
+
+def output_models(value=None):
+    """Map actual selected export names to native model/registry identifiers."""
+    models = selected_models(value)
+    return {name: pair for name, pair in MODEL_OUTPUTS.items() if pair[0] in models}
 
 def now():
     return dt.datetime.now(dt.timezone.utc).isoformat()

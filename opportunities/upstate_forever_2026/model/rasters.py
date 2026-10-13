@@ -1,9 +1,11 @@
 """Native grid, explicit scenario edits and output-unit derivations."""
 from __future__ import annotations
 import math
+from contextlib import contextmanager
 from pathlib import Path
 import shutil
-from .common import atomic_json, describe_file, digest, finite
+from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
+                     finite, held, read_json, verify_file)
 
 RESOLUTION = 30.0
 RATE_UNITS = {"nitrogen_export": "kg/ha/year",
@@ -90,8 +92,6 @@ def grid_definition(reference, model_geometry, *, resolution=RESOLUTION):
     from pyproj import CRS
     from rasterio.transform import Affine
     resolution = finite(resolution, "model grid resolution", positive=True)
-    if resolution != RESOLUTION:
-        raise ValueError("The scientific model requires an exact 30-metre grid")
     with rasterio.open(reference) as ref:
         crs = CRS.from_user_input(ref.crs)
         if not crs.is_projected or any(abs(axis.unit_conversion_factor - 1) > 1e-12 for axis in crs.axis_info[:2]):
@@ -103,8 +103,8 @@ def grid_definition(reference, model_geometry, *, resolution=RESOLUTION):
             raise ValueError("Reference grid must be finite, north-up and unrotated")
         if (not math.isclose(observed.a, resolution, rel_tol=1e-9, abs_tol=1e-12)
                 or not math.isclose(-observed.e, resolution, rel_tol=1e-9, abs_tol=1e-12)):
-            raise ValueError("Select the original nominal 30-metre reference land-cover grid")
-        # Native coverage descriptions can round their nominal 30 m coefficients.
+            raise ValueError(f"Select the original nominal {resolution:g}-metre reference land-cover grid")
+        # Native coverage descriptions can round their nominal pixel coefficients.
         # Keep their upper-left corner, then declare one exact model grid before
         # the original source aligner resamples into it. Source bytes stay intact.
         anchor = Affine(resolution, 0, observed.c, 0, -resolution, observed.f)
@@ -128,7 +128,7 @@ def grid_definition(reference, model_geometry, *, resolution=RESOLUTION):
             "changed": observed != anchor,
             "maximum_reference_corner_shift_m": max(corner_shifts),
             "model_window": {"col_off": c0, "row_off": r0, "width": width, "height": height},
-            "method": "Exact 30-metre cells anchored at the original reference upper-left corner",
+            "method": f"Exact {resolution:g}-metre cells anchored at the original reference upper-left corner",
             "source_alignment": "Original source alignment policy; nearest-neighbor for land-cover codes",
         }
     if width <= 0 or height <= 0:
@@ -151,10 +151,92 @@ def output_profile(grid, *, categorical=False):
             "compress": "deflate", "predictor": 2 if categorical else 3,
             "BIGTIFF": "IF_SAFER"}
 
+@contextmanager
+def _atomic_raster(destination):
+    """Install a finished TIFF while keeping the previous destination intact."""
+    import os
+    import tempfile
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=destination.parent,
+                prefix="." + destination.name + "-", suffix=".partial.tif", delete=False) as out:
+            pending = Path(out.name)
+        yield pending
+        with pending.open("rb") as complete:
+            os.fsync(complete.fileno())
+        os.replace(pending, destination)
+        pending = None
+        descriptor = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        if pending is not None:
+            pending.unlink(missing_ok=True)
+
+
+def _alignment_tile(cache, selection_id, window, profile):
+    """Reuse only an atomically recorded, intact native tile."""
+    import numpy as np
+    name = "r" + str(int(window.row_off)) + "-c" + str(int(window.col_off))
+    metadata_path = cache / (name + ".json")
+    if not metadata_path.exists():
+        return None
+    try:
+        metadata = read_json(metadata_path)
+        coordinates = [int(window.col_off), int(window.row_off),
+                       int(window.width), int(window.height)]
+        if (metadata.get("schema") != "upstate.alignment-tile/v1"
+                or metadata.get("selection_id") != selection_id
+                or metadata.get("window") != coordinates):
+            return None
+        retained = verify_file(cache, metadata["array"])
+        data = np.load(retained, allow_pickle=False)
+        if (data.shape != (int(window.height), int(window.width))
+                or data.dtype != np.dtype(profile["dtype"])):
+            return None
+        return data
+    except (OSError, ValueError, KeyError, TypeError, EOFError):
+        # A derived cache tile can always be rebuilt from the retained source.
+        # Missing or interrupted metadata never marks an output complete.
+        return None
+
+
+def _retain_alignment_tile(cache, selection_id, window, values):
+    import hashlib
+    import io
+    import numpy as np
+    name = "r" + str(int(window.row_off)) + "-c" + str(int(window.col_off))
+    payload = io.BytesIO()
+    np.save(payload, values, allow_pickle=False)
+    body = payload.getvalue()
+    artifact = {"path": name + ".npy", "bytes": len(body),
+                "sha256": hashlib.sha256(body).hexdigest()}
+    atomic_bytes(cache / artifact["path"], body)
+    atomic_json(cache / (name + ".json"), {
+        "schema": "upstate.alignment-tile/v1", "selection_id": selection_id,
+        "window": [int(window.col_off), int(window.row_off),
+                   int(window.width), int(window.height)],
+        "array": artifact,
+    })
+
+
 def align_source(source, destination, grid, *, categorical=False,
-                 resampling=None, conversion=None):
+                 resampling=None, conversion=None, checkpoint_directory=None,
+                 source_identity=None):
+    """Align source windows and retain completed tiles for interrupted work.
+
+    Workspace callers supply the complete retained body/companion identity.
+    Standalone local callers can omit it; each GDAL-listed source file is then
+    hashed before checkpoint reuse. The final TIFF is replaced only after all
+    blocks and metadata have been written and closed.
+    """
     import numpy as np
     import rasterio
+    from contextlib import nullcontext
     from rasterio.enums import Resampling
     from rasterio.vrt import WarpedVRT
     profile = output_profile(grid, categorical=categorical)
@@ -166,40 +248,91 @@ def align_source(source, destination, grid, *, categorical=False,
     factor = finite((conversion or {}).get("factor", 1), "conversion.factor", positive=True)
     if factor != 1 and not (conversion or {}).get("reference"):
         raise ValueError("Supply the reference for the physical-unit conversion")
+    if categorical and factor != 1:
+        raise ValueError("Land-cover class codes cannot use a physical-unit scale factor")
     counts, valid, missing, low, high = {}, 0, 0, None, None
+    completed_tiles, reused_tiles = 0, 0
+    selection_id, cache = None, None
     with rasterio.Env(GDAL_CACHEMAX=64 * 1024 * 1024), rasterio.open(source) as src:
         if src.count != 1:
             raise ValueError("Select a single-band scientific input")
-        with WarpedVRT(src, crs=profile["crs"], transform=profile["transform"],
-                       width=profile["width"], height=profile["height"],
-                       nodata=profile["nodata"], dtype=profile["dtype"],
-                       resampling=getattr(Resampling, method), warp_mem_limit=64) as vrt:
-            with rasterio.open(destination, "w", **profile) as out:
-                for _, window in out.block_windows(1):
-                    data = vrt.read(1, window=window, masked=True)
-                    mask = np.ma.getmaskarray(data) | ~np.isfinite(np.ma.getdata(data))
-                    values = np.ma.getdata(data).copy()
-                    if factor != 1:
-                        values[~mask] *= factor
-                    if np.any(~np.isfinite(values[~mask])):
-                        raise ValueError("Input conversion produced a non-finite value")
-                    if categorical:
-                        codes, amounts = np.unique(values[~mask], return_counts=True)
-                        for code, amount in zip(codes, amounts):
-                            counts[str(int(code))] = counts.get(str(int(code)), 0) + int(amount)
-                    if np.any(~mask):
-                        current = values[~mask]
-                        low = float(current.min()) if low is None else min(low, float(current.min()))
-                        high = float(current.max()) if high is None else max(high, float(current.max()))
-                    valid += int((~mask).sum())
-                    missing += int(mask.sum())
-                    values[mask] = profile["nodata"]
-                    out.write(values.astype(profile["dtype"]), 1, window=window)
-                out.update_tags(resampling=method, unit_conversion_factor=str(factor),
-                                source_filename=Path(source).name)
+        if checkpoint_directory is not None:
+            if source_identity is None:
+                bodies = []
+                for name in dict.fromkeys([str(source), *src.files]):
+                    original = Path(name).resolve(strict=True)
+                    bodies.append({"path": str(original), "bytes": original.stat().st_size,
+                                   "sha256": file_digest(original)})
+                source_identity = {"files": bodies}
+            selection = {
+                "schema": "upstate.source-alignment/v1",
+                "source": source_identity, "grid": grid,
+                "categorical": bool(categorical), "resampling": method,
+                "conversion": conversion, "conversion_factor": factor,
+                "output_dtype": profile["dtype"], "output_nodata": profile["nodata"],
+                "block_shape": [profile["blockysize"], profile["blockxsize"]],
+                "warp_memory_mb": 64,
+                "implementation": "window-alignment-v1",
+                "runtime": {"rasterio": rasterio.__version__,
+                            "gdal": rasterio.__gdal_version__,
+                            "proj": getattr(rasterio, "__proj_version__", None)},
+            }
+            selection_id = digest(selection)
+            cache = Path(checkpoint_directory) / selection_id
+        lock = held(cache / ".alignment.lock", blocking=False) if cache else nullcontext()
+        with lock:
+            if cache:
+                atomic_json(cache / "selection.json", selection, immutable=True)
+            with WarpedVRT(src, crs=profile["crs"], transform=profile["transform"],
+                           width=profile["width"], height=profile["height"],
+                           nodata=profile["nodata"], dtype=profile["dtype"],
+                           resampling=getattr(Resampling, method), warp_mem_limit=64) as vrt:
+                with _atomic_raster(destination) as pending:
+                    with rasterio.open(pending, "w", **profile) as out:
+                        for _, window in out.block_windows(1):
+                            values = _alignment_tile(cache, selection_id, window, profile) if cache else None
+                            if values is not None:
+                                reused_tiles += 1
+                            else:
+                                data = vrt.read(1, window=window, masked=True)
+                                mask = np.ma.getmaskarray(data) | ~np.isfinite(np.ma.getdata(data))
+                                values = np.ma.getdata(data).copy()
+                                if factor != 1 and np.any(~mask):
+                                    scaled = values[~mask].astype("float64") * factor
+                                    limits = np.finfo(profile["dtype"])
+                                    if (np.any(~np.isfinite(scaled))
+                                            or np.any(scaled < limits.min) or np.any(scaled > limits.max)):
+                                        raise ValueError("Input conversion exceeds the finite output value range")
+                                    values[~mask] = scaled
+                                if np.any(values[~mask] == profile["nodata"]):
+                                    raise ValueError("Input conversion collides with the output nodata value")
+                                values[mask] = profile["nodata"]
+                                values = values.astype(profile["dtype"], copy=False)
+                                if cache:
+                                    _retain_alignment_tile(cache, selection_id, window, values)
+                            usable = np.isfinite(values) & (values != profile["nodata"])
+                            current = values[usable]
+                            if categorical:
+                                codes, amounts = np.unique(current, return_counts=True)
+                                for code, amount in zip(codes, amounts):
+                                    code = str(int(code))
+                                    counts[code] = counts.get(code, 0) + int(amount)
+                            if current.size:
+                                current_low, current_high = float(current.min()), float(current.max())
+                                low = current_low if low is None else min(low, current_low)
+                                high = current_high if high is None else max(high, current_high)
+                            valid += int(current.size)
+                            missing += int(values.size - current.size)
+                            out.write(values, 1, window=window)
+                            completed_tiles += 1
+                        out.update_tags(resampling=method, unit_conversion_factor=str(factor),
+                                        source_filename=Path(source).name)
     return {"resampling": method, "conversion": conversion, "valid_cells": valid,
             "nodata_cells": missing, "minimum": low, "maximum": high,
-            "class_counts": counts if categorical else None}
+            "class_counts": counts if categorical else None,
+            "preparation": {"tile_count": completed_tiles, "reused_tiles": reused_tiles,
+                            "checkpoint_id": selection_id,
+                            "completion": "Atomically installed complete raster"}}
 
 def write_mask(destination, grid, geometry):
     import rasterio
@@ -207,9 +340,10 @@ def write_mask(destination, grid, geometry):
     from shapely.geometry import mapping
     profile = output_profile(grid, categorical=True)
     profile.update(dtype="uint8", nodata=255)
+    shapes = [(mapping(geometry), 1)]
     with rasterio.open(destination, "w", **profile) as out:
         for _, window in out.block_windows(1):
-            data = rasterize([(mapping(geometry), 1)], out_shape=(int(window.height), int(window.width)),
+            data = rasterize(shapes, out_shape=(int(window.height), int(window.width)),
                              transform=out.window_transform(window), fill=0, all_touched=False,
                              dtype="uint8")
             out.write(data, 1, window=window)
@@ -228,7 +362,7 @@ def make_scenario(baseline, destination, grid, patches, *, source_loader, allowe
         rows, _ = vector_geometry(source, layer=patch.get("layer") or entry.get("layer"),
                                   where=patch.get("where"), target_crs=grid["crs"])
         geometry = polygon_union(rows)
-        prepared.append((patch, geometry, 0))
+        prepared.append((patch, mapping(geometry), 0))
     counts = [0] * len(prepared)
     profile = output_profile(grid, categorical=True)
     with rasterio.open(baseline) as src, rasterio.open(destination, "w", **profile) as out:
@@ -237,7 +371,7 @@ def make_scenario(baseline, destination, grid, patches, *, source_loader, allowe
             invalid = np.ma.getmaskarray(data)
             values = np.ma.getdata(data).copy()
             for i, (patch, geometry, _) in enumerate(prepared):
-                mask = rasterize([(mapping(geometry), 1)], out_shape=values.shape,
+                mask = rasterize([(geometry, 1)], out_shape=values.shape,
                                  transform=src.window_transform(window), fill=0, dtype="uint8").astype(bool)
                 selected = mask & ~invalid & np.isin(values, patch["from_codes"])
                 counts[i] += int(selected.sum())
@@ -262,10 +396,18 @@ def rate_to_mass(source, destination, grid, *, reporting_mask, pollutant):
     with rasterio.open(source) as src, rasterio.open(reporting_mask) as mask:
         t = src.transform
         target = profile["transform"]
-        if src.crs != mask.crs or abs(t.a - 30) > 1e-9 or abs(t.e + 30) > 1e-9 or t.b or t.d:
-            raise ValueError("Native model output is not the selected 30m projected grid")
-        dx, dy = (target.c - t.c) / 30, (t.f - target.f) / 30
-        if not math.isclose(dx, round(dx), abs_tol=1e-7) or not math.isclose(dy, round(dy), abs_tol=1e-7):
+        if (not src.crs or not src.crs.is_projected or src.crs != mask.crs
+                or src.crs != rasterio.crs.CRS.from_user_input(profile["crs"])
+                or not all(math.isfinite(value) for value in (*tuple(t)[:6], *tuple(target)[:6]))
+                or t.b or t.d or target.b or target.d or target.a <= 0 or target.e >= 0
+                or abs(t.a - target.a) > 1e-9 or abs(t.e - target.e) > 1e-9):
+            raise ValueError("Native model output is not the selected projected grid")
+        if (mask.transform != target or mask.width != profile["width"]
+                or mask.height != profile["height"]):
+            raise ValueError("Reporting mask is not the selected model grid")
+        dx, dy = (target.c - t.c) / target.a, (target.f - t.f) / target.e
+        if (not math.isclose(dx, round(dx), rel_tol=0, abs_tol=1e-7)
+                or not math.isclose(dy, round(dy), rel_tol=0, abs_tol=1e-7)):
             raise ValueError("Native model output has shifted pixel centres")
         area = abs(t.a * t.e - t.b * t.d) / 10000.0
         with rasterio.open(destination, "w", **profile) as out:
@@ -321,8 +463,9 @@ def combined_priority(inputs, destination, *, weights, percentile=95, selected_c
     if set(weights) != set(inputs) or any(finite(x, "priority weight", minimum=0) < 0 for x in weights.values()):
         raise ValueError("Supply nonnegative weights for the three named pollutants")
     weight_sum = sum(float(v) for v in weights.values())
-    if weight_sum <= 0 or not 0 < float(percentile) <= 100:
-        raise ValueError("Priority weights and percentile must be positive")
+    percentile = finite(percentile, "Priority percentile", positive=True)
+    if not math.isfinite(weight_sum) or weight_sum <= 0 or percentile > 100:
+        raise ValueError("Priority weights and percentile must be finite and positive")
     caps = {}
     if selected_caps is not None and set(selected_caps) != set(inputs):
         raise ValueError("Explicit priority caps must cover the three named pollutants")
@@ -332,10 +475,9 @@ def combined_priority(inputs, destination, *, weights, percentile=95, selected_c
         for key, raster in rasters.items():
             check_same_grid(first, raster)
             if selected_caps is None:
-                values = raster.read(1, masked=True).compressed()
-                values = values[np.isfinite(values) & (values > 0)]
-                caps[key] = float(np.percentile(values, percentile)) if values.size else 0.0
-                del values
+                from .raster_stats import raster_percentile
+                value = raster_percentile(raster, percentile, positive_only=True)
+                caps[key] = value if value is not None else 0.0
             else:
                 caps[key] = finite(selected_caps[key], "Priority cap", minimum=0)
         profile = dict(first.profile)
