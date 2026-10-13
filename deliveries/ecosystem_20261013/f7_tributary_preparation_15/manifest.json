@@ -1,0 +1,120 @@
+{
+  "schema": "upstate.f7-preparation-source-delivery/v1",
+  "commit": "2b6cbbf4910743302fd065a395b010f60d784564",
+  "files": 15,
+  "json": {
+    "bytes": 322489,
+    "sha256": "053aa6d7d0873b215b8b16addc07f714850ae592aae9e1f5780cb441ec5484ed"
+  },
+  "gzip": {
+    "bytes": 91500,
+    "sha256": "7868c0735ab6e6c2f081bebf786856a703e678aca13865ad94d32eec0de9cc2b",
+    "git_blob": "76d8530905b301c5e3351ee02bbd1a7c1a23a15f"
+  },
+  "base64": {
+    "bytes": 122000,
+    "sha256": "4fec31cbd6c85f91c16109a3671da0bfe6860e51e64e1df23f9bcb391949f1f1",
+    "git_blob": "4a4fa4f7f7eb73f6ec40c6421f1330389ab9cea7"
+  },
+  "source_scope": "15 complete source/data files for standalone prepare-only with native Shapely/pyproj. Binding uses the existing complete scientific Workspace application. Original national files are supplied from the retained 9072 archive or original directory.",
+  "entrypoint": "source_tools/prepare_f7_tributaries.py",
+  "original_operation": "1791918349.495279",
+  "external_archive": {
+    "drive_id": "16LDSlej6CJ0FoeO_nVbDL9JR069Njc6t",
+    "bytes": 5287188,
+    "sha256": "43868c684f747a92395ef570626a25253b517d702eb74ec2aa0eb3a68606112d"
+  },
+  "original_source_id": "af89b23daa91db89d2abd558312ae50cf444e82c778d9832779a2ed27208f845",
+  "members": [
+    {
+      "path": "source_tools/prepare_f7_tributaries.py",
+      "git_blob": "04fc4118d080545cce1c9e8585b091228a9db3f7",
+      "bytes": 11948,
+      "sha256": "653b372bb43bda73faef86fb26014d78cafe65dac54e45b30da206fd8eb057dc"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/preparation-selection.json",
+      "git_blob": "fceb4f5f3b1be7c463fac0f47105eb28512be4ee",
+      "bytes": 12965,
+      "sha256": "380089ea4ac6ae22599a8097041906e0e765acb31d94f9ee7f1b35f1dc966994"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/retained-catchments.json",
+      "git_blob": "8b7a01273c0dbf84bb5b8fc5371e8556d98b1206",
+      "bytes": 6306,
+      "sha256": "f05d1c43319c33acd1c44b82a7536921c728126565d2ff076e026237d7753df2"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/PREPARE_F7.md",
+      "git_blob": "5f3d67801cebdd3f5b3fe5b453d9fccd49607ccc",
+      "bytes": 8226,
+      "sha256": "c005adaa440538523e330849fc40f6b37a3f771a1df3d6372a63c0d53c8509fb"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/retained-catchments/comid-6269342.json",
+      "git_blob": "94598ff1670d959d32eb454045bcf2a240e91dcc",
+      "bytes": 567,
+      "sha256": "0e985e1459d067f3230b033df92ffda1c6c450e84c5bac71c30782022dec1f26"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/retained-catchments/basin-comid-6269342.json",
+      "git_blob": "23aa8a66688915c3cd85f978deccce71c6d745b4",
+      "bytes": 27736,
+      "sha256": "206b6a6654e538b188212914634a7fa1fcf11c3c55b13eca7ea124cad0b2bb62"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/retained-catchments/comid-11730084.json",
+      "git_blob": "ba904cac5501986ed777442aa61112581c9b123c",
+      "bytes": 803,
+      "sha256": "8f181918336be3f88919755a150f1643c9984b573bd0417ca6af627bd542fa9b"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/retained-catchments/basin-comid-11730084.json",
+      "git_blob": "e61b419505d9781b3ee271c0b5313b9edb974ec3",
+      "bytes": 37813,
+      "sha256": "338793342fe1db2c63788e6970ccdb4581f7c83df8f7a7df596271078d9202e4"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/retained-catchments/comid-6280111.json",
+      "git_blob": "35b9272b04cc556f4d11d7eece4e2e42246f163f",
+      "bytes": 878,
+      "sha256": "37714639a340507c5cb759f665c0e6468c9d9b88ed320cd05db12496a68180ab"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/retained-catchments/basin-comid-6280111.json",
+      "git_blob": "c058f06d2f224ec96b3d9865789180dfa5ec4a72",
+      "bytes": 63709,
+      "sha256": "444ef5e5987fb5b834333c83a356c71e8e02aad486d6d8dd9e1f1a4ef54d17cb"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/original-target-records.json",
+      "git_blob": "67358d3366684213cce1674081c7358d87df18b1",
+      "bytes": 36838,
+      "sha256": "d30de5b49d45028a6b3e342ed266d68af3ccc5ca31d570ba675ff8b5aca1261e"
+    },
+    {
+      "path": "source/usgs-annual-2012/upper-savannah/F7DN436B-original-metadata.xml",
+      "git_blob": "690c6ff85ceaa7d69ddb4cef3f8f31f70749a23a",
+      "bytes": 40293,
+      "sha256": "ca82b16ed8d383f866919e1743d91e617b2cfe4de24cc715d8919b1f564d9572"
+    },
+    {
+      "path": "source_tools/usgs_annual.py",
+      "git_blob": "104e82a7dc990c968940e72cbae815abfcc81f52",
+      "bytes": 39341,
+      "sha256": "e95e60a2d1463ee9d1788928c9c78c8aea17d2a403d2d0fa58c04d8cdba72149"
+    },
+    {
+      "path": "model/common.py",
+      "git_blob": "b3d9c407580faf9fa6bb8b18bf1cd510ca818542",
+      "bytes": 13522,
+      "sha256": "bd2d4f2c2bc0c9a1b62d898fbb2b883905f6650457a6845a9a209ce1cfb0d6f9"
+    },
+    {
+      "path": "model/verified_files.py",
+      "git_blob": "d9d1f9c5397a87b2053fb1df0a6a578e5ca8642a",
+      "bytes": 6858,
+      "sha256": "69b090015585af9e8eda5263ee7dd3a4f9f3714e976ea80b3e03dcaf26433b89"
+    }
+  ]
+}
