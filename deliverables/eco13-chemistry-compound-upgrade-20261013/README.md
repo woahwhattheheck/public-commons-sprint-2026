@@ -12,7 +12,7 @@ The two source parts contain **40 complete UTF-8 files / 418,177 source bytes**:
 
 The separate bootstrap directory contains the complete unchanged original application source assembler. The stager checks its exact declared byte count and SHA before loading it; the installed base need not supply a matching staging helper. Every source part and every complete member is verified before the original assembler publishes any staged source.
 
-Native source pin: `71f0c79e10f13d420d753e5b4df17cc126140e83` (PR3724). Receiving script pin: `52847d1bc1c107518340c3483f8a63364f9d1b2d`. Each file's source commit and complete identity appear in `manifest.json`.
+Native source pin: `71f0c79e10f13d420d753e5b4df17cc126140e83` (PR3724). Receiving script pin: `1c067ec39324290f20eb85ae3a365be74a71e7a4`. Each file's source commit and complete identity appear in `manifest.json`.
 
 ## Existing application and project
 
