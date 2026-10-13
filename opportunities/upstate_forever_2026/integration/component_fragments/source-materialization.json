@@ -1,0 +1,31 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "source-materialization",
+  "source_reference": "ECO-SOURCE-ROUTE/WO44/source-materialization/2026-10-13",
+  "components": {
+    "source-materialization": {
+      "title": "Original source intake and native materialization",
+      "paths": [
+        "model/common.py",
+        "model/verified_files.py",
+        "model/workspace.py",
+        "source_tools/receive_source_materialization.py",
+        "source_tools/SOURCE_MATERIALIZATION.md",
+        "tests/test_source_materialization.py",
+        "integration/component_fragments/source-materialization.json"
+      ],
+      "requires": [
+        "core"
+      ],
+      "retained_only": [
+        {
+          "path": "tests/test_source_materialization.py",
+          "reason": "Focused authored source/repair verification; not a scientific dataset or model result."
+        }
+      ]
+    }
+  },
+  "required_components": [
+    "source-materialization"
+  ]
+}

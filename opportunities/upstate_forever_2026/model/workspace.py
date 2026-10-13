@@ -18,6 +18,7 @@ from .model_selection import (normalize_selection, selected, grid_models, run_mo
 from .grid_reuse import retain_grid_definition, reuse_grid_inputs
 from .record_catalog import ProjectedFileCache, delivery_summary
 from .operator_catalog import OperatorCatalogue
+from .verified_files import verified_operation
 
 class Workspace:
     def __init__(self, root, *, create=False, title="Upper Savannah scientific workspace"):
@@ -132,6 +133,7 @@ class Workspace:
     def sources(self):
         return self._list("sources")
 
+    @verified_operation
     def import_sources(self, manifest):
         if isinstance(manifest, (str, Path)):
             manifest_path = Path(manifest).resolve(strict=True)
@@ -180,6 +182,7 @@ class Workspace:
                                       "notes": value.get("notes", []),
                                       "scope": value.get("scope", {})})
 
+    @verified_operation
     def source_file(self, collection_id, source_id):
         collection = self._get("sources", collection_id)
         found = [e for e in collection["entries"] if e["id"] == source_id]
@@ -238,6 +241,7 @@ class Workspace:
                         raise ValueError("Native source view differs: " + source_id)
         return view / entry["body"].get("view_path", entry["body"]["filename"]), entry
 
+    @verified_operation
     def save_profile(self, value):
         value, active = normalize_selection(value)
         parameters = checked_parameters(value)
@@ -250,6 +254,7 @@ class Workspace:
                                                 "rows": len(table["rows"]), "sha256": table_entry["body"]["sha256"]})
         return self._save("profiles", value)
 
+    @verified_operation
     def save_scenario(self, value):
         value = scenario_spec(dict(value))
         collection = identifier(value["source_collection_id"])
@@ -259,6 +264,7 @@ class Workspace:
                 raise ValueError("Scenario masks must be retained polygons or aligned binary rasters")
         return self._save("scenarios", value)
 
+    @verified_operation
     def prepare_grid(self, spec):
         from . import rasters
         from pyproj import CRS
@@ -373,6 +379,7 @@ class Workspace:
             raise ValueError("Selected grid lacks completed input roles: " + ", ".join(missing))
         return grid
 
+    @verified_operation
     def prepare_run(self, selection):
         profile = self._get("profiles", selection["profile_id"])
         scenario = self._get("scenarios", selection["scenario_id"])
