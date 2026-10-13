@@ -27,7 +27,8 @@
     "sediment.mjs",
     "result_handback.mjs",
     "intake_comparison.mjs",
-    "sediment_comparisons.mjs"
+    "sediment_comparisons.mjs",
+    "chiques_nutrients.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",
