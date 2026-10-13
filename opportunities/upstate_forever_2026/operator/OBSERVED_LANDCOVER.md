@@ -115,3 +115,13 @@ Example queue payload for saving uses actual retained identities:
     }
 
 The source registration uses the maintained model.observed_context and model.landcover_report_source portable ZIP writer. Existing model.common and model.reuse retain immutable bytes and verified original members. The feature is included by the maintained cumulative application/extension loader and the original Workspace portable application inventory.
+
+## Open a source-bound selection from the offline report
+
+The paired annual report can export a compact `upstate.observed-landcover-selection-request/v1` JSON with one to eight original HUC12s and chart hints. **Open saved selection JSON** also accepts this desk's complete retained comparison JSON. The import finds exactly one current source using the original analysis source ID and SHA256, calls the maintained inputs reader, and verifies polygon SHA256, original raster years and raster SHA256 values before replacing the draft. It also checks every selected HUC against the actual current original inventory.
+
+If the source is missing, first import the completed original source. If multiple retained collections contain the same analysis, choose the intended original source explicitly and retry the import. The importer accepts that current selection only when its real collection, analysis ID and hash match exactly one fresh catalogue entry; otherwise it keeps the draft and asks for a clear source choice. Failed validation, a new workspace, a newer file import or edits made during the read keep the current draft. File inputs accept up to32 MiB so the original complete native saved comparison remains usable.
+
+The imported title and source/HUC checkboxes are editable. Chart group/quantity hints are retained separately in the workspace-local browser draft and never enter the native scientific selection payload. **Inspect selected watersheds** and **Save comparison and report source** continue through the original reader and queued action. The exported complete native report can reopen in the paired offline side-by-side view when its source bindings match and it has at most eight watersheds; larger native comparisons keep their original native workflow.
+
+For rendered acceptance, inspect this file control, successful source import, unchanged draft on missing/ambiguous/foreign source, edit-during-read and workspace-switch behavior using the actual operator. Module-level execution is a separate check.

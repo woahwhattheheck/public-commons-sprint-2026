@@ -3,15 +3,15 @@
   "title": "Original 2023–2025 land-cover change — complete watershed domain",
   "entries": [
     {
-      "id": "original-landcover-change-b8bceabf4cbc9f3e97cefb88",
+      "id": "original-landcover-change-95a2a5a315083612e1131806",
       "title": "Original 2023–2025 land-cover change — complete watershed domain",
       "kind": "document",
       "role": "OBSERVED_CONTEXT",
       "vintage": "Original product years 2023 and 2025; source captured 2026-10-13",
       "uri": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms",
       "path": "observed-report.json",
-      "bytes": 63479,
-      "sha256": "b8bceabf4cbc9f3e97cefb88916fdb32cc755279559e0f6d5101ef7732611e59",
+      "bytes": 63806,
+      "sha256": "95a2a5a315083612e11318069a8250a452fa95132a33b6d2972789118b07a359",
       "companions": [
         {
           "path": "annual-2023.json",
@@ -75,13 +75,18 @@
         },
         {
           "path": "reconciliation.json",
-          "bytes": 4371,
-          "sha256": "17958a34d072d766f79e1967d16cc054f3aa61afcde061648cd2f6ca54290b36"
+          "bytes": 5098,
+          "sha256": "67349b30982ddecb279043fe4d2beeed8daaa0c47f4e7fe0e43877b04c58841c"
+        },
+        {
+          "path": "watershed-group-flows.csv",
+          "bytes": 1207485,
+          "sha256": "3266777f92f5ee843aa89d6a2842882b42a471fe1995c497594d6a0e4f954405"
         },
         {
           "path": "landcover-change-report.html",
-          "bytes": 261820,
-          "sha256": "08246409893ef3727caab9d0ab6df65e74f701b2ad8961f4349c2a5a3508dc8a"
+          "bytes": 310588,
+          "sha256": "6523851a610570964ba6b1c84027a3c7ff852efcd5f764d4f4569dc4afce2287"
         }
       ],
       "description": "Complete original paired annual land-cover source with exact matrix/annual support and all HUC rows.",
