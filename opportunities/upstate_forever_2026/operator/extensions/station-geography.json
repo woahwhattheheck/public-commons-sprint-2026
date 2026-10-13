@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "station-geography",
   "title": "Station geography",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "order": 44,
   "assets": [
     "station_geography.mjs",

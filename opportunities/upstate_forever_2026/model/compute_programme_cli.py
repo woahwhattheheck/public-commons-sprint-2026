@@ -98,7 +98,9 @@ def perform(args):
             raise ValueError("Choose an adopted conservation interaction programme")
         return result
     if args.command == "catalog":
-        return programmes.catalog(include_completed_sources=not args.without_completed_sources)
+        from .programme_interactions import catalog as interaction_catalog
+        return {**programmes.catalog(include_completed_sources=not args.without_completed_sources),
+                **interaction_catalog(programmes.workspace)}
     if args.command == "preview":
         return programmes.preview(read_json(args.selection))
     if args.command == "create":

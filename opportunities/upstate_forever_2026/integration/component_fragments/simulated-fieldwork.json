@@ -1,0 +1,18 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "simulated-fieldwork",
+  "extend_components": {
+    "implementation": {
+      "paths": [
+        "source_tools/prepare_simulated_fieldwork.py",
+        "model/simulated_fieldwork.py",
+        "docs/SIMULATED_FIELDWORK.md",
+        "integration/component_fragments/simulated-fieldwork.json"
+      ]
+    }
+  },
+  "required_components": [
+    "implementation"
+  ],
+  "source_reference": "Complete explicitly simulated headwaters field chapter using original laboratory intake, QC, corrective task and portable scientific reports."
+}
