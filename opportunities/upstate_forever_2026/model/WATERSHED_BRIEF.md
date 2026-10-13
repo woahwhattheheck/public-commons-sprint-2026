@@ -147,3 +147,37 @@ calculation. The utility source selection itself computes no pollutant load.
 
 See the [complete original two-utility source study](../source/utility-source-context/20261013/README.md)
 for the independently traversed source records and runnable Node source join.
+
+
+## Observed utility source context, brief v5
+
+Brief edition v5 retains the original planning, programme, classification and
+native-network sections and adds an optional source-bound observation section.
+model.utility_observed_context.load_for_utility validates the original source
+manifest, all declared member bytes, original utility-profile hash and exact
+selected HUC12s before supplying this section. Its binding enters the saved export
+identity independently of the parent regional context ID.
+
+The microbial section retains original concentration units, detection states,
+field replicate and source comments. Calendar-year tables report active station
+sets, actual sample dates and observed months. Per-station coverage and complete
+method-specific numeric/censored tables are exported with the original records.
+Original numeric medians represent their exact retained sample groups.
+
+The regional stream section retains the actual station relation to each utility
+selection, the original gauge network relation and existing high-flow coverage.
+It carries constituent, fraction, analytical method, original units and temporal
+support in the complete JSON and CSVs. Source nutrient concentrations and native
+annual land-origin N/P/sediment mass retain their own quantities.
+
+The HTML renderer now recognizes the saved observed-sources relative links as
+well as original publisher URLs. All source members have ordinary path/bytes/SHA256
+descriptors in export.json; an exported report can open them offline. The native
+report writer remains a standard-library implementation.
+
+A single `utility-watershed-packet.zip` download carries the verified saved file
+inventory at its original relative paths, including the brief, selected data,
+original profile and observation sources. Extract the ZIP and open
+`watershed-selection-brief.html`; its local source links resolve within the packet.
+The archive includes `packet.json` with each carried file identity. The native
+utility receiver writes the same complete packet for each utility selection.

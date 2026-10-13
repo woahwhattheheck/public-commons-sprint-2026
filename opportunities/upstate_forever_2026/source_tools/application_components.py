@@ -63,6 +63,8 @@ def validate_catalog(catalog):
             raise ValueError("Invalid component identity: " + str(name))
         for path in strings(component.get("paths"), name + " source paths", nonempty=True):
             relative(path)
+        for path in strings(component.get("source_manifests", []), name + " native source manifests"):
+            relative(path)
         for root in strings(component.get("import_roots", []), name + " Python roots"):
             relative(root)
         for dependency in strings(component.get("requires", []), name + " dependencies"):
@@ -153,6 +155,51 @@ def local_resource(owner, value):
     else:
         target = posixpath.normpath(posixpath.join(posixpath.dirname(owner), value))
     return relative(target)
+
+
+def source_manifest_members(path, value):
+    """Resolve the exact native Workspace.import_sources member contract."""
+    relative(path)
+    if (not isinstance(value, dict) or value.get("schema") != "upstate.sources/v1"
+            or not isinstance(value.get("entries"), list)):
+        raise ValueError("Source manifest must use upstate.sources/v1 and list entries")
+    members, seen = [], set()
+    for entry in value["entries"]:
+        if not isinstance(entry, dict):
+            raise ValueError("Native source entries must be objects")
+        source_id = entry.get("id")
+        if not isinstance(source_id, str) or not source_id or source_id in seen:
+            raise ValueError("Each source edition needs a unique nonempty source ID")
+        seen.add(source_id)
+        if not entry.get("uri") or not entry.get("vintage") or not entry.get("title"):
+            raise ValueError("Source " + source_id + " needs its original URI, vintage and title")
+        if entry.get("kind") not in {"raster", "vector", "table", "document"}:
+            raise ValueError("Native source kind must be raster, vector, table or document")
+        companions = entry.get("companions", [])
+        if not isinstance(companions, list):
+            raise ValueError("Native source companions must be a list")
+        native_names = set()
+        for index, member in enumerate([entry, *companions]):
+            if not isinstance(member, dict) or "path" not in member:
+                raise ValueError("Native sources require one path and optional companion paths")
+            name = relative(member["path"])
+            if name in native_names:
+                raise ValueError("Native source paths collide within source " + source_id)
+            native_names.add(name)
+            # Native relative_file is scoped to the manifest parent. It rejects
+            # literal '..', even when an application-level sibling would exist.
+            target = relative(posixpath.join(posixpath.dirname(path), name))
+            expected = member.get("sha256")
+            if expected is not None and (not isinstance(expected, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", expected)):
+                raise ValueError("Native source SHA256 must identify the original member")
+            size = member.get("bytes")
+            if size is not None and (type(size) is not int or size < 0):
+                raise ValueError("Native source byte count must be a nonnegative integer")
+            members.append({"manifest": path, "source_id": source_id, "path": target,
+                            "source_path": name, "kind": "source-primary" if index == 0 else "source-companion",
+                            "sha256": expected, "bytes": size})
+    return members
 
 
 def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True):
@@ -257,6 +304,52 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
 
     exports_cache = {}
 
+    def namespace_exports(module, function):
+        """Read literal exports from an original globals-namespace installer."""
+        result = set()
+        for candidate in _module_candidates(module, roots):
+            if candidate not in files:
+                continue
+            try:
+                tree = ast.parse(_text(files, metadata, candidate), filename=candidate)
+            except (SyntaxError, ValueError):
+                continue
+            declaration = next((item for item in tree.body
+                                if isinstance(item, ast.FunctionDef)
+                                and item.name == function), None)
+            if declaration is None:
+                continue
+            arguments = declaration.args
+            positional = [*arguments.posonlyargs, *arguments.args]
+            if (len(positional) != 1 or arguments.vararg or arguments.kwarg
+                    or arguments.kwonlyargs):
+                continue
+            namespace = positional[0].arg
+
+            def statements(items):
+                for item in items:
+                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        continue
+                    if isinstance(item, ast.Expr) and isinstance(item.value, ast.Call):
+                        call = item.value
+                        if (isinstance(call.func, ast.Attribute)
+                                and isinstance(call.func.value, ast.Name)
+                                and call.func.value.id == namespace
+                                and call.func.attr == "update"
+                                and len(call.args) == 1 and not call.keywords
+                                and isinstance(call.args[0], ast.Dict)):
+                            result.update(key.value for key in call.args[0].keys
+                                          if isinstance(key, ast.Constant)
+                                          and isinstance(key.value, str)
+                                          and key.value.isidentifier())
+                    for child in ast.iter_child_nodes(item):
+                        if isinstance(child, ast.stmt):
+                            statements([child])
+                        elif isinstance(child, ast.ExceptHandler):
+                            statements(child.body)
+            statements(declaration.body)
+        return result
+
     def module_exports(name, visiting=()):
         if name in exports_cache:
             return exports_cache[name]
@@ -270,6 +363,8 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                 tree = ast.parse(_text(files, metadata, candidate), filename=candidate)
             except (SyntaxError, ValueError):
                 continue
+
+            installers = {}
 
             def names(target):
                 if isinstance(target, ast.Name):
@@ -287,7 +382,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                         exported.update(alias.asname or alias.name.split(".")[0] for alias in item.names)
                     elif isinstance(item, ast.ImportFrom):
                         exported.update(alias.asname or alias.name for alias in item.names if alias.name != "*")
-                        if any(alias.name == "*" for alias in item.names) and item.module:
+                        if item.module:
                             package = list(PurePosixPath(candidate).parent.parts)
                             if item.level and item.level <= len(package):
                                 target = ".".join([*package[:len(package) - item.level + 1],
@@ -297,13 +392,26 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                             else:
                                 target = None
                             if target:
-                                exported.update(module_exports(target, (*visiting, name)))
+                                installers.update({alias.asname or alias.name: (target, alias.name)
+                                                   for alias in item.names if alias.name != "*"})
+                                if any(alias.name == "*" for alias in item.names):
+                                    exported.update(module_exports(target, (*visiting, name)))
                     elif isinstance(item, (ast.Assign, ast.AnnAssign)):
                         targets = item.targets if isinstance(item, ast.Assign) else [item.target]
                         for target in targets:
                             exported.update(names(target))
                     elif isinstance(item, (ast.For, ast.AsyncFor)):
                         exported.update(names(item.target))
+                    elif isinstance(item, ast.Expr) and isinstance(item.value, ast.Call):
+                        call = item.value
+                        if (isinstance(call.func, ast.Name) and call.func.id in installers
+                                and len(call.args) == 1 and not call.keywords
+                                and isinstance(call.args[0], ast.Call)
+                                and isinstance(call.args[0].func, ast.Name)
+                                and call.args[0].func.id == "globals"
+                                and not call.args[0].args and not call.args[0].keywords
+                                and "globals" not in exported):
+                            exported.update(namespace_exports(*installers[call.func.id]))
                     # Conditional imports and declarations still belong to the
                     # module; function and class locals were excluded above.
                     for child in ast.iter_child_nodes(item):
@@ -333,6 +441,24 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
     for name in selected:
         for path in catalog["components"][name]["paths"]:
             require(path, "component:" + name, "component")
+
+    source_members, source_manifests = [], []
+    for manifest_path in sorted({path for name in selected
+                                 for path in catalog["components"][name].get("source_manifests", [])}):
+        require(manifest_path, "selected-source-manifests", "source-manifest")
+        if manifest_path not in files:
+            continue
+        try:
+            manifest_value = json.loads(_text(files, metadata, manifest_path))
+            members = source_manifest_members(manifest_path, manifest_value)
+            source_members.extend(members)
+            source_manifests.append({"path": manifest_path,
+                                     "source_ids": [entry["id"] for entry in manifest_value["entries"]],
+                                     "member_references": len(members)})
+            for member in members:
+                require(member["path"], manifest_path, member["kind"])
+        except (ValueError, TypeError, KeyError, UnicodeError) as error:
+            issue("source-manifest", manifest_path, manifest_path, str(error))
 
     ids = {}
     for path in sorted(files):
@@ -455,6 +581,16 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
         if isinstance(record, dict) and any(record.get(key) != identities[path][key]
                                            for key in ("bytes", "sha256")):
             issue("source-identity", path, path, "Member metadata differs from original source bytes")
+    for member in source_members:
+        actual = identities.get(member["path"])
+        if actual is None:
+            continue
+        for key in ("sha256", "bytes"):
+            expected = member[key]
+            if expected is not None and actual[key] != expected:
+                issue("source-manifest-identity", member["manifest"], member["path"],
+                      "Original native source " + key + " differs from its manifest",
+                      source_id=member["source_id"], expected=expected, actual=actual[key])
     distinct = {canonical(item): item for item in issues}
     missing = [distinct[key] for key in sorted(distinct)]
     return {
@@ -467,6 +603,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                         "source_reference": catalog["components"][name].get("source_reference")}
                        for name in selected],
         "extensions": descriptors, "members": identities,
+        "source_manifests": source_manifests,
         "embedded_members": retained_embedded,
         "dependencies": sorted(edges, key=lambda row: (row["path"], row["kind"], row["target"])),
         "issues": missing,
@@ -493,6 +630,9 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
         raise ValueError("Receive the original selected-edition catalogue: " + CATALOG_PATH)
     catalog = validate_catalog(json.loads(catalog_file.read_text("utf-8")))
     declared = {path for component in catalog["components"].values() for path in component["paths"]}
+    selected = _selected(catalog, ())
+    declared.update(path for name in selected
+                    for path in catalog["components"][name].get("source_manifests", []))
     for path in sorted(root.rglob("*")):
         relative_path = path.relative_to(root)
         if any(part in _EXCLUDED or part.startswith(".") for part in relative_path.parts):
@@ -512,6 +652,45 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
             files[name] = base64.b64encode(body).decode("ascii")
             record["encoding"] = "base64"
         metadata[name] = record
+    # Select the exact native source files named by the edition, including CSV,
+    # GeoJSON and binary sidecars that are not generic source-code extensions.
+    for manifest_path in sorted({path for name in selected
+                                 for path in catalog["components"][name].get("source_manifests", [])}):
+        if manifest_path not in files:
+            continue
+        try:
+            members = source_manifest_members(
+                manifest_path, json.loads(_text(files, metadata, manifest_path)))
+        except (ValueError, TypeError, KeyError, UnicodeError):
+            # inspect() returns the precise malformed-manifest diagnostic.
+            continue
+        for member in members:
+            name = member["path"]
+            if name in files:
+                continue
+            path = root.joinpath(*PurePosixPath(name).parts)
+            if not path.is_file():
+                continue
+            if path.is_symlink() or not path.resolve(strict=True).is_relative_to(root):
+                raise ValueError("Native source member leaves the application: " + name)
+            for parent in path.parents:
+                if parent == root:
+                    break
+                if parent.is_symlink():
+                    raise ValueError("Native source member contains an alias: " + name)
+            if path.stat().st_size > 256 * 1024 * 1024:
+                raise ValueError("Selected native source exceeds the receiving limit: " + name)
+            with path.open("rb") as stream:
+                body = stream.read(256 * 1024 * 1024 + 1)
+            if len(body) > 256 * 1024 * 1024:
+                raise ValueError("Selected native source exceeds the receiving limit: " + name)
+            record = {"bytes": len(body), "sha256": digest(body)}
+            try:
+                files[name] = body.decode("utf-8")
+            except UnicodeError:
+                files[name] = base64.b64encode(body).decode("ascii")
+                record["encoding"] = "base64"
+            metadata[name] = record
     # Load only resources actually referenced by retained HTML. This keeps a
     # figure present on disk from appearing absent in the source-map inspection,
     # without reading unrelated original geospatial payloads.

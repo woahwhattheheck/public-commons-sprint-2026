@@ -13,7 +13,6 @@ import itertools
 import json
 import math
 from pathlib import Path
-import zipfile
 
 from .common import (INVEST_VERSION, atomic_bytes, atomic_json, canonical,
                      describe_file, digest, held, identifier, now, read_json,
@@ -23,6 +22,9 @@ from .model_selection import (grid_models, models as normalize_models,
                               required_outputs, run_models, selected,
                               validate_completed_run)
 from . import rasters
+from .native_execution import storage_exhausted
+from .parameter_exports import EDITION as EXPORT_EDITION, retain_differences, write_archive
+from .reuse import copy_verified
 
 SCHEMA = "upstate.parameter-experiment/v1"
 SELECTION_SCHEMA = "upstate.parameter-experiment-selection/v1"
@@ -399,7 +401,7 @@ def _areas(workspace, selections, target_crs, grid_id):
     return result
 
 
-def _paired(baseline_path, case_path, areas, *, pollutant):
+def _paired(baseline_path, case_path, areas, *, pollutant, checkpoint=None):
     import numpy as np
     import rasterio
     from rasterio.features import geometry_mask
@@ -418,7 +420,15 @@ def _paired(baseline_path, case_path, areas, *, pollutant):
             raise ValueError("The retained comparison grid has invalid pixel area")
         # Native capture already converted the original per-hectare rates to
         # annual mass per pixel. Aggregate those stored masses exactly once.
-        for _, window in baseline.block_windows(1):
+        block_height, block_width = baseline.block_shapes[0]
+        total_windows = (math.ceil(baseline.height / block_height)
+                         * math.ceil(baseline.width / block_width))
+        next_window = 0
+        if checkpoint is not None:
+            totals, next_window = checkpoint.begin(totals, total_windows)
+        for window_index, (_, window) in enumerate(baseline.block_windows(1)):
+            if window_index < next_window:
+                continue
             a = baseline.read(1, window=window, masked=True)
             b = alternative.read(1, window=window, masked=True)
             av, bv = np.ma.getdata(a), np.ma.getdata(b)
@@ -439,6 +449,10 @@ def _paired(baseline_path, case_path, areas, *, pollutant):
                 total["baseline_valid_cells"] += int(ga.sum())
                 total["case_valid_cells"] += int(gb.sum())
                 total["paired_valid_cells"] += int(paired.sum())
+            if checkpoint is not None:
+                # Publish only after every area has consumed this complete window.
+                checkpoint.advance(totals, window_index + 1,
+                                   force=window_index + 1 == total_windows)
     for area in areas:
         total = totals[area["id"]]
         for name in ("baseline", "case"):
@@ -477,8 +491,9 @@ def _response(case, profile, change, baseline_mass):
     return result
 
 
-def _summarize(workspace, key):
+def _summarize(workspace, key, *, progress=None):
     import rasterio
+    from .parameter_pair_cache import PairResults
     state = inspect(workspace, key)
     directory = workspace.root / "experiments" / key
     completed = [case for case in state["cases"] if case["state"] == "complete"]
@@ -494,13 +509,23 @@ def _summarize(workspace, key):
     with rasterio.open(baseline_files[pollutants[0]]) as raster:
         areas = _areas(workspace, state["selection"]["reporting_areas"], raster.crs,
                        baseline["selection"]["grid_id"])
+    cache = PairResults(
+        directory, workspace_id=workspace.project["id"], experiment_id=key,
+        engine_path=Path(__file__), areas=areas,
+        total_pairs=len(completed) * len(pollutants), progress=progress)
     rows = []
     for case in completed:
         run = workspace.inspect_run(case["run_id"])
         for pollutant in pollutants:
             path = (baseline_files[pollutant] if case["id"] == "baseline" else
                     verify_file(workspace.root / "runs" / run["id"], run["artifacts"][pollutant]))
-            values = _paired(baseline_files[pollutant], path, areas, pollutant=pollutant)
+            values = cache.evaluate(
+                case_id=case["id"], run_id=run["id"], pollutant=pollutant,
+                baseline=baseline["artifacts"][pollutant],
+                alternative=run["artifacts"][pollutant],
+                calculate=lambda checkpoint: _paired(
+                    baseline_files[pollutant], path, areas,
+                    pollutant=pollutant, checkpoint=checkpoint))
             for area in areas:
                 value = values[area["id"]]
                 rows.append({"case_id": case["id"], "case": case["label"], "run_id": run["id"],
@@ -523,7 +548,9 @@ def _summarize(workspace, key):
                                "minimum_mass": low["case_mass"], "maximum_mass": high["case_mass"],
                                "minimum_case_id": low["case_id"], "maximum_case_id": high["case_id"],
                                "support_changed_cases": len(selected) - len(matched)})
+    aggregation = cache.finish()
     result = {"schema": "upstate.parameter-experiment-results/v1", "experiment_id": key,
+              "aggregation": aggregation,
               "workspace_id": workspace.project["id"], "title": state["selection"]["title"],
               "purpose": state["selection"]["purpose"], "design": state["selection"]["design"],
               "selection": state["selection"], "baseline_selection": baseline["selection"],
@@ -579,6 +606,27 @@ def _report(result):
                     esc(", ".join(map(str, axis["values"]))) + "</td><td>" +
                     esc(axis["reason"]) + "</td><td>" +
                     "<br>".join(esc(ref) for ref in axis["references"]) + "</td></tr>")
+    maps = result.get("difference_maps", {})
+    map_section = ""
+    if maps.get("requested"):
+        map_rows = []
+        for alternative in maps.get("alternatives", []):
+            for pollutant, descriptor in alternative["artifacts"].items():
+                map_rows.append("<tr><td>" + esc(alternative["case"]) + "</td><td>" +
+                                esc(pollutant.replace("_export", "")) + "</td><td>" +
+                                esc(descriptor["units"]) + '</td><td><a href="' +
+                                esc(descriptor["path"]) + '">Download GeoTIFF</a></td></tr>')
+        if map_rows:
+            map_section = ('<h2>Spatial parameter responses</h2><p>' +
+                           esc(maps["basis"]) + '</p><p><a href="' +
+                           esc(maps["comparison"]["path"]) + '">Original comparison</a> · ' +
+                           '<a href="' + esc(maps["grid"]["path"]) +
+                           '">Original grid</a></p><div class="scroll"><table><thead><tr>' +
+                           '<th>Case</th><th>Pollutant</th><th>Units</th><th>GIS file</th>' +
+                           '</tr></thead><tbody>' + "".join(map_rows) + '</tbody></table></div>')
+        else:
+            map_section = ("<h2>Spatial parameter responses</h2><p>Maps will be included "
+                           "as the selected native alternatives complete.</p>")
     return """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>""" + esc(result["title"]) + """</title>
 <style>body{font:14px/1.5 system-ui,sans-serif;color:#202020;background:#fff;margin:0}
@@ -592,7 +640,7 @@ code{overflow-wrap:anywhere}a{color:#242424}@media print{main{margin:0;padding:0
 <p><a href="results.csv">Download quantitative results (CSV)</a> · <a href="results.json">Open full results (JSON)</a> · <a href="selection.json">Open saved design</a></p>
 <h2>Parameter selection</h2><div class="scroll"><table><thead><tr><th>Axis</th><th>Native parameters</th><th>Values</th><th>Reason</th><th>Sources</th></tr></thead><tbody>""" + "".join(axes) + """</tbody></table></div>
 <h2>Quantitative comparisons</h2><p>""" + esc(result["comparison_basis"]) + """</p><p>""" + esc(result["mass_basis"]) + """</p><div class="scroll"><table><thead><tr><th>Area</th><th>Case</th><th>Pollutant</th><th>Units</th><th>Baseline on shared cells</th><th>Case on shared cells</th><th>Change</th><th>Change %</th><th>Shared cells</th><th>Support</th></tr></thead><tbody>""" + "".join(row_html) + """</tbody></table></div>
-<h2>Interpretation and source</h2><p>""" + esc(result["range_basis"]) + """</p><p>Numeric single-parameter responses include the change per parameter unit and normalized elasticity in the downloadable data. Coupled parameter changes retain their complete joint selection.</p>
+""" + map_section + """<h2>Interpretation and source</h2><p>""" + esc(result["range_basis"]) + """</p><p>Numeric single-parameter responses include the change per parameter unit and normalized elasticity in the downloadable data. Coupled parameter changes retain their complete joint selection.</p>
 <p>Study <code>""" + esc(result["experiment_id"]) + "</code><br>Baseline <code>" + esc(result["selection"]["baseline_run_id"]) + "</code></p></main></body></html>"
 
 
@@ -601,22 +649,44 @@ def _exports(workspace, state):
     profiles = {case["profile_id"]: workspace._get("profiles", case["profile_id"])
                 for case in state["cases"]}
     atomic_json(directory / "profiles.json", profiles)
+    maps, map_files = retain_differences(workspace, directory, state)
+    result = read_json(directory / "results.json")
+    if result.get("experiment_id") != state["id"] or result.get("workspace_id") != workspace.project["id"]:
+        raise ValueError("Parameter results belong to a different retained study")
+    result["difference_maps"] = maps
+    result["export_edition"] = EXPORT_EDITION
+    atomic_json(directory / "results.json", result)
+    atomic_bytes(directory / "report.html", _report(result).encode("utf-8"))
     files = ["selection.json", "results.json", "results.csv", "report.html", "profiles.json"]
-    pending = directory / ".results.zip"
-    with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for name in files:
-            archive.write(directory / name, name)
-        for case in state["cases"]:
-            run = workspace.inspect_run(case["run_id"])
-            for model in run_models(run):
-                stage = run.get("stages", {}).get(model)
-                if stage and stage.get("arguments"):
-                    original = verify_file(workspace.root / "runs" / case["run_id"], stage["arguments"])
-                    archive.write(original, "native-arguments/" + case["id"] + "/" + model + ".json")
-    pending.replace(directory / "experiment-results.zip")
-    return {name: describe_file(directory, directory / filename) for name, filename in (
+    if (directory / "aggregation.json").is_file():
+        files.append("aggregation.json")
+        aggregation = read_json(directory / "aggregation.json")
+        context = directory / aggregation["context"]
+        # A context path is written only by the retained pair-result manager.
+        if not context.resolve().is_relative_to((directory / "paired-results").resolve()):
+            raise ValueError("The retained aggregation context leaves its study")
+        files.append(context.relative_to(directory).as_posix())
+        for pair_id in dict.fromkeys(row["pair_id"] for row in aggregation["pairs"]):
+            files.append((context.parent / (identifier(pair_id) + ".json")).relative_to(directory).as_posix())
+    descriptors = [describe_file(directory, directory / name) for name in files]
+    descriptors.extend(map_files.values())
+    for case in state["cases"]:
+        run = workspace.inspect_run(case["run_id"])
+        for model in run_models(run):
+            stage = run.get("stages", {}).get(model)
+            if stage and stage.get("arguments"):
+                descriptors.append(copy_verified(
+                    workspace.root / "runs" / case["run_id"], stage["arguments"], directory,
+                    path="native-arguments/" + case["id"] + "/" + model + ".json"))
+    write_archive(directory, directory / "experiment-results.zip", descriptors)
+    artifacts = {name: describe_file(directory, directory / filename) for name, filename in (
         ("selection", "selection.json"), ("results", "results.json"), ("csv", "results.csv"),
         ("report", "report.html"), ("profiles", "profiles.json"), ("archive", "experiment-results.zip"))}
+    artifacts.update(map_files)
+    if (directory / "aggregation.json").is_file():
+        artifacts["aggregation"] = describe_file(directory, directory / "aggregation.json")
+    state["export_edition"] = EXPORT_EDITION
+    return artifacts
 
 
 def execute(workspace, key, *, progress=None):
@@ -634,9 +704,17 @@ def execute(workspace, key, *, progress=None):
     with held(directory / ".experiment.lock", blocking=False):
         state = inspect(workspace, key)
         if state["state"] == "complete":
-            for item in state["artifacts"].values():
-                verify_file(directory, item)
-            return {**state, "reused": True}
+            if state.get("export_edition") == EXPORT_EDITION:
+                for item in state["artifacts"].values():
+                    verify_file(directory, item)
+                return {**state, "reused": True}
+            # Upgrade completed report/GIS exports using the same retained runs.
+            # A failed copy/archive attempt resumes here without native execution.
+            _summarize(workspace, key)
+            state["artifacts"] = _exports(workspace, state)
+            state["updated_at"] = now()
+            atomic_json(state_path, state)
+            return {**state, "reused": True, "exports_refreshed": True}
         state.pop("error", None)
         save(state="running")
         try:
@@ -650,17 +728,18 @@ def execute(workspace, key, *, progress=None):
                     case.pop("error", None)
                 except Exception as error:
                     case["state"] = "failed"
-                    case["error"] = {"type": type(error).__name__, "message": str(error)}
+                    case["error"] = deepcopy(getattr(error, "native_failure", None)) or {
+                        "type": type(error).__name__, "message": str(error)}
+                    if storage_exhausted(error):
+                        raise
                     save()
                     if case["id"] == "baseline":
                         raise
                 save()
             # Preserve usable quantitative results while other parameter cases recover.
-            summary = _summarize(workspace, key)
-            if state["selection"]["difference_maps"]:
-                completed_ids = [case["run_id"] for case in state["cases"] if case["state"] == "complete"]
-                if len(completed_ids) > 1:
-                    state["comparison_id"] = workspace.compare_runs(completed_ids)["id"]
+            summary = _summarize(workspace, key,
+                                 progress=lambda value: save(active_case_id=None, active_run_id=None,
+                                                             aggregation_progress=value))
             state["artifacts"] = _exports(workspace, state)
             state["result_counts"] = {"rows": len(summary["rows"]), "ranges": len(summary["ranges"])}
             failed = [case for case in state["cases"] if case["state"] != "complete"]
@@ -671,8 +750,15 @@ def execute(workspace, key, *, progress=None):
                 save(state="complete", completed_at=now(), active_case_id=None, active_run_id=None)
             return state
         except BaseException as error:
-            save(state="failed", active_case_id=None, active_run_id=None,
-                 error={"type": type(error).__name__, "message": str(error)})
+            failure = deepcopy(getattr(error, "native_failure", None)) or {
+                "type": type(error).__name__, "message": str(error)}
+            try:
+                save(state="failed", active_case_id=None, active_run_id=None, error=failure)
+            except OSError:
+                # The original run journal has reserved recovery capacity.
+                # Preserve its primary failure if this larger study cannot save.
+                if not storage_exhausted(error):
+                    raise
             raise
 
 
@@ -682,12 +768,12 @@ def summarize(workspace, key):
     directory = workspace.root / "experiments" / key
     with held(directory / ".experiment.lock", blocking=False):
         state = inspect(workspace, key)
-        result = _summarize(workspace, key)
-        if state["selection"]["difference_maps"]:
-            run_ids = [case["run_id"] for case in state["cases"] if case["state"] == "complete"]
-            if len(run_ids) > 1:
-                state["comparison_id"] = workspace.compare_runs(run_ids)["id"]
+        def aggregation_progress(value):
+            state.update(aggregation_progress=value, updated_at=now())
+            atomic_json(directory / "experiment.json", state)
+        result = _summarize(workspace, key, progress=aggregation_progress)
         state["artifacts"] = _exports(workspace, state)
+        result = read_json(directory / "results.json")
         state["result_counts"] = {"rows": len(result["rows"]), "ranges": len(result["ranges"])}
         state["updated_at"] = now()
         state["active_case_id"] = state["active_run_id"] = None

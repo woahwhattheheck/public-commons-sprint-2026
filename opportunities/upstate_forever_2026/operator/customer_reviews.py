@@ -10,6 +10,7 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
+import stat
 import urllib.parse
 
 from model.common import atomic_json, canonical, digest, file_digest, identifier, read_json
@@ -22,6 +23,12 @@ ACTIONS = frozenset({
 READS = frozenset({"catalog", "review", "template", "compare", "spatial-export",
                    "handbacks", "handback", "handback-template"})
 APPLICATION = Path(__file__).resolve().parents[1]
+EXPORT_ACTIONS = frozenset({"customer.review.export", "customer.review.handback.export"})
+
+
+class ReceivedExportUnavailable(Exception):
+    """The proven sender-local export was not part of this restored project."""
+
 
 
 class CustomerReviews:
@@ -57,6 +64,151 @@ class CustomerReviews:
             "filename": path.name,
         }
 
+
+    def _export_identity(self, task):
+        """Return only task IDs bound to the unchanged original export request."""
+        action, payload = task.get("action"), task.get("payload")
+        operation = task.get("operation_id")
+        if (action not in EXPORT_ACTIONS or not isinstance(payload, dict)
+                or not isinstance(operation, str)
+                or not re.fullmatch(r"[A-Za-z0-9_-]{16,100}", operation)):
+            raise ValueError("Open an original retained review export operation")
+        workspace = identifier(task.get("workspace"))
+        key = identifier(task.get("id"))
+        if (key != digest({"workspace": workspace, "operation_id": operation})
+                or task.get("request_sha256") != digest({
+                    "workspace": workspace, "action": action, "payload": payload})):
+            raise ValueError("The export differs from its original task selection")
+        originals, origin = [], task.get("transfer_origin")
+        while origin is not None:
+            if not isinstance(origin, dict):
+                raise ValueError("The export has an invalid retained transfer history")
+            identifier(origin.get("transfer_id"))
+            old_workspace = identifier(origin.get("workspace_key"))
+            old_key = identifier(origin.get("task_id"))
+            if (old_key != digest({"workspace": old_workspace, "operation_id": operation})
+                    or origin.get("request_sha256") != digest({
+                        "workspace": old_workspace, "action": action, "payload": payload})):
+                raise ValueError("The export differs from its original transferred request")
+            originals.append(old_key)
+            origin = origin.get("previous")
+        return originals
+
+    def _export_selection(self, task, *, completed=False):
+        originals = self._export_identity(task)
+        ws, payload = self.operator.ws(task["workspace"]), task["payload"]
+        if task["action"] == "customer.review.handback.export":
+            handback_id = self._id(payload, "handback_id")
+            record = ws._get(review_handback.KIND, handback_id)
+            if record["project_id"] != ws.project["id"] or record["state"] != "ready":
+                raise ValueError("Choose the retained ready engineering edition in this project")
+            selected = {"handback_id": handback_id}
+            pins = {key: record[key] for key in
+                    ("review_id", "response_id", "revised_review_id")}
+            pins["handback_id"] = handback_id
+        else:
+            review_id = self._id(payload, "review_id")
+            record = ws._get("reviews", review_id)
+            if record["project"] != ws.project:
+                raise ValueError("The export belongs to another original scientific project")
+            if "expected_response_id" not in payload:
+                raise ValueError("The export needs its original selected response generation")
+            expected = payload["expected_response_id"]
+            if expected is not None:
+                response = ws._get("review-responses", identifier(expected))
+                if response["review_id"] != review_id or response["project_id"] != ws.project["id"]:
+                    raise ValueError("The selected response belongs to another original review")
+            selected = {"review_id": review_id, "expected_response_id": expected}
+            pins = {"review_id": review_id, "latest_response_id": expected}
+        if completed:
+            if task.get("state") != "complete" or not isinstance(task.get("result"), dict):
+                raise ValueError("Open a completed original export")
+            result = task["result"]
+            if result.get("project_id") != ws.project["id"] or any(result.get(k) != v for k, v in pins.items()):
+                raise ValueError("The completed export differs from its original selected edition")
+            identifier(result.get("package_sha256"))
+        return selected, originals
+
+    def _rebuild_source(self, task, selected):
+        """Resolve the selected export through original multi-machine task aliases."""
+        source_id = self._id(task["payload"], "source_export_task_id")
+        source = None
+        try:
+            candidate = self.operator.task(source_id)
+        except FileNotFoundError:
+            candidate = None
+        if candidate is not None and candidate.get("workspace") == task["workspace"]:
+            source = candidate
+        if source is None:
+            matches = []
+            for candidate in self.operator.task_list(task["workspace"]):
+                if candidate.get("action") != task["action"] or candidate.get("state") != "complete":
+                    continue
+                origin = candidate.get("transfer_origin")
+                while isinstance(origin, dict) and origin.get("task_id") != source_id:
+                    origin = origin.get("previous")
+                if isinstance(origin, dict) and source_id in self._export_identity(candidate):
+                    matches.append(candidate)
+            if len(matches) != 1:
+                raise ValueError("Restore the original completed export task before rebuilding its selected edition")
+            source = matches[0]
+        if source["id"] == task["id"] or source.get("action") != task["action"]:
+            raise ValueError("Choose a distinct completed export of this original review kind")
+        original, _ = self._export_selection(source, completed=True)
+        if selected != original:
+            raise ValueError("The rebuild must retain the source export's exact original selection")
+        # Check any locally retained package before offering a replacement.
+        # A missing proven sender directory is expected; changed local files are not.
+        try:
+            self._export_manifest(source)
+            original_archive = Path(source["result"]["archive"]["path"])
+            if file_digest(original_archive) != source["result"]["archive"]["sha256"]:
+                raise self.Fault("REVIEW_ARCHIVE_CHANGED", "The original review archive changed.", 409)
+        except ReceivedExportUnavailable:
+            pass
+        return source
+
+    @staticmethod
+    def _absolute_export_path(value):
+        if not isinstance(value, str) or "\\" in value or "\0" in value:
+            raise ValueError("The export has an invalid original file path")
+        path = PurePosixPath(value)
+        if not path.is_absolute() or str(path) != value or ".." in path.parts:
+            raise ValueError("The export has an invalid original file path")
+        return Path(value)
+
+    @staticmethod
+    def _export_descriptor(value, path):
+        if (not isinstance(value, dict) or value.get("path") != str(path)
+                or type(value.get("bytes")) is not int or value["bytes"] < 0):
+            raise ValueError("The export file differs from its original task inventory")
+        identifier(value.get("sha256"))
+
+    def _export_availability(self, task):
+        selected, _ = self._export_selection(task, completed=True)
+        try:
+            self._export_manifest(task)
+        except ReceivedExportUnavailable:
+            return {
+                "export_status": "rebuild_from_retained_review",
+                "export_message": (
+                    "This received project retains the original review and engineering records. "
+                    "The sender's exported desk is unavailable on this computer. "
+                    "Rebuild this exact selected edition here to open or download its package."),
+                "rebuild": {"action": task["action"],
+                            "payload": {**selected, "source_export_task_id": task["id"]}},
+            }
+        return {"export_status": "available", "desk_url": self._desk_url(task["id"])}
+
+    def _listed_export_availability(self, task):
+        try:
+            return self._export_availability(task)
+        except (self.Fault, OSError, ValueError, KeyError, TypeError) as error:
+            # A damaged historical export must not hide other saved reviews.
+            # Opening the task, serving its files or rebuilding still raises
+            # the original error from the strict operations.
+            return {"export_status": "error", "export_message": str(error)}
+
     def _exports(self, workspace, review_id=None):
         result = []
         for task in self.operator.task_list(workspace):
@@ -71,7 +223,7 @@ class CustomerReviews:
                 "latest_response_id": value["latest_response_id"],
                 "package_sha256": value["package_sha256"], "members": value["members"],
                 "archive_bytes": value["archive"]["bytes"],
-                "desk_url": self._desk_url(task["id"]),
+                **self._listed_export_availability(task),
             })
         return result
 
@@ -87,7 +239,7 @@ class CustomerReviews:
                 "task_id": task["id"], "review_id": value["review_id"], "handback_id": value["handback_id"],
                 "created_at": task["created_at"], "completed_at": task.get("ended_at"),
                 "package_sha256": value["package_sha256"], "members": value["members"],
-                "archive_bytes": value["archive"]["bytes"], "desk_url": self._desk_url(task["id"]),
+                "archive_bytes": value["archive"]["bytes"], **self._listed_export_availability(task),
             })
         return result
 
@@ -247,20 +399,20 @@ class CustomerReviews:
 
     def _export(self, task):
         ws = self.operator.ws(task["workspace"])
-        payload = task["payload"]
-        review_id = self._id(payload, "review_id")
-        if "expected_response_id" not in payload:
-            raise ValueError("Reopen the selected review before exporting its current response generation")
-        expected = payload["expected_response_id"]
-        if expected is not None:
-            identifier(expected)
+        payload, (selected, origins) = task["payload"], self._export_selection(task)
+        review_id, expected = selected["review_id"], selected["expected_response_id"]
+        historical = bool(origins) or "source_export_task_id" in payload
+        if "source_export_task_id" in payload:
+            self._rebuild_source(task, selected)
         directory = self.operator.root / "outputs" / "customer-review-exports" / task["id"]
         directory.mkdir(parents=True, exist_ok=True)
         desk, archive = directory / "desk", directory / "review-desk.zip"
         if desk.exists():
             result = reviews.describe_export(desk)
         else:
-            result = reviews.export_review(ws, review_id, desk, expected_response_id=expected)
+            generation = ({"through_response_id": expected} if historical
+                          else {"expected_response_id": expected})
+            result = reviews.export_review(ws, review_id, desk, **generation)
         if (result["review_id"] != review_id or result["project_id"] != ws.project["id"]
                 or result["latest_response_id"] != expected):
             raise self.Fault("REVIEW_EXPORT_GENERATION",
@@ -280,7 +432,10 @@ class CustomerReviews:
 
     def _export_handback(self, task):
         ws = self.operator.ws(task["workspace"])
-        handback_id = self._id(task["payload"], "handback_id")
+        selected, _ = self._export_selection(task)
+        handback_id = selected["handback_id"]
+        if "source_export_task_id" in task["payload"]:
+            self._rebuild_source(task, selected)
         directory = self.operator.root / "outputs" / "customer-review-handbacks" / task["id"]
         directory.mkdir(parents=True, exist_ok=True)
         desk, archive = directory / "desk", directory / "engineering-handback.zip"
@@ -298,18 +453,46 @@ class CustomerReviews:
         return result
 
     def _export_manifest(self, task):
-        if task["action"] not in ("customer.review.export", "customer.review.handback.export") or task["state"] != "complete":
+        if task["action"] not in EXPORT_ACTIONS or task["state"] != "complete":
             raise self.Fault("REVIEW_EXPORT_PENDING", "Open a completed review export.", 409)
+        _, origins = self._export_selection(task, completed=True)
         result = task["result"]
         engineering = task["action"] == "customer.review.handback.export"
         family = "customer-review-handbacks" if engineering else "customer-review-exports"
-        expected_root = self.operator.root / "outputs" / family / task["id"] / "desk"
-        directory = Path(result["directory"])
-        if directory != expected_root:
-            raise self.Fault("REVIEW_EXPORT_PATH", "The retained export is outside its original task directory.", 409)
-        file = directory / (review_handback.MANIFEST if engineering else "review-manifest.json")
+        manifest_name = review_handback.MANIFEST if engineering else "review-manifest.json"
+        archive_name = "engineering-handback.zip" if engineering else "review-desk.zip"
+        directory = self._absolute_export_path(result["directory"])
+        parts = directory.parts
+        if (len(parts) < 5 or parts[-4:-2] != ("outputs", family)
+                or parts[-1] != "desk" or parts[-2] not in [task["id"], *origins]):
+            raise self.Fault("REVIEW_EXPORT_PATH", "The export is outside its original task directory.", 409)
+        original_task_id = parts[-2]
+        file, archive = directory / manifest_name, directory.parent / archive_name
+        self._export_descriptor(result.get("manifest"), file)
+        self._export_descriptor(result.get("archive"), archive)
+        if result["archive"].get("package_sha256") != result["package_sha256"]:
+            raise ValueError("The original archive describes a different review package")
+        local_root = self.operator.root.absolute()
+        expected = local_root / "outputs" / family / original_task_id / "desk"
+        if directory != expected:
+            if original_task_id in origins:
+                # Never follow a sender's absolute path on the receiving computer.
+                raise ReceivedExportUnavailable()
+            raise self.Fault("REVIEW_EXPORT_PATH", "The export is outside this original operator.", 409)
+        try:
+            cursor = local_root
+            for part in directory.relative_to(local_root).parts:
+                cursor = cursor / part
+                status = cursor.lstat()
+                if not stat.S_ISDIR(status.st_mode):
+                    raise self.Fault("REVIEW_EXPORT_PATH", "The original export directory changed.", 409)
+        except FileNotFoundError:
+            if original_task_id in origins:
+                raise ReceivedExportUnavailable() from None
+            raise
+        file = reviews._regular(local_root, file.relative_to(local_root).as_posix())
         descriptor = result["manifest"]
-        if file.is_symlink() or file.stat().st_size != descriptor["bytes"] or file_digest(file) != descriptor["sha256"]:
+        if file.stat().st_size != descriptor["bytes"] or file_digest(file) != descriptor["sha256"]:
             raise self.Fault("REVIEW_MANIFEST_CHANGED", "The original review export inventory changed.", 409)
         manifest = read_json(file)
         if engineering and manifest.get("handback_id") != result.get("handback_id"):
@@ -318,6 +501,21 @@ class CustomerReviews:
                 or manifest["review_id"] != result["review_id"]
                 or manifest["project_id"] != result["project_id"]):
             raise self.Fault("REVIEW_EXPORT_CHANGED", "The retained review export identity changed.", 409)
+        try:
+            original_archive = reviews._regular(local_root, archive.relative_to(local_root).as_posix())
+        except FileNotFoundError:
+            if original_task_id in origins:
+                # A transferred desk may have been copied without its ZIP.
+                # Verify the complete present desk before treating that omission
+                # as recoverable; missing or changed members remain errors.
+                if engineering:
+                    review_handback.describe_export(directory)
+                else:
+                    reviews.describe_export(directory)
+                raise ReceivedExportUnavailable() from None
+            raise
+        if original_archive.stat().st_size != result["archive"]["bytes"]:
+            raise self.Fault("REVIEW_ARCHIVE_CHANGED", "The original review archive changed.", 409)
         return directory, manifest
 
     def decorate_task(self, task):
@@ -327,6 +525,14 @@ class CustomerReviews:
         task["_review"] = {"review_id": result["review_id"]}
         if task["action"].startswith("customer.review.handback."):
             task["_review"].update(handback_id=result["handback_id"], kind="engineering-handback")
+        if task["action"] in EXPORT_ACTIONS:
+            availability = self._export_availability(task)
+            task["_review"].update(availability, package_sha256=result["package_sha256"])
+            if task["action"] == "customer.review.export":
+                task["_review"]["latest_response_id"] = result["latest_response_id"]
+            if availability["export_status"] != "available":
+                task["_downloads"] = []
+                return task
         if task["action"] == "customer.review.handback.export":
             directory, manifest = self._export_manifest(task)
             task["_downloads"] = [
@@ -363,7 +569,11 @@ class CustomerReviews:
 
     def desk_member(self, task_id, member):
         task = self.operator.task(identifier(task_id))
-        directory, manifest = self._export_manifest(task)
+        try:
+            directory, manifest = self._export_manifest(task)
+        except ReceivedExportUnavailable as error:
+            raise self.Fault("REVIEW_EXPORT_RECEIVED",
+                             "Open the retained review and rebuild this export on this computer.", 409) from error
         relative = PurePosixPath(member)
         if ("\\" in member or "\0" in member or relative.is_absolute()
                 or str(relative) != member or any(part in (".", "..") for part in relative.parts)):

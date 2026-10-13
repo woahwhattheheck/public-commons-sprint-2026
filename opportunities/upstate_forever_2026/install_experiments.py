@@ -147,7 +147,7 @@ def server_join(text):
     text = replace_once(text, "        state = ws.overview()\n",
         "        state = ws.overview()\n"
         "        state[\"experiments\"] = self.experiments.catalog(workspace)\n",
-        'state["experiments"] = self.experiments.catalog(workspace)')
+        'state["experiments"] = self.experiments.catalog(workspace')
     text = wrap_task_return(text)
     text = replace_once(text, '                workspace = one("workspace", self.app.primary)\n',
         '                workspace = one("workspace", self.app.primary)\n'

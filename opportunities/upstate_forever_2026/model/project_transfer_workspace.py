@@ -128,10 +128,16 @@ class NativeProjectTransfer:
                 retained_acquisitions = snapshot["archive"].get("source_acquisitions")
                 if retained_acquisitions is not None and retained_acquisitions != source_acquisitions:
                     raise TransferError("Receiving changed the original source acquisition lineage")
+                from .portable_implementation import verify_implementation
+                implementation = verify_implementation(restored.root, snapshot["archive"]["members"])
+                retained_implementation = snapshot["archive"].get("implementation")
+                if retained_implementation is not None and retained_implementation != implementation:
+                    raise TransferError("Receiving changed the original fieldwork plan history")
                 result = {"project": snapshot["archive"]["project"], "directory": str(target),
                           "workspace": str(target / "workspace"), "application": str(target / "application"),
                           "identity": "MATCH", "recovered_after_lost_reply": True,
-                          "source_acquisitions": source_acquisitions}
+                          "source_acquisitions": source_acquisitions,
+                          "implementation": implementation}
             else:
                 record["state"] = "restoring"
                 _atomic(record_path, canonical(record) + b"\n", replace=True)

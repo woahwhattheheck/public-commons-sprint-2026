@@ -159,3 +159,10 @@ Use **Download cost worksheet CSV** or **Download cost worksheet JSON** to prepa
 ## Continue a chosen scenario into fieldwork
 
 In a completed edition, choose **Plan implementation**, explicitly select one original whole scenario, review its modeled outcomes and source costs, and continue to the existing Implementation & fieldwork desk. Choose the destination plan there; its native source intake preserves the economic edition and its original reporting zone. Assignments, schedules and field budgets use the existing plan controls. See [Economic scenarios into implementation planning](ECONOMIC_IMPLEMENTATION.md) for the complete source and receiving workflow.
+
+
+### Continue into implementation planning and its report
+
+Add `--implementation` to the same `operator/economic_receive.py` command to continue the original completed Economic edition through **Plan implementation**. The receiver explicitly selects the original scenario, uses **Create a new plan for this scenario**, follows the original native plan-create and source-import tasks, and reopens the resulting saved revision. It checks the retained edition, native report, zone, signed outputs and original cost footprint against that selected source.
+
+The continuation exports the complete portable plan JSON and creates the native implementation report through the existing queue. It downloads every original report member against its manifest, opens the readable scenario report, and retains its screenshot and PDF alongside the original economic package. The final journey result includes the actual plan ID, revision, source binding and task IDs. Native planning and reporting use the already completed model results; work assignments, budgets and field observations remain available for the operator to enter in the new plan.

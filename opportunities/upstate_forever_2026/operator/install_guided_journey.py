@@ -25,6 +25,15 @@ OWNED = frozenset({
     "operator/GUIDED_JOURNEY.md",
     MANIFEST,
 })
+PREDECESSORS = {
+    "operator/install_guided_journey.py": "d26ec75243ac872e62ee546173a41caaecb66dff931714eb2138a940e86a01cf",
+    "operator/Guided_Journey_Integration.json": "6e65a9f432d86b16176161a47c15455f79354da5604cafcf100d5ad6c5ca103b",
+    "operator/extensions/guided-journey.json": "081005d323f5c521227f030fbaa5795d2b965591b3c0a071e7ac361df939644d",
+    "operator/web/journey.mjs": "6597690150bd4ebedb43a94469d404bd7ce9fc73acfc721d6b7ef6644ae9995e",
+    "operator/web/journey.css": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a",
+    "operator/GUIDED_JOURNEY.md": "76235bf1375bc11ab96f52dbb165a63c0bd15881344f82fc829fb02e6387e013",
+    "operator/Guided_Journey_Source.json": "778c3a9ee83be0640326b555450b5da7c864d61e40de6c09107110286cb8f566"
+}
 SHARED = ("operator/server.py", "operator/web/app.mjs")
 OPTIONAL_SHARED = ("install_extensions.py", "operator/web/index.html")
 
@@ -148,7 +157,8 @@ def prepare(application, files, integration):
     for name, incoming in files.items():
         path = safe_path(application, name)
         before = read(path)
-        if before is not None and before != incoming:
+        if (before is not None and before != incoming
+                and hashlib.sha256(before).hexdigest() != PREDECESSORS.get(name)):
             raise ValueError("Preserve and compose the other installed journey edition at " + name)
         original[name], proposed[name] = before, incoming
         modes[name] = path.stat().st_mode & 0o777 if before is not None else 0o644

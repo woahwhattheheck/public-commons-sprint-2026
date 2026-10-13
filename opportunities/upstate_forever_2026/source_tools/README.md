@@ -6,6 +6,10 @@ These commands prepare the original public inputs for the same `model.workspace.
 
 Use [Source archive recovery](SOURCE_BANK_RECOVERY.md) to inspect and extract original ZIPs, gzip source banks and exported Slack source documents. The pure JavaScript decoder works without a native executor. Its Node command verifies the complete archive before recovering files into a new directory and retains the original carrier and full member inventory. The guide includes commands for the actual completed 217-HUC run and the 19-file water-source bank.
 
+## Native bounds for the original 217 watersheds
+
+Use [Original 217-watershed acquisition bounds](ORIGINAL_HUC12_BOUNDS.md) to derive exact native EPSG:3857 query windows from the retained model-domain ZIP. The same original polygon union remains the final NHD feature-selection geometry. Continue the retained source through [the NHD receiver](RESUME_NHD_ORIGINALS.md), preserving its original IDs and geometry pages.
+
 ## Streamed downloads and original-object reuse
 
 Use [Streamed original-source capacity](STORAGE_RESOURCES.md) when continuing a large retained source on a shared Linux worker. The receiver distinguishes disk-backed streams from memory-backed appends, accounts for the effective cgroup memory limit and clean reclaimable file cache, and records the next range's actual storage and buffer requirements.

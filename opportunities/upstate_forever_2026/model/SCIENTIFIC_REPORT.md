@@ -87,96 +87,88 @@ edition while earlier complete reports remain reproducible.
 
 ## Integrate in the maintained delivery
 
-The formatter is model/scientific_report.py. The maintained delivery integration
-is composed in [PR 2821](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2821),
-including the original scientific formatter from [PR 2737](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2737).
-Updating an application that already has that integration requires only this
-module and guide; all public call signatures are unchanged. The hooks below
-describe the existing integration for receiving an earlier application. Preserve
-its receiving-water pipeline and other installed sections.
+Receive the current complete application through its existing cumulative receiving
+operation. The scientific report now depends on the maintained delivery builder,
+observed-source collector and figure renderer, annual-comparison diagnostics,
+economic collector, client companion, archive capture and ordinary operator
+preview controls. The application catalogue and its dependency closure retain
+these modules together. Use `integration/application_components.json` with the
+current source assembler and installer; carry the whole selected application
+edition into the existing Workspace operation.
 
-Add the module import:
+Updating only an old formatter and its guide is insufficient for the current
+report. Earlier integration examples belonged to their original editions. The
+current delivery already contains the calls below; preserve those maintained
+calls when composing another component, and apply source changes to their current
+implementations.
 
-    from . import scientific_report
+The maintained flow is:
 
-Include the formatter edition in the delivery identity alongside the existing map
-renderer version:
+1. Validate the original baseline, ordered alternatives, selected grid/profile,
+   delivery mode, source selections and optional economic/native report bindings.
+   Bind the selected observed-context source before computing delivery identity.
+   Scientific renderer, client companion and application editions remain explicit.
+2. Collect receiving-water quantities and their original map/source assets once.
+   Collect the selected observed report, all source companions, concentration
+   support and original figure specifications. Verify their saved binding before
+   adding them to the report and retained file inventory.
+3. Refine the existing ordered scientific sections with
+   `scientific_report.refine_sections`. This reads the original biophysical CSV,
+   completed native quantities and original annual comparison rows. The current
+   `model/observation_diagnostics.py` reader adds exact-period and catchment-weight
+   tables from those comparison rows. Append the maintained receiving-water and
+   selected source/economic sections through their existing collectors.
+4. Write `report.pdf`, `report.html`, `report.md` and `report-data.json` from the
+   same ordered scientific blocks. Write the separate `client-report.*`
+   companion through its maintained compiler. Register every returned descriptor
+   and selected source/analysis asset in the existing delivery state.
+5. Build the final offline atlas and `delivery.json` from that complete inventory.
+   Their working-project links use the fixed package-relative
+   `working/scientific-workspace.zip` path. Capture the final report, atlas,
+   manifest and source descriptors in that scientific Workspace archive.
+6. Verify the actual retained working archive, then build the complete delivery
+   package. The receiver restores the original project, native records and
+   captured delivery files through the existing portable Workspace operation.
 
-    "report_renderer": scientific_report.REPORT_VERSION,
+This order keeps the original reports and navigation in the editable project.
+The archive is retained beside its received files without requiring the ZIP to
+contain its own checksum. A prior archive with different selected assets remains
+retained as an earlier capture.
 
-After the existing sections have been assembled, refine them using the original
-records already bound by the delivery:
+The report block contract remains ordered heading/block pairs. Table blocks have
+`kind=table`, `columns`, `rows`, optional relative `widths` and a `caption`.
+Link blocks retain package-relative files or supported original publisher links.
+Figure blocks retain the complete original numeric specification and verified
+SVG descriptor. The PDF, HTML, Markdown and data writers consume those same
+blocks; the normal delivery stores their descriptor keys as `report`,
+`report_html`, `report_markdown` and `report_data`.
 
-    sections = scientific_report.refine_sections(
-        sections,
-        workspace=workspace,
-        baseline=baseline,
-        alternatives=alternatives,
-        comparison=comparison,
-        profile=profile,
-        grid=grid,
-        priority=state["priority"],
-        observation_results=observation_results,
-        receptor_inventory=state.get("receptor_inventory"),
-    )
+For the operator's complete selection and archive controls, use
+[Client report and selected-zone economics](CLIENT_REPORT.md).
+For annual-reference weighting, original cohort membership and JSON export, use
+[Annual-load comparison review](OBSERVATION_DIAGNOSTICS.md).
+For received projects and retained original versus derived navigation, use
+[Reopen a scientific delivery](RECEIVED_DELIVERY_NAVIGATION.md).
 
-This preserves every unrecognized section, including independently installed
-scientific sections. A section is an ordered pair of heading and blocks. Blocks
-can be ordinary strings or dictionaries with kind=table, columns, rows, optional
-relative widths, and optional caption. Link blocks have kind=links and an items
-array of title/path objects; paths refer to files retained inside the delivery.
+## Revising an original native-study delivery
 
-For the selected receiving-water product returned by the existing
-receiving_water_delivery.collect operation, append the maintained readable
-receiving-water section exactly once:
+Use **Revise delivery choices** from the existing delivery. The form displays the
+retained study title, purpose and reference and carries the same
+`delivery_mode: native_study` and `native_study` metadata into the new selection.
+Its original native baseline, alternatives, attached analysis, saved report and
+economic edition remain connected through their existing selectors and bindings.
 
-    sections.extend(scientific_report.receiving_sections(water_product))
+Regional supporting sources and source-water overlays are optional for this mode.
+An existing selected source stays selected; disabling one removes only that
+optional selection. Native-study contact metadata can be left empty. The regional
+delivery form continues to require its regional source editions, water-designation
+overlays and contact fields. Both modes use the existing completed NDR and SDR
+cohort contract.
 
-Use this section in place of the older receiving_water_delivery.report_section
-JSON paragraphs. Keep the existing collect, attach_state, apply_map_specs and
-extend_assets hooks so original physical layers and complete GIS records travel
-with the same report.
-
-Render the original report path with the table-aware renderer:
-
-    scientific_report.report_pdf(
-        target,
-        selection.get("title", workspace.project["title"]),
-        sections,
-        contact=contact,
-        source_records=records,
-    )
-
-Retain the offline companions before saving the report state:
-
-    state["files"].update(scientific_report.write_companions(
-        directory,
-        selection.get("title", workspace.project["title"]),
-        sections,
-        contact=contact,
-        source_records=records,
-        binding={
-            "baseline_run_id": baseline["id"],
-            "scenario_run_ids": scenario_ids,
-            "profile_id": profile["id"],
-            "grid_id": grid["id"],
-            "comparison_id": comparison["id"],
-            "observation_comparison_ids": selection.get("observation_comparison_ids", []),
-        },
-    ))
-
-The returned descriptor keys are report_html, report_markdown and report_data. Include their
-original paths in manifest.project_assets before packaging:
-
-    manifest["project_assets"].extend(
-        state["files"][name]["path"]
-        for name in ("report_html", "report_markdown", "report_data")
-    )
-
-The original PDF descriptor remains state.files.report. All four artifacts use
-the same selected records and report blocks. Including REPORT_VERSION in the
-delivery identity lets previous complete deliveries retain their original report
-bytes while new deliveries use the updated format.
+The ordered retained-study selector carries each selected original report,
+figures, measurements and source files in the chosen order. Rebuilding then uses
+the maintained delivery pipeline described above to produce the current scientific
+and client companions, final atlas and editable Workspace snapshot together.
 
 ## Open, print and reopen
 
@@ -223,7 +215,7 @@ The report now preserves typed links for original publisher references, estimate
 
 The selected economic edition supplies its original reporting-zone identity, modeled and unmodeled responses, available and unavailable alternatives, estimate dates and original common-support coverage. Each coverage percentage uses its own recorded valid-cell denominator, not the whole watershed area. Operating and annualized costs are reported per year in the recorded currency. The formatter reads the completed edition and does not recalculate costs or physical quantities.
 
-The existing scientific workspace archive is prepared before report composition, making its retained link available in every report format. The current-export reference must be an original baseline scenario; future alternatives must be distinct and exclude that baseline. Scenario-analysis release readiness applies the same baseline requirement before opening the delivery form.
+The report uses the fixed package-relative working-project link during composition. The current builder captures the scientific workspace after both complete report sets, the final offline atlas and delivery manifest are retained. The current-export reference must be an original baseline scenario; future alternatives must be distinct and exclude that baseline. Scenario-analysis release readiness applies the same baseline requirement before opening the delivery form.
 
 ## Observed source context and original figures
 
@@ -291,8 +283,8 @@ is introduced.
 The producer and numeric drawing module are part of this same source contribution:
 `model/observed_context.py` and `model/scientific_figures.py`. Install them with
 the current formatter/delivery successor before invoking the original delivery.
-The existing native receiving operation should render the actual four supplied
-figures, open PDF and offline HTML, and retain their complete source context and
+The existing native receiving operation should render every figure declared by the selected original
+recipe, open PDF and offline HTML, and retain their complete source context and
 package with the selected original Workspace.
 
 

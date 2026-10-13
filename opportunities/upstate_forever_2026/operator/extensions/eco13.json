@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "eco13",
   "title": "Experiment comparisons",
-  "version": "2",
+  "version": "3",
   "order": 57,
   "assets": [
     "eco13.mjs",
@@ -21,7 +21,9 @@
       "eco13.experiment.receive",
       "eco13.report.save",
       "eco13.comparison.export",
-      "eco13.archive.receive"
+      "eco13.archive.receive",
+      "eco13.review.create",
+      "eco13.review.receive"
     ],
     "invoke": {
       "handler": "invoke",

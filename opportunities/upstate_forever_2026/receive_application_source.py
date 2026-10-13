@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Verify and receive the complete Upper Savannah application source carrier."""
+"""Verify and receive the complete Upper Savannah application source carrier.
+
+Source-map members use their declared UTF-8 or base64 encoding. Byte counts,
+SHA-256 and optional Git blob identities always describe the decoded file.
+"""
 from __future__ import annotations
 import argparse
 import base64
@@ -83,8 +87,16 @@ def read_carrier(path):
         p = PurePosixPath(name)
         if not isinstance(content, str) or not name or p.is_absolute() or str(p) != name or "\\" in name or "\0" in name or any(x in (".", "..") for x in p.parts):
             raise ValueError("Invalid source member path")
-        body = content.encode("utf-8")
         entry = metadata[name]
+        if not isinstance(entry, dict):
+            raise ValueError("Invalid source member metadata: " + name)
+        encoding = entry.get("encoding", "utf-8")
+        if encoding in ("utf-8", "utf8"):
+            body = content.encode("utf-8")
+        elif encoding == "base64":
+            body = base64.b64decode(content, validate=True)
+        else:
+            raise ValueError("Unsupported source member encoding: " + name)
         if entry.get("bytes") != len(body) or entry.get("sha256") != digest(body):
             raise ValueError("Source body mismatch: " + name)
         expected_git = entry.get("git_blob")

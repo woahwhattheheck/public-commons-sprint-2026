@@ -1,0 +1,26 @@
+[
+  {
+    "code": "ORIGINAL_WQP_SCOPE",
+    "context": "The original state WQP results cover four named River/Stream stations and Nutrient queries from 2020-01-01 through 2025-12-31. The two nonoverlapping query responses preserve all 63 columns, 589 result rows and 153 activities."
+  },
+  {
+    "code": "QUANTITATION",
+    "context": "181 results are Present Below Quantification Limit. Their original reported values and reported-value units are blank; original limit values, limit types and mg/L limit units remain intact. Quantified-only summaries use the other 408 original numerical values. Below-limit interval support uses the existing nonnegative concentration method without assigning a value to a censored sample."
+  },
+  {
+    "code": "SEPARATE_CONSTITUENTS",
+    "context": "Ammonia, Nitrate + Nitrite, Kjeldahl nitrogen, Phosphorus and Nitrogen remain separate original characteristics. Sample fraction, analytical method, result value type, source basis fields and effective support unit separate series. Six Nitrogen results are labeled Calculated by the publisher; no components are summed by this application."
+  },
+  {
+    "code": "WHOLE_BASIN_SCOPE",
+    "context": "All four original WGS84 station points fall inside the retained NLDI whole basin for USGS-02186702. The original request uses simplified=false and splitCatchment=false. Whole-basin membership does not establish gauge-upstream position within the same unsplit reach. The original station and basin bytes and explicit membership result are retained."
+  },
+  {
+    "code": "TEMPORAL_SCOPE",
+    "context": "Year and month filters use original sample dates. Rows retain their original local times and source time-zone labels. Sampling dates are irregular; no annual load or flow-weighted concentration is derived."
+  },
+  {
+    "code": "SEPARATE_ZERO_QUERY",
+    "context": "The prior exact USGS-02186702 Nutrient query returned a header-only response. That station-specific result remains separate from these four state stream-station queries."
+  }
+]

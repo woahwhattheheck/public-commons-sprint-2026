@@ -152,7 +152,8 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
                         execution.phase("stage_reuse", model=name)
                         reused, rejected = recover(
                             workspace, key, name, selected, directory, args,
-                            source_run_ids=retained_sources, matcher=input_matcher)
+                            source_run_ids=retained_sources, matcher=input_matcher,
+                            progress=execution.reuse_progress)
                         if rejected:
                             state.setdefault("reuse_observations", {})[name] = rejected
                         if reused is not None:
@@ -226,22 +227,31 @@ def compare_runs(workspace, ids):
     if any(r["state"] != "complete" for r in runs):
         raise ValueError("Finish the selected native model runs")
     common_outputs = common_comparison_outputs(runs)
+    from .native_versions import comparison_versions, models_for_outputs
+    versions = comparison_versions(runs, models_for_outputs(common_outputs))
     baseline = runs[0]
     if any(r["selection"]["grid_id"] != baseline["selection"]["grid_id"] for r in runs[1:]):
         raise ValueError("Run comparison requires the same retained reporting/model grid")
-    key = digest({"runs": ids, "direction": "alternative minus baseline"})
+    key = digest({"runs": ids, "direction": "alternative minus baseline",
+                  "native_version_provenance": versions})
     directory = workspace.root / "comparisons" / key
     directory.mkdir(parents=True, exist_ok=True)
     result = {"schema": "upstate.run-comparison/v1", "id": key, "baseline_run_id": ids[0],
               "direction": "alternative minus baseline", "alternatives": [],
               "common_artifacts": list(common_outputs),
+              "native_version_provenance": versions,
               "model_scopes": {run["id"]: run_scope(run) for run in runs}}
     with held(directory / ".comparison.lock", blocking=False):
         previous_path = directory / "comparison.json"
         if previous_path.exists():
             previous = read_json(previous_path)
-            if previous.get("baseline_run_id") != ids[0] or [r["run_id"] for r in previous.get("alternatives", [])] != ids[1:]:
-                raise ValueError("Retained comparison selection differs")
+            if (previous.get("schema") != "upstate.run-comparison/v1"
+                    or previous.get("id") != key
+                    or previous.get("baseline_run_id") != ids[0]
+                    or [r["run_id"] for r in previous.get("alternatives", [])] != ids[1:]
+                    or previous.get("common_artifacts") != list(common_outputs)
+                    or previous.get("native_version_provenance") != versions):
+                raise ValueError("Retained comparison selection or native version provenance differs")
             for alternative in previous["alternatives"]:
                 for artifact in alternative["artifacts"].values():
                     verify_file(directory, artifact)

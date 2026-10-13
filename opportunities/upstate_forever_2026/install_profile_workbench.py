@@ -13,8 +13,12 @@ import tempfile
 
 COMPONENT_FILES = (
     "model/profile_editions.py",
+    "model/profile_customer_review.py",
+    "source_tools/receive_profile_customer_review.py",
+    "source_tools/PROFILE_CUSTOMER_REVIEW.md",
     "operator/profile_workbench.py",
     "operator/web/profile_workbench.mjs",
+    "operator/web/profile_customer_review.mjs",
     "operator/web/profile_workbench.css",
     "operator/extensions/profile-workbench.json",
     "operator/PROFILE_WORKBENCH.md",

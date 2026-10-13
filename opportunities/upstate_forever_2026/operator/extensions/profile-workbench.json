@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "profile-workbench",
   "title": "Profile workbench",
-  "version": "1",
+  "version": "2",
   "order": 25,
   "assets": [
     "profile_workbench.mjs",
-    "profile_workbench.css"
+    "profile_workbench.css",
+    "profile_customer_review.mjs"
   ],
   "backend": {
     "module": "profile_workbench",
@@ -19,7 +20,9 @@
     },
     "actions": [
       "profile.edition.save",
-      "profile.edition.review"
+      "profile.edition.review",
+      "profile.customer_review.create",
+      "profile.customer_review.apply"
     ],
     "invoke": {
       "handler": "invoke",
@@ -104,6 +107,45 @@
         ],
         "path": "/api/profile-workbench/compare",
         "operation": "compare",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/customer-reviews/catalog",
+        "operation": "customer-review-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/customer-reviews/inspect",
+        "operation": "customer-review-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/customer-reviews/preview",
+        "operation": "customer-review-preview",
         "handler": "read",
         "args": [
           "workspace_key",

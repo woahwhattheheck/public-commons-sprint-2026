@@ -269,6 +269,13 @@ class Operator:
         pack = chosen["spatial_export_id"]
         if pack and selection.get("spatial_review_id") and pack.get("review_id") != selection["spatial_review_id"]:
             raise Fault("JOURNEY_SELECTION", "The map pack belongs to a different saved geographic view.")
+        # Calibration review: retain the original dossier in a saved journey.
+        review_id = selection.get("calibration_review_id", "")
+        if not isinstance(review_id, str):
+            raise Fault("JOURNEY_SELECTION", "Choose one saved calibration review.")
+        if review_id:
+            from calibration import validate_review_journey
+            validate_review_journey(ws, journey)
         request_sha256 = digest(journey)
         current = self.operator_session(workspace)
         if current and (current.get("request_sha256") == request_sha256 or current.get("journey") == journey):
@@ -1089,7 +1096,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True

@@ -306,7 +306,11 @@ def execute(args):
     if command == "summary":
         return summarize_plan(store.get(args.plan_id), args.as_of)
     if command == "report":
-        return store.report(args.plan_id, args.out, args.as_of)
+        result = store.report(args.plan_id, args.out, args.as_of)
+        # Keep the complete original edition with its saved native plan so
+        # ordinary CLI reports reopen through the same Workspace transfer path.
+        result["retained_report"] = store.retain_report(result["directory"])
+        return result
     if command in ("csv", "html"):
         plan = store.get(args.plan_id)
         content = (report_csv(plan, args.table, args.as_of) if command == "csv"
