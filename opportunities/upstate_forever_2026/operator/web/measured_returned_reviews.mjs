@@ -30,14 +30,15 @@ export function mountReturnedReviews(root,host,{memory=new Map(),openLargeFiles=
  roles.map(([key,label,help])=>'<fieldset><legend>'+label+'</legend><p>'+help+'</p><label>Saved native archive<select data-archive="'+key+'"></select></label><p class="mrr-small" data-archive-detail="'+key+'"></p></fieldset>').join('')+
  '</div><button type="submit">Prepare returned-review comparison</button></form>'+
  '<h3>2. Review and reopen a saved comparison</h3><div class="mrr-actions"><label>Saved comparison<select data-plans></select></label><button type="button" data-open-plan>Open comparison</button></div><div data-plan></div>'+
- '<form data-apply-form hidden><h3>3. Incorporate the explicit saved decisions</h3><p>Extract the complete comparison ZIP, open its original <strong>review.html</strong>, choose each overlapping change and save the decision JSON. Open that exact file here.</p><label>Saved decisions for this comparison<input type="file" accept=".json,application/json" data-decisions></label><div data-decision-review></div><button type="submit" disabled>Create independent reviewed project</button></form>'+
+ '<form data-apply-form hidden><h3>3. Incorporate the explicit saved decisions</h3><p>Extract the complete comparison ZIP, open its original <strong>review.html</strong>, choose each overlapping change and save the decision JSON. Open that exact file here.</p><label>Saved decisions for this comparison<input type="file" accept=".json,application/json" data-decisions></label><div data-decision-review aria-live="polite"></div><div class="mrr-actions"><button type="submit" disabled>Create independent reviewed project</button><button type="button" data-clear-decisions disabled>Clear selected decisions</button></div></form>'+
  '<h3>Independent reviewed projects</h3><div class="mrr-actions"><label>Saved incorporation<select data-results></select></label><button type="button" data-open-result>Open result</button></div><div data-result></div></details>';
  const panel=q('[data-panel]'),status=q('[role=status]'),titleInput=q('[name=title]');
  titleInput.value=state.title;
  function message(text,error=false){if(active()){status.textContent=text;status.dataset.error=String(error);}}
  function controls(){
   for(const control of root.querySelectorAll('button,input,select'))control.disabled=busy;
-  q('[data-apply-form] button').disabled=busy||!decisions;
+  q('[data-apply-form] button[type=submit]').disabled=busy||!decisions;
+  q('[data-clear-decisions]').disabled=busy||!decisions;
   if(currentTask)q('[data-task]').disabled=false;
  }
  async function work(fn){if(busy||!active())return;busy=true;root.setAttribute('aria-busy','true');controls();try{await fn();}catch(error){message(error.message,true);}finally{busy=false;if(active()){root.setAttribute('aria-busy','false');controls();}}}
@@ -134,8 +135,11 @@ export function mountReturnedReviews(root,host,{memory=new Map(),openLargeFiles=
   for(const [role]of roles){const chosen=state.archives[role],record=(catalog.archives||[]).find(row=>archiveKey(row)===archiveKey(chosen));if(!record||!['edition','intake'].includes(record.kind)||!Number.isSafeInteger(record.bytes)||record.bytes<=0||!/^[a-f0-9]{64}$/.test(record.sha256))throw Error('Choose a complete verified '+role+' archive from the current catalog.');if(chosen.sha256!==record.sha256||chosen.bytes!==record.bytes)throw Error('The selected '+role+' archive changed. Select its current retained edition explicitly.');value[role]={kind:record.kind,id:record.id,bytes:record.bytes,sha256:record.sha256};}
   await queue('measurements.returned-review.plan',value);
  });},{signal:abort.signal});
+ function clearDecisionSelection(){decisions=null;q('[data-decisions]').value='';q('[data-decision-review]').replaceChildren();controls();}
+ q('[data-clear-decisions]').addEventListener('click',()=>{if(!active()||busy)return;generation++;clearDecisionSelection();message('Decision selection cleared. Choose a saved decision file to continue.');},{signal:abort.signal});
  q('[data-decisions]').addEventListener('change',event=>{
-  const file=event.target.files[0];event.target.value='';if(!file)return;const version=++generation,planId=state.planId,nativePlanId=plan?.native_plan_id;
+  const file=event.target.files[0],version=++generation,planId=state.planId,nativePlanId=plan?.native_plan_id;
+  clearDecisionSelection();if(!file){message('No decision file selected. Choose a saved decision file to continue.');return;}
   work(async()=>{
    const value=JSON.parse(await file.text());if(!active()||version!==generation)return;
    if(value.format!=='upper-savannah-returned-review-decisions/v1'||value.planId!==nativePlanId||!Array.isArray(value.decisions)||!String(value.reviewer||'').trim()||!String(value.reason||'').trim())throw Error('Choose complete saved decisions for this exact comparison, with the incorporating reviewer and rationale.');
