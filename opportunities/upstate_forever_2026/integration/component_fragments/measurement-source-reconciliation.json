@@ -7,9 +7,12 @@
       "title": "Original measurement source versions, explicit decisions and complete retained comparison reports",
       "paths": [
         "integration/component_fragments/measurement-source-reconciliation.json",
+        "measurement_workspace/GUIDED_INTAKE.md",
         "measurement_workspace/SOURCE_RECONCILIATION.md",
         "measurement_workspace/engine/cli.mjs",
         "measurement_workspace/engine/http.mjs",
+        "measurement_workspace/engine/intake-receiving.mjs",
+        "measurement_workspace/engine/reconciliation-receiving.mjs",
         "measurement_workspace/engine/reconciliation_cli.mjs",
         "measurement_workspace/engine/source_reconciliation.mjs",
         "measurement_workspace/operator.py",
@@ -22,7 +25,8 @@
         "operator/web/source_reconciliation.mjs"
       ],
       "requires": [
-        "measurement-large-files"
+        "measurement-large-files",
+        "measurement-flow-studies"
       ]
     }
   },
