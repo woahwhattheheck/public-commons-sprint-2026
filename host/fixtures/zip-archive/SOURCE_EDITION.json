@@ -1,0 +1,267 @@
+{
+  "schema": "commons.zip-intake-source-edition.v1",
+  "operation": "COMMONS-ZIP-ARCHIVE-INTAKE-D76C-20261013",
+  "original": {
+    "zip": {
+      "path": "host/connected_zip.cjs",
+      "gitBlob": "fc17a5555952f6d73f76df3bcd1a34f3232d0c66"
+    },
+    "gzip": {
+      "path": "host/connected_gzip.cjs",
+      "gitBlob": "d8b1a6e03a8e5e6fa603e4ac8a24eb4ca49bc453"
+    }
+  },
+  "files": [
+    {
+      "path": "host/connected_zip.cjs",
+      "bytes": 12228,
+      "sha256": "911abc6b486103a1d10a7a744de453e6c7547e1a5c3f8736662f9fff7a4d7e46"
+    },
+    {
+      "path": "host/connected_zip_archive.cjs",
+      "bytes": 13818,
+      "sha256": "92d681feffa5df20f289fec1826a01bf11bd67a1e94ad9a1e0d7477ef0632a4a"
+    },
+    {
+      "path": "host/connected_zip_receive.cjs",
+      "bytes": 15338,
+      "sha256": "ab79864038e1c415d4baed8f6b63b599ddda016149832c8937a10ea6bcce2623"
+    },
+    {
+      "path": "host/CONNECTED_ZIP_ARCHIVE.md",
+      "bytes": 17641,
+      "sha256": "dd2d4fe7386a5ac76a83f81df0ad2840fcb6ec1b691be0bb2e7b48144adfea21"
+    },
+    {
+      "path": "host/fixtures/zip-archive/upstream-fixtures.json",
+      "bytes": 8358,
+      "sha256": "c8ff6ffc5e1842ee5b3c882f9fc2f61b04b04c10871e8736015765ac7db3948d"
+    },
+    {
+      "path": "host/fixtures/zip-archive/JSZIP-MIT-LICENSE.txt",
+      "bytes": 1149,
+      "sha256": "b7804b570c31c8491352bd4e0b123a9652edb72d778554986ec51f22e6c2b70b"
+    }
+  ],
+  "validation": {
+    "runtime": "connected V8, original Acorn parser and unchanged upstream JSZip 3.10.1",
+    "upstream": [
+      {
+        "name": "data_descriptor.zip",
+        "sha256": "14e965f2e62e6faf170e1d379f52aa4431361208e5e592b748529100109c28e7",
+        "bytes": 196,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "Hello.txt",
+            "kind": "file",
+            "bytes": 12,
+            "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+          }
+        ]
+      },
+      {
+        "name": "all.windows.zip",
+        "sha256": "c0e8be4922c2e8b59fd25129665eb6c00eba4ff8f361bcbff35d1fc5e9e9f6a1",
+        "bytes": 273,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "Hello.txt",
+            "kind": "file",
+            "bytes": 12,
+            "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+          },
+          {
+            "name": "images/smile.gif",
+            "kind": "file",
+            "bytes": 41,
+            "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb"
+          }
+        ]
+      },
+      {
+        "name": "archive_comment.zip",
+        "sha256": "8dda966acc62972743af4b1ed72c26aa56b61b2010b70b5eeb6a836230601323",
+        "bytes": 153,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "Hello.txt",
+            "kind": "file",
+            "bytes": 12,
+            "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+          }
+        ]
+      },
+      {
+        "name": "utf8_in_name.zip",
+        "sha256": "9e697cfcf4709d6b9d0e69ca564fa86395f8f8e33f2a7cd591849c58ce1a70b0",
+        "bytes": 122,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "€15.txt",
+            "kind": "file",
+            "bytes": 6,
+            "sha256": "72e4473860e8384a9f8cedc7b0b775d346a85fe0a0e8aee43c652afb0ad17d83"
+          }
+        ]
+      },
+      {
+        "name": "winrar_utf8_in_name.zip",
+        "sha256": "96c39f34e9bfe6745a45825dd032e16a98886b2eb123b1e5b0f97c36f16c0c78",
+        "bytes": 154,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "€15.txt",
+            "kind": "file",
+            "bytes": 6,
+            "sha256": "72e4473860e8384a9f8cedc7b0b775d346a85fe0a0e8aee43c652afb0ad17d83"
+          }
+        ]
+      },
+      {
+        "name": "zip64.zip",
+        "sha256": "188719263f4df8f262bc9d10b237976af1fdddd1697b3d9d226129e9ba56b237",
+        "bytes": 288,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "Hello.txt",
+            "kind": "file",
+            "bytes": 12,
+            "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+          }
+        ]
+      },
+      {
+        "name": "folder.zip",
+        "sha256": "33066e599107262502bee7bf8f649fc9008813def502ab0496595774b77a3200",
+        "bytes": 112,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "folder/",
+            "kind": "directory",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ]
+      },
+      {
+        "name": "extra_attributes.zip",
+        "sha256": "015556bbca079f8f49f5037a0976e7dcaeb019ce69ec19b1f00395bca10b0323",
+        "bytes": 180,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "Hello.txt",
+            "kind": "file",
+            "bytes": 12,
+            "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+          }
+        ]
+      },
+      {
+        "name": "deflate-stream.zip",
+        "sha256": "92de00e73a54e9bd2a8ceeb45c338a7a38604e777afac0e92f591d1ce8836e2e",
+        "bytes": 205,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "Hello.txt",
+            "kind": "file",
+            "bytes": 94,
+            "sha256": "5ba82c991b055a1ce12c0a16ad65b5beb38251bb1cf11c7d830f1b8ed32cafdd"
+          }
+        ]
+      },
+      {
+        "name": "nested_zip64.zip",
+        "sha256": "aa24e98001afa5fc65175a61c98eb55343d18e1a2898d0cc5b6608164e709a9c",
+        "bytes": 564,
+        "state": "MATCHED_ORIGINAL_JSZIP_3_10_1",
+        "entries": [
+          {
+            "name": "zip64.zip",
+            "kind": "file",
+            "bytes": 288,
+            "sha256": "188719263f4df8f262bc9d10b237976af1fdddd1697b3d9d226129e9ba56b237"
+          }
+        ]
+      }
+    ],
+    "boundaries": [
+      {
+        "check": "strict original packZip/readZip member matches new ordinary reader",
+        "pass": true
+      },
+      {
+        "check": "preimage STORE archive bytes identical and strict reader retained",
+        "pass": true
+      },
+      {
+        "check": "changed original data descriptor",
+        "pass": true,
+        "error": "ZIP data descriptor differs from the central record"
+      },
+      {
+        "check": "central versus local CRC mismatch",
+        "pass": true,
+        "error": "ZIP local sizes or CRC differ"
+      },
+      {
+        "check": "archive entry budget",
+        "pass": true,
+        "error": "ZIP entries is outside its supported bound"
+      },
+      {
+        "check": "archive expansion budget before inflate",
+        "pass": true,
+        "error": "Total uncompressed ZIP bytes is outside its supported bound"
+      },
+      {
+        "check": "implicit directory case alias",
+        "pass": true,
+        "error": "ZIP implicit directories collide after Unicode/case normalization"
+      },
+      {
+        "check": "symlink member",
+        "pass": true,
+        "error": "ZIP symlinks and special files are unsupported"
+      }
+    ],
+    "unsignedDescriptor": {
+      "state": "PASSED",
+      "derivedFrom": "e884181129f845bab40e29e17f55dbd6d5fb2aef",
+      "descriptor": {
+        "offset": 79,
+        "bytes": 12,
+        "signature": false,
+        "zip64": false
+      },
+      "content": "Hello World\n"
+    },
+    "realSourceArchive": {
+      "path": "receiving/tyk-gateway-cohort-20261013/tyk-gateway-source.zip",
+      "commit": "fb2cf7f5ae07dbb3acfc5be4b3abd6d3dc2f49d2",
+      "bytes": 5022315,
+      "sha256": "2256efcbf461be1dec86895372474008a708e1034ea42c9d8ee697a32ff011b5",
+      "members": [
+        {
+          "name": "README.md",
+          "bytes": 22217
+        },
+        {
+          "name": "source-envelope.json",
+          "bytes": 6625664
+        }
+      ],
+      "state": "OPENED_EXACT"
+    },
+    "nativeReceiving": "NOT_RUN_ORIGINAL_EXECUTOR_UNAVAILABLE",
+    "renderedProduct": "NOT_CLAIMED"
+  }
+}
