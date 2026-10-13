@@ -90,6 +90,8 @@ export function createGeographicWorkbench(host) {
         ["Resolution",number(grid.resolution_m)+" m"],["Rectangular grid",number(p.rectangular_grid_cells)+" cells"],
         ["Physical input generation",p.physical_generation.method],
         ["Generation working set",p.physical_generation.numeric_working_set_independent_of_total_cells ? "Raster-window numeric arrays are independent of total grid cells" : "See retained producer assumptions"],
+        ["Declared matching method",p.selection.matching_method??"Original legacy selection"],
+        ["Declared matching budget (bytes)",p.selection.max_working_bytes===undefined?"Original legacy selection":number(p.selection.max_working_bytes)],
         ["Field seed",p.selection.seed],["Corridor buffer on each side",number(p.selection.corridor_width_m)+" m; nominal "+number(2*p.selection.corridor_width_m)+" m total"],
         ["Original geography",p.geography_classification],["Physical inputs",p.physical_inputs_classification]
       ])+'<p>Prepared nitrogen and phosphorus results use kg/year; sediment uses metric tonnes/year delivered to streams. Native results appear after the existing model operation runs.</p>'+
@@ -130,7 +132,9 @@ export function createGeographicWorkbench(host) {
         reporting_layer:s.reporting_boundary.layer||"",reporting_where:JSON.stringify(s.reporting_boundary.where||{}),
         reporting_boundary_description:s.reporting_boundary_description,utility_layer:s.utility_focus[0].layer||"",
         utility_where:JSON.stringify(s.utility_focus[0].where||{}),additional_utility_focus:JSON.stringify(s.utility_focus.slice(1)),
-        intakes:JSON.stringify(s.intakes||[]),utility_label:s.utility_label,seed:s.seed,corridor_width_m:s.corridor_width_m},import_sources:true};
+        intakes:JSON.stringify(s.intakes||[]),utility_label:s.utility_label,seed:s.seed,corridor_width_m:s.corridor_width_m,
+        ...(Object.hasOwn(s,"matching_method")?{matching_method:s.matching_method}:{}),
+        ...(Object.hasOwn(s,"max_working_bytes")?{max_working_bytes:s.max_working_bytes}:{})},import_sources:true};
   }
   function applyPayload(payload){
     if(payload?.method!=="geographic-headwaters"||!payload.inputs||!payload.options)throw new Error("Open a complete geographic operator selection.");
