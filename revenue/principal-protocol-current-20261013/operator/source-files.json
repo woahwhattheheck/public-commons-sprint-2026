@@ -53,8 +53,8 @@
     },
     {
       "path": "lib/workspace.mjs",
-      "bytes": 33531,
-      "sha256": "aaf9e2d8044c06d335fd7ddb958d2c700fd6a5baf75f90962fee4615508955aa"
+      "bytes": 33586,
+      "sha256": "828ad60d38045c0bd121c17825ba99634ea87962d6d4ba841b07b4ec1df53bb8"
     },
     {
       "path": "native/principal_attempt.py",
