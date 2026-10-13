@@ -69,3 +69,64 @@ This reads the ZIP without extracting it. It checks exact membership and file ha
 The complete feature contains `model/community_revisions.py`, `operator/community_revisions.py`, `operator/extensions/community-revisions.json`, `operator/web/community_revisions.mjs` and the additive current `operator/web/community.mjs` join. The descriptor requires the original plan-save and report-build actions, registers one queued action plus GET reads, and exposes the existing native item/task/file interfaces.
 
 The application uses its existing extension registry, task coalescing/recovery, operator workspace binding and file ticket verification. There is one existing Community controller. The scientific report preparation controls and saved-view callbacks are preserved.
+
+## Receive a complete revision handover
+
+Open **Communities → Intervention plans → Receive revision handover** in the
+receiving project. Select the complete exported `community-revision-comparison.zip`
+and choose **Review original comparison**. The operator retains the uploaded ZIP,
+reads every original member, reconstructs the comparison from the saved plan
+lineage and displays the original project, source editions, field changes and
+known/unknown planning estimates.
+
+Choose **Receive complete handover** to queue `community.revision.receive`.
+Its saved request binds the retained upload ID and reviewed ZIP SHA-256. Repeating
+the same original ZIP reuses the same received handover identity, including when
+the uploaded filename differs. The normal operator task recovery retains the
+original request and its completed result.
+
+The result appears beside other **Saved revision handovers**, labeled
+**Received** and its original project ID. It remains readable in a project that
+has no local copies of the original plans. Where those exact plan identities are
+already retained locally, the original plan controls are available. Every member
+and the byte-identical original ZIP can be downloaded through the usual verified
+file transport. Download that ZIP to pass the same complete handover onward.
+
+The receiving project owns the received record; the comparison keeps the
+exporter's project, source table, complete original revision chain and archived
+scientific context. Editable project/study transfer remains the existing
+**Study transfer** workflow. Receiving this comparison adds a retained comparison
+artifact and leaves native study registries available to that workflow.
+
+The normal full Workspace backup includes the received record, original ZIP and
+all extracted members. Restoration runs the same independent reconstruction and
+file verification before the record is reopened.
+
+### Native receiving API
+
+The existing authenticated `POST /api/upload` retains the original file. Read
+`GET /api/community-revisions/receive-preview?upload_id=ORIGINAL_UPLOAD_ID`
+in the selected workspace, then submit the normal original queue action:
+
+```json
+{
+  "action": "community.revision.receive",
+  "payload": {
+    "upload_id": "ORIGINAL_UPLOAD_ID",
+    "archive_sha256": "REVIEWED_COMPLETE_ZIP_SHA256"
+  },
+  "operation_id": "ORIGINAL_STABLE_OPERATION_ID"
+}
+```
+
+The received item kind is `community_received_revisions`; the same item reader
+and `GET /api/community-revisions/received?id=RECEIVED_ID` return its original
+comparison and verified download tickets. The existing comparison catalogue
+includes received rows with `received: true` and both project identities.
+
+`model.community_revision_receiving.receive(workspace, path)` uses the same
+native implementation. `inspect(workspace, id)` reopens its retained original
+ZIP and verifies the extracted files. The provider passes the operator's selected
+archive extraction capacity to preview, receive, reopen and restore. Files are
+streamed into immutable receiving members, and publication occurs only after
+their original byte counts and SHA-256 values agree.
