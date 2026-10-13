@@ -8,6 +8,7 @@ const BINDINGS = Object.freeze({
   profile: 'mcp__codex_apps__google_drive_get_profile',
   metadata: 'mcp__codex_apps__google_drive_get_file_metadata',
   document: 'mcp__codex_apps__google_drive_get_document_text',
+  fullDocument: 'mcp__codex_apps__google_drive_get_document',
   writeDocument: 'mcp__codex_apps__google_drive_batch_update_document'
 });
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -109,11 +110,67 @@ function createDocumentAuthoring(nativeTools, options = {}) {
     state.actor={email:plan.actor_email,id:actor.id||null};
     await retain();
   }
+  async function emptyDocument(plan,flattened){
+    // The native flattened reader omits a new Doc's empty final paragraph.
+    // Admit it only from the complete original body at the SAME revision.
+    const full=await call('fullDocument',{document_id:plan.document_id});
+    const invalid=()=>{throw failure('DOCUMENT_LAYOUT','Use the complete original single-tab empty Doc with no side content or suggestions');};
+    if(full.documentId!==plan.document_id||full.revisionId!==flattened.revisionId)invalid();
+    function plain(container){
+      if(!object(container))invalid();
+      for(const name of ['footnotes','inlineObjects','positionedObjects','headers','footers'])
+        if(container[name]!=null&&Object.keys(container[name]).length)invalid();
+    }
+    function suggestions(value){
+      if(value==null||typeof value!=='object')return;
+      for(const [name,item] of Object.entries(value)){
+        if(name==='suggestionsViewMode'){
+          if(item!=='SUGGESTIONS_INLINE')invalid();
+          continue;
+        }
+        if((/suggest/i.test(name)||name==='positionedObjectIds')&&
+          item!=null&&(typeof item!=='object'||Object.keys(item).length))invalid();
+        suggestions(item);
+      }
+    }
+    plain(full);suggestions(full);
+    let body,tabId=null;
+    if(full.tabs!=null&&!Array.isArray(full.tabs))invalid();
+    if(full.tabs?.length){
+      if(full.tabs.length!==1||full.body!=null)invalid();
+      const tab=full.tabs[0];
+      if(!object(tab)||tab.parentTabId!=null||tab.tabProperties?.parentTabId!=null||
+        (tab.childTabs!=null&&(!Array.isArray(tab.childTabs)||tab.childTabs.length)))invalid();
+      const ids=[tab.tabId,tab.tabProperties?.tabId].filter(value=>value!=null);
+      if(!ids.length||ids.some(value=>typeof value!=='string'||!value||/[\0\r\n]/.test(value))||
+        ids.some(value=>value!==ids[0]))invalid();
+      tabId=ids[0];
+      plain(tab);
+      const content=tab.documentTab??tab;
+      plain(content);
+      body=content.body;
+    }else body=full.body;
+    if(!object(body)||!Array.isArray(body.content))invalid();
+    const items=body.content;
+    if(items.length!==2||!object(items[0].sectionBreak)||
+      items[0].endIndex!==1||(items[0].startIndex!=null&&items[0].startIndex!==0)||
+      Object.keys(items[0]).some(name=>!['startIndex','endIndex','sectionBreak'].includes(name)))invalid();
+    const item=items[1],paragraph=item.paragraph;
+    if(item.startIndex!==1||item.endIndex!==2||!object(paragraph)||
+      Object.keys(item).some(name=>!['startIndex','endIndex','paragraph'].includes(name))||
+      paragraph.bullet!=null||!Array.isArray(paragraph.elements)||paragraph.elements.length!==1)invalid();
+    const element=paragraph.elements[0];
+    if(element.startIndex!==1||element.endIndex!==2||!object(element.textRun)||
+      element.textRun.content!=='\n'||Object.keys(element.textRun.textStyle||{}).length||
+      Object.keys(element).some(name=>!['startIndex','endIndex','textRun'].includes(name)))invalid();
+    return {text:'',revision:full.revisionId,start:1,end:1,tabId};
+  }
   async function originalDocument(plan){
     const doc=await call('document',{document_id:plan.document_id});
     if(doc.documentId!==plan.document_id||typeof doc.revisionId!=='string'||!doc.revisionId||
-       !Array.isArray(doc.paragraphs)||doc.paragraphs.length!==1)
+       !Array.isArray(doc.paragraphs)||doc.paragraphs.length>1)
       throw failure('DOCUMENT_LAYOUT','This receiving Doc must contain one original plain JSON paragraph');
+    if(doc.paragraphs.length===0)return emptyDocument(plan,doc);
     const p=doc.paragraphs[0];
     if(typeof p.text!=='string'||p.startIndex!==1||
        p.endIndex-p.startIndex!==p.text.length||

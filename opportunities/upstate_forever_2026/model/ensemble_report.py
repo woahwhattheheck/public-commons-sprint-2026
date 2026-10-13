@@ -15,7 +15,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
 from .ensembles import Ensembles
 
 SCHEMA = "upstate.ensemble-report-release/v1"
-RENDERER_VERSION = 4
+RENDERER_VERSION = 5
 POLLUTANTS = {"nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
               "sediment_export": "Sediment"}
 PAIR_FIELDS = (
@@ -194,13 +194,13 @@ def render_html(report, rows, ranges, sensitivity, release_id):
     body += (
         "<h2>Reading the comparison</h2>"
         "<p>Land-cover alternatives use a baseline with the same parameter profile and model grid. "
-        "The separate parameter comparison holds the observed baseline land cover fixed and compares "
+        "The separate parameter comparison holds the retained baseline land cover fixed and compares "
         "each varied profile with the first selected reference profile. A negative change means "
         "lower modeled annual export. The physical change uses only "
-        "cells with valid results in both runs. Each run's complete reporting-area total is "
+        "cells with valid results in both runs. Each run's total over its own valid reporting-mask cells is "
         "also available in the detailed table.</p>"
         "<p>Ranges describe the explicitly selected parameter choices. The report groups "
-        "matching geographic masks together. It preserves cases with different coverage "
+        "matching geographic masks together. Identical pair masks do not establish complete reporting-area coverage. It preserves cases with different coverage "
         "as separate groups. A percentage requires a nonzero baseline on the same cells.</p>")
     if rows:
         body += "<h2>Direction across the selected parameter choices</h2>"
@@ -224,7 +224,7 @@ def render_html(report, rows, ranges, sensitivity, release_id):
               _n(r["percent_change"]), format(r["common_cells"], ","),
               format(r["baseline_only_cells"], ","), format(r["alternative_only_cells"], ","))
              for r in rows])
-        body += "<h2>Full retained reporting-area totals</h2>"
+        body += "<h2>Reporting-mask totals for each run</h2>"
         body += _table(
             ["Parameter case", "Alternative", "Pollutant", "Units",
              "Baseline total", "Alternative total", "Baseline valid cells", "Alternative valid cells"],
@@ -233,10 +233,10 @@ def render_html(report, rows, ranges, sensitivity, release_id):
               format(r["baseline_valid_cells"], ","), format(r["alternative_valid_cells"], ","))
              for r in rows])
     if sensitivity:
-        body += ("<h2>Parameter sensitivity with observed land cover held fixed</h2>"
+        body += ("<h2>Parameter sensitivity with baseline land cover held fixed</h2>"
                  "<p>Annual change is the varied profile minus the reference profile on the same "
                  "valid cells. These comparisons show the effect of changing scientific parameters "
-                 "on the observed baseline.</p>")
+                 "on the retained baseline. The original input records retain their source and simulation labels.</p>")
         body += _table(
             ["Reference profile", "Varied profile", "Scenario", "Pollutant", "Units",
              "Reference / common cells", "Varied / common cells", "Annual change", "Change %",
@@ -247,7 +247,7 @@ def render_html(report, rows, ranges, sensitivity, release_id):
               _n(r["percent_change"]), format(r["common_cells"], ","),
               format(r["baseline_only_cells"], ","), format(r["alternative_only_cells"], ","))
              for r in sensitivity])
-        body += "<h2>Full reporting-area totals for the parameter comparison</h2>"
+        body += "<h2>Reporting-mask totals for the parameter comparison</h2>"
         body += _table(
             ["Reference profile", "Varied profile", "Scenario", "Pollutant", "Units",
              "Reference total", "Varied total", "Reference valid cells", "Varied valid cells"],
@@ -354,9 +354,11 @@ def build(workspace, ensemble_id):
                 "# Scenario and parameter comparison\n\n"
                 "Each alternative is paired with a baseline using the same retained parameter profile "
                 "and reporting/model grid. Annual changes are alternative minus baseline on the "
-                "intersection of valid raster cells. Original full-coverage totals are separate "
+                "intersection of valid raster cells inside the reporting mask. Totals over each run's own valid cells are separate "
                 "columns. Missing cells remain missing; zero baseline makes percentage change "
-                "undefined.\n\n"
+                "undefined. Cells invalid in both runs remain outside those paired totals; matching pair masks "
+                "do not establish complete reporting-area coverage. Baseline means the retained source "
+                "scenario, and does not classify its inputs as observed or simulated.\n\n"
                 "Ranges are grouped by scenario, pollutant, units and exact common-valid mask. "
                 "They describe the selected parameter cases. An identical cell count alone is "
                 "insufficient to join geographic support.\n\n"

@@ -799,7 +799,11 @@
         "operator/extensions/gis-vector-reviews.json",
         "AGENTS.md",
         "model/gis_review_raster.py",
-        "model/gis_review_raster_view.html"
+        "model/gis_review_raster_view.html",
+        "source_tools/receive_gis_edition_review.py",
+        "source_tools/receive_gis_edition_review_browser.mjs",
+        "source_tools/RECEIVE_GIS_EDITION_REVIEW.md",
+        "CURRENT_OWNER_DIRECTION.md"
       ],
       "requires": [
         "core",

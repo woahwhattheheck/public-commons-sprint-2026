@@ -2,6 +2,12 @@
 
 The Evidence workspace turns retained parcel, flood-map, ordinance and site material into a named research case, reviewed findings, explicit source-edition decisions and an editable handover. It is part of the existing QGIS analyst application. The same QgisWorkspace SQLite database, analyst request journal, native QGIS worker and complete project package own the work.
 
+## Operate the complete native receiving course
+
+[EVIDENCE_FOREGROUND.md](EVIDENCE_FOREGROUND.md) runs the original native bootstrap, full evidence workflow, existing analyst, desktop and phone browser controls, report downloads and independent editable-project receiving in one foreground operation. It retains the complete application, PostGIS adapter and vector producer under their original source identities in the private receiving directory. [EVIDENCE_BOOTSTRAP.md](EVIDENCE_BOOTSTRAP.md) explains the actual original geometry inputs, installed runtime selection and interrupted-workspace recovery; [EVIDENCE_BOOTSTRAP_INPUTS.example.json](EVIDENCE_BOOTSTRAP_INPUTS.example.json) gives the complete input shape.
+
+Continue the same directory and original requests after an interruption. The accepting operator must open and inspect the populated app, downloaded report, every PDF page, native map and reopened editable project. The receiving course retains these actual outputs for inspection.
+
 ## Run the maintained application
 
 Use the existing Python and QGIS environment selected for this application. Start the complete maintained source with:

@@ -914,6 +914,13 @@ def context_desks_join(root, records, *, application_source=None):
         result = programme_updates["install"](root, root)
         records.append({"component": "Source-update Programme successors", "result": result})
 
+    programme_reuse_path = "operator/install_programme_reuse.py"
+    if (root / programme_reuse_path).is_file():
+        programme_reuse = module(root, programme_reuse_path)
+        complete("Original native reuse for Programme successors", programme_reuse["FILES"])
+        result = programme_reuse["install"](root, root)
+        records.append({"component": "Original native reuse for Programme successors", "result": result})
+
     point_source_path = "operator/install_point_source_context.py"
     if (root / point_source_path).is_file():
         point_sources = module(root, point_source_path)

@@ -17,6 +17,7 @@ from .common import (INVEST_VERSION, ROLES, SOURCE_IDS, atomic_bytes, atomic_jso
 from .profiles import checked_parameters, scenario_spec
 from . import common as scientific_common
 from .native_execution import process_interrupted, storage_exhausted
+from .programme_reuse import normalize_candidates, candidate_bindings
 
 SELECTION_SCHEMA = "upstate.compute-programme-selection/v1"
 PROGRAMME_SCHEMA = "upstate.compute-programme/v1"
@@ -449,6 +450,10 @@ class ComputeProgrammes:
                     self.workspace.inspect_run(source_id), model)
                     for model, source_id in row["source_runs"].items()},
                     "execution_method": "completed_model_assembly"}
+            if "reuse_source_run_ids" in row:
+                assembly["reuse_candidates"] = candidate_bindings(
+                    self.workspace, row["reuse_source_run_ids"], digest(native),
+                    _models(native.get("models")))
             changes = {}
             for model in _models(native.get("models")):
                 selected_parameters = profile.get(model, {})
@@ -485,10 +490,10 @@ class ComputeProgrammes:
         if not isinstance(rows, list) or not rows:
             raise ValueError("Select one or more named native runs")
         keys = []
-        allowed_run = {"key", "title", "profile_id", "scenario_id", "reason", "experiment_key", "changes", "models", "source_runs", "native_run_id"}
+        allowed_run = {"key", "title", "profile_id", "scenario_id", "reason", "experiment_key", "changes", "models", "source_runs", "native_run_id", "reuse_source_run_ids"}
         for row in rows:
             if not isinstance(row, dict) or set(row) - allowed_run:
-                raise ValueError("A run selects key, title, profile_id, scenario_id and optional experiment context, native_run_id or completed source stages")
+                raise ValueError("A run selects key, title, profile_id, scenario_id and optional experiment context, native_run_id, completed source stages or native reuse candidates")
             keys.append(_name(row.get("key"), "Run key"))
             row["title"] = _text(row.get("title"), "each run title")
             identifier(row.get("profile_id"))
@@ -504,6 +509,10 @@ class ComputeProgrammes:
                 if not isinstance(sources, dict) or set(sources) != {"ndr", "sdr"}:
                     raise ValueError("Select one completed original NDR source run and one SDR source run")
                 row["source_runs"] = {model: identifier(sources[model]) for model in ("ndr", "sdr")}
+            if "reuse_source_run_ids" in row:
+                row["reuse_source_run_ids"] = normalize_candidates(row["reuse_source_run_ids"])
+                if "source_runs" in row:
+                    raise ValueError("Choose completed source-stage assembly or explicit native reuse candidates")
             for name in ("reason", "experiment_key"):
                 if name in row:
                     row[name] = _text(row[name], name)
@@ -1086,7 +1095,13 @@ class ComputeProgrammes:
                                     raise RuntimeError("The maintained assembler has not retained both completed native stages")
                                 attempt["assembly_id"] = (seeded.get("assembly") or {}).get("id")
                                 self._write_state(key, state, phase="outputs:" + name)
-                            native = self.workspace.run(binding["run_id"])
+                            if "reuse_source_run_ids" in binding:
+                                attempt["reuse_source_run_ids"] = list(binding["reuse_source_run_ids"])
+                                self._write_state(key, state)
+                                native = self.workspace.run(binding["run_id"],
+                                    reuse_source_run_ids=binding["reuse_source_run_ids"])
+                            else:
+                                native = self.workspace.run(binding["run_id"])
                             reused = bool(native.get("reused"))
                             verified_runs.add(binding["run_id"])
                         if native["state"] != "complete":

@@ -1,9 +1,10 @@
+import {requirementCoverage,requirementCoverageHtml} from './grant-requirement-review-core.mjs';
 import {verifyProductSourceImports} from './grant-product-authoring-core.mjs';
 import {verifyIssuerProgrammes,issuerContextSection} from './grant-issuer-source.mjs';
 import {selectedIssuerContext} from './grant-issuer-core.mjs';
 // MIT. Exact original files and prepared output inside the existing submission draft.
 import {
-  ANSWERS, REQUIREMENTS, SCHEMA, ENVELOPE, MAX_BYTES, makeSource, validateDraft,
+  ANSWERS, REQUIREMENTS, OFFICIAL, SCHEMA, ENVELOPE, MAX_BYTES, makeSource, validateDraft,
   validateSource, retainVersion, receiveSource, outputText, applicationOutput, fieldStatus, formSourceReview,
 } from './grant-submission-core.mjs';
 import {verifyPlanningSource} from './grant-plan-source.mjs';
@@ -329,6 +330,7 @@ export async function prepareSubmission(draft,{at=now(),planningOptions={}}={}) 
     fieldIssues:selection.outputKind==='fields'?draft.fields.map(row=>({id:row.id,label:row.label,
       ...fieldStatus(row,draft.form,selection.format)})):[],
     fieldSourceReview:selection.outputKind==='fields'?formSourceReview(draft):null,
+    requiredContentReview:requirementCoverage(snapshot,{outputKind:selection.outputKind,includeText:false,criteria:{url:OFFICIAL.criteria,reviewedAt:OFFICIAL.reviewedAt}}),
     contextIssues:context.issues,
     statusMeaning:'Prepared exact output and retained context. Preparation is not a submission, issuer receipt, award decision, payment or approval.',
   };
@@ -404,6 +406,9 @@ export async function verifyHandover(draft,{planningOptions={}}={}) {
       'The frozen output differs from its complete retained authoring state.');
     const expected=body.output.kind==='fields'?snapshot.fields.map(row=>({id:row.id,label:row.label,...fieldStatus(row,snapshot.form,body.output.format)})):[];
     need(same(expected,body.fieldIssues),'The frozen field observations differ from their actual retained fields.');
+    if(Object.prototype.hasOwnProperty.call(body,'requiredContentReview'))need(same(body.requiredContentReview,
+      requirementCoverage(snapshot,{outputKind:body.output.kind,includeText:false,criteria:body.requiredContentReview.criteria})),
+      'The prepared required-content review differs from its complete frozen draft.');
     // Earlier prepared editions predate this observation and keep their exact bodies.
     if(Object.prototype.hasOwnProperty.call(body,'fieldSourceReview'))need(same(body.fieldSourceReview,body.output.kind==='fields'?formSourceReview(snapshot):null),
       'The prepared field source comparison differs from its frozen authoring state.');
@@ -469,6 +474,7 @@ export function preparedReport(draft,id) {
       table(['Answer area','Mapped field identities'],body.fieldSourceReview.answers.map(row=>[row.title,row.fieldIds.join(', ')||'No association entered'])),
       table(['Field','Source state','Changed answer identities','Last wording choice','Reviewed at'],body.fieldSourceReview.fields.map(row=>[row.label||row.id,row.status,row.changedAnswerIds.join(', '),row.choice||'',row.reviewedAt||''])),
     ]:[]),
+    ...(body.requiredContentReview?[requirementCoverageHtml(requirementCoverage(body.snapshot,{outputKind:body.output.kind,criteria:body.requiredContentReview.criteria}))]:[para('This historical prepared edition predates exact required-content coverage. Its original review decisions remain in the frozen authoring snapshot.')]),
     '<h2>Original issuer observations</h2>',
     para('These are the operator’s retained observations and original files. File hashes identify received bytes; they do not independently authenticate an issuer or prove submission or approval.'),
     ...(returns.length?returns.map(row=>'<h3>'+escaped(row.body.kind)+'</h3>'+

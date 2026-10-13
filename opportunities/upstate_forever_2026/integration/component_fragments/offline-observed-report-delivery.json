@@ -1,0 +1,23 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "offline-observed-report-delivery",
+  "components": {
+    "offline-observed-report-delivery": {
+      "title": "Complete offline scientific report and original-source delivery",
+      "paths": [
+        "integration/component_fragments/offline-observed-report-delivery.json",
+        "source_tools/deliver_observed_report.py",
+        "source_tools/DELIVER_OBSERVED_REPORT.md"
+      ],
+      "requires": [],
+      "source_manifests": []
+    }
+  },
+  "required_components": [
+    "offline-observed-report-delivery"
+  ],
+  "source_reference": {
+    "operation": "ECO-CLOUD-26A4-OBSERVED-REPORT-DELIVERY-20261013",
+    "original_report_operation": "observed-report-16a897c91483a2c23ee5"
+  }
+}

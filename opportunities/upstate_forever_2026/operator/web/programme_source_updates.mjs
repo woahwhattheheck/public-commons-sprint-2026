@@ -7,6 +7,7 @@ const cell = value => '<td>' + esc(value) + '</td>';
 function nativeWork(row) {
   if (!row.target_run_id) return 'Prepare the source mapping';
   if (row.target_state === 'complete') return 'Completed native result available';
+  if (rows(row.reuse_source_run_ids).length) return 'Compare original native inputs; reuse matching stages and run changed stages';
   if (row.prepared_on_create) return 'Prepared when saved; continue in Programme';
   return row.requires_native_rerun ? 'Continue the selected native run' : 'Continue; original stages may be reused';
 }
@@ -19,7 +20,14 @@ function mappingDetails(row) {
     (side === 'from' ? 'Original sources' : 'Successor sources') + ':</strong> ' +
     (rows(row.source_ids?.[side]).map(item => esc(item.kind) + ' · <code>' + esc(item.collection_id) +
       '/' + esc(item.source_id) + '</code>').join('<br>') || 'No retained source references') + '</small>').join('');
-  return '<details><summary>Source and dependency details</summary>' + dependencies + sources + '</details>';
+  const candidates = rows(row.reuse_candidates).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +
+    'selected model scope: ' + esc(rows(item.models).join(', ')) + '</small>').join('');
+  const skipped = rows(row.reuse_skipped).map(item => '<small><code>' + esc(item.run_id) + '</code> · ' +
+    esc(item.reason) + '</small>').join('');
+  const reuse = candidates ? '<p><strong>Original stage candidates</strong><br>' + candidates +
+    'The native input matcher checks each selected model before reusing its retained stage. Candidate selection does not assert equivalent inputs.</p>' : '';
+  const omitted = skipped ? '<p><strong>Originals not selected for reuse</strong><br>' + skipped + '</p>' : '';
+  return '<details><summary>Source, dependency and native reuse details</summary>' + dependencies + sources + reuse + omitted + '</details>';
 }
 const button = (action, title, extra = '') => '<button type="button" data-source-successor="' + action + '" ' + extra + '>' + esc(title) + '</button>';
 

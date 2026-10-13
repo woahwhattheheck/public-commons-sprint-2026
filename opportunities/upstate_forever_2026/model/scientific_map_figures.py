@@ -190,7 +190,7 @@ def _draw_geometry(drawing, geometry, X, Y, role):
             path.moveTo(X(ring[0][0]), Y(ring[0][1]))
             for point in ring[1:]:
                 path.lineTo(X(point[0]), Y(point[1]))
-            path.close()
+            path.closePath()
         drawing.add(path)
 
 

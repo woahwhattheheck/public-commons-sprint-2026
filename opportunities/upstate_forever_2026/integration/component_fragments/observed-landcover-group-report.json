@@ -7,12 +7,18 @@
   "extend_components": {
     "observed-watershed-change": {
       "paths": [
-        "model/observed_landcover_report.py"
+        "model/observed_landcover_report.py",
+        "model/observed_landcover_provenance.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "AGENTS.md"
       ]
     },
     "study-transfer": {
       "paths": [
-        "model/observed_landcover_report.py"
+        "model/observed_landcover_report.py",
+        "model/observed_landcover_provenance.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "AGENTS.md"
       ]
     }
   }

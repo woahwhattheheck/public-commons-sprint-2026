@@ -9,7 +9,7 @@
   "inventory": "integration/reach_chemistry/COMPOUND_SOURCE.json",
   "source_files": 43,
   "installed_files": 38,
-  "source_bytes": 895314,
+  "source_bytes": 915538,
   "parts": [
     {
       "path": "source-01.json",
@@ -20,10 +20,10 @@
     },
     {
       "path": "source-02.json",
-      "bytes": 305313,
-      "sha256": "7acd4a25d4833f2abbb7f1249b9a8f2122e062104725580acb60f6714974c4a7",
+      "bytes": 332676,
+      "sha256": "22fb42de0dc58cc84f256a6a7b57477bb07416e5fb71b7dc9d35015ef4b96278",
       "members": 15,
-      "source_bytes": 226496
+      "source_bytes": 246720
     },
     {
       "path": "source-03.json",
@@ -311,17 +311,21 @@
     },
     {
       "path": "source/chemistry-report-receiving/README.md",
-      "bytes": 16996,
-      "sha256": "324a4c950f819c566e7ba98199af78d2fffb2f41feb8ea68ffaa406925bb9583",
+      "bytes": 26631,
+      "sha256": "f043190e6fb2c29e904270c2f223ed97902f39e3448d1a37ad158d278031778b",
       "role": "receiving_driver",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_git_blob": "182846a71a40ca7f491a0206cb799bff62001e16",
+      "previous_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8",
+      "source_bank_git_blob": "82fcbaafaab280c38de102b76e1744668a1af2cc"
     },
     {
       "path": "source/chemistry-report-receiving/browser.mjs",
-      "bytes": 30695,
-      "sha256": "5935cfc1ca3c2f6c78d2cb13becc63429e8b07c9b6f33f384f799eb7a7549901",
+      "bytes": 41284,
+      "sha256": "3147e80270db7d1166a32e40d60e7bef5f7bdea90d2ee9a44d2cdba5a5c5f455",
       "role": "receiving_driver",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_git_blob": "7a8340a6a6cdf0693e258c5fd58208be35acd7a3",
+      "previous_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8",
+      "source_bank_git_blob": "82fcbaafaab280c38de102b76e1744668a1af2cc"
     },
     {
       "path": "source/chemistry-report-receiving/chemistry-source-bank.json",
@@ -428,5 +432,15 @@
     "application": "fresh isolated Python using original received archive application",
     "retained_science": "original case, original and compound runs, reports, sources, rendered edition and prior report/source identities",
     "source_commit": "2714cfca13fc4d0939ca9aa32834d0f3dfed9846"
+  },
+  "saved_report_receiving": {
+    "source_bank_git_blob": "82fcbaafaab280c38de102b76e1744668a1af2cc",
+    "entry": "source/chemistry-report-receiving/browser.mjs",
+    "native_receipts": [
+      "receiving.json",
+      "scientific-preview.json"
+    ],
+    "configuration": "--from-native OUTPUT --workspace-key KEY --write-config NEW_FILE",
+    "scientific_report_edition_id": "Retain the exact completed native edition, original source order, title, contact and selected Study identity."
   }
 }

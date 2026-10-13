@@ -96,9 +96,12 @@ export async function receiveBrowser(request,{playwrightModule=null,executable=n
     const descriptor={path:rel,...await hashFile(path),kind,...details};
     artifacts.set(rel,descriptor);return descriptor;
   }
+  let checkpointTail=Promise.resolve();
   async function checkpoint(){
     result.artifacts=[...artifacts.values()];result.updated_at=now();result.elapsed_seconds=(Date.now()-started)/1000;
-    await writeJSON(join(spec.output,'result.json'),result);
+    const snapshot=copy(result);
+    checkpointTail=checkpointTail.catch(()=>{}).then(()=>writeJSON(join(spec.output,'result.json'),snapshot));
+    return checkpointTail;
   }
   const sourceHTML=await fs.readFile(join(spec.original,'REVIEW.html'),'utf8');
   const actualHTML=await hashFile(join(spec.original,'REVIEW.html')),expectedHTML=spec.files.get('REVIEW.html');
@@ -118,8 +121,20 @@ export async function receiveBrowser(request,{playwrightModule=null,executable=n
   demand(typeof chromium?.launch==='function','Use the existing Playwright module with Chromium support.');
   const launchOptions={headless:true};
   if(executable||process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH)launchOptions.executablePath=resolve(executable||process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH);
+  let stopSignal=null,stopPromise=null;
+  const stopHandlers=new Map(['SIGTERM','SIGINT'].map(signal=>[signal,()=>{
+    if(stopSignal||result.state==='complete')return;
+    stopSignal=signal;result.state='interrupted';result.interrupted_at=now();result.interruption={signal};
+    stopPromise=(async()=>{
+      await checkpoint().catch(()=>{});
+      if(context)await context.close().catch(()=>{});
+      if(browser)await browser.close().catch(()=>{});
+    })();
+  }]));
+  for(const [signal,handler]of stopHandlers)process.on(signal,handler);
+  const checkRunning=()=>demand(!stopSignal,'GIS report receiving interrupted by '+stopSignal+'.');
   try{
-    browser=await chromium.launch(launchOptions);
+    browser=await chromium.launch(launchOptions);checkRunning();
     context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,colorScheme:'light'});
     context.setDefaultTimeout(30000);context.setDefaultNavigationTimeout(60000);
     // Original report pages are self-contained. Keep browser reads on files or the current local operator.
@@ -158,9 +173,7 @@ export async function receiveBrowser(request,{playwrightModule=null,executable=n
       name=member(name);const expected=spec.files.get(name);
       demand(expected,'A visible download is absent from the original report inventory: '+name);
       const locator=page.locator(selector).first();await locator.waitFor({state:'visible'});
-      const promised=page.waitForEvent('download');
-      await locator.click();
-      const download=await promised;
+      const [download]=await Promise.all([page.waitForEvent('download'),locator.click()]);
       const target=join(spec.output,'downloads',contextName,name);
       await fs.mkdir(dirname(target),{recursive:true,mode:0o700});await download.saveAs(target);
       demand(!await download.failure(),'The original browser download did not finish.');
@@ -170,7 +183,7 @@ export async function receiveBrowser(request,{playwrightModule=null,executable=n
       return saved;
     }
     async function browse(page,label,{controls=true,downloads=false}={}){
-      await populated(page);const entry={context:label,started_at:now(),layers:[],documents:[]};
+      checkRunning();await populated(page);const entry={context:label,started_at:now(),layers:[],documents:[]};
       result.contexts.push(entry);
       for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
         await page.setViewportSize(viewport);
@@ -249,7 +262,7 @@ export async function receiveBrowser(request,{playwrightModule=null,executable=n
       demand(actual.bytes===expected.bytes&&actual.sha256===expected.sha256,'Original report attachment changed: '+name);
       const doc=await context.newPage();
       await doc.goto(new URL(name,request.locations.offline).href,{waitUntil:'load'});
-      const displayed=await doc.locator('body').innerText();
+      const displayed=await (await doc.locator('pre').count()?doc.locator('pre').first():doc.locator('body')).innerText();
       const parsed=JSON.parse(displayed);
       result.opened_documents.push({context:'original-offline',member:name,bytes:actual.bytes,sha256:actual.sha256,
         json_type:Array.isArray(parsed)?'array':'object'});
@@ -273,8 +286,7 @@ export async function receiveBrowser(request,{playwrightModule=null,executable=n
     }
     await anchor.waitFor({state:'visible'});await anchor.scrollIntoViewIfNeeded();
     await capture(operator,'operator-1440-project-card',{context:'operator',viewport:{width:1440,height:1000}});
-    const popupPromise=context.waitForEvent('page');await anchor.click();
-    const preview=await popupPromise;await preview.waitForLoadState('domcontentloaded');
+    const [preview]=await Promise.all([context.waitForEvent('page'),anchor.click()]);await preview.waitForLoadState('domcontentloaded');
     demand(new URL(preview.url()).origin===spec.origin&&new URL(preview.url()).pathname===spec.operatorPath,
       'The application opened a different review resource.');
     await browse(preview,'operator-preview',{downloads:true});
@@ -301,13 +313,16 @@ export async function receiveBrowser(request,{playwrightModule=null,executable=n
     await reopened.goto(request.locations.reopened,{waitUntil:'load'});
     await browse(reopened,'independent-reopen',{downloads:false});
     demand(result.errors.length===0,'The actual report browser returned a script exception; see the retained result.');
-    result.state='complete';result.completed_at=now();await checkpoint();
+    checkRunning();result.state='complete';result.completed_at=now();await checkpoint();
     return result;
   }catch(error){
-    result.state='failed';result.failed_at=now();result.error=safeError(error);await checkpoint();throw new Error(result.error);
+    result.state=stopSignal?'interrupted':'failed';result.failed_at=now();result.error=safeError(error);await checkpoint();throw new Error(result.error);
   }finally{
+    for(const [signal,handler]of stopHandlers)process.removeListener(signal,handler);
+    if(stopPromise)await stopPromise;
     if(context)await context.close().catch(()=>{});
     if(browser)await browser.close().catch(()=>{});
+    await checkpointTail.catch(()=>{});
   }
 }
 async function main(){

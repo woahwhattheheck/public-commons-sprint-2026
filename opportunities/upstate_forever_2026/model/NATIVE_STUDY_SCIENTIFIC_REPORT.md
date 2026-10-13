@@ -4,6 +4,31 @@ This course publishes an existing native Ensembles design as an ordinary scienti
 
 A completed land-cover pair or a completed baseline parameter contrast is sufficient. A partial design keeps its completed physical results, unfinished run counts and original errors visible. An annual observation or calibration is optional for this native-study report.
 
+## Original input scope at the report opening
+
+The scientific source now includes **Original geography, source classifications and model endpoint** immediately after the saved-design summary. It shows the retained grid title, CRS, cell size and area, dimensions and bounds, the computational and reporting source choices, and each original input's declared classification and units.
+
+Grid rectangle area is calculated from the saved width, height and native pixel area. It describes the rectangular raster envelope. The separate source selections identify actual computational and reporting geometry; the original comparison sections identify finite paired support. A coordinate system or rectangular extent alone does not identify an agency catchment or an actual utility service area.
+
+Classifications come from the original source entry's `classification` field. If that field is absent, the report says **Not declared**. It does not infer measured, simulated or regional status from filenames, titles or coordinates. Mixed source editions keep their individual declarations visible. Native NDR quantities retain kg/year and SDR quantities retain metric tonnes/year delivered to modeled streams; source-to-intake interpretation remains a separate scientific relationship.
+
+### Original assumption and recipe documents
+
+The producer resolves original document entries in the selected source collections when either:
+
+- Their exact URI is referenced by an original selected profile.
+- Their body SHA256 equals an explicit `recipe-sha256:` profile reference or a selected input entry's `recipe_sha256`.
+
+It preserves each selected document, its companions, source entry and original manifest bytes under `reference-sources/`. The source inventory includes those bindings; `study-source-scope.json` retains the exact grid/selections/classifications/document descriptors. Known original simulated assumption and input-recipe schemas expose their original assumption fields as ordinary report tables. Other referenced documents remain available as complete original files without interpreting their contents.
+
+This closes the real simulated-headwaters profile's `input-assumptions.json` and `input-recipe.json` references. Those documents describe the original input edition. Selected per-case profile tables continue to show actual varied parameters, so an original baseline assumption is not silently substituted for a varied case. The existing scientific collector carries the scope tables and source links through HTML, PDF, complete report data and the ordinary source ZIP.
+
+### Preserve old and new source editions
+
+The source recipe remains version2 and existing v1/v2 transfer compatibility remains intact. The producer and source-scope helper hashes enter the saved source identity, so preparation creates a distinct immutable presentation edition. Previously exported numeric reports and native runs are unchanged. The source packet continues to retain exact original coefficient tables, all original scalar rows and comparison-support identities, plus the explicitly referenced documents. Large rasters and geometry remain in their complete editable Workspace transfer under original paths and hashes.
+
+Use the SAME `prepare(workspace, actual_ensemble_id, render=True)` action at the existing source/export boundary. Open the actual report and its attached original assumptions, inspect its grid/source labels and original parameter cases, and view the final figures and archive contents in the recipient's viewer. The completed5156 course is the explicitly simulated120×120-cell,30m,1,296-hectare square. The actual Upper Savannah geography successor has its own source/grid identity and native operation.
+
 ## Operator course
 
 1. Open **Scenario sensitivity** and select the saved design.
@@ -256,3 +281,53 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
+
+## Current owner demonstration direction
+
+The complete current brief is retained here from `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`; carry it onward with this receiving course.
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Direct owner instructions
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

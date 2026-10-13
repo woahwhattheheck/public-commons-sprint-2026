@@ -1,0 +1,21 @@
+reference_id,reference_kind,characteristic,group_id,sample_role,fraction,media_subdivision,method_id,records,sampling_dates,reference_value,reference_unit,numeric_below,numeric_at,numeric_above,censored_limit_below,censored_limit_at,censored_limit_above,unresolved,limit_min,limit_max,maximum_numeric
+arsenic-hh-legacy,legacy_assessment_label,Arsenic,G015,routine_environmental,Dissolved,Surface Water,Publisher unspecified,48,24,10,ug/L,0,0,0,48,0,0,0,2,2,
+arsenic-hh-legacy,legacy_assessment_label,Arsenic,G024,routine_environmental,Total,Surface Water,Publisher unspecified,24,24,10,ug/L,0,0,0,24,0,0,0,2,2,
+arsenic-al-legacy,legacy_assessment_label,Arsenic,G015,routine_environmental,Dissolved,Surface Water,Publisher unspecified,48,24,50,ug/L,0,0,0,48,0,0,0,2,2,
+arsenic-al-legacy,legacy_assessment_label,Arsenic,G024,routine_environmental,Total,Surface Water,Publisher unspecified,24,24,50,ug/L,0,0,0,24,0,0,0,2,2,
+beryllium-legacy,legacy_assessment_label,Beryllium,G014,routine_environmental,Dissolved,Surface Water,Publisher unspecified,48,24,6.5,ug/L,0,0,0,48,0,0,0,5,5,
+beryllium-legacy,legacy_assessment_label,Beryllium,G023,routine_environmental,Total,Surface Water,Publisher unspecified,24,24,6.5,ug/L,0,0,0,24,0,0,0,5,5,
+cadmium-legacy,legacy_assessment_label,Cadmium,G010,routine_environmental,Dissolved,Surface Water,Publisher unspecified,48,24,0.4,ug/L,0,0,0,0,0,48,0,1,1,
+cadmium-legacy,legacy_assessment_label,Cadmium,G019,routine_environmental,Total,Surface Water,Publisher unspecified,24,24,0.4,ug/L,0,0,0,0,0,24,0,1,1,
+copper-legacy,legacy_assessment_label,Copper,G011,routine_environmental,Dissolved,Surface Water,Publisher unspecified,48,24,7,ug/L,0,0,0,48,0,0,0,2,2,
+copper-legacy,legacy_assessment_label,Copper,G020,routine_environmental,Total,Surface Water,Publisher unspecified,24,24,7,ug/L,0,0,0,24,0,0,0,2,2,
+lead-legacy,legacy_assessment_label,Lead,G013,routine_environmental,Dissolved,Surface Water,Publisher unspecified,48,24,25,ug/L,0,0,0,48,0,0,0,2,10,
+lead-legacy,legacy_assessment_label,Lead,G022,routine_environmental,Total,Surface Water,Publisher unspecified,24,24,25,ug/L,0,0,0,24,0,0,0,2,10,
+mercury-legacy,legacy_assessment_label,Mercury,G002,routine_environmental,Total,Surface Water,Publisher unspecified,24,24,0.012,ug/L,9,0,0,15,0,0,0,0.001,0.001,0.00369
+nickel-legacy,legacy_assessment_label,Nickel,G012,routine_environmental,Dissolved,Surface Water,Publisher unspecified,48,24,88,ug/L,0,0,0,48,0,0,0,2,10,
+nickel-legacy,legacy_assessment_label,Nickel,G021,routine_environmental,Total,Surface Water,Publisher unspecified,24,24,88,ug/L,0,0,0,24,0,0,0,2,10,
+zinc-legacy,legacy_assessment_label,Zinc,G016,routine_environmental,Dissolved,Surface Water,Publisher unspecified,48,24,50,ug/L,0,0,0,48,0,0,0,10,10,
+zinc-legacy,legacy_assessment_label,Zinc,G018,routine_environmental,Total,Surface Water,Publisher unspecified,24,24,50,ug/L,0,0,0,24,0,0,0,10,10,
+cyanide-2022-methodology,published_2022_methodology,Cyanide,G025,routine_environmental,Publisher unspecified,Surface Water,Publisher unspecified,12,12,5,ug/L,0,0,0,0,0,12,0,20,20,
+turbidity-trout-legacy,legacy_assessment_label,Turbidity,G017,routine_environmental,Publisher unspecified,Surface Water,Publisher unspecified,23,23,10,NTU,15,0,0,8,0,0,0,1,1,8.7
+turbidity-trout-legacy,legacy_assessment_label,Turbidity,G026,routine_environmental,Publisher unspecified,Surface Water,Publisher unspecified,1,1,10,NTU,0,0,0,0,0,0,1,,,

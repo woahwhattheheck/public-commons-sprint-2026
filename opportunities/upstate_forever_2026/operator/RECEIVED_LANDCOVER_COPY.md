@@ -1,5 +1,7 @@
 # Create a local editable comparison from a received report
 
+Read and carry the complete [current owner direction](../CURRENT_OWNER_DIRECTION.md), version **2026-10-13.3**, with this receiving operation. The application [AGENTS.md](../AGENTS.md) contains the full standing rendered-product and **all attachments** instruction. These original files accompany the component; their complete contents apply to every participating child, provider and cloud handoff. Preserve active computation and the existing 14:00 UTC cutoff.
+
 A received Scientific Report can contain a complete selected-watershed comparison from another project. Its original source, figures, selected HUC identifiers, input documents and quantities remain available in the received Study. **Create local editable comparison** admits those verified original inputs into the current project and runs the maintained selected-watershed producer to save a new local comparison.
 
 This operation gives the new comparison its own project and implementation identity. It retains an explicit link to the original project, source collection, report body, saved comparison and original input entries. It does not change the received report or rename a foreign comparison as a local one.
