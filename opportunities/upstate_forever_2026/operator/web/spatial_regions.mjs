@@ -147,6 +147,13 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
     const completed=model.tasks.find(task=>task.id===model.autoOpenTask&&task.state==='complete'&&task.result?.id);
     if(completed){model.autoOpenTask=null;openResult(completed.result.id);}
   }
+  function restoreFields(){
+    const bins=node('[data-region-input="bins"]');
+    const choices=[16,32,64,128];
+    if(Number.isInteger(model.bins)&&model.bins>=2&&model.bins<=256&&!choices.includes(model.bins))choices.push(model.bins);
+    bins.innerHTML=choices.sort((a,b)=>a-b).map(value=>'<option value="'+value+'">'+value+'</option>').join('');
+    for(const key of ['title','notes','bins','inclusion','search'])node('[data-region-input="'+key+'"]').value=model[key];
+  }
   async function action(target){
     clearError();
     const name=target.dataset.regionAction;
@@ -156,13 +163,18 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
     if(name==='open'){model.autoOpenTask=null;return openResult(target.dataset.id);}
     if(name==='task')return showTask(target.dataset.id);
     if(name==='reopen'&&model.result){
-      model.selection={...copy(model.result.request.region),label:model.result.title,...(model.result.request.source_feature?{source_feature:copy(model.result.request.source_feature)}:{})};
-      await reopen(copy(model.result));selection();return;
+      const saved=copy(model.result),original=saved.request;
+      if(!Number.isInteger(original.histogram_bins)||original.histogram_bins<2||original.histogram_bins>256||typeof original.all_touched!=='boolean')throw Error('The saved analysis has no valid native calculation settings.');
+      await reopen(saved);
+      if(!current())return;
+      Object.assign(model,{selection:{...copy(original.region),label:saved.title,...(original.source_feature?{source_feature:copy(original.source_feature)}:{})},
+        title:original.title,notes:original.notes||'',bins:original.histogram_bins,inclusion:original.all_touched?'touched':'centre'});
+      restoreFields();selection();status('Original area, rasters, cell inclusion, histogram bins and notes restored.');return;
     }
     if(name==='feature'){
       const group=features[Number(target.dataset.group)],feature=group?.features?.[Number(target.dataset.feature)];
       if(!feature||!['Polygon','MultiPolygon'].includes(feature.geometry?.type))throw Error('Inspect the original polygon again before selecting it.');
-      selectRegion({crs:feature.geometry_crs,geometry:copy(feature.geometry),label:group.layer.title+' · feature '+feature.id,source_feature:{selection:copy(group.selection),id:String(feature.id)}});
+      selectRegion({crs:feature.geometry_crs,geometry:copy(feature.geometry),display_geometry:copy(feature.display_geometry),display_geometry_crs:feature.display_geometry_crs,label:group.layer.title+' · feature '+feature.id,source_feature:{selection:copy(group.selection),id:String(feature.id)}});
       panel.scrollIntoView({block:'nearest',behavior:'smooth'});return;
     }
     if(name==='previous'||name==='next'){model.page+=name==='next'?1:-1;renderHistory();return;}
@@ -184,7 +196,7 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
     if(key==='inclusion')model.inclusion=target.value;
     if(key==='histogram'){model.histogramSeries=target.value;const row=tableSeries(model.result).find(row=>row.key===target.value);node('[data-region-histogram]').innerHTML=histogram(row);}
   },{signal:events.signal});
-  for(const key of ['title','notes','bins','inclusion','search'])node('[data-region-input="'+key+'"]').value=model[key];
+  restoreFields();
   selection();renderResult();renderHistory();renderTasks();
   return {selectBounds,selectRegion,setState,openResult,setFeatures:value=>{features=value||[];},dispose:()=>{disposed=true;events.abort();for(const control of reads)control.abort();reads.clear();}};
 }
