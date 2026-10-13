@@ -64,6 +64,18 @@ The transfer cache belongs to the workspace selected when receiving. Its verifie
 
 Receiving and restoration retain the original project identity. Before registration, the restored Workspace passes the same installed extension verifiers as the original Workspace restore action, including retained study and investigation context checks. The original restore implementation creates a receiving directory and preserves completed recipient edits on a replay of the same restoration task.
 
+## Retained soil and floodplain acquisitions
+
+The transfer inventory and completed capture or restore task show the original acquisition operations. Each row identifies its original request, retained processing state, soil/floodplain families, predecessor, imported source editions and saved result files. Preparation interrupted before a committed selection remains visible as retained preparation.
+
+After **Restore editable copy**, expand **Retained soil and floodplain acquisitions** in the completed task and choose **Open acquisition**. The operator selects that restored workspace, mounts the existing Conservation desk, and opens the exact retained operation. Use its current **Resume** or **Continue with current application** control to process the retained requests and responses. The original operation and its predecessor history remain available.
+
+The summary also accompanies current-workspace captures and completed study captures when the original portable archive carries acquisition metadata. A sender can open the original retained acquisition from its capture task. A manifest received before restoration displays the sender's inventory; its acquisition controls become available in the completed editable restoration.
+
+A restore interrupted after writing the destination but before returning its final reply reconstructs the same acquisition summary from the verified original destination files. It compares the retained lineage with the original archive and retains the recovered result on the existing transfer operation.
+
+This receiving integration uses the current `model/portable_acquisitions.py` and portable backup/restore source together with the complete installed application. Older archives without an acquisition summary remain readable.
+
 ## Part sizing and inventories
 
 The **Raw payload per part** value limits block payload. Every part also contains the complete original manifest and ZIP metadata, so the downloaded file can be larger. The desk displays this operator's upload capacity. Choose a payload size that leaves room for that overhead and is at least as large as the selected transfer block size.
