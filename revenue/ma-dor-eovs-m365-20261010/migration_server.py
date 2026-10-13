@@ -19,6 +19,7 @@ from migration_workspace import MigrationWorkspace, MigrationError
 import financial_workspace
 import property_workspace
 import crf_workspace
+import adviser_workspace
 from migration_portable import PortableService
 
 READS = {
@@ -38,7 +39,9 @@ READS = {
 READS.update(financial_workspace.READS)
 READS.update(property_workspace.READS)
 READS.update(crf_workspace.READS)
+READS.update(adviser_workspace.READS)
 STATIC = {
+    "/migration-advisers.js": ("public/migration-advisers.js", "text/javascript; charset=utf-8"),
     "/crf": ("public/crf.html", "text/html; charset=utf-8"),
     "/crf.html": ("public/crf.html", "text/html; charset=utf-8"),
     "/crf.js": ("public/crf.js", "text/javascript; charset=utf-8"),
@@ -220,7 +223,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 identifier = query.get("id", [""])[0]
                 format_name = query.get("format", ["ndjson"])[0]
                 if kind not in {"case.dataset", "case.plan", "case.rehearsal", "case.review", "case.cutover",
-                                "register.dataset", "register.plan", "register.rehearsal", "register.review", "register.cutover"} | set(financial_workspace.KINDS) | set(property_workspace.KINDS) | set(crf_workspace.KINDS):
+                                "register.dataset", "register.plan", "register.rehearsal", "register.review", "register.cutover"} | set(financial_workspace.KINDS) | set(property_workspace.KINDS) | set(crf_workspace.KINDS) | set(adviser_workspace.KINDS):
                     raise ValueError("Choose a complete retained workbench record export")
                 if format_name not in {"ndjson", "csv"}:
                     raise ValueError("Choose NDJSON or CSV")
