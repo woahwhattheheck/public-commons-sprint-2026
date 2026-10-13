@@ -27,7 +27,10 @@
         "source/geographic_headwaters_20261013/PREPARE.md",
         "source_tools/geographic_scenario_context.py",
         "source_tools/geographic_scenario_interpretation.mjs",
-        "docs/GEOGRAPHIC_SOURCE_INTERPRETATION_RECEIVING.md"
+        "docs/GEOGRAPHIC_SOURCE_INTERPRETATION_RECEIVING.md",
+        "model/geographic_programme.py",
+        "source_tools/adopt_geographic_headwaters_programme.py",
+        "source_tools/GEOGRAPHIC_PROGRAMME.md"
       ],
       "requires": [
         "core",
@@ -35,7 +38,8 @@
         "simulated-headwaters-demo",
         "geographic-receiving-context",
         "ensembles",
-        "study-transfer"
+        "study-transfer",
+        "programme-activity"
       ]
     }
   },

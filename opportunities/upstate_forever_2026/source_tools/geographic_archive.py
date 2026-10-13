@@ -12,7 +12,7 @@ from pathlib import Path
 import stat
 import zipfile
 
-from model.common import atomic_json, digest, identifier, read_json
+from model.common import atomic_json, describe_file, digest, identifier, read_json
 from model import portable, reviews
 
 
@@ -281,7 +281,7 @@ def _archive_selection(requested, handover):
 
 
 def binding(workspace, prepared, scientific, delivery, review, response_id, *,
-            archive_selection=None, handover=None, utility_context=None, reference_basis=None):
+            archive_selection=None, handover=None, utility_context=None, reference_basis=None, programme=None):
     """Bind full-course completion, or an explicitly separate reference edition."""
     members = {}
     cache = {}
@@ -482,6 +482,25 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
             collection(item["source"]["source_collection_id"])
         utility_sources.update(utilities.source_collection_ids(original_context))
 
+    programme_identity = None
+    if programme is not None:
+        from model.geographic_programme import verify as verify_programme
+        verify_programme(workspace, programme)
+        _require(programme.get("geographic_id") == prepared["id"]
+                 and programme.get("existing_delivery_id") == delivery_id,
+                 "Retain the Programme of the selected original geographic delivery")
+        programme_identity = digest(programme)
+        directory = root / "compute-programmes" / identifier(programme["programme_id"])
+        record(directory.relative_to(root).as_posix() + "/programme.json")
+        record(directory.relative_to(root).as_posix() + "/progress.json")
+        for path in sorted(directory.rglob("*")):
+            _require(not path.is_symlink(), "Original Programme contains a symbolic link")
+            if path.is_file() and not path.name.endswith(".lock"):
+                item = describe_file(root, path)
+                add(item["path"], item)
+        for item in programme["report"]["files"]:
+            descriptor("", item)
+
     archive_delivery = None
     if handover is not None:
         handover_id = identifier(handover["id"])
@@ -497,6 +516,7 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
                  and handover_record.get("scientific", {}).get("id") == scientific_id
                  and handover_record.get("delivery_id") == delivery_id
                  and handover_record.get("reference_basis") == reference_basis
+                 and handover_record.get("geographic_programme") == programme
                  and handover_record.get("review", {}).get("review_id") == review["id"]
                  and handover_record.get("review", {}).get("latest_response_id") == response_id
                  and digest(handover_record) == handover["identity"]["content_sha256"]
@@ -548,6 +568,9 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
         "omitted_runtime_locks": sorted(omitted_runtime_members),
         "members": dict(sorted(members.items())),
     }
+    if programme is not None:
+        value.update(geographic_programme_id=programme["programme_id"],
+                     geographic_programme_sha256=programme_identity)
     if reference is not None:
         value.update(schema="upstate.geographic-reference-handover-binding/v1",
                      completion_scope="reference", reference_basis=reference["basis"],
@@ -559,7 +582,7 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
 
 
 def retain_binding(workspace, output, prepared, scientific, delivery, review, response_id, *,
-                   archive_selection=None, handover=None, utility_context=None, reference_basis=None):
+                   archive_selection=None, handover=None, utility_context=None, reference_basis=None, programme=None):
     """Retain the pre-backup selection before the archive's publication window.
 
     Its immutable generation survives a lost outer receiving checkpoint.
@@ -578,6 +601,9 @@ def retain_binding(workspace, output, prepared, scientific, delivery, review, re
     if reference_basis is not None:
         reference_snapshot(workspace, prepared, reference_basis)
         scope.update(completion_scope="reference", reference_basis=reference_basis)
+    if programme is not None:
+        scope.update(geographic_programme_id=programme["programme_id"],
+                     geographic_programme_sha256=digest(programme))
     path = Path(output) / "archive-bindings" / (digest(scope) + ".json")
     if path.exists():
         selected = read_json(path)
@@ -589,7 +615,7 @@ def retain_binding(workspace, output, prepared, scientific, delivery, review, re
         return selected
     selected = binding(workspace, prepared, scientific, delivery, review, response_id,
                        archive_selection=archive_selection, handover=handover,
-                       utility_context=utility_context, reference_basis=reference_basis)
+                       utility_context=utility_context, reference_basis=reference_basis, programme=programme)
     atomic_json(path, selected, immutable=True)
     return selected
 
