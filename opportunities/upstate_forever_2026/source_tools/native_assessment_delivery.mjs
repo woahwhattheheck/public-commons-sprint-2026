@@ -2,6 +2,7 @@
 import { createArchiveCodec } from "./archive_codec.mjs";
 import { buildAssociationReport } from "./assessment_association_report.mjs";
 import { zipReportFiles } from "./assessment_association_package.mjs";
+import { retainMicrobialSources, microbialScientificSections } from "./native_assessment_microbiology.mjs";
 const codec = createArchiveCodec();
 const json = value => JSON.stringify(value, null, 2) + "\n";
 const bytes = value => typeof value === "string" ? codec.utf8Encode(value) : value;
@@ -12,6 +13,7 @@ const requireSame = (a, b, message) => { if (JSON.stringify(a) !== JSON.stringif
 const table = (columns, rows, widths) => ({kind:"table", columns, rows:rows.map(row => row.map(String)), widths});
 const fixed = (value, digits=2) => Number(value).toLocaleString("en-US", {minimumFractionDigits:digits, maximumFractionDigits:digits});
 export const NATIVE_DELIVERY_DIRECTORY = "results/native-assessment-delivery-20261013";
+export const MICROBIAL_DELIVERY_DIRECTORY = "results/native-assessment-microbial-delivery-20261013";
 export const NATIVE_SOURCE_DIRECTORY = "source/annual-reference-assessment-20261013";
 export const STATION_SOURCE_DIRECTORY = "source/station-assessment-context/native159-source-context-20261013";
 export const ANNUAL_SOURCE_FILES = Object.freeze([
@@ -350,15 +352,20 @@ function scientificSections(context, annual, report) {
     ]],
   ];
 }
-export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, originalAssessmentFiles, stationSourceFiles, annualSourceFiles}) {
+export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, originalAssessmentFiles, stationSourceFiles, annualSourceFiles, microbialFiles, microbialOriginalFiles}) {
   const retained=retainNativeFiles(nativeFiles);
   const context=JSON.parse(text(retained.files["assessment-native-huc-context.json"]));
   const annual=JSON.parse(text(retained.files["annual-reference-assessment-summary.json"]));
   validateRecordPointers(context,originalAssessmentFiles);
   const stationSources=retainStationSources(stationSourceFiles,context);
   const annualSources=retainAnnualSources(annualSourceFiles);
+  if ((microbialFiles === undefined) !== (microbialOriginalFiles === undefined))
+    throw Error("Retain both the measured source edition and its complete original provenance.");
+  const microbial=microbialFiles===undefined?null:retainMicrobialSources(microbialFiles,microbialOriginalFiles,context);
   const report=buildAssociationReport({...assessmentInputs,geography:text(retained.files["assessment-native-huc-context.json"]),
-    nativeAnnualContext:text(retained.files["annual-reference-assessment-summary.json"])});
+    nativeAnnualContext:text(retained.files["annual-reference-assessment-summary.json"]),
+    ...(microbial?{nativeMicrobialContext:microbial.files["microbial-assessment-overlap.json"],
+      nativeMicrobialObservations:microbial.files["microbial-assessment-observations.csv"]}:{})});
   const files={};
   for(const [path,body] of Object.entries(retained.files))files[nativePath(path)]=body;
   for(const [path,body] of Object.entries(stationSources.files))files[STATION_SOURCE_DIRECTORY+"/"+path]=body;
@@ -369,14 +376,32 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
     files[nativePath(path)]=body;
   }
   for(const [path,body] of Object.entries(report.files))files["association/"+path]=body;
+  if (microbial) {
+    for (const [path,body] of Object.entries(microbial.files)) files[nativePath(path)]=body;
+    for (const [path,body] of Object.entries(microbial.originalFiles)) {
+      nativeDeliveryPath(path);
+      if (files[path] !== undefined && text(files[path]) !== text(body)) throw Error("Original source path collision: "+path);
+      files[path]=body;
+    }
+  }
   const sections=scientificSections(context,annual,report);
-  const reportId="native-assessment-observed-"+RESULT_HASHES["assessment-native-huc-context.json"].slice(0,20);
+  if (microbial) {
+    sections.splice(3,0,...microbialScientificSections(microbial.bound.coverage,NATIVE_SOURCE_DIRECTORY+"/"));
+    sections[sections.length-1][1][0]="Import the included 17-entry source manifest to retain four original native vector/table entries, seven original station/assessment entries, four original measured microbial entries, the interactive assessment report and this scientific report recipe. Existing Spatial Review opens the original-point layers; Annual load observations retains the target/catchment intake and calibration actions.";
+  }
+  const reportId="native-assessment-observed-"+RESULT_HASHES["assessment-native-huc-context.json"].slice(0,20)+
+    (microbial?"-microbial-"+microbial.bound.source.context_sha256.slice(0,12):"");
   const inputs=Object.entries(files).map(([path,body])=>identity(path,body));
-  const recipe={schema:"upstate.observed-report/v1",title:"Physical assessment coverage, utility selection and annual references",
-    edition:"original-native-assessment-context-20261013-v1",vintage:"2026-10-13",
+  const recipe={schema:"upstate.observed-report/v1",title:microbial?"Physical assessment coverage, measured E. coli and annual references":"Physical assessment coverage, utility selection and annual references",
+    edition:microbial?"original-native-assessment-microbial-context-20261013-v1":"original-native-assessment-context-20261013-v1",vintage:"2026-10-13",
     interpretation_kind:"completed_native_geography_and_original_assessment_context",
     inputs,sections,source_links:[nativePath("README.md"),nativePath("sources.json"),nativePath("assessment-native-huc-context.json"),
       nativePath("annual-reference-assessment-summary.json"),"association/sources.json","association/OPEN_ASSESSMENT_ASSOCIATIONS.html"]};
+  if (microbial) {
+    recipe.measured_source_context=microbial.bound.source;
+    recipe.source_links.push(nativePath("microbial-assessment-sources.json"),nativePath("MICROBIAL_COVERAGE.md"),
+      "source/ecoli_temporal_analysis/20261013/source-manifest.json","source/ecoli_utility_context/20261013/source-manifest.json");
+  }
   const available=new Set(Object.keys(files));
   for(const [,blocks] of sections)for(const block of blocks){
     if(typeof block==="string")continue;
@@ -388,25 +413,28 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
   files["observed-report.json"]=json(recipe);
   const nativeEntries=retained.manifest.entries.map(row=>prefixedEntry(row,NATIVE_SOURCE_DIRECTORY+"/"));
   const stationEntries=stationSources.manifest.entries.map(row=>prefixedEntry(row,STATION_SOURCE_DIRECTORY+"/"));
-  const allOriginalEntries=[...nativeEntries,...stationEntries];
+  const microbialEntries=microbial?microbial.manifest.entries.map(row=>prefixedEntry(row,NATIVE_SOURCE_DIRECTORY+"/")):[];
+  const allOriginalEntries=[...nativeEntries,...stationEntries,...microbialEntries];
+  const relationship=row=>microbialEntries.includes(row)?"original_measured_microbial_source":
+    nativeEntries.includes(row)?"original_native_geometry_context":"original_station_and_assessment_edition";
   const associationManifest=JSON.parse(report.files["sources.json"]);
   const document=prefixedEntry(associationManifest.entries[0],"association/");
   document.metadata={...(document.metadata||{}),related_source_ids:allOriginalEntries.map(row=>row.id),
-    source_relationships:allOriginalEntries.map(row=>({id:row.id,relationship:nativeEntries.includes(row)?"original_native_geometry_context":"original_station_and_assessment_edition"}))};
+    source_relationships:allOriginalEntries.map(row=>({id:row.id,relationship:relationship(row)}))};
   const observed={id:reportId,title:recipe.title,kind:"document",role:"OBSERVED_CONTEXT",vintage:recipe.vintage,
     uri:retained.manifest.entries[0].uri,...identity("observed-report.json",files["observed-report.json"]),
     companions:inputs,metadata:{related_source_ids:[document.id,...allOriginalEntries.map(row=>row.id)],
       source_relationships:[{id:document.id,relationship:"interactive_native_assessment_report"},
-        ...allOriginalEntries.map(row=>({id:row.id,relationship:nativeEntries.includes(row)?"original_native_geometry_context":"original_station_and_assessment_edition"}))]}};
+        ...allOriginalEntries.map(row=>({id:row.id,relationship:relationship(row)}))]}};
   const manifest={schema:"upstate.sources/v1",title:recipe.title,entries:[...allOriginalEntries,document,observed],
     notes:["Original native result/source roles remain retained; completed geometry and publisher labels are distinct.",
       "The existing Annual load observations and calibration actions receive the original targets and catchments."]};
   if (new Set(manifest.entries.map(row=>row.id)).size !== manifest.entries.length) throw Error("Combined source IDs repeat");
   files["sources.json"]=json(manifest);
-  const archive=zipReportFiles(files,{compress:true}),archiveDescriptor=identity("native-assessment-delivery.zip",archive);
+  const archive=zipReportFiles(files,{compress:true}),archiveDescriptor=identity(microbial?"native-assessment-microbial-delivery.zip":"native-assessment-delivery.zip",archive);
   const inventory={schema:"commons.artifacts/v1",title:recipe.title,source_id:reportId,
     interactive_source_id:report.sourceId,archive:{...archiveDescriptor,manifest_member:"sources.json"},
     files:Object.entries(files).map(([path,body])=>identity(path,body))};
   files[archiveDescriptor.path]=archive;files["artifacts.json"]=json(inventory);
-  return {files,manifest,recipe,report,archive:inventory.archive,inventory,directory:NATIVE_DELIVERY_DIRECTORY};
+  return {files,manifest,recipe,report,archive:inventory.archive,inventory,directory:microbial?MICROBIAL_DELIVERY_DIRECTORY:NATIVE_DELIVERY_DIRECTORY};
 }
