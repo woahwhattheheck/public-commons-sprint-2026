@@ -1,0 +1,35 @@
+{
+  "format": "commons.hcps.application-build.v1",
+  "files": [
+    {
+      "path": "index.template.html",
+      "bytes": 12852,
+      "sha256": "1d1ada270cbdb0cd962bf44c562ec53409f6c643dc86297f349d1198d1c21587"
+    },
+    {
+      "path": "hcps.css",
+      "bytes": 6079,
+      "sha256": "a01c0370d5aabc4913b2fb234ff8696dc0a6b8f40e617c4ab08a260e5915b3a5"
+    },
+    {
+      "path": "hcps-core.cjs",
+      "bytes": 14756,
+      "sha256": "fda28977406041bd43d01a4cb46d65a366e84db742d7791ba59f1d11b3b99363"
+    },
+    {
+      "path": "hcps-app.js",
+      "bytes": 28867,
+      "sha256": "18ea7151d3ef8aecfd432a0f15bb5b6afbba3858bd19adc646446762e4ae5b35"
+    },
+    {
+      "path": "production-seed.json",
+      "bytes": 208206,
+      "sha256": "fde71638e6f4214265109da75beb607b371398d6d89be72d370fd5535f3a0383"
+    }
+  ],
+  "application": {
+    "path": "HCPS_Response_Desk.html",
+    "bytes": 270494,
+    "sha256": "6a5835c7f3713d0d8a874e077b983682ad188e501f37bdcb15a11fe0fe07be73"
+  }
+}
