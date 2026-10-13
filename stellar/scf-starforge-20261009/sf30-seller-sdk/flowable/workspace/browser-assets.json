@@ -134,6 +134,27 @@
         "document-comparison-browser.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/programme-source-review.mjs",
+      [
+        "programme-source-review.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/programme-source-review-browser.mjs",
+      [
+        "programme-source-review-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/programme-source-review.css",
+      [
+        "programme-source-review.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }

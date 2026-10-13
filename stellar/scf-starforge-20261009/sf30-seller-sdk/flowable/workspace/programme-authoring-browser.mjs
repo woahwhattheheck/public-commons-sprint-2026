@@ -2,9 +2,11 @@
 import {createProgrammeDraft,validateProgrammeDraft,parseProgrammeDraft,serializeProgrammeDraft,programmeDraftCatalogue,
  addProgrammeDraftSources,renameProgrammeDraftSource,compileProgrammeDraft,refreshProgrammeCatalogueSources,programmeSourceSha256,programmeUtf8,PROGRAMME_DRAFT_LIMIT} from './programme-authoring.mjs';
 import {openProgrammeDraftStore} from './programme-authoring-store.mjs';
+import {installProgrammeSourceReview} from './programme-source-review-browser.mjs';
+import {validateProgrammeSourceReviewWork} from './programme-source-review.mjs';
 export function installProgrammeAuthoring({root,node,button,busy,notice,table,pre,write,requireEngine,reload,openProgramme,workspaceId,decisionCompiler}){
  let draft=null,revision=0,version=0,savedVersion=0,store=null,scope=null,selectedPath='',preview=null;
- let saving=null,persistenceError=null,saveTimer=null;
+ let saving=null,persistenceError=null,saveTimer=null,sourceReview=null,reviewDesk=null,editEpoch=0;
  const status=node('p','Open a workspace to begin.',{class:'muted',role:'status','aria-live':'polite'});
  const shelf=node('div'),editor=node('div'),inventory=node('div'),familyPanel=node('div'),previewPanel=node('div');
  const controls=node('div',null,{class:'toolbar'}),fields=node('div',null,{class:'form-grid'});
@@ -32,7 +34,8 @@ export function installProgrammeAuthoring({root,node,button,busy,notice,table,pr
   if(saving)return saving;
   saving=(async()=>{
    while(version!==savedVersion&&!persistenceError){
-    const captured=version,selected=validateProgrammeDraft(draft),result=await store.save(selected,revision);
+    const captured=version,selected=validateProgrammeDraft(draft),review=sourceReview?validateProgrammeSourceReviewWork(sourceReview):null,
+     result=await store.save(selected,revision,{sourceReview:review});
     revision=result.revision;savedVersion=captured;updateStatus();
    }
   })().catch(error=>{persistenceError=error;updateStatus();}).finally(()=>{saving=null;});
@@ -42,9 +45,9 @@ export function installProgrammeAuthoring({root,node,button,busy,notice,table,pr
   clearTimeout(saveTimer);saveTimer=null;await saveLoop();if(persistenceError)throw persistenceError;
   if(version!==savedVersion)throw new Error('Retain the complete draft before changing its saved edition.');
  }
- function changed(){
+ function changed(sourceChanged=true){
   if(store&&persistenceError?.code!=='PROGRAMME_DRAFT_CONFLICT')persistenceError=null;
-  version++;preview=null;previewPanel.replaceChildren(node('p','Build a fresh preview after editing the source or configuration.',{class:'muted'}));
+  version++;if(sourceChanged)reviewDesk?.sourceChanged();preview=null;previewPanel.replaceChildren(node('p','Build a fresh preview after editing the source or configuration.',{class:'muted'}));
   updateStatus();clearTimeout(saveTimer);saveTimer=setTimeout(()=>{saveTimer=null;void saveLoop();},350);
  }
  function invalidateEditor(){preview=null;previewPanel.replaceChildren();}
@@ -53,16 +56,18 @@ export function installProgrammeAuthoring({root,node,button,busy,notice,table,pr
   const rows=await store.list();table(shelf,[{label:'Source draft',key:'title'},{label:'Kind',key:'kind'},{label:'Updated',key:'updatedAt'},
    {label:'Open',render:row=>button('Reopen draft',async()=>{
     await flush();const found=await store.read(row.id);if(!found)throw new Error('The selected draft is no longer available.');
-    draft=validateProgrammeDraft(found.draft);revision=found.revision;version=savedVersion=0;persistenceError=null;selectedPath='';invalidateEditor();renderEditor();updateStatus();
+    const reopened=validateProgrammeDraft(found.draft),review=found.sourceReview?validateProgrammeSourceReviewWork(found.sourceReview):null;
+    draft=reopened;sourceReview=review;editEpoch++;revision=found.revision;version=savedVersion=0;persistenceError=null;selectedPath='';invalidateEditor();renderEditor();updateStatus();
    })}],rows,{empty:'Create a draft or reopen a complete source-draft JSON.'});
  }
- function adopt(value,{newIdentity=false}={}){
-  draft=validateProgrammeDraft(value);if(newIdentity)draft.id=crypto.randomUUID();
+ function adopt(value,{newIdentity=false,reviewWork=null}={}){
+  const selected=validateProgrammeDraft(value),review=reviewWork?validateProgrammeSourceReviewWork(reviewWork):null;
+  draft=selected;sourceReview=review;editEpoch++;if(newIdentity)draft.id=crypto.randomUUID();
   revision=0;version=1;savedVersion=0;persistenceError=null;selectedPath='';invalidateEditor();renderEditor();updateStatus();
  }
  async function saveCopy(){
   current();if(saving)await saving;const copy=validateProgrammeDraft(draft);copy.id=crypto.randomUUID();
-  adopt(copy);await flush();await refreshShelf();
+  adopt(copy,{reviewWork:sourceReview});await flush();await refreshShelf();
  }
  async function loadExample(kind){
   const response=await fetch('./programme-'+kind+'.source-draft.json',{credentials:'same-origin'});
@@ -78,7 +83,8 @@ export function installProgrammeAuthoring({root,node,button,busy,notice,table,pr
   current();if(!store)throw new Error('Browser draft storage is unavailable. Download your current source draft.');
   if(saving)await saving;const found=await store.read(draft.id);if(!found)throw new Error('This draft has no saved edition. Save a new copy or download it.');
   if(version!==savedVersion&&!window.confirm('Replace the current unsaved edits with the complete saved edition? Download your current draft first if you need both.'))return;
-  draft=validateProgrammeDraft(found.draft);revision=found.revision;version=savedVersion=0;persistenceError=null;selectedPath='';invalidateEditor();renderEditor();updateStatus();
+  const reopened=validateProgrammeDraft(found.draft),review=found.sourceReview?validateProgrammeSourceReviewWork(found.sourceReview):null;
+    draft=reopened;sourceReview=review;editEpoch++;revision=found.revision;version=savedVersion=0;persistenceError=null;selectedPath='';invalidateEditor();renderEditor();updateStatus();
  }),button('Download complete draft',()=>{
   download(serializeProgrammeDraft(current()),(draft.operation||draft.id)+'.source-draft.json');
  }),button('Refresh saved drafts',refreshShelf));
@@ -91,7 +97,8 @@ export function installProgrammeAuthoring({root,node,button,busy,notice,table,pr
   adopt(value,{newIdentity:true});await flush();await refreshShelf();draftFile.value='';
  }));
  root.append(controls,status,shelf,editor);
- editor.append(node('h3','Programme configuration'),fields,familyPanel,node('h3','Complete source inventory'),inventory);
+ const reviewHost=node('div');
+ editor.append(node('h3','Programme configuration'),fields,familyPanel,reviewHost,node('h3','Complete source inventory'),inventory);
  input('title','Draft title',300);
  const kind=field('Programme kind',selectElement([['BPMN process','process'],['CMMN case','case'],['DMN decision','decision']]));
  formControls.kind=kind;kind.addEventListener('change',()=>{draft.kind=kind.value;draft.familyKeys=[];draft.migrateKeys=[];draft.delegationKey='';changed();renderFamilies();});
@@ -229,14 +236,31 @@ export function installProgrammeAuthoring({root,node,button,busy,notice,table,pr
  function renderEditor(){
   editor.hidden=!draft;if(!draft)return;
   for(const[key,element]of Object.entries(formControls))element.value=key.startsWith('role:')?(draft.roles[key.slice(5)]??''):(draft[key]??'');
-  renderInventory();renderFamilies();renderSource();
+  renderInventory();renderFamilies();renderSource();reviewDesk?.render();
  }
+ function reviewContext(){return draft?{draft,sourceReview,scope,version,epoch:editEpoch}:null;}
+ function assertReviewContext(expected){
+  if(!draft||expected.scope!==scope||expected.id!==draft.id||expected.version!==version||expected.epoch!==editEpoch)
+   throw new Error('The active source draft changed. Reopen the current review before continuing.');
+ }
+ function setReviewState(expected,next){
+  assertReviewContext(expected);
+  const review=validateProgrammeSourceReviewWork(next.sourceReview),selected=next.draft?validateProgrammeDraft(next.draft):null;
+  if(selected&&selected.id!==draft.id)throw new Error('Adoption must preserve this local source draft identity.');
+  sourceReview=review;if(selected)draft=selected;changed(!!selected);
+  if(selected)renderEditor();
+ }
+ reviewDesk=installProgrammeSourceReview({root:reviewHost,node,button,busy,notice,table,pre,download,readSourceFile,
+  getContext:reviewContext,setState:setReviewState,flush,
+  async openWorking(value,expected){
+   assertReviewContext(expected);adopt(value.draft,{newIdentity:true,reviewWork:value.sourceReview});await flush();await refreshShelf();
+  }});
  async function render(){
   const next=workspaceId();if(!next){editor.hidden=true;return;}
   if(next!==scope){
    if(draft)await flush();store?.close();store=null;scope=null;
    try{store=await openProgrammeDraftStore(next);}catch(error){persistenceError=error;updateStatus();return;}
-   scope=next;draft=null;revision=version=savedVersion=0;persistenceError=null;selectedPath='';invalidateEditor();renderEditor();
+   scope=next;draft=null;sourceReview=null;editEpoch++;revision=version=savedVersion=0;persistenceError=null;selectedPath='';invalidateEditor();renderEditor();
    updateStatus('Create or reopen a complete source draft. Drafts are kept for this workspace in this browser.');
   }
   try{await refreshShelf();}catch(error){persistenceError=error;updateStatus();}

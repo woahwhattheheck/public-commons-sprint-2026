@@ -1,0 +1,24 @@
+/* MIT. Neutral, scoped programme source-review controls. */
+.programme-source-review { margin-block: 1.25rem; border: 1px solid #bcc1c6; background: #fff; color: #202428; padding: 1rem; }
+.programme-source-review > h3 { margin-top: 0; }
+.programme-source-review > details { border-top: 1px solid #d2d5d8; margin-top: 1rem; padding-top: .8rem; }
+.programme-source-review summary { cursor: pointer; font-weight: 600; padding-block: .3rem; }
+.programme-source-review .form-grid { margin-block: .8rem; }
+.programme-source-review label { min-width: 0; }
+.programme-source-review input, .programme-source-review select, .programme-source-review textarea { max-width: 100%; box-sizing: border-box; }
+.programme-source-review input[type=file] { display: block; width: 100%; margin-block: .45rem; }
+.programme-source-review table { width: 100%; }
+.programme-source-review td, .programme-source-review th { vertical-align: top; overflow-wrap: anywhere; }
+.programme-source-review td select { min-width: 9rem; width: 100%; }
+.programme-review-columns { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .8rem; margin-block: .8rem; }
+.programme-review-value { min-width: 0; border: 1px solid #d2d5d8; padding: .65rem; background: #f6f7f8; }
+.programme-review-value h4 { margin: 0 0 .5rem; font-size: 1rem; }
+.programme-review-value textarea { width: 100%; min-height: 15rem; resize: vertical; font-family: ui-monospace,SFMono-Regular,Consolas,monospace; white-space: pre; overflow: auto; }
+.programme-review-value pre { max-height: 26rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.programme-source-review details > pre { max-height: 28rem; overflow: auto; }
+@media (max-width: 900px) {
+ .programme-review-columns { grid-template-columns: minmax(0,1fr); }
+ .programme-source-review { padding: .7rem; }
+ .programme-source-review .toolbar { align-items: stretch; }
+ .programme-source-review table { display: block; overflow-x: auto; }
+}
