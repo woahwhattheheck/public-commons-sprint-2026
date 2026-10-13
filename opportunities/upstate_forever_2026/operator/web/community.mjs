@@ -250,14 +250,54 @@ export function communityWatershedContextHtml(context){
 }
 
 /** Host-owned callbacks retain original workspace, task and dialog semantics. */
+
+export function validateCommunityView(value,state){
+  if(value===undefined||value===null)return null;
+  if(!value||Array.isArray(value)||typeof value!=='object'||value.schema!=='upstate.community-view/v1'||
+     value.project_id!==state?.data?.project?.id)throw Error('Open the original project or its restored copy before opening this Community view.');
+  const string=(name,fallback='')=>{
+    const item=value[name]===undefined?fallback:value[name];
+    if(typeof item!=='string')throw Error('The saved Community '+name+' must be a string.');
+    return item;
+  };
+  const tableId=string('table_id'),tables=list(state.data.community_tables);
+  const table=tables.find(row=>row.id===tableId);
+  if(!table)throw Error('This project does not contain the saved Community table.');
+  const tab=string('tab','explore'),sort=string('sort','geoid');
+  if(!['explore','plans','reports'].includes(tab)||!['geoid','population_desc','poverty_desc','income_asc'].includes(sort))
+    throw Error('The saved Community tab or sort is unavailable.');
+  const compare=value.compare_geoids===undefined?[]:value.compare_geoids;
+  if(!Array.isArray(compare)||compare.some(id=>typeof id!=='string')||new Set(compare).size!==compare.length)
+    throw Error('Choose distinct original census block groups for the saved Community comparison.');
+  const utility=string('utility_id'),watershed=string('watershed_id'),planId=string('plan_id'),reportId=string('report_id');
+  if(Array.isArray(table.groups)){
+    const memberships=table.groups.flatMap(group=>list(group.memberships));
+    const declared=list(table.metadata?.utilities);
+    const utilities=new Set(declared.length?declared.map(row=>row.id):memberships.map(row=>row.utility_id));
+    if(utility&&!utilities.has(utility))throw Error('The saved utility is absent from the original Community table.');
+    if(watershed&&!memberships.some(row=>row.watershed_id===watershed&&(!utility||row.utility_id===utility)))
+      throw Error('The saved watershed is absent from this original utility selection.');
+    const ids=new Set(table.groups.map(group=>group.geoid));
+    if(compare.some(id=>!ids.has(id)))throw Error('The saved comparison contains a block group outside the original Community table.');
+  }
+  const plan=planId?list(state.data.community_plans).find(row=>row.id===planId):null;
+  const report=reportId?list(state.data.community_reports).find(row=>row.id===reportId):null;
+  if(planId&&(!plan||plan.table_id!==tableId))throw Error('The selected Community plan belongs to another retained table.');
+  if(reportId&&(!report||report.table_id!==tableId||(planId&&(report.plan_id||report.selection?.plan_id)!==planId)))
+    throw Error('The selected Community report belongs to another retained plan or table.');
+  return {schema:'upstate.community-view/v1',project_id:value.project_id,table_id:tableId,tab,
+    utility_id:utility,watershed_id:watershed,query:string('query'),sort,compare_geoids:[...compare],plan_id:planId,report_id:reportId};
+}
+
 export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem}){
   const cache=new Map(),pending=new Map();
-  let activeWorkspace=null,container=null,mountController=null,loadError='',formTable=null,formWorkspace=null;
+  let activeWorkspace=null,container=null,mountController=null,loadError='',formTable=null,formWorkspace=null,validatedView=null;
   let formPlanPrevious=null,formCsvPreview=null,formInterventionImport=null,formCsvEpoch=0;
   let formWatershedCatalog=[],formWatershedReport=null,formWatershedError='',formWatershedCatalogError='';
   let formWatershedGeneration=0,formWatershedRequest=0;
-  let local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[]};
-  const current=()=>getState();
+  let local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[],plan:'',report:''};
+  let retainedState=null;
+  const current=()=>{const live=getState();return retainedState?.previous===live?retainedState.state:live;};
   const data=()=>current()?.data??{};
   const workspace=()=>current()?.workspace_key??'';
   const tables=()=>list(data().community_tables);
@@ -266,15 +306,66 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   const key=(kind,id)=>workspace()+'|'+kind+'|'+id;
   function sync(){
     if(activeWorkspace!==workspace()){
-      activeWorkspace=workspace();loadError='';
-      local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[]};
-      try{const saved=JSON.parse(sessionStorage.getItem('upstate-community-view:'+workspace())||'null');if(saved&&typeof saved==='object')local={...local,...saved};}catch{}
+      activeWorkspace=workspace();loadError='';validatedView=null;
+      local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[],plan:'',report:''};
+      let saved;try{saved=JSON.parse(sessionStorage.getItem('upstate-community-view:'+workspace())||'null');}catch{}
+      if(saved&&typeof saved==='object'&&(!saved.project_id||saved.project_id===data().project?.id))local={...local,...saved};
+      else if(data().operator_session?.journey?.community){
+        try{local=localView(validateCommunityView(data().operator_session.journey.community,current()));}
+        catch(error){loadError=error.message;}
+      }
     }
-    if(!tables().some(t=>t.id===local.table))local.table=tables()[0]?.id??'';
+    if(!tables().some(t=>t.id===local.table)){local.table=tables()[0]?.id??'';local.plan='';local.report='';}
     if(!['explore','plans','reports'].includes(local.tab))local.tab='explore';
     local.compare=list(local.compare);
   }
-  function persist(){try{sessionStorage.setItem('upstate-community-view:'+workspace(),JSON.stringify(local));}catch{}}
+  function persist(){try{sessionStorage.setItem('upstate-community-view:'+workspace(),JSON.stringify({...local,project_id:data().project?.id}));}catch{}}
+  function localView(value){
+    return {table:value.table_id,tab:value.tab,utility:value.utility_id,watershed:value.watershed_id,query:value.query,
+      sort:value.sort,compare:[...value.compare_geoids],plan:value.plan_id,report:value.report_id};
+  }
+  function viewState(state=current()){
+    const rows={...state.data};
+    for(const kind of ['community_tables','community_plans','community_reports'])
+      rows[kind]=list(rows[kind]).map(item=>cache.get(state.workspace_key+'|'+kind+'|'+item.id)||item);
+    return {...state,data:rows};
+  }
+  function capture(){
+    if(activeWorkspace!==workspace())return null;
+    sync();if(!local.table)return null;
+    return validateCommunityView({schema:'upstate.community-view/v1',project_id:data().project.id,table_id:local.table,
+      tab:local.tab,utility_id:local.utility,watershed_id:local.watershed,query:local.query,sort:local.sort,
+      compare_geoids:local.compare,plan_id:local.plan||'',report_id:local.report||''},viewState());
+  }
+  async function validateView(value){
+    if(value===undefined||value===null)return null;
+    sync();validatedView=null;const selectedWorkspace=workspace(),before=JSON.stringify(local),project=data().project?.id;
+    const fresh=await api('/api/state?workspace='+encodeURIComponent(selectedWorkspace));
+    if(workspace()!==selectedWorkspace||fresh.workspace_key!==selectedWorkspace||fresh.data?.project?.id!==project)
+      throw Error('The selected workspace changed. Open the Community view in its original project.');
+    let selected=validateCommunityView(value,fresh);
+    await get('community_tables',selected.table_id,{fresh:true});
+    if(selected.plan_id)await get('community_plans',selected.plan_id,{fresh:true});
+    if(selected.report_id)await get('community_reports',selected.report_id,{fresh:true});
+    if(workspace()!==selectedWorkspace||JSON.stringify(local)!==before)
+      throw Error('The Community selection changed while opening the saved view. Open it again.');
+    selected=validateCommunityView(selected,viewState(fresh));
+    validatedView={value:JSON.stringify(selected),state:fresh,before,workspace:selectedWorkspace,project};
+    return selected;
+  }
+  function restoreView(value){
+    if(value===undefined||value===null)return null;
+    const original=validatedView;
+    if(original&&(original.workspace!==workspace()||original.project!==data().project?.id||original.before!==JSON.stringify(local)))
+      throw Error('The Community selection changed. Open the saved view again.');
+    const selected=validateCommunityView(value,viewState(original?.value===JSON.stringify(value)?original.state:current()));
+    if(original?.value===JSON.stringify(value))retainedState={previous:getState(),state:original.state};
+    activeWorkspace=workspace();local=localView(selected);validatedView=null;loadError='';persist();redraw();return {...selected};
+  }
+  function selectRetainedTable(id){
+    if(local.table!==id){local.utility='';local.watershed='';local.query='';local.compare=[];local.plan='';local.report='';}
+    local.table=id;
+  }
   function row(kind,id){return cache.get(key(kind,id))||list(data()[kind]).find(r=>r.id===id);}
   async function get(kind,id,{fresh=false}={}){
     const ws=workspace(),k=key(kind,id);
@@ -405,6 +496,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       '<div class="page-actions">'+button('import','Import community table')+button('plan-new','New plan','','primary')+'</div></header>'+
       '<div class="community-heading-controls">'+field('Retained community table',select('community_table',tables(),local.table,'Choose a retained table'))+
       '<nav class="community-tabs" aria-label="Community workflow">'+[['explore','Communities'],['plans','Intervention plans'],['reports','Reports']].map(([id,label])=>button('tab-'+id,label,'aria-pressed="'+(local.tab===id)+'"')).join('')+'</nav></div>'+
+      ((local.plan||local.report)?'<div class="page-actions" data-community-saved-selection>'+(local.plan?button('plan-open','Selected plan','data-id="'+e(local.plan)+'"'):'')+(local.report?button('report-open','Selected report','data-id="'+e(local.report)+'"'):'')+'</div>':'')+
       (loadError?'<div class="notice error" role="alert">'+e(loadError)+button('retry','Retry original read','','small')+'</div>':'')+
       (local.tab==='explore'?explore(t):local.tab==='plans'?planView():reportView())+'</div>';
   }
@@ -437,7 +529,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     const signal=mountController.signal;
     node.addEventListener('change',event=>{
       const target=event.target;
-      if(target.name==='community_table'){local.table=target.value;local.utility='';local.watershed='';local.query='';local.compare=[];loadError='';redraw();}
+      if(target.name==='community_table'){local.table=target.value;local.utility='';local.watershed='';local.query='';local.compare=[];local.plan='';local.report='';loadError='';redraw();}
       else if(target.name==='community_utility'){local.utility=target.value;local.watershed='';redraw();}
       else if(target.name==='community_watershed'){local.watershed=target.value;updateExplore();}
       else if(target.name==='community_sort'){local.sort=target.value||'geoid';updateExplore();}
@@ -862,6 +954,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   }
   async function planDetail(id){
     const p=await get('community_plans',id,{fresh:true}),t=await get('community_tables',p.table_id),groups=list(p.selected_groups).length?p.selected_groups:selectCommunityGroups(t.groups,p.selection);
+    selectRetainedTable(p.table_id);local.plan=p.id;local.tab='plans';if(row('community_reports',local.report)?.plan_id!==p.id)local.report='';persist();
     const related=reports().filter(r=>(r.plan_id||r.selection?.plan_id)===id);
     detail(p.title,
       '<p class="community-intro">'+e(p.purpose)+'</p><div class="community-detail-actions">'+button('plan-revise','Revise plan','data-id="'+e(p.id)+'"')+button('report-new','Build complete report','data-id="'+e(p.id)+'"','primary')+'</div>'+
@@ -892,6 +985,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     const r=await get('community_reports',id,{fresh:true});
     const files=list(r._downloads),html=files.find(f=>/\.html?$/i.test(f.filename||''));
     const planId=r.plan_id||r.selection?.plan_id;
+    selectRetainedTable(r.table_id);local.plan=planId||'';local.report=r.id;local.tab='reports';persist();
     const title=r.title||r.selection?.title||'Community and utility report';
     const body='<div class="community-detail-actions">'+(planId?button('plan-open','Open original plan','data-id="'+e(planId)+'"'):'')+
       (html?button('report-preview',preview?'Hide report preview':'Preview full report','data-id="'+e(id)+'" data-preview="'+(!preview)+'"','primary'):'')+'</div>'+
@@ -939,5 +1033,5 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     throw Error('This community action is not available.');
   }
   function detach(){mountController?.abort();container=null;}
-  return {render,mount,dispatch,detach};
+  return {render,mount,dispatch,detach,capture,validateView,restoreView};
 }
