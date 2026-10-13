@@ -158,3 +158,25 @@ The walkthrough also accepts `--geometry-source-id EXACT_ID` together with
 `--geometry-manifest /actual/sources.json` for an explicitly selected fresh WBD
 edition. Its default still reuses the original upstream-domain collection or the
 retained four-focus edition when available.
+
+## Native coverage in report editions
+
+The printable HTML, editable Markdown and browser plan distinguish two spatial
+supports: each original run's reporting-area total and each retained comparison's
+common valid cells. The report displays original valid-cell counts and pixel area
+in hectares when those fields exist. The scientific-context CSV retains the same
+coverage fields, units, run/grid/profile/scenario identifiers and comparison ID.
+Missing coverage metadata remains unspecified.
+
+Community and intervention filters select whole source block groups. They leave
+the original model reporting area unchanged. A native alternative-minus-baseline
+difference is summed on cells valid in both runs; it can differ from subtracting
+the two separately reported full-run totals. Negative change means lower modeled
+export on that common support, and positive change means higher export. A changed
+parameter profile remains a sensitivity comparison. These selections provide
+scientific context alongside the communities.
+
+Rebuilding the same saved plan with report format version 3 creates a new report
+edition while preserving earlier reports. The original intervention CSV import,
+plan revision lineage, received CSV and import record remain in their existing
+report and portable Workspace paths.
