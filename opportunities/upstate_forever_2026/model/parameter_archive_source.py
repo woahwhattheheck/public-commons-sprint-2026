@@ -18,6 +18,7 @@ from .common import (atomic_bytes, atomic_json, describe_file, digest, file_dige
 from . import ensemble_scientific_source as shared
 from . import parameter_report_source as live
 from . import parameter_scientific_figures as figures
+from . import parameter_support_reconciliation as reconciliation
 
 SCHEMA = "upstate.parameter-result-archive-source/v1"
 DIRECTORY = "parameter-archive-sources"
@@ -271,28 +272,8 @@ def _sections(result, selected, rows, origin_uri, original_bytes):
                       "Undefined in original result"),
                      row["paired_area_ha"], row["support_changed"]] for row in values]),
             ]])
-    reversal = next((row for row in rows if row["support_changed"] and
-                     row["change"] is not None and row["baseline_full_mass"] is not None and
-                     row["case_full_mass"] is not None and
-                     ((row["change"] < 0 and row["case_full_mass"] > row["baseline_full_mass"]) or
-                      (row["change"] > 0 and row["case_full_mass"] < row["baseline_full_mass"]))), None)
-    if reversal:
-        overview.append(["Read the comparison on its original common support", [
-            "The original " + reversal["case"] + " / " + reversal["pollutant"] +
-            " row illustrates why independent full totals and paired effects can point in different directions.",
-            live._table(["Original quantity", "Stored value"], [
-                ["Paired signed change (" + reversal["units"] + ")", reversal["change"]],
-                ["Paired percent change", reversal["percent_change"]],
-                ["Baseline own-valid total (" + reversal["units"] + ")", reversal["baseline_full_mass"]],
-                ["Case own-valid total (" + reversal["units"] + ")", reversal["case_full_mass"]],
-                ["Common valid cells", reversal["paired_valid_cells"]],
-                ["Baseline own-valid cells", reversal["baseline_valid_cells"]],
-                ["Case own-valid cells", reversal["case_valid_cells"]],
-            ]),
-            "The independent totals cover different cells. The original paired change compares the "
-            "same cells in both runs and is the appropriate value for this particular spatial comparison. "
-            "No subtraction of those independent totals replaces the retained common-cell result.",
-        ]])
+    # The maintained shared sections include source-bound support reconciliation
+    # and the single-assumption sign-reversal example; do not create a second reducer.
     sections = overview + findings + [["Methods, original selection and source provenance", [
         "The following appendix retains the original identities, selections, source editions, "
         "geographic methods and historical-range policy used for the figures and numeric tables."
@@ -345,6 +326,7 @@ def _package(directory, raw, result, selected, rows, origin_uri):
                 "vintage": "Original archived result " + provenance["original_sha256"],
                 "body_sha256": provenance["original_sha256"]}]
     atomic_json(directory / "original-source-editions.json", records, immutable=True)
+    reconciliation.write(directory, selected, rows, original_rows=result["rows"], origin_uri=origin_uri)
     graphics = figures.write(directory, selected, rows)
     sections = _sections(result, selected, rows, origin_uri, len(raw))
     sections.append(["Original figure coverage", [
@@ -410,7 +392,8 @@ def prepare(workspace, result_path, *, expected_sha256, selection=None, origin_u
                 "producer_sha256": file_digest(Path(__file__)),
                 "sections_sha256": file_digest(Path(live.__file__)),
                 "figure_helper_sha256": file_digest(Path(figures.__file__)),
-                "figure_svg_helper_sha256": file_digest(Path(figures.drawing.__file__))}
+                "figure_svg_helper_sha256": file_digest(Path(figures.drawing.__file__)),
+                "support_reconciliation_sha256": file_digest(Path(reconciliation.__file__))}
     key = digest(identity)
     directory = workspace.root / DIRECTORY / key
     directory.mkdir(parents=True, exist_ok=True)
@@ -448,7 +431,8 @@ def prepare(workspace, result_path, *, expected_sha256, selection=None, origin_u
                 operation["state"] = "complete"
             for name in ("sources.json", "scientific-report.json", "original-result.json",
                          "selected-results.json", "selected-results.csv", "archive-provenance.json",
-                         "historical-ranges.json", figures.SPEC, figures.COORDINATES, figures.COVERAGE):
+                         "historical-ranges.json", figures.SPEC, figures.COORDINATES, figures.COVERAGE,
+                         *reconciliation.FILES):
                 operation["files"][name] = describe_file(workspace.root, source / name)
             operation["delivery_selection"] = shared.delivery_selection(operation["source"])
             operation["figure_count"] = len(recipe.get("figures", []))
