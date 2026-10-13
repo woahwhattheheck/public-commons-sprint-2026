@@ -129,3 +129,7 @@ The runtime source is additive under the existing SF30 seller SDK and composes t
 The original Water operations workspace now includes **HEC-DSS handover**: inspect an immutable USGS edition, choose receiving pathnames, units and time conventions, review the complete plan, create a native DSS7 file, reopen interrupted work, and receive a portable handover with its original source edition. The native binding closes and reopens each new file and compares its catalog, clocks, values, missing positions, units, measurement types, notes and any explicit quality words.
 
 See [DSS.md](DSS.md) for the complete runtime, analyst and receiving workflow, including the retained Potomac example, original daily calendar semantics and corrected-source comparisons. The same workflow is available through the `dss-runtime`, `dss-source`, `dss-preview`, `dss-export`, `dss-exports`, `dss-verify`, `dss-handover` and `dss-receive` CLI commands. The native Python runtime is selected with `USGS_HECDSS_PYTHON`.
+
+## Legacy watershed migration
+
+The existing workspace now includes **Watershed migration** for a complete retained model directory: original source capture, native DSS catalog inspection, saved file and record-reference review, official DSS6-to-DSS7 conversion, full dataset comparison, and portable receiving with the original files and review history. Open [WATERSHED.md](WATERSHED.md) for the installed native runtime, browser workflow and complete CLI.

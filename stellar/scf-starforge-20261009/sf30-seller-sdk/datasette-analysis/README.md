@@ -321,3 +321,44 @@ jobs retain the underlying operation and data. Complete native workspace
 archives therefore carry both the customer work and its operator history.
 
 Copyright TokenJunkieLabs. MIT.
+
+
+## BDNB territory and complete customer receiving
+
+The [BDNB product entry](../../../../products/ntico/bdnb-territory/README.md) composes
+original publisher files, explicit source dictionaries, territory selections,
+edition correspondence, individual reviews and complete Analysis reports,
+workbooks, streaming annexes and workspace archives in this same application.
+The mounted **BDNB territory** operator and exact CLI requests share its native
+database and request history.
+
+Use the [complete receiving programme](../../../../products/ntico/bdnb-territory/RECEIVING.md)
+for producer → customer review → returned archive → independent reopen, and the
+[original workflow profile](../../../../products/ntico/bdnb-territory/WORKFLOW.md)
+for commissioned API/Kestra/JMS delivery and its real recipient receipt.
+
+## Source and provider workflows
+
+The same selected installation includes **Datasette source workflow** in Applications.
+Keep the original Python installation, Analysis workspace and stable operation ID;
+review the complete workflow configuration and optional private provider descriptor,
+then use the existing Save, Start and Open controls. The workflow's **Business
+requests** and **Provider sources** panes retain their own original request history.
+
+In **Provider sources → Original input files**, select the complete provider
+handover, contacts, returned import result, native archive or mapping decisions.
+The browser calculates its full SHA-256, saves the exact transfer intent before
+uploading, and sends bounded chunks. Pause or reopen the page, read the same
+server status, and reselect the exact original file to continue. Completed inputs
+remain available to the maintained provider preparation, receiving and
+reconciliation operations.
+
+The selected source includes the complete supplier review and BDNB territory
+products, the original partner adapters and Kestra flows, and the installed
+Analysis selected-view query/report/export implementation. Complete outputs and
+workspace archives preserve their original source, edits and receiving history.
+
+- [Install and open the source workflow](INSTALLATION.md#managed-source-workflow)
+- [Provider accounts, complete file intake and interrupted transfers](PROVIDER_WORKFLOWS.md)
+- [Business requests and complete workflow delivery](WORKFLOW.md)
+- [Supplier project receiving and customer continuation](WORKFLOW_RECEIVING.md)

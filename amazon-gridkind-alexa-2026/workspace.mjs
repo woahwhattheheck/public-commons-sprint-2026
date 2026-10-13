@@ -4,9 +4,10 @@ import {resolve,join} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {DEMO,inputs} from './engine.mjs';
 import {inspectWeek} from './weekly.mjs';
+import {inspectRequestRecord,resolveReviewInput} from './week-review.mjs';
 
 const FORMAT='gridkind-household/v1';
-const KINDS=new Set(['scenario','plan','approval','execution','cancel','comparison','restore','week']);
+const KINDS=new Set(['scenario','plan','approval','execution','cancel','comparison','restore','week','week-request','week-return']);
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const clone=value=>structuredClone(value);
 function stable(value){
@@ -77,6 +78,17 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     requireValue(digest(data)===row.sha256,'Saved record integrity check failed.',409);
     return {...data,sha256:row.sha256};
   }
+  function weekReviewOutcome(owner,householdId,requestId,responseId){
+    household(owner,householdId);
+    requireValue(UUID.test(requestId)&&UUID.test(responseId),'Invalid weekly review request or response identity.');
+    const returned=db.prepare("SELECT id FROM records WHERE household_id=? AND json_extract(data_json,'$.kind')='week-return' AND json_extract(data_json,'$.detail.requestId')=? AND json_extract(data_json,'$.detail.response.responseId')=?").all(householdId,requestId,responseId);
+    requireValue(returned.length<=1,'The saved review response has conflicting outcomes.',409);
+    if(!returned.length)return null;
+    const returnRecord=record(owner,householdId,returned[0].id);
+    const weeks=db.prepare("SELECT id FROM records WHERE household_id=? AND json_extract(data_json,'$.kind')='week' AND json_extract(data_json,'$.parentId')=?").all(householdId,returnRecord.id);
+    requireValue(weeks.length===1,'The saved review outcome is incomplete.',409);
+    return {returnRecord,record:record(owner,householdId,weeks[0].id)};
+  }
   function nextSequence(householdId){return Number(db.prepare('SELECT COALESCE(MAX(sequence),0)+1 AS next FROM records WHERE household_id=?').get(householdId).next);}
   function append(householdId,{kind,scenario,state=null,detail={},name,parentId=null}){
     requireValue(KINDS.has(kind),'Unknown household record type.');
@@ -137,6 +149,7 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
         current:()=>({id:selectedId,...household(id,selectedId)}),
         record:spec=>append(selectedId,spec),
         readRecord:recordId=>record(id,selectedId,recordId),
+        reviewOutcome:(requestId,responseId)=>weekReviewOutcome(id,selectedId,requestId,responseId),
         setScenario:scenario=>db.prepare('UPDATE households SET scenario_json=? WHERE id=?').run(JSON.stringify(inputs(scenario)),selectedId),
         create:(name,scenario)=>{selectedId=create(id,name,scenario);return selectedId;},
         select:householdId=>{household(id,householdId);selectedId=householdId;db.prepare('UPDATE visitors SET selected_id=? WHERE id=?').run(householdId,id);},
@@ -162,7 +175,7 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     const {household:home,records}=bundle.payload;
     requireValue(home&&UUID.test(home.id)&&Array.isArray(records)&&records.length>0&&records.length<=5000,'Invalid household history.');
     label(home.name);inputs(home.scenario);
-    const ids=new Set();let sequence=0;
+    const ids=new Set(),known=new Map(),reviewOutcomes=new Map(),responseKeys=new Set();let sequence=0;
     for(const row of records){
       const {sha256,...data}=row??{};
       requireValue(UUID.test(data.id)&&!ids.has(data.id)&&Number.isSafeInteger(data.sequence)&&data.sequence>sequence&&KINDS.has(data.kind),'Invalid saved record order or identity.');
@@ -177,10 +190,46 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
         if(data.state.proposal)requireValue(typeof data.state.proposal.id==='string'&&Number.isSafeInteger(data.state.proposal.revision)&&data.state.proposal.revision>=1,'Invalid saved proposal.');
       }
       if(data.kind==='comparison')requireValue(data.detail?.report?.schema==='gridkind-rate-robustness-v1'&&Array.isArray(data.detail.report.alternatives),'Invalid saved tariff comparison.');
-      if(data.kind==='week')inspectWeek(data.detail?.report);
-      ids.add(data.id);sequence=data.sequence;
+      if(data.kind==='week'){
+        inspectWeek(data.detail?.report);
+        const parent=known.get(data.parentId);
+        if(parent?.kind==='week-return'){
+          const outcome=reviewOutcomes.get(parent.id);
+          requireValue(outcome&&!outcome.child,'A returned review must have one resulting weekly record.');
+          requireValue(data.state===null&&digest(data.detail.review)===digest(outcome.binding),
+            'The resulting week does not retain its original review identities.');
+          requireValue(digest(data.detail.report.input)===digest(outcome.input),
+            'The resulting week inputs differ from its retained review decisions.');
+          outcome.child=data.id;
+        }else requireValue(data.detail?.review===undefined,'A review-linked week is missing its earlier returned review.');
+      }
+      if(data.kind==='week-request'){
+        requireValue(data.state===null,'A weekly review request cannot carry a daily approval.');
+        inspectRequestRecord(row);
+        const original=known.get(data.parentId);
+        requireValue(original?.kind==='week'&&digest(original)===digest(data.detail.baseRecord),
+          'The review request differs from its original saved weekly record.');
+      }
+      if(data.kind==='week-return'){
+        requireValue(data.state===null,'A returned weekly review cannot carry a daily approval.');
+        const detail=data.detail,request=known.get(data.parentId),target=known.get(detail?.targetId);
+        requireValue(request?.kind==='week-request'&&target?.kind==='week'&&detail.requestId===request.id&&
+          detail.requestSha256===request.sha256&&detail.targetSha256===target.sha256,
+          'A returned review is missing its original request or selected weekly target.');
+        const resolved=resolveReviewInput(request,target,detail.response,detail.choices);
+        requireValue(detail.responseSha256===resolved.responseSha256&&digest(detail.decisions)===digest(resolved.decisions),
+          'The retained review response or explicit decisions have changed.');
+        const responseKey=request.id+':'+resolved.responseId;
+        requireValue(!responseKeys.has(responseKey),'The household contains duplicate outcomes for one returned review.');
+        responseKeys.add(responseKey);
+        reviewOutcomes.set(data.id,{input:resolved.input,child:null,binding:{
+          requestId:request.id,requestSha256:request.sha256,returnId:data.id,returnSha256:sha256,
+          targetId:target.id,targetSha256:target.sha256,responseId:resolved.responseId,responseSha256:resolved.responseSha256}});
+      }
+      known.set(data.id,row);ids.add(data.id);sequence=data.sequence;
     }
-    return {name:home.name,records:records.length,plans:records.filter(r=>r.kind==='plan').length,comparisons:records.filter(r=>r.kind==='comparison').length,weeks:records.filter(r=>r.kind==='week').length,sourceId:home.id,sha256:bundle.sha256};
+    requireValue([...reviewOutcomes.values()].every(outcome=>outcome.child),'A returned review is missing its atomically saved weekly result.');
+    return {name:home.name,records:records.length,weekRequests:records.filter(r=>r.kind==='week-request').length,weekReturns:records.filter(r=>r.kind==='week-return').length,plans:records.filter(r=>r.kind==='plan').length,comparisons:records.filter(r=>r.kind==='comparison').length,weeks:records.filter(r=>r.kind==='week').length,sourceId:home.id,sha256:bundle.sha256};
   }
   function importHousehold(id,expected,bundle,name){
     const preview=inspectImport(bundle);
@@ -194,5 +243,5 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     });
   }
   function close(){if(!closed){db.close();closed=true;}}
-  return {directory:root,ensure,current,view,record,history,mutate,assertRevision,exportHousehold,inspectImport,importHousehold,close};
+  return {directory:root,ensure,current,view,record,history,mutate,assertRevision,weekReviewOutcome,exportHousehold,inspectImport,importHousehold,close};
 }

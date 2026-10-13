@@ -601,11 +601,18 @@ The GIS review opens through its original declared-member URL, so its report-rel
 TIFF, JSON and CSV links stay attached to the same retained review. In Chromium,
 an opaque sandbox suppresses the operator's `SameSite=Strict` session cookie on
 clicks inside the document. The operator therefore applies a generated-review
-policy to `REVIEW.html` only after it recreates the HTML with the installed review
-producer and confirms the complete UTF-8 length and SHA-256 against that exact
-retained file. The checked `review.json` must identify the same complete review,
-selection and layers. Geographic view companions are verified by the original
-renderer; labels and embedded data use its existing escaping.
+policy to `REVIEW.html` only after checking its original UTF-8 length and SHA-256
+and matching its complete static template and executable code to the installed
+review producer. The embedded JSON must round-trip through the producer's safe
+escaping and equal its reconstructed data in canonical JSON form. This preserves
+JSON types and array order while allowing object-key order to differ: the saved
+`review.json` sorts object keys, whereas the original HTML can retain the native
+producer's insertion order.
+
+The checked `review.json` must identify the same complete review, selection and
+layers. Geographic view companions are verified by the original renderer.
+Duplicate JSON keys, nonfinite data, literal script-closing markup, changed static
+code and altered payloads do not satisfy the template match.
 
 This exact-template match permits the generated review to retain the operator's
 origin and use the ordinary authenticated member downloads. Every other member,

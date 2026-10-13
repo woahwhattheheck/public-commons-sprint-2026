@@ -16,14 +16,30 @@ Download complete choices saves the current original selectors and declared assu
 
 Combined editions reuse the existing source composer and CAS objects. Full Workspace export/restore retains geography-operations, geographic-headwaters and original sources. The complete producer and native receiver remain owned by6A4E; the original source host, queue, GIS algorithms, rendering, solver and source readers are preserved.
 
+## Continue completed native cases as a Programme
+
+Open **Saved geographic studies → Open saved geographic case → Continue in a run programme**. The screen reads the original geographic edition, its native bindings and the actual baseline, restoration and matched-control states. Each case keeps its completion time. If one of these three reference runs is unfinished, open its existing native run, continue that original operation and use **Refresh original run states** when it finishes. The parameter-study runs retain their own progress.
+
+Choose **Use this geographic case and its original utility areas**, or select an existing mapped delivery from this Workspace. The backend verifies that a selected delivery belongs to the same geographic case and retains its original map/source/report choices. A mismatched selection returns an inline explanation and leaves the original case available.
+
+Use **Save completed runs as a Programme**. This submits `geography.adopt-programme` to the existing operator queue, retaining the original case, optional delivery and exact reviewed preview. The operation verifies the completed NDR/SDR outputs and uses the maintained Programme/report pathway. It keeps their original run IDs, sources, grid, profile, scenario masks and geographic support.
+
+The resulting **Saved Programme operations** panel opens the original task and the saved Programme. Failed or interrupted operations retain **Resume original operation**. The browser saves the immutable original request before dispatch and reuses its operation ID after a lost response; switching cases or Workspaces cannot replace the visible selection with a late result. **Download original operation history** includes both preparation and Programme request/receipt records.
+
+Inside the existing Programme, inspect the annual result rows and native history, open maps/report choices, and use **Update sources** to select the already imported source refresh plan. The successor comparison and original native-input matcher then determine which stages can reuse original outputs. Complete the existing Programme source-update/reuse receiving course for equivalent-table and changed-SDR-C editions; keep each resulting original source and report attached to its actual Programme.
+
+The preview route is `/api/geographic-headwaters/programme-preview`; its POST body contains `workspace`, `case_id` and an optional `delivery_id`. The action payload adds `expected_preview_id`. This joins `model.geographic_programme` and the existing queue, task files and Programme desk. The complete geographic-operator component now requires geographic-programme and programme-source-updates.
+
+At the current receiving boundary, open the actual completed geographic case at desktop and 390 px, inspect the three run states, choose its original delivery, save the Programme, open the retained task/result and Programme, then continue a source revision through Update sources. Reopen the same complete Workspace and original saved case; its Programme operation and result must remain usable. Personally open, look at and operate the actual pages, screenshots and downloaded report/project attachments under the owner's standing instruction. Source-level verification accompanies the implementation; the actual delivered edition receives this user course.
+
 ## Exact operator contract
 
 - Additive backend: operator/geographic_preparation.py.
 - Manifest: operator/extensions/geographic-headwaters.json.
 - Browser: operator/web/geographic_workbench.mjs, geographic_allocation.mjs and geographic_workbench.css.
 - Existing dependencies: source_preparation.SourcePreparation; source_workbench.createSourceWorkbench(host, configuration); model.geographic_headwaters.
-- Read routes: /api/geographic-headwaters/catalog, preview, case, allocation, progress, result. POST bodies include the original workspace key.
-- Original queued actions: geography.prepare and geography.compose.
+- Read routes: /api/geographic-headwaters/catalog, preview, case, allocation, programme-preview, progress, result. POST bodies include the original workspace key.
+- Original queued actions: geography.prepare, geography.compose and geography.adopt-programme.
 - Task downloads use the existing verified file-ticket transport.
 - Native surface: catalog(workspace), preview(workspace, selection), prepare(workspace, selection).
 - Selection schema: upstate.geographic-headwaters-selection/v1.
@@ -40,7 +56,9 @@ When the saved edition includes physical contrasts, choose the original land-cov
 
 The native-support table retains the three-run intersection separately for each pollutant. Expand **Original baseline comparisons and annual quantities** for the original pairwise native totals and alternative-minus-baseline Float32 change-pixel sums, with their own common-cell counts and units. A group without an original corresponding native mass analysis says so explicitly. The UI does not subtract different-support pairwise totals into a restoration-versus-control effect.
 
-Where the saved source includes original same-mask siting contrasts, **Native comparison on the same source pixels** displays baseline/restoration/control masses and the directly retained control-minus-restoration advantage. The expanded view preserves exact common support, actual changed-hectare normalization, avoided percentages and changed/unchanged/unavailable-category source-cell partitions. Values are read from the original numerical companion. Original pairwise quantities remain in their separate section.
+Where the saved source includes original same-mask siting contrasts, **Native comparison on the same source pixels** displays baseline/restoration/control masses and the directly retained control-minus-restoration advantage. Avoided export is shown separately as baseline minus restoration or control, with original annual units and percentages. Expand **Common support and three original intervention areas** to read the complete whole-scenario intervention, actual changed categorical hectares inside this region, and changed hectares with finite native output in all three runs. These are separate original denominators; common coverage is a fraction from zero to one.
+
+**Avoided export per explicitly selected changed hectare** shows each retained rate with its named denominator and annual mass-per-hectare units. Missing common support, zero area, zero baseline mass and unequal local budgets retain their own unavailable reasons. The shared control-minus-restoration rate is descriptive and appears only for positive equal local changed area and original-class counts. Routing or retention changes outside a region can change export originating inside it, so a local rate does not isolate the causal effect of its planted hectares or an intake load. **Response at changed and unchanged source cells** preserves the original source-cell partitions. Older saved editions keep their explicit local-area alias; missing whole-scenario and native-common fields remain unavailable. All values are read from the original numerical companion, and original pairwise quantities remain in their separate section.
 
 Saved maps and allocation scatterplots open through their original verified file tickets. Each figure is selected by its retained region roster. A group map shows that group's original boundaries; the numeric panels refer to the specifically selected region. Download and inspect all original CSV/GeoJSON/JSON/profile/figure members through **Complete original data and source files**. Existing preparation, assumption editing, native run controls and whole-project handoff stay in the same workbench.
 

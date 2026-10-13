@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <!-- The wrapper reports structured operation errors. Provider configuration
+       and connection exceptions can contain credentials and stay off task logs. -->
+  <root level="OFF"/>
+</configuration>

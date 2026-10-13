@@ -1,6 +1,8 @@
 """Editable GIS inside the original Operator task, upload and download lifecycle."""
 from __future__ import annotations
 import hashlib
+import json
+from pathlib import Path
 import re
 import urllib.parse
 import zipfile
@@ -22,6 +24,31 @@ GENERATED_REVIEW_POLICY = VIEW_POLICY.replace(
     "sandbox allow-scripts allow-downloads allow-same-origin;", 1)
 
 
+def _review_template_matches(retained, rendered, template):
+    """Match installed code exactly while tolerating retained JSON object order."""
+    marker = "__GIS_REVIEW_PAYLOAD__"
+    if template.count(marker) != 1:
+        return False
+    prefix, suffix = template.split(marker)
+    values = []
+    for document in (retained, rendered):
+        if (not document.startswith(prefix) or not document.endswith(suffix)
+                or len(document) < len(prefix) + len(suffix)):
+            return False
+        text = document[len(prefix):len(document)-len(suffix)] if suffix else document[len(prefix):]
+        value = json.loads(text)
+        # Round-trip the original renderer's safe encoding. This also rejects
+        # duplicate keys, nonfinite values and literal script-closing markup.
+        encoded = json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        for character, escaped in (("<", "\\u003c"), (">", "\\u003e"), ("&", "\\u0026"),
+                                   ("\u2028", "\\u2028"), ("\u2029", "\\u2029")):
+            encoded = encoded.replace(character, escaped)
+        if encoded != text:
+            return False
+        values.append(gis.canonical(value))
+    return values[0] == values[1]
+
+
 def generated_review_policy(folder, record, member, expected):
     """Keep cookie-backed member downloads usable for the trusted review template."""
     if member != 'REVIEW.html' or expected.get('path') != 'REVIEW.html':
@@ -41,11 +68,17 @@ def generated_review_policy(folder, record, member, expected):
                 or report.get('selection') != record['selection']
                 or report.get('layers') != record['layers']):
             return VIEW_POLICY
-        # Integrity alone does not establish script provenance. Reconstruct the
-        # exact portable HTML from installed source and escaped retained data.
-        rendered = gis_edition_review._report_html(report, folder).encode('utf-8')
-        if (len(rendered) == expected['bytes']
-                and hashlib.sha256(rendered).hexdigest() == expected['sha256']):
+        # Integrity alone does not establish script provenance. Reconstruct
+        # current trusted code and verified data, then bind the original bytes.
+        from model import gis_review_raster
+        retained = gis.checked(folder, expected).read_bytes()
+        if (len(retained) != expected['bytes']
+                or hashlib.sha256(retained).hexdigest() != expected['sha256']):
+            return VIEW_POLICY
+        rendered = gis_edition_review._report_html(report, folder)
+        template = Path(gis_review_raster.__file__).with_name(
+            gis_review_raster.TEMPLATE).read_text(encoding='utf-8')
+        if _review_template_matches(retained.decode('utf-8'), rendered, template):
             return GENERATED_REVIEW_POLICY
     except (OSError, ValueError, TypeError, KeyError):
         # Prior producer editions and unavailable rendering companions retain

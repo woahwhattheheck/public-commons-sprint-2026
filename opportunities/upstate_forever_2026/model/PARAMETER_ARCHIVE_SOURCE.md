@@ -83,7 +83,7 @@ The original selection has `difference_maps=false`. This archived course present
 
 ## Retained members and source checks
 
-Before receiving, the adapter verifies the caller-supplied SHA256 against the exact file bytes and rejects duplicate JSON keys, missing original identities, invalid numbers, duplicate matrix rows, mismatched case/run/profile assignments and inconsistent original support counts. It requires the declared completed case/area/pollutant matrix. It copies original physical values; it does not recalculate changes, percentages, support areas or ranges.
+Before receiving, the adapter verifies the caller-supplied SHA256 against the exact file bytes and rejects duplicate JSON keys, missing original identities, invalid numbers, duplicate matrix rows, mismatched case/run/profile assignments and inconsistent original support counts. It requires the declared completed case/area/pollutant matrix. It copies original physical values without replacing any original changes, percentages, support areas or ranges. A separately labeled derived support reconciliation subtracts the retained full and paired masses, retains arithmetic residuals and explicit null reasons, and binds every projection to the exact original row. See [PARAMETER_SUPPORT_RECONCILIATION.md](PARAMETER_SUPPORT_RECONCILIATION.md) for the equation, complete original Gura example and source contract.
 
 Each operation retains:
 
@@ -91,11 +91,12 @@ Each operation retains:
 - `archive-provenance.json`: donor/receiving identities, original selections, metadata presence and each selected-to-original JSON row index.
 - `selected-results.json` and `selected-results.csv`: copied original rows and explicit range display policy.
 - `historical-ranges.json`: original stored range rows and basis.
+- `support-reconciliation.json`, `support-reconciliation.csv` and `parameter-support-reconciliation.py`: derived full/common-support accounting, original row bindings and exact calculation source.
 - Existing Parameter figure specification, SVGs, coordinate JSON/CSV, and undefined-value coverage.
 - An ordinary observed scientific-report recipe, source manifest and all source companions.
 - Shared rendered PDF, HTML, Markdown, report data, selection and ZIP.
 
-The source operation pins the archived bytes, report selection, adapter, maintained section producer and figure helper source identities. Repeated calls verify frozen source members before reuse. Whole-source transfer preserves the original companions through the maintained source inventory; it does not masquerade as the original editable Gura Workspace.
+The source operation pins the archived bytes, report selection, adapter, maintained section producer, support reconciliation helper and figure helper source identities. Repeated calls verify frozen source members before reuse. Whole-source transfer preserves the original companions through the maintained source inventory; it does not masquerade as the original editable Gura Workspace.
 
 ## Actual receiving and product inspection
 

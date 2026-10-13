@@ -13,6 +13,7 @@
         "operator/web/geographic_received_studies.mjs",
         "model/GEOGRAPHIC_STUDY_RECEIVING.md",
         "source_tools/geographic_headwaters_handover.py",
+        "source_tools/simulated_headwaters_handover.py",
         "CURRENT_OWNER_DIRECTION.md"
       ],
       "requires": [
@@ -29,6 +30,7 @@
         "operator/geographic_receiving.py",
         "operator/web/geographic_received_studies.mjs",
         "source_tools/geographic_headwaters_handover.py",
+        "source_tools/simulated_headwaters_handover.py",
         "model/GEOGRAPHIC_STUDY_RECEIVING.md"
       ]
     }

@@ -2,6 +2,31 @@
 
 The complete companion explains the original quantities used by the six-question utility review. It covers those six whole HUCs and the five original utility focus/upstream groups, with the combined 36-HUC union counted once. The saved six-question project remains byte-identical.
 
+## Open the portable reader
+
+[PORTABLE_REVIEW.html](../../deliverables/utility-review-attribution-20261013/PORTABLE_REVIEW.html) contains all eleven views and all five complete CSV/JSON downloads in one file. Save and open it in a current browser. Its embedded tables are byte-identical to the separately retained originals: 810,189 bytes across the five files. No network request is used to select a subject or download a table. The full editable source delivery remains the twenty-file package described below.
+
+To recreate this exact portable reader from an extracted complete delivery, use the maintained source tool:
+
+```sh
+node source_tools/watershed_review/build_portable_reader.mjs ORIGINAL_DELIVERY NEW_PORTABLE_REVIEW.html
+```
+
+The two source tools `portable.mjs` and `build_portable_reader.mjs` live under the application's `source_tools/watershed_review/` directory. The builder preserves the supplied original HTML and all five table strings, writes a new file, and reports its bytes and SHA-256. The current portable file is 167,315 bytes with SHA-256 `add9755fb26e71721d3264983a8c19732f9472dd84c9ebe88a6b6f49a22ffa2e`.
+
+## Materialize the complete twenty-file delivery
+
+The preview folder contains generated outputs. The [complete source transfer folder](../../source/utility-class-attribution-20261013/) contains both committed transfer parts and the receiver. From the application root, materialize them into a new directory:
+
+```sh
+python source/utility-class-attribution-20261013/receive.py \
+  --part source/utility-class-attribution-20261013/part-1.json \
+  --part source/utility-class-attribution-20261013/part-2.json \
+  --destination NEW_COMPLETE_DELIVERY
+```
+
+Use that complete directory for the ordinary Node scientific replay and native source import below. The original source bank, source identity and saved six-question project remain unchanged.
+
 ## What the original classifications show
 
 | Whole-HUC subject | Forest gross loss, ha | Forest to shrub/grass, ha | Forest gross gain, ha | Developed gross gain, ha | Of developed gain: open-space class21, ha |
@@ -14,7 +39,7 @@ The complete companion explains the original quantities used by the six-question
 | Eastanollee Creek |82.44|68.31|42.21|51.48|34.02|
 | Combined36-HUC union |1710.99|1302.75|1062.45|654.84|483.21|
 
-The complete tables preserve the exact native cell area and full numerical precision. Source: the retained55,552-cell transition matrix, paired annual inventories and original217-profile producer; all originals are included in the full delivery.
+The complete tables preserve the exact native cell area and full numerical precision. Source: the retained 55,552-row HUC/class-pair transition matrix, paired annual inventories and original217-profile producer; all originals are included in the full delivery.
 
 Lower Tugaloo's small net forest change conceals180.09ha gross loss and179.28ha gross gain. All three forest classes together contribute110.25ha to grass/herbaceous. Shrub/scrub accounts for84.29% of its gross forest gain. The useful review is to locate those before/after classifications in the original maps and examine relevant management evidence, keeping each pathway visible.
 
@@ -38,7 +63,7 @@ The supplied full delivery contains every required file. The computation first r
 
 The producer writes a fresh directory and retains all original inputs, complete code and owner direction inside it. Preserve the existing56-member review delivery; receive this complete companion as its own source collection alongside the unchanged six-question project.
 
-Current full source bank: Git54818bb1491e61ba80ca3f3e145c3c17631bb135 in woahwhattheheck/public-commons-sprint-2026. UTF8 body5993762B/SHA256f74bef206ec0ddb6ad152ba9a5cdfa77135f3f46990e642b4c1af89d4943de99;20 full members5682233B. The adjacent transfer parts reconstruct its equivalent ASCII-escaped source bank; member bytes are identical.
+Current full source bank: Git54818bb1491e61ba80ca3f3e145c3c17631bb135 in woahwhattheheck/public-commons-sprint-2026. UTF8 body5993762B/SHA256f74bef206ec0ddb6ad152ba9a5cdfa77135f3f46990e642b4c1af89d4943de99;20 full members5682233B. The two parts in the linked complete source transfer folder reconstruct its equivalent ASCII-escaped source bank; member bytes are identical.
 
 ## Native producing course
 

@@ -1,0 +1,21 @@
+{
+  "schema": "stellar-forge.source-workflow-configuration.v1",
+  "profile": "bdnb-territory",
+  "adapter": "bdnb",
+  "source": {
+    "kind": "bdnb-installed-source-descriptors"
+  },
+  "analysis": {
+    "workspace": null,
+    "operationId": null,
+    "waitSeconds": 3600
+  },
+  "bdnb": {
+    "actions": [],
+    "publication_id": null,
+    "pack_id": null
+  },
+  "delivery": {
+    "artifactBaseUrl": ""
+  }
+}
