@@ -47,10 +47,11 @@ def main():
         "model/monitoring_report_source.py", "model/scientific_report_editions.py",
         "model/observed_context.py", "model/observed_report_render.py",
         "model/scientific_figures.py", "model/scientific_map_figures.py",
-        "operator/source_report_editions.py",
+        "operator/source_report_editions.py", "model/portable.py",
     ]
     request = {"schema": "upstate.monitoring-native-report-request/v1",
                "workspace": str(root), "project_id": workspace.project["id"],
+               "application": str(app), "script_sha256": file_digest(Path(__file__)),
                "selection": selection, "selection_sha256": hashlib.sha256(selection_body).hexdigest(),
                "report_title": args.report_title, "contact": contact, "transfer": args.transfer,
                "implementation": {name: file_digest(app / name) for name in implementation_paths}}
@@ -194,6 +195,20 @@ def main():
                     report_sources.FOLDER + "/" + source["id"] + "/report.json",
                     editions.KIND + "/" + edition["id"] + "/edition.json",
                 ]
+                backup_intent = {"path": str(archive), "project_id": workspace.project["id"],
+                                 "comparison_id": comparison["id"], "report_source_id": source["id"],
+                                 "scientific_report_edition_id": edition["id"]}
+                previous_intent = state["steps"].get("workspace_backup_intent")
+                pending_archive = archive.parent / (".archive-" + archive.name + ".pending")
+                if previous_intent is not None and previous_intent != backup_intent:
+                    raise ValueError("Retain the original full-Workspace backup selection.")
+                if pending_archive.exists() and not archive.exists():
+                    if previous_intent != backup_intent:
+                        raise ValueError("An unfinished archive belongs to another retained operation.")
+                    with held(root / ".workspace.lock", blocking=False):
+                        pending_archive.unlink()
+                if previous_intent is None:
+                    record("workspace_backup_intent", backup_intent)
                 if archive.exists():
                     captured = portable.inspect_archive(archive, verify=True)
                     if captured["project"] != workspace.project:

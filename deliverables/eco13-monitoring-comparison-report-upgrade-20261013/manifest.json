@@ -678,8 +678,8 @@
   },
   "native_receiving": {
     "path": "receive_native.py",
-    "bytes": 14410,
-    "sha256": "7e3062aacf90d4ed21bcce16e8b13a1ff797af4a5a9b2c9db602827cd434f62c",
+    "bytes": 15611,
+    "sha256": "a61f28e1770670eb37e320b09d52ac3e7afe5c1ac35ebb151e4cf938f4eec110",
     "original_apis": [
       "monitoring_frontier_comparison.prepare",
       "monitoring_frontier_comparison.export_comparison",
