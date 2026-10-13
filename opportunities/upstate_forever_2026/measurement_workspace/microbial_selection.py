@@ -121,7 +121,12 @@ def catalog(workspace):
         for entry in collection["entries"]:
             body = entry.get("body", {})
             hashes = {row.get("sha256") for row in entry.get("companions", [])}
-            if (entry.get("kind") == "document"
+            metadata = entry.get("metadata", {})
+            retained_primary = (isinstance(metadata, dict)
+                and isinstance(metadata.get("original_report_source_id"), str)
+                and bool(metadata["original_report_source_id"]))
+            if ((entry.get("role") == "WATER_QUALITY_ASSOCIATION_REPORT" or retained_primary)
+                    and entry.get("kind") == "document"
                     and body.get("filename", "").lower().endswith((".html", ".htm"))
                     and {CONTEXT_SHA, OBSERVATIONS_SHA} <= hashes):
                 sources.append({"source_collection_id": collection["id"],
