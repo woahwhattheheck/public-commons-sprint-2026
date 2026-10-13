@@ -8,8 +8,8 @@
       "title": "Observed Upper Savannah hydrology and Eighteenmile scientific context",
       "kind": "document",
       "path": "observed_hydrology_context.report.json",
-      "bytes": 121814,
-      "sha256": "9b2caed68851900484907e8ef2d33cde78f2a5fbe5a2b56b91e76daef69a5e71",
+      "bytes": 155586,
+      "sha256": "dc524ff96f8463510b5d36d3ed0b067fd69fd09141835f3488b9a6b416874c9e",
       "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
       "vintage": "2023 water quality and discharge; 2020–2025 observed hydrology; source recovery 2026-10-13",
       "metadata": {
@@ -30,10 +30,15 @@
         "gauge_years": 174,
         "complete_numeric_gauge_years": 149,
         "fully_approved_complete_gauge_years": 144,
-        "scientific_sections": 13,
+        "scientific_sections": 17,
         "original_whole_basins": 14,
         "original_basin_vertices": 29049,
-        "original_point_catchment_pairs": 169
+        "original_point_catchment_pairs": 169,
+        "calendar_month_periods": 2088,
+        "calendar_season_periods": 696,
+        "flow_duration_quantiles": 3654,
+        "complete_numeric_months": 1936,
+        "complete_numeric_seasons": 629
       },
       "companions": [
         {
@@ -63,8 +68,8 @@
         },
         {
           "path": "observations/calibration_context_20261013/observed-flow-report.html",
-          "bytes": 3835729,
-          "sha256": "09c1c37022fc25b9ccaf8755b8a29554e6a6e4a74a48b39827c1ed9c2782898e"
+          "bytes": 6349691,
+          "sha256": "a9b901ba056b07264397c917966960e4d722ac168eb42e0eb7fb53bf2ac36b37"
         },
         {
           "path": "observations/calibration_context_20261013/README.md",
@@ -967,6 +972,96 @@
           "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
         },
         {
+          "path": "observations/flow_seasonality_20261013/annual.csv",
+          "bytes": 79255,
+          "sha256": "ce5f81942aed2f72ddefd256859efc16481ee5b230be37a41e72c4d3ada26455"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/explorer-data.json",
+          "bytes": 3416049,
+          "sha256": "9d80e91e2c33f7955dec97e6b4c740eb9705f95d3f7796df6175d39231e92897"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/flow_seasonality.mjs",
+          "bytes": 22230,
+          "sha256": "7f849e5bd5d8d879fa5f2d10a3121c32524384830353a581d3a6634127791c18"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/flow-duration.csv",
+          "bytes": 303791,
+          "sha256": "b1aa61dda7a3ee3cd9924681881ef7091e3d17290355ca1598458c55ceecbf6a"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/inputs.json",
+          "bytes": 36936,
+          "sha256": "9fde7acb09e0daf32c6283c02b551b7d280ac7759c69b00d89b7d93d57b6fa3b"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/monthly-comparisons.csv",
+          "bytes": 1870251,
+          "sha256": "be9e2dccf562b7066ff2ce4bc20199f22fee770160b5a625f37265690209a1ba"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/monthly-profiles.csv",
+          "bytes": 95335,
+          "sha256": "df14a9d8c5c7ff5d676d2bb7b2c1b3baa15f123004dd2b17b7feee80fdbd04be"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/monthly.csv",
+          "bytes": 610355,
+          "sha256": "74fd361a5ce714a681347b1ea324a0909e9996d2b96a8f8c1b636fe07f32ae72"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/original-flow-data.json",
+          "bytes": 3722413,
+          "sha256": "19ad80b95f50d9e9d44dc688f97def588eaa271c5248e4393dfe2799841fcf0b"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/original-flow-positions.json",
+          "bytes": 1797936,
+          "sha256": "2ddc7292a43d072bdae463ca033e3f524763688da156e75c716c2142b9e9fa9a"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/products.mjs",
+          "bytes": 19191,
+          "sha256": "eecca02ceaf3cf5fb4ae75c27ab245941aecbb49dbd28c08722498a60d10b6a1"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/README.md",
+          "bytes": 21895,
+          "sha256": "b5002d3e7f0439795d1c44495de7738041dbdcd28186f162fb377716892980d1"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/rebuild.mjs",
+          "bytes": 2875,
+          "sha256": "4a1355bcfb836506eaccf5a82d2e24b06db8b0e04e03ae40a158ce73f8c99ccc"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/seasonal-comparisons.csv",
+          "bytes": 634332,
+          "sha256": "90da21ecb32540b1e0b4b630e8d4ab90953cc323527ba5ba19fd538040d9f94a"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/seasonal-profiles.csv",
+          "bytes": 36943,
+          "sha256": "60fd95f49f613c7feb8e758d5089970c38790c078a2b7d4e077346ca3705fd1b"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/seasonal.csv",
+          "bytes": 230393,
+          "sha256": "aabbf2cdbe92e3afd7ac113b0e2ef79330c8a187c271258d8639def8314b63c8"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/station-context.csv",
+          "bytes": 9864,
+          "sha256": "ab667df952747cf37d7dee474369a23b4d84852dfff33a1e3d8e2b3bf4373844"
+        },
+        {
+          "path": "observations/flow_seasonality_20261013/summary.json",
+          "bytes": 2770,
+          "sha256": "ab667941deb6fe7938b7ed67ba5ddb20b50cd5d53e4f4123bf495e0064ee101b"
+        },
+        {
           "path": "observations/observed_hydrology_20261013/CALIBRATION_CONTEXT.md",
           "bytes": 20608,
           "sha256": "789a8d62c853e26891aec0939768a4c990e25f99725b4422a0c4a61e7f9616b5"
@@ -1487,14 +1582,24 @@
           "sha256": "19ecc87b71a3e74c4ee714015e0885cd0d62a4570e1ff61fd60d9a88160354bc"
         },
         {
+          "path": "observed_flow_seasonality.report.json",
+          "bytes": 56772,
+          "sha256": "51bf829cc0d9dbba083baf64e056092435ead10817013e3bad185b51ca386ef8"
+        },
+        {
+          "path": "observed_flow_seasonality.sources.json",
+          "bytes": 36470,
+          "sha256": "9e32b74700446eea432196bd4f71da2c7946949f74f0c922c6829d0869152b8a"
+        },
+        {
           "path": "source_tools/assess_observed_context.mjs",
           "bytes": 1764,
           "sha256": "edbaa86c3dd8d54c999ffaba82f0bf874dae9a952b09df1a70288f3e3e9ced2f"
         },
         {
           "path": "source_tools/build_observed_flow_report.mjs",
-          "bytes": 4476,
-          "sha256": "bcf126d94bb0134579e12676d584b7d8b6e317e08577fb142a82a0463e7b6ebe"
+          "bytes": 6741,
+          "sha256": "46c6bc183762d4e66e2c34ee74478db8efd84556b1669385cddfd1be048fc6d4"
         },
         {
           "path": "source_tools/observed_context.mjs",
@@ -1508,13 +1613,18 @@
         },
         {
           "path": "source_tools/observed_flow_map.mjs",
-          "bytes": 9144,
-          "sha256": "82161691eec7989fbf9763cf4fc56e0d9d1c920c5e78b0b99665a5e6e4b85d5d"
+          "bytes": 10178,
+          "sha256": "81ce6caff824f83d19f8d2fbd53d91afcd6e6fc79a173baf3d5cae8cd8f1af69"
         },
         {
           "path": "source_tools/observed_flow_report.mjs",
-          "bytes": 32743,
-          "sha256": "1b44442de38216f21a4f7e98d22ece6f5d63914cd82dbf523eb063529d19f6a0"
+          "bytes": 35236,
+          "sha256": "ad712353f3b3f38aa5cdfd58eb063d09763fa688833f580ae89bdedd087af4b0"
+        },
+        {
+          "path": "source_tools/observed_flow_seasonality.mjs",
+          "bytes": 10598,
+          "sha256": "56543ef6002fa8cbb746199ec50d8eab31390c911a129f94ab609a0017d11e79"
         },
         {
           "path": "source/hydrology-huc05-07-20261013/CALIBRATION_CONTEXT.md",
