@@ -119,9 +119,18 @@ def _derived_catchments(workspace, selector, binding, contract, preset, observed
     if not isinstance(producer_files, list) or not producer_files:
         raise ValueError("Retain the actual delineation arguments/log or producer record")
     for item in producer_files:
-        verify_file(workspace.root, item)
         if (item["sha256"], item["bytes"]) not in retained:
             raise ValueError("Every original delineation producer file must remain a source companion")
+        # Independent receiving preserves original producer descriptors verbatim.
+        # Resolve by the already verified native companion body, rather than
+        # requiring the former Workspace's execution-directory layout.
+        matches = [v for v in entry["companions"]
+                   if (v["sha256"], v["bytes"]) == (item["sha256"], item["bytes"])]
+        if not matches:
+            raise ValueError("Retained delineation producer companion is missing")
+        companion = matches[0]
+        verify_file(workspace.root, {"path": companion["object"],
+                                    "sha256": item["sha256"], "bytes": item["bytes"]})
     features, crs = rasters.vector_geometry(
         source_path, layer=selector.get("layer") or entry.get("layer"), where=selector.get("where"))
     polygons = {str(f["properties"][selector["id_field"]]): f["geometry"] for f in features}
