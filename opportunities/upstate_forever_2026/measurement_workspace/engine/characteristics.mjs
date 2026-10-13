@@ -1,5 +1,7 @@
 /** Explicit opt-in WQP characteristic interpretation; original cells stay retained. */
 export const WQP_CHARACTERISTIC_EDITION='wqp-characteristics/v1';
+export const WQP_SOLIDS_EDITION='wqp-characteristics/v2';
+export const WQP_CHARACTERISTIC_EDITIONS=Object.freeze([WQP_CHARACTERISTIC_EDITION,WQP_SOLIDS_EDITION]);
 export const CHARACTERISTIC_MAPPING='_wqp_characteristics';
 export const CHARACTERISTIC_FIELDS={
  speciation:['Result_MethodSpeciation','MethodSpeciationName','speciation'],
@@ -42,7 +44,8 @@ export function characteristicUnit(raw,characteristic,base){
 }
 const metals={mercury:'Hg',zinc:'Zn',iron:'Fe',copper:'Cu',manganese:'Mn',nickel:'Ni',magnesium:'Mg',chromium:'Cr',calcium:'Ca',lead:'Pb',cadmium:'Cd'};
 /** Classification is deliberately separate from model/calibration eligibility. */
-export function interpretCharacteristic({characteristic,fraction,spec,pcode='',speciation='',method='',methodContext='',methodName='',resultDepth='',resultDepthUnit='',resultDepthReference='',activityDepth='',activityDepthUnit='',activityDepthReference='',relativeDepth='',timeBasis='',temperatureBasis='',weightBasis=''}){
+export function interpretCharacteristic({edition=WQP_CHARACTERISTIC_EDITION,characteristic,fraction,spec,pcode='',speciation='',method='',methodContext='',methodName='',resultDepth='',resultDepthUnit='',resultDepthReference='',activityDepth='',activityDepthUnit='',activityDepthReference='',relativeDepth='',timeBasis='',temperatureBasis='',weightBasis=''}){
+ if(!WQP_CHARACTERISTIC_EDITIONS.includes(edition))throw Error('Choose an explicit supported WQP characteristic edition');
  const name=label(characteristic),f=label(fraction),declared=chemical(speciation),unitBasis=chemical(spec.basis);
  const total=['total','unfiltered','total recoverable'].includes(f);
  const issues=[],conflict=!!(declared&&unitBasis&&declared!==unitBasis);
@@ -58,7 +61,12 @@ export function interpretCharacteristic({characteristic,fraction,spec,pcode='',s
  if(['turbidity-ntu','turbidity-fnu'].includes(spec.kind)&&name==='turbidity')parameter='turbidity';
  if(spec.kind==='acidity'&&name==='ph')parameter='ph';
  if(spec.kind==='salinity-ppt'&&name==='salinity')parameter='salinity';
+ let solidsBasis=null;
  if(spec.kind==='concentration'){
+  if(edition===WQP_SOLIDS_EDITION){
+   if(name==='total suspended solids'){parameter='tss';solidsBasis='total-suspended-solids';}
+   if(name==='suspended sediment concentration'){parameter='ssc';solidsBasis='suspended-sediment-concentration';}
+  }
   if(['oxygen','dissolved oxygen','dissolved oxygen (do)'].includes(name)&&inherent('O2'))parameter='do';
   const fiveDay=/5[ -]?day/i.test(methodName)||/5[ -]?day/i.test(characteristic)||(/^(?:5210[- ]?B)$/i.test(method)&&label(methodContext)==='apha');
   if((['biochemical oxygen demand, standard conditions','biochemical oxygen demand, 5 day','biochemical oxygen demand, 5-day'].includes(name)||pcode==='00310')&&fiveDay&&inherent('O2'))parameter='bod5';
@@ -83,7 +91,8 @@ export function interpretCharacteristic({characteristic,fraction,spec,pcode='',s
  if(basis&&basis!=='unspecified'&&permitted[parameter]&&!permitted[parameter].includes(basis))issues.push('conflicting-characteristic-basis');
  if(conflict||issues.includes('conflicting-characteristic-basis'))parameter='unmapped';
  return {parameter,basis,issues,metadata:{
-  edition:WQP_CHARACTERISTIC_EDITION,sourceCharacteristic:characteristic,sourceSpeciation:speciation,
+  edition,sourceCharacteristic:characteristic,sourceSpeciation:speciation,
+  ...(edition===WQP_SOLIDS_EDITION?{solidsBasis,solidsBasisSource:solidsBasis?'explicit-characteristic':null,solidsConversion:'none'}:{}),
   sourceUnitBasis:unitBasis,basisSource,chemicalBasis:basis,sourceFraction:fraction,
   chemicalConversion:'none',unitKind:spec.kind,
   microbialCountMethod:spec.kind==='microbial-mpn'?'MPN':spec.kind==='microbial-cfu'?'CFU':null,

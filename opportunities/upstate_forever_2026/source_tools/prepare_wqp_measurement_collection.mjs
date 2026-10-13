@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 import {parseCSV,day} from '../measurement_workspace/engine/parse.mjs';
 import {parseSource,WQP_DETECTION_EDITION} from '../measurement_workspace/engine/normalise.mjs';
-import {WQP_CHARACTERISTIC_EDITION} from '../measurement_workspace/engine/characteristics.mjs';
+import {WQP_CHARACTERISTIC_EDITIONS} from '../measurement_workspace/engine/characteristics.mjs';
 
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const need=(value,message)=>{if(!value)throw Error(message);};
@@ -45,7 +45,7 @@ function unique(rows,field,label){
   return values;
 }
 export function prepareWqpCollection({capture,captureBytes,queryBytes,files,characteristics=''}) {
-  need(characteristics===''||characteristics===WQP_CHARACTERISTIC_EDITION,'Choose the explicit supported characteristic interpretation');
+  need(characteristics===''||WQP_CHARACTERISTIC_EDITIONS.includes(characteristics),'Choose the explicit supported characteristic interpretation');
   need(capture?.schema==='upstate.wqp-source-capture/v1'&&capture.state==='complete','Select a complete original WQP capture');
   const query=capture.query,from=day(query.from),to=day(query.to);
   need(from<=to&&typeof query.station_id==='string'&&query.station_id,'Retain the captured station and original dates');
@@ -159,7 +159,7 @@ function write(root,name,bytes){
   }finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);syncDirectory(directory);}
 }
 function main(args){
-  const options={};for(let i=0;i<args.length;i+=2){const k=args[i],v=args[i+1];need(['--source','--output','--characteristics'].includes(k)&&v&&!options[k],'Use --source CAPTURE_DIRECTORY --output PREPARED_DIRECTORY [--characteristics wqp-characteristics/v1]');options[k]=v;}
+  const options={};for(let i=0;i<args.length;i+=2){const k=args[i],v=args[i+1];need(['--source','--output','--characteristics'].includes(k)&&v&&!options[k],'Use --source CAPTURE_DIRECTORY --output PREPARED_DIRECTORY [--characteristics wqp-characteristics/v1|wqp-characteristics/v2]');options[k]=v;}
   need(options['--source']&&options['--output'],'Choose complete source and prepared directories');
   const source=fs.realpathSync(options['--source']),output=path.resolve(options['--output']);
   const inside=(a,b)=>{const r=path.relative(a,b);return r===''||(!path.isAbsolute(r)&&r!=='..'&&!r.startsWith('..'+path.sep));};
