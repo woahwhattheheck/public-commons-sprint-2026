@@ -3,10 +3,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path
 import re
 
-VERSION = "chemistry-review-20261013-v1"
+VERSION = "chemistry-review-20261013-v2"
 CSS = """
 #chemistry-review-ui .controls input{border:1px solid #888;padding:9px;min-width:0;max-width:100%}
 .cr-table{min-width:780px}.cr-table td{overflow-wrap:anywhere}.cr-note-preview{white-space:pre-wrap;max-width:260px}
@@ -22,8 +24,15 @@ CSS = """
 
 def augment(html: str) -> str:
     """Preserve all original results/downloads and attach a separate review workspace."""
-    if 'id="chemistry-review-extension"' in html:
-        raise ValueError("This page already contains analyst review. Regenerate from its original source.")
+    current_script = Path(__file__).with_name("chemistry_review.js").read_text(encoding="utf-8")
+    existing = re.search(r'(<script\b[^>]*\bid="chemistry-review-extension"[^>]*>)(.*?)(</script\s*>)', html, re.S | re.I)
+    if existing:
+        previous = existing.group(2)
+        if previous == current_script:
+            return html
+        if hashlib.sha256(previous.encode("utf-8")).hexdigest() != "41e2b57c5bbf008e9657404c669f9f38d49712c0c2c2d9c51de2862d41a86f52":
+            raise ValueError("The current review controller differs from the retained complete predecessor.")
+        return html[:existing.start(2)] + current_script + html[existing.end(2):]
     match = re.search(r'<script\b[^>]*\bid="study-data"[^>]*>(.*?)</script\s*>', html, re.S | re.I)
     if not match:
         raise ValueError("Choose the existing populated Monitoring + Chemistry workbench.")
@@ -42,7 +51,7 @@ def augment(html: str) -> str:
         "project_id": data["budget"]["comparison"]["project_id"],
         "study_data_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
     }
-    script = Path(__file__).with_name("chemistry_review.js").read_text(encoding="utf-8")
+    script = current_script
     encoded = json.dumps(binding, separators=(",", ":"), ensure_ascii=False).replace("<", "\\u003c")
     insert = ('<style id="chemistry-review-style">' + CSS + '</style>\n'
               '<script id="chemistry-review-binding" type="application/json">' + encoded + '</script>\n'
@@ -62,10 +71,32 @@ def main() -> None:
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = augment(args.input.read_text(encoding="utf-8"))
+    if args.input.resolve() == args.output.resolve():
+        raise ValueError("Keep the original HTML; choose a distinct output path.")
+    result = augment(args.input.read_bytes().decode("utf-8"))
+    body = result.encode("utf-8")
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("x", encoding="utf-8") as output:
-        output.write(result)
+    if args.output.exists():
+        if args.output.read_bytes() != body:
+            raise ValueError("The output already contains different complete bytes.")
+    else:
+        descriptor, temporary_name = tempfile.mkstemp(prefix="."+args.output.name+".review-", dir=str(args.output.parent))
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "wb") as output:
+                output.write(body); output.flush(); os.fsync(output.fileno())
+            try:
+                os.link(temporary, args.output)
+            except FileExistsError:
+                if args.output.read_bytes() != body:
+                    raise ValueError("A different output was published concurrently.")
+            directory = os.open(str(args.output.parent), os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        finally:
+            temporary.unlink(missing_ok=True)
     print(json.dumps({"path": str(args.output), "bytes": args.output.stat().st_size,
                       "sha256": hashlib.sha256(args.output.read_bytes()).hexdigest(), "version": VERSION}))
 
