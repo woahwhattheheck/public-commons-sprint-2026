@@ -13,7 +13,7 @@ node opportunities/otf_rapid_response_2026/vendor_submission_20261011/assemble.m
 
 Start from `starter.example.json`. The same command resumes the same output after interruption and reuses identical completed files. A different input or generator result requires a different directory. The saved `operation.json` binds every complete expected file; `complete.json` appears after all files have been materialized. Each file is published by an exclusive link from a separate temporary inode, so a concurrent caller cannot truncate another caller's output.
 
-Output includes `proposal-review.md`, `Budget_Template-RFP-2026.completed.xlsx`, `budget-mapping.json`, `vendor-input.json` and `readiness.json`. Once all nine submission sections and budget fields are complete, it also produces `proposal-submission.md` without the internal completeness appendix. The submission edition rejects internal custody references; attach the actual publishable CV/example or use its public reference in the input.
+Output includes `proposal-review.md`, `Budget_Template-RFP-2026.completed.xlsx`, `budget-mapping.json`, `vendor-input.json` and `readiness.json`. Once all nine submission sections and budget fields are complete, it also produces `proposal-submission.md` without the internal completeness appendix. The submission edition is omitted while internal custody references remain; the complete internal review and workbook still materialize, with the exact outward-source issue in readiness.json. Attach the actual publishable CV/example or use its public reference in the input.
 
 ## Original budget
 
