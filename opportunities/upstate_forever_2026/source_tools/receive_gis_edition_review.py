@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -83,6 +84,15 @@ def reopen_archive(folder, review, target, gis):
     archive = gis.checked(folder, review["files"]["review.zip"])
     expected = {name: rec for name, rec in review["files"].items() if name != "review.zip"}
     target.mkdir(parents=True, exist_ok=True)
+    staging = target.with_name(target.name + ".receiving-stage")
+    if staging.is_symlink():
+        raise ValueError("Receiving staging must be an original local directory")
+    staging.mkdir(exist_ok=True)
+    # Staging is owned only by this report under the outer receiving lock.
+    # Interrupted temporary writes never enter the completed report inventory.
+    for pending in staging.glob("member-*.receiving"):
+        if pending.is_file() and not pending.is_symlink():
+            pending.unlink()
     required = sum(rec["bytes"] for name, rec in expected.items()
                    if not (target / name).exists())
     if shutil.disk_usage(target).free < required:
@@ -104,7 +114,7 @@ def reopen_archive(folder, review, target, gis):
                 gis.checked(target, rec)
                 continue
             destination.parent.mkdir(parents=True, exist_ok=True)
-            pending = destination.with_name(destination.name + ".receiving-" + uuid.uuid4().hex)
+            pending = staging / ("member-" + uuid.uuid4().hex + ".receiving")
             try:
                 count, digest = 0, hashlib.sha256()
                 with stream.open(item) as source, pending.open("xb") as output:
@@ -121,6 +131,8 @@ def reopen_archive(folder, review, target, gis):
                 os.replace(pending, destination)
             finally:
                 pending.unlink(missing_ok=True)
+    if not any(staging.iterdir()):
+        staging.rmdir()
     actual = {p.relative_to(target).as_posix() for p in target.rglob("*") if p.is_file()}
     if actual != set(expected):
         raise ValueError("Reopened report contains unexpected files; use its dedicated output directory")
@@ -144,8 +156,40 @@ def source_map(application, gis):
             if (application / name).is_file()]
 
 
+def run_browser_child(command, log, timeout):
+    """Stop only this receiving command's own browser process group."""
+    process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT,
+                               start_new_session=(os.name == "posix"))
+    def stop():
+        try:
+            if os.name == "posix":
+                os.killpg(process.pid, signal.SIGTERM)
+            elif process.poll() is None:
+                process.terminate()
+        except ProcessLookupError:
+            pass
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            pass
+        finally:
+            try:
+                if os.name == "posix":
+                    os.killpg(process.pid, signal.SIGKILL)
+                elif process.poll() is None:
+                    process.kill()
+            except ProcessLookupError:
+                pass
+            process.wait()
+    try:
+        return process.wait(timeout=timeout)
+    except BaseException:
+        stop()
+        raise
+
+
 def browser_course(application, workspace, output, report, folder, reopened, gis, *,
-                   node, playwright_module, operator_url_file, timeout):
+                   node, playwright_module, browser_executable, operator_url_file, timeout):
     """Use the actual installed browser client and existing operator file transport."""
     from model.common import digest
     browser_output = output / "browser" / (timestamp().replace(":", "-") + "-" + uuid.uuid4().hex[:8])
@@ -199,20 +243,30 @@ def browser_course(application, workspace, output, report, folder, reopened, gis
                    "--request", str(request_path)]
         if playwright_module:
             command += ["--playwright-module", str(playwright_module)]
+        if browser_executable:
+            command += ["--executable", str(browser_executable)]
         # Browser output may contain an authenticated URL. Keep its log private;
         # returned source/result maps never carry the operator capability.
         log_path = browser_output / "browser-process.log"
         descriptor = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(descriptor, "w", encoding="utf-8") as log:
-            completed = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT,
-                                       timeout=timeout, check=False)
+            returncode = run_browser_child(command, log, timeout)
         result_path = browser_output / "result.json"
-        if completed.returncode != 0:
+        if returncode != 0:
             raise RuntimeError("The browser course reported an actual failure; inspect " + str(log_path))
         result = gis.load(result_path)
-        if result.get("report_id") != report["id"]:
-            raise ValueError("The browser result belongs to a different GIS review")
-        for artifact in result.get("artifacts", []):
+        expected = {"schema": "upstate.gis-edition-review-browser-result/v1",
+                    "state": "complete", "report_id": report["id"],
+                    "receipt_id": selection["receipt_id"], "export_id": selection["export_id"],
+                    "workspace_key": key}
+        if any(result.get(name) != value for name, value in expected.items()):
+            raise ValueError("The browser result did not complete this exact GIS receiving course")
+        artifacts = result.get("artifacts")
+        if (not isinstance(artifacts, list) or not artifacts
+                or len({item["path"] for item in artifacts}) != len(artifacts)
+                or not isinstance(result.get("contexts"), list) or not result["contexts"]):
+            raise ValueError("The browser course did not retain its actual contexts and artifacts")
+        for artifact in artifacts:
             gis.checked(browser_output, artifact)
         return {"directory": str(browser_output), "result": result,
                 "result_file": gis.record(browser_output, result_path)}
@@ -228,7 +282,7 @@ def browser_course(application, workspace, output, report, folder, reopened, gis
 
 def receive(application, workspace, output, *, export_id=None, receipt_id=None,
             require_raster=False, inspect=False, native_only=False, node="node",
-            playwright_module=None, operator_url_file=None, browser_timeout=900):
+            playwright_module=None, browser_executable=None, operator_url_file=None, browser_timeout=900):
     application, output = Path(application).resolve(), Path(output).resolve()
     sys.path[:0] = [str(application / "operator"), str(application)]
     from model.workspace import Workspace
@@ -248,6 +302,10 @@ def receive(application, workspace, output, *, export_id=None, receipt_id=None,
             return choices
         previous = gis.load(journal_path) if journal_path.exists() else {}
         if previous:
+            if (previous.get("schema") != SCHEMA or previous.get("operation_id") != OPERATION
+                    or previous.get("workspace") != str(workspace.root)
+                    or previous.get("application") != str(application)):
+                raise ValueError("This receiving output belongs to a different application, Workspace or operation; use a separate output for the restored location")
             selected = previous["selection"]
             if export_id and (export_id, receipt_id) != (selected["export_id"], selected["receipt_id"]):
                 raise ValueError("This output already retains another pair; use its original IDs or a new output")
@@ -270,6 +328,8 @@ def receive(application, workspace, output, *, export_id=None, receipt_id=None,
             "application": str(application), "selection": selection, "binding": binding,
             "created_at": timestamp(), "history": []}
         state["sources"] = source_map(application, gis)
+        state.setdefault("source_observations", []).append({"observed_at": timestamp(),
+            "application": str(application), "sources": state["sources"]})
         instructions = output / "instructions"
         instructions.mkdir(exist_ok=True)
         for name in ("AGENTS.md", "CURRENT_OWNER_DIRECTION.md"):
@@ -328,7 +388,7 @@ def receive(application, workspace, output, *, export_id=None, receipt_id=None,
             if not native_only:
                 state["browser"] = phase("actual_browser_course", lambda:
                     browser_course(application, workspace, output, verified, folder, reopened, gis,
-                        node=node, playwright_module=playwright_module,
+                        node=node, playwright_module=playwright_module, browser_executable=browser_executable,
                         operator_url_file=operator_url_file, timeout=browser_timeout))
                 state["state"] = "browser_course_complete"
             state["finished_at"] = timestamp()
@@ -356,6 +416,7 @@ def main():
                         help="Retain native report/reopening for an existing separate browser worker")
     parser.add_argument("--node", default="node")
     parser.add_argument("--playwright-module")
+    parser.add_argument("--browser-executable", help="Existing Chromium executable for the receiving browser")
     parser.add_argument("--operator-url-file", type=Path,
                         help="Private file holding the existing loopback operator login URL")
     parser.add_argument("--browser-timeout", type=float, default=900)
@@ -365,7 +426,8 @@ def main():
     result = receive(args.application, args.workspace, args.output,
         export_id=args.export_id, receipt_id=args.receipt_id, require_raster=args.require_raster,
         inspect=args.inspect, native_only=args.native_only, node=args.node,
-        playwright_module=args.playwright_module, operator_url_file=args.operator_url_file,
+        playwright_module=args.playwright_module, browser_executable=args.browser_executable,
+        operator_url_file=args.operator_url_file,
         browser_timeout=args.browser_timeout)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
 
