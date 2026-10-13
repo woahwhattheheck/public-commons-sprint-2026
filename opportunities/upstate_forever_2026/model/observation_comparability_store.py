@@ -27,11 +27,14 @@ def _require(value, message):
 
 
 def _producers():
-    return {name: file_digest(path) for name, path in {
+    from . import observation_comparability_figures as figures
+    result = {name: file_digest(path) for name, path in {
         "store": Path(__file__),
         "calculation": Path(calculation.__file__),
         "desk": Path(calculation.__file__).with_suffix(".html"),
     }.items()}
+    result["figures"] = digest(figures.implementation())
+    return result
 
 
 def _choice(value):
@@ -167,7 +170,8 @@ def _selection(value, loaded):
              "Use a nonempty comparison title of at most 300 characters")
     _require(value["binding_sha256"] == digest(loaded["binding"]),
              "The original cohort binding changed; reopen the current source selection")
-    _require(isinstance(value["producers"], dict) and set(value["producers"]) == {"store", "calculation", "desk"},
+    _require(isinstance(value["producers"], dict) and set(value["producers"]) in (
+                 {"store", "calculation", "desk"}, {"store", "calculation", "desk", "figures"}),
              "Retain the selected comparison producer edition")
     for checksum in value["producers"].values():
         identifier(checksum)
@@ -236,6 +240,13 @@ def build(workspace, value):
             _require(len(generated_inputs) == len(generated["original_inputs"])
                      and generated_inputs == identity["binding"]["originals"],
                      "The generated source changed an original publisher response or companion edition")
+            from . import observation_comparability_figures as figures
+            figure_implementation = figures.implementation()
+            _require(digest(figure_implementation) == selection["producers"].get("figures"),
+                     "Reopen the original source to select its current native figure implementation")
+            figures.prepare(output, figure_implementation)
+            _require(_producers() == identity["producers"],
+                     "The original selected comparison producer changed during figure generation")
             # Bind the native editor edition in its source manifest before any
             # complete ZIP/build/import publication. Existing saved editions keep
             # their original manifest and source collection unchanged.
