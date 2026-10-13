@@ -54,10 +54,11 @@ class Workspace:
                 "grids": [read_json(p) for p in sorted((self.root / "grids").glob("*/grid.json"))],
                 "runs": [read_json(p) for p in sorted((self.root / "runs").glob("*/run.json"))],
                 "observations": self._list("observations"),
-                "spatial_reviews": self._list("spatial-reviews"),
+                "scenario_analyses": [read_json(p) for p in sorted((self.root / "analyses").glob("*/summary.json"))],
                 "community_tables": self._list("community-tables"),
                 "community_plans": self._list("community-plans"),
                 "community_reports": self._list("community-reports"),
+                "spatial_reviews": self._list("spatial-reviews"),
                 "customer_reviews": self._list("reviews"),
                 "customer_review_responses": self._list("review-responses"),
                 "spatial_exports": [read_json(p) for p in sorted((self.root / "spatial-exports").glob("*/export.json"))],
@@ -340,13 +341,17 @@ class Workspace:
         from .native import execute_run
         return execute_run(self, identifier(key))
 
+    def combine_runs(self, selection, source_runs, *, execute=True):
+        from .run_assembly import combine_runs
+        return combine_runs(self, selection, source_runs, execute=execute)
+
     def compare_runs(self, ids):
         from .native import compare_runs
         return compare_runs(self, ids)
 
-    def combine_runs(self, selection, source_runs, *, execute=True):
-        from .run_assembly import combine_runs
-        return combine_runs(self, selection, source_runs, execute=execute)
+    def analyze_scenarios(self, selection):
+        from .scenario_analysis import analyze
+        return analyze(self, selection)
 
     def import_observations(self, path, metadata):
         from .observations import ingest
@@ -355,6 +360,10 @@ class Workspace:
     def compare_observations(self, run_id, observation_id, catchments):
         from .observations import compare
         return compare(self, run_id, observation_id, catchments)
+
+    def build_delivery(self, selection):
+        from .delivery import build
+        return build(self, selection)
 
     def import_community_table(self, selection):
         from .communities import import_table
@@ -366,10 +375,6 @@ class Workspace:
 
     def build_community_report(self, selection):
         from .community_reports import build
-        return build(self, selection)
-
-    def build_delivery(self, selection):
-        from .delivery import build
         return build(self, selection)
 
     def backup(self, destination, *, include_intermediates=True):
