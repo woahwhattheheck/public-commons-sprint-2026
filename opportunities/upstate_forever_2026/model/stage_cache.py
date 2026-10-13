@@ -268,7 +268,7 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
     journal = _ReuseProgress(model, selected, progress)
     observations, seen = [], set()
     for index_key, path, explicit_id in candidates:
-        adopted, phase = {}, "validation"
+        adopted, phase, original_id = {}, "validation", None
         try:
             if explicit_id is None:
                 record = read_json(path)
@@ -399,7 +399,7 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments,
                                  "phase": phase, "reason": str(exc)})
             journal.value["rejected_candidates"] += 1
             journal.emit(phase="searching", current_file=None,
-                         last_rejection={"source_run_id": journal.value["source_run_id"],
+                         last_rejection={"source_run_id": original_id,
                                          "phase": phase, "reason": str(exc)})
             continue
     journal.emit(force=True, phase="no_matching_stage", current_file=None)
