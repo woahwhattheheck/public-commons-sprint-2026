@@ -15,10 +15,12 @@ MEMBERS = ("model/native_execution.py", "model/native_worker.py",
            "operator/native_jobs.py", "operator/programme_jobs.py",
            "operator/parameter_study_jobs.py", "operator/parameter_study_api.py",
            "model/parameter_case_status.py", "model/parameter_result_query.py",
+           "model/parameter_views.py",
            "model/record_catalog.py", "model/delivery_catalogue.py",
            "operator/web/parameter_case_console.mjs", "operator/web/parameter_studies.mjs",
            "operator/web/parameter_studies.css", "docs/PARAMETER_CASE_CONSOLE.md",
            "docs/PARAMETER_RESULT_QUERIES.md", "docs/PARAMETER_STUDY_PROCESS_RECOVERY.md",
+           "docs/PARAMETER_CASE_BROWSING.md",
            "operator/web/jobs.mjs", "operator/web/jobs.css", "operator/NATIVE_JOBS.md",
            "install_native_supervision.py")
 PREVIOUS = {
@@ -106,6 +108,14 @@ PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("fb4339debca8ab51cb97c
 # Complete the received Parameter operating guide while accepting this original edition.
 PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("125bfb1e39c0a0c56f84c7d171e15b7c9e55ffd0d635381af1df8137002a68b8")
 PREVIOUS.setdefault("install_native_supervision.py", []).append("2badb6f90e9ff87475be475cf7f4551352e507c39ac24684623a4c9a2f1c6bef")
+
+
+# Exact installed source before compact saved-case navigation (PR3867).
+PREVIOUS.setdefault("install_native_supervision.py", []).append("273ea100d343c3665da104942758a4ecc79554f0c00b16149412be4a982c9927")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("80ee50777b8c95ae725a1aff63c5bacabdfc385da29fb5f840d983ecd9eb0926")
+PREVIOUS.setdefault("operator/parameter_study_api.py", []).append("be0642a44fbb5e55a81184563675b9665333f1ca97cb7ec0f1926f5d29d7f4fe")
+PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("af524e4158c89dad72ea8d0a9c6ed636db10bab1f1c977e616ddf6988fae437a")
+PREVIOUS.setdefault("model/parameter_case_status.py", []).append("0fd189b233f6a10420b73946151e907caa49774feabccadf674ac14cda9b3b7d")
 
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
@@ -390,7 +400,7 @@ PARAMETER_QUERY_KEYS = (
     "id", "baseline_run_id", "area_id", "pollutant", "offset", "limit",
     "candidate_run_ids", "run_id", "attempt_id", "stream", "log_offset",
     "expected_attempt_id", "history_offset", "range_offset", "range_limit",
-    "expected_artifact_sha256",
+    "expected_artifact_sha256", "case_filter", "query",
 )
 
 
@@ -443,7 +453,8 @@ def parameter_study_dependency(body):
             ("native_case_context", ("workspace", "key", "run_id")),
             ("record_interruption", ("workspace", "key", "error")),
             ("_read", ("workspace", "key")),
-            ("_bind_state", ("workspace", "key", "spec", "state"))):
+            ("_bind_state", ("workspace", "key", "spec", "state")),
+            ("_baseline_versions", ("run",))):
         node = declarations.get(name)
         if node is None:
             raise ValueError("Receive the current complete saved-study source before native supervision: "
@@ -456,7 +467,8 @@ def parameter_study_dependency(body):
                 or any(value is None for value in args.kw_defaults)):
             raise ValueError("Compose the current saved-study adapter with its scientific API: " + name)
     return {"bytes": len(body), "sha256": sha(body),
-            "functions": ["native_case_context", "record_interruption", "_read", "_bind_state"],
+            "functions": ["native_case_context", "record_interruption", "_read", "_bind_state",
+                          "_baseline_versions"],
             "policy": "retain installed scientific source unchanged"}
 
 
@@ -466,7 +478,8 @@ def retained_reader_dependencies(application):
     required = {
         "model/common.py": ("canonical", "digest", "held", "identifier", "relative_file",
                             "read_json", "file_digest"),
-        "model/model_selection.py": ("selected",),
+        "model/model_selection.py": ("selected", "run_models", "validate_completed_run"),
+        "model/native_versions.py": ("model_versions", "version_label"),
         "model/parameter_calibration.py": ("candidates",),
     }
     bodies, records = {}, {}
