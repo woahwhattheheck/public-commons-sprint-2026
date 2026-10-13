@@ -12,6 +12,7 @@ from pathlib import Path
 from .common import digest, identifier, read_json
 from . import reviews, review_handback, review_receiving, review_reconciliation
 from . import scientific_report_study_transfer as report_editions
+from . import report_changes_review as comparison_review
 
 ROOT_KINDS = ("reviews",)
 IMMUTABLE_KINDS = ("reviews", "review-responses", "review-handbacks",
@@ -170,8 +171,85 @@ def _scientific_source(closure, collection_id, entry):
             "source_identity_sha256": source_key, "source_receipt": receipt_name}
 
 
+def _comparison_source(closure, collection_id, entry):
+    """Retain the exact complete pair selected as an ordinary review source."""
+    if entry.get("role") != comparison_review.ROLE:
+        return None
+    metadata = entry.get("metadata") or {}
+    identity = metadata.get("scientific_report_comparison_identity")
+    declared = comparison_review.source_members(entry, identity)
+    comparison_id = identifier(identity["comparison_id"])
+    source_key = digest(identity)
+    body_name = entry["body"].get("view_path", entry["body"]["filename"])
+    prefix = "report/" if body_name == "report/index.html" else ""
+    parts = {}
+    for part in [entry["body"], *entry.get("companions", [])]:
+        name = part.get("view_path", part["filename"])[len(prefix):]
+        parts[name] = part
+        closure.add_file(part["object"], part)
+    copied_record = closure.read(parts["comparison.json"]["object"])
+    if (copied_record.get("schema") != comparison_review.report_changes.SCHEMA
+            or copied_record.get("state") != "complete"
+            or copied_record.get("id") != comparison_id
+            or digest(copied_record) != identity.get("comparison_record_sha256")
+            or copied_record.get("identity") != identity["pair_identity"]):
+        raise ValueError("The review source changed its original completed comparison")
+    expected = {name: {field: item[field] for field in ("bytes", "sha256")}
+                for name, item in copied_record["files"].items()}
+    expected["comparison.json"] = {field: parts["comparison.json"][field]
+                                    for field in ("bytes", "sha256")}
+    if expected != declared:
+        raise ValueError("The review source lost the exact complete comparison tree")
+    base = {"project_id": identity["project_id"],
+            "source_collection_id": collection_id, "source_id": entry["id"],
+            "comparison_id": comparison_id,
+            "left_edition_id": identity["pair_identity"]["left"]["edition_id"],
+            "right_edition_id": identity["pair_identity"]["right"]["edition_id"],
+            "source_identity_sha256": source_key}
+    if identity["project_id"] != closure.workspace.project["id"]:
+        return {**base, "external": True}
+    current = comparison_review.comparison_context(closure.workspace, comparison_id)
+    if current["identity"] != identity:
+        raise ValueError("The customer review differs from its saved local comparison")
+    folder = comparison_review.KIND + "/" + source_key + "/source"
+    receipt_name = folder + "/source-receipt.json"
+    receipt = closure.read(receipt_name)
+    collection = _record(closure, "sources", collection_id)
+    if (receipt.get("schema") != comparison_review.SCHEMA
+            or receipt.get("source_identity") != identity
+            or receipt.get("source_collection_id") != collection_id
+            or receipt.get("source_id") != entry["id"]
+            or receipt.get("source_collection_sha256") != digest(collection)
+            or receipt.get("directory") != folder):
+        raise ValueError("The original comparison review source receipt changed")
+    expected_paths = {folder + "/model-sources.json",
+                      *(folder + "/report/" + name for name in declared)}
+    copies = receipt.get("files")
+    if (not isinstance(copies, list) or len(copies) != len(expected_paths)
+            or any(not isinstance(row, dict) for row in copies)
+            or {row.get("path") for row in copies} != expected_paths):
+        raise ValueError("The customer review lost its original comparison capture")
+    for item in copies:
+        name = item["path"]
+        if name.startswith(folder + "/report/"):
+            native = declared[name[len(folder + "/report/"):]]
+            if any(item.get(field) != native[field] for field in ("bytes", "sha256")):
+                raise ValueError("The retained review copy differs from the original comparison")
+        closure.add_file(name, item)
+    manifest = closure.read(folder + "/model-sources.json")
+    original = collection["original_manifest"]
+    copied = closure.files[folder + "/model-sources.json"]
+    if (manifest.get("schema") != "upstate.sources/v1"
+            or any(copied[field] != original[field] for field in ("bytes", "sha256"))):
+        raise ValueError("The comparison review intake changed its original source manifest")
+    closure.need(comparison_review.report_changes.KIND, comparison_id,
+                 "Complete scientific report comparison selected for customer review")
+    return {**base, "external": False, "source_key": source_key,
+            "source_directory": folder, "source_receipt": receipt_name}
+
+
 def _review_files(closure, review):
-    cache, linked_reports = {}, []
+    cache, linked_reports, linked_comparisons = {}, [], []
     for pin in review["selections"]:
         kind, key = pin["kind"], identifier(pin["id"])
         if kind not in ("sources", "runs", "deliveries", "spatial-exports"):
@@ -187,13 +265,16 @@ def _review_files(closure, review):
                 linked = _scientific_source(closure, key, entry)
                 if linked is not None:
                     linked_reports.append(linked)
+                comparison = _comparison_source(closure, key, entry)
+                if comparison is not None:
+                    linked_comparisons.append(comparison)
     reviews._validate_bindings(closure.workspace, review)
     members = []
     for artifact in review["artifacts"]:
         path = reviews._resolve(closure.workspace, artifact, cache)
         relative = path.resolve(strict=True).relative_to(closure.root).as_posix()
         members.append(_member(closure, relative, artifact))
-    return linked_reports, members
+    return linked_reports, linked_comparisons, members
 
 
 def _auxiliary(closure, review):
@@ -240,7 +321,7 @@ def _auxiliary(closure, review):
 
 def _include_review(closure, key):
     review = _record(closure, "reviews", key)
-    reports, artifacts = _review_files(closure, review)
+    reports, comparisons, artifacts = _review_files(closure, review)
     original_responses = [_record(closure, "review-responses", row["id"])
                           for row in _scan(closure, "review-responses")
                           if row.get("review_id") == key]
@@ -305,8 +386,11 @@ def _include_review(closure, key):
     for report in reports:
         if not report["external"]:
             locks.add("scientific-report-reviews/" + report["source_key"] + "/source/source.lock")
+    for comparison in comparisons:
+        if not comparison["external"]:
+            locks.add(comparison["source_directory"] + "/source.lock")
     # Source capture files are native immutable producer records, not view caches.
-    for report in reports:
+    for report in [*reports, *comparisons]:
         if report["external"]:
             continue
         receipt_name = report["source_receipt"]
@@ -325,6 +409,9 @@ def _include_review(closure, key):
         "members": [members[name] for name in sorted(members)],
         "lock_paths": sorted(locks),
     }
+    if comparisons:
+        row["report_comparisons"] = sorted(comparisons,
+            key=lambda item: (item["source_collection_id"], item["source_id"]))
     previous = _state(closure).get(key)
     if previous is not None and previous != row:
         raise ValueError("The original customer review history changed during transfer preparation.")
@@ -334,6 +421,9 @@ def _include_review(closure, key):
         responses=len(responses), handbacks=len(handbacks), received_packages=len(receipts),
         returned_responses=len(drafts), reconciliations=len(reconciliations),
         scientific_report_editions=[item["scientific_report_edition_id"] for item in reports if not item["external"]])
+    if comparisons:
+        closure.nodes[("reviews", key)]["scientific_report_comparisons"] = [
+            item["comparison_id"] for item in comparisons if not item["external"]]
 
 
 def visit(closure, kind, key, value):
@@ -394,6 +484,8 @@ def verify_receipt(closure, captured):
         if current is None or any(current.get(name) != original.get(name) for name in (
                 "schema", "id", "project_id", "review_sha256", "title", "purpose", "scientific_reports")):
             raise ValueError("The received study lost an original customer review binding.")
+        if current.get("report_comparisons", []) != original.get("report_comparisons", []):
+            raise ValueError("The received review lost its original scientific comparison binding.")
         old_responses = original["response_ids"]
         if current["response_ids"][:len(old_responses)] != old_responses:
             raise ValueError("The received customer response history lost its original prefix.")
