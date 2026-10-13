@@ -5,6 +5,7 @@ const esc = x => String(x ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 const pretty = x => JSON.stringify(x,null,2);
 const valueText = x => typeof x==='number'&&!Number.isInteger(x)?x.toPrecision(7):typeof x==='object'?JSON.stringify(x):x;
 const button = (action,label,id='') => `<button type="button" data-action="chemistry-${action}" data-id="${esc(id)}">${esc(label)}</button>`;
+function sampleDays(text){const days=text.split(/[,\s]+/).filter(Boolean).map(Number);if(!days.length||days.some(v=>!Number.isFinite(v)||v<0))throw Error('Choose finite, nonnegative sample days.');return days;}
 const parse = (element,label) => {try{return JSON.parse(element.value)}catch(e){throw new Error(`${label}: ${e.message}`)}};
 function table(rows,columns){
  if(!rows?.length)return '<p class="chemistry-muted">No records in this selection.</p>';
@@ -225,7 +226,7 @@ export function attachChemistry(host){
     target.innerHTML=table(rows.map(observationView),['id','measurement','operator','basis','reach','day','role','qualifier','reference_or_limits','error_scale','source']);
    }catch(error){target.textContent=error.message;}
   }
-  observations();area.querySelector('[data-request]').addEventListener('change',observations);
+  observations();area.querySelector('[data-request]').addEventListener('change',()=>{observations();try{const request=parse(area.querySelector('[data-request]'),'Analysis request');if(Array.isArray(request.sample_days)&&request.sample_days.every(x=>typeof x==='number'&&Number.isFinite(x)&&x>=0))area.querySelector('[data-sample-days]').value=request.sample_days.join(', ');}catch(error){report(error)}});
   physical();
   area.querySelector('[data-physical]').addEventListener('change',e=>{
    const target=e.target;
@@ -253,7 +254,7 @@ export function attachChemistry(host){
     area.querySelector('[data-project]').value=pretty(project);physical();
    }catch(error){if(request===projectRead&&sameEditor(context))report(error);}
   });
-  area.querySelector('[data-sample-days]').addEventListener('change',e=>{try{const days=e.target.value.split(/[,\s]+/).filter(Boolean).map(Number);if(!days.length||days.some(v=>!Number.isFinite(v)||v<0))throw Error('Choose finite, nonnegative sample days.');const request=parse(area.querySelector('[data-request]'),'Analysis request');request.sample_days=days;area.querySelector('[data-request]').value=pretty(request);}catch(error){report(error)}});
+  area.querySelector('[data-sample-days]').addEventListener('change',e=>{try{const days=sampleDays(e.target.value);const request=parse(area.querySelector('[data-request]'),'Analysis request');request.sample_days=days;area.querySelector('[data-request]').value=pretty(request);}catch(error){report(error)}});
   area.querySelector('[data-mode]').addEventListener('change',e=>{try{let request=parse(area.querySelector('[data-request]'),'Analysis request');request.mode=e.target.value;area.querySelector('[data-request]').value=pretty(request);area.querySelector('[data-request-detail]').open=e.target.value!=='simulate';}catch(e){report(e)}});
   area.querySelector('[data-observation-file]').addEventListener('change',async event=>{
    const file=event.target.files[0],request=++observationRead,context=captureContext();
@@ -316,10 +317,12 @@ export function attachChemistry(host){
    if(action==='execute'){
     const parent=editorCase,revision=editorGeneration,area=root.querySelector('[data-chemistry-editor]');
     if(!parent)throw Error('Save and open the scenario before calculating.');
-    const requestText=area.querySelector('[data-request]').value,projectText=area.querySelector('[data-project]').value;
+    const requestText=area.querySelector('[data-request]').value,projectText=area.querySelector('[data-project]').value,sampleText=area.querySelector('[data-sample-days]').value;
     const request=parse(area.querySelector('[data-request]'),'Analysis request'),draft=parse(area.querySelector('[data-project]'),'Chemical project');
+    const visibleDays=sampleDays(sampleText);
+    if(JSON.stringify(request.sample_days)!==JSON.stringify(visibleDays))throw Error('Sample days differ between the visible control and advanced request. Apply the current sample-days field or reopen the advanced request before running.');
     const saved=await original('case',{case_id:parent},context,parent);
-    if(editorGeneration!==revision||editorCase!==parent||root.querySelector('[data-chemistry-editor]')!==area||area.querySelector('[data-request]').value!==requestText||area.querySelector('[data-project]').value!==projectText)throw Error('The scenario or request changed before submission. Run the current selection again.');
+    if(editorGeneration!==revision||editorCase!==parent||root.querySelector('[data-chemistry-editor]')!==area||area.querySelector('[data-request]').value!==requestText||area.querySelector('[data-project]').value!==projectText||area.querySelector('[data-sample-days]').value!==sampleText)throw Error('The scenario or request changed before submission. Run the current selection again.');
     if(JSON.stringify(saved.project)!==JSON.stringify(draft))throw Error('Save the edited scenario before calculating.');
     return await perform('run',{case_id:parent,request},context);
    }

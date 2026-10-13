@@ -169,7 +169,20 @@ export function createWaterDesk(host) {
  return {
   mount(element,value){root=element;catalog=value;owner=captureContext();epoch++;draft=retained()||{flow_bindings:[],storage_bindings:[]};caseRecord=null;render();},
   async restore(){if(draft?.template_case_id){root.querySelector('[data-water-template]').value=draft.template_case_id;await act('template');}},
-  update(value){catalog=value;const target=root?.querySelector('[data-water-saved]');if(target)target.innerHTML=savedList();},
+  update(value){
+   catalog=value;if(!root)return;
+   const keepOptions=(node,rows)=>{
+    const selected=new Set([...node.selectedOptions].map(x=>x.value)),prior=new Map([...node.options].map(x=>[x.value,x.textContent]));
+    const known=new Set(rows.map(x=>x.value));
+    for(const chosen of selected)if(chosen&&!known.has(chosen))rows.push({value:chosen,label:(prior.get(chosen)||chosen)+' (retained selection)'});
+    node.innerHTML=rows.map(x=>option(x.value,x.label,selected.has(x.value))).join('');
+   };
+   const template=root.querySelector('[data-water-template]');
+   if(template)keepOptions(template,[{value:'',label:'Choose a saved one-phase chemical scenario'},...catalog.cases.map(x=>({value:x.id,label:x.title}))]);
+   const choices=sources().map(x=>({value:x.key,label:x.label}));
+   for(const node of root.querySelectorAll('[data-water-binding] [data-w=sources]'))keepOptions(node,choices.map(x=>({...x})));
+   const target=root.querySelector('[data-water-saved]');if(target)target.innerHTML=savedList();
+  },
   dispatch(action,id){return act(action,id)},
   detach(){epoch++;request++;if(root){root.oninput=null;root.onchange=null}root=null;owner=null;}
  };
