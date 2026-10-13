@@ -69,6 +69,27 @@ def rounds(config: dict) -> list[dict]:
         nominal += timedelta(days=interval)
     if not result:
         raise ContractError("campaign has no sampling rounds under the supplied month/date restrictions")
+    selections = config.get("selected_round_dates", {})
+    if not isinstance(selections, dict):
+        raise ContractError("selected_round_dates must map original round numbers to selected date arrays")
+    known_rounds = {str(item["round"]) for item in result}
+    if any(not isinstance(key, str) or key not in known_rounds for key in selections):
+        raise ContractError("selected_round_dates contains an unknown original round number")
+    for item in result:
+        key = str(item["round"])
+        if key not in selections:
+            continue
+        chosen = selections[key]
+        if not isinstance(chosen, list) or not chosen:
+            raise ContractError(f"round {key}: choose a nonempty array of original eligible dates")
+        dates = [parse_date(value, f"round {key} selected date").isoformat() for value in chosen]
+        if dates != chosen or dates != sorted(set(dates)):
+            raise ContractError(f"round {key}: selected dates must be distinct, ascending YYYY-MM-DD dates")
+        if any(value not in item["eligible_dates"] for value in dates):
+            raise ContractError(f"round {key}: selected date is outside its original window, weekdays, months or blackouts")
+        item["original_eligible_dates"] = item["eligible_dates"]
+        item["eligible_dates"] = list(dates)
+        item["date_selection"] = "explicit"
     return result
 
 

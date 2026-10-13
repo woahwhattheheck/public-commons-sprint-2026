@@ -42,7 +42,31 @@ export function samplingSelection(draft){
 function evidenceKey(value){return JSON.stringify([value.source_collection_id,value.source_id]);}
 function evidenceQuantity(row){return String(row.pollutant||'').replaceAll('_',' ')+' · '+text(row.units);}
 function newDraft(context){return {context_id:context.context_id,title:'Sampling priorities',operator:'',recorded_at:new Date().toISOString(),evidence_start:'',evidence_end:'',notes:'',planning_basis:'',targets:[]};}
-function designDraft(configuration=null){const c=configuration||{},calendar=c.calendar||{},cost=c.default_cost||{};return {title:'',budget:c.budget??'',max_sites:c.max_sites??'',program_overhead:c.program_overhead??'',coverage_mode:c.coverage_mode||'local',setup:cost.setup??'',per_visit:cost.per_visit??'',cost_basis:cost.basis||'',start_date:calendar.start_date||'',end_date:calendar.end_date||'',interval_days:calendar.interval_days??'',round_window_days:calendar.round_window_days??'',crews:calendar.crews??'',visit_minutes:calendar.visit_minutes??'',travel_buffer_minutes:calendar.travel_buffer_minutes??'',advanced:json(c)};}
+function roundDateText(value){
+  if(value===undefined)return '';
+  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Selected round dates must be an object.');
+  return Object.keys(value).sort((a,b)=>Number(a)-Number(b)).map(key=>{
+    if(!/^[1-9]\d*$/.test(key)||!Array.isArray(value[key])||!value[key].length)throw Error('Each selected round needs its original number and a nonempty date array.');
+    return key+' = '+value[key].join(', ');
+  }).join('\n');
+}
+function parseRoundDates(value){
+  const selected={};
+  for(const line of String(value??'').split(/\r?\n/)){
+    if(!line.trim())continue;
+    const match=/^\s*([1-9]\d*)\s*=\s*(.+?)\s*$/.exec(line);
+    if(!match||Object.prototype.hasOwnProperty.call(selected,match[1]))throw Error('Use one line per original round: 2 = 2026-12-04. Do not repeat a round.');
+    const dates=match[2].split(',').map(date=>date.trim());
+    if(dates.some(date=>!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T00:00:00Z'))||new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date)||dates.some((date,index)=>index&&date<=dates[index-1]))throw Error('Each round needs distinct ascending YYYY-MM-DD dates, separated by commas.');
+    selected[match[1]]=dates;
+  }
+  return selected;
+}
+function roundDateValue(draft, strict=false){
+  if(draft.selected_round_dates!==undefined)return draft.selected_round_dates;
+  try{return roundDateText(JSON.parse(draft.advanced||'{}').calendar?.selected_round_dates);}catch(error){if(strict)throw error;return '';}
+}
+function designDraft(configuration=null){const c=configuration||{},calendar=c.calendar||{},cost=c.default_cost||{};return {title:'',budget:c.budget??'',max_sites:c.max_sites??'',program_overhead:c.program_overhead??'',coverage_mode:c.coverage_mode||'local',setup:cost.setup??'',per_visit:cost.per_visit??'',cost_basis:cost.basis||'',start_date:calendar.start_date||'',end_date:calendar.end_date||'',interval_days:calendar.interval_days??'',round_window_days:calendar.round_window_days??'',crews:calendar.crews??'',visit_minutes:calendar.visit_minutes??'',travel_buffer_minutes:calendar.travel_buffer_minutes??'',selected_round_dates:configuration===null?undefined:roundDateText(calendar.selected_round_dates),advanced:json(c)};}
 function blankTarget(){return {id:'target-'+crypto.randomUUID(),station_id:'',cohort_id:'',months:[],minimum_dates_per_month:'',proposed_visits:'',reporting_limit:null,reporting_limit_basis:'',flow_goal:'any',reason:'',priority:3,included:true,setup_cost:null,per_visit_cost:null,cost_basis:'',sensitivity_basis:''};}
 function money(cents){return cents===null||cents===undefined?'Unknown':(cents/100).toLocaleString('en-US',{style:'currency',currency:'USD'});}
 export function attachMonitoringRecommendations(host){
@@ -279,6 +303,7 @@ export function attachMonitoringRecommendations(host){
         return '<label>'+labels[key]+'<input data-design="'+key+'" value="'+esc(d[key])+'"'+(['start_date','end_date'].includes(key)?' type="date"':'')+'></label>';
       }).join('')+
       '<label>Coverage basis<select data-design="coverage_mode"><option value="local"'+(d.coverage_mode==='local'?' selected':'')+'>Local catchment presence</option><option value="outlet_context"'+(d.coverage_mode==='outlet_context'?' selected':'')+'>Upstream context at proposed outlets</option></select></label>'+
+      '<label class="sampling-wide">Selected field dates by original round (optional)<textarea rows="3" data-design="selected_round_dates" placeholder="2 = 2026-12-04">'+esc(roundDateValue(d))+'</textarea><span>Use one line per original round and comma-separated dates when more field days are needed. Blank keeps the original earliest eligible scheduling. Every selected date must satisfy that round’s unchanged window, weekdays, months, blackouts and crew capacity. This prepares a separate saved design; it does not alter historical observations or a previous calendar.</span></label>'+
       '<label class="sampling-wide">Additional original design configuration (JSON object; visible fields above take precedence)<textarea rows="5" data-design="advanced">'+esc(d.advanced)+'</textarea></label></div><button type="button" data-action="design">Prepare Monitoring design</button>'+
       designs.map(item=>'<p>Saved design '+esc(item.plan_id)+' · '+esc(item.status)+'</p><button type="button" data-action="open-design" data-id="'+esc(item.plan_id)+'">Open saved design and calendar</button>').join('')+
       (state.design?'<p>Prepared design '+esc(state.design.plan_id||state.design.id||'')+' · '+esc(state.design.status)+'</p>'+table(['Target','Catchment','Proposed visits','Calendar visits in selected months','Request met'],(state.design.target_calendar||[]).map(r=>[r.target_id,r.catchment_id,r.proposed_visits,r.calendar_visits_in_selected_months,r.calendar_count_meets_request?'Yes':'No']))+detail('Original design costs, bindings and field requirements',state.design)+'<button type="button" data-action="open-design" data-id="'+esc(state.design.plan_id)+'">Open design and field calendar</button>':'')+'</details>';
@@ -514,9 +539,13 @@ export function attachMonitoringRecommendations(host){
     if(!d.cost_basis.trim())throw Error('Enter the basis for the native design costs.');
     if(!d.start_date||!d.end_date||d.end_date<d.start_date)throw Error('Choose an ordered future calendar window.');
     if(extra.required_ids!==undefined&&!Array.isArray(extra.required_ids))throw Error('Additional required_ids must be an array of exact catchment IDs.');
+    const selectedDates=parseRoundDates(roundDateValue(d,true));
+    const calendar={...(extra.calendar||{})};
+    if(Object.keys(selectedDates).length)calendar.selected_round_dates=selectedDates;
+    else delete calendar.selected_round_dates;
     return {...extra,required_ids:[...new Set([...(extra.required_ids||[]),...(state.saved.handoff?.required_catchment_ids||[])])],coverage_mode:d.coverage_mode,budget:requiredDecimal('budget','programme budget'),max_sites:integer(d.max_sites,'Maximum sites'),program_overhead:requiredDecimal('program_overhead','programme overhead'),
       default_cost:{...(extra.default_cost||{}),setup:requiredDecimal('setup','default setup cost'),per_visit:requiredDecimal('per_visit','default cost per visit'),basis:d.cost_basis},
-      calendar:{...(extra.calendar||{}),start_date:d.start_date,end_date:d.end_date,interval_days:integer(d.interval_days,'Days between rounds',1),round_window_days:integer(d.round_window_days,'Round window',1),crews:integer(d.crews,'Field crews',1),visit_minutes:integer(d.visit_minutes,'Minutes per visit',1),travel_buffer_minutes:integer(d.travel_buffer_minutes,'Travel allowance') }};
+      calendar:{...calendar,start_date:d.start_date,end_date:d.end_date,interval_days:integer(d.interval_days,'Days between rounds',1),round_window_days:integer(d.round_window_days,'Round window',1),crews:integer(d.crews,'Field crews',1),visit_minutes:integer(d.visit_minutes,'Minutes per visit',1),travel_buffer_minutes:integer(d.travel_buffer_minutes,'Travel allowance') }};
   }
   function appendDownload(state,item){
     if(!current(state))return;const url=new URL(item.url,document.baseURI);if(url.origin!==location.origin||!/^\/api\/file\//.test(url.pathname))throw Error('The export did not return an original same-origin file ticket.');
