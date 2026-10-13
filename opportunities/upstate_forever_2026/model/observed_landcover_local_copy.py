@@ -329,6 +329,37 @@ def include_input(closure, original_entry):
     _require(digest(collection) == receipt["input_collection_id"]
              and [row for row in collection["entries"] if row["id"] == original_entry["id"]] == [original_entry],
              "The editable comparison changed its admitted source entry")
+    # A revised comparison can use these admitted inputs without being the
+    # first local edition named by the admission. Keep that original edition
+    # and its source as well, so the admission still reopens after a selected
+    # revised-only Study transfer.
+    local_id = identifier(receipt["local_selection_id"])
+    local_prefix = "observed-landcover-selections/" + local_id + "/"
+    local = closure.read(local_prefix + "receipt.json")
+    _require(local.get("schema") == "upstate.observed-landcover-selection/v1"
+             and local.get("state") == "complete"
+             and local.get("id") == local_id == digest(local.get("identity"))
+             and local.get("project_id") == closure.workspace.project["id"]
+             and local.get("source") == receipt["local_source"]
+             and local["identity"].get("selection") == receipt["selection"]
+             and local["identity"].get("binding") == receipt["source_binding"]
+             and local.get("summary") == receipt["summary"],
+             "The admission lost its original local comparison")
+    for descriptor in local["files"].values():
+        _require(_relative(descriptor["path"]).startswith(local_prefix),
+                 "Original local comparison member escapes its saved edition")
+        closure.add_file(descriptor["path"], descriptor)
+    closure.tree(local_prefix.rstrip("/"))
+    local_collection_id = identifier(receipt["local_source"]["source_collection_id"])
+    local_collection = closure.read("sources/" + local_collection_id + ".json")
+    local_entries = [row for row in local_collection["entries"]
+                     if row["id"] == receipt["local_source"]["source_id"]]
+    _require(digest(local_collection) == local_collection_id and len(local_entries) == 1
+             and local_entries[0]["body"]["sha256"] == local["files"]["observed-report.json"]["sha256"]
+             and local_entries[0]["body"]["bytes"] == local["files"]["observed-report.json"]["bytes"],
+             "The admission lost its original local report source")
+    closure.need("sources", local_collection_id,
+                 "Original local edition retained with its admitted inputs")
     parent_id = identifier(receipt["original_source"]["source_collection_id"])
     parent = closure.read("sources/" + parent_id + ".json")
     parents = [row for row in parent["entries"] if row["id"] == receipt["original_source"]["source_id"]]
