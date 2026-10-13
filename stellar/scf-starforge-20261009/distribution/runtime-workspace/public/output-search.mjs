@@ -6,7 +6,7 @@ const el = (tag, text, cls) => {
   return node;
 };
 const integer = value => Number.isSafeInteger(value) && value >= 0;
-export function createOutputSearch({ root, api, route, downloadRoute, onOpen, storagePrefix }) {
+export function createOutputSearch({ root, api, route, downloadRoute, onOpen, onRetain, storagePrefix }) {
   const stylesheetId = 'runtime-output-search-css';
   if (!document.getElementById(stylesheetId)) {
     const link = el('link'); link.id = stylesheetId; link.rel = 'stylesheet';
@@ -31,6 +31,15 @@ export function createOutputSearch({ root, api, route, downloadRoute, onOpen, st
     epoch++; busy = false; message = 'Search paused. Continue from the last retained byte position.'; render(); persist();
   });
   const exportButton = button('Download complete search', 'export', () => download());
+  const retainButton = button('Use in operating procedure', 'procedure', async () => {
+    if (!session || !input || !onRetain) return;
+    const own=identity, selected=session;
+    try {
+      await onRetain({selection:selected.selection,query:selected.query,contextBytes:96});
+      if(identity===own&&session===selected){message='The complete output selection is retained in Operating procedures. Save a named observation there to capture every original byte and match.';render();}
+    } catch(error){if(identity===own&&session===selected){message=error.message;render();}}
+  });
+  retainButton.hidden=!onRetain;
   const status = el('p', '', 'note'), notice = el('p', '', 'message'), results = el('ol', undefined, 'output-search-results');
   status.dataset.outputSearch = 'status'; status.setAttribute('aria-live', 'polite');
   notice.dataset.outputSearch = 'notice'; results.dataset.outputSearch = 'results';
@@ -91,6 +100,7 @@ export function createOutputSearch({ root, api, route, downloadRoute, onOpen, st
     more.disabled = busy || !session || session.result?.done === true;
     pause.disabled = !busy;
     exportButton.disabled = exporting || !session;
+    retainButton.disabled = !session || !onRetain;
     desk.setAttribute('aria-busy', String(busy));
     const result = session?.result;
     status.textContent = !identity ? 'Choose an original output source.' : !session
