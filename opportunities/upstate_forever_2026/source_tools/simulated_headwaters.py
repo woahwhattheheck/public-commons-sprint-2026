@@ -10,6 +10,7 @@ import csv
 from datetime import datetime, timezone
 import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import math
 import os
@@ -596,11 +597,16 @@ def operate_locked(args, output):
         "roots": [{"kind": "scientific-report-editions", "id": scientific_report["id"]}],
         "include_related_results": False,
     }
+    selected_sources = {
+        "application/source_tools/simulated_headwaters_receiving.py":
+            sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
+        "application/source_tools/simulated_headwaters.py": sha256(Path(__file__)),
+    }
     selected_edition = hashlib.sha256(json.dumps({
         "scientific_report": scientific_report["id"],
         "scientific_study": scientific_study["source_operation_id"],
-        "receiving_source_sha256": sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
-        "driver_source_sha256": sha256(Path(__file__)),
+        "receiving_source_sha256": selected_sources["application/source_tools/simulated_headwaters_receiving.py"],
+        "driver_source_sha256": selected_sources["application/source_tools/simulated_headwaters.py"],
     }, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
     selected_archive = output / "selected-study-archives" / (selected_edition + ".zip")
     selected_archive.parent.mkdir(parents=True, exist_ok=True)
@@ -614,13 +620,15 @@ def operate_locked(args, output):
     save(scientific_study_transfer=selected_identity)
     atomic_json(output / "selected-study-transfer.json", selected_transfer)
     selected_restored, selected_manifest = phase("selected_study_restore", lambda: restore_selected_study(
-        selected_archive, selected_transfer, output / "selected-study-reopened" / selected_edition))
+        selected_archive, selected_transfer, output / "selected-study-reopened" / selected_edition,
+        expected_sources=selected_sources))
     selected_cold = phase("selected_study_cold_reopen", lambda: cold_reopen(
         selected_restored, selected_manifest, receipt, output / "selected-study-cold-reopen",
         selected_study=selected_identity))
     save(scientific_study_received=selected_restored, scientific_study_cold_receiving=selected_cold)
 
     programme = phase("adopt_completed_programme", lambda: adopt_completed_programme(ws, receipt))
+    programme.update(phase("save_programme_opening", lambda: save_programme_opening(ws, programme)))
     save(programme_id=programme["programme_id"], programme=programme)
     atomic_json(output / "programme-receiving.json", read_json(ws.root / programme["adoption"]["path"]))
 
@@ -630,6 +638,10 @@ def operate_locked(args, output):
         "programme_id": programme["programme_id"], "programme_report_id": programme["report_id"],
         "programme_input_sha256": programme["input"]["sha256"],
         "programme_adoption_sha256": programme["adoption"]["sha256"],
+        "operator_opening_id": programme["operator_opening_id"],
+        "operator_session_revision": programme["operator_session"]["revision"],
+        "operator_session_sha256": programme["operator_session_file"]["sha256"],
+        "programme_opening_sources": programme["opening_sources"],
         "fieldwork_operation_id": campaign["operation_id"],
         "fieldwork_revision": campaign["current_revision"],
         "customer_review": customer_identity,
@@ -654,6 +666,8 @@ def operate_locked(args, output):
         "application/source_tools/simulated_headwaters_receiving.py",
         "application/source_tools/adopt_simulated_headwaters_programme.py",
         "application/model/compute_programme.py",
+        "application/operator/server.py",
+        "workspace/" + programme["operator_session_file"]["path"],
         "workspace/" + programme["input"]["path"],
         "workspace/" + programme["adoption"]["path"],
         "workspace/compute-programmes/" + programme["programme_id"] + "/programme.json",
@@ -691,6 +705,17 @@ def operate_locked(args, output):
             raise ValueError("Existing archive belongs to another scientific project")
         if any(name not in manifest["members"] for name in required_members):
             raise ValueError("Existing archive lacks the selected completed runs or delivery")
+        for member, source_key in (
+                ("application/source_tools/simulated_headwaters_receiving.py", "receiving_source_sha256"),
+                ("application/model/simulated_customer_review.py", "customer_review_source_sha256")):
+            if manifest["members"][member]["sha256"] != archive_selection[source_key]:
+                raise ValueError("Existing archive contains another selected receiving implementation: " + member)
+        for scope, items in (("application/", programme["opening_sources"]),
+                             ("workspace/", [programme["operator_session_file"]])):
+            for item in items:
+                retained = manifest["members"].get(scope + item["path"], {})
+                if any(retained.get(name) != item[name] for name in ("bytes", "sha256")):
+                    raise ValueError("Archive changed the selected Programme opening: " + item["path"])
         return manifest
 
     if record.get("backup"):
@@ -830,8 +855,9 @@ def adopt_completed_programme(ws, receipt):
     status = manager.status(result["programme_id"], include_ensemble_candidates=False)
     if (status["state"] != "complete"
             or [row["run_id"] for row in status["runs"]] != run_ids
-            or any(not row.get("attempts") or row["attempts"][-1].get("reused") is not True
-                   for row in status["runs"])):
+            or (result.get("programme_reused") is not True
+                and any(not row.get("attempts") or row["attempts"][-1].get("reused") is not True
+                        for row in status["runs"]))):
         raise ValueError("Reopen the Programme's verified completed original native runs")
     report = manager.read_report(result["programme_id"])
     for name in ("schema", "rows", "files"):
@@ -845,6 +871,76 @@ def adopt_completed_programme(ws, receipt):
             "report_id": report["id"], "input": source,
             "adoption": descriptor(ws.root, adopted), "files": report["files"],
             "run_ids": run_ids, "directory": directory.relative_to(ws.root).as_posix()}
+
+
+def save_programme_opening(ws, programme):
+    """Save the original Guided journey through this application's Operator API."""
+    from model.common import digest
+    from source_tools.adopt_simulated_headwaters_programme import save_operator_opening
+
+    adopted = read_json(ws.root / programme["adoption"]["path"])
+    opening = adopted["operator_opening"]
+    if (opening.get("schema") != "upstate.simulated-operator-opening/v1"
+            or opening.get("programme_id") != programme["programme_id"]
+            or opening["journey"].get("project_id") != ws.project["id"]):
+        raise ValueError("Retain the original Programme's project-bound Guided opening")
+    server_path = APP / "operator" / "server.py"
+    source_files = [server_path, APP / "source_tools" / "adopt_simulated_headwaters_programme.py"]
+    sources = [descriptor(APP, path) for path in source_files]
+    # operator is a Python standard-library module, so load the original server
+    # by its full source path rather than importing a competing package name.
+    name = "_simulated_headwaters_operator_" + sources[0]["sha256"]
+    spec = importlib.util.spec_from_file_location(name, server_path)
+    if spec is None or spec.loader is None:
+        raise ValueError("Open the retained original Operator server source")
+    module = importlib.util.module_from_spec(spec)
+    previous_module = sys.modules.get(name)
+    previous_path = list(sys.path)
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+        if Path(module.APPLICATION).resolve() != APP.resolve():
+            raise ValueError("The Operator belongs to another application edition")
+        # This owned state directory stays outside both the application and
+        # scientific Workspace. No HTTP listener or native task is started.
+        with tempfile.TemporaryDirectory(prefix="simulated-headwaters-operator-") as state:
+            operator = module.Operator(ws.root, state)
+            try:
+                workspace_key = operator.primary
+                if operator.ws(workspace_key).root != ws.root:
+                    raise ValueError("The Operator opened another scientific Workspace")
+                retained_opening = save_operator_opening(operator, workspace_key, adopted)
+                saved = retained_opening["operator_session"]
+                if operator.operator_session(workspace_key) != saved:
+                    raise ValueError("The original Operator save did not reopen unchanged")
+            except BaseException as failure:
+                try:
+                    operator.close()
+                except Exception as closing:
+                    if hasattr(failure, "add_note"):
+                        failure.add_note("Operator cleanup also failed: " + str(closing))
+                raise
+            else:
+                operator.close()
+    finally:
+        sys.path[:] = previous_path
+        if previous_module is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = previous_module
+    session_path = ws.root / "operator-session.json"
+    session_file = descriptor(ws.root, session_path)
+    if (read_json(session_path) != saved
+            or session_file != retained_opening["operator_session_file"]
+            or retained_opening["opening_id"] != opening["id"]
+            or saved["journey"].get("recorded_context", {}).get("operator_opening", {}).get("id") != opening["id"]
+            or saved["journey"].get("selection") != opening["journey"]["selection"]
+            or saved.get("revision") != digest(saved["journey"])):
+        raise ValueError("Retain the exact saved Programme view and original notes history")
+    if [descriptor(APP, path) for path in source_files] != sources:
+        raise ValueError("Programme opening source changed during its original save")
+    return {"operator_opening_id": retained_opening["opening_id"], "operator_session": saved,
+            "operator_session_file": retained_opening["operator_session_file"], "opening_sources": sources}
 
 
 def main(argv=None):

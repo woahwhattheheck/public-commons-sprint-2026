@@ -618,7 +618,7 @@ def _native_study_source(ws, files, check, case, delivery=None, *, report_select
     }
 
 
-def restore_selected_study(archive, saved, destination):
+def restore_selected_study(archive, saved, destination, *, expected_sources=None):
     """Reuse or restore the same original selected-study archive and its source."""
     from model import portable, study_transfer
     archive = Path(archive).resolve(strict=True)
@@ -628,6 +628,10 @@ def restore_selected_study(archive, saved, destination):
     manifest = inspected["manifest"]
     if inspected["study"]["id"] != saved["id"]:
         raise ValueError("The selected archive contains another original Study transfer")
+    for name, expected_sha256 in (expected_sources or {}).items():
+        retained = manifest["members"].get(name)
+        if retained is None or retained["sha256"] != expected_sha256:
+            raise ValueError("The selected archive contains another receiving implementation: " + name)
     if destination.is_symlink():
         raise ValueError("Keep selected-study receiving in its own actual directory")
     if destination.exists():
@@ -809,6 +813,7 @@ def _finish(request, application, ws, files, payload):
 
 
 def _programme(ws, files, check, case):
+    from model.common import digest, identifier
     from model.compute_programme import ComputeProgrammes
     run_ids = [case["baseline_run_id"], *case["alternative_run_ids"]]
     source_path = files.file(ws.root, check["input"])
@@ -837,8 +842,9 @@ def _programme(ws, files, check, case):
     manager = ComputeProgrammes(ws)
     status = manager.status(key, include_ensemble_candidates=False)
     if (status["state"] != "complete" or [row["run_id"] for row in status["runs"]] != run_ids
-            or any(not row.get("attempts") or row["attempts"][-1].get("reused") is not True
-                   for row in status["runs"])):
+            or (adopted.get("programme_reused") is not True
+                and any(not row.get("attempts") or row["attempts"][-1].get("reused") is not True
+                        for row in status["runs"]))):
         raise ValueError("Receiving changed completed native Programme reuse")
     for row in status["runs"][1:]:
         comparison = status["comparisons"].get(row["key"])
@@ -856,10 +862,58 @@ def _programme(ws, files, check, case):
     if (not preview["ready"] or preview["selection"]["baseline_run_id"] != run_ids[0]
             or preview["selection"]["scenario_run_ids"] != run_ids[1:]):
         raise ValueError("Receiving changed the Programme's original mapped selection")
+    opening = None
+    scenario_ids = [case["baseline_scenario_id"], *case["alternative_scenario_ids"]]
+    expected_session = check.get("operator_session")
+    if expected_session is not None:
+        if not isinstance(expected_session, dict):
+            raise ValueError("Retain the original saved operator-session record")
+        files.file(ws.root, check["operator_session_file"])
+        saved = files.json("operator-session.json")
+        original_opening = adopted["operator_opening"]
+        saved_journey = saved.get("journey", {})
+        if (check.get("operator_opening_id") != original_opening["id"]
+                or original_opening["programme_id"] != key
+                or saved_journey.get("recorded_context", {}).get("operator_opening", {}).get("id") != original_opening["id"]
+                or saved_journey.get("selection") != original_opening["journey"]["selection"]):
+            raise ValueError("The saved opening no longer represents the original Programme selection")
+        journey = saved.get("journey", {})
+        selection = journey.get("selection", {})
+        if (saved != expected_session
+                or saved.get("schema") != "upstate.operator-session/v1"
+                or saved.get("project_id") != ws.project["id"]
+                or journey.get("schema") != "upstate.operating-journey/v1"
+                or journey.get("project_id") != ws.project["id"]
+                or saved.get("revision") != digest(journey)):
+            raise ValueError("Receiving changed the original saved guided opening")
+        selected_run = selection.get("run_id")
+        if (selection.get("baseline_run_id") != run_ids[0]
+                or selected_run not in run_ids[1:]
+                or selection.get("grid_id") != case["grid_id"]
+                or selection.get("profile_id") != case["profile_id"]
+                or selection.get("scenario_id") != scenario_ids[run_ids.index(selected_run)]
+                or selection.get("delivery_id") != case["delivery_id"]):
+            raise ValueError("The saved guided opening differs from the original demo")
+        comparison_id = identifier(selection["comparison_id"])
+        files.json("comparisons/" + comparison_id + "/comparison.json")
+        comparison = ws.retained_item("comparisons", comparison_id)
+        if (comparison["baseline_run_id"] != run_ids[0]
+                or selected_run not in [item["run_id"] for item in comparison["alternatives"]]):
+            raise ValueError("The saved opening comparison uses another native case")
+        spatial_id = selection.get("spatial_review_id")
+        if spatial_id:
+            selected_reviews = case.get("spatial_review_ids")
+            if selected_reviews is None and len(run_ids) == 2:
+                selected_reviews = {run_ids[1]: case.get("spatial_review_id")}
+            if not isinstance(selected_reviews, dict) or selected_reviews.get(selected_run) != spatial_id:
+                raise ValueError("The saved opening map uses another original run pair")
+        opening = {"revision": saved["revision"], "saved_at": saved["saved_at"],
+                   "entry_view": "journey", "selection": selection}
     return {"kind": "compute_programme", "programme_id": key,
             "state": status["state"], "run_ids": run_ids, "report_id": report["id"],
             "input": check["input"], "adoption": check["adoption"],
-            "files": report["files"], "native_study_selection": preview["selection"]}
+            "files": report["files"], "native_study_selection": preview["selection"],
+            "operator_opening": opening}
 
 
 def _inspect(request):
