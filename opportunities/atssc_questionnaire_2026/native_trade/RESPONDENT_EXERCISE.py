@@ -321,6 +321,13 @@ def main():
         return report
     except Exception as error:
         report.update({"status":"FAILED","finished_at":stamp(),"error":{"type":type(error).__name__,"message":str(error),"traceback":traceback.format_exc()}})
+        try:
+            checkpoint_path=root/"ATSSC_Interrupted_Respondent_Project.zip"
+            if (root/"workspace"/"questionnaires.sqlite3").is_file() and not checkpoint_path.exists():
+                retained=Workspace(root/"workspace").outreach.op_export_project({"path":str(checkpoint_path)})
+                report["retained_case_checkpoint"]=retained
+        except Exception as checkpoint_error:
+            report["checkpoint_error"]={"type":type(checkpoint_error).__name__,"message":str(checkpoint_error)}
         (root/"NATIVE_RESULT.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
         raise
     finally:
