@@ -1,0 +1,97 @@
+{
+  "schema": "commons.guarded-source-replacements/v1",
+  "operation": "ES26-native26A4-presentation-current-composition",
+  "version": "upstate.scientific-report/v19-original-source-readable-layout",
+  "source": {
+    "native_report_operation": "observed-report-16a897c91483a2c23ee5",
+    "native_project_id": "dc92b8b9-6eda-4362-b12d-3cf2ef6c9007",
+    "guarded_source_file_id": "file_000000003200820ebdaedffb5edd0ef8",
+    "native_postimage_sha256": "90bde44af63af7289b1ca3f49a2f806b13d53dbb23df7909cc0f850d012b7d84",
+    "native_postimage_bytes": 65403,
+    "desktop_width": 1365,
+    "narrow_width": 390,
+    "viewed_by": "Original ECO-CLOUD-26A4 producer; current maintainer has performed source review only",
+    "images": {
+      "desktop": "file_00000000c1f8820c8304cd62a7dc03d1",
+      "narrow": "file_0000000006e8820997c8a7c028391572",
+      "pdf_pages": [
+        "file_0000000004a081f8a2ada5476857808d",
+        "file_000000006b9881f5bec2cacaa27a59fb",
+        "file_00000000f14081f49cb4b0b0efe55f36",
+        "file_0000000031e481f8944d73c32038ce90",
+        "file_00000000b2dc81f5bfff90f4fad76880",
+        "file_00000000e8f081f4a28425c4a901e1cb",
+        "file_000000009aa082438598e1b3ed9175c6",
+        "file_000000007238820e8d47837ab98299d8",
+        "file_000000002e40820ab7acdbfafb183a4d"
+      ]
+    }
+  },
+  "files": {
+    "model/scientific_report.py": {
+      "bytes": 82983,
+      "sha256": "5d5de65aeedb044ef83641d6c8a729c0f25f52e41e556255f0e77a4c3a7c869c",
+      "preimage_bytes": 81688,
+      "preimage_sha256": "adee2cd50dfbd0a87b33c9d296681eac954a9e5fe9267ce721d6b58d79963412",
+      "preimage_git_blob": "a81e0b39f149679672842136a6ad28bedc595596"
+    }
+  },
+  "changes": [
+    {
+      "path": "model/scientific_report.py",
+      "old": "            if figure.get(\"title\"):\n                story.append(paragraph(figure[\"title\"], styles[\"Heading3\"]))\n            drawings = list(panel_drawings(figure[\"spec\"], 7.1 * inch))\n            if not drawings:\n                raise ValueError(\"Scientific figure contains no native report panels\")\n            for drawing in drawings[:-1]:\n                story.extend([drawing, Spacer(1, .08 * inch)])\n            story.append(KeepTogether([\n                drawings[-1], Spacer(1, .05 * inch), paragraph(figure[\"caption\"]),\n            ]))",
+      "new": "            heading = [paragraph(figure[\"title\"], styles[\"Heading3\"])] if figure.get(\"title\") else []\n            drawings = list(panel_drawings(figure[\"spec\"], 7.1 * inch))\n            if not drawings:\n                raise ValueError(\"Scientific figure contains no native report panels\")\n            # A title travels with its first plotted panel, not an empty page edge.\n            if len(drawings) > 1:\n                story.append(KeepTogether(heading + [drawings[0]]))\n                story.append(Spacer(1, .08 * inch))\n                for drawing in drawings[1:-1]:\n                    story.extend([drawing, Spacer(1, .08 * inch)])\n                heading = []\n            story.append(KeepTogether(heading + [\n                drawings[-1], Spacer(1, .05 * inch), paragraph(figure[\"caption\"]),\n            ]))"
+    },
+    {
+      "path": "model/scientific_report.py",
+      "old": "\"a{color:inherit;text-decoration:underline}nav{border:1px solid #aaa;padding:12px 20px}\"",
+      "new": "\"a{color:inherit;text-decoration:underline;overflow-wrap:anywhere}li{overflow-wrap:anywhere}nav{border:1px solid #aaa;padding:12px 20px}\""
+    },
+    {
+      "path": "model/scientific_report.py",
+      "old": "\"p{max-width:95ch;overflow-wrap:anywhere}.table-wrap{overflow-x:auto;margin:16px 0}\"",
+      "new": "\"p{max-width:95ch;overflow-wrap:anywhere}.table-wrap{overflow-x:auto;max-width:100%;margin:16px 0;overscroll-behavior-x:contain}\""
+    },
+    {
+      "path": "model/scientific_report.py",
+      "old": "\"padding:8px;border-bottom:1px solid #ccc;overflow-wrap:anywhere}th{background:#eee;border-bottom:1px solid #444}\"",
+      "new": "\"padding:8px;border-bottom:1px solid #ccc;overflow-wrap:normal;word-break:normal}.scientific-number{white-space:nowrap;font-variant-numeric:tabular-nums}th{background:#eee;border-bottom:1px solid #444}\""
+    },
+    {
+      "path": "model/scientific_report.py",
+      "old": "        return html_escape(value).replace(\"\\n\", \"<br>\")\n    if isinstance(block, dict) and block.get(\"kind\") == \"figure\":",
+      "new": "        escaped = html_escape(value).replace(\"\\n\", \"<br>\")\n        import re\n        if re.fullmatch(r\"[+−-]?[0-9][0-9,]*(?:\\.[0-9]+)?(?:[eE][+−-]?[0-9]+)?%?\", value.strip()):\n            return '<span class=\"scientific-number\">' + escaped + '</span>'\n        return escaped\n    if isinstance(block, dict) and block.get(\"kind\") == \"figure\":"
+    },
+    {
+      "path": "model/scientific_report.py",
+      "old": "    styles[\"BodyText\"].leading = 13\n    cell_style",
+      "new": "    styles[\"BodyText\"].leading = 13\n    styles[\"Heading2\"].keepWithNext = True\n    styles[\"Heading3\"].keepWithNext = True\n    cell_style"
+    },
+    {
+      "path": "model/scientific_report.py",
+      "old": "    def append(block):\n",
+      "new": "    def append(block, section_heading=None):\n"
+    },
+    {
+      "path": "model/scientific_report.py",
+      "old": "            heading = [paragraph(figure[\"title\"], styles[\"Heading3\"])] if figure.get(\"title\") else []",
+      "new": "            heading = [paragraph(section_heading, styles[\"Heading2\"])] if section_heading else []\n            if figure.get(\"title\"):\n                heading.append(paragraph(figure[\"title\"], styles[\"Heading3\"]))"
+    },
+    {
+      "path": "model/scientific_report.py",
+      "old": "    for heading, blocks in sections:\n        story.append(paragraph(heading, styles[\"Heading2\"]))\n        for block in blocks:\n            append(block)\n    story.append(paragraph(\"Source editions\", styles[\"Heading2\"]))",
+      "new": "    for heading, blocks in sections:\n        # The section heading and first figure are a single page-aware unit.\n        # Explicit grouping avoids a nested KeepTogether leaving the outer title.\n        if blocks and isinstance(blocks[0], dict) and blocks[0].get(\"kind\") == \"figure\":\n            append(blocks[0], section_heading=heading)\n            remaining = blocks[1:]\n        else:\n            story.append(paragraph(heading, styles[\"Heading2\"]))\n            remaining = blocks\n        for block in remaining:\n            append(block)\n    story.append(paragraph(\"Source editions\", styles[\"Heading2\"]))"
+    },
+    {
+      "path": "model/scientific_report.py",
+      "old": "REPORT_VERSION = \"upstate.scientific-report/v18-original-source-admission\"",
+      "new": "REPORT_VERSION = \"upstate.scientific-report/v19-original-source-readable-layout\""
+    }
+  ],
+  "preserved": [
+    "Current pdf_table_flowables and all scientific source admission",
+    "Current source_links disambiguation and original link targets",
+    "Current observed_report_render presentation and short original CLI",
+    "All original sections, data values, units, figure specifications and report identity rules"
+  ]
+}
