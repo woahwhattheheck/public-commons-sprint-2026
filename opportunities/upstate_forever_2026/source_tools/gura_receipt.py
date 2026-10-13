@@ -22,7 +22,7 @@ from model.workspace import Workspace
 SCHEMA = "upstate.gura-original-receiving/v1"
 SOURCE_STATE_SCHEMA = "upstate.gura-receiving/v1"
 ARCHIVES = {
-    "ndr": {"sha256": "df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4c8af8bea53c6c7d",
+    "ndr": {"sha256": "df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4d4c8af8bea53c6c7d",
             "bytes": 701988,
             "uri": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/data/NDR.zip"},
     "sdr": {"sha256": "34351a1305d8e6258c2d566917cfeab5f152096e930ef5b0a834968146bdc779",
