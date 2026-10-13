@@ -70,7 +70,8 @@ function createDocumentAuthoring(nativeTools, options = {}) {
   const bindings={...BINDINGS,...(options.bindings||{})},now=options.now||Date.now;
   const save=options.onState;
   if(typeof save!=='function')throw new TypeError('Supply the original durable onState receiver');
-  let state=options.state?copy(options.state):null,running=false;
+  let state=options.state?copy(options.state):null,running=false,closed=false,job=null;
+  const schedule=options.setTimeout||globalThis.setTimeout,unschedule=options.clearTimeout||globalThis.clearTimeout;
   const snapshot=()=>state?copy(state):null;
   async function retain(){ await save(snapshot()); }
   async function call(name,args){
@@ -183,46 +184,136 @@ function createDocumentAuthoring(nativeTools, options = {}) {
       throw failure('DOCUMENT_LAYOUT','Original receiving Doc has non-ASCII or multiline content');
     return {text,revision:doc.revisionId,start:p.startIndex,end:p.endIndex-tail,tabId:p.tabId||null};
   }
-  async function documentReady(plan,text){
+  function writeRequest(plan,text,original){
+    const requests=[],tab=original.tabId?{tabId:original.tabId}:{};
+    if(original.end>original.start)requests.push({deleteContentRange:{range:{
+      startIndex:original.start,endIndex:original.end,...tab}}});
+    requests.push({insertText:{location:{index:1,...tab},text}});
+    return {document_id:plan.document_id,write_control:{requiredRevisionId:original.revision},requests};
+  }
+  function frozenWrite(plan,text){
+    const frozen=state.document.write;
+    if(!frozen)return null;
+    const invalid=()=>{throw failure('WRITE_IDENTITY','Preserve the exact original Doc write, revision, tab and attempt history');};
+    if(!object(frozen)||frozen.schema!=='commons.connected_document_write/v1'||
+      !object(frozen.preimage)||frozen.preimage.sha256!==plan.document_preimage_sha256||
+      !Number.isSafeInteger(frozen.preimage.bytes)||frozen.preimage.bytes<0||
+      typeof frozen.revision!=='string'||!frozen.revision||
+      (frozen.tab_id!==null&&(typeof frozen.tab_id!=='string'||!frozen.tab_id||/[\0\r\n]/.test(frozen.tab_id)))||
+      !digest(frozen.request_sha256)||!Number.isSafeInteger(frozen.attempt)||frozen.attempt<1||
+      !Array.isArray(frozen.attempts)||frozen.attempts.length!==frozen.attempt)invalid();
+    const expected=writeRequest(plan,text,{revision:frozen.revision,tabId:frozen.tab_id,
+      start:1,end:1+frozen.preimage.bytes});
+    if(JSON.stringify(frozen.request)!==JSON.stringify(expected)||
+      sha256Utf8(JSON.stringify(expected)).sha256!==frozen.request_sha256)invalid();
+    for(let i=0;i<frozen.attempts.length;i++){
+      const row=frozen.attempts[i];
+      if(!object(row)||row.attempt!==i+1||typeof row.at!=='string'||!Number.isFinite(Date.parse(row.at))||
+        !['STARTED','ACCEPTED','UNCERTAIN'].includes(row.status))invalid();
+    }
+    return frozen;
+  }
+  function createWrite(plan,text,original,{legacy=false}={}){
+    const request=writeRequest(plan,text,original);
+    return {schema:'commons.connected_document_write/v1',request,
+      request_sha256:sha256Utf8(JSON.stringify(request)).sha256,
+      revision:original.revision,tab_id:original.tabId,preimage:sha256Utf8(original.text),
+      attempt:1,attempts:[{attempt:1,at:new Date(now()).toISOString(),
+        status:legacy?'UNCERTAIN':'STARTED',...(legacy?{recovered_legacy:true}:{})}]};
+  }
+  async function verified(plan,original){
+    state.document={...state.document,status:'VERIFIED',revision:original.revision,
+      tab_id:original.tabId,source:plan.source};
+    await retain();
+  }
+  function selectedContinuation(value){
+    if(!object(value)||Object.keys(value).some(key=>!['expected_write_sha256','after_attempt'].includes(key))||
+      !digest(value.expected_write_sha256)||!Number.isSafeInteger(value.after_attempt)||value.after_attempt<1)
+      throw failure('CONTINUATION_SELECTION','Select the retained original write SHA-256 and its exact current attempt');
+    return copy(value);
+  }
+  function checkContinuation(plan,text,selection){
+    const frozen=frozenWrite(plan,text);
+    if(!frozen||selection.expected_write_sha256!==frozen.request_sha256||selection.after_attempt!==frozen.attempt)
+      throw failure('CONTINUATION_CHANGED','Read the same original operation and select its current retained write and attempt');
+  }
+  async function documentReady(plan,text,{mode='run',continuation=null}={}){
+    let frozen=frozenWrite(plan,text);
     const original=await originalDocument(plan);
     if(original.text===text){
-      state.document={status:'VERIFIED',revision:original.revision,tab_id:original.tabId,source:plan.source};
-      await retain();return;
+      if(frozen&&original.tabId!==frozen.tab_id)
+        throw failure('DOCUMENT_CHANGED','The selected source is in a different tab; preserve the original write');
+      await verified(plan,original);return true;
     }
-    if(['WRITE_STARTED','WRITE_ACCEPTED'].includes(state.document.status))
-      throw failure('RECONCILE_DOCUMENT','The original write is retained; reconcile its actual content before another write');
-    if(sha256Utf8(original.text).sha256!==plan.document_preimage_sha256)
-      throw failure('DOCUMENT_PREIMAGE','The original receiving Doc has changed');
-    const requests=[],tab=original.tabId?{tabId:original.tabId}:{};
-    if(original.end>original.start)requests.push({deleteContentRange:{range:{startIndex:original.start,endIndex:original.end,...tab}}});
-    requests.push({insertText:{location:{index:1,...tab},text}});
-    state.document={status:'WRITE_STARTED',revision:original.revision,preimage:sha256Utf8(original.text)};
-    await retain();
-    const written=await call('writeDocument',{document_id:plan.document_id,
-      write_control:{requiredRevisionId:original.revision},requests});
-    if(written.documentId!==plan.document_id)
-      throw failure('RECONCILE_DOCUMENT','Native write did not return the selected Doc identity');
-    state.document={...state.document,status:'WRITE_ACCEPTED',
-      accepted_revision:written.revisionId||written.writeControl?.requiredRevisionId||null};
+    if(mode==='inspect')throw failure('DOCUMENT_BYTES','Original Doc differs from the complete selected source packet');
+    const pending=['WRITE_STARTED','WRITE_ACCEPTED'].includes(state.document.status);
+    if(!frozen&&pending){
+      // Legacy state did not retain the full request. Reconstruct only from the
+      // SAME original revision, whose native paragraph/tab is unchanged.
+      if(original.revision!==state.document.revision||
+        sha256Utf8(original.text).sha256!==plan.document_preimage_sha256||
+        state.document.preimage?.sha256!==plan.document_preimage_sha256)
+        throw failure('RECONCILE_DOCUMENT','The legacy write has no recoverable original revision; preserve it');
+      state.document.write=createWrite(plan,text,original,{legacy:true});
+      frozen=frozenWrite(plan,text);await retain();
+    }
+    if(frozen){
+      if(original.revision!==frozen.revision||original.tabId!==frozen.tab_id||
+        sha256Utf8(original.text).sha256!==frozen.preimage.sha256||
+        sha256Utf8(original.text).bytes!==frozen.preimage.bytes)
+        throw failure('DOCUMENT_REVISION_CHANGED','The original write revision has changed; no rebasing or repeated mutation is allowed');
+      if(mode==='reconcile'){
+        state.status='CONTINUATION_AVAILABLE';await retain();return false;
+      }
+      if(mode!=='continue')
+        throw failure('RECONCILE_DOCUMENT','Use read-only reconcile, then explicitly continue the exact retained write and attempt');
+      checkContinuation(plan,text,continuation);
+      frozen.attempt++;
+      frozen.attempts.push({attempt:frozen.attempt,at:new Date(now()).toISOString(),status:'STARTED'});
+    }else{
+      if(state.document.status==='VERIFIED')
+        throw failure('DOCUMENT_REVISION_CHANGED','The previously verified source has changed; preserve the later Doc');
+      if(sha256Utf8(original.text).sha256!==plan.document_preimage_sha256)
+        throw failure('DOCUMENT_PREIMAGE','The original receiving Doc has changed');
+      if(mode==='reconcile'){
+        state.status='PREPARED';await retain();return false;
+      }
+      if(mode==='continue')throw failure('CONTINUATION_CHANGED','Reconcile this original operation before selecting a continuation');
+      frozen=createWrite(plan,text,original);
+    }
+    state.document={...state.document,status:'WRITE_STARTED',revision:frozen.revision,
+      preimage:copy(frozen.preimage),write:frozen};
+    state.status='WRITE_PENDING';
+    await retain(); // Complete exact CAS request and attempt precede dispatch.
+    let written;
+    try{
+      if(closed)throw failure('CLOSED','The original owner closed before dispatch; keep its frozen request for reconciliation');
+      written=await call('writeDocument',copy(frozen.request));
+      if(written.documentId!==plan.document_id)
+        throw failure('RECONCILE_DOCUMENT','Native write did not return the selected Doc identity');
+    }catch(error){
+      frozen.attempts[frozen.attempt-1].status='UNCERTAIN';
+      frozen.attempts[frozen.attempt-1].code=String(error.code||error.name||'NATIVE_ERROR').slice(0,160);
+      await retain();throw error;
+    }
+    const revision=written.revisionId||written.writeControl?.requiredRevisionId||null;
+    Object.assign(frozen.attempts[frozen.attempt-1],{status:'ACCEPTED',accepted_revision:revision});
+    state.document={...state.document,status:'WRITE_ACCEPTED',accepted_revision:revision};
     await retain();
     const after=await originalDocument(plan);
-    if(after.text!==text||after.tabId!==original.tabId)throw failure('DOCUMENT_BYTES','Full original Doc readback differs from the complete source packet');
-    state.document={status:'VERIFIED',revision:after.revision,tab_id:after.tabId,source:plan.source};await retain();
+    if(after.text!==text||after.tabId!==frozen.tab_id)
+      throw failure('DOCUMENT_BYTES','Full original Doc readback differs from the complete source packet');
+    await verified(plan,after);return true;
   }
-  async function execute(input,inspectOnly=false){
-    if(running)throw failure('RUNNING','Continue the existing in-flight operation');
-    running=true;
+  async function execute(request,mode,continuation){
     try{
-      // Snapshot the complete caller-owned request before any awaited callback.
-      const request=copy(input);
       const plan=await initialize(request);
+      if(continuation)checkContinuation(plan,request.text,continuation);
       await identity(plan);
-      if(inspectOnly){
-        const original=await originalDocument(plan);
-        if(original.text!==request.text)
-          throw failure('DOCUMENT_BYTES','Original Doc differs from the complete selected source packet');
-        state.document={status:'VERIFIED',revision:original.revision,tab_id:original.tabId,source:plan.source};
-      }else await documentReady(plan,request.text);
+      const ready=await documentReady(plan,request.text,{mode,continuation});
+      if(!ready)return {state:snapshot(),pending:state.document.write?{
+        expected_write_sha256:state.document.write.request_sha256,
+        after_attempt:state.document.write.attempt}:null};
       state.status='DOCUMENT_READY';
       delete state.last_failure;
       await retain();
@@ -233,19 +324,66 @@ function createDocumentAuthoring(nativeTools, options = {}) {
       }};
     }catch(error){
       if(state){
+        // Local refusal/validation must not erase an active original provider interval.
+        const observed=now(),previous=state.last_failure;
+        const priorDeadline=previous?.retry_at_ms>observed?previous.retry_at_ms:0;
+        const nextDeadline=error.retry_after_seconds?observed+error.retry_after_seconds*1000:0;
+        const retryDeadline=Math.max(priorDeadline,nextDeadline);
         state.last_failure={code:error.code||error.name,message:cleanMessage(error.message),
-          at:new Date(now()).toISOString(),
-          ...(error.retry_after_seconds?{retry_after_seconds:error.retry_after_seconds,
-            retry_at_ms:now()+error.retry_after_seconds*1000}:{})};
+          at:new Date(observed).toISOString(),
+          ...(retryDeadline>observed?{
+            retry_after_seconds:nextDeadline>=priorDeadline?error.retry_after_seconds:previous.retry_after_seconds,
+            retry_at_ms:retryDeadline}:{})};
         await retain();
       }
       throw error;
     }finally{running=false;}
   }
+  function begin(input,mode,continuation){
+    if(closed)throw failure('CLOSED','This original authoring owner is closed');
+    if(running)throw failure('RUNNING','Continue waiting for the same in-flight operation');
+    // Snapshot complete caller input before validators, state writes or tools.
+    const request=copy(input),selected=continuation?selectedContinuation(continuation):null;
+    prepare(request,sha256Utf8);
+    running=true;
+    const current={settled:false,result:null,error:null,promise:null,completion:null};
+    job=current;
+    current.promise=Promise.resolve().then(()=>execute(request,mode,selected));
+    // Always observe the original promise. Waiting never cancels or duplicates it.
+    current.completion=current.promise.then(result=>{current.settled=true;current.result=result;},
+      error=>{current.settled=true;current.error=error;});
+    return current;
+  }
+  async function wait({timeout_ms=10000}={}){
+    if(!Number.isSafeInteger(timeout_ms)||timeout_ms<0||timeout_ms>60000)
+      throw new TypeError('timeout_ms must be an integer between 0 and 60000');
+    const current=job;
+    if(!current)throw failure('NOT_STARTED','Start or continue the same original operation first');
+    if(!current.settled&&timeout_ms>0){
+      if(typeof schedule!=='function'||typeof unschedule!=='function')
+        throw failure('WAIT_TIMER_REQUIRED','Supply the runtime timers for bounded cooperative waiting');
+      let timer;
+      try{await Promise.race([current.completion,new Promise(resolve=>{timer=schedule(resolve,timeout_ms);})]);}
+      finally{if(timer!==undefined)unschedule(timer);}
+    }
+    if(!current.settled)return {status:'PENDING',state:snapshot()};
+    if(current.error)throw current.error;
+    return {status:'SETTLED',result:copy(current.result)};
+  }
+  async function close(){
+    closed=true;
+    const current=job;
+    if(current)await current.completion;
+    return snapshot();
+  }
   return Object.freeze({
-    run:input=>execute(input,false),
-    inspect:input=>execute(input,true),
-    snapshot
+    run:async input=>await begin(input,'run',null).promise,
+    inspect:async input=>await begin(input,'inspect',null).promise,
+    reconcile:async input=>await begin(input,'reconcile',null).promise,
+    continue:async (input,selection)=>await begin(input,'continue',selection).promise,
+    start:input=>{begin(input,'run',null);return {status:'PENDING',state:snapshot()};},
+    startContinuation:(input,selection)=>{begin(input,'continue',selection);return {status:'PENDING',state:snapshot()};},
+    wait,close,snapshot
   });
 }
 module.exports={SCHEMA,BINDINGS,prepare,createDocumentAuthoring};

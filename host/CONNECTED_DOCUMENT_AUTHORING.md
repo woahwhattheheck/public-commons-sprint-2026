@@ -34,7 +34,7 @@ const ready = await author.run({
 
 All identifiers and source variables above come from the existing authorized operation. `originalPlainDocText` is the entire current paragraph with only its returned final native paragraph newline excluded. For an empty original plain Doc, use the SHA-256 of the empty string. Do not use an abbreviated excerpt, an earlier version of the Doc or a generated substitute as the preimage.
 
-`onState` is required and awaited. It must persist the small JSON-serializable state in the owning operation's existing durable journal. It is called before the write, immediately after an accepted write and after full readback. The source packet itself remains in the existing source bank. A snapshot includes original actor/Doc identities, source length/hash, the immutable plan hash, native call count, current Doc revision and sanitized failure information. It does not store signed connector URLs.
+`onState` is required and awaited. It must persist the complete JSON-serializable state in the owning operation's existing durable journal. It is called before the write, immediately after an accepted write and after full readback. The source packet stays in the existing source bank; the journal additionally retains the exact original native write request, including its complete insertion text, before dispatch. Allow roughly the source packet size plus journal metadata rather than assuming this state is small. A snapshot includes original actor/Doc identities, source length/hash, the immutable plan hash, native call count, current Doc revision and sanitized failure information. It does not store signed connector URLs.
 
 The complete request is copied synchronously before the first awaited validator or journal callback. Later caller mutations cannot change the source that the plan identifies or the text sent to the native Doc.
 
@@ -73,6 +73,61 @@ The returned object contains `state.status === 'DOCUMENT_READY'` and:
 ```
 
 This is the Doc-authoring result. The Library receiver separately owns raw export and Library receipt validation.
+
+## Original write continuation and cooperative waiting
+
+An interrupted tool call is an unknown outcome. A later read of the original Doc may show the selected complete source, the unchanged original preimage, or a later edit. These states have different continuations.
+
+The helper now retains a `commons.connected_document_write/v1` record at `state.document.write`. It contains the exact native request, original required revision and tab, original preimage byte length/hash, request SHA-256, current attempt, and ordered attempt observations. `WRITE_PENDING` is saved before dispatch. Accepted or uncertain responses update that same history; full readback must still match before `DOCUMENT_READY`.
+
+The write uses **requiredRevisionId**, never targetRevisionId. Google's [current batchUpdate contract](https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/batchUpdate#writecontrol) says a request whose required revision is no longer current is rejected without processing, and the batch applies atomically. Keeping the exact same required revision and body means an unknown earlier call and an explicitly selected continuation cannot both insert the source into successive revisions. A later revision is never adopted as a replacement precondition merely because its text resembles the old preimage.
+
+First reconcile using only original reads:
+
+```javascript
+const observed = await author.reconcile(originalInput);
+
+if (observed.document) {
+  // The complete selected source is already present. No write was repeated.
+  const ready = observed;
+} else if (observed.state.status === 'CONTINUATION_AVAILABLE') {
+  // Retain this exact selection with the same original operation.
+  const selection = observed.pending;
+  // Explicit continuation, after the owning operation selects it:
+  const ready = await author.continue(originalInput, selection);
+}
+```
+
+The selection is exactly `{expected_write_sha256, after_attempt}`. It must equal the retained request hash and current attempt. Each continuation reads and verifies the actor and full original Doc again before a write. If the source already matches, it returns its current verified revision without dispatch. If the original revision, tab or preimage changed, it refuses to rebase or overwrite the later Doc. Stale attempt selections also refuse to dispatch.
+
+Original v1 journals remain readable. A legacy `WRITE_STARTED` or `WRITE_ACCEPTED` record lacks the full native body. Read-only reconciliation reconstructs it only when the live Doc is still at that exact saved revision and has the exact original preimage. The actual original tab and paragraph bounds then reproduce the predecessor's deterministic request. Otherwise it preserves the legacy uncertain record and refuses another write. A legacy record whose target source is already fully present is adopted without a write.
+
+```javascript
+author.start(originalInput); // Starts the same run, returns immediately.
+for (;;) {
+  const observation = await author.wait({timeout_ms: 10000});
+  if (observation.status === 'SETTLED') {
+    const ready = observation.result;
+    break;
+  }
+  const current = observation.state;
+  reportProgress({
+    operation_id: current?.operation_id,
+    status: current?.status || 'INITIALIZING',
+    document_status: current?.document?.status,
+    attempt: current?.document?.write?.attempt
+  });
+  await yieldToOwningRuntime(); // E.g. the existing functions.exec yield_control().
+}
+```
+
+This is cooperative observation of one original Promise. `wait` accepts 0–60,000 milliseconds (10,000 default); a timeout returns `PENDING` and does not cancel or repeat the provider call. `startContinuation(originalInput, selection)` provides the same observation flow for an explicit continuation. `run`, `inspect`, `reconcile` and `continue` remain ordinary awaited methods. A settled failure is thrown by `wait`, preserving the same original error.
+
+Keep the executing runtime alive while its original Promise is pending. In a tools-backed isolate, yield from the live cell and resume that same cell; do not end the isolate, discard the Promise, or create another author merely because a wait timed out. In the existing application host, retain this author in its current operation lifetime. `close()` prevents further calls, prevents a not-yet-dispatched write, and drains the already-entered original call before returning. It cannot cancel an externally accepted Docs operation. No background watcher or replacement operation engine is introduced.
+
+The owning caller may inject its original timer functions through `setTimeout` and `clearTimeout` if the runtime does not provide them globally. The journal callback remains the original durable writer and must preserve ordering. Do not log the complete pending state publicly: its frozen request includes the original source text. Report only the operation/status/attempt metadata needed for coordination.
+
+`run` never automatically replays an uncertain write. `reconcile` never dispatches a mutation. An actual approval denial or terminal source/destination restriction remains binding; explicit continuation is not permission to bypass that decision. All continuations use the same original actor, Doc, source and authorized operation.
 
 ## Join the maintained Library receiver
 
@@ -132,13 +187,18 @@ Pass the actual connector `file_uri` object between supported native actions. Se
 | `DOCUMENT_READY` | Feed the exact Doc/revision and original payload into the maintained receiver. |
 | `DOCUMENT_PREIMAGE` | Inspect the same original Doc; another edit changed the selected preimage. Preserve that edit. |
 | `DOCUMENT_LAYOUT` | Use the actual native paragraph/tab layout; do not guess or broaden the edit range. |
-| `WRITE_STARTED` retained after interruption | Read the same Doc first. If its full source equals the selected packet, normal continuation adopts it. Otherwise reconcile that original write before another mutation. |
-| `WRITE_ACCEPTED` with incomplete readback | Continue the same Doc and source. A different full body is not accepted as the selected packet. |
+| `WRITE_STARTED` retained after interruption | Run read-only `reconcile`. Adopt complete matching source, or explicitly select the returned original write hash/current attempt for same-revision continuation. |
+| `WRITE_ACCEPTED` with incomplete readback | Reconcile the same Doc/source. Only unchanged original revision, tab and preimage permit explicit frozen-CAS continuation; later edits are preserved. |
+| `DOCUMENT_REVISION_CHANGED` / `CONTINUATION_CHANGED` | Preserve the later Doc or newer retained attempt. Do not rebuild the request against a new revision. |
 | `SOURCE_CHANGED` | Resume the original immutable request; changing source or destination requires its own explicitly selected operation. |
 | `PROVIDER_RETRY_AT` | Honor the retained actual provider interval, then resume the same operation at a useful work boundary. |
 | Provider rejection or approval denial | Retain the original result and resolve that exact authorized operation; do not rotate actor, provider or destination. |
 
 The helper never automatically retries a mutation. It refuses a second concurrent call on the same instance. Original native error responses remain on the thrown error where available; the portable journal retains only a sanitized message/code and actual retry interval. Keep complete failure state so another authorized worker can continue the same original operation.
+
+## Validation scope for the continuation
+
+The complete successor was invoked against explicit reference Docs and durable-journal boundaries, including the actual predecessor to obtain a legacy interrupted journal. The focused course covered same-body legacy continuation, bounded pending observation, close/drain, accepted-response loss with no repeated write, a late original provider commit racing the same-revision continuation, refusal of later revisions/tampered requests, and closure before dispatch. These are source-model results, not a claim of a new native Docs write, provider timing limit, or rendered customer delivery. The original existing document/source operation owns actual use.
 
 ## Actual product use
 
