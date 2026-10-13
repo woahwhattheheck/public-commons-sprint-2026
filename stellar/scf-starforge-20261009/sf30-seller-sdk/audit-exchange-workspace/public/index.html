@@ -38,6 +38,7 @@
     <button type="button" data-section="revisions">Compare revisions</button>
     <button type="button" data-section="editions">Saved editions</button>
     <button type="button" data-section="reviews">Review work</button>
+    <button type="button" data-section="review-following">Review following revisions</button>
     <button type="button" data-section="links">Related workspaces</button>
     <button type="button" data-section="analysis">Native analysis</button>
     <button type="button" data-section="projection">Turnover tables</button>
@@ -145,6 +146,41 @@
         <label>Evidence links, one per line: label | URL<textarea id="review-evidence" data-draft rows="4" spellcheck="false" placeholder="Source document | https://example.org/document"></textarea></label>
         <button type="submit" data-mutation disabled>Save review</button>
       </form>
+    </section>
+
+
+    <section id="revision-review-panel" data-panel="review-following" aria-labelledby="revision-review-heading" hidden>
+      <div class="section-heading"><div><p class="eyebrow">Retained findings and changed XML</p><h2 id="revision-review-heading">Review following revisions</h2></div><a href="/AUDIT_REVISION_REVIEW.md" target="_blank" rel="noopener">Full operating guide</a></div>
+      <p>Inspect each earlier finding against the current original XML. Explicitly retain its earlier revision or review the complete fields and choose a current entity. Nothing is automatically resolved.</p>
+      <p id="revision-review-state" role="status">Connect the original Audit workspace.</p>
+      <p id="revision-review-persistence" role="status"></p>
+      <div class="actions"><button type="button" id="revision-review-new">New working review</button><button type="button" id="revision-review-download">Download complete working copy</button></div>
+      <form id="revision-review-working-form" onsubmit="return false" class="card"><label>Saved unfinished working copies<select id="revision-review-working"></select></label><div class="actions"><button type="button" id="revision-review-working-refresh">Refresh working copies</button><button type="button" id="revision-review-working-open">Open complete working copy</button></div></form>
+      <form id="revision-review-import" class="card"><label>Complete working JSON<input type="file" id="revision-review-import-file" accept=".json,application/json" required></label><button type="submit">Import as a separate working copy</button></form>
+      <form id="revision-review-selection" onsubmit="return false" class="card">
+        <label>Working title<input id="revision-review-name" type="text"></label>
+        <label>Original source<select id="revision-review-source"></select></label>
+        <label>Whole review note<textarea id="revision-review-note" rows="3"></textarea></label>
+        <button id="revision-review-preview" type="button">Preview selected earlier reviews</button>
+      </form>
+      <h3>Reviews on earlier revisions</h3><div id="revision-review-candidates"></div>
+      <h3>Reviewed decisions</h3><div id="revision-review-decisions"></div>
+      <form id="revision-review-decision" class="card" hidden>
+        <h3 id="revision-review-title"></h3>
+        <label>Explicit decision<select id="revision-review-mode"><option value="retain">Retain on the earlier revision</option><option value="update">Review and update on the current revision</option></select></label>
+        <label>Reason for this decision<textarea id="revision-review-reason" rows="3" required></textarea></label>
+        <fieldset id="revision-review-fields"><legend>Complete current review</legend>
+          <label>Current entity<select id="revision-review-entity"></select></label>
+          <label>Title<input id="revision-review-field-title" type="text"></label>
+          <div class="form-grid"><label>Status<select id="revision-review-field-status"><option value="open">Open</option><option value="investigating">Investigating</option><option value="resolved">Resolved</option><option value="accepted">Accepted</option></select></label><label>Assignee<input id="revision-review-field-assignee" type="text"></label><label>Due date<input id="revision-review-field-dueDate" type="text" placeholder="Preserve the reviewed source value"></label></div>
+          <label>Review note<textarea id="revision-review-field-note" rows="4"></textarea></label>
+          <label>Evidence (one label | https://URL per line)<textarea id="revision-review-field-evidence" rows="3"></textarea></label>
+        </fieldset>
+        <div id="revision-review-native"></div>
+        <button type="submit">Keep complete decision</button>
+      </form>
+      <div class="actions"><button id="revision-review-apply" type="button" data-mutation>Apply explicit decisions and download source archive</button></div>
+      <h3>Complete applied review archives</h3><div id="revision-review-history"></div>
     </section>
 
     <section data-panel="links" aria-labelledby="links-heading" hidden>

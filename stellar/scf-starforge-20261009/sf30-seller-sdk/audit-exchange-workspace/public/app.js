@@ -1,3 +1,4 @@
+import {mountRevisionReview} from "/revision-review.js";
 import {mountRecipientOperator} from "/recipient-operator.js";
 import {mountCorrectionDesk} from "/corrections.js";
 import {AuditExchangeClient, AuditExchangeError, auditRequestId, auditFileBase64, auditSha256} from "/client.mjs";
@@ -13,7 +14,7 @@ const S={
   analysisPollTimer:null,analysisPollBusy:false,analysisRefreshPaused:false,activeAnalysisId:null,
   tabId:sessionStorage.getItem("audit-exchange-tab")||auditRequestId()
 };
-let correctionDesk=null,recipientDesk=null;
+let correctionDesk=null,recipientDesk=null,revisionDesk=null;
 sessionStorage.setItem("audit-exchange-tab",S.tabId);
 const pendingKey=id=>"audit-exchange:pending:"+id;
 const requestOf=row=>row?.envelope?.requestId||row?.requestId;
@@ -104,6 +105,7 @@ function updateControls(){
   document.body.setAttribute("aria-busy",String(S.busy));
   correctionDesk?.sync();
   recipientDesk?.sync();
+  revisionDesk?.sync();
 }
 async function run(label,work){
   if(S.busy)return;
@@ -273,13 +275,13 @@ function restoreDraft(){
   }
   renderPatches();syncNativeOptions();
 }
-async function showSection(section){await flushDraft();S.section=section;all("[data-panel]").forEach(node=>node.hidden=node.dataset.panel!==section);all("[data-section]").forEach(node=>node.setAttribute("aria-current",node.dataset.section===section?"page":"false"));scheduleAnalysisRefresh();if(section==="corrections")await correctionDesk.open();}
+async function showSection(section){await flushDraft();S.section=section;all("[data-panel]").forEach(node=>node.hidden=node.dataset.panel!==section);all("[data-section]").forEach(node=>node.setAttribute("aria-current",node.dataset.section===section?"page":"false"));scheduleAnalysisRefresh();if(section==="corrections")await correctionDesk.open();if(section==="review-following")await revisionDesk.open();}
 function showInspector(view){S.inspector=view;all("[data-inspector-panel]").forEach(node=>node.hidden=node.dataset.inspectorPanel!==view);all("[data-inspector]").forEach(node=>node.setAttribute("aria-current",node.dataset.inspector===view?"page":"false"));}
 function sourceBinding(){return S.detail?S.detail.source.name+" · revision "+S.detail.revision.number+" · "+S.detail.revision.id:"Open a source revision in Inspect and correct.";}
 function clearDetailView(){
   S.activeEntity=null;S.activeField=null;S.analysisPreview=null;S.projectionPreview=null;S.analysisInput=null;S.projectionInput=null;S.comparison=null;S.dirtyForms.clear();
   for(const file of ["import","replace","weather","receive"]){S[file+"File"]=null;$(file+"-file").value="";}
-  for(const form of all("form"))if(form.id!=="connect-form")form.reset();
+  for(const form of all("form"))if(form.id!=="connect-form"&&!form.closest("#revision-review-panel"))form.reset();
   for(const id of ["entities-table","fields-table","patches-table","references-table","series-table","validation-summary","validation-table","revision-table","comparison-table","edition-sources","analysis-readings","projection-tables"])empty(id,"Open a source revision to view its retained records.");
   for(const id of ["entity-detail","field-form","edition-detail","analysis-preview","analysis-result","projection-preview","receive-result","reference-comparison"])$(id).hidden=true;
   $("source-context").replaceChildren(el("p","Select a source document."));$("xml-text").value="";
@@ -708,7 +710,7 @@ $("recover-file-form").addEventListener("submit",event=>{event.preventDefault();
   }).then(restored=>{if(!restored)throw new Error("Another original request is already retained for this workspace.");});
   await reconcilePending();notice("Opened the complete original request. Recover it with its original identity and inputs.");
 });});
-$("recover-request").addEventListener("click",()=>run("Recover original retained request",async()=>{await reconcilePending();const actionName=S.pending?.envelope.action,originalInputs=clone(S.pending?.envelope.inputs||{}),result=await executePending();await refresh();if(result?.sourceId&&result?.revisionId)await openSource(result.sourceId,result.revisionId);else if(["analysis.run","analysis.resume"].includes(actionName))renderAnalysisResult(result);else if(actionName==="export.create")await download(result);else if(actionName==="return.apply")await correctionDesk.recovered(result,originalInputs);else if(actionName.startsWith("recipient."))await recipientDesk.recovered(actionName,result);else if(actionName==="workspace.receive"){$("receive-result").hidden=false;$("receive-result-json").textContent=json(result);}notice("Recovered the original "+actionName+" result.");}));
+$("recover-request").addEventListener("click",()=>run("Recover original retained request",async()=>{await reconcilePending();const actionName=S.pending?.envelope.action,originalInputs=clone(S.pending?.envelope.inputs||{}),result=await executePending();await refresh();if(result?.sourceId&&result?.revisionId)await openSource(result.sourceId,result.revisionId);else if(["analysis.run","analysis.resume"].includes(actionName))renderAnalysisResult(result);else if(actionName==="export.create")await download(result);else if(actionName==="return.apply")await correctionDesk.recovered(result,originalInputs);else if(actionName==="review.transition.apply")await revisionDesk.recovered(result);else if(actionName.startsWith("recipient."))await recipientDesk.recovered(actionName,result);else if(actionName==="workspace.receive"){$("receive-result").hidden=false;$("receive-result-json").textContent=json(result);}notice("Recovered the original "+actionName+" result.");}));
 $("download-request").addEventListener("click",()=>{if(S.pending)downloadBytes(json(S.pending)+"\n","audit-original-request-"+S.pending.envelope.requestId+".json","application/json");});
 $("close-refused").addEventListener("click",()=>run("Close refused original request",async()=>{await reconcilePending();if(S.pending?.status!=="refused")throw new Error("Recover the original result before closing this request.");await closePending(null,"server refused");await refresh();notice("Closed the refused request. Review the current workspace before preparing a new change.");}));
 document.addEventListener("input",event=>{if(event.target.matches("[data-draft]")){if(event.target.form?.id)S.dirtyForms.add(event.target.form.id);queueDraft();}if(event.target===$("actor"))localStorage.setItem("audit-exchange:operator",$("actor").value);});
@@ -721,4 +723,5 @@ $("server-url").value=location.origin+"/";$("actor").value=localStorage.getItem(
 try{const previous=JSON.parse(localStorage.getItem("audit-exchange:last-connection")||"null");if(previous&&new URL(previous.url).origin===location.origin){$("server-url").value=previous.url;$("workspace-pin").value=previous.workspaceId;}}catch{}
 correctionDesk=mountCorrectionDesk({state:()=>S.state,busy:()=>S.busy,pending:()=>S.pending,tabId:()=>S.tabId,read:(...args)=>S.client.read(...args),mutate,run,operator,download,downloadBytes,exportFile,openSource,notice,fileBase64:auditFileBase64});
 recipientDesk=mountRecipientOperator({state:()=>S.state,busy:()=>S.busy,pending:()=>S.pending,read:(...args)=>S.client.read(...args),mutate,run,operator,download,downloadBytes,notice,fileBase64:auditFileBase64,table});
+revisionDesk=mountRevisionReview({state:()=>S.state,busy:()=>S.busy,pending:()=>S.pending,read:(...args)=>S.client.read(...args),mutate,run,operator,download,downloadBytes,notice,table});
 syncNativeOptions();updateControls();
