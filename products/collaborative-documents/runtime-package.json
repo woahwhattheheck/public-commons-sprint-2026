@@ -1,0 +1,9 @@
+{
+  "name": "stellar-forge-collaborative-documents-integration",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "license": "MIT"
+}
