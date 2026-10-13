@@ -1,0 +1,11 @@
+# Complete compressed Flow exports
+
+Operation ECO-FLOW-EXPORT-CAPACITY-7F24-20261013 continues the original Daily Flow comparison and saved load comparison in the same Measurements application.
+
+All four Flow ZIP downloads—original studies, saved load calculations, study comparisons and saved-load comparisons— use standard ZIP method8 (DEFLATE) for compressible members and method0 for members that would become larger. The complete original relative paths, order, full UTF-8 bodies, manifest entries and scientific comparison identifiers remain unchanged. The archive itself carries its actual new byte count and SHA-256. Historical saved ZIPs remain independently usable; the original stored ZIP writer and unrelated collection callers are unchanged.
+
+Large product strings are encoded one at a time. The builder keeps compressed payloads rather than a second complete set of uncompressed member buffers, and the HTTP response base64-encodes the compressed archive. This avoids creating both an extra100MB-class ZIP and its larger base64 copy for the retained products. Original full scientific file generation remains synchronous and still retains its complete selected files.
+
+Continue the existing application operation and original Workspace. Open Measurements → Daily flow studies and Concentration and discharge loads. Open a saved study or calculation and download its complete ZIP; for comparisons, select the intended exact pair, compare it and download that displayed pair’s complete ZIP. Extract with the recipient's ordinary ZIP application. Open report.html, both full source/report folders and every selected CSV/JSON/README; the original manifest binds each full member. Retain the displayed pair/returned archive checksum in the original receiving output. Original selected daily/load calculations and their admission decisions are unchanged.
+
+AGENTS.md2026-10-13.1 and CURRENT_OWNER_DIRECTION.md2026-10-13.4 apply. The producing course operates and LOOKs at actual desktop/390px pages and all attachments, complete downloads and independent cold reopening. Keep the same DE49/CLOUD13/WO46 author/receiver handles and owned dataset; compose current source through the existing installer and preserve local edits. No additional native controller is part of this export improvement.

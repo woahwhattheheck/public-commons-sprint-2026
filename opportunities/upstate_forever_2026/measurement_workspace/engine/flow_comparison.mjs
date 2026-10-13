@@ -2,7 +2,7 @@
 import {readFlowStudy,previewFlowStudy} from './flow_workspace.mjs';
 import {reconcileFlowEditions} from './flow_editions.mjs';
 import {flowStudyFiles} from './flow_bundles.mjs';
-import {zipMembers} from './collection_zip.mjs';
+import {deflatedZipMembers} from './collection_zip.mjs';
 import {hash,stable} from './normalise.mjs';
 import {InputError,csv} from './parse.mjs';
 
@@ -113,11 +113,11 @@ export function flowComparisonFiles(product){
  return files;
 }
 export function flowComparisonBundle(product){
- const files=flowComparisonFiles(product),members=Object.entries(files).map(([name,text])=>({name,data:Buffer.from(text)}));
+ const files=flowComparisonFiles(product),members=Object.entries(files).map(([name,text])=>({name,data:text}));
  const manifest={schema:FLOW_COMPARISON_PRODUCT,id:product.id,selection:product.selection,
-  files:members.map(({name,data})=>({path:name,bytes:data.length,sha256:hash(data)}))};
+  files:members.map(({name,data})=>({path:name,bytes:Buffer.byteLength(data),sha256:hash(data)}))};
  members.push({name:'manifest.json',data:Buffer.from(json(manifest))});
- const bytes=zipMembers(members);
+ const bytes=deflatedZipMembers(members);
  return {name:'flow-comparison-'+product.id.slice(0,16)+'.zip',type:'application/zip',bytes:bytes.length,sha256:hash(bytes),base64:bytes.toString('base64'),comparison_id:product.id,before_id:product.before.id,after_id:product.after.id};
 }
 export function flowComparisonReport(product){
