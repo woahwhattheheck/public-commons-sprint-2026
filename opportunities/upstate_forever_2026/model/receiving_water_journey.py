@@ -273,6 +273,13 @@ def run(workspace, request, output_dir, *, progress=None):
             plan = receiving_waters.inspect_plan(workspace, identifier(plan_id))
             if analysis and analysis["plan_id"] != plan["id"]:
                 raise ValueError("Analysis and source plan identities differ")
+            preparation = request.get("preparation")
+            if preparation:
+                if set(preparation["receptor_ids"]) != {row["id"] for row in plan["receptors"]}:
+                    raise ValueError("Original prepared receptor IDs differ from the saved plan")
+                if any(row["source"]["source_collection_id"] != preparation["source_collection_id"]
+                       for row in plan["receptors"]):
+                    raise ValueError("Prepared plan does not retain the original source collection")
             if analysis is None and any(request.get(k) for k in ("run_id", "quantity", "statistic")):
                 raise ValueError("Numerical result selection requires --analysis-id")
             result.update(plan_id=plan["id"], analysis_id=analysis["id"] if analysis else None)
@@ -346,7 +353,8 @@ def run(workspace, request, output_dir, *, progress=None):
 
 def parser():
     command = argparse.ArgumentParser(description=__doc__)
-    command.add_argument("--workspace", type=Path, required=True)
+    command.add_argument("--workspace", type=Path)
+    command.add_argument("--preparation", type=Path)
     command.add_argument("--output-dir", type=Path, required=True)
     command.add_argument("--plan-id")
     command.add_argument("--analysis-id")
@@ -365,14 +373,43 @@ def parser():
 
 
 def main(argv=None):
-    args = parser().parse_args(argv)
-    if not args.plan_id and not args.analysis_id:
-        parser().error("Select --plan-id or --analysis-id")
-    request = {
-        name: value for name, value in vars(args).items()
-        if name not in ("workspace", "output_dir") and value is not None
-    }
+    command = parser()
+    args = command.parse_args(argv)
+    if args.preparation is None and (args.workspace is None or not (args.plan_id or args.analysis_id)):
+        command.error("Select --preparation, or --workspace with --plan-id or --analysis-id")
+    stage = "open_preparation" if args.preparation else "open_operation"
     try:
+        preparation = None
+        if args.preparation:
+            path = args.preparation.resolve()
+            receipt = read_json(path)
+            if receipt.get("schema") != "upstate.public-water-preparation/v1":
+                raise ValueError("Select the original public-water preparation result")
+            if receipt.get("plan_state") != "complete":
+                raise ValueError("The original source preparation did not complete its plan")
+            original_workspace = Path(receipt["workspace"])
+            if not original_workspace.is_absolute():
+                raise ValueError("Preparation must retain its absolute scientific Workspace path")
+            original_workspace = original_workspace.resolve()
+            if args.workspace is not None and args.workspace.resolve() != original_workspace:
+                raise ValueError("Explicit Workspace differs from the original preparation")
+            original_plan = identifier(receipt["plan_id"])
+            if args.plan_id is not None and args.plan_id != original_plan:
+                raise ValueError("Explicit plan differs from the original preparation")
+            args.workspace, args.plan_id = original_workspace, original_plan
+            preparation = {
+                "path": str(path), "bytes": path.stat().st_size,
+                "sha256": file_digest(path),
+                "source_collection_id": receipt["source_collection_id"],
+                "receptor_ids": receipt["receptor_ids"],
+            }
+        request = {
+            name: value for name, value in vars(args).items()
+            if name not in ("workspace", "output_dir", "preparation") and value is not None
+        }
+        if preparation is not None:
+            request["preparation"] = preparation
+        stage = "open_operation"
         result = run(
             Workspace(args.workspace), request, args.output_dir,
             progress=lambda row: print(
@@ -381,7 +418,7 @@ def main(argv=None):
         )
     except Exception as error:
         result = {
-            "schema": SCHEMA, "state": "failed", "stage": "open_operation",
+            "schema": SCHEMA, "state": "failed", "stage": stage,
             "workspace": str(args.workspace),
             "error": {"type": type(error).__name__, "message": str(error)},
         }
