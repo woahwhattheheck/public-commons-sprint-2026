@@ -632,7 +632,21 @@ function bindCollection(name,targets,chosenValues={}){
  const update=()=>{const collection=node.value;for(const [target,kind] of targets){const el=form.elements.namedItem(target);if(el)setOptions(el,sourceRows(collection,kind),chosenValues[target]??el.value);}chosenValues={};};
  node.addEventListener('change',update);update();
 }
+function renderOriginalSourcePreview(preview){
+ $('#source-preview').innerHTML='<h3 class="subheading">'+esc(preview.title)+'</h3><p class="note">'+preview.entries.length+' original sources · manifest <span class="mono">'+esc(short(preview.manifest_sha256))+'</span></p>'+table(['Source','Kind / role','Original URI','Vintage / units'],preview.entries.map(x=>'<tr><td>'+esc(sourceDisplayTitle(x))+'<small>'+esc(x.path)+'</small></td><td>'+esc(x.kind)+'<br>'+esc(x.role||'')+'</td><td>'+external(x.uri)+'</td><td>'+esc(x.vintage)+'<br>'+esc(x.units||'')+'</td></tr>'));
+ $('#form-submit').textContent='Import this source edition';
+ $('#form-progress').textContent='Preview retained. Review the exact source selection before import.';
+}
 function sourceForm(options={}){
+ const included=options.includedArchive||null;
+ if(included&&(included.workspace_key!==workspace||!included.archive||
+  !/^[0-9a-f]{64}$/.test(included.archive_id||'')||
+  !/^[0-9a-f]{64}$/.test(included.archive.sha256||'')||
+  !Number.isSafeInteger(included.archive.bytes)||included.archive.bytes<0||
+  included.preview?.kind!=='archive'||!/^[0-9a-f]{64}$/.test(included.preview.id||'')||
+  included.preview.archive_sha256!==included.archive.sha256||
+  included.preview.upload_id!==included.archive.id||!Array.isArray(included.preview.entries)))
+  throw Error('Preview the included source archive again in the current Workspace.');
  sourcePreview=null;
  const registered=[...(state.registered_sources||[])];
  if(options.registeredManifest&&!registered.some(row=>row.id===options.registeredManifest.id))
@@ -640,9 +654,11 @@ function sourceForm(options={}){
  if(options.registeredId&&!registered.some(row=>row.id===options.registeredId))
   throw Error('Refresh and choose an available registered source edition.');
  openForm('Import original source data','Preview the original metadata and file selection, then retain the edition in the native workspace.',
- '<div class="form-grid">'+field('Source selection',select('source_mode',[...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],options.mode==='archive'?'archive':options.mode==='registered'&&registered.length?'registered':registered.length?'registered':'archive'))+
+ '<div class="form-grid">'+field('Source selection',select('source_mode',[...(included?[['included','Included source archive']]:[]),...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],included?'included':options.mode==='archive'?'archive':options.mode==='registered'&&registered.length?'registered':registered.length?'registered':'archive'))+
  '<div id="source-selection-body" class="full"></div><div id="source-preview" class="full"></div></div>','Preview source',
  async()=>{
+  if(included&&val('source_mode')==='included'&&included.workspace_key!==workspace)
+   throw Error('Preview the included archive again in the current Workspace.');
   if(sourcePreview)return submitAction('source.import',{preview_id:sourcePreview.id});
   const context=formContext,generation=context.sourcePreviewGeneration,selectedWorkspace=workspace;
   const currentDraft=()=>{if(formContext!==context||workspace!==selectedWorkspace||context.sourcePreviewGeneration!==generation)throw Error('The source selection changed while it was being checked. Preview the current selection again.');};
@@ -661,14 +677,20 @@ function sourceForm(options={}){
   }
   const preview=await api('/api/source-preview',{method:'POST',body:data});
   currentDraft();sourcePreview=preview;
-  $('#source-preview').innerHTML='<h3 class="subheading">'+esc(sourcePreview.title)+'</h3><p class="note">'+sourcePreview.entries.length+' original sources · manifest <span class="mono">'+esc(short(sourcePreview.manifest_sha256))+'</span></p>'+table(['Source','Kind / role','Original URI','Vintage / units'],sourcePreview.entries.map(x=>'<tr><td>'+esc(sourceDisplayTitle(x))+'<small>'+esc(x.path)+'</small></td><td>'+esc(x.kind)+'<br>'+esc(x.role||'')+'</td><td>'+external(x.uri)+'</td><td>'+esc(x.vintage)+'<br>'+esc(x.units||'')+'</td></tr>'));
-  $('#form-submit').textContent='Import this source edition';
-  $('#form-progress').textContent='Preview retained. Review the exact source selection before import.';
+  renderOriginalSourcePreview(sourcePreview);
  },()=>{
   const renderSource=()=>{
    formContext.sourcePreviewGeneration=(formContext.sourcePreviewGeneration||0)+1;
    sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';
    const mode=val('source_mode');
+   if(mode==='included'){
+    if(!included||included.workspace_key!==workspace)throw Error('Preview the included archive in the current Workspace.');
+    $('#source-selection-body').innerHTML='<h3 class="subheading">'+esc(included.archive.filename)+'</h3>'+
+     '<p class="note">Included source archive · '+included.archive.bytes.toLocaleString()+' bytes. The original ZIP has been retained for this preview; no source edition has been imported yet.</p>'+
+     '<dl><dt>Archive SHA256</dt><dd class="mono">'+esc(included.archive.sha256)+'</dd>'+
+     '<dt>Original import manifest</dt><dd class="mono">'+esc(included.preview.manifest_member)+'</dd></dl>';
+    sourcePreview=included.preview;renderOriginalSourcePreview(sourcePreview);return;
+   }
    $('#source-selection-body').innerHTML=mode==='registered'?field('Registered manifest',select('registered_id',registered.map(x=>[x.id,x.title+' · '+x.entries+' sources']),options.registeredId||registered[0]?.id),'',true):
     '<div class="form-grid">'+field(mode==='archive'?'Original source ZIP':'Original source file',input('source_file','file','','required '+(mode==='archive'?'accept=".zip"':'')),'Files are uploaded as their original bytes.',true)+
     (mode==='archive'?field('Manifest entry, when the ZIP has several manifests',input('manifest_member','text',options.manifestMember||''),'Optional. Use the exact original relative path.',true):
