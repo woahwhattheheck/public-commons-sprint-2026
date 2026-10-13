@@ -556,7 +556,7 @@ export function createPublishedStudiesDesk(host) {
         ' · Retains 73 selected records, 12 excluded campaign records, original reporting limits and the source selection inference.</p>';
       output += table("Observed series and report rows", series, [
         ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_fraction","Fraction"],["method_authority","Method authority"],["method_id","Method"],["method_specification_name","Method specification"],["result_value_type","Result type"],["sample_support","Sample support"],["record_count","Original rows"],
-        ["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
+        ...((observed.statistic_basis) ? [["measurement_count","Measurements"]] : []),["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
         ["published_n","Printed n"],["observed_mean","Quantified mean"],["observed_sd","Quantified sample SD"],
         ["published_mean","Printed mean"],["published_sd","Printed SD"],["reported_depths","Original depth"]
       ]);
@@ -574,11 +574,11 @@ export function createPublishedStudiesDesk(host) {
         output += table("Original concentration support", supported, [
           ["site_id","Station"],["parameter","Parameter"],["project_id","Project"],["activity_type","Activity type"],
           ["sample_fraction","Fraction"],["method_id","Method"],["result_value_type","Result type"],
-          ["record_count","Original rows"],["quantified_count","Quantified"],["below_limit_count","Below limit"],
-          ["unresolved_count","Unresolved"],["mean_interval","All-row mean interval"],["unit","Unit"],
+          ["record_count","Original rows"],...((observed.statistic_basis) ? [["measurement_count","Measurements"]] : []),["quantified_count","Quantified"],["below_limit_count","Below limit"],
+          ["unresolved_count","Unresolved"],["mean_interval", observed.statistic_basis ? "Activity-weighted mean interval" : "All-row mean interval"],["unit","Unit"],
           ["limits","Original reporting limits"]
         ],false);
-        output += '<p class="ps-help">Each interval uses every selected row in its original station, parameter, project and activity-type series. A below-limit value contributes [0, its original limit), conditional on nonnegative concentration. The upper endpoint is excluded when a row is censored. These are arithmetic bounds; the source values and printed report cohort stay intact. Complete endpoints and source selectors are included in the context export.</p>';
+        output += '<p class="ps-help">' + (observed.statistic_basis ? 'Each interval uses each agreeing activity/characteristic measurement once; every original result identifier is retained. ' : 'Each interval uses every selected row. ') + 'The series retains its original station, parameter, project, activity type and analytical support. A below-limit value contributes [0, its original limit), conditional on nonnegative concentration. The upper endpoint is excluded when a row is censored. These are arithmetic bounds; the source values and printed report cohort stay intact. Complete endpoints and source selectors are included in the context export.</p>';
       }
       const calendars = series.map(row => ({
         ...row, missing_dates: arr(row.missing_chlorophyll_dates).join("; "),

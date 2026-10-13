@@ -27,6 +27,12 @@ BASIS = (
 
 
 def _basis(records):
+    if records and records[0].get("statistic_basis") == "agreeing_original_activity_characteristic/v1":
+        return ("The mean interval gives one weight to each agreeing original activity/characteristic measurement. "
+                "All original result IDs and source rows remain attached. Quantified values retain their originals; "
+                "below-limit values contribute [0, original reporting limit), conditional on nonnegative concentration. "
+                "No individual censored value is substituted. This is not a statistical confidence interval. "
+                "Original method, fraction, basis and effective unit remain separate series.")
     if records and records[0].get("source_observation"):
         return BASIS.replace("The published report retains its separate analytical cohort and censor treatment.",
                              "Fraction, method, original result type, basis fields and effective support unit remain separate source series.")
@@ -60,6 +66,9 @@ def _interval(row: dict[str, Any]) -> dict[str, Any]:
         "activity_id": row.get("activity_id"), "date": row.get("date"),
         "source_file": row.get("source_file"),
         "source_selector": row.get("source_selector"),
+        **({"measurement_original_result_ids": row["measurement_original_result_ids"],
+            "measurement_original_records": row["measurement_original_records"]}
+           if "measurement_original_result_ids" in row else {}),
         "original_value": row.get("source_value_token", row.get("value")),
         "original_detection_condition": condition,
         "original_detection_limit": row.get("raw_cells", {}).get(
@@ -136,12 +145,17 @@ def summarize_series(records: list[dict[str, Any]]) -> dict[str, Any]:
 def enrich_observation_context(context: dict[str, Any]) -> dict[str, Any]:
     """Add support to existing series without changing selection or statistics."""
     groups: dict[tuple[str, ...], list[dict[str, Any]]] = defaultdict(list)
-    for row in context.get("rows", []):
+    for row in context.get("statistics_rows", context.get("rows", [])):
         groups[_key(row)].append(row)
     series = []
     for row in context.get("series", []):
         item = dict(row)
-        item["observation_support"] = summarize_series(groups.get(_key(row), []))
+        records = groups.get(_key(row), [])
+        item["observation_support"] = summarize_series(records)
+        if context.get("statistic_basis") == "agreeing_original_activity_characteristic/v1":
+            count = sum(record.get("measurement_original_result_count", 1) for record in records)
+            item["observation_support"].update(record_count=count, original_result_count=count,
+                measurement_count=len(records), statistic_basis=context["statistic_basis"])
         series.append(item)
     return {**context, "series": series, "observation_support_version": VERSION}
 
@@ -155,6 +169,7 @@ def report_sections(context: dict[str, Any]) -> list[tuple[str, list[Any]]]:
     """Return existing scientific-report (heading, blocks) pairs."""
     observation = context.get("observations", context)
     enriched = enrich_observation_context(observation)
+    weighted = enriched.get("statistic_basis") == "agreeing_original_activity_characteristic/v1"
     groups = defaultdict(list)
     for row in enriched["series"]:
         if row.get("parameter") in CONCENTRATIONS:
@@ -166,7 +181,7 @@ def report_sections(context: dict[str, Any]) -> list[tuple[str, list[Any]]]:
         for row in records:
             support = row["observation_support"]
             coverage.append([
-                str(row.get("site_id", "")), str(support["record_count"]),
+                str(row.get("site_id", "")), str(support["record_count"]), *([str(support["measurement_count"])] if weighted else []),
                 str(support["quantified_count"]), str(support["below_limit_count"]),
                 str(support["unresolved_count"]), support["unit"],
                 "; ".join(_format(item["value"]) for item in support["reporting_limits"]) or "None",
@@ -188,12 +203,12 @@ def report_sections(context: dict[str, Any]) -> list[tuple[str, list[Any]]]:
                 "; original result type: " + str(records[0].get("result_value_type", "")) +
                 "; source series identity: " + series_key + "." ] if series_key else []),
             {"kind": "table", "columns": [
-                "Station", "Result rows", "Supported quantified", "Below limit", "Unresolved",
+                "Station", "Result rows", *(["Measurements"] if weighted else []), "Supported quantified", "Below limit", "Unresolved",
                 "Unit", "Original reporting limits",
-            ], "rows": coverage, "widths": [1, .8, .9, .9, .9, .7, 1.4],
+            ], "rows": coverage, "widths": [1, .8, *([.8] if weighted else []), .9, .9, .9, .7, 1.4],
              "caption": "Coverage of the selected original result rows."},
             {"kind": "table", "columns": [
-                "Station", "Quantified-only mean", "All-row mean interval", "Unit",
+                "Station", "Quantified-only mean", "Supported mean interval", "Unit",
             ], "rows": means, "widths": [1, 1.6, 2.4, .8],
              "caption": "Concentration means; display rounded to six significant figures."},
             "Interval notation [a, b) includes a and excludes b. [a, a] means "

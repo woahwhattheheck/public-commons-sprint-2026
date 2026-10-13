@@ -14,6 +14,7 @@ from measurement_workspace.source_observations import builtin_companion
 from measurement_workspace import utility_microbiology as microbial
 from measurement_workspace import sv833_observations as sv833
 from measurement_workspace import rl18151_observations as rl18151
+from measurement_workspace import three_twenty_observations as three_twenty
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report",
@@ -49,6 +50,8 @@ class PublishedStudyProvider:
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
     def _builtin_source(self, builtin_id=BUILTIN_ID):
+        if builtin_id == three_twenty.BUILTIN_ID:
+            return three_twenty.builtin_companion(self.builtin.parent.parent)
         if builtin_id == "scdes-eighteenmile-trace-metals-2023":
             from measurement_workspace import trace_metal_observations as trace_metals
             return trace_metals.builtin_companion(self.builtin.parent.parent)
@@ -287,6 +290,9 @@ class PublishedStudyProvider:
                             "publication": metadata.get("publication"),
                             "counts": metadata.get("content_counts", {}),
                         })
+                three_twenty_source = three_twenty.catalog_entry(self.builtin.parent.parent)
+                if three_twenty_source:
+                    builtin.append(three_twenty_source)
                 rl18151_source = rl18151.catalog_entry(self.builtin.parent.parent)
                 if rl18151_source:
                     builtin.append(rl18151_source)
@@ -356,7 +362,12 @@ class PublishedStudyProvider:
                 evidence = {}
                 builtin_id = payload.get("builtin_id")
                 if builtin_id is not None:
-                    if builtin_id == rl18151.BUILTIN_ID:
+                    if builtin_id == three_twenty.BUILTIN_ID:
+                        available = three_twenty.catalog_entry(self.builtin.parent.parent) is not None
+                    elif builtin_id == "scdes-eighteenmile-trace-metals-2023":
+                        from measurement_workspace import trace_metal_observations as trace_metals
+                        available = trace_metals.catalog_entry(self.builtin.parent.parent) is not None
+                    elif builtin_id == rl18151.BUILTIN_ID:
                         available = rl18151.catalog_entry(self.builtin.parent.parent) is not None
                     elif builtin_id == sv833.BUILTIN_ID:
                         available = sv833.catalog_entry(self.builtin.parent.parent) is not None
