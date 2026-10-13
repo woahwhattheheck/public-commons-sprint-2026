@@ -243,24 +243,34 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
         if path not in files:
             issue(kind, owner, path, "Required original source member is absent")
 
-    def require_module(name, owner, kind, *, namespace=False):
-        candidates = _module_candidates(name, roots)
+    def source_candidates(name, module_path=None):
+        if module_path is None:
+            return _module_candidates(name, roots)
+        # Resolve relative imports inside their actual retained filesystem
+        # package, including original folders with dashes or date names.
+        # Absolute backend/extension declarations keep the strict grammar.
+        relative(module_path)
+        return [module_path + ".py", module_path + "/__init__.py"]
+
+    def require_module(name, owner, kind, *, namespace=False, module_path=None):
+        candidates = source_candidates(name, module_path)
         found = [candidate for candidate in candidates if candidate in files]
         if found:
             for candidate in found:
                 require(candidate, owner, kind)
             return
-        targets = [(root + "/" if root else "") + name.replace(".", "/") + "/" for root in roots]
+        targets = ([module_path + "/"] if module_path is not None else
+                   [(root + "/" if root else "") + name.replace(".", "/") + "/" for root in roots])
         if namespace and any(path.startswith(target) for path in files for target in targets):
             return
         issue(kind, owner, name, "Installed Python module is absent", candidates=candidates)
 
     exports_cache = {}
 
-    def namespace_exports(module, function):
+    def namespace_exports(module, function, module_path=None):
         """Read literal exports from an original globals-namespace installer."""
         result = set()
-        for candidate in _module_candidates(module, roots):
+        for candidate in source_candidates(module, module_path):
             if candidate not in files:
                 continue
             try:
@@ -303,13 +313,14 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
             statements(declaration.body)
         return result
 
-    def module_exports(name, visiting=()):
-        if name in exports_cache:
-            return exports_cache[name]
-        if name in visiting:
+    def module_exports(name, visiting=(), *, module_path=None):
+        identity = (name, module_path)
+        if identity in exports_cache:
+            return exports_cache[identity]
+        if identity in visiting:
             return set()
         exported = set()
-        for candidate in _module_candidates(name, roots):
+        for candidate in source_candidates(name, module_path):
             if candidate not in files:
                 continue
             try:
@@ -337,18 +348,22 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                         exported.update(alias.asname or alias.name for alias in item.names if alias.name != "*")
                         if item.module:
                             package = list(PurePosixPath(candidate).parent.parts)
+                            target_path = None
                             if item.level and item.level <= len(package):
-                                target = ".".join([*package[:len(package) - item.level + 1],
-                                                   item.module])
+                                target_parts = [*package[:len(package) - item.level + 1],
+                                                *item.module.split(".")]
+                                target = ".".join(target_parts)
+                                target_path = "/".join(target_parts)
                             elif not item.level:
                                 target = item.module
                             else:
                                 target = None
                             if target:
-                                installers.update({alias.asname or alias.name: (target, alias.name)
+                                installers.update({alias.asname or alias.name: (target, alias.name, target_path)
                                                    for alias in item.names if alias.name != "*"})
                                 if any(alias.name == "*" for alias in item.names):
-                                    exported.update(module_exports(target, (*visiting, name)))
+                                    exported.update(module_exports(target, (*visiting, identity),
+                                                                   module_path=target_path))
                     elif isinstance(item, (ast.Assign, ast.AnnAssign)):
                         targets = item.targets if isinstance(item, ast.Assign) else [item.target]
                         for target in targets:
@@ -373,20 +388,21 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                         elif isinstance(child, ast.ExceptHandler):
                             statements(child.body)
             statements(tree.body)
-        exports_cache[name] = exported
+        exports_cache[identity] = exported
         return exported
 
-    def require_from(name, aliases, owner, line):
-        require_module(name, owner, "python-import", namespace=True)
-        exports = module_exports(name)
-        module_files = [candidate for candidate in _module_candidates(name, roots) if candidate in files]
+    def require_from(name, aliases, owner, line, *, module_path=None):
+        require_module(name, owner, "python-import", namespace=True, module_path=module_path)
+        exports = module_exports(name, module_path=module_path)
+        module_files = [candidate for candidate in source_candidates(name, module_path) if candidate in files]
         is_package = (any(candidate.endswith("/__init__.py") for candidate in module_files)
                       or not module_files)
         for alias in aliases:
             if alias.name == "*" or alias.name in exports:
                 continue
             if is_package:
-                require_module(name + "." + alias.name, owner, "python-import", namespace=True)
+                require_module(name + "." + alias.name, owner, "python-import", namespace=True,
+                               module_path=(module_path + "/" + alias.name if module_path is not None else None))
             elif module_files:
                 issue("python-import", owner, name + "." + alias.name,
                       "Imported name is absent from the retained module", line=line)
@@ -479,8 +495,9 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                                   "Relative import leaves the application", line=node.lineno)
                             continue
                         prefix = package[:len(package) - node.level + 1]
-                        name = ".".join([*prefix, *([node.module] if node.module else [])])
-                        require_from(name, node.names, path, node.lineno)
+                        parts = [*prefix, *(node.module.split(".") if node.module else [])]
+                        name = ".".join(parts)
+                        require_from(name, node.names, path, node.lineno, module_path="/".join(parts))
                     elif node.module and node.module.split(".", 1)[0] in local_roots:
                         require_from(node.module, node.names, path, node.lineno)
         elif path.endswith((".js", ".mjs")):
