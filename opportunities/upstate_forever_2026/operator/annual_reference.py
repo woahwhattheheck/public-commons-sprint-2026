@@ -14,6 +14,14 @@ APPLICATION = Path(__file__).resolve().parents[1]
 DICTIONARY = APPLICATION / "source/usgs-annual2012-20261013/F7DN436B-original-metadata.xml"
 BASINS = APPLICATION / "source/usgs-nldi-upper-savannah-20261013"
 DEFAULT_HUCS = [f"030601{i:02d}" for i in range(1, 8)]
+SOURCE_EDITIONS = {
+    "f7dn436b": {"title": "USGS published annual estimates — F7DN436B",
+                 "description": "Original paired stations, final estimators, source periods and published standard errors.",
+                 "modes": ["registered", "uploads", "published"]},
+    "southeast-sparrow-2012": {"title": "USGS Southeast SPARROW calibration targets — 2012 reference",
+                 "description": "Original published nitrogen, phosphorus and sediment targets with their regional target horizon and source reach.",
+                 "modes": ["published", "registered"]},
+}
 
 
 class AnnualReferences:
@@ -23,6 +31,15 @@ class AnnualReferences:
 
     def _fail(self, message, status=422):
         raise self.Fault("ANNUAL_REFERENCE", message, status)
+
+    def _edition(self, payload):
+        key = payload.get("source_edition") or "f7dn436b"
+        if key not in SOURCE_EDITIONS:
+            self._fail("Choose an available original annual-source edition.")
+        if key == "southeast-sparrow-2012":
+            from source_tools import sparrow_reference
+            return key, sparrow_reference
+        return key, annual
 
     @staticmethod
     def _directory(workspace, task_id):
@@ -49,6 +66,7 @@ class AnnualReferences:
                     "station_count": result.get("station_count"),
                     "binding": result.get("binding"),
                     "inventory_task_id": result.get("inventory_task_id"),
+                    "source_edition": record.get("source_edition", "f7dn436b"),
                 }
 
     def _basin_sources(self):
@@ -66,6 +84,12 @@ class AnnualReferences:
     def _choices(self, row, sources, reviews):
         choices = []
         comid = row.get("comid", "")
+        if row.get("retained_catchment"):
+            choices.append({
+                "id": "retained-source-reach", "label": "Retained source reach " + comid,
+                "description": "Original full-reach catchment retained with this published source edition.",
+                "component_review": row.get("component_review"),
+            })
         if ((comid, "reach_feature") in sources and (comid, "upstream_basin") in sources
                 and comid in reviews):
             review = reviews[comid]
@@ -78,6 +102,8 @@ class AnnualReferences:
         if re.fullmatch(r"[0-9]+", comid):
             choices.append({"id": "published-reach", "label": "Receive published reach " + comid,
                             "description": "Receive the original full-reach NLDI basin."})
+        if row.get("final_method") == "published_regional_target":
+            return choices
         for key, choice, label in (
                 ("station_id", "water-quality-station", "Water-quality station"),
                 ("flow_station_id", "flow-station", "Published flow station")):
@@ -94,10 +120,11 @@ class AnnualReferences:
         path = directory / "inventory.json"
         verify_file(workspace.root, record["result"]["inventory"])
         value = read_json(path)
-        # Verify the original ZIPs and dictionary again before displaying/adopting rows.
-        if annual._source(directory / "original")["id"] != value["source"]["id"]:
+        # Reopen the exact selected edition before displaying/adopting its rows.
+        edition, source = self._edition(record)
+        if source._source(directory / "original")["id"] != value["source"]["id"]:
             self._fail("The retained original inventory source has changed.")
-        return directory, value
+        return directory, {**value, "source_edition": edition}
 
     def read(self, workspace_key, operation, payload=None):
         workspace = self.operator.ws(workspace_key)
@@ -105,6 +132,10 @@ class AnnualReferences:
         if operation == "catalog":
             return {
                 "workspace_key": workspace_key, "default_huc8": DEFAULT_HUCS,
+                "source_editions": [{"id": key, **value,
+                                    "available": key == "f7dn436b" or
+                                        (APPLICATION / "source_tools/sparrow_reference.py").is_file()}
+                                   for key, value in SOURCE_EDITIONS.items()],
                 "source_roots": [{"id": key, "label": str(path)}
                                  for key, path in self.sources.roots.items()],
                 "uploads": [
@@ -162,9 +193,25 @@ class AnnualReferences:
         atomic_json(directory / "operation.json", record)
 
     def _original(self, workspace, directory, payload):
+        edition, source_tool = self._edition(payload)
         original = directory / "original"
         original.mkdir(parents=True, exist_ok=True)
-        mode = payload.get("mode", "registered")
+        mode = payload.get("mode", "published" if edition == "southeast-sparrow-2012" else "registered")
+        if mode not in SOURCE_EDITIONS[edition]["modes"]:
+            self._fail("Choose a supported intake for this original source edition.")
+        if edition == "southeast-sparrow-2012":
+            if mode == "registered":
+                source = self.sources._root_path(payload.get("root_id"), payload.get("path", ""), directory=True)
+                for name in source_tool.FILES:
+                    path = relative_file(source, name)
+                    atomic_bytes(original / name, path.read_bytes(), immutable=True)
+                for name, expected in getattr(source_tool, "CATCHMENT_FILES", {}).items():
+                    if (source / name).is_file():
+                        path = relative_file(source, name)
+                        verify_file(source, {"path": name, **expected})
+                        atomic_bytes(original / name, path.read_bytes(), immutable=True)
+            source_tool.receive(original)
+            return original
         if mode == "published":
             annual.receive(original)
             return original
@@ -186,6 +233,8 @@ class AnnualReferences:
         return original
 
     def _run_inventory(self, workspace, directory, record, payload):
+        edition, source_tool = self._edition(payload)
+        record["source_edition"] = edition
         self._stage(directory, record, "Receiving original annual tables")
         original = self._original(workspace, directory, payload)
         selected_hucs = payload.get("huc8", DEFAULT_HUCS)
@@ -194,14 +243,16 @@ class AnnualReferences:
                        for value in selected_hucs)):
             self._fail("Choose at least one original eight-digit HUC.")
         self._stage(directory, record, "Reading original station, estimator and period records")
-        value = annual.inventory(original, huc8=selected_hucs)
+        value = source_tool.inventory(original, huc8=selected_hucs)
         atomic_json(directory / "inventory.json", value, immutable=True)
         document = describe_file(workspace.root, directory / "inventory.json")
         return {"inventory": document, "documents": [document],
-                "source_id": value["source"]["id"], "record_counts": value["record_counts"],
+                "source_id": value["source"]["id"], "source_edition": edition,
+                "record_counts": value["record_counts"],
                 "usable_counts": value["usable_counts"], "station_count": value["station_count"]}
 
     def _selection(self, original, inventory, payload):
+        edition, source_tool = self._edition(inventory)
         submitted = payload.get("records")
         if not isinstance(submitted, list) or not submitted:
             self._fail("Choose actual annual-reference records from the inventory.")
@@ -222,7 +273,9 @@ class AnnualReferences:
                 self._fail("Choose an available original station or published reach for " + row["station_id"])
             spec = {"record_id": record_id,
                     "comparability_note": str(payload.get("comparability_note", "")).strip()}
-            if choice == "retained-reach":
+            if choice == "retained-source-reach":
+                spec["retained_catchment"] = row["retained_catchment"]
+            elif choice == "retained-reach":
                 comid, review = row["comid"], reviews[row["comid"]]
                 retained = {"source": "comid", "identifier": comid, "station_role": "published_reach",
                             "split_catchment": False, "component_indices": [review["retained_component_index"]],
@@ -250,21 +303,25 @@ class AnnualReferences:
         title = str(payload.get("title", "")).strip()
         if not title:
             self._fail("Give this selected observation edition a title.")
-        return {"schema": annual.SELECTION_SCHEMA, "title": title,
+        return {"schema": source_tool.SELECTION_SCHEMA, "title": title,
                 "source_id": inventory["source"]["id"], "records": selected,
                 "scope": {"huc8": inventory["selected_huc8"],
-                          "selection": "Original paired station/flow-station HUC8 records"}}
+                          "selection": inventory.get("selection_basis") or
+                              "Original paired station/flow-station HUC8 records",
+                          "source_edition": edition}}
 
     def _run_import(self, workspace, directory, record, payload):
         inventory_task_id = identifier(payload.get("inventory_task_id"))
         previous, inventory = self._inventory(workspace, inventory_task_id)
         original = previous / "original"
+        edition, source_tool = self._edition(inventory)
+        record["source_edition"] = edition
         self._stage(directory, record, "Retaining the selected original catchment sources")
         selection = self._selection(original, inventory, payload)
         atomic_json(directory / "selection.json", selection, immutable=True)
         prepared = directory / "prepared"
         self._stage(directory, record, "Preparing selected annual loads and upstream catchments")
-        result = annual.prepare(prepared, original_root=original,
+        result = source_tool.prepare(prepared, original_root=original,
                                 selection_path=directory / "selection.json")
         self._stage(directory, record, "Importing the source edition and annual observations")
         binding = annual.bind(workspace.root, prepared)
@@ -274,7 +331,7 @@ class AnnualReferences:
                                           "catchment-sources.json", "observation-metadata.json",
                                           "source-manifest.json", "result.json",
                                           "binding-" + workspace.project["id"] + ".json"))
-        return {"inventory_task_id": inventory_task_id, "binding": binding,
+        return {"inventory_task_id": inventory_task_id, "source_edition": edition, "binding": binding,
                 "preparation_id": result["id"], "documents": documents,
                 "records": result["records"], "stations": result["stations"],
                 "catchments": result["catchments"], "parameters": result["parameters"]}
@@ -291,6 +348,7 @@ class AnnualReferences:
                 "schema": "upstate.annual-reference-operation/v1", "task_id": task["id"],
                 "project_id": workspace.project["id"], "action": task["action"],
                 "request_sha256": task["request_sha256"], "created_at": now(),
+                "source_edition": task["payload"].get("source_edition") or "f7dn436b",
                 "title": task["payload"].get("title") or "Original annual-reference inventory",
                 "state": "queued", "updated_at": now(),
             }
