@@ -138,3 +138,7 @@ The [complete native receiving course](receiving/RUNTIME_PROCEDURES_RECEIVE.md) 
 This workflow composes the existing Operating Plan, Operating Plan Return and Runtime Workspace implementations. Native operating commands remain owned by their original modules. The new adapter records and returns selected source and operator work under the workspace's existing write coordination.
 
 The source review and native operating course are separate. Report a completed native or browser journey only from its actual returned output. Preserve the original Runtime operating case and its selected IDs when the existing receiving course resumes.
+
+## Complete output reviews
+
+Search an original Application, Runtime operation or npm-attempt output and choose **Use in operating procedure** to carry its complete fixed-end bytes and every literal match. The saved step, original file history and returned-work comparison remain this procedure's existing engine. See [OUTPUT_PROCEDURES.md](OUTPUT_PROCEDURES.md) for the complete source contract, independent reader, exact CLI exports and receiving course.

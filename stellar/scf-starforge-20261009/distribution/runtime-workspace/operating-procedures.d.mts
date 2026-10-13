@@ -4,13 +4,17 @@ export const RUNTIME_PROCEDURE_SCHEMA: 'stellar-forge.runtime-operating-procedur
 export const RUNTIME_CAPTURE_SCHEMA: 'stellar-forge.runtime-operating-capture.v1';
 export const RUNTIME_PROCEDURE_MAX_BYTES: number;
 export const RUNTIME_PROCEDURE_BODY_MAX_BYTES: number;
+export interface RuntimeProcedureOutputSelection {
+  kind:'application'|'runtime'; input:{applicationId?:string;operationId?:string;runtimeId?:string;logFile?:string};
+  selection:string; query:string; contextBytes?:number;
+}
 export interface RuntimeProcedureSelection {
   runtimeIds?: string[]; operationIds?: string[]; archiveIds?: string[];
-  backupOperationIds?: string[]; storageDirectory?: string;
+  backupOperationIds?: string[]; storageDirectory?: string; output?:RuntimeProcedureOutputSelection;
 }
 export interface RuntimeProcedureCapture {
   id: string; stepId: string; fileId: string; capturedAt: string;
-  sha256: string; bytes: number; selection: Required<Omit<RuntimeProcedureSelection,'storageDirectory'>> & {storageDirectory?:string};
+  sha256: string; bytes: number; selection: Required<Omit<RuntimeProcedureSelection,'storageDirectory'|'output'>> & {storageDirectory?:string;output?:RuntimeProcedureOutputSelection};
 }
 export interface RuntimeProcedureRequest {
   requestId: string; inputSha256: string; at: string; action: string; revision: number;
@@ -39,7 +43,7 @@ export interface RuntimeProceduresAPI {
   runtimeProcedureDecide(input:RuntimeProcedureWrite & {reviewId:string;key:string;decision:{take:OperatingReturnChoice;value?:OperatingReturnJSON;note?:string}|null}):Promise<RuntimeProcedureView>;
   runtimeProcedureApply(input:RuntimeProcedureWrite & {reviewId:string}):Promise<RuntimeProcedureView>;
   runtimeProcedureReceive(input:{requestId:string;document:RuntimeProcedure}):Promise<RuntimeProcedureView>;
-  runtimeProcedureExport(input:{procedureId:string;format:'json'|'html'|'plan-json'|'plan-html';reviewId?:string}):Promise<RuntimeProcedureDownload>;
+  runtimeProcedureExport(input:{procedureId:string;format:'json'|'html'|'plan-json'|'plan-html'|'output-json'|'output-html'|'output-index';reviewId?:string;captureId?:string}):Promise<RuntimeProcedureDownload>;
 }
 export function inspectRuntimeProcedure(input:unknown):RuntimeProcedure;
 export function createRuntimeProceduresAPI(root:string,workspaceId:string,getModel:()=>unknown):RuntimeProceduresAPI;

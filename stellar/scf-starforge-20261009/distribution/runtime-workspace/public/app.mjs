@@ -532,6 +532,10 @@ const operatingProcedures = createOperatingProceduresView({ root: $('operating-p
   openLog, chooseRuntime, switchView, openApplication: id => applications.choose(id) });
 const managed = createManagedWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
   refreshOperation, openLog, switchView, message, error });
+document.addEventListener('runtime-output-procedure',event=>{
+  if(!event.detail||event.detail.workspaceId!==state?.workspaceId)return;
+  event.detail.accept=operatingProcedures.selectOutput(event.detail.output).then(selected=>{if(selected)switchView('operating-procedures');});
+});
 const applications = createApplicationsWorkspaceView({ root: $('applications-workspace'), api, getState: () => state, getToken: () => token,
   refreshWorkspace: refresh, switchView, message, error });
 const applicationGroups = createApplicationGroupsView({ root: $('application-groups-workspace'), api, getState: () => state,
