@@ -366,36 +366,51 @@ export class ImplementationWorkbench {
   planReportSourcePanel(){
     const flow=this.planReportSource;
     if(!flow||flow.plan_id!==this.plan?.id)return '';
-    const preview=flow.preview,ready=flow.result;
+    const preview=flow.preview,ready=flow.result,working=['previewing','registering'].includes(flow.stage);
     return '<section class="iw-notice" aria-label="Implementation report source"><h3>Whole plan in the scientific report</h3>'+
       (preview?'<p><b>'+esc(preview.title)+'</b> · saved revision '+esc(preview.plan_binding.revision)+' · original report date '+esc(preview.as_of)+'</p>'+
       '<p>'+Object.entries(preview.counts).map(([name,count])=>esc(count)+' '+esc(name.replaceAll('_',' '))).join(' · ')+'</p>'+
       '<p>'+esc(preview.original_report_member_count)+' original report files and '+esc(preview.attachment_count)+' available original attachments. Other source references remain listed with their actual availability.</p>'+
       this.table(['Original attachment','State'],preview.attachment_inventory.map(row=>[esc(row.label),esc(row.state.replaceAll('_',' '))])):'')+
       '<p>The selected report stays at its original saved revision. Your editable plan and browser draft remain available.</p>'+
+      (preview?'<p>'+(preview.delivery_selection_supplied?'The captured Report desk selection retains '+esc(preview.existing_observed_sources.length)+' preceding observed sources in their original order. The whole plan report is appended once.':'This source-only registration can be added to the current scientific publisher when explicitly opened.')+'</p>':'')+
+      '<div class="iw-actions">'+(typeof this.host.openExtension==='function'?button('plan-report-use-current','Review with current Report desk selection',working||this.pending?'disabled':''):'')+button('plan-report-source-only','Review this report source only',working||this.pending?'disabled':'')+'</div>'+
+      (flow.stage==='error'?'<p role="alert">'+esc(flow.error)+'</p>':'')+
       (flow.stage==='registering'?'<p>The original source registration is retained in the task queue.</p>':
-       ready?'<p>'+this.nativeDownloads(ready._downloads)+'</p><div class="iw-actions">'+button('plan-report-open','Open scientific report','','iw-primary')+'</div>':
-       preview?'<div class="iw-actions">'+button('plan-report-register','Register reviewed report source','','iw-primary')+'</div>':'<p>Opening the selected original report…</p>')+
+       ready?'<p>'+this.nativeDownloads(ready._downloads)+'</p><div class="iw-actions">'+button('plan-report-open','Open scientific report','','iw-primary')+(ready.delivery_selection&&typeof this.host.openDelivery==='function'?button('plan-report-client','Prepare client report'):'')+'</div>':
+       preview?'<div class="iw-actions">'+button('plan-report-register','Register reviewed report source','','iw-primary')+'</div>':flow.stage==='error'?'':'<p>Opening the selected original report…</p>')+
       (!this.pending?'<div class="iw-actions">'+button('plan-report-dismiss','Close report review')+'</div>':'')+'</section>';
   }
-  async previewPlanReportSource(reportId){
+  async previewPlanReportSource(reportId,useCurrent=false){
     if(!this.native||this.pending)throw Error('Finish the retained native operation before reviewing another report.');
     const row=(this.reports||[]).find(item=>item.id===reportId);
     if(!row)throw Error('Choose an original report retained with this plan.');
     const planId=this.plan.id,workspace=this.workspace,turn=this.generation;
-    this.planReportSource={stage:'previewing',plan_id:planId,report_id:reportId};this.cache();this.render();
+    const flow={stage:'previewing',plan_id:planId,report_id:reportId,existing_report_selection:null};
+    this.planReportSource=flow;this.cache();this.render();
+    const current=()=>!this.gone&&turn===this.generation&&this.workspace===workspace&&this.host.getState?.()?.workspace_key===workspace&&this.plan?.id===planId&&this.planReportSource===flow;
     try{
-      const result=await this.host.api('/api/implementation/report-source-preview',{method:'POST',body:{workspace,plan_id:planId,report_id:reportId}});
-      if(this.gone||turn!==this.generation||this.workspace!==workspace||this.plan?.id!==planId||this.planReportSource?.report_id!==reportId)return;
-      if(result.report_id!==reportId||result.plan_binding?.plan_id!==planId||result.plan_binding?.revision!==row.revision||result.workspace_key!==workspace)throw Error('The report preview names another saved plan edition.');
-      this.planReportSource={stage:'review',plan_id:planId,report_id:reportId,preview:result};this.cache();this.render();
-    }catch(error){if(!this.gone&&turn===this.generation&&this.planReportSource?.report_id===reportId){this.planReportSource=null;this.cache();}throw error;}
+      if(useCurrent){
+        const module=await import('./implementation_source_reports.mjs');
+        if(!current())return;
+        const selection=await module.captureImplementationReportSelection(this);
+        if(!current()||selection===null)return;
+        flow.existing_report_selection=selection;
+      }
+      const result=await this.host.api('/api/implementation/report-source-preview',{method:'POST',body:{
+        workspace,plan_id:planId,report_id:reportId,existing_report_selection:clone(flow.existing_report_selection)}});
+      if(!current())return;
+      if(result.report_id!==reportId||result.plan_binding?.plan_id!==planId||result.plan_binding?.revision!==row.revision||result.workspace_key!==workspace||
+         result.delivery_selection_supplied!==(flow.existing_report_selection!==null))throw Error('The report preview names another saved plan edition or selection.');
+      flow.stage='review';flow.preview=result;this.cache();this.render();
+    }catch(error){if(!current())return;flow.stage='error';flow.error=error?.message||String(error);this.cache();this.render();throw error;}
   }
   async registerPlanReportSource(){
     const flow=this.planReportSource;
     if(!flow?.preview||flow.stage!=='review'||flow.plan_id!==this.plan?.id)throw Error('Review the original saved report first.');
     flow.stage='registering';this.cache();
-    try{await this.queue('implementation.report-source.import',{plan_id:flow.plan_id,report_id:flow.report_id,expected_operation_id:flow.preview.operation_id});}
+    try{await this.queue('implementation.report-source.import',{plan_id:flow.plan_id,report_id:flow.report_id,
+      existing_report_selection:clone(flow.existing_report_selection??null),expected_operation_id:flow.preview.operation_id});}
     catch(error){if(!this.pending&&this.planReportSource===flow){flow.stage='review';this.cache();}throw error;}
   }
   finishPlanReportSource(pending,result){
@@ -409,18 +424,25 @@ export class ImplementationWorkbench {
     this.message='The complete original plan report is registered. Open it in the ordered scientific report composer.';
     this.cache();this.render();
   }
-  async openPlanReportSource(){
+  async openPlanReportSource(target='scientific'){
     const flow=this.planReportSource;
     if(!flow?.result||flow.plan_id!==this.plan?.id)throw Error('Register the reviewed report source first.');
-    const turn=this.generation,workspace=this.workspace;
-    const result=await this.read('/api/implementation/report-source-detail',{source_key:flow.result.source_key,operation_id:flow.result.operation_id});
-    if(this.gone||turn!==this.generation||this.workspace!==workspace||this.planReportSource!==flow)return;
-    if(result.plan_id!==flow.plan_id||result.report_id!==flow.report_id||result.operation_id!==flow.preview.operation_id)throw Error('The retained report handoff changed.');
-    flow.result=clone(result);this.cache();
-    const choice={source_collection_id:result.source_collection_id,source_id:result.source_id};
-    const {openImplementationSourceReport}=await import('./implementation_source_reports.mjs');
-    if(this.gone||turn!==this.generation||this.workspace!==workspace||this.planReportSource!==flow)return;
-    await openImplementationSourceReport(this,[choice],{title:flow.preview.title+' — implementation and fieldwork'});
+    const turn=this.generation,workspace=this.workspace,planId=this.plan.id;
+    const current=()=>!this.gone&&turn===this.generation&&this.workspace===workspace&&this.host.getState?.()?.workspace_key===workspace&&this.plan?.id===planId&&this.planReportSource===flow;
+    try{
+      const result=await this.read('/api/implementation/report-source-detail',{source_key:flow.result.source_key,operation_id:flow.result.operation_id});
+      if(!current())return;
+      if(result.plan_id!==flow.plan_id||result.report_id!==flow.report_id||result.operation_id!==flow.preview.operation_id)throw Error('The retained report handoff changed.');
+      flow.result=clone(result);this.cache();
+      if(target==='client'){
+        if(!result.delivery_selection||typeof this.host.openDelivery!=='function')throw Error('Review this saved report with the current Report desk selection before preparing its client report.');
+        this.cache();await this.host.openDelivery(clone(result.delivery_selection));return;
+      }
+      const choice={source_collection_id:result.source_collection_id,source_id:result.source_id};
+      const {openImplementationSourceReport}=await import('./implementation_source_reports.mjs');
+      if(!current())return;
+      await openImplementationSourceReport(this,[choice],{title:flow.preview.title+' — implementation and fieldwork',selection:result.delivery_selection??null});
+    }catch(error){if(current())throw error;}
   }
   retainedReports(){
     if(!this.native)return '';
@@ -579,6 +601,9 @@ export class ImplementationWorkbench {
     if(action==='site-visit-import'){await openSiteVisitIntake(this);return;}
     if(action.startsWith('deployment-')){const turn=this.generation,selected=this.plan?.id;const deployment=await this.deploymentCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await deployment.act(this,b);return;}
     if(action==='plan-report-preview'){await this.previewPlanReportSource(b.dataset.reportId);return;}
+    if(action==='plan-report-use-current'){await this.previewPlanReportSource(this.planReportSource?.report_id,true);return;}
+    if(action==='plan-report-source-only'){await this.previewPlanReportSource(this.planReportSource?.report_id,false);return;}
+    if(action==='plan-report-client'){await this.openPlanReportSource('client');return;}
     if(action==='plan-report-register'){await this.registerPlanReportSource();return;}
     if(action==='plan-report-open'){await this.openPlanReportSource();return;}
     if(action==='plan-report-dismiss'){if(this.pending)throw Error('Finish the retained report operation first.');this.planReportSource=null;this.cache();this.render();return;}
