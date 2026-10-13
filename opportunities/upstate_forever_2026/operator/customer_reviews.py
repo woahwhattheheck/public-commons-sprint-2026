@@ -10,6 +10,7 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
+import stat
 import urllib.parse
 
 from model.common import atomic_json, canonical, digest, file_digest, identifier, read_json
@@ -196,6 +197,15 @@ class CustomerReviews:
             }
         return {"export_status": "available", "desk_url": self._desk_url(task["id"])}
 
+    def _listed_export_availability(self, task):
+        try:
+            return self._export_availability(task)
+        except (self.Fault, OSError, ValueError, KeyError, TypeError) as error:
+            # A damaged historical export must not hide other saved reviews.
+            # Opening the task, serving its files or rebuilding still raises
+            # the original error from the strict operations.
+            return {"export_status": "error", "export_message": str(error)}
+
     def _exports(self, workspace, review_id=None):
         result = []
         for task in self.operator.task_list(workspace):
@@ -210,7 +220,7 @@ class CustomerReviews:
                 "latest_response_id": value["latest_response_id"],
                 "package_sha256": value["package_sha256"], "members": value["members"],
                 "archive_bytes": value["archive"]["bytes"],
-                **self._export_availability(task),
+                **self._listed_export_availability(task),
             })
         return result
 
@@ -226,7 +236,7 @@ class CustomerReviews:
                 "task_id": task["id"], "review_id": value["review_id"], "handback_id": value["handback_id"],
                 "created_at": task["created_at"], "completed_at": task.get("ended_at"),
                 "package_sha256": value["package_sha256"], "members": value["members"],
-                "archive_bytes": value["archive"]["bytes"], **self._export_availability(task),
+                "archive_bytes": value["archive"]["bytes"], **self._listed_export_availability(task),
             })
         return result
 
@@ -467,24 +477,42 @@ class CustomerReviews:
                 raise ReceivedExportUnavailable()
             raise self.Fault("REVIEW_EXPORT_PATH", "The export is outside this original operator.", 409)
         try:
-            file = reviews._regular(local_root, file.relative_to(local_root).as_posix())
-            descriptor = result["manifest"]
-            if file.stat().st_size != descriptor["bytes"] or file_digest(file) != descriptor["sha256"]:
-                raise self.Fault("REVIEW_MANIFEST_CHANGED", "The original review export inventory changed.", 409)
-            manifest = read_json(file)
-            if engineering and manifest.get("handback_id") != result.get("handback_id"):
-                raise self.Fault("REVIEW_EXPORT_CHANGED", "The retained engineering edition changed.", 409)
-            if (manifest["package_sha256"] != result["package_sha256"]
-                    or manifest["review_id"] != result["review_id"]
-                    or manifest["project_id"] != result["project_id"]):
-                raise self.Fault("REVIEW_EXPORT_CHANGED", "The retained review export identity changed.", 409)
-            original_archive = reviews._regular(local_root, archive.relative_to(local_root).as_posix())
-            if original_archive.stat().st_size != result["archive"]["bytes"]:
-                raise self.Fault("REVIEW_ARCHIVE_CHANGED", "The original review archive changed.", 409)
+            cursor = local_root
+            for part in directory.relative_to(local_root).parts:
+                cursor = cursor / part
+                status = cursor.lstat()
+                if not stat.S_ISDIR(status.st_mode):
+                    raise self.Fault("REVIEW_EXPORT_PATH", "The original export directory changed.", 409)
         except FileNotFoundError:
             if original_task_id in origins:
                 raise ReceivedExportUnavailable() from None
             raise
+        file = reviews._regular(local_root, file.relative_to(local_root).as_posix())
+        descriptor = result["manifest"]
+        if file.stat().st_size != descriptor["bytes"] or file_digest(file) != descriptor["sha256"]:
+            raise self.Fault("REVIEW_MANIFEST_CHANGED", "The original review export inventory changed.", 409)
+        manifest = read_json(file)
+        if engineering and manifest.get("handback_id") != result.get("handback_id"):
+            raise self.Fault("REVIEW_EXPORT_CHANGED", "The retained engineering edition changed.", 409)
+        if (manifest["package_sha256"] != result["package_sha256"]
+                or manifest["review_id"] != result["review_id"]
+                or manifest["project_id"] != result["project_id"]):
+            raise self.Fault("REVIEW_EXPORT_CHANGED", "The retained review export identity changed.", 409)
+        try:
+            original_archive = reviews._regular(local_root, archive.relative_to(local_root).as_posix())
+        except FileNotFoundError:
+            if original_task_id in origins:
+                # A transferred desk may have been copied without its ZIP.
+                # Verify the complete present desk before treating that omission
+                # as recoverable; missing or changed members remain errors.
+                if engineering:
+                    review_handback.describe_export(directory)
+                else:
+                    reviews.describe_export(directory)
+                raise ReceivedExportUnavailable() from None
+            raise
+        if original_archive.stat().st_size != result["archive"]["bytes"]:
+            raise self.Fault("REVIEW_ARCHIVE_CHANGED", "The original review archive changed.", 409)
         return directory, manifest
 
     def decorate_task(self, task):
