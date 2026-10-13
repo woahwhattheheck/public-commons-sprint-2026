@@ -16,12 +16,12 @@ from model.common import (atomic_bytes, atomic_json, canonical, describe_file,
                           digest, held, identifier, read_json,
                           relative_file, verify_file)
 
-ACTIONS = {"receptor.network.build", "receptor.inventory.build", "receptor.experiment.build", "receptor.package.export", "receptor.source-areas.prepare", "receptor.scenario.save", "receptor.programme.create", "receptor.programme.compare"}
+ACTIONS = {"receptor.network.build", "receptor.inventory.build", "receptor.experiment.build", "receptor.package.export", "receptor.source-areas.prepare", "receptor.scenario.save", "receptor.programme.create", "receptor.programme.compare", "receptor.report-source.build"}
 APPLICATION = Path(__file__).resolve().parents[1]
 POLLUTANTS = ("nitrogen_export", "phosphorus_export", "sediment_export")
 FOLDERS = {"network": "receptor-networks", "inventory": "receptor-inventories",
            "comparison": "receptor-experiments", "source-areas": "receptor-scenario-areas",
-           "programme": "receptor-programmes"}
+           "programme": "receptor-programmes", "report-source": "receptor-report-sources"}
 
 
 def _folder(kind):
@@ -69,7 +69,7 @@ def _summaries(workspace, folder):
         stat = path.stat()
         signature = (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
         row = dict(_saved_summary(str(path), signature))
-        if folder in ("receptor-experiments", "receptor-scenario-areas", "receptor-programmes") and row["workspace_id"] != workspace.project["id"]:
+        if folder in ("receptor-experiments", "receptor-scenario-areas", "receptor-programmes", "receptor-report-sources") and row["workspace_id"] != workspace.project["id"]:
             raise ValueError("Saved comparison belongs to a different workspace")
         rows.append(row)
     return sorted(rows, key=lambda row: (row["created_at"], row["id"]), reverse=True)
@@ -81,7 +81,8 @@ def overview(operator, workspace_key):
             "inventories": _summaries(workspace, "receptor-inventories"),
             "networks": _summaries(workspace, "receptor-networks"),
             "source_areas": _summaries(workspace, "receptor-scenario-areas"),
-            "programmes": _summaries(workspace, "receptor-programmes")}
+            "programmes": _summaries(workspace, "receptor-programmes"),
+            "report_sources": _summaries(workspace, "receptor-report-sources")}
 
 
 def _profiles():
@@ -284,6 +285,9 @@ def _network(workspace, key):
 
 
 def _record(workspace, kind, key):
+    if kind == "report-source":
+        from model import receptor_report_source
+        return receptor_report_source.inspect(workspace, key)
     if kind == "programme":
         from model import receptor_programmes
         return receptor_programmes.inspect(workspace, key)
@@ -510,7 +514,7 @@ def read(operator, workspace_key, operation, payload):
         return receptor_programmes.preview(workspace, payload["selection"])
     if operation == "network-plan":
         return _network_plan(workspace, payload["selection"])
-    if operation in ("comparison", "inventory", "network", "source-areas", "programme"):
+    if operation in ("comparison", "inventory", "network", "source-areas", "programme", "report-source"):
         key = payload.get(operation + "_id") or payload.get("id")
         return _decorate(operator, workspace_key, operation, _record(workspace, operation, identifier(key)))
     raise ValueError("Choose a registered source-water read")
@@ -538,7 +542,7 @@ def _export(workspace, kind, key):
         pending = directory / ".source-water-results.zip.pending"
         report = _folder(kind) + "/" + key + "/index.html"
         package_description = ("Original source geometry, watershed links, editable memberships and saved source selections are included."
-            if kind in ("network", "source-areas") else "Editable GeoPackages, memberships, physical quantities and original result records are included.")
+            if kind in ("network", "source-areas", "report-source") else "Editable GeoPackages, memberships, physical quantities and original result records are included.")
         cover = ('<!doctype html><html lang="en"><meta charset="utf-8"><title>Source-water results</title>'
                  '<style>body{font:16px system-ui;max-width:850px;margin:40px auto;padding:0 24px;color:#222}a{color:inherit}</style>'
                  "<h1>" + escape(result["title"]) + "</h1><p><a href=\"" + escape(report, quote=True)
@@ -580,6 +584,9 @@ def _task_result(kind, result):
 
 def invoke(operator, workspace_key, action, payload):
     workspace = operator.ws(workspace_key)
+    if action == "receptor.report-source.build":
+        from model import receptor_report_source
+        return _task_result("report-source", receptor_report_source.build(workspace, payload["selection"]))
     if action == "receptor.programme.create":
         from model import receptor_programmes
         return _task_result("programme", receptor_programmes.create(workspace, payload["selection"],
@@ -648,6 +655,8 @@ def verify_workspace(workspace):
     for kind, folder in FOLDERS.items():
         rows = _summaries(workspace, folder)
         for row in rows:
+            if kind == "report-source":
+                _record(workspace, kind, row["id"])
             directory = workspace.root / folder / row["id"]
             record = read_json(directory / "result.json")
             records = [({**item, "path": (Path(folder) / row["id"] / item["path"]).as_posix()})

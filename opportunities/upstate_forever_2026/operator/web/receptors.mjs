@@ -10,7 +10,7 @@ const active = value => ['queued', 'running'].includes(value);
 const ticketURL = ticket => /^\/api\/file\/[a-f0-9]{64}$/.test(ticket?.url || '') ? ticket.url : '';
 const metricName = key => ({nitrogen_export:'Nitrogen', phosphorus_export:'Phosphorus', sediment_export:'Sediment'}[key] || label(key));
 
-export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail, getProgramme}) {
+export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail, getProgramme, openScientificReport}) {
   let root=null, frame=null, workspace=null, generation=0, catalog=null, taskTarget=null;
   let draft=null, customProfile=null, planned=null, profileOptions=[], scenarioOptions=[];
   let result=null, pending=null, packageFiles=[], observing=false, fetching=false, pathSelection=null, selectedMapHuc='';
@@ -307,10 +307,11 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       ...(catalog.inventories||[]).map(row=>({...row,kind:'inventory'})),
       ...(catalog.networks||[]).map(row=>({...row,kind:'network'})),
       ...(catalog.source_areas||[]).map(row=>({...row,kind:'source-areas'})),
-      ...(catalog.programmes||[]).map(row=>({...row,kind:'programme'}))].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+      ...(catalog.programmes||[]).map(row=>({...row,kind:'programme'})),
+      ...(catalog.report_sources||[]).map(row=>({...row,kind:'report-source'}))].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
     node('[data-rc-saved]').innerHTML=rows.length ?
       '<div class="rc-scroll"><table><caption>Retained source-water products</caption><thead><tr><th>Title</th><th>Type</th><th>State</th><th>Rows</th><th>Open</th></tr></thead><tbody>'+
-      rows.map(row=>'<tr><td>'+esc(row.title)+'</td><td>'+esc(row.kind==='comparison'?'Experiment profiles':row.kind==='network'?'Original watershed network':row.kind==='source-areas'?'Prepared scenario areas':row.kind==='programme'?'Paired native programme':'One baseline')+'</td><td>'+esc(label(row.state))+'</td><td>'+esc(number(row.scenario_rows))+'</td><td><button type="button" data-receptor-action="open" data-kind="'+row.kind+'" data-id="'+esc(row.id)+'">Open result</button></td></tr>').join('')+
+      rows.map(row=>'<tr><td>'+esc(row.title)+'</td><td>'+esc(row.kind==='comparison'?'Experiment profiles':row.kind==='network'?'Original watershed network':row.kind==='source-areas'?'Prepared scenario areas':row.kind==='programme'?'Paired native programme':row.kind==='report-source'?'Scientific source report':'One baseline')+'</td><td>'+esc(label(row.state))+'</td><td>'+esc(number(row.scenario_rows))+'</td><td><button type="button" data-receptor-action="open" data-kind="'+row.kind+'" data-id="'+esc(row.id)+'">Open result</button></td></tr>').join('')+
       '</tbody></table></div>' : '<p>Saved original watershed networks, native comparisons and inventories appear here as their workspace tasks finish.</p>';
   }
   function selection() {
@@ -451,6 +452,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     if(result._kind==='network')return renderNetwork();
     if(result._kind==='source-areas')return renderPreparedSources();
     if(result._kind==='programme')return renderProgramme();
+    if(result._kind==='report-source')return renderSourceReport();
     node('[data-rc-path]').replaceChildren();
     const rows=resultRows(), report=ticketURL(result._report);
     node('[data-rc-result-header]').innerHTML='<h2>'+esc(result.title)+'</h2><p>'+rows.length+' retained receiving-area quantities · '+esc(label(result.state||'complete'))+'</p>'+
@@ -529,7 +531,8 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       '<button type="button" data-receptor-action="export">Export complete source package</button>'+
       '<button type="button" data-receptor-action="reuse">Use these receiving areas again</button>'+
       '<button type="button" data-receptor-action="author-start">Edit receiving-area study</button>'+
-      '<button type="button" data-receptor-action="prepare-areas">Prepare scenario areas</button></div>'+
+      '<button type="button" data-receptor-action="prepare-areas">Prepare scenario areas</button>'+
+      '<button type="button" data-receptor-action="scientific-source">Prepare scientific report source</button></div>'+
       '<div data-rc-package>'+downloadLinks(packageFiles)+'</div>'+
       networkMapMarkup()+
       '<p class="rc-note">Membership follows the original ToHUC drainage links upstream from each selected anchor, including the anchor watershed. A watershed can contribute to more than one selected receiving area. Link counts describe steps through the retained network.</p>'+
@@ -988,6 +991,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       '<div class="rc-toolbar"><button type="button" data-receptor-action="prepared-analysis">Compare native results for these areas</button>'+
       '<button type="button" data-receptor-action="prepared-scenario">Create land-cover scenario</button>'+
       '<button type="button" data-receptor-action="prepared-programme">Prepare paired programme</button>'+
+      '<button type="button" data-receptor-action="scientific-source">Prepare scientific report source</button>'+
       '<button type="button" data-receptor-action="export">Export complete source package</button>'+
       '<button type="button" data-receptor-action="open" data-kind="network" data-id="'+esc(prepared.network_result_id)+'">Open original watershed study</button>'+
       (report?'<a class="rc-button" href="'+esc(report)+'" target="_blank" rel="noopener">Printable area report</a>':'')+'</div>'+
@@ -1016,6 +1020,37 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
   }
 
 
+  function renderSourceReport() {
+    const saved=result, summary=saved.summary, report=ticketURL(saved._report);
+    node('[data-rc-result-header]').innerHTML='<h2>'+esc(saved.title)+'</h2>'+
+      '<p>'+number(summary.network_huc12_count)+' original HUC12 units · '+number(summary.selected_huc12_count)+' selected distinct units · '+number(summary.membership_rows)+' original membership rows</p>'+
+      '<div class="rc-toolbar"><button type="button" data-receptor-action="scientific-compose">'+
+      (typeof openScientificReport==='function'?'Open scientific report composer':'Open retained scientific source')+'</button>'+
+      '<button type="button" data-receptor-action="export">Export complete source package</button>'+
+      '<button type="button" data-receptor-action="open" data-kind="'+(saved.preparation_id?'source-areas':'network')+'" data-id="'+esc(saved.preparation_id||saved.network_result_id)+'">Open original source study</button>'+
+      (report?'<a class="rc-button" href="'+esc(report)+'" target="_blank" rel="noopener">Printable source geography</a>':'')+'</div><div data-rc-package>'+downloadLinks(packageFiles)+'</div>';
+    for(const selector of ['[data-rc-result-filters]','[data-rc-path]','[data-rc-ranges]'])node(selector)?.replaceChildren();
+    node('[data-rc-quantities]').innerHTML='<div class="rc-scroll"><table><caption>Original receiving-area source support</caption><thead><tr><th>Receiving area</th><th>HUC12 units</th><th>Original anchors</th><th>Published area (km²)</th><th>Longest path (links)</th></tr></thead><tbody>'+
+      summary.areas.map(area=>'<tr><td>'+esc(area.title)+'</td><td>'+number(area.huc12_count)+'</td><td>'+esc(area.anchor_huc12s.join(', '))+'</td><td>'+
+        esc(area.published_area.complete?area.published_area.value:'Unavailable: '+area.published_area.missing_units+' original values missing')+'</td><td>'+number(area.maximum_links_to_anchor)+'</td></tr>').join('')+'</tbody></table></div>';
+    node('[data-rc-products]').innerHTML='<h3>Scientific source and original companions</h3><p>The retained report preserves the original watershed geography, drainage links, memberships and prepared polygon sources. Published areas sum the original AreaSqKm attributes over distinct HUC12 members. The report composer can combine this source with selected observation and native process reports in reading order.</p>'+
+      '<p>'+number(summary.shared_huc12_count)+' HUC12 units are shared by selected areas. The selected union counts every original unit once.</p>';
+    node('[data-rc-downloads]').innerHTML='<details class="rc-detail"><summary>Complete original report files</summary><p class="rc-download-links">'+downloadLinks(saved._downloads||[])+'</p><p>Original decoded source: <code>'+esc(saved.source_binding.decoded_sha256)+'</code></p></details>';
+  }
+  async function openSourceReportComposer() {
+    if(result?._kind!=='report-source')throw Error('Open the retained source geography report first.');
+    const selected=result, context=viewContext(), epoch=generation, choice=copy(selected.source_choice);
+    await waitForRetainedState(choice.source_collection_id);
+    if(!currentView(context)||generation!==epoch||result!==selected)return;
+    const collection=getState()?.data?.sources?.find(row=>row.id===choice.source_collection_id);
+    if(!collection?.entries?.some(entry=>entry.id===choice.source_id))throw Error('Refresh the retained report source before opening its composer.');
+    if(typeof openScientificReport==='function'){
+      await openScientificReport({workspace_key:context.workspace,sources:[choice],title:selected.title});
+    }else{
+      await openItem('sources',choice.source_collection_id);
+    }
+  }
+
   function taskActions(task) {
     if(task?.state!=='complete'||!task.result||task.workspace!==currentWorkspace())return '';
     const saved=task.result,buttons=[];
@@ -1025,11 +1060,12 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       'receptor.experiment.build':['comparison','Open profile comparisons'],
       'receptor.source-areas.prepare':['source-areas','Open prepared scenario areas'],
       'receptor.programme.create':['programme','Open paired native programme'],
-      'receptor.programme.compare':['comparison','Open source-water programme comparisons']
+      'receptor.programme.compare':['comparison','Open source-water programme comparisons'],
+      'receptor.report-source.build':['report-source','Open scientific source geography']
     };
     const valid=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);
     const resultButton=(kind,id,title)=>{
-      if(!['network','inventory','comparison','source-areas','programme'].includes(kind)||!valid(id))return;
+      if(!['network','inventory','comparison','source-areas','programme','report-source'].includes(kind)||!valid(id))return;
       buttons.push('<button type="button" data-action="receptor-result-open" data-workspace="'+esc(task.workspace)+
         '" data-kind="'+kind+'" data-id="'+id+'">'+esc(title)+'</button>');
     };
@@ -1057,7 +1093,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       closeDetail();
       return openItem('scenarios',id);
     }
-    if(action!=='receptor-result-open'||!['network','inventory','comparison','source-areas','programme'].includes(button.dataset.kind))
+    if(action!=='receptor-result-open'||!['network','inventory','comparison','source-areas','programme','report-source'].includes(button.dataset.kind))
       throw Error('Choose a registered source-water task result.');
     taskTarget={workspace:requested,kind:button.dataset.kind,id};
     closeDetail();
@@ -1066,6 +1102,12 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
   }
 
   async function act(action,target) {
+    if(action==='scientific-compose')return openSourceReportComposer();
+    if(action==='scientific-source'){
+      if(!['network','source-areas'].includes(result?._kind))throw Error('Open a saved original watershed study or prepared area result.');
+      const selection=result._kind==='network'?{network_id:result.id}:{preparation_id:result.id};
+      return submit('receptor.report-source.build',{selection});
+    }
     if(action==='prepare-areas')return prepareAreaForm();
     if(action==='prepared-analysis')return usePreparedAnalysis();
     if(action==='prepared-scenario')return interventionForm();
@@ -1146,7 +1188,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     const state=getState();
     if(state?.workspace_key!==workspace)return;
     const sourceState=state.data?.source_water;
-    if(sourceState&&catalog){catalog.comparisons=sourceState.comparisons||[];catalog.inventories=sourceState.inventories||[];catalog.networks=sourceState.networks||[];catalog.source_areas=sourceState.source_areas||[];catalog.programmes=sourceState.programmes||[];renderSaved();if(result?._kind==='source-areas')renderPreparedSources();}
+    if(sourceState&&catalog){catalog.comparisons=sourceState.comparisons||[];catalog.inventories=sourceState.inventories||[];catalog.networks=sourceState.networks||[];catalog.source_areas=sourceState.source_areas||[];catalog.programmes=sourceState.programmes||[];catalog.report_sources=sourceState.report_sources||[];renderSaved();if(result?._kind==='source-areas')renderPreparedSources();}
     if(!pending||observing)return;
     const task=(state.tasks||[]).find(row=>row.workspace===workspace&&sameTask(row,pending));
     if(!task)return;
@@ -1178,9 +1220,9 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
         completed=await openResult('source-areas',finished.result.preparation_id);
         if(completed&&ownsCompletion())toast('Land-cover scenario saved. Prepare its native run from these source areas.');
       } else if(finished.result?.id){
-        const kind=finished.action==='receptor.programme.create'?'programme':
+        const kind=finished.action==='receptor.report-source.build'?'report-source':finished.action==='receptor.programme.create'?'programme':
           ['receptor.experiment.build','receptor.programme.compare'].includes(finished.action)?'comparison':finished.action==='receptor.network.build'?'network':finished.action==='receptor.source-areas.prepare'?'source-areas':'inventory';
-        if(kind==='source-areas'){
+        if(kind==='source-areas'||kind==='report-source'){
           await waitForRetainedState(finished.result.source_collection_id);
           if(!ownsCompletion())return;
         }
