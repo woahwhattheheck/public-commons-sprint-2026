@@ -1,0 +1,320 @@
+{
+  "schema": "tjl.publication.report-dataset.v1",
+  "id": "ohio-household-published-illustration-2025",
+  "title": "Published household-cost illustration: three Ohio counties",
+  "description": "Complete statistical Table 5 transcription from OACAA's 2025 report, with reproducible component arithmetic and separately dated benchmark comparisons.",
+  "publicationPeriod": "2026 working production",
+  "dataPeriod": "Published 2025 Table 5; comparison labels retain their printed years",
+  "geography": "Vinton, Sandusky and Delaware counties, Ohio; selected published illustrations",
+  "methodology": "Preserve all 42 published numeric cells for two adults and two school-age children. Calculate with exact decimal/integer arithmetic. The component gap is an unresolved reconciliation difference; it is not interpreted as a credit. Comparison columns explicitly pair actual 2024 benchmarks with the published 2025 illustration.",
+  "source": {
+    "title": "OACAA 2025 published Table 5 statistical transcription",
+    "url": "https://oacaa.org/wp-content/uploads/2025/07/2025-OACA-Report-small.pdf",
+    "locator": "Table 5: Monthly expenses and self-sufficiency wages, sample counties, 2025",
+    "publisher": "Ohio Association of Community Action Agencies",
+    "retrievedAt": "2026-10-13",
+    "note": "Primary publisher PDF table returned by the public web index. All numerical cells below are a factual transcription. The full 11,255,300-byte PDF and its page pixels were not downloaded in this source step.",
+    "rights": "Factual statistical transcription with source attribution; no reproduction of report artwork or prose."
+  },
+  "columns": [
+    {
+      "key": "county",
+      "label": "Published county",
+      "kind": "text",
+      "role": "geography",
+      "unit": "",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": ""
+    },
+    {
+      "key": "published_position",
+      "label": "Published selection",
+      "kind": "text",
+      "role": "note",
+      "unit": "",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "The source's low/middle/high labels; not independently reproduced statewide ranks."
+    },
+    {
+      "key": "household",
+      "label": "Household type",
+      "kind": "text",
+      "role": "denominator",
+      "unit": "",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": ""
+    },
+    {
+      "key": "housing",
+      "label": "Housing",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "child_care",
+      "label": "Child care",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "food",
+      "label": "Food",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "transportation",
+      "label": "Transportation",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "health_care",
+      "label": "Health care",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "miscellaneous",
+      "label": "Miscellaneous",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "taxes",
+      "label": "Taxes",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "hourly_wage",
+      "label": "Hourly wage per working adult",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "USD per hour",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "monthly_income",
+      "label": "Monthly household income",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "annual_income",
+      "label": "Annual household income",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per year",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published amount."
+    },
+    {
+      "key": "printed_minimum_wage",
+      "label": "2024 Ohio Minimum Wage (hourly)",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "USD per hour",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published comparison, including its original year label; see independent benchmark dataset."
+    },
+    {
+      "key": "printed_hourly_difference",
+      "label": "Disparity between Ohio Minimum Wage and self-sufficiency wage",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "USD per hour",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published comparison, including its original year label; see independent benchmark dataset."
+    },
+    {
+      "key": "printed_poverty_threshold",
+      "label": "2024 federal poverty level threshold (annual)",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per year",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published comparison, including its original year label; see independent benchmark dataset."
+    },
+    {
+      "key": "printed_annual_difference",
+      "label": "Disparity between federal poverty level threshold and self-sufficiency wage",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per year",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Exact published comparison, including its original year label; see independent benchmark dataset."
+    },
+    {
+      "key": "component_sum",
+      "label": "Sum of seven printed monthly components",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Arithmetic sum of housing, child care, food, transport, health care, miscellaneous and taxes."
+    },
+    {
+      "key": "component_gap",
+      "label": "Component sum minus printed monthly income",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per month",
+      "period": "Published 2025 Table 5; comparison labels retain their printed years",
+      "definition": "Reconciliation difference, not an inferred tax credit or a proposed replacement budget."
+    },
+    {
+      "key": "comparison_wage_2024",
+      "label": "Actual 2024 non-tipped Ohio rate",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "USD per hour",
+      "period": "2024",
+      "definition": "Selected original state poster; coverage and exceptions remain in benchmark source."
+    },
+    {
+      "key": "comparison_hourly_gap_2024",
+      "label": "2024 state rate minus published required hourly wage",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "USD per hour",
+      "period": "2024 benchmark versus published 2025 illustration",
+      "definition": "Explicit cross-period comparison; does not revise the published household standard."
+    },
+    {
+      "key": "comparison_threshold_2024",
+      "label": "Actual 2024 official four-person/two-child threshold",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per year",
+      "period": "2024",
+      "definition": "Original Census statistical threshold, distinct from HHS guidelines."
+    },
+    {
+      "key": "comparison_annual_gap_2024",
+      "label": "2024 threshold minus published required annual income",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per year",
+      "period": "2024 benchmark versus published 2025 illustration",
+      "definition": "Explicit cross-period comparison; does not revise the published household standard."
+    }
+  ],
+  "rows": [
+    {
+      "id": "household-illustration-vinton",
+      "values": {
+        "county": "Vinton County",
+        "published_position": "Low",
+        "household": "Two adults and two school-age children",
+        "housing": "884",
+        "child_care": "1101",
+        "food": "953",
+        "transportation": "752",
+        "health_care": "749",
+        "miscellaneous": "593",
+        "taxes": "658",
+        "hourly_wage": "14.85",
+        "monthly_income": "5226",
+        "annual_income": "62713",
+        "printed_minimum_wage": "10.70",
+        "printed_hourly_difference": "-4.15",
+        "printed_poverty_threshold": "30900",
+        "printed_annual_difference": "-31813",
+        "component_sum": "5690",
+        "component_gap": "464",
+        "comparison_wage_2024": "10.45",
+        "comparison_hourly_gap_2024": "-4.40",
+        "comparison_threshold_2024": "31812",
+        "comparison_annual_gap_2024": "-30901"
+      },
+      "locator": "Table 5: Monthly expenses and self-sufficiency wages, sample counties, 2025; Vinton County column",
+      "note": "All fourteen original numeric cells are retained. Original comparison labels are not silently corrected; separate primary sources identify their periods."
+    },
+    {
+      "id": "household-illustration-sandusky",
+      "values": {
+        "county": "Sandusky County",
+        "published_position": "Middle",
+        "household": "Two adults and two school-age children",
+        "housing": "884",
+        "child_care": "1363",
+        "food": "996",
+        "transportation": "716",
+        "health_care": "749",
+        "miscellaneous": "620",
+        "taxes": "940",
+        "hourly_wage": "16.57",
+        "monthly_income": "5833",
+        "annual_income": "69991",
+        "printed_minimum_wage": "10.70",
+        "printed_hourly_difference": "-5.87",
+        "printed_poverty_threshold": "30900",
+        "printed_annual_difference": "-39091",
+        "component_sum": "6268",
+        "component_gap": "435",
+        "comparison_wage_2024": "10.45",
+        "comparison_hourly_gap_2024": "-6.12",
+        "comparison_threshold_2024": "31812",
+        "comparison_annual_gap_2024": "-38179"
+      },
+      "locator": "Table 5: Monthly expenses and self-sufficiency wages, sample counties, 2025; Sandusky County column",
+      "note": "All fourteen original numeric cells are retained. Original comparison labels are not silently corrected; separate primary sources identify their periods."
+    },
+    {
+      "id": "household-illustration-delaware",
+      "values": {
+        "county": "Delaware County",
+        "published_position": "High",
+        "household": "Two adults and two school-age children",
+        "housing": "1621",
+        "child_care": "1709",
+        "food": "1147",
+        "transportation": "739",
+        "health_care": "876",
+        "miscellaneous": "758",
+        "taxes": "1300",
+        "hourly_wage": "21.92",
+        "monthly_income": "7716",
+        "annual_income": "92596",
+        "printed_minimum_wage": "10.70",
+        "printed_hourly_difference": "-11.22",
+        "printed_poverty_threshold": "30900",
+        "printed_annual_difference": "-61696",
+        "component_sum": "8150",
+        "component_gap": "434",
+        "comparison_wage_2024": "10.45",
+        "comparison_hourly_gap_2024": "-11.47",
+        "comparison_threshold_2024": "31812",
+        "comparison_annual_gap_2024": "-60784"
+      },
+      "locator": "Table 5: Monthly expenses and self-sufficiency wages, sample counties, 2025; Delaware County column",
+      "note": "All fourteen original numeric cells are retained. Original comparison labels are not silently corrected; separate primary sources identify their periods."
+    }
+  ]
+}
