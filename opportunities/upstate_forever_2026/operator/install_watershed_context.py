@@ -16,6 +16,12 @@ FILES = (
     "model/watershed_brief.py",
     "model/watershed_briefing.py",
     "model/utility_monitoring.py",
+    "model/utility_monitoring_report.py",
+    "model/monitoring_workspace.py",
+    "model/monitoring_packet.py",
+    "model/monitoring_comparison_report.py",
+    "model/monitoring_report_source.py",
+    "docs/UTILITY_MONITORING_REPORTS.md",
     "docs/UTILITY_MONITORING.md",
     "source_tools/receive_utility_monitoring.py",
     "docs/UTILITY_MONITORING_RECEIVING.md",
@@ -26,6 +32,7 @@ FILES = (
     "docs/UTILITY_SOURCE_BRIEFING.md",
     "model/utility_watershed_context.py",
     "model/utility_observed_context.py",
+    "model/watershed_observation_context.py",
     "source/receptor-topology/20261013/utility-focus-profile.json",
     "operator/receive_watershed_context.py",
     "source_tools/prepare_watershed_context.py",
@@ -41,6 +48,7 @@ FILES = (
 )
 OPTIONAL = (
     "integration/run_watershed_context_operator.py",
+    "integration/component_fragments/watershed-observation-exports.json",
     "integration/WATERSHED_CONTEXT_RECEIVING.md",
     "source_tools/receive_watershed_edition.py",
     "source_tools/utility_observed_context.mjs",
@@ -69,6 +77,7 @@ SOURCE_MANIFESTS = (
     "source/water_context/20261013/complete-sources.json",
     "source/water_context/20261013/complete-native-sources.json",
     "utility_observed_context.sources.json",
+    "landcover_observation_profiles.sources.json",
 )
 
 

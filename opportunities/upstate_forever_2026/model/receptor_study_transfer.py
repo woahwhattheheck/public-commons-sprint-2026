@@ -322,6 +322,89 @@ def _entry_identity(entry):
     }
 
 
+def _map_members(closure, identity, recipe, members, product, prepared, summary):
+    """Validate the original R9 map capture without loading a GIS renderer."""
+    selected = identity["selection"]
+    version = identity.get("version")
+    if version == 1:
+        if (selected.get("include_maps", False) or "native_map_runtime" in identity
+                or "figure_spec" in recipe or "figures" in recipe
+                or "projected_maps" in summary):
+            raise ValueError("The original source report acquired another map edition")
+        return set()
+    runtime = identity.get("native_map_runtime")
+    if (version != 2 or selected.get("include_maps") is not True
+            or not isinstance(runtime, dict)
+            or runtime.get("schema") != "upstate.receptor-map-runtime/v1"):
+        raise ValueError("Retain the original declared source-map rendering edition")
+    inventory_name = "figures/source-water-map-members.json"
+    specification_name = "figures/source-water-map-spec.json"
+    reader_name = "figures/original-geometry-reader.json"
+    inventory = _cas(closure, members[inventory_name])
+    chosen = set((prepared or {}).get("identity", {}).get(
+        "receptor_ids", [area["id"] for area in product["areas"]]))
+    ordered = [area["id"] for area in product["areas"] if area["id"] in chosen]
+    expected_identity = {"network_id": product["id"],
+                         "preparation_id": (prepared or {}).get("id"),
+                         "receptor_ids": ordered,
+                         "source_binding": product["source_binding"], "runtime": runtime}
+    if (not ordered or len(ordered) != len(chosen)
+            or inventory.get("schema") != "upstate.receptor-report-maps/v1"
+            or inventory.get("identity") != expected_identity
+            or inventory.get("figure_spec") != specification_name
+            or recipe.get("figure_spec") != specification_name
+            or summary.get("projected_maps") != inventory.get("summary")):
+        raise ValueError("The saved projected maps differ from their original selected source areas")
+    mapped = {}
+    for item in inventory["files"]:
+        name = _relative(item["path"])
+        if name in mapped or name not in members or not _same(item, members[name]):
+            raise ValueError("A retained projected-map companion changed")
+        mapped[name] = item
+    figures = inventory["figures"]
+    if (not isinstance(figures, list) or not figures
+            or recipe.get("figures") != [{key: item[key] for key in ("id", "path")}
+                                         for item in figures]):
+        raise ValueError("The saved report changed its ordered original map figures")
+    source_names = set()
+    for descriptor in runtime["source"]:
+        name = "render-source/" + _relative(descriptor["path"])
+        if name in source_names or name not in mapped or not _same(descriptor, mapped[name]):
+            raise ValueError("The map capture lost its original renderer source")
+        source_names.add(name)
+    figure_names, figure_ids = set(), set()
+    for figure in figures:
+        name = _relative(figure["path"])
+        if (not isinstance(figure["id"], str) or not figure["id"]
+                or figure["id"] in figure_ids or name in figure_names
+                or name != "figures/" + figure["id"] + ".svg"):
+            raise ValueError("The saved map repeats or changes an original figure identity")
+        figure_names.add(name)
+        figure_ids.add(figure["id"])
+    expected = source_names | figure_names | {specification_name, reader_name}
+    if set(mapped) != expected or inventory_name in expected:
+        raise ValueError("The source-map inventory is not the complete original rendering capture")
+    specification = _cas(closure, members[specification_name])
+    if (specification.get("schema") != "upstate.scientific-figure-spec/v1"
+            or specification.get("edition") != "source-water-original-maps/1"
+            or specification.get("rendering") != {
+                "reportlab_version": runtime["libraries"]["reportlab"], "width_points": 511.2}
+            or [(item["id"], item["title"], item["caption"])
+                for item in specification.get("figures", [])] != [
+                    (item["id"], item["title"], item["caption"]) for item in figures]):
+        raise ValueError("The retained map specification differs from its original figure inventory")
+    source = product["files"]["source_body"]
+    original = {"path": "network/" + source["path"],
+                "bytes": source["bytes"], "sha256": source["sha256"]}
+    reader = _cas(closure, members[reader_name])
+    if (reader.get("schema") != "upstate.receptor-map-original-reader/v1"
+            or reader.get("original_source") != original
+            or reader.get("source_binding") != product["source_binding"]
+            or reader.get("runtime") != runtime):
+        raise ValueError("The saved geometry interpretation lost its original source and runtime")
+    return expected | {inventory_name}
+
+
 def include_source(closure, collection_id, entry):
     """Follow only the declared original geography producer of a saved edition."""
     metadata = entry.get("metadata") or {}
@@ -356,7 +439,7 @@ def include_source(closure, collection_id, entry):
     project = identity.get("workspace_id")
     if (provenance.get("schema") != "upstate.receptor-report-provenance/v1"
             or identity.get("schema") != SCHEMAS["receptor-report-sources"]
-            or identity.get("version") != 1 or digest(identity) != key
+            or identity.get("version") not in (1, 2) or digest(identity) != key
             or not isinstance(project, str) or not project
             or entry.get("id") != "source-water-geography-" + key[:24]
             or entry.get("uri") != "urn:sha256:" + key
@@ -367,7 +450,7 @@ def include_source(closure, collection_id, entry):
             or metadata.get("preparation_id") != prepared_id):
         raise ValueError("The source geography report changed its original selection")
     originals = identity.get("source_members")
-    if not isinstance(originals, dict) or set(originals) != set(requested) - {"summary.json", "provenance.json"}:
+    if not isinstance(originals, dict) or not set(originals) <= set(requested) - {"summary.json", "provenance.json"}:
         raise ValueError("The source geography report lost its exact original product inventory")
     for name, item in originals.items():
         if not _same(item, members[name]):
@@ -406,6 +489,9 @@ def include_source(closure, collection_id, entry):
             or summary.get("preparation_id") != prepared_id
             or summary.get("original_source_binding") != network["source_binding"]):
         raise ValueError("The retained source geography summary names another original network")
+    map_members = _map_members(closure, identity, recipe, members, network, prepared, summary)
+    if set(requested) != set(originals) | map_members | {"summary.json", "provenance.json"}:
+        raise ValueError("The source geography report changed its complete original input inventory")
     local = project == closure.workspace.project["id"]
     required = []
     capture_sha = None

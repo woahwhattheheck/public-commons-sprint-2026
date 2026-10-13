@@ -35,6 +35,12 @@ Original `.network.lock`, `.prepare.lock`, `.batch.lock`, `.inventory.lock` and 
 
 The retained network describes original upstream HUC12 relationships. It does not imply that a geography-only report contains modeled pollutant quantities. Physical inventories continue to identify their original baseline, alternatives, grid support, annual units and producing model versions.
 
+## Saved projected-map editions
+
+Original R8 reports retain their complete source geography. R9 reports with maps additionally retain the original projected SVG figures, figure specification, geometry-reader inventory and the exact renderer source bytes. The transfer checks the version 2 identity, original native runtime declaration, selected network and prepared areas, ordered figures and every map companion against the original saved capture. Receiving reads those artifacts without re-rendering the maps or requiring the former GIS runtime to be installed. The editable original records keep their source identities.
+
+The common report-source receipt limits restored archives to the editable source histories originally captured for each source pair. An older archive can therefore reopen its retained ordered report and companion bytes without unexpectedly requiring later-added producer records. A new explicit selection follows the complete current typed source history.
+
 ## Component integration
 
 The additive helper is `model/receptor_study_transfer.py`. Its public contract is:

@@ -519,7 +519,7 @@ const operatingProcedures = createOperatingProceduresView({ root: $('operating-p
   openLog, chooseRuntime, switchView, openApplication: id => applications.choose(id) });
 const managed = createManagedWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
   refreshOperation, openLog, switchView, message, error });
-const applications = createApplicationsWorkspaceView({ root: $('applications-workspace'), api, getState: () => state,
+const applications = createApplicationsWorkspaceView({ root: $('applications-workspace'), api, getState: () => state, getToken: () => token,
   refreshWorkspace: refresh, switchView, message, error });
 const python = createPythonWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
   openLog, switchView, message, error,

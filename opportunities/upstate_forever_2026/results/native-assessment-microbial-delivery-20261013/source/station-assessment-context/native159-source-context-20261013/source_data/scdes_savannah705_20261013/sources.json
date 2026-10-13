@@ -1,0 +1,35 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original complete SCDES Savannah monitoring-station feature set",
+  "entries": [
+    {
+      "id": "scdes-bw-monitoring-savannah-native-20261013",
+      "title": "SCDES original Savannah monitoring stations — 705 native features",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/BW_Monitoring_Stations/MapServer/9",
+      "vintage": "Retained 2026-10-13 official source capture",
+      "kind": "vector",
+      "path": "scdes-savannah705-native.esri.json",
+      "sha256": "14b1a945ee8d5f172f63435b4fd955e9dada6894fcbca2964160c6e2e52d79f0",
+      "format": "EsriJSON",
+      "role": "MONITORING_STATIONS",
+      "station_id_field": "STAT",
+      "native_id_field": "OBJECTID",
+      "source_crs": "EPSG:26917",
+      "metadata": {
+        "native_feature_count": 705,
+        "original_query": "https://gis.des.sc.gov/gisserver/rest/services/water/BW_Monitoring_Stations/MapServer/9/query?where=BASIN%3D'Savannah'&outFields=*&returnGeometry=true&f=pjson",
+        "geometry_representation": "Original unmodified Esri feature-set response; native coordinates and every original attribute retained"
+      },
+      "companions": [
+        {
+          "path": "original-count-response.html",
+          "sha256": "d110bed49ce5c04505eba11c314a48b8d6615417ab68e11882526aaabe0a9487"
+        },
+        {
+          "path": "source-provenance.json",
+          "sha256": "f7c7c2e6eb9ef1992380f605afcda599e7cccbbd925956132d91ac585b31b2fc"
+        }
+      ]
+    }
+  ]
+}

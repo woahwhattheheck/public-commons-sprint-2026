@@ -8,6 +8,8 @@ import { composeGrantEntry } from './grant-entry.mjs';
 import { attachGrantSubmission } from './grant-submission.mjs';
 import { attachGrantReviewRounds } from './grant-review-round.mjs';
 import { attachGrantCompanion } from './grant-companion.mjs';
+import { attachSavedProjects } from './saved-projects.mjs';
+import { projectPublicGrantMarkdown, projectPublicGrantHtml, projectPublicGrantSourceIndex } from './grant-publication-source.mjs';
 import { receiveFinancialApplication, attachFinancialSources } from './grant-financial-operations.mjs';
 import { projectGrantMarkdown, receiveGrantCustomerSections, projectGrantSourceIndex, receiveGrantCustomerSources } from './grant-customers.mjs';
 import { receiveDatasetteApplication, datasetteSourceSelection, addDatasetteGrantSources, receiveDatasetteExistingWork } from './grant-datasette.mjs';
@@ -186,8 +188,8 @@ export function composeGrantApplication({
 }) {
   need(typeof fredCommit === 'string' && /^[a-f0-9]{40}$/.test(fredCommit), 'Select the actual merged economic product commit.');
   need(coopsCommit === null || (typeof coopsCommit === 'string' && /^[a-f0-9]{40}$/.test(coopsCommit)), 'Select the actual merged coastal product commit.');
-  const application = projectGrantMarkdown(applyGrantDeliveryPlan(applicationMarkdown), { application: true });
-  const companion = projectGrantMarkdown(productAndFinanceMarkdown);
+  const application = projectPublicGrantMarkdown(projectGrantMarkdown(applyGrantDeliveryPlan(applicationMarkdown), { application: true }));
+  const companion = projectPublicGrantMarkdown(projectGrantMarkdown(productAndFinanceMarkdown));
   const datasetteSelection = datasetteSourceSelection({ analysisCommit: datasetteCommit, publisherCommit: datasettePublisherCommit });
   if (datasetteSelection) need(companion.includes('## Datasette editions and customer analysis\n'), 'Retain the selected complete Datasette installation with its source commits.');
   if (coopsCommit) need(companion.includes(COASTAL_HEADING + '\n'), 'Retain the selected complete coastal installation with its source commit.');
@@ -259,8 +261,8 @@ export function composeGrantApplication({
   const submission = attachGrantSubmission({ templateHtml: reviewerEntry.html, sourceIndex: index });
   const reviewRound = attachGrantReviewRounds(submission);
   const companionReader = attachGrantCompanion(reviewRound);
-  html = companionReader.templateHtml;
-  index = companionReader.sourceIndex;
+  html = projectPublicGrantHtml(attachSavedProjects(companionReader.templateHtml));
+  index = projectPublicGrantSourceIndex(companionReader.sourceIndex);
   const indexText = JSON.stringify(index, null, 2) + '\n';
   const files = {
     'grant.html': html,

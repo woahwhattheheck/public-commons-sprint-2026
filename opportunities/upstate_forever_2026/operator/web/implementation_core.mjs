@@ -283,6 +283,7 @@ export function implementationSourceRefs(row){
   const refs=[];
   for(const key of ['source_link_id','audit_source_link_id','source_ref','custody_ref'])if(typeof row[key]==='string')refs.push(row[key]);
   if(Array.isArray(row.evidence_refs))refs.push(...row.evidence_refs);
+  if(Array.isArray(row.source_link_ids))refs.push(...row.source_link_ids);
   for(const key of ['original_source','lab_source']){const source=row[key];if(source&&typeof source==='object')for(const field of ['source_link_id','audit_source_link_id','source_ref'])if(typeof source[field]==='string')refs.push(source[field]);}
   const response=row.form_response,fields=response?.template?.fields,answers=response?.answers;
   if(Array.isArray(fields)&&answers&&typeof answers==='object')for(const field of fields){if(!field||typeof field!=='object')continue;const answer=answers[field.key];if(field.type==='attachment_ref'&&typeof answer==='string')refs.push(answer);if(field.type==='attachment_refs'){if(Array.isArray(answer))refs.push(...answer);else if(Array.isArray(answer?.references))refs.push(...answer.references);}}
@@ -291,7 +292,7 @@ export function implementationSourceRefs(row){
 export function deleteRow(plan,collection,id){
   if(collection==='source_links'){
     const linked=[];
-    for(const name of [...COLLECTIONS,'field12_lab_imports'])for(const [index,row] of (Array.isArray(plan[name])?plan[name]:[]).entries())if(implementationSourceRefs(row).includes(id))linked.push(name+'.'+(row.id||index));
+    for(const name of [...COLLECTIONS,'field12_lab_imports','field12_site_visit_imports'])for(const [index,row] of (Array.isArray(plan[name])?plan[name]:[]).entries())if(implementationSourceRefs(row).includes(id))linked.push(name+'.'+(row.id||index));
     if(linked.length)throw Error('This source is still linked. Update its original associations first.\n'+linked.join('\n'));
   }
   const p=clone(plan);p[collection]=p[collection].filter(x=>x.id!==id);

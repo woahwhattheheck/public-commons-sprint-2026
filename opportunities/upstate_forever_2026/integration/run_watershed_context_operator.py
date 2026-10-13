@@ -161,6 +161,15 @@ def receive(args):
     edition = Path(args.source_dir).resolve(strict=True)
     output = Path(args.output).absolute()
     require(not output.exists(), "Choose a new receiving output directory.")
+    existing_workspace = getattr(args, "workspace", None)
+    workspace_directory = (Path(existing_workspace).expanduser().resolve(strict=True)
+                           if existing_workspace else output / "workspace")
+    if existing_workspace:
+        require(workspace_directory.is_dir(), "Choose the existing original Workspace directory.")
+        resolved_output = output.resolve()
+        require(not resolved_output.is_relative_to(workspace_directory)
+                and not workspace_directory.is_relative_to(resolved_output),
+                "Receiving output must be separate from the existing Workspace.")
     manifest_arg = getattr(args, "source_manifest", None)
     source_manifest = (Path(manifest_arg).expanduser() if manifest_arg is not None
                        else edition / "complete-sources.json").resolve(strict=True)
@@ -185,17 +194,23 @@ def receive(args):
     result = {"schema": "upstate.watershed-context-operator-journey/v1",
               "started_at": datetime.now(timezone.utc).isoformat(),
               "state": "running", "application": str(application), "source_directory": str(edition),
-              "source_manifest_path": str(source_manifest)}
+              "source_manifest_path": str(source_manifest),
+              "include_observed_evidence": bool(getattr(args, "include_observed_evidence", False)),
+              "workspace_directory": str(workspace_directory),
+              "workspace_mode": "existing" if existing_workspace else "new"}
     server = thread = journey = None
     try:
         server, startup = server_module.start_server(
-            output / "workspace", state_directory=output / "operator-state",
-            create=True, title="Upper Savannah regional watershed receiving",
+            workspace_directory, state_directory=output / "operator-state",
+            create=not bool(existing_workspace),
+            title=None if existing_workspace else "Upper Savannah regional watershed receiving",
             source_roots=[edition], restore_directory=output / "received", port=0)
         thread = threading.Thread(target=server.serve_forever,
                                   kwargs={"poll_interval": 0.1}, daemon=True)
         thread.start()
         workspace = startup["workspace_key"]
+        original_project_id = startup["project"]["id"]
+        result["original_project_id"] = original_project_id
         journey = OperatorJourney(server, args.timeout, output)
         adopted = adopted_files = adopted_report = None
         if args.completed_archive:
@@ -296,8 +311,19 @@ def receive(args):
         detail = journey.regional(workspace, "huc", report_id=report_id, huc12=priorities[0])
         require(detail["huc"] == next(row for row in rows if row["huc12"] == priorities[0]),
                 "The original HUC route changed the saved native record.")
-        export_task = journey.task(workspace, "watershed.context.export",
-                                  {"report_id": report_id, "huc12s": priorities})
+        export_payload = {"report_id": report_id, "huc12s": priorities}
+        evidence_choice = None
+        if getattr(args, "include_observed_evidence", False):
+            evidence_choice = imported_report.get("_evidence_profiles")
+            require(isinstance(evidence_choice, dict)
+                    and evidence_choice.get("schema") == "upstate.watershed-observation-choice/v1"
+                    and isinstance(evidence_choice.get("sha256"), str)
+                    and len(evidence_choice["sha256"]) == 64
+                    and all(char in "0123456789abcdef" for char in evidence_choice["sha256"]),
+                    "Install the complete retained observed-evidence source before this selected course.")
+            export_payload.update(include_evidence=True,
+                                  evidence_profile_sha256=evidence_choice["sha256"])
+        export_task = journey.task(workspace, "watershed.context.export", export_payload)
         export_id = export_task["result"]["id"]
         selection = journey.regional(workspace, "export", export_id=export_id)
         require(selection["watershed_count"] == len(priorities),
@@ -309,6 +335,24 @@ def receive(args):
         report_files = journey.download_item(original, "regional-report")
         export_files = journey.download_item(selection, "priority-watersheds")
         selected = json.loads(export_files["selected-watersheds.json"].read_bytes())
+        if evidence_choice is not None:
+            evidence = selection.get("landcover_observation_context")
+            selected_evidence = selected.get("landcover_observation_context")
+            require(isinstance(evidence, dict) and isinstance(selected_evidence, dict),
+                    "The selected export did not retain its requested observed evidence.")
+            require(evidence.get("source", {}).get("manifest_sha256") == evidence_choice["sha256"]
+                    and selected_evidence.get("source", {}).get("manifest_sha256") == evidence_choice["sha256"],
+                    "The saved evidence source differs from the explicit selected manifest.")
+            require(sorted(evidence.get("selected", {}).get("huc12s", [])) == priorities
+                    and sorted(selected_evidence.get("selected", {}).get("huc12s", [])) == priorities,
+                    "Observed evidence changed the selected HUC12 membership.")
+            require(evidence.get("selected", {}).get("summary", {}).get("watershed_count") == len(priorities),
+                    "The evidence summary did not retain its distinct selected-watershed count.")
+            result["observed_evidence"] = {
+                "choice": evidence_choice,
+                "saved_context": evidence,
+                "retained_export_files": selection.get("files", {}),
+            }
         for brief_name in ("watershed-selection-brief.md", "watershed-selection-brief.html"):
             require(brief_name in export_files, "The selected watershed planning brief is missing.")
         native_origin = original.get("source_validation", {}).get(
@@ -344,7 +388,11 @@ def receive(args):
         restore_task = journey.task(workspace, "workspace.restore", {"upload_id": uploaded["id"]})
         receiving = restore_task["result"]
         require(receiving["identity"] == "MATCH", "Original archive receiving changed project identity.")
+        require(server.operator.ws(workspace).project["id"] == original_project_id,
+                "The source Workspace project identity changed during receiving.")
         restored_key = receiving["workspace_key"]
+        require(server.operator.ws(restored_key).project["id"] == original_project_id,
+                "The independent received Workspace does not preserve the original project identity.")
         reopened = journey.request("/api/item", params={
             "workspace": restored_key, "kind": "watershed-context", "id": report_id})
         require(reopened["report"] == report
@@ -373,8 +421,18 @@ def receive(args):
                 "Rebuilding from reconstructed source companions changed the report.")
         reopened_export = journey.regional(restored_key, "export", export_id=export_id)
         reopened_files = journey.download_item(reopened_export, "received-priority-watersheds")
-        for name in ("selected-watersheds.json", "selected-watersheds.csv",
-                     "watershed-selection-brief.md", "watershed-selection-brief.html"):
+        retained_names = ("selected-watersheds.json", "selected-watersheds.csv",
+                          "watershed-selection-brief.md", "watershed-selection-brief.html")
+        if evidence_choice is not None:
+            require(reopened_export.get("landcover_observation_context")
+                    == selection["landcover_observation_context"],
+                    "Received selection changed its saved observed evidence.")
+            require(reopened_export.get("files") == selection.get("files"),
+                    "Received selection changed the full original evidence file inventory.")
+            require(set(reopened_files) == set(export_files),
+                    "Received selection lost original evidence downloads.")
+            retained_names = tuple(export_files)
+        for name in retained_names:
             require(reopened_files[name].read_bytes() == export_files[name].read_bytes(),
                     "Received selection download changed: " + name)
         result.update(
@@ -414,9 +472,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--application", required=True)
     parser.add_argument("--source-dir", required=True)
+    parser.add_argument("--workspace",
+                        help="Existing original Workspace; otherwise create OUTPUT/workspace")
     parser.add_argument("--source-manifest",
                         help="Exact upstate.sources/v1 manifest; defaults to SOURCE_DIR/complete-sources.json")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--include-observed-evidence", action="store_true",
+                        help="Include the retained land-cover/station evidence in the selected export and full archive receiving")
     parser.add_argument("--timeout", type=float, default=300)
     parser.add_argument("--completed-archive")
     parser.add_argument("--completed-archive-sha256")

@@ -1,0 +1,17 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "community-report-handover",
+  "extend_components": {
+    "community-report-context": {
+      "paths": [
+        "model/community_report_handover.py",
+        "model/community_report_context.py",
+        "model/COMMUNITY_REPORT_CONTEXT.md",
+        "operator/community_report_context.py",
+        "operator/extensions/community-report-context.json",
+        "operator/web/community_report_handover.mjs",
+        "operator/web/community.mjs"
+      ]
+    }
+  }
+}

@@ -27,6 +27,7 @@ SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _MISSING = object()
 _MANAGED = frozenset(("schema", "id", "revision", "created_at", "updated_at"))
 _MAX_AUDIT = MAX_JSON_BYTES * 4
+_IMPORT_HISTORIES = ("field12_lab_imports", "field12_site_visit_imports")
 
 
 def _equal(left, right):
@@ -180,7 +181,7 @@ class _Merger:
         if len(path) == 1 and path[0] in COLLECTIONS and all(
                 isinstance(value, list) for value in (base, current, incoming)):
             return self.rows(path, base, current, incoming)
-        if path == ("field12_lab_imports",) and all(
+        if len(path) == 1 and path[0] in _IMPORT_HISTORIES and all(
                 isinstance(value, list) for value in (current, incoming)) and (
                     base is _MISSING or isinstance(base, list)):
             return self.rows(path, [] if base is _MISSING else base,
@@ -239,29 +240,38 @@ def _original_bindings(current, proposed):
                         issues.append(
                             f"{collection}/{row['id']}/{field}/{key}: select the retained "
                             "original source link together with this result definition.")
-    history = current.get("field12_lab_imports", [])
-    fresh = proposed.get("field12_lab_imports", [])
-    if not isinstance(history, list) or not isinstance(fresh, list):
-        issues.append("field12_lab_imports: laboratory import history must remain a list.")
-    else:
+    for history_name in _IMPORT_HISTORIES:
+        history = current.get(history_name, [])
+        fresh = proposed.get(history_name, [])
+        if not isinstance(history, list) or not isinstance(fresh, list):
+            issues.append(f"{history_name}: source import history must remain a list.")
+            continue
         valid_records = [row for row in fresh if isinstance(row, dict)
                          and isinstance(row.get("operation_id"), str) and row["operation_id"]]
         fresh_by_id = {row["operation_id"]: row for row in valid_records}
         if len(valid_records) != len(fresh) or len(fresh_by_id) != len(fresh):
-            issues.append("field12_lab_imports: retain complete unique original import operation records.")
+            issues.append(f"{history_name}: retain complete unique original import operation records.")
         for old in history:
             if (not isinstance(old, dict) or not isinstance(old.get("operation_id"), str) or
                     not old["operation_id"] or
                     not _equal(old, fresh_by_id.get(old["operation_id"], _MISSING))):
-                issues.append("field12_lab_imports: preserve every committed laboratory import record.")
+                issues.append(f"{history_name}: preserve every committed source import record.")
                 break
         for row in fresh:
-            if isinstance(row, dict):
-                for key in ("source_link_id", "audit_source_link_id"):
-                    if key in row and (not isinstance(row[key], str) or row[key] not in source_ids):
-                        issues.append(
-                            f"field12_lab_imports/{row.get('operation_id', '')}/{key}: "
-                            "select the retained original laboratory source link.")
+            if not isinstance(row, dict):
+                continue
+            for key in ("source_link_id", "audit_source_link_id"):
+                if key in row and (not isinstance(row[key], str) or row[key] not in source_ids):
+                    issues.append(
+                        f"{history_name}/{row.get('operation_id', '')}/{key}: "
+                        "select the retained original source link.")
+            if "source_link_ids" in row and (
+                    not isinstance(row["source_link_ids"], list) or
+                    any(not isinstance(value, str) or value not in source_ids
+                        for value in row["source_link_ids"])):
+                issues.append(
+                    f"{history_name}/{row.get('operation_id', '')}/source_link_ids: "
+                    "select every retained original CSV source link.")
     return issues
 
 def _evidence_issues(store, current, proposed):

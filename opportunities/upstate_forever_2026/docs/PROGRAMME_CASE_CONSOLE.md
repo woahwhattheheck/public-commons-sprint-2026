@@ -12,6 +12,8 @@ The original native run shows its current lock, phase, retained model stages, so
 
 **Original process attempts** uses the same reader as the Parameter studies console. It reads both supervised operator workers and the original isolated Gura CLI receipts. Select an older attempt to inspect its actual return code, request hash and available process logs. **Follow latest attempt** returns to the newest usable retained receipt.
 
+A worker can finish and retain its scientific result before a later observed signal interrupts that process. The attempt then shows **Interrupted after result completion**, its original negative exit code, and the retained-result state. A later successful verification appears separately as **latest verification complete**. The original immutable interruption receipt remains in the downloaded case record, including its request/run binding, signal and qualified resource observations.
+
 **Read from start** begins at byte zero of the selected log. Each read is limited to 64 KiB; subsequent refreshes continue from the returned offset. Rewinding or changing history pages cancels the prior read, so a delayed response cannot overwrite the newly selected position. Changing the workspace or closing the detail view stops its polling.
 
 Saved memory and group counters retain the original observing process and time. A supervisor’s observation after a child exits remains labelled as the supervisor’s observation. Shared-group event totals do not attribute the event to a particular child.

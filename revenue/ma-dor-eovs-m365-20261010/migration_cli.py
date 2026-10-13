@@ -144,7 +144,7 @@ def parser():
     resume.add_argument("--reason", required=True)
     _envelope_parser(resume)
     export = commands.add_parser("export", help="Stream complete retained rows/findings or a reviewed principal map")
-    export.add_argument("kind", choices=("source","reconciliation","mapping","case.dataset","case.plan","case.rehearsal","case.review","case.cutover"))
+    export.add_argument("kind", choices=("source","reconciliation","mapping","case.dataset","case.plan","case.rehearsal","case.review","case.cutover","finance.dataset","finance.definition","finance.run","finance.reconciliation","finance.review","finance.control","finance.release"))
     export.add_argument("id")
     export.add_argument("--format", choices=("ndjson","csv"), default="ndjson")
     export.add_argument("--out", required=True, help="Create-only output file, or - for binary stdout")

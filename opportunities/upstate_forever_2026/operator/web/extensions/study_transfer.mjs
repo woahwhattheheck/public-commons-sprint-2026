@@ -1,3 +1,4 @@
+import {attachReceivedStudies,receivedFieldworkPreview} from '../received_studies.mjs';
 /** Selected editable scientific-study transfer in the original operator.
  * TokenJunkieLabs. Uses the original task queue, downloads and receiving form.
  */
@@ -63,11 +64,12 @@ export function attachStudyTransfer(host) {
     throw new TypeError('The study desk needs the original operator API and workspace state.');
   }
   let root=null,workspace=null,epoch=0,searchTimer=null,exportTimer=null;
+  const received=attachReceivedStudies({...host,getWorkspace:()=>host.getWorkspace?.()??host.getState()?.workspace_key});
   let catalogue={items:[],total:0,offset:0,limit:200,next_offset:null};
   let exportsPage={items:[],total:0,offset:0,limit:50,next_offset:null};
   let selected=new Map(),title='Selected scientific study',kind='',query='',selectedOnly=false,offset=0;
   let related=true,plan=null,planSignature=null,busy=false,catalogueBusy=false,exportBusy=false;
-  let taskSignature='',lastError='',requestSerial=0;
+  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0;
   let pendingSubmission=null;
   let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:
     typeof host.openExtension==='function'?
@@ -127,7 +129,8 @@ export function attachStudyTransfer(host) {
       '<div data-study-plan></div></section>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Study archives</h3>'+
       button('refresh-exports','Refresh exports')+'</div><div data-study-exports></div>'+
-      '<div class="st-pagination" data-study-export-pages></div></section>';
+      '<div class="st-pagination" data-study-export-pages></div></section>'+
+      '<section class="st-panel" data-study-received></section>';
     root.querySelector('[data-study-field="kind"]').value=kind;
     root.querySelector('[data-study-field="query"]').value=query;
     root.querySelector('[data-study-field="title"]').value=title;
@@ -167,6 +170,24 @@ export function attachStudyTransfer(host) {
     for(const field of root.querySelectorAll('[data-study-action="open-monitoring"]'))field.disabled=Boolean(busy);
   }
 
+  function receivingControl(row){
+    if(!['receiving-water-plans','receiving-water-analyses'].includes(row?.kind)||
+        !/^[0-9a-f]{64}$/.test(row?.id||'')||row.state==='unreadable'||
+        (row.state&&row.state!=='complete')||typeof host.openExtension!=='function')return '';
+    return button('open-receiving','Open in Receiving waters','data-study-kind="'+escapeHTML(row.kind)+'" data-study-id="'+escapeHTML(row.id)+'"');
+  }
+  async function openReceiving(kind,id){
+    if(!['receiving-water-plans','receiving-water-analyses'].includes(kind)||!/^[0-9a-f]{64}$/.test(id||''))
+      throw Error('Choose an original receiving-water study from this workspace.');
+    if(typeof host.openExtension!=='function')throw Error('Open the maintained Receiving waters desk.');
+    const captured=stamp(),serial=++receivingRequest,recordKind=kind==='receiving-water-plans'?'plan':'analysis';
+    const row=await request(endpoint('/api/receiving-waters/'+recordKind,{[recordKind+'_id']:id}));
+    if(!current(captured)||serial!==receivingRequest)throw Error('The workspace or Study transfer view changed. Choose the saved study again.');
+    if(row.id!==id||row.state!=='complete'||row.schema!=='upstate.receiving-water-'+recordKind+'/v1')
+      throw Error('Open a complete original receiving-water study.');
+    return host.openExtension('receiving-waters',recordKind==='plan'?'openPlan':'openAnalysis',
+      {id:row.id,workspace_key:captured.workspace});
+  }
   function renderCatalogue() {
     if(!root)return;
     const page=visiblePage(),body=root.querySelector('[data-study-catalogue]');
@@ -187,7 +208,7 @@ export function attachStudyTransfer(host) {
             '<strong>'+escapeHTML(row.title||row.id.slice(0,12))+'</strong>'+
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
-            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+
+            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
@@ -244,11 +265,12 @@ export function attachStudyTransfer(host) {
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Record</th>'+
       '<th scope="col">Type</th><th scope="col">Reason included</th></tr></thead><tbody>'+
       plan.nodes.map(row=>'<tr><td><strong>'+escapeHTML(row.title)+'</strong><small class="st-identity">'+
-        escapeHTML(row.id.slice(0,16))+'</small></td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
+        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
         '</td><td>'+escapeHTML(row.reasons.join('; '))+'</td></tr>').join('')+'</tbody></table></div></details>';
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
       plan.related_result_issues.map(row=>'<li>'+escapeHTML(row.path)+': '+escapeHTML(row.message)+'</li>').join('')+'</ul></details>';
+    html+=receivedFieldworkPreview(plan.implementation_report_sources);
     body.innerHTML=html;
   }
 
@@ -424,7 +446,8 @@ export function attachStudyTransfer(host) {
     event.preventDefault();event.stopPropagation();
     const action=target.dataset.studyAction;
     try{
-      if(action==='open-monitoring'){
+      if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
+      else if(action==='open-monitoring'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
         if(!row||row.state==='unreadable'||!monitoringOpenKinds.has(row.kind))
           throw new Error('Choose an available saved Monitoring record.');
@@ -490,11 +513,13 @@ export function attachStudyTransfer(host) {
     root=container.ownerDocument.createElement('div');
     root.className='study-transfer';container.replaceChildren(root);
     epoch++;skeleton();
+    received.mount(root.querySelector('[data-study-received]'));
     if(lastError)notice(lastError,true);
     loadCatalogue();loadExports(0);
   }
 
   function detach() {
+    received.detach();
     epoch++;requestSerial++;
     clearTimeout(searchTimer);clearTimeout(exportTimer);searchTimer=null;exportTimer=null;
     for(const controller of requests)controller.abort();
