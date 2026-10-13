@@ -1,0 +1,22 @@
+{
+  "schema": "gwma.public-provider-receipt/v1",
+  "source_url": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=1&offset=24&sort=_id%20asc",
+  "retrieved_on": "2026-10-13",
+  "banked_at": "2026-10-13T08:21:05Z",
+  "bytes": 7222,
+  "sha256": "781553d73e48a2ad73d5ad568cd802f54dfd7a72d8d8dc0187a7bf12fdbb8687",
+  "transport": "Original public HTTPS fetched by connected Notion attachment source_url; complete text downloaded through original integration",
+  "provider_file_upload_id": "3f8dd772-3100-81b7-8774-00b246d3b9be",
+  "provider_filename": "GWMA-LAR-Imperial-ecoli-original-terminal-20261013.json",
+  "provider_content_type": "application/json; charset=utf-8",
+  "provider_status": "uploaded",
+  "original_upload_receipt": {
+    "file_upload_id": "3f8dd772-3100-81b7-8774-00b246d3b9be",
+    "filename": "GWMA-LAR-Imperial-ecoli-original-terminal-20261013.json",
+    "content_type": "application/json; charset=utf-8",
+    "content_length": 7222,
+    "status": "uploaded",
+    "markdown_source": "file-upload://3f8dd772-3100-81b7-8774-00b246d3b9be",
+    "suggested_markdown": "<file src=\"file-upload://3f8dd772-3100-81b7-8774-00b246d3b9be\"></file>"
+  }
+}
