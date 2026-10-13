@@ -1,0 +1,50 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "runtime-companion-archive",
+  "description": "Receive complete original ZIP and mixed application source into existing Runtime Files and Companion sets, prepare retained working copies, and independently export and reopen the originals.",
+  "components": [
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/application_source_closure.py",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/application_source_bridge.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/APPLICATION_SOURCE_CLOSURE.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/examples/application-source-self.json",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/connected_javascript_source_closure.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/source_closure_cli.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/JAVASCRIPT_SOURCE_CLOSURE.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/examples/source-closure-self.json",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/vendor/acorn-source-closure/acorn.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/vendor/acorn-source-closure/SOURCE.json",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/vendor/acorn-source-closure/LICENSE",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/python_source_closure.py",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/PYTHON_SOURCE_CLOSURE.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/examples/python-source-closure-self.json",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/connected_zip.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/connected_zip_archive.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/connected_zip_receive.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/connected_gzip.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/CONNECTED_ZIP_ARCHIVE.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/connected_application_archive.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/application_archive_source.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/APPLICATION_ARCHIVE_SOURCE.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/examples/application-archive-self.json",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/application_archive_parser.py",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/AGENTS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/runtime_companion_archive.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/RUNTIME_COMPANION_ARCHIVE.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/README.md"
+  ],
+  "commands": {
+    "runtime-companion-archive": "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/cli.mjs",
+    "runtime-companion-source": "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/source-cli.mjs"
+  },
+  "commandDescriptions": {
+    "runtime-companion-archive": "Receive, review, prepare and independently export complete source through existing Runtime Companion",
+    "runtime-companion-source": "Collect, inspect and receive complete ZIP/Python/JavaScript application source without executing the application"
+  },
+  "exports": {
+    "./runtime-workspace/companion-archive": "./source/stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/runtime_companion_archive.cjs",
+    "./runtime-workspace/application-archive-source": "./source/stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/application_archive_source.cjs"
+  }
+}
