@@ -39,7 +39,8 @@ PREVIOUS_EDITIONS = {
     "f3ffdf5ed39aa827e83ed67b73fabad894f6219e46509e18da8f5a7c88512bce",
     "b118d793dc2b2cc2de8ea0016ccb8b0e0e18af422a1f154e8dd822801c6387c1",
     "c4327d021354b53a12f39ce9bca2d84442b997cb6b45a69e912593a186d497e5",
-    "d9391e2f83a0b10ca5bc77560730780d2d318077f0dad19020ec4ff6c199e0f1"
+    "d9391e2f83a0b10ca5bc77560730780d2d318077f0dad19020ec4ff6c199e0f1",
+    "efdf95c8c2f31b1a0b288b10c80a8e33f57ee06639535d8165c92cda5df068bf"
   ],
   "model/compute_programme_cli.py": [
     "2021af6d59f3a9f94849da50cbcd58eac987f9cbae52964582d1d090c461ff96",
@@ -50,7 +51,8 @@ PREVIOUS_EDITIONS = {
   "operator/programmes.py": [
     "67c0c1697b44f81763e21dbf3dd62e258886247707f72a408d2b6ecbf6a10a61",
     "2cf9f3748debb8c78b272141ea2da4f02193ebe279a41b5a02ad1af0c6a56bd7",
-    "d3d0b5e2a9fb774de81e61541c0b6420f58c766613e925d1e3ac566b293075d4"
+    "d3d0b5e2a9fb774de81e61541c0b6420f58c766613e925d1e3ac566b293075d4",
+    "0741c15a214d01880a35bc1ff62198b36af20dcabe3e2fba321ef0bfb53e8aef"
   ],
   "operator/web/programmes.mjs": [
     "0a334cf55eaa95a7c0347ad605adea170261495b3042fc33b6b051fbaad9d2d4",
@@ -58,7 +60,8 @@ PREVIOUS_EDITIONS = {
     "2e0438a63ee057ecef5bf36d14a9053701b98f83f09cea3a14a57dffa9432571",
     "5a3f6d32cc1de2a8a4dc86550684c240cb51be5dad675eb6d3c7fe6e96bb3f0d",
     "95f29be61a90fbcca671264b0c3fe849e3de0aec894c6e8438235e0aded1fe30",
-    "2602a24040ffbf5e9bb45dfcc709114328899cd2acb865c613478cba0ba09443"
+    "2602a24040ffbf5e9bb45dfcc709114328899cd2acb865c613478cba0ba09443",
+    "8f415ee9049807121bc842c27a0cbd465eb7702a747540f82a6c5fa52cd8d493"
   ],
   "operator/web/programmes.css": [
     "939dea3c338775175b137239acfbc7d4cd1e2daef58060af2ed73ea98c484bdf",
@@ -67,7 +70,8 @@ PREVIOUS_EDITIONS = {
   "install_programmes.py": [
     "168d26a1792c2f1ade350d92130279e2710c2c4d4790b2f1cdf911b1007b21f0",
     "d0def021491c12552834c3d2e3f85599d025dea5fc00bf14cde1df8fc3794508",
-    "24610143bb5b2e13cbbc239153801cc5886332705ac9d27df3575783d77f1a06"
+    "24610143bb5b2e13cbbc239153801cc5886332705ac9d27df3575783d77f1a06",
+    "cdac9d9f0d358ef788e3707618bc2a8526a72d47bbb1e4a312374741946f3055"
   ],
   "PROGRAMMES.md": [
     "b0a9c33c09f4dddba47db5a677ddc135b5c4242630c255ab4c232d4f365a206f",
@@ -91,7 +95,9 @@ PREVIOUS_EDITIONS = {
   "source/gura-original-tables-3.20/source.json": [
     "40aba1995f45941b0391db17b94bceb36d6478b07339d2fb486644c3624e35d2"
   ],
-  "model/PAIR_COMPLETION.md": []
+  "model/PAIR_COMPLETION.md": [
+    "95cbf57c338b0a83ff04bc2f353bf8ab323de6b080dfd2db128ee434de79237b"
+  ]
 }
 
 def sha(data):

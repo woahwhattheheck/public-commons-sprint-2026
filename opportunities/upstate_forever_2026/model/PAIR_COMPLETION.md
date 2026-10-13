@@ -36,7 +36,7 @@ Each requirement has `action="verify_or_resume"` when an original named run alre
 
 Creation returns the ordinary programme status with its new `programme_id`. It prepares retained native run records, then returns; execution uses the existing `resume` method and shared native work queue. There is no second native execution implementation.
 
-The optional `expected_preview_id` protects an open form from concurrent progress. If another worker completes a relevant run and the requirements change, refresh the preview and continue from that current result.
+The optional `expected_preview_id` protects an open form from concurrent progress. A preview already retained by a creation attempt reopens that exact continuation, even if other calculations have since finished. For a preview that has never been retained, changed requirements require a fresh preview.
 
 When `needed` is false, open the existing paired selections. A programme containing baseline runs alone first needs a selected alternative scenario.
 
@@ -96,7 +96,7 @@ python -B -m model.compute_programme_cli --workspace /path/to/workspace ensemble
 
 ## Retained origin and interpretation
 
-Each child retains `compute-programmes/<child-id>/pair-completion.json`, containing its parent ID, preview identity, exact added native selections, required selections and their named/native run mappings. It is included in the existing workspace backup alongside the parent, child and original native outputs. The source reference identifies the parent plus the exact retained requirements; the programme identity also captures the installed source files.
+Before preparing a child, the parent retains the complete selection, additions and requirements in `compute-programmes/<parent-id>/pair-completions/<requirements-digest>.json`. Each child also retains `compute-programmes/<child-id>/pair-completion.json`, containing its parent ID, preview identity, exact added native selections, required selections and their named/native run mappings. If a process stops between preparation and writing the child origin, status and experiment synchronization recover that origin from the already saved parent request. Repeating creation with the same preview resumes the saved request or reopens its existing child. The next creation continuation persists the child origin and parent backlink. It is included in the existing workspace backup alongside the parent, child and original native outputs. The source reference identifies the parent plus the exact retained requirements; the programme identity also captures the installed source files.
 
 The paired service compares a baseline and alternative under the same profile and grid. Each selected profile appears once in its pollutant cohort. NDR and SDR cohorts combine only when their exact native pair lists match.
 

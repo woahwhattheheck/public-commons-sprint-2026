@@ -47,7 +47,8 @@ export function attachProgrammes(context) {
     if (errorNode) { errorNode.textContent = ''; errorNode.hidden = true; }
   }
   function tasksFor(id) {
-    return asArray(getState()?.tasks).filter(task => task.payload?.programme_id === id && task.action?.startsWith('compute.programme.'));
+    return asArray(getState()?.tasks).filter(task => task.action?.startsWith('compute.programme.') &&
+      (task.programme?.id || task.result?.id || task.payload?.programme_id) === id);
   }
   function activeTask(id) { return tasksFor(id).find(task => ['queued', 'running'].includes(task.state)); }
   function named(kind, id) {
@@ -439,7 +440,7 @@ export function attachProgrammes(context) {
       ['Units', row => row.units],
       ['Valid cells', row => printable(row.valid_cells)],
       ['Area (ha)', row => printable(row.valid_area_ha ?? row.area_ha)],
-      ['Common-area change', row => printable(row.total_change ?? row.common_sum_change ?? row.sum_change)],
+      ['Alternative − baseline', row => printable(row.total_change ?? row.common_sum_change ?? row.sum_change)],
       ['Change (%)', row => printable(row.percent_change)],
       ['Comparison cells', row => printable(row.comparison_cells)],
       ['State', row => labelState(row.state)],
@@ -448,7 +449,7 @@ export function attachProgrammes(context) {
     return '<p>' + escapeHTML(report.title || 'Saved native result catalogue') + '</p>' +
       (rows.length ? table(columns.map(item => item[0]), rows.map(row => '<tr>' + columns.map(([, value]) => '<td>' +
         escapeHTML(value(row) ?? '—') + '</td>').join('') + '</tr>')) : '<p>No completed quantities are present in this saved catalogue.</p>') +
-      '<p class="note">Whole-run totals retain each run’s actual valid area. Common-area changes use the original paired comparison. The decision-report workflow provides the full catchment and sensitivity interpretation.</p>' +
+      '<p class="note">Whole-run totals retain each run’s actual valid area. Common-area changes are alternative minus baseline: negative values mean lower export under the alternative. Paired effect maps show baseline minus alternative, so positive map values mean lower export. The decision-report workflow provides the full catchment and sensitivity interpretation.</p>' +
       (asArray(report.notes).length ? '<ul>' + report.notes.map(note => '<li>' + escapeHTML(note) + '</li>').join('') + '</ul>' : '') +
       fileList(asArray(report._downloads)) + '<details class="technical"><summary>Complete catalogue</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(report, null, 2)) + '</pre></details>';
