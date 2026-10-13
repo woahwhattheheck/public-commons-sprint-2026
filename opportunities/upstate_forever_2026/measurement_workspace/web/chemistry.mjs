@@ -17,7 +17,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
  let dead=false,busy=false,epoch=0,catalog={cases:[],bindings:[],measurement_choices:[]},inspected=null,prepared=null,carried=null,selectedRow=0;
  let saved=memory.get(workspace);
  if(!saved){try{saved=JSON.parse(sessionStorage.getItem(storageKey)||'null');}catch{}}
- let rawDraft=saved?.rawDraft||{},draft=saved?.draft||null,caseChoice=saved?.caseChoice||'',filters=saved?.filters||{},preparedId=saved?.preparedId||'';
+ let rawDraft=saved?.rawDraft||{},draft=saved?.draft||null,caseChoice=saved?.caseChoice||'',filters=saved?.filters||{},editionChoice=saved?.editionChoice||'',preparedId=saved?.preparedId||'';
  const active=()=>!dead&&host.getWorkspace()===workspace;
  const call=async(action,payload={})=>{
   if(!active())throw Error('Reopen this measured-data workspace before continuing.');
@@ -28,7 +28,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
  const panel=root.querySelector('[data-mb-panel]'),status=root.querySelector('[role=status]'),library=root.querySelector('[data-mb-library]'),editor=root.querySelector('[data-mb-editor]'),result=root.querySelector('[data-mb-result]');
  function message(value,error=false){if(!active())return;status.textContent=value;status.dataset.error=String(error);}
  function persist(){
-  const value={draft,rawDraft,caseChoice,filters,preparedId};
+  const value={draft,rawDraft,caseChoice,filters,editionChoice,preparedId};
   memory.set(workspace,value);
   try{sessionStorage.setItem(storageKey,JSON.stringify(value));}catch{}
  }
@@ -43,16 +43,19 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
  function renderLibrary(){
   library.innerHTML='<h3>Case and source population</h3><form data-mb-inspect><div class="mb-grid">'+
    select('case_id','Saved physical model',[['','Choose a saved case'],...catalog.cases.map(c=>[c.id,titleOf(c)])],caseChoice)+
+   select('observation_edition_id','Observation source',[['','Current original Measurements records'],...(catalog.observation_editions||[]).map(e=>[e.id,e.title+' · '+e.counts.retained+' retained / '+e.counts.records+' originals'])],editionChoice)+
    text('stationId','Original station ID (optional)',filters.stationId)+text('from','From source date',filters.from,'type="date"')+
    text('to','Through source date',filters.to,'type="date"')+text('parameter','Normalized parameter (optional)',filters.parameter)+
-   '</div><div class="mb-actions"><button>Inspect original records</button><button type="button" data-mb-action="catalog">Refresh saved library</button></div></form>'+
+   '</div><p>A saved Observation edition fixes its complete population and scientist-authored relationships. Clear the optional filters when choosing an edition. The edition’s frozen eligibility is intersected with current review decisions. Later acceptance does not remove a saved exclusion; create a revised edition to adopt changed reviews. Excluded, unresolved and duplicate representations remain explicit exclusions.</p><div class="mb-actions"><button>Inspect original records</button><button type="button" data-mb-action="catalog">Refresh saved library</button></div></form>'+
    '<details><summary>Reopen a binding carried by a received Chemistry case</summary><p>Select the received case above, then inspect its retained source before adopting the original binding.</p><button type="button" data-mb-action="carried-case">Read selected case sources</button><div data-mb-carried></div></details>'+
    '<label>Saved source-bound binding<select data-mb-saved>'+option('','Choose a saved binding','')+catalog.bindings.map(b=>option(b.id,titleOf(b),preparedId)).join('')+'</select></label>'+
    '<div class="mb-actions"><button type="button" data-mb-action="open-binding">Reopen selected binding</button></div>';
  }
  function initialDraft(value){
   const prior=draft?.case_id===value.case.id?draft:{};
-  return {...prior,case_id:value.case.id,expected_revision:value.revision,filters:copy(value.filters||filters),
+  const inherited={...prior};delete inherited.observation_edition;
+  return {...inherited,case_id:value.case.id,expected_revision:value.revision,filters:copy(value.filters||filters),
+   ...(value.observation_edition?{observation_edition:copy(value.observation_edition)}:{}),
    title:prior.title||'',reviewer:prior.reviewer||'',reason:prior.reason||'',
    station_bindings:prior.station_bindings||[],measurement_mappings:prior.measurement_mappings||[],
    time_origin:prior.time_origin||'',day_overrides:prior.day_overrides||{},interval_overrides:prior.interval_overrides||{},
@@ -77,7 +80,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
   const value=draft,project=inspected.case.project,records=inspected.records||[],groups=inspected.groups||[];
   const stations=[...new Set(records.map(r=>r.stationId).filter(Boolean))].sort(),species=project.species||[],reaches=project.reaches||[];
   const mapping=new Map((value.measurement_mappings||[]).map(g=>[groupKey(g),g]));
-  editor.innerHTML='<h3>Binding definition</h3><p>'+esc(titleOf(inspected.case))+' · '+records.length+' original records · '+groups.length+' method/fraction groups · measured revision '+esc(inspected.revision)+'. Review a refreshed population before saving if measured records change.</p>'+
+  editor.innerHTML=(inspected.observation_edition?'<section class="mb-edition"><h3>Saved Observation edition</h3><p>'+esc(inspected.observation_edition.id)+' · '+esc(JSON.stringify(inspected.observation_edition_counts||{}))+'</p><p>Every original record remains accounted for. Same-observation representatives, unresolved relationships and exclusions are fixed by this edition, with current native review checked independently.</p></section>':'')+'<h3>Binding definition</h3><p>'+esc(titleOf(inspected.case))+' · '+records.length+' original records · '+groups.length+' method/fraction groups · measured revision '+esc(inspected.revision)+'. Review a refreshed population before saving if measured records change.</p>'+
    '<form data-mb-prepare><fieldset><legend>Scientific review</legend><div class="mb-grid">'+text('title','Binding title',value.title,'required')+text('reviewer','Prepared / reviewed by',value.reviewer,'required')+'</div>'+note('binding_reason','Why these measurements support this physical model',value.reason,'required')+'</fieldset>'+
    '<fieldset><legend>Station to native reach</legend><p>Only entered assignments are used. Original station names or geographic proximity do not determine a reach.</p>'+stations.map((station,i)=>{
     const item=value.station_bindings.find(s=>s.station_id===station)||{};
@@ -182,11 +185,16 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
  async function inspectPopulation(){
   captured();const form=library.querySelector('form'),values=Object.fromEntries([...form.querySelectorAll('[name]')].map(input=>[input.name,input.value]));
   if(!values.case_id)throw Error('Choose the saved physical case.');
-  const chosenCase=values.case_id,chosenFilters=Object.fromEntries(Object.entries(values).filter(([k,v])=>k!=='case_id'&&v));
-  const version=++epoch,value=await call('inspect',{case_id:chosenCase,filters:chosenFilters});
+  const chosenCase=values.case_id,chosenEdition=values.observation_edition_id||'',chosenFilters=Object.fromEntries(Object.entries(values).filter(([k,v])=>!['case_id','observation_edition_id'].includes(k)&&v));
+  if(chosenEdition&&Object.keys(chosenFilters).length)throw Error('Clear the optional filters to use the complete saved Observation edition. Its original scope is already retained.');
+  const selectedEdition=chosenEdition?(catalog.observation_editions||[]).find(e=>e.id===chosenEdition):null;
+  if(chosenEdition&&!selectedEdition)throw Error('Refresh the saved library and choose the original edition again.');
+  if(draft&&(caseChoice!==chosenCase||editionChoice!==chosenEdition||canonical(filters)!==canonical(chosenFilters))&&!confirm('Replace the inspected source population? Export the working binding definition first if you need to keep its unfinished choices.'))return;
+  const version=++epoch,value=await call('inspect',{case_id:chosenCase,filters:chosenFilters,
+   ...(selectedEdition?{observation_edition:{id:selectedEdition.id,digest:selectedEdition.digest}}:{})});
   if(!active()||version!==epoch)return;
-  if(caseChoice!==chosenCase){rawDraft={};draft=null;}
-  caseChoice=chosenCase;filters=chosenFilters;
+  if(caseChoice!==chosenCase||editionChoice!==chosenEdition){rawDraft={};draft=null;}
+  caseChoice=chosenCase;filters=chosenFilters;editionChoice=chosenEdition;
   inspected={...value,source_groups:value.groups,groups:mappingGroups(value.groups||[])};draft=initialDraft(value);selectedRow=0;persist();drawEditor();
   message('Original records loaded. Complete and review each mapping before saving the source-bound binding.');
  }
@@ -199,6 +207,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
    '<details open><summary>Retained native observations ('+observations.length+')</summary>'+table(observations.map(o=>({...o,operator:operator(o),limits:interval(o)})),[['id','Observation'],['measurement','Measured quantity'],['operator','Modeled pools'],['basis','Basis'],['reach','Reach'],['day','Day'],['role','Role'],['limits','Value / limits'],['sigma_mg_l','Error scale']])+'</details>'+
    '<details><summary>Accepted original records</summary><pre>'+esc(pretty(value.accepted||[]))+'</pre></details>'+
    '<details><summary>Excluded original records and reasons</summary><pre>'+esc(pretty(value.excluded||[]))+'</pre></details>'+
+   (value.observation_edition_source?'<details><summary>Complete selected Observation edition and original decisions</summary><pre>'+esc(pretty(value.observation_edition_source))+'</pre></details>':'')+
    '<details><summary>Original source and complete retained binding</summary><pre>'+esc(pretty(value))+'</pre></details>';
  }
  async function readCarriedCase(){

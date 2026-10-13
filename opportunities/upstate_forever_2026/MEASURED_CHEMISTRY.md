@@ -157,3 +157,8 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
 
+
+
+## Saved Observation editions
+
+Choose a named immutable edition in the existing **Observation source** control to carry its complete original population and scientific relationship decisions through Chemistry. The edition’s frozen eligibility is intersected with current native eligibility; revised review decisions require a revised edition. Existing original-record binding remains available. See the [complete saved-edition, native report and editable receiving course](measurement_workspace/OBSERVATION_EDITION_CHEMISTRY.md).
