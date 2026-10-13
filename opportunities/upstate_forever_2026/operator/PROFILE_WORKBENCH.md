@@ -60,3 +60,23 @@ The operator provider and model/profile_editions.py are in backend source F0C8NF
 With the retained 15-row regional source, open the original working profile, inspect its provenance, revise one selected native coefficient, preview its one-cell change, save, reopen and compare against the reference. Exercise one invalid native coefficient to confirm the draft remains correctable. Open the original task and its saved CSV/lineage files, then reopen the same scientific workspace from its normal archive. Record actual operation times and screenshots of this new interface on the receiving host.
 
 The source package includes a completed module syntax and CSV behavior check. The live browser and native save/reopen sequence belongs to the receiving host's actual original workspace.
+
+## Original coefficient evidence and endpoint experiments
+
+Open a saved profile and use **Coefficient evidence and ranges** below its original coefficient table. The evidence template contains the original numeric cell text, native units and nutrient load types. Fill source title and citation only for coefficients whose source has been established; locator, period and notes can identify the actual table or method. Import the completed CSV through **Original sources**, select that retained table, inspect its coverage and save the evidence.
+
+Each evidence edition binds the original profile ID and coefficient-table SHA256 to the retained evidence CSV. Coverage counts documented, unknown and ranged coefficient cells within the selected native models. General profile references remain visible but do not become individual-cell citations. Application-rate and measured-runoff tags retain their original meanings.
+
+For coefficients with actual source-supported lower and upper values and a range basis, select the exact land-cover and parameter cells. Enter the scientific purpose, review the selected endpoint table and prepare the profiles. The maintained sourced-profile materializer creates the lower and upper parameter configurations; the original central profile remains the same saved profile and table. Other coefficients, descriptive columns, load types and native algorithm parameters stay unchanged.
+
+Lower and upper refer to parameter values. They are not confidence intervals and do not automatically identify the lowest or highest pollution result. Use a completed baseline run under the central profile to prepare the existing native experiment. Optional land-cover scenarios use the central profile in one-at-a-time comparisons; the endpoint profiles use baseline land cover. Execute and inspect these cases in the existing Experiments view.
+
+Saved evidence and endpoint records expose downloads through the operator's authenticated file transport, including the original evidence CSV. Workspace export retains both record directories, and normal archive receiving validates their profile, source and endpoint bindings before promotion. Requests retain operation IDs before submission; returning to the same profile restores saved requests and allows the existing operation to resume.
+
+The additive backend is model/biophysical_evidence.py; scientific format and CLI details are in model/BIOPHYSICAL_EVIDENCE.md. The browser child module is operator/web/biophysical_evidence.mjs. ProfileWorkbench read routes under /api/profile-workbench/biophysical/ are catalog, template, evidence-preview, evidence-inspect, ranges-preview and ranges-inspect. Mutations use the existing action queue: profile.biophysical.evidence.save, profile.biophysical.ranges.prepare and profile.biophysical.experiment.prepare.
+
+### Receiving this addition
+
+Receive the complete current source package, run the standard profile workbench installer against the existing application, then restart the operator. The installer includes the evidence backend, browser module, extension descriptor, guide and current portable workspace implementation. Preserve newer changes when composing shared files.
+
+On an actual retained profile, download its evidence template and import the unchanged template through Original sources. Inspect and save it: all unattributed cells should remain unknown, with the exact original values and load types retained. Then use actual supplied coefficient citations and ranges to inspect selected endpoints, prepare the native experiment and reopen the exported workspace. Confirm that the new evidence and ranges remain selectable and that the original central profile ID and table SHA256 are unchanged.
