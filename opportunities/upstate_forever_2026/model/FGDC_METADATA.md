@@ -60,7 +60,9 @@ a publication or observation date.
 A source originator is not inferred from its publisher or from the metadata
 author. Source media describe the medium; raster/vector/tabular presentation
 forms are separately retained in `geoform`. A selected source's own explicit
-currentness basis stays explicit.
+currentness basis stays explicit. A generic declared period or date does not
+establish ground-condition or publication time unless the original source
+supplies that basis.
 
 Model-stage completion uses the retained original producing stage timestamp.
 The separate annual-mass conversion date is `Unknown` if it was not recorded.
@@ -75,7 +77,7 @@ The selected original contact supports a person or an organization primary.
 Address blocks retain supplied type, street lines, city, state, postal code and
 country. Voice, email, fax, TDD, position, hours and instructions are retained
 when supplied. Required contact fields absent from the original record are
-explicitly marked `None`, with an instruction explaining that the detail was
+explicitly marked `Unknown`, with an instruction explaining that the detail was
 not supplied; this does not assert that no contact method exists.
 
 Every emitted digital standard-order entry includes GeoTIFF transfer information,
@@ -115,8 +117,8 @@ in place.
 The standalone receiver is
 `source/fgdc-metadata/receive_metadata.py`. It uses the exact installed
 `_fgdc` and `_grid_measurements` production functions, the real Pyproj CRS
-implementation, and the official FGDC XSD with all ten section schemas.
-Its controlled six-file exercise covers Albers and UTM coordinates, physical
+implementation, and the official FGDC XSD with all ten section schemas and the exact original federal DTD.
+Its controlled twelve-file exercise covers Albers, north/south UTM and another projected CRS, physical
 exports, signed changes, priorities, source date precision, explicit unknown
 dates, person/organization contacts and both relative dataset-link layouts.
 Those descriptors are validation fixtures, not scientific outputs.
@@ -137,6 +139,8 @@ ECO_PYTHON=/actual/equipped/python
   --receipt "$ECO_RECEIVING/metadata-receiving.json"
 ```
 
+The exact 16,377-byte original DTD is retained at `source/fgdc/fgdc-std-001-1998.dtd`, SHA256 `778584c89cf0f61a382900cfab7fb7171ae99894b9b54702540ca28cb4267598`. XML parsing disables network and external entity resolution. Albers and UTM use their original explicit parameter productions; other projected CRSs retain complete WKT and affine information in the common local-planar production. This avoids the published DTD/XSD disagreement on the nesting of `otherprj`.
+
 The schema download uses only https://www.fgdc.gov/schemas/metadata/.
 For an offline receiving host, supply all eleven original schemas in that
 directory and omit `--download-schema`. The receipt records their hashes.
@@ -144,12 +148,30 @@ The exercise directory and receipt are create-only; select a new receiving
 directory for another attempt.
 
 Actual-delivery validation is read-only. It checks every registered XML member's
-original bytes and SHA, validates the XML against the official schema, and
+original bytes and SHA, validates the XML against both official grammar distributions, and
 requires each relative dataset target to exist inside that same delivery.
 The ordinary builder/archive receiver remains responsible for complete scientific
 and portable-package verification. The standards exercise can be used alone by
 omitting `--delivery-directory`; an actual-delivery check can omit
 `--exercise-output`.
+
+## Inspect the actual outgoing product
+
+Before describing a client-facing delivery, report, app or export as ready, open
+and inspect its exact outgoing version in the actual receiving application.
+Operate its important controls, inspect the rendered screen or real screenshots,
+and open the downloaded files again. Use the actual populated scientific project;
+an empty Workspace, HTTP response, source review or captured-but-unseen screenshot
+does not establish completed-product acceptance.
+
+For this metadata handover, open the original atlas and its baseline, signed and
+priority datasets in the existing GIS application. Check units, CRS, NoData,
+signed values, original support and relative file relationships alongside the
+XML. Inspect the readable report and extracted handover at desktop/screenshare
+and narrow/mobile widths where relevant. Fix clipping, overflow, missing styles,
+broken links and unreadable tables in the authorized original source. Keep the
+plain industrial layout, real data/workflows and the October 13 14:00 UTC cutoff.
+Delegated product receiving must carry this same inspection requirement.
 
 ## Standards and execution evidence
 
