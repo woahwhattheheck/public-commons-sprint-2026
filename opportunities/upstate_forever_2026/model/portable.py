@@ -298,6 +298,9 @@ def restore(archive_path, destination):
         if restored._list("spatial-regions"):
             from .spatial_regions import SpatialRegions
             SpatialRegions(restored).verify()
+        if restored._list("spatial-cohorts"):
+            from .spatial_cohorts import SpatialCohorts
+            SpatialCohorts(restored).verify()
         spatial_exports = restored.overview().get("spatial_exports", [])
         if spatial_exports:
             from .spatial_exports import SpatialExports
