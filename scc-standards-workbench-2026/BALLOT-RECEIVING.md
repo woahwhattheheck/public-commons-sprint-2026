@@ -71,6 +71,8 @@ If a concrete defect requires an updated source edition after the original invoc
 
 The next invocation records the previous and current whole-tree identity. Previously completed native mutations and original return files remain retained. Reopen the affected exact outgoing application/attachment in the updated edition, and continue the relevant original step. The existing consultation programme retains its own operation and source history.
 
+Each dispatched UI operation observes its actual visible validation/storage error, page crash/close and native server exit. Its default two-minute operation timeout can be selected with `operation_timeout_ms` for the actual host. A click that never sends a request returns the concrete operating error instead of holding the whole course indefinitely; an uncertain committed request retains its exact envelope and result for the original replay.
+
 A failure record names the actual active stage and native/browser error. Resolve that concrete input, dependency or product defect on the same receiving worker. A missing runtime dependency is a host selection problem; keep the complete source, workspace and requests together when routing to the existing equipped host.
 
 ## Complete deliverables
