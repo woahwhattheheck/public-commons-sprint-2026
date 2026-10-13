@@ -5,9 +5,9 @@
 <script type="module">
 const data=JSON.parse(document.querySelector('#bootstrap').textContent);
 const shaURL=URL.createObjectURL(new Blob([data.shaSource],{type:'text/javascript'}));
-const marker="import {sha256Utf8,sha256Bytes} from './sha256.mjs';";
+const marker="import {sha256Utf8,sha256Bytes,utf8Length} from './sha256.mjs';";
 if(!data.engineSource.startsWith(marker))throw new Error('The bundled engine dependency differs.');
-const engineSource=data.engineSource.replace(marker,'import {sha256Utf8,sha256Bytes} from '+JSON.stringify(shaURL)+';');
+const engineSource=data.engineSource.replace(marker,'import {sha256Utf8,sha256Bytes,utf8Length} from '+JSON.stringify(shaURL)+';');
 const engineURL=URL.createObjectURL(new Blob([engineSource],{type:'text/javascript'}));
 const appURL=URL.createObjectURL(new Blob([data.appSource],{type:'text/javascript'}));
 const issuerURL=URL.createObjectURL(new Blob([data.issuerSource],{type:'text/javascript'}));
@@ -18,7 +18,7 @@ try{
 const [engine,app,sha,issuer,issuerUI]=await Promise.all([import(engineURL),import(appURL),import(shaURL),import(issuerURL),import(issuerUIURL)]);
 let extensions=null;
 if(data.workOrderSource&&data.workOrderUISource){
-const source=data.workOrderSource.replace("import * as E from './engine.mjs';",'import * as E from '+JSON.stringify(engineURL)+';').replace("import {sha256Utf8} from './sha256.mjs';",'import {sha256Utf8} from '+JSON.stringify(shaURL)+';');
+const source=data.workOrderSource.replace("import * as E from './engine.mjs';",'import * as E from '+JSON.stringify(engineURL)+';').replace("import {sha256Utf8,utf8Length} from './sha256.mjs';",'import {sha256Utf8,utf8Length} from '+JSON.stringify(shaURL)+';');
 workOrderURL=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
 workOrderUIURL=URL.createObjectURL(new Blob([data.workOrderUISource],{type:'text/javascript'}));
 const [workOrders,ui]=await Promise.all([import(workOrderURL),import(workOrderUIURL)]);

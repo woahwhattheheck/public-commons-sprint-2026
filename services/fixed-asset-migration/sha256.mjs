@@ -484,6 +484,18 @@ module.exports = sha256;
 
 const connectedSha256Upstream = module.exports;
 
+/** Validate exact UTF-8 encodability and count bytes without allocating a hash state. */
+function utf8Length(value) {
+  if (typeof value !== 'string') throw new TypeError('utf8Length requires a string');
+  let bytes = 0;
+  for (const char of value) {
+    const code = char.codePointAt(0);
+    if (code >= 0xd800 && code <= 0xdfff) throw new TypeError('Unpaired UTF-16 surrogate');
+    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+  }
+  return bytes;
+}
+
 /**
  * Hash a complete well-formed UTF-16 string as its exact UTF-8 content bytes.
  * No normalization, byte-order mark insertion, newline conversion or I/O.
@@ -491,12 +503,7 @@ const connectedSha256Upstream = module.exports;
  */
 function sha256Utf8(value) {
   if (typeof value !== 'string') throw new TypeError('sha256Utf8 requires a string');
-  let bytes = 0;
-  for (const char of value) {
-    const code = char.codePointAt(0);
-    if (code >= 0xd800 && code <= 0xdfff) throw new TypeError('Unpaired UTF-16 surrogate');
-    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
-  }
+  const bytes = utf8Length(value);
   // A separate hasher owns its working state for each invocation.
   const sha256 = connectedSha256Upstream.create().update(value).hex();
   return {bytes, sha256};
@@ -509,4 +516,4 @@ function sha256Bytes(value) {
     sha256: connectedSha256Upstream.create().update(value).hex()};
 }
 
-export {sha256Utf8, sha256Bytes};
+export {sha256Utf8, sha256Bytes, utf8Length};

@@ -1,5 +1,5 @@
 import * as E from './engine.mjs';
-import {sha256Utf8} from './sha256.mjs';
+import {sha256Utf8,utf8Length} from './sha256.mjs';
 
 /** Work-order migration is a companion of the original financial workspace.
  * Every mutation is one original import-supporting operation; original CSV bytes
@@ -12,7 +12,7 @@ const plain=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 function need(ok,message,code='WORK_ORDER_INPUT'){if(!ok){const e=Error(message);e.code=code;throw e;}}
 const stable=x=>x===null||typeof x!=='object'?JSON.stringify(x):Array.isArray(x)?'['+x.map(stable).join(',')+']':'{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+stable(x[k])).join(',')+'}';
 const hash=x=>sha256Utf8(stable(x)).sha256;
-const txt=(v,label,max=1000,empty=false)=>{need(typeof v==='string'&&v.length<=max&&(empty||v.length>0),'Supply '+label+'.');sha256Utf8(v);return v;};
+const txt=(v,label,max=1000,empty=false)=>{need(typeof v==='string'&&v.length<=max&&(empty||v.length>0),'Supply '+label+'.');utf8Length(v);return v;};
 const ident=(v,label)=>{txt(v,label,200);need(!/[\u0000-\u001f]/.test(v),'Use a complete printable '+label+'.');return v;};
 const key=(...v)=>JSON.stringify(v);
 const f=(name,type='text',required=false)=>({name,type,required,label:name.replaceAll('_',' ')});
@@ -126,10 +126,10 @@ function apply(s,action,input,event){
 export function read(workspace){
  const ws=E.validateWorkspace(workspace),s=blank(ws),files=new Map(ws.supportingFiles.map(f=>[f.id,f])),seen=new Set();
  for(const op of ws.operations){if(op.kind!=='import-supporting')continue;const file=files.get(op.supportingInputId);if(!file||file.purpose!==PURPOSE||seen.has(file.id))continue;
-  seen.add(file.id);const event=JSON.parse(codec.decode(file.base64));
+  seen.add(file.id);const eventText=codec.decode(file.base64),event=JSON.parse(eventText);
   need(event.schema===SCHEMA&&event.workspaceId===ws.id&&event.sequence===s.eventCount+1&&event.previous===s.head,'The complete work-order event chain differs.','WORK_ORDER_HISTORY_CHANGED');
   need(event.operationId===op.id&&event.requestSha256===hash(event.input),'The saved work-order request identity differs.','WORK_ORDER_HISTORY_CHANGED');
-  apply(s,event.action,event.input,event);s.head=sha256Utf8(codec.decode(file.base64)).sha256;s.eventCount++;
+  apply(s,event.action,event.input,event);s.head=sha256Utf8(eventText).sha256;s.eventCount++;
  }
  return s;
 }
