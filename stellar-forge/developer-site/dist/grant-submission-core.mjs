@@ -1,3 +1,4 @@
+import {validateGrantOperatingSelection} from './grant-operating-plan-core.mjs';
 import {validateProductSourceAuthoring,productSourceSelectionOf,restoreProductSourceSelection} from './grant-product-authoring-core.mjs';
 import {validatePlanningUpdateState,selectPlanningRevision} from './grant-plan-update-core.mjs';
 import {validateHandover,handoverSelectionOf,restoreHandoverSelection} from './grant-handover-core.mjs';
@@ -39,7 +40,7 @@ export const REQUIREMENTS = [
   {id:'eligibility',title:'Applicant and applicable conditions',answers:['applicant'],detail:'Review eligibility, open-source contract plans and any applicable track or funding conditions.'},
 ];
 export const OFFICIAL = {
-  reviewedAt:'2026-10-12',
+  reviewedAt:'2026-10-13',
   criteria:'https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria',
   budget:'https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines',
   rules:'https://stellar.gitbook.io/scf-handbook/scf-awards/official-rules-for-submissions',
@@ -103,11 +104,17 @@ function validateFields(fields){
     need(field.answerIds.every(x=>ids.includes(x)),'Select original application answers.');
     limit(field.wordLimit,'Word limit');limit(field.characterLimit,'Character limit');
     need(['unspecified','characters','utf16','utf8Bytes'].includes(field.characterMethod),'Select the issuer character-count convention.');
+    validateFieldSourceReview(field);
+    if(field.sourceReviewNote!==undefined)string(field.sourceReviewNote,'Working field review note');
     // Form-source metadata remains editable until the operator completes it.
   }
 }
 function validateState(state,sources,planSources=[]){
   validatePlanningState(state.planningReview,planSources);
+  if(state.planningReview?.operatingSelection!==undefined&&state.planningReview.operatingSelection!==null){
+    const source=planSources.find(item=>item.sha256===state.planningReview.sourceSha);
+    validateGrantOperatingSelection(state.planningReview.operatingSelection,source,state.planningReview.revision);
+  }
   validatePlanningUpdateState(state,planSources);
   need(sources.some(x=>x.sha256===state.currentSource),'Retain the selected source edition.');
   list(state.answers,'Answers');need(JSON.stringify(state.answers.map(x=>x.id))===JSON.stringify(ids),'Retain all nine answer identities.');
@@ -183,13 +190,14 @@ export function useSourceAnswer(draft,id,source,now=new Date().toISOString()){
 export function newField(id,answerIds=[],draft=null){
   need(typeof id==='string'&&id.length>0,'Select a field identity.');
   const field={id,label:'',prompt:'',text:'',answerIds:[...answerIds],wordLimit:null,characterLimit:null,characterMethod:'unspecified',sourceUrl:'',observedAt:''};
-  if(draft)field.text=answerIds.map(id=>{const a=draft.answers.find(x=>x.id===id);need(a,'Select a canonical answer.');return a.text;}).join('\n\n');
+  if(draft){field.text=answerIds.map(id=>{const a=draft.answers.find(x=>x.id===id);need(a,'Select a canonical answer.');return a.text;}).join('\n\n');field.sourceReview=fieldReviewSnapshot(draft,field,'refresh','',draft.updatedAt);}
   validateFields([field]);return field;
 }
 export function rebuildField(draft,id){
   const result=retainVersion(draft,'Before refreshing form field');
   const field=result.fields.find(x=>x.id===id);need(field,'Select an existing form field.');
   field.text=field.answerIds.map(id=>result.answers.find(x=>x.id===id).text).join('\n\n');
+  field.sourceReview=fieldReviewSnapshot(result,field,'refresh','',result.updatedAt);
   return validateDraft(result);
 }
 function tableCells(line){return line.trim().replace(/^\|/,'').replace(/\|$/,'').split(/(?<!\\)\|/).map(x=>x.trim().replaceAll('\\|','|'));}
@@ -236,7 +244,7 @@ export function importFormMap(draft,map){
 export function exportFormMap(draft){validateDraft(draft);return {schema:'stellar-forge.grant-form-map.v1',form:clone(draft.form),fields:clone(draft.fields)};}
 
 /** Keep native plan bytes once per draft; versions retain the selected review. */
-export function receivePlanningSource(draft,source,now=new Date().toISOString()){
+export function receivePlanningSource(draft,source,now=new Date().toISOString(),{revision=source.document.currentRevision}={}){
   validatePlanSources([source]);
   const result=retainVersion(draft,'Before receiving native planning edition',now);
   result.planSources??=[];
@@ -245,6 +253,79 @@ export function receivePlanningSource(draft,source,now=new Date().toISOString())
     need(retained.base64===source.base64&&JSON.stringify(retained.document)===JSON.stringify(source.document),
       'Retain the original complete planning edition.');
   }else result.planSources.push(clone(source));
-  selectPlanningRevision(result,(retained||source).sha256,(retained||source).document.currentRevision,{now});
+  selectPlanningRevision(result,(retained||source).sha256,revision,{now});
   return validateDraft(result);
+}
+
+// A field's manuscript baseline travels inside the original field and every
+// saved version/form-map. Old drafts retain their original unreviewed state.
+export const FIELD_SOURCE_SCHEMA='stellar-forge.grant-field-sources.v1';
+function validateFieldSourceReview(field){
+  const review=field.sourceReview;if(review===undefined)return;
+  need(review&&review.schema===FIELD_SOURCE_SCHEMA,'Retain the field source review.');
+  iso(review.reviewedAt,'Field source review date');
+  need(['refresh','keep'].includes(review.choice),'Retain the explicit field wording choice.');
+  string(review.fieldText,'Reviewed field text');string(review.note,'Field source review note');
+  list(review.answers,'Reviewed source answers');unique(review.answers.map(row=>row.id),'reviewed answer identities');
+  for(const row of review.answers){need(ids.includes(row.id),'Retain an original answer identity.');string(row.text,'Reviewed source answer');}
+}
+function fieldReviewSnapshot(draft,field,choice,note,reviewedAt){
+  return {schema:FIELD_SOURCE_SCHEMA,reviewedAt,choice,note,fieldText:field.text,
+    answers:field.answerIds.map(id=>{const answer=draft.answers.find(row=>row.id===id);need(answer,'Select a complete current answer.');return {id,text:answer.text};})};
+}
+/** Exact editorial comparison; unchanged text is never classified as new facts. */
+export function fieldSourceStatus(draft,field){
+  validateFieldSourceReview(field);
+  const previous=field.sourceReview?.answers||[],old=new Map(previous.map(row=>[row.id,row]));
+  const selected=new Set(field.answerIds),current=new Map(draft.answers.map(row=>[row.id,row]));
+  const rows=[...new Set([...previous.map(row=>row.id),...field.answerIds])].map(id=>{
+    const before=old.get(id),after=selected.has(id)?current.get(id):null;
+    need(!selected.has(id)||after,'Retain the complete selected draft answer.');
+    return {id,title:ANSWERS.find(row=>row[0]===id)?.[1]||id,before:before?.text??null,after:after?.text??null,
+      status:!field.sourceReview?'unreviewed':!before?'added':!after?'removed':before.text===after.text?'unchanged':'changed'};
+  });
+  const changedAnswerIds=rows.filter(row=>!['unchanged','unreviewed'].includes(row.status)).map(row=>row.id);
+  const orderChanged=!!field.sourceReview&&JSON.stringify(previous.map(row=>row.id))!==JSON.stringify(field.answerIds);
+  const status=field.sourceReview?((changedAnswerIds.length||orderChanged)?'changed':field.answerIds.length?'current':'unmapped'):
+    field.answerIds.length?'unreviewed':'unmapped';
+  return {status,rows,changedAnswerIds,orderChanged,fieldEdited:field.sourceReview?field.text!==field.sourceReview.fieldText:null,
+    choice:field.sourceReview?.choice??null,reviewedAt:field.sourceReview?.reviewedAt??null,
+    proposedText:field.answerIds.map(id=>current.get(id).text).join('\n\n')};
+}
+export function reviewFieldSources(draft,id,{choice='keep',note='',now=new Date().toISOString()}={}){
+  need(['refresh','keep'].includes(choice),'Select current answer wording or keep the edited field.');
+  string(note,'Field source review note');iso(now,'Field source review date');
+  const result=retainVersion(draft,choice==='refresh'?'Before refreshing mapped field':'Before accepting edited field wording',now);
+  const field=result.fields.find(row=>row.id===id);need(field,'Select an existing form field.');
+  if(choice==='refresh')field.text=fieldSourceStatus(result,field).proposedText;
+  field.sourceReview=fieldReviewSnapshot(result,field,choice,note,now);delete field.sourceReviewNote;
+  return validateDraft(result);
+}
+/** Operator-invoked batch refresh only for text copied unchanged from answers. */
+export function refreshUneditedFormFields(draft,{now=new Date().toISOString()}={}){
+  validateDraft(draft);const eligible=draft.fields.filter(field=>{
+    const status=fieldSourceStatus(draft,field);
+    return status.status==='changed'&&status.fieldEdited===false&&status.choice==='refresh';
+  }).map(field=>field.id);
+  if(!eligible.length)return {draft:clone(draft),updatedIds:[]};
+  const result=retainVersion(draft,'Before refreshing unchanged mapped fields',now);
+  for(const id of eligible){const field=result.fields.find(row=>row.id===id);
+    field.text=fieldSourceStatus(result,field).proposedText;
+    field.sourceReview=fieldReviewSnapshot(result,field,'refresh','',now);
+  }
+  return {draft:validateDraft(result),updatedIds:eligible};
+}
+/** Mapping coverage is explicit editorial context, not a claim of adequacy. */
+export function formSourceReview(draft){
+  const fields=draft.fields.map(field=>{
+    const status=fieldSourceStatus(draft,field);
+    return {id:field.id,label:field.label,status:status.status,changedAnswerIds:status.changedAnswerIds,
+      fieldEdited:status.fieldEdited,choice:status.choice,reviewedAt:status.reviewedAt};
+  });
+  const answers=ANSWERS.map(([id,title])=>({id,title,fieldIds:draft.fields.filter(field=>field.answerIds.includes(id)).map(field=>field.id)}));
+  return {schema:'stellar-forge.grant-form-source-review.v1',answers,fields,
+    unmappedAnswerIds:answers.filter(row=>!row.fieldIds.length).map(row=>row.id),
+    changedFieldIds:fields.filter(row=>row.status==='changed').map(row=>row.id),
+    unreviewedFieldIds:fields.filter(row=>row.status==='unreviewed').map(row=>row.id),
+    meaning:'The recorded mapping and exact answer changes support editorial review. Include the useful facts in the actual field text and apply the issuer’s observed prompts and limits.'};
 }

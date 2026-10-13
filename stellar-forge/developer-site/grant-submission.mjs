@@ -2,6 +2,16 @@ import {HANDOVER_ROUTES,attachGrantHandover} from './grant-handover.mjs';
 // MIT. Connect the complete submission workspace to the existing grant composer.
 export const SUBMISSION_OPERATION = 'SCF-SUBMISSION-WORKSPACE-22B705-20261012';
 export const SUBMISSION_ROUTES = [
+  ['/grant-operating-plan-core.mjs',['grant-operating-plan-core.mjs','text/javascript; charset=utf-8']],
+  ['/grant-operating-plan-workspace.mjs',['grant-operating-plan-workspace.mjs','text/javascript; charset=utf-8']],
+  ['/stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs',['../../../stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs','text/javascript; charset=utf-8']],
+  ['/stellar/scf-starforge-20261009/distribution/discovery/operating-plan.mjs',['../../../stellar/scf-starforge-20261009/distribution/discovery/operating-plan.mjs','text/javascript; charset=utf-8']],
+  ['/stellar/scf-starforge-20261009/distribution/discovery/operating-plan-return.mjs',['../../../stellar/scf-starforge-20261009/distribution/discovery/operating-plan-return.mjs','text/javascript; charset=utf-8']],
+  ["/grant-product-sources-core.mjs",["grant-product-sources-core.mjs","text/javascript; charset=utf-8"]],
+  ["/grant-product-authoring-core.mjs",["grant-product-authoring-core.mjs","text/javascript; charset=utf-8"]],
+  ["/grant-product-authoring-source.mjs",["grant-product-authoring-source.mjs","text/javascript; charset=utf-8"]],
+  ["/grant-product-authoring-workspace.mjs",["grant-product-authoring-workspace.mjs","text/javascript; charset=utf-8"]],
+  ["/grant-product-authoring.css",["grant-product-authoring.css","text/css; charset=utf-8"]],
   ...HANDOVER_ROUTES,
   ['/grant-submission.html',['grant-submission.html','text/html; charset=utf-8']],
   ['/grant-submission.css',['grant-submission.css','text/css; charset=utf-8']],
@@ -27,7 +37,11 @@ export function attachGrantSubmission({templateHtml,sourceIndex}){
     draft_schema:'stellar-forge.grant-submission-draft.v1',export_schema:'stellar-forge.grant-submission-export.v1',
     form_map_schema:'stellar-forge.grant-form-map.v1',operation:SUBMISSION_OPERATION,
     planning:{source_schema:'stellar-forge.grant-plan-source.v1',review_schema:'stellar-forge.grant-plan-review.v1',update_schema:'stellar-forge.grant-plan-update.v1',target_schema:'stellar-forge.grant-plan-target.v1',native_schema:'stellar-forge.sf47-planning.v1',formats:['json','zip'],operation:'SCF-PLAN-SUBMISSION-INTEGRATION-7F5A-20261012'},
-    guide:'https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION.md',
+    product_sources:{schema:'stellar-forge.grant-product-authoring.v1',
+      registration_schema:'stellar-forge.grant-product-registration.v1',
+      route:'/grant-submission.html',view:'products',
+      guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_PRODUCT_AUTHORING.md'},
+    guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION.md',
   };
   return {templateHtml:html,sourceIndex:attachGrantHandover(index)};
 }

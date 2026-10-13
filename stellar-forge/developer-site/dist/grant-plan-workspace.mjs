@@ -1,3 +1,4 @@
+import {renderGrantOperatingPlan} from './grant-operating-plan-workspace.mjs';
 import {renderPlanningUpdates} from './grant-plan-update-workspace.mjs';
 import {selectPlanningRevision} from './grant-plan-update-core.mjs';
 // MIT. Native planning review and application use the existing submission editor.
@@ -19,7 +20,7 @@ export function renderPlanning(root, context) {
     'Receive a saved SF47 plan, review its original costs and delivery schedule, then prepare the text for this submission.'));
   const actions = node('div', undefined, 'row');
   actions.append(button('Receive native plan or planning ZIP', () => context.chooseFile('plan')),
-    link('Native planning and submission guide', 'https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION.md'));
+    link('Native planning and submission guide', 'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION.md'));
   root.append(actions);
   if (!sources.length) {
     root.append(node('p', 'Choose the complete planning ZIP from the original SF47 workspace, or its saved plan JSON exported with show --part all.', 'empty'));
@@ -95,6 +96,7 @@ export function renderPlanning(root, context) {
     }
     root.append(card);
   }
+  renderGrantOperatingPlan(root, context, {source, plan, review: selected});
   const finance = node('details');
   finance.append(node('summary', 'Conditional payment schedule and native cash requirement'));
   const paymentTable = node('table', undefined, 'plan-table'), paymentHead = node('thead'), header = node('tr');

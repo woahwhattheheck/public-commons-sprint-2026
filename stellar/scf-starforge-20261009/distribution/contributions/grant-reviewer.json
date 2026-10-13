@@ -16,17 +16,27 @@
     "./grant/review-round/composition": "./source/stellar-forge/developer-site/grant-review-round.mjs",
     "./grant/review-round/model-receiving": "./source/stellar-forge/developer-site/GRANT_REVIEW_ROUNDS_MODEL.mjs",
     "./grant/review-round/browser-receiving": "./source/stellar-forge/developer-site/GRANT_REVIEW_ROUNDS_BROWSER.mjs",
-    "./grant/application-exporter": "./source/stellar-forge/developer-site/grant-export.mjs"
+    "./grant/application-exporter": "./source/stellar-forge/developer-site/grant-export.mjs",
+    "./grant/operating-plan": {
+      "types": "./source/stellar-forge/developer-site/dist/grant-operating-plan-core.d.mts",
+      "import": "./source/stellar-forge/developer-site/dist/grant-operating-plan-core.mjs"
+    },
+    "./grant/operating-plan/cli": "./source/stellar-forge/developer-site/grant-operating-plan.mjs",
+    "./grant/issuer-context": "./source/stellar-forge/developer-site/grant-issuer-context.mjs",
+    "./grant/issuer-context/source": "./source/stellar-forge/developer-site/dist/grant-issuer-source.mjs",
+    "./grant/issuer-context/core": "./source/stellar-forge/developer-site/dist/grant-issuer-core.mjs"
   },
   "commands": {
     "grant-application": "stellar-forge/developer-site/grant.mjs",
     "grant-compose": "stellar-forge/developer-site/grant-compose.mjs",
-    "grant-export": "stellar-forge/developer-site/grant-export.mjs"
+    "grant-export": "stellar-forge/developer-site/grant-export.mjs",
+    "grant-operating-plan": "stellar-forge/developer-site/grant-operating-plan.mjs"
   },
   "commandDescriptions": {
     "grant-application": "Read the complete SCF application, prepare and review a saved draft, retain its handover and open the original grant purchase reviewer",
     "grant-compose": "Compose the complete selected SCF manuscript and maintained product sections into the existing reviewer and source downloads",
-    "grant-export": "Prepare a complete saved SCF draft as exact field text, native handover files and an offline copy and print page"
+    "grant-export": "Prepare a complete saved SCF draft as exact field text, native handover files and an offline copy and print page",
+    "grant-operating-plan": "Prepare an editable customer operating procedure from selected original SF47 work packages or a complete saved submission"
   },
   "browserAssets": [
     {
@@ -43,6 +53,9 @@
     "operations/scf-submission-review-round-7108-20261012/complete-model-artifacts.json",
     "operations/scf-submission-review-round-7108-20261012/model-result.json",
     "operations/scf-submission-review-round-7108-20261012/current-native-compatibility.json",
-    "operations/scf-submission-review-round-7108-20261012/README.md"
+    "operations/scf-submission-review-round-7108-20261012/README.md",
+    "stellar-forge/developer-site/GRANT_ISSUER_CONTEXT.md",
+    "stellar-forge/developer-site/GRANT_ISSUER_RECEIVING.mjs",
+    "stellar-forge/developer-site/GRANT_OPERATING_PLANS.md"
   ]
 }
