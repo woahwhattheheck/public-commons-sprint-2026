@@ -1,0 +1,16 @@
+{
+  "schema": "commons.javascript-source-selection/v1",
+  "label": "Complete public JavaScript source collector",
+  "paths": [
+    "host/source_closure_cli.cjs"
+  ],
+  "resources": [
+    "host/JAVASCRIPT_SOURCE_CLOSURE.md",
+    "host/examples/source-closure-self.json",
+    "host/vendor/acorn-source-closure/SOURCE.json",
+    "host/vendor/acorn-source-closure/LICENSE",
+    "features/registry/javascript-source-closure-20261013.json",
+    "host/vendor/acorn-source-closure/acorn.cjs"
+  ],
+  "routes": []
+}
