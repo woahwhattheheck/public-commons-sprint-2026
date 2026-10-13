@@ -18,7 +18,7 @@ import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-2"
+PREFIX = "waterlink-receiving-waters-3"
 REQUIRED = (
     "model/receiving_waters.py",
     "model/receiving_water_delivery.py",
@@ -234,8 +234,8 @@ def join_app(text):
         "return receivingWaters.dispatch(button)",
     )
     text = replace_once(
-        text, "customerReviews.taskActions(row)+fileList(row._downloads||[])",
-        "receivingWaters.taskActions(row)+customerReviews.taskActions(row)+fileList(row._downloads||[])",
+        text, "customerReviews.taskActions(row)",
+        "receivingWaters.taskActions(row)+customerReviews.taskActions(row)",
         "receivingWaters.taskActions(row)",
     )
     text = replace_once(
