@@ -1,0 +1,236 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original headwaters: completed native delivery and routing interpretation",
+  "captured_at": "2026-10-13",
+  "scope": "Original1296ha simulated teaching case; twelve native runs; complete original numerical records and unchanged input interpretation",
+  "notes": [
+    "Annual native N/P kg/year and sediment metric tonnes/year are stream exports.",
+    "Within-profile three-way comparisons retain exact common support; routing contrasts use original intersection rows.",
+    "Original input and completed native data are retained for scientific review."
+  ],
+  "entries": [
+    {
+      "id": "headwaters-completed-native-interpretation",
+      "title": "Original headwaters: source loading, native delivery and routing",
+      "kind": "document",
+      "role": "OBSERVED_CONTEXT",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source/headwaters_native_interpretation_20261013",
+      "vintage": "2026-10-13",
+      "classification": "SIMULATED DEMONSTRATION INPUTS; ORIGINAL COMPLETED NATIVE OUTPUTS",
+      "originator": "TokenJunkieLabs",
+      "path": "source/headwaters_native_interpretation_20261013/scientific-report.json",
+      "bytes": 26479,
+      "sha256": "75d38479c4c5899a68137c41a0efe6998b1828c4f3d155825c2443c19c23fd4a",
+      "metadata": {
+        "report_schema": "upstate.observed-report/v1",
+        "producer": "headwaters-native-interpretation-20261013-v1",
+        "scientific_review": "Original completed source-bound outputs and assumptions retained for modeling-team review",
+        "source_case": "upstate-simulated-piedmont-headwaters-v1",
+        "original_project_id": "1b6a344c-df5a-4986-a5e4-47a2d158324b",
+        "original_ensemble_id": "8cb02b0fe3b6a96782525e8aa5607621dd0a456719c6651ce07a675d9cae1ff4"
+      },
+      "companions": [
+        {
+          "path": "source/headwaters_input_interpretation_20261013/CHAPTER.md",
+          "bytes": 8664,
+          "sha256": "228bbc73b7ed5cfb68bd0fada411fa5356863e63e6605057ff840989cf7dcfbf"
+        },
+        {
+          "path": "source/headwaters_input_interpretation_20261013/RECEIVING.md",
+          "bytes": 10361,
+          "sha256": "d18dde3cb06368075c6ade0125a92688f607c84673a8240c4b3f7485c0353db5"
+        },
+        {
+          "path": "source/headwaters_input_interpretation_20261013/analysis.json",
+          "bytes": 10921,
+          "sha256": "d1b68b8f7bdd384df28ff87aab2369c7fb02e7fc1d35762d2ac2ba6411659736"
+        },
+        {
+          "path": "source/headwaters_input_interpretation_20261013/biophysical-source-replay.csv",
+          "bytes": 397,
+          "sha256": "bd5d7a436a302df751e57f63c188216402f13acdfff26c847b9b83733651fd94"
+        },
+        {
+          "path": "source/headwaters_input_interpretation_20261013/covariate-balance.csv",
+          "bytes": 2475,
+          "sha256": "866edbc91ad8f46b0fa4beced8ce6e6ec4d8d69de1713b896b26dde5b48c1c6c"
+        },
+        {
+          "path": "source/headwaters_input_interpretation_20261013/original/simulated_headwaters.py",
+          "bytes": 47708,
+          "sha256": "27ed9a250bc08a079b4d40db1d5aaffa55747a1f6f4c21d01ee7024c00d3dd0a"
+        },
+        {
+          "path": "source/headwaters_input_interpretation_20261013/scientific-report.json",
+          "bytes": 14662,
+          "sha256": "a26d9921c15accfc851fa63307b663face8ddeaeaa29459312868a5f0badf16f"
+        },
+        {
+          "path": "source/headwaters_input_interpretation_20261013/source-inputs.json",
+          "bytes": 1628,
+          "sha256": "8703090f218ceb7cdba2e36560c6bbce3859f0508e5b78324f213f97f2a99584"
+        },
+        {
+          "path": "source/headwaters_input_interpretation_20261013/source-loading.csv",
+          "bytes": 451,
+          "sha256": "1941adcddeaed0130470ebb3387aae03f1431853e130c1b12734f98b34c024b4"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/CHAPTER.md",
+          "bytes": 12253,
+          "sha256": "74357a7185516ed510cacdbca17af472b0248b44eac68862df53f2652d33405e"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/RECEIVING.md",
+          "bytes": 10511,
+          "sha256": "6647e7929d09def1a6c2232ab2dcbdf7158bb5566cafef72a5ac1fbce90122d4"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/analysis.json",
+          "bytes": 147723,
+          "sha256": "4d15f65f074cf869c2c326882dc0eb59e9fc8cf52bf94564ca2fcd2f29fd8084"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/cap-identity.csv",
+          "bytes": 14422,
+          "sha256": "11850b829cbb18c5653c82ac74b2d5a9797dd257dd1db718e33852a6cde65673"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/native-inventory.csv",
+          "bytes": 20218,
+          "sha256": "ccc61dc6a13f61bc1eae69fd92c29a4e5d1927511f94e430e42f2f71846f3398"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/parameter-comparisons.csv",
+          "bytes": 4880,
+          "sha256": "6df08359ff14e1612e602a7be94f017b5984709ed922103ad18b4493af0d6bff"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/placement-comparisons.csv",
+          "bytes": 4860,
+          "sha256": "84c1ff7425638b2f5874d15e2ffdc8286cd49e138dab546b163a61a4e59d5a8d"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/report.html",
+          "bytes": 16806,
+          "sha256": "4c043d64dfc1cc02b81cd7624cb959a768b3e5181c846416856e73c392e42d14"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/numeric/release.json",
+          "bytes": 1536,
+          "sha256": "33a7982468772b05f0e14c9605100613600e074c3b4673686dc956a379fb1fc3"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/numeric/report.json",
+          "bytes": 220725,
+          "sha256": "066b3267c63cd1812f789d4781627c399d0c94ec7f19d5640a09f28fc4fbbc70"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/ensemble.json",
+          "bytes": 20386,
+          "sha256": "2f3ac6fc167d9b53344767256b98af20f53c86b6c3790239bfa2585ced45ccaa"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/grid.json",
+          "bytes": 6814,
+          "sha256": "9ee1ffa2a0a9d02cd2e9841840779ca59878b4a22d3463f91a96262c75de1ad9"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/native-runs.json",
+          "bytes": 705166,
+          "sha256": "22f56730c6861d0199d8d8749d7efded076d64bcfc5e963348c1aa59288c61ed"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/profiles/4fdd94724e3ebdd706e6ccee2d352f516a2482321b43378a62dc62101c54537b.json",
+          "bytes": 4087,
+          "sha256": "c3ae2be71172ce36bb7890cdb54dfe9fa9f804be3abddd21c8ff955b75b7e4e5"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/profiles/6a24d29ad5adc6adb5dc1806fe2229045132e44549e0ea71f828a460b83fe6c3.json",
+          "bytes": 1090,
+          "sha256": "c2a18df3aa818784998d9e2a0338b523f2d4732f04c99b6aa131a8836ba2f459"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/profiles/cbfaa2e529a87cee974d42a359b821c33be059801f8cef70e04f48209939bafc.json",
+          "bytes": 4091,
+          "sha256": "d90544d8f5206ea872f0fa874f92d1d3cde11910f727b025050142338290479b"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/profiles/e4b07bb38701fb980e78ee47159ba5866865fac42eedb361555b9c575eea1738.json",
+          "bytes": 4087,
+          "sha256": "62ae53c209c141b8ae87ad66b2f9ae5d48f5612daffc4efcbd9eb9b709729f6e"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/scenarios/28044212ab992451e31b5e9e6dc831a9221a5ef53ac136ea56b2af063f70f223.json",
+          "bytes": 821,
+          "sha256": "7dd065a4a25d651bd5a6934fd881503ce7b961d6a7cf6db8012168b6a1870428"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/scenarios/63f5d52029585807ff8f4d5e8d5fff0972adf7c01811d97cab3edbee3d9658d7.json",
+          "bytes": 341,
+          "sha256": "66e860a13a6dd9c692b8b805e5ff7f6c50f1ea94e108e16df0d0c1785683f5bd"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/retained/original/scenarios/8d419f1c618cc7a5025c01eb40f173afbbe6919e4ba96580f6e7e1e36943d65d.json",
+          "bytes": 743,
+          "sha256": "4ffa3175427df28ba629288ae3f40dd7447a47093a742ea569f8e1387e52f224"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/scenario-comparisons.csv",
+          "bytes": 15160,
+          "sha256": "4211510d547f04adbada7068ef93fd94e2add5fd263dc968b3a50d48fce3ce80"
+        },
+        {
+          "path": "source/headwaters_native_interpretation_20261013/source-inputs.json",
+          "bytes": 4199,
+          "sha256": "d5da4c08ea3efc12c7da0aa51382b806d1421ec65714dd6cc88c8f73bf1bf9f7"
+        },
+        {
+          "path": "source/simulated_headwaters_20261013/generate-matched-control.mjs",
+          "bytes": 6965,
+          "sha256": "193af3916b4ba8bd600903e5d086bf7d2c62d874a4f24078101dd610e5185c9a"
+        },
+        {
+          "path": "source/simulated_headwaters_20261013/input-recipe.json",
+          "bytes": 678544,
+          "sha256": "3f8842c985a4d9186d43eafea07023ad326de1a46780f3fc93b0c4e04874d0fb"
+        },
+        {
+          "path": "source/simulated_headwaters_20261013/matched-control.json",
+          "bytes": 350926,
+          "sha256": "552ec6934b08b35678898b00c6a6d6fbacf93b8946d924475675001c8b433cb0"
+        },
+        {
+          "path": "source_tools/build_headwaters_input_report.mjs",
+          "bytes": 3639,
+          "sha256": "4da057d009684f79140ce19990d2e2c22f1d7e71ea3170c3ece62a41d78a32a8"
+        },
+        {
+          "path": "source_tools/build_headwaters_native_report.mjs",
+          "bytes": 3133,
+          "sha256": "9571870040a47e6e3ff0eb7058381a7023020227a9db1eeaf2c4cc1351a59a0a"
+        },
+        {
+          "path": "source_tools/headwaters_input_accounting.mjs",
+          "bytes": 6864,
+          "sha256": "44c0aa078a6718a844c44a1964d2d1341330cdaf6f44560ce3d123ab3923d83f"
+        },
+        {
+          "path": "source_tools/headwaters_input_report_views.mjs",
+          "bytes": 11140,
+          "sha256": "31b16d396931f692cc519e0423eb25a0e9a0601f033816bac53f0714f09515f1"
+        },
+        {
+          "path": "source_tools/headwaters_native_interpretation.mjs",
+          "bytes": 11291,
+          "sha256": "d60559ba05e26a78865df36c1728b6a7e13d8700b168fbec3f2b17505ad69ea6"
+        },
+        {
+          "path": "source_tools/headwaters_native_report_views.mjs",
+          "bytes": 14166,
+          "sha256": "53d37c19f740b5853ba1e6216371043b118e65ad3ebf9fed00494a925696b859"
+        }
+      ]
+    }
+  ]
+}

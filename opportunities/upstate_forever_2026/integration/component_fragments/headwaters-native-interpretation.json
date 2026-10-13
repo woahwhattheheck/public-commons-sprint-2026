@@ -1,0 +1,48 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "components": {
+    "headwaters-native-interpretation": {
+      "title": "Completed original headwaters source-to-native interpretation",
+      "paths": [
+        "headwaters_native_interpretation.sources.json",
+        "source/headwaters_native_interpretation_20261013/CHAPTER.md",
+        "source/headwaters_native_interpretation_20261013/RECEIVING.md",
+        "source/headwaters_native_interpretation_20261013/analysis.json",
+        "source/headwaters_native_interpretation_20261013/cap-identity.csv",
+        "source/headwaters_native_interpretation_20261013/native-inventory.csv",
+        "source/headwaters_native_interpretation_20261013/parameter-comparisons.csv",
+        "source/headwaters_native_interpretation_20261013/placement-comparisons.csv",
+        "source/headwaters_native_interpretation_20261013/report.html",
+        "source/headwaters_native_interpretation_20261013/retained/numeric/release.json",
+        "source/headwaters_native_interpretation_20261013/retained/numeric/report.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/ensemble.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/grid.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/native-runs.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/profiles/4fdd94724e3ebdd706e6ccee2d352f516a2482321b43378a62dc62101c54537b.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/profiles/6a24d29ad5adc6adb5dc1806fe2229045132e44549e0ea71f828a460b83fe6c3.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/profiles/cbfaa2e529a87cee974d42a359b821c33be059801f8cef70e04f48209939bafc.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/profiles/e4b07bb38701fb980e78ee47159ba5866865fac42eedb361555b9c575eea1738.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/scenarios/28044212ab992451e31b5e9e6dc831a9221a5ef53ac136ea56b2af063f70f223.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/scenarios/63f5d52029585807ff8f4d5e8d5fff0972adf7c01811d97cab3edbee3d9658d7.json",
+        "source/headwaters_native_interpretation_20261013/retained/original/scenarios/8d419f1c618cc7a5025c01eb40f173afbbe6919e4ba96580f6e7e1e36943d65d.json",
+        "source/headwaters_native_interpretation_20261013/scenario-comparisons.csv",
+        "source/headwaters_native_interpretation_20261013/scientific-report.json",
+        "source/headwaters_native_interpretation_20261013/source-inputs.json",
+        "source_tools/build_headwaters_native_report.mjs",
+        "source_tools/headwaters_native_interpretation.mjs",
+        "source_tools/headwaters_native_report_views.mjs"
+      ],
+      "requires": [
+        "core",
+        "observed-context",
+        "headwaters-input-interpretation"
+      ],
+      "source_manifests": [
+        "headwaters_native_interpretation.sources.json"
+      ]
+    }
+  },
+  "required_components": [
+    "headwaters-native-interpretation"
+  ]
+}
