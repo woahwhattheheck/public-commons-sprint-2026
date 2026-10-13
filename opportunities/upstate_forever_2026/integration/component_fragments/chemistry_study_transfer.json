@@ -1,0 +1,26 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "chemistry_study_transfer",
+  "source_reference": "Original Chemistry scientific report lineage through the maintained selected-study transfer",
+  "extend_components": {
+    "chemistry": {
+      "paths": [
+        "model/chemistry_study_transfer.py",
+        "model/CHEMISTRY_STUDY_TRANSFER.md",
+        "source_tools/chemistry_study_composition.py",
+        "integration/component_fragments/chemistry_study_transfer.json"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/chemistry_study_transfer.py",
+        "model/CHEMISTRY_STUDY_TRANSFER.md",
+        "integration/component_fragments/chemistry_study_transfer.json"
+      ]
+    }
+  },
+  "required_components": [
+    "chemistry",
+    "study-transfer"
+  ]
+}
