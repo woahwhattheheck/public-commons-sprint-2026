@@ -346,3 +346,36 @@ Use the same application, operation directory and complete input JSON after an i
 A native analysis whose retained metadata permits runtime recovery can continue after the actual reported condition is repaired. Add `--resume-analysis REPAIR_LABEL` to record that continuation against the same analysis ID and immutable original inputs. A deliberate application correction uses `--adopt-source`; the driver retains both complete source generations in the same case.
 
 The final case contains the original input files, source cohorts, all three native workspaces, full request and response files, browser recovery records, source models, projection, consumer result, observed weather, native outputs and complete exported application/workspaces. Each captured archive includes a complete member manifest and is reopened to verify every member's bytes and SHA256. The original operation's `-latest-archive.json` pointer identifies the complete retained archive beside the case directory. Preserve that archive with the operating deliverables.
+
+
+## Complete offline recipient review and native acceptance
+
+Use [AUDIT_RECIPIENT_REVIEW.md](AUDIT_RECIPIENT_REVIEW.md) for the following
+recipient course on this original Audit workspace. The complete application
+includes the standalone recipient editor, source-bound manuscript, all authored
+editions and the original-byte return packer. A recipient can inspect retained
+source revisions, save and reopen unfinished review fields, then return the
+whole original archive and complete manuscript.
+
+The author prepares that standalone delivery from an existing native
+workspace/application export:
+
+    python3 audit_recipient_review.py prepare --archive /absolute/original-application.zip --out /absolute/recipient
+
+The recipient opens Audit_Recipient_Review.html and retains every accompanying
+file. Native acceptance is explicit: run the helper's preview command against
+the same existing author workspace, inspect the full review proposals, then
+apply using that saved preview and the same original acceptance journal. The
+unchanged native review.save operation remains authoritative. Existing review
+head conflicts remain visible; complete accepted requests replay without a
+second review.
+
+AUDIT_RECIPIENT_RECEIVING.py operates the complete following course with an
+explicit review plan, actual original workspace/export and installed browser.
+It retains the source, complete recipient files and exact native requests,
+exports the full application, independently receives/reopens it through the
+original engine, and saves the resulting project. Current commissioning and
+native analysis stay with their original owner. Follow the full outgoing
+product/all-attachment rule above and in the recipient guide: producing peers
+must personally LOOK at actual renders and use the delivered attachments.
+Source publication is distinct from native and rendered completion.
