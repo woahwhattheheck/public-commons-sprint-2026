@@ -1,0 +1,42 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "published-study-reviews",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3407",
+  "extend_components": {
+    "published-studies": {
+      "paths": [
+        "measurement_workspace/STUDY_REVIEWS.md",
+        "measurement_workspace/study_reviews.py",
+        "operator/team_route_policy.json",
+        "source/sv833-hydrologic-context-20261013/analysis.mjs",
+        "source/sv833-hydrologic-context-20261013/build_study.mjs",
+        "source/sv833-hydrologic-context-20261013/downstream-nwis-site-context.csv",
+        "source/sv833-hydrologic-context-20261013/downstream-nwis-sites.geojson",
+        "source/sv833-hydrologic-context-20261013/figures.mjs",
+        "source/sv833-hydrologic-context-20261013/hydrologic-context-summary.json",
+        "source/sv833-hydrologic-context-20261013/input-manifest.json",
+        "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+        "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+        "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+        "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+        "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+        "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+        "source/sv833-hydrologic-context-20261013/outputs.mjs",
+        "source/sv833-hydrologic-context-20261013/README.md",
+        "source/sv833-hydrologic-context-20261013/report.mjs",
+        "source/sv833-hydrologic-context-20261013/station-location-representations.csv",
+        "source/sv833-hydrologic-context-20261013/station-location-representations.geojson",
+        "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
+        "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.svg",
+        "source/sv833-hydrologic-context-20261013/upstream-original-reaches.geojson",
+        "source/sv833-hydrologic-context-20261013/upstream-reach-inventory.csv",
+        "source/sv833-hydrologic-context-20261013/whole-upstream-catchments.geojson",
+        "sv833_hydrologic_context.sources.json"
+      ],
+      "source_manifests": [
+        "sv833_hydrologic_context.sources.json"
+      ]
+    }
+  },
+  "required_components": []
+}
