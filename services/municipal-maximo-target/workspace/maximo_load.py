@@ -237,7 +237,7 @@ def receive(workspace, project_id, load_id, operation, actor, returned):
         if old:
             need(old["load_id"] == load_id and old["body"] == encoded and old["actor"] == actor,
                  "Original receiving operation belongs to a different result")
-            return json.loads(old["report"])
+            return original(old["report"].encode())
         db.execute("INSERT INTO maximo_load_returns(id,load_id,body,report,actor,at,summary) VALUES(?,?,?,?,?,?,?)",
                    (operation, load_id, encoded, wire(report, maximum=16*1024*1024).decode(), actor, time.time(),
                     canonical(received_summary(report))))
@@ -252,7 +252,7 @@ def list_loads(workspace, project_id):
             doc = original(row["body"])
             if "request_sha256" not in doc:
                 doc["request_sha256"] = SHA(wire({k:doc[k] for k in ("method","url","headers","body_sha256")}))
-            db.execute("UPDATE maximo_loads SET summary=? WHERE id=?", (canonical(prepared_summary(doc)),row["id"]))
+            db.execute("UPDATE maximo_loads SET summary=? WHERE id=?", (wire(prepared_summary(doc)).decode(),row["id"]))
         missing_returns = list(db.execute("""SELECT r.id,r.report FROM maximo_load_returns r JOIN maximo_loads l ON l.id=r.load_id
              WHERE l.project_id=? AND r.summary IS NULL""", (project_id,)))
         for row in missing_returns:
