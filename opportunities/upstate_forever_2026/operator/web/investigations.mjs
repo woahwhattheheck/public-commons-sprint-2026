@@ -16,7 +16,7 @@ const actionNames = {
 export function createInvestigationClient(options) {
  const {api,getWorkspace,onChange=()=>{},onNotice=()=>{}}=options;
  const storage=options.storage || globalThis.sessionStorage;
- const contexts=new Map();
+ const contexts=new Map(),refreshes=new Map();
  const key=w=>'upstate-intelligence:'+w;
  const makeId=()=> 'intelligence_'+(options.randomUUID?.() || globalThis.crypto?.randomUUID?.() ||
    Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_'+Math.random().toString(36).slice(2)).replaceAll('-','');
@@ -29,7 +29,7 @@ export function createInvestigationClient(options) {
     sourceSelection:Array.isArray(saved.sourceSelection)?saved.sourceSelection:[],
     experiment:null,experimentId:saved.experimentId||null,experimentOffset:saved.experimentOffset||0,experimentRead:0,
     nativeTask:null,nativeTaskRead:0,experimentSubmission:saved.experimentSubmission||null,
-    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,loading:false,error:null});
+    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,loading:false,error:null,readErrors:{}});
   }return contexts.get(w);
  };
  const persist=c=>{try{storage?.setItem(key(c.workspace),json({sessionId:c.sessionId,pending:c.pending,lastResult:c.lastResult,draft:c.draft,collectionId:c.collectionId,sourceSelection:c.sourceSelection,experimentId:c.experimentId,experimentOffset:c.experimentOffset,experimentSubmission:c.experimentSubmission}));}
@@ -83,7 +83,7 @@ export function createInvestigationClient(options) {
   if(request===c.nativeTaskRead){c.nativeTask=value;changed(c);}
   return value;
  }
- async function acceptExperimentSubmission(task,c,submission){
+ async function acceptExperimentSubmission(task,c,submission,hydrate=true){
   if(task.workspace!==c.workspace || task.action!==submission.body.action ||
      task.operation_id!==submission.body.operation_id || !originalId(task.id) ||
      task.id!==submission.taskId || stable(task.payload)!==stable(submission.body.payload))
@@ -94,8 +94,8 @@ export function createInvestigationClient(options) {
    if(!originalId(id))throw Error('The completed original task did not return its saved programme ID.');
    submission.experimentId=id;
    changed(c);
-   await catalog(c.workspace);
-   if(c.sessionId===submission.sessionId&&!submission.selected)await selectSubmittedExperiment(c.workspace);
+   if(hydrate)await reconcileReads(c,[['catalog','Saved investigation catalog',()=>catalog(c.workspace)],
+    ['programme-return','Original programme return',()=>c.sessionId===submission.sessionId&&!submission.selected?selectSubmittedExperiment(c.workspace):null]]);
   }else if(['failed','interrupted','canceled','cancelled'].includes(task.state)){
    submission.error=task.error?.message||'The original native task '+task.state+'. Open its retained task to continue.';
   }
@@ -115,13 +115,13 @@ export function createInvestigationClient(options) {
   c.experimentSubmission=submission;changed(c);
   return acceptExperimentSubmission(task,c,submission);
  }
- async function pollExperimentSubmission(w=getWorkspace()){
+ async function pollExperimentSubmission(w=getWorkspace(),hydrate=true){
   const c=context(w),submission=c.experimentSubmission;if(!submission)return null;
   const task=await api('/api/task?'+new URLSearchParams({id:submission.taskId,workspace:w}));
-  if(c.experimentSubmission===submission)return acceptExperimentSubmission(task,c,submission);
+  if(c.experimentSubmission===submission)return acceptExperimentSubmission(task,c,submission,hydrate);
   return task;
  }
- async function selectSubmittedExperiment(w=getWorkspace()){
+ async function selectSubmittedExperiment(w=getWorkspace(),readProgramme=true){
   const c=context(w),submission=c.experimentSubmission;
   if(!submission?.experimentId)throw Error('The original programme is still being prepared.');
   if(c.sessionId!==submission.sessionId)await session(submission.sessionId,w);
@@ -129,8 +129,10 @@ export function createInvestigationClient(options) {
   c.draft.fields||={};Object.assign(c.draft.fields,{
    actionKind:'ensemble',ensembleMode:'saved',nativeProgramme:submission.experimentId});
   c.draft.panel='actions';c.draft.selected={kind:'ensemble',id:submission.experimentId};submission.selected=true;
+  if(c.experimentId!==submission.experimentId)c.experiment=null;
+  c.experimentId=submission.experimentId;c.experimentOffset=0;
   changed(c);
-  await experiment(submission.experimentId,0,w);
+  if(readProgramme)await experiment(submission.experimentId,0,w);
   return submission.experimentId;
  }
  function clearExperimentSubmission(){
@@ -155,13 +157,46 @@ export function createInvestigationClient(options) {
   if(!c.sourceSelection.length)throw Error('Select original files for this collection.');
   return queue('intelligence.collection.export',{session_id:sid,title:title.trim(),refs:clone(c.sourceSelection)});
  }
- async function refresh(w=getWorkspace()){
-  const c=context(w);c.loading=true;c.error=null;changed(c);
-  try {await catalog(w);await collectionSources(w);if(c.sessionId)await session(c.sessionId,w);if(c.pending?.taskId)await poll(w);if(c.lastResult?.export_id && c.sessionId===c.lastResult.session_id)await exported(c.lastResult.export_id,w,c.sessionId);if(c.collectionId && c.sessionId)await collection(c.collectionId,w,c.sessionId);if(c.experimentSubmission&&c.experimentSubmission.taskState!=='complete')await pollExperimentSubmission(w);if(c.experimentId)await experiment(c.experimentId,c.experimentOffset,w);}
-  catch(e){c.error=e.message;changed(c);throw e;}
-  finally{c.loading=false;changed(c);}
+ async function reconcileReads(c,readers){
+  return Promise.all(readers.map(async([key,label,read])=>{
+   try{
+    const value=await read();delete c.readErrors[key];return {key,status:'fulfilled',value};
+   }catch(error){
+    c.readErrors[key]={label,message:error?.message||String(error)};
+    return {key,status:'rejected',reason:error};
+   }finally{
+    c.error=Object.values(c.readErrors).map(row=>row.label+': '+row.message).join('\n')||null;changed(c);
+   }
+  }));
  }
- async function accept(task,c,p){
+ function refresh(w=getWorkspace()){
+  if(refreshes.has(w))return refreshes.get(w);
+  const c=context(w);c.loading=true;c.error=null;c.readErrors={};changed(c);
+  const operation=(async()=>{
+   try{
+    // Catalog, source inventory and retained operation status are independent.
+    await reconcileReads(c,[
+     ['catalog','Saved investigation catalog',()=>catalog(w)],
+     ['sources','Registered source collections',()=>collectionSources(w)],
+     ['operation','Original investigation task',()=>c.pending?.taskId?poll(w,false):null],
+     ['programme-task','Original programme task',()=>c.experimentSubmission&&c.experimentSubmission.taskState!=='complete'?pollExperimentSubmission(w,false):null]
+    ]);
+    const submitted=c.experimentSubmission;
+    if(submitted?.experimentId&&!submitted.selected&&c.sessionId===submitted.sessionId)
+     await reconcileReads(c,[['programme-return','Original programme return',()=>selectSubmittedExperiment(w,false)]]);
+    await reconcileReads(c,[
+     ['session','Retained investigation',()=>c.sessionId?session(c.sessionId,w):null],
+     ['evidence','Retained analysis evidence',()=>c.lastResult?.evidence_id&&c.sessionId===c.lastResult.session_id?evidence(c.lastResult.evidence_id,w,c.sessionId):null],
+     ['export','Retained investigation export',()=>c.lastResult?.export_id&&c.sessionId===c.lastResult.session_id?exported(c.lastResult.export_id,w,c.sessionId):null],
+     ['collection','Retained file collection',()=>c.collectionId&&c.sessionId?collection(c.collectionId,w,c.sessionId):null],
+     ['programme','Original programme results',()=>c.experimentId?experiment(c.experimentId,c.experimentOffset,w):null]
+    ]);
+   }finally{c.loading=false;refreshes.delete(w);changed(c);}
+   return clone(c);
+  })();
+  refreshes.set(w,operation);return operation;
+ }
+ async function accept(task,c,p,hydrate=true){
   if(task.workspace!==c.workspace || task.action!==p.body.action || task.operation_id!==p.body.operation_id ||
       stable(task.payload)!==stable(p.body.payload) || !originalId(task.id))
    throw Error('The returned operation does not match this original workspace request.');
@@ -173,11 +208,13 @@ export function createInvestigationClient(options) {
    }
    if(r.collection_id && c.sessionId===r.session_id)c.collectionId=r.collection_id;
    changed(c);
-   await catalog(c.workspace);
-   if(c.sessionId)await session(c.sessionId,c.workspace);
-   if(r.evidence_id && c.sessionId===r.session_id)await evidence(r.evidence_id,c.workspace,r.session_id);
-   if(r.export_id && c.sessionId===r.session_id)await exported(r.export_id,c.workspace,r.session_id);
-   if(r.collection_id && c.sessionId===r.session_id)await collection(r.collection_id,c.workspace,r.session_id);
+   if(hydrate)await reconcileReads(c,[
+    ['catalog','Saved investigation catalog',()=>catalog(c.workspace)],
+    ['session','Retained investigation',()=>c.sessionId?session(c.sessionId,c.workspace):null],
+    ['evidence','Retained analysis evidence',()=>r.evidence_id&&c.sessionId===r.session_id?evidence(r.evidence_id,c.workspace,r.session_id):null],
+    ['export','Retained investigation export',()=>r.export_id&&c.sessionId===r.session_id?exported(r.export_id,c.workspace,r.session_id):null],
+    ['collection','Retained file collection',()=>r.collection_id&&c.sessionId===r.session_id?collection(r.collection_id,c.workspace,r.session_id):null]
+   ]);
    return task;
   }
   if(['failed','interrupted','canceled','cancelled'].includes(task.state)){
@@ -208,10 +245,10 @@ export function createInvestigationClient(options) {
   if(p.taskId)return poll(c.workspace);
   return send(c,p);
  }
- async function poll(w=getWorkspace()){
+ async function poll(w=getWorkspace(),hydrate=true){
   const c=context(w),p=c.pending;if(!p?.taskId)return null;
   const task=await api('/api/task?'+new URLSearchParams({id:p.taskId,workspace:w}));
-  if(c.pending===p)return accept(task,c,p);
+  if(c.pending===p)return accept(task,c,p,hydrate);
   return task;
  }
  function clearFinished(){
