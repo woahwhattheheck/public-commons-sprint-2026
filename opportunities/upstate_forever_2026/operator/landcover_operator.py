@@ -26,6 +26,8 @@ def read(operator, workspace_key, operation, payload):
     workspace = operator.ws(workspace_key)
     if operation == 'catalog':
         return landcover_workspace.catalog(workspace)
+    if operation == 'inputs':
+        return landcover_workspace.preview_inputs(workspace, payload['selection'])
     if operation == 'edition':
         result = landcover_workspace.inspect(workspace, payload['id'])
         result['_downloads'] = _downloads(operator, workspace_key, result['edition'])
