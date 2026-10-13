@@ -7,7 +7,7 @@ Authored by TokenJunkieLabs for the Upper Savannah scientific application.
 
 The existing experiment/programme layer owns profiles, scenarios and native NDR/SDR execution. This extension consumes its **completed original run pairs**. Every pair uses one parameter profile, the same grid and model version, and the same baseline/alternative scenario contrast. Duplicate profiles are rejected so a repeated row cannot silently change the ensemble weighting. Analyse a different alternative as a separate ensemble.
 
-For each selected pollutant, the extension writes full-resolution GeoTIFFs containing valid-pair count, improvement count, common support, fraction of selected pairs showing improvement, mean/minimum/maximum reduction, and every requested exact quantile. Reduction is **baseline minus alternative**. Native `kg/pixel/year` and `metric_tonnes/pixel/year` stay separate. An areal-rate raster is rejected rather than converted again.
+For each selected pollutant, the extension writes full-resolution GeoTIFFs containing valid-pair count, improvement count, common support, fraction of valid pairs showing improvement, mean/minimum/maximum reduction, and every requested exact quantile. Reduction is **baseline minus alternative**. Native `kg/pixel/year` and `metric_tonnes/pixel/year` stay separate. An areal-rate raster is rejected rather than converted again.
 
 The complete report supplies original profile/run/source identities, all member totals, common/partial/missing coverage, basin quantiles, readable HTML, grayscale raster overviews, CSV and JSON. Basin quantiles come from member totals on the same cells, not sums of pixel quantiles. Missing support and zero denominators remain distinguishable from zero results. Negative original values are retained and counted. Projected grid area is labelled as such.
 
@@ -68,24 +68,64 @@ The output is `WORKSPACE/ensemble-products/ANALYSIS_ID/`. Exact source-file hash
 | `all_pairs_all_pollutants` | Every pair and every selected pollutant | Same common geography across pollutants and members |
 | `available_pairs` | At least one valid pair; counts vary spatially | Still the strict common pixels, separately per pollutant |
 
-The improvement fraction is the fraction of explicitly selected pairs, not an estimated success probability. Quantiles are descriptive order statistics, with linear interpolation at `(n-1)*q`; parameter choices have no inferred probability distribution.
+The improvement fraction at each displayed pixel is `improved_pairs / valid_pairs`. For `available_pairs`, the denominator can vary across pixels and is retained in the valid-pair raster. With complete support, it equals the selected member count. Quantiles are descriptive order statistics, with linear interpolation at `(n-1)*q`; parameter choices have no inferred probability distribution.
 
-## Existing operator integration
+## Shared operator integration
 
-Copy the complete source into the maintained application, preserving other teams' files. Then:
+The current application uses its installed extension registry. Receive the full paired source, then compose it into the same application:
 
 ```sh
+python operator/integrate_paired_ensemble.py --apply
+# The existing receiving command delegates to the same shared-host installer:
 python operator/install_paired_ensemble.py --operator operator
-# Start the existing operator with its normal command and existing state.
 ```
 
-The installer adds one idempotent `paired_ensemble.install` call after the original `Operator` and `Handler` definitions and before `main()`, and a navigation link. It preserves the existing server and browser modules rather than replacing them. The panel opens at `/web/paired_ensemble.html` under the **same original operator origin**, using its existing session capability and selected workspace.
+The installer parses the complete Python source, uses the current shared host's server/browser joins, and removes only this paired component's exact earlier standalone activation and navigation link. Start the original operator with its existing configuration after applying the source. The installed catalogue contains one **paired-ensemble** extension and one owner for each original action. Its shared view is **Paired raster analysis**, following Scenario sensitivity.
 
-The panel discovers complete profile-matched runs, shows incomplete contrast profiles, selects quantities/support, previews the source binding, submits the original durable action queue, pauses immediately after the current tile, resumes the exact saved request, opens complete reports, exports result projects and receives them. Progress polling reads one retained task and its small control file rather than repeatedly hashing all inputs or reloading the full workspace.
+The original CLI, quantitative kernel, analysis IDs and `ensemble-products/` directory are preserved. The earlier `/web/paired_ensemble.html` entry remains an installed compatibility asset served by the current registered routes. Its old installer delegates to the shared installer whenever the descriptor is present.
 
-Actions: `paired_ensemble.build`, `paired_ensemble.resume`, `paired_ensemble.export`, `paired_ensemble.receive`. Reads: the existing `/api/state`, `/api/item?kind=paired_ensemble_products`, `/api/task`, plus `/api/paired-ensemble/progress?task_id=...`. Immediate preview/pause use `/api/paired-ensemble/preview` and `/api/paired-ensemble/pause`. All use the original authorization boundary and native queue; the extension creates no independent model scheduler.
+The desk selects original grid/scenario/model-version combinations and exposes each completed baseline/alternative run choice for each profile. Several native scopes may exist for the same profile; their available pollutants remain visible, and the operator chooses the original runs explicitly. Physical-output controls use the intersection actually present in every selected pair.
 
-The registration was composed against original operator blob `8434eba9cf0243fe2d50ec879a993c7ffbbc86a9` and original Workspace blob `4785867daaa959ad69a2ca955a3abc3f5ef324a7`. Newer cumulative operator editions should retain these methods; the wrapper delegates every unrelated route and action to the current implementation.
+A saved scenario design can populate those original pairs directly. The same shared `model.paired_ensemble.designs.design_cohort` function supplies both the browser and the headless study workflow. It retains the full planned profile count, the complete selected member subset, any unfinished members with their native states, and the available physical outputs within the design's declared model scope. Each land-cover alternative produces its own cohort.
+
+The original task queue owns build, resume, export and receiving. The desk retains ambiguous-submission operation IDs, follows task and tile progress, pauses after a durable tile, and resumes the exact submitted selection. A retained analysis also supplies its original native pairs after browser state has been lost. Whole-workspace receiving retains those original runs; a standalone result ZIP supplies its quantitative results and report.
+
+State updates read JSON metadata. The form and checked profiles remain mounted across task refreshes. Raster hash checks occur during explicit source preview, build, export and file access. An active desk stops its own polling and outstanding reads when its workspace or view changes.
+
+### Registered contracts
+
+| Surface | Current identity |
+| --- | --- |
+| Manifest | `operator/extensions/paired-ensemble.json` |
+| Backend | `paired_ensemble_service.PairedEnsembleService` |
+| Browser | `attachPairedEnsembles` from `paired_ensemble_desk.mjs` |
+| Extension/view | `paired-ensemble` |
+| Original item/state kind | `paired_ensemble_products` |
+| Queue actions | `paired_ensemble.build`, `paired_ensemble.resume`, `paired_ensemble.export`, `paired_ensemble.receive` |
+| GET routes | `/api/paired-ensemble/catalog`, `/edition`, `/inspect`, `/cohort`, `/selection`, `/progress` |
+| Immediate POST controls | `/api/paired-ensemble/preview`, `/pause` |
+| Retained member route | `/api/file/paired-ensemble/{workspace_key}/{ensemble_id}/{member_path...}` |
+
+The member route uses the shared host's typed nested-file registration and original authorized file tickets. It serves only an actual quantitative/report inventory member. Its HTML uses the paired component's existing report content policy. Downloads, uploads and portable result receiving use the original operator transport.
+
+The recovered original `paired_ensemble_provider.py` and host browser assets remain installed. The current shared service reuses its cached catalogue and preserves the `/api/paired-ensemble/edition` reader, including its verified embedded report document, `editions` catalogue field and original task-result marker. The typed member route supplies the current desk. One singular descriptor owns the original four queue actions. The installer backs up and removes the exact earlier A74F plural descriptor on installed copies; changed unrelated registrations remain available for source composition.
+
+The backend's `catalog` response includes actual native run IDs, run states, retained selections and present physical outputs. `cohort` accepts `design_id` and one `scenario_id`. `selection` accepts an existing `ensemble_id` and recovers a native selection from the durable analysis. `progress` accepts an original analysis `task_id` or `selection_id`. Pause accepts the original `task_id`, or the existing selection form for compatibility.
+
+### Shared native-design selection
+
+```python
+from model.paired_ensemble.designs import design_cohort
+from model.paired_ensemble import EnsembleWorkspace
+
+cohort = design_cohort(ws, saved_design_id, saved_alternative_scenario_id)
+if cohort["ready"]:
+    result = EnsembleWorkspace(ws).build(cohort["selection"])
+```
+
+The result has schema `upstate.paired-design-cohort/v1` and includes `design_id`, `design_state`, `grid_id`, `baseline_scenario_id`, `scenario_id`, `selection`, `selected_member_count`, `planned_member_count`, `available_pollutants`, `pending_members`, `ready`, and `effect_direction`. The selection contains the exact original run pairs. Cross-profile baseline sensitivity is retained in the separate scalar sensitivity report.
+
+The browser controller preserves the recovered original `prepare(selection)` and `openEdition(ensemble_id)` methods, alongside `mount`, `update`, `detach`, `fromDesign({design_id, scenario_id})`, `create({selection})`, and `open(ensemble_id)`. Existing experiment handoffs use `host.openExtension('paired-ensemble', 'prepare', selection)`. It uses local scoped event listeners, so it has no overlapping global action prefix.
 
 ## Exact consumer contract
 
@@ -114,9 +154,11 @@ Receiving is create-only and streamed; every original result member is hash-chec
 
 ## Executed operating checks
 
+The following numerical and browser measurements were retained by the original ASTRA-ECO12-2651 author on host `f5dd7c7e9cd6`. They describe the original numerical component and report, before the shared desk added in this edition. Shared-host receiving and native-study execution continue in the existing application operation.
+
 `PYTHONPATH=. python checks/paired_ensemble_journey.py --out NEW_DIRECTORY` runs one complete authored numerical journey: three support modes, exact NumPy comparison, distinct missing masks, negative and zero inputs, durable pause/resume, missing-derived-file repair, completed-native-record binding, full report export, receiving, reopening and re-export. It checked 448,614 scalar outputs across three pollutants, with all 36 quantitative rasters and 51 portable files retained. These are labelled numerical fixtures, not regional model results.
 
-A separate fresh-process 96-profile / 576-input-raster / 257×254-pixel / three-pollutant run completed computation and reporting in **11.65 seconds**, with **201,900 KiB maximum RSS**, four durable tiles and 36 quantitative raster outputs. Tile-array budget was 128 MiB. These are measurements of this cloud container and workload, not extrapolated regional timings.
+A separate fresh-process 96-profile / 576-input-raster / 257×254-pixel / three-pollutant run completed computation and reporting in **11.65 seconds**, with **201,900 KiB maximum RSS**, four durable tiles and 36 quantitative raster outputs. Tile-array budget was 128 MiB. These measurements describe that original cloud host and workload; regional execution records retain their own timings.
 
 The complete report was rendered as owned HTML in Chromium at desktop and 390-pixel phone widths: six raster previews loaded, no horizontal page overflow, and all seven member rows opened. File-URL navigation returned `ERR_BLOCKED_BY_ADMINISTRATOR`; the visual check used the authored DOM with embedded copies of its actual preview PNGs. The original full regional application receiving/run belongs to its existing source/runtime operation.
 
@@ -131,7 +173,7 @@ No additional calibration, causal certainty or probabilistic interpretation is i
 
 ## Cumulative source coexistence
 
-Stable contribution identity: **ASTRA-ECO12-2651**, originally merged in PR2651. A different active seat used the same ASTRA-ECO12 label and generic ensemble module paths. This complete edition places the six computation modules in `model/paired_ensemble/`, with independent `paired_ensemble.*` operator actions, `paired_ensemble_products` catalogue and `/web/paired_ensemble.html`. The other seat's `model.ensemble_workspace.run_workspace` and single-artifact model files remain intact. This feature adds complete multi-pollutant/shared-support computation and its report to the same maintained operator.
+Stable contribution identity: **ASTRA-ECO12-2651**, originally merged in PR2651. A different active seat used the same ASTRA-ECO12 label and generic ensemble module paths. This complete edition places the six computation modules in `model/paired_ensemble/`, with independent `paired_ensemble.*` operator actions, the `paired_ensemble_products` catalogue and the shared `paired-ensemble` view. The earlier `/web/paired_ensemble.html` asset remains for compatibility. The separate single-artifact `run_workspace` contribution is a distinct source component; its generic module paths are not supplied by this package. This feature adds complete multi-pollutant/shared-support computation and its report to the maintained operator.
 
 `operator/install_paired_ensemble.py` migrates this contribution's exact earlier server/navigation registrations, and removes earlier generic files **only when their SHA-256 equals the original PR2651 source**. Differing peer files are preserved. The scientific kernel bytes and result schema remain unchanged by this namespace move, so already-produced result projects keep their original identities and receiving compatibility.
 
@@ -139,4 +181,4 @@ Stable contribution identity: **ASTRA-ECO12-2651**, originally merged in PR2651.
 
 For an NDR-only retained grid and profile, pass `pollutants: ["nitrogen_export", "phosphorus_export"]`. For SDR-only, pass `pollutants: ["sediment_export"]`. A combined study can request all three exports. Each requested artifact is checked against the original completed run, and the retained profile must contain the parameters for every requested native model. Source records preserve the profile's actual available parameter groups, requested pollutant list and original native run identities. Complete historical two-model profiles retain the same source values and analysis identity.
 
-The paired-design service uses `model.ensembles`, `model.ensemble_cli` and `model.ensemble_report`. This raster consumer uses `model.paired_ensemble` throughout, including its CLI and report functions. The separate single-artifact `model.ensemble_workspace.run_workspace` contribution and its `ensemble_raster_cli` keep their own namespace. Use `operator/install_paired_ensemble.py --operator operator` after receiving this complete component to migrate the earlier PR2651 registration while retaining the same `ensemble-products` results.
+The paired-design service uses `model.ensembles`, `model.ensemble_cli` and `model.ensemble_report`. This raster consumer uses `model.paired_ensemble` throughout, including its CLI and report functions. The current complete application invokes this namespaced consumer for saved native study cohorts. Use `operator/integrate_paired_ensemble.py --apply` when updating an earlier installed application, retaining its existing `ensemble-products` results. The original installer command delegates to that migration when the shared descriptor is present.

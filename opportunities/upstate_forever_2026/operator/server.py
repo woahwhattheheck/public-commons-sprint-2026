@@ -1044,9 +1044,5 @@ def main():
         server.operator.close()
 
 
-# ASTRA-ECO12-2651 namespaced original-operator integration
-import paired_ensemble as _paired_ensemble_extension
-_paired_ensemble_extension.install(sys.modules[__name__])
-
 if __name__ == "__main__":
     main()
