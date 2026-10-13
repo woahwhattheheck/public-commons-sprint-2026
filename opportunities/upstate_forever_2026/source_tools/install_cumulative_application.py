@@ -602,6 +602,7 @@ def context_desks_join(root, records, *, application_source=None):
             "observations/station_context.sources.json",
             "calibration_station_geography.sources.json",
             "regional_station_context.sources.json",
+            "observations/wbd_station_join_20261013/station-context.sources.json",
         )
         source_records = [manifest(name) for name in manifests if (root / name).is_file()]
         result = observed_station["install"](root, root)
