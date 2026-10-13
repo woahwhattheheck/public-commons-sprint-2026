@@ -384,7 +384,8 @@ def main(argv=None):
                         def progress(current):
                             item.update(state=current["state"], progress=current["progress"],
                                         active_run_id=current.get("active_run_id"),
-                                        active_case_id=current.get("active_case_id"))
+                                        active_case_id=current.get("active_case_id"),
+                                        aggregation_progress=current.get("aggregation_progress"))
                             checkpoint("native-cases", active_study_key=item_key)
 
                         current = parameter_studies.execute(workspace, study["id"], progress=progress)
