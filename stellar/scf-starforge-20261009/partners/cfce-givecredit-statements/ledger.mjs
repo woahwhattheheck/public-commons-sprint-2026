@@ -711,7 +711,7 @@ async function decodeTransaction(ctx,row,ref) {
   return tx;
 }
 
-async function makeContext(options) {
+async function ledgerSelectionContext(options) {
   const sdk=options.sdk || await import('@stellar/stellar-sdk');
   const network=options.network||'mainnet';
   need(['mainnet','testnet'].includes(network),'LEDGER_NETWORK','Choose the actual mainnet or testnet source.');
@@ -730,6 +730,19 @@ async function makeContext(options) {
     endLedger:options.endLedger===undefined?null:String(options.endLedger)};
   const originalIdentities=originalSourceIdentities(options);
   if(originalIdentities.length)selection.originalLedgerSources=originalIdentities;
+  return {sdk,network,passphrase,rpcUrl,horizonUrl,archiveRpcUrl,contracts,selection};
+}
+function requireCheckpointSelection(source,selection){
+  need(source?.kind==='ledger' && source.schema==='stellar-forge.givecredit-source.v1' &&
+    JSON.stringify(source.metadata?.selection)===JSON.stringify(selection),
+    'LEDGER_CHECKPOINT_SELECTION','Resume the original network, endpoints, contracts and source boundaries.');
+}
+/** Validate the existing native selection without mutating a retained checkpoint or fetching remote data. */
+export async function validateLedgerCheckpointSelection(source,options={}){
+  const {selection}=await ledgerSelectionContext(options);requireCheckpointSelection(source,selection);return copy(selection);
+}
+async function makeContext(options) {
+  const {sdk,network,passphrase,rpcUrl,horizonUrl,archiveRpcUrl,contracts,selection}=await ledgerSelectionContext(options);
   need(options.checkpointMode===undefined||['copy','borrowed'].includes(options.checkpointMode),'CHECKPOINT_MODE','Choose detached copy or awaited native borrowed checkpoint delivery.');
   const source=options.checkpoint?(options.checkpointMode==='borrowed'?options.checkpoint:copy(options.checkpoint)):{
     schema:'stellar-forge.givecredit-source.v1',kind:'ledger',
@@ -739,9 +752,7 @@ async function makeContext(options) {
       sourceCommit:'3d20065447bd56c9c05a3e658ccd11e0b9cb985e'},
     files:{},responses:[],tables:Object.fromEntries(TABLES.map(name=>[name,[]])),
   };
-  need(source.kind==='ledger' && source.schema==='stellar-forge.givecredit-source.v1' &&
-    JSON.stringify(source.metadata.selection)===JSON.stringify(selection),
-    'LEDGER_CHECKPOINT_SELECTION','Resume the original network, endpoints, contracts and source boundaries.');
+  requireCheckpointSelection(source,selection);
   source.metadata.status='capturing'; delete source.metadata.interruption;
   const ctx={sdk,network,passphrase,rpcUrl,horizonUrl,archiveRpcUrl,contracts:new Set(contracts),source,options,
     nativeContract:sdk.Asset.native().contractId(passphrase),assets:new Map(),archiveCache:new Map(),
