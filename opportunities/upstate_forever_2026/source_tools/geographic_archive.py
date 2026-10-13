@@ -12,7 +12,7 @@ from pathlib import Path
 import stat
 import zipfile
 
-from model.common import atomic_json, describe_file, digest, identifier, read_json
+from model.common import atomic_json, describe_file, digest, identifier, read_json, verify_file
 from model import portable, reviews
 
 
@@ -198,13 +198,11 @@ def reference_snapshot(workspace, prepared, reference_basis):
             "comparison": comparison, "members": members, "paired_products": paired}
 
 
-def retained_execution_prepared(workspace, output, selection_bytes, normalized_selection):
-    """Adopt a new executor for the same prepared course without preparing or running it."""
+def _prepared_execution(workspace, prepared):
+    """Verify one original geographic preparation against its actual native course."""
     from source_tools.headwaters_parameter_course import _load, _reference_member
     from model.model_selection import run_models
 
-    original, state, prepared = _retained_preparation(
-        workspace, output, selection_bytes, normalized_selection)
     record, plan, _ = _load(workspace, prepared["ensemble_id"])
     reference = _reference_member(workspace, plan)
     expected = {"grid_id": prepared["grid_id"],
@@ -243,7 +241,65 @@ def retained_execution_prepared(workspace, output, selection_bytes, normalized_s
                      and tuple(run_models(run)) == ("ndr", "sdr"),
                      "Adopt the exact original native run selections without duplicating members")
             seen.add(key)
+    return prepared
+
+def retained_execution_prepared(workspace, output, selection_bytes, normalized_selection):
+    """Adopt a new executor for the same prepared course without preparing or running it."""
+    original, state, prepared = _retained_preparation(
+        workspace, output, selection_bytes, normalized_selection)
+    _prepared_execution(workspace, prepared)
     return original, state, prepared
+
+
+def retained_workspace_prepared(workspace, prepared_id, normalized_selection):
+    """Open an existing direct-Workspace preparation without inventing CLI history.
+
+    The caller starts its own explicit receiving admission for this saved
+    preparation. This read-only entry never prepares inputs or dispatches runs.
+    """
+    key = identifier(prepared_id)
+    root = workspace.root.resolve()
+    relative = "geographic-headwaters/" + key
+    directory = root / relative
+    def original_record(name):
+        path = directory / name
+        _require(not path.is_symlink() and path.resolve(strict=True).is_relative_to(root)
+                 and stat.S_ISREG(path.stat().st_mode),
+                 "Open an original retained geographic preparation record")
+        return read_json(path)
+    prepared = original_record("prepared.json")
+    inputs = original_record("inputs/input-receipt.json")
+    identity = inputs.get("identity", {})
+    _require(prepared.get("schema") == "upstate.geographic-headwaters-prepared/v1"
+             and prepared.get("id") == key and prepared.get("directory") == relative
+             and prepared.get("project_id") == workspace.project["id"]
+             and prepared.get("state") == "prepared"
+             and prepared.get("selection") == normalized_selection
+             and identity.get("schema") == "upstate.geographic-headwaters/v1"
+             and identity.get("id") == key
+             and digest({name: value for name, value in identity.items() if name != "id"}) == key
+             and identity.get("project_id") == workspace.project["id"]
+             and identity.get("selection") == normalized_selection
+             and identity.get("geographic_binding") == prepared.get("geography")
+             and inputs.get("geography") == prepared.get("geography")
+             and inputs.get("input_summary") == prepared.get("input_summary"),
+             "Use the exact saved geographic preparation and its original input receipt")
+    inputs_root = directory / "inputs"
+    for item in inputs["files"]:
+        # Match the original portable archive contract: runtime locks are not
+        # scientific inputs and are deliberately absent from a cold restore.
+        if portable.member_name(item["path"]).name.endswith(".lock"):
+            continue
+        verify_file(inputs_root, item)
+    collection = workspace._get("sources", prepared["source_collection_id"])
+    manifest = collection["original_manifest"]
+    source_file = describe_file(inputs_root, inputs_root / "sources.json")
+    _require(all(source_file[key] == manifest[key] for key in ("bytes", "sha256")),
+             "The physical original input manifest differs from the retained source collection")
+    verify_file(root, {"path": manifest["object"],
+                       "bytes": manifest["bytes"], "sha256": manifest["sha256"]})
+    return _prepared_execution(workspace, prepared)
+
 
 
 def retained_prepared(workspace, output, selection_bytes, normalized_selection):
