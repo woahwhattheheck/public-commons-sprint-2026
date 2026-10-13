@@ -237,3 +237,9 @@ The standalone installer checks original source conflicts before writing and ret
 The original cohort reconciliation module was executed against its four retained input CSVs. Its 75-row cohort CSV (43,187 bytes), five-row summary CSV (644 bytes) and reconciliation JSON (8,067 bytes) reproduced the source edition byte for byte.
 
 The current nine-source `normalize_core.mjs` was also executed against all exact original capture CSVs. All six derived CSVs and `summary.json` matched their retained bytes: 920 measurements, 225 activities, 167 coverage groups, fifteen calendar dates, 75 selected chlorophyll records and five summaries. All 44 source member hashes and the complete source-bank hash matched. The authored browser module parses in JavaScript. The complete Python Workspace/operator/browser workflow is the native receiver exercise.
+
+## Direct original Canvas intake and existing illustrated report
+
+The same intake accepts a downloaded Canvas Markdown file. It reads the complete ordered base64 fences as one original gzip source bank, enforces the decompressed size limit and verifies every original member hash. It also accepts the earlier plain JSON companion fence. Source scripts in the Canvas are retained as source data; intake only decodes the original data blocks.
+
+When the maintained application includes `eighteenmile_lake_observation_report.sources.json` from PR2880, installed-study intake follows its six native entries and all original WQP/cohort companions. Repeated native IDs keep their original body and collect the full companion set. The existing illustrated observation report is linked from Report comparison and Sources and methods. Selected exports retain its exact original HTML as `original-lake-observation-report.html`; complete study and native project archives retain its original report, generator and both source trees.

@@ -9,6 +9,7 @@ import argparse
 import base64
 import csv
 import hashlib
+import gzip
 import html
 import io
 import json
@@ -207,6 +208,37 @@ def _normalize_bundle(files: dict[str, bytes]) -> dict[str, bytes]:
     return normalized
 
 
+def _companion_document(data: bytes):
+    if len(data) > MAX_SOURCE_BYTES * 2:
+        raise ValueError("The study carrier exceeds the intake size limit.")
+    try:
+        return _json(data), data
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        markdown = data.decode("utf-8-sig").replace("\u00a0", " ")
+    blocks = re.findall(r"(?ms)^[ \t]*\x60{3}base64[ \t]*\r?\n(.*?)^[ \t]*\x60{3}[ \t]*$", markdown)
+    if blocks:
+        encoded = "".join(re.sub(r"\s+", "", block) for block in blocks)
+        compressed = base64.b64decode(encoded, validate=True)
+        if not compressed.startswith(b"\x1f\x8b"):
+            raise ValueError("Canvas base64 source blocks must contain the original gzip companion.")
+        with gzip.GzipFile(fileobj=io.BytesIO(compressed)) as archive:
+            decoded = archive.read(MAX_SOURCE_BYTES + 1)
+        if len(decoded) > MAX_SOURCE_BYTES:
+            raise ValueError("The decoded Canvas companion exceeds the intake size limit.")
+        return _json(decoded), decoded
+    candidates = []
+    for block in re.findall(r"(?ms)^[ \t]*\x60{3}json[ \t]*\r?\n(.*?)^[ \t]*\x60{3}[ \t]*$", markdown):
+        try:
+            value = json.loads(block)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict) and value.get("schema") == COMPANION_SCHEMA:
+            candidates.append((value, block.encode("utf-8")))
+    if len(candidates) != 1:
+        raise ValueError("Choose the original study JSON, its complete Canvas Markdown, or a study ZIP.")
+    return candidates[0]
+
+
 def decode_companion(data: bytes) -> tuple[dict[str, bytes], dict[str, Any]]:
     """Read the original OBS12 JSON bank or this consumer's complete ZIP export."""
     if data.startswith(b"PK"):
@@ -241,7 +273,9 @@ def decode_companion(data: bytes) -> tuple[dict[str, bytes], dict[str, Any]]:
             return _normalize_bundle(files), {
                 "carrier_sha256": _hash(data), "source_format": "study_directory_zip"
             }
-    package = _json(data)
+    package, decoded = _companion_document(data)
+    if not isinstance(package, dict):
+        raise ValueError("The study companion must be a JSON object.")
     if package.get("schema") != COMPANION_SCHEMA:
         raise ValueError("Expected the published OBS12 study companion or a complete study export ZIP.")
     files = {}
@@ -258,6 +292,7 @@ def decode_companion(data: bytes) -> tuple[dict[str, bytes], dict[str, Any]]:
     return _normalize_bundle(files), {
         "carrier_sha256": _hash(data),
         "source_format": COMPANION_SCHEMA,
+        "decoded_companion_sha256": _hash(decoded),
         "operation_id": package.get("operation_id"),
     }
 
@@ -282,6 +317,7 @@ OBSERVATION_FILE = "wqp_20261013/three-lake-observations.csv"
 COHORT_FILE = "cohort_reconciliation_20261013/study_chlorophyll_cohort.csv"
 COHORT_CONTEXT = "cohort_reconciliation_20261013/cohort_reconciliation.json"
 COHORT_MANIFEST = "eighteenmile_chlorophyll_reconciled.sources.json"
+REPORT_MANIFEST = "eighteenmile_lake_observation_report.sources.json"
 WQP_FILE = "wqp/derived/measurements.csv"
 WQP_COHORT = "wqp/derived/selected_chlorophyll.csv"
 WQP_COVERAGE = "wqp/derived/coverage.csv"
@@ -431,7 +467,7 @@ def _dated_context(complete, sites, parameters, observation_context):
 
 def _manifest_path(manifest_name, value):
     value = _name(value)
-    if manifest_name == COHORT_MANIFEST:
+    if manifest_name in (COHORT_MANIFEST, REPORT_MANIFEST):
         prefix = "observations/eighteenmile_2023/"
         if not value.startswith(prefix):
             raise ValueError("The cohort manifest must identify files inside the original study directory.")
@@ -538,7 +574,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
 def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: str, version_id: str):
     """Register original map/table identities and every retained study document."""
     manifest_entries, source_entries, seen_ids, native_ids = [], {}, set(), {}
-    manifest_names = [name for name in ("model-sources.json", "wqp_20261013/source-manifest.json", COHORT_MANIFEST) if name in files]
+    manifest_names = [name for name in ("model-sources.json", "wqp_20261013/source-manifest.json", COHORT_MANIFEST, REPORT_MANIFEST) if name in files]
     for manifest_name in manifest_names:
         parent = PurePosixPath(manifest_name).parent
         native = _json(files[manifest_name])
@@ -596,7 +632,7 @@ def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: s
         if name in source_entries:
             continue
         suffix = PurePosixPath(name).suffix.lower()
-        if suffix not in (".csv", ".json", ".geojson", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".mjs"):
+        if suffix not in (".csv", ".json", ".geojson", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".mjs", ".html"):
             continue
         source_id = "study-" + _hash(name.encode("utf-8"))[:16]
         if source_id in seen_ids:
@@ -768,7 +804,7 @@ class PublishedStudyStore:
                 if staging.exists():
                     shutil.rmtree(staging)
         record = _json(record_path.read_bytes())
-        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v5":
+        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v6":
             source_manifest, source_entries = _source_manifest(files, study, study_id, version_id)
             manifest_path = final / "sources.json"
             _atomic(manifest_path, _json_bytes(source_manifest))
@@ -780,7 +816,7 @@ class PublishedStudyStore:
             }
             record["counts"] = {**{name: len(rows) for name, rows in tables.items()}, **result_counts}
             record["source_collection_id"] = collection["id"]
-            record["source_registration_schema"] = "upstate.published-study-sources/v5"
+            record["source_registration_schema"] = "upstate.published-study-sources/v6"
             record["source_entries"] = source_entries
             _atomic(record_path, _json_bytes(record))
         _atomic(
@@ -1092,6 +1128,15 @@ class PublishedStudyStore:
             _atomic(destination / filename, output.getvalue().encode("utf-8"))
             written.append(filename)
         report_context = dict(context)
+        report_context["related_reports"] = []
+        for artifact in context["source_artifacts"]:
+            name = artifact["path"]
+            if name == "wqp_20261013/lake-observations-report.html":
+                path, _ = self.source_file(study_id, name, context["record"]["version_id"])
+                report_name = "original-lake-observation-report.html"
+                _atomic(destination / report_name, path.read_bytes())
+                written.append(report_name)
+                report_context["related_reports"].append({"filename": report_name, "title": "Original activity figures and complete chlorophyll cohort report"})
         report_context["embedded_images"] = []
         for artifact in context["source_artifacts"]:
             name = artifact["path"]
@@ -1254,6 +1299,7 @@ class PublishedStudyStore:
         ) + "<p>Selected activity dates outside the retained flow-date table: " + esc(
             ", ".join(dated.get("dates_without_flow_context", [])) or "none"
         ) + ".</p></section>"
+        related_reports = "".join('<p><a href="' + esc(item["filename"]) + '">' + esc(item["title"]) + "</a></p>" for item in context.get("related_reports", []))
         url = study.get("original_url", "")
         source_link = (
             '<a href="' + esc(url) + '">Original publisher report</a>'
@@ -1283,7 +1329,7 @@ class PublishedStudyStore:
             "<div class='source'><p>" + source_link + "</p><p>Seasonal rows retain their original sample support, "
             "depths and concentration units. Monthly n values count days. Original numeric cells remain available "
             "in the accompanying CSV files.</p>" + visuals + "</div>" +
-            seasonal + observed + monthly + ranges + stations + permits +
+            related_reports + seasonal + observed + monthly + ranges + stations + permits +
             "<section><h2>Source notes</h2><ul>" + notes + "</ul></section></body></html>"
         )
 
