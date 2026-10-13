@@ -1,0 +1,35 @@
+{
+  "schema": "commons.ordered-source-envelope/v1",
+  "source_path": "operations/ecosystem-source12/receiving-union-20261013.source.json",
+  "source_git_blob": "4bbeb227bdace88befa881e5403d0cac91347d62",
+  "encoding": "utf-8",
+  "bytes": 8895721,
+  "sha256": "bfc0d06aa5930c828f803de71b381ac4a61963b0ad6610da6de57987630b7837",
+  "join": "Concatenate the four complete UTF-8 text parts in this order without inserting separators, then parse the resulting original artifact-base64 JSON envelope.",
+  "parts": [
+    {
+      "path": "operations/ecosystem-source12/receiving-union-20261013.part1.txt",
+      "git_blob": "e78e0257f0f98ce5f6079c217b0955fe02bd81b1",
+      "bytes": 2250002,
+      "sha256": "ef1f96b338473c06873f4ee210dce0fb1faaec1b59f97d9bebbf7850f1faa068"
+    },
+    {
+      "path": "operations/ecosystem-source12/receiving-union-20261013.part2.txt",
+      "git_blob": "3fa3006b3dee3641ec88207eaee7ed39ff0c7c9f",
+      "bytes": 2250000,
+      "sha256": "42511b514878b9a98c95a1a01e4c933aa0f036087c8fa7a6b65f5b8f43b5a80b"
+    },
+    {
+      "path": "operations/ecosystem-source12/receiving-union-20261013.part3.txt",
+      "git_blob": "400f04e68c7ac5d53431c67a278ad675ded59d58",
+      "bytes": 2250000,
+      "sha256": "ebd8ed134dc2f70b257f1dfb50e2604772676c9b1cfa5e8ac2655aaf3a48af33"
+    },
+    {
+      "path": "operations/ecosystem-source12/receiving-union-20261013.part4.txt",
+      "git_blob": "9fb27335a1160e2f6563675a23ca9ed8102ec87a",
+      "bytes": 2145719,
+      "sha256": "cfa635e03906f92ae134fb23ecebf6568d73642d3115e85cfdaafa4970962dad"
+    }
+  ]
+}
