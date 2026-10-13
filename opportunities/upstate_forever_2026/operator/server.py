@@ -241,6 +241,63 @@ class Operator:
             raise Fault("JOURNEY_PROJECT", "The saved operator view belongs to a different project.", 409)
         return value
 
+    def _validate_community_view(self, ws, view):
+        if view is None:
+            return
+        if (not isinstance(view, dict)
+                or view.get("schema") != "upstate.community-view/v1"
+                or view.get("project_id") != ws.project["id"]):
+            raise Fault("JOURNEY_COMMUNITY", "Save the community view in its original project.")
+        values = {}
+        defaults = {"table_id": "", "utility_id": "", "watershed_id": "", "query": "",
+                    "plan_id": "", "report_id": "", "tab": "explore", "sort": "geoid"}
+        for key, default in defaults.items():
+            selected = view.get(key, default)
+            if not isinstance(selected, str):
+                raise Fault("JOURNEY_COMMUNITY", "The community " + key.replace("_", " ") + " must be text.")
+            values[key] = selected
+        if values["tab"] not in {"explore", "plans", "reports"}:
+            raise Fault("JOURNEY_COMMUNITY", "Choose an existing Communities tab.")
+        if values["sort"] not in {"geoid", "population_desc", "poverty_desc", "income_asc"}:
+            raise Fault("JOURNEY_COMMUNITY", "Choose an existing community sort order.")
+        selected_records = {}
+        for key, collection in (("table_id", "community-tables"),
+                                ("plan_id", "community-plans"),
+                                ("report_id", "community-reports")):
+            selected = values[key]
+            if not selected and key != "table_id":
+                selected_records[key] = None
+                continue
+            if not re.fullmatch(r"[0-9a-f]{64}", selected):
+                raise Fault("JOURNEY_COMMUNITY", "Choose a retained community " + key.removesuffix("_id") + ".")
+            try:
+                selected_records[key] = ws._get(collection, selected)
+            except FileNotFoundError as error:
+                raise Fault("JOURNEY_COMMUNITY", "This workspace does not contain the selected community " + key.removesuffix("_id") + ".") from error
+        table = selected_records["table_id"]
+        members = [member for group in table["groups"] for member in group["memberships"]]
+        utility_ids = {row["id"] for row in table.get("metadata", {}).get("utilities", [])}
+        if not utility_ids:
+            utility_ids = {member["utility_id"] for member in members}
+        if values["utility_id"] and values["utility_id"] not in utility_ids:
+            raise Fault("JOURNEY_COMMUNITY", "The selected utility is absent from this community table.")
+        if values["watershed_id"] and not any(
+                member["watershed_id"] == values["watershed_id"]
+                and (not values["utility_id"] or member["utility_id"] == values["utility_id"])
+                for member in members):
+            raise Fault("JOURNEY_COMMUNITY", "The selected watershed is absent from this utility and table.")
+        compared = view.get("compare_geoids", [])
+        if (not isinstance(compared, list)
+                or any(not isinstance(geoid, str) for geoid in compared)
+                or len(compared) != len(set(compared))
+                or set(compared) - {group["geoid"] for group in table["groups"]}):
+            raise Fault("JOURNEY_COMMUNITY", "Compare unique original block-group GEOIDs from this table.")
+        plan, report = selected_records["plan_id"], selected_records["report_id"]
+        if any(record and record.get("table_id") != table["id"] for record in (plan, report)):
+            raise Fault("JOURNEY_COMMUNITY", "The selected community plan and report must use this table.")
+        if plan and report and report.get("plan_id") != plan["id"]:
+            raise Fault("JOURNEY_COMMUNITY", "The selected community report belongs to a different plan.")
+
     def _save_operator_session(self, workspace, value):
         ws = self.ws(workspace)
         journey = value.get("journey")
@@ -286,6 +343,7 @@ class Operator:
         if review_id:
             from calibration import validate_review_journey
             validate_review_journey(ws, journey)
+        self._validate_community_view(ws, journey.get("community"))
         request_sha256 = digest(journey)
         current = self.operator_session(workspace)
         if current and (current.get("request_sha256") == request_sha256 or current.get("journey") == journey):
