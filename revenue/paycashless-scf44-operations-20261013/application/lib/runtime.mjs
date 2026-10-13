@@ -13,6 +13,7 @@ const execute = promisify(execFile);
 export const RUNTIME_SCHEMA = 'paycashless.node-runtime.v1';
 export const SOURCE_SCHEMA = 'paycashless.application-source.v1';
 export const REQUIRED_APPLICATION_FILES = Object.freeze([
+  "AGENTS.md",
   "README.md",
   "OPERATIONS.md",
   "COMMISSIONING.md",
@@ -20,6 +21,7 @@ export const REQUIRED_APPLICATION_FILES = Object.freeze([
   "PAYCASHLESS_INTEGRATION.json",
   "PAYCASHLESS_MODEL.md",
   "PAYCASHLESS_OPERATOR.md",
+  "BROWSER_WORKING_COPY.md",
   "SETTLEMENT_STREAM.md",
   "examples/configuration.example.json",
   "server.mjs",
@@ -57,6 +59,21 @@ export const REQUIRED_APPLICATION_FILES = Object.freeze([
   "sources/horizon-original.json",
   "sources/provider-source-receipts.json"
 ]);
+
+// Historical deliveries keep the exact original complete source selection.
+export const SOURCE_EDITION = 'browser-working-copy-v1';
+const LEGACY_SOURCE_MANIFEST_SHA256 = 'e0b1368af2fca7dae0eba0b6019b9da66c97b11d997d182eff560e466225c077';
+export function completePaycashlessSource(manifest, manifestSha256) {
+  if (manifest?.schema !== SOURCE_SCHEMA || !Array.isArray(manifest.files)) return false;
+  const names = new Set(manifest.files.map(file => file.path));
+  const legacy = !Object.hasOwn(manifest, 'sourceEdition') &&
+    manifestSha256 === LEGACY_SOURCE_MANIFEST_SHA256;
+  const required = legacy ? REQUIRED_APPLICATION_FILES.filter(name =>
+    name !== 'AGENTS.md' && name !== 'BROWSER_WORKING_COPY.md') : REQUIRED_APPLICATION_FILES;
+  return (legacy || manifest.sourceEdition === SOURCE_EDITION) &&
+    names.size === manifest.files.length && names.size === required.length &&
+    required.every(name => names.has(name));
+}
 
 async function linkedLibraries(executable) {
   if (process.platform !== 'linux') {
@@ -256,7 +273,7 @@ export async function capturePaycashlessSource({ sourceDirectory, destination })
     names.add(file.path);
     await copyDeclared(sourceDirectory, file, destination);
   }
-  need(REQUIRED_APPLICATION_FILES.every(name => names.has(name)), 'INCOMPLETE_APPLICATION_SOURCE');
+  need(completePaycashlessSource(manifest, hash(bytes)), 'INCOMPLETE_APPLICATION_SOURCE');
   await writeExact(path.join(destination, 'source-files.json'), bytes, 0o644);
   return {
     schema: SOURCE_SCHEMA, manifestSha256: hash(bytes),
