@@ -6,11 +6,14 @@
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
 const {spawn}=require('node:child_process'),zlib=require('node:zlib'),{TextDecoder}=require('node:util');
 const zip=require('./connected_zip.cjs'),zipReceive=require('./connected_zip_receive.cjs');
-const core=require('./connected_application_archive.cjs'),io=zipReceive.receivingIO;
+const core=require('./connected_application_archive.cjs'),tar=require('./connected_tar_archive.cjs'),io=zipReceive.receivingIO;
+const TAR_PACKET='commons.application-archive-source.v2';
+const ARCHIVE_LIMITS={maxBytes:128*1024*1024,maxEntries:8192,maxUncompressedBytes:128*1024*1024};
 const MAX=256*1024*1024,MAX_ARCHIVE=128*1024*1024,MAX_SPEC=2*1024*1024;
 const UTF8=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true});
 const TOOL_PATHS=[
  'application_archive_source.cjs','application_archive_parser.py','connected_application_archive.cjs',
+ 'application_tar_source.py','connected_tar_archive.cjs','TAR_APPLICATION_SOURCE.md',
  'application_source_closure.py','application_source_bridge.cjs','python_source_closure.py',
  'source_closure_cli.cjs','connected_javascript_source_closure.cjs',
  'connected_zip.cjs','connected_zip_archive.cjs','connected_zip_receive.cjs','connected_gzip.cjs',
@@ -95,7 +98,7 @@ async function runCollector(root,args,{python,node,signal}){
  const dir=await fs.mkdtemp(path.join(root,'attempts','parser-'));
  await fs.chmod(dir,0o700);await io.syncDirectory(path.dirname(dir));
  const invocation=['-E','-s',path.join(__dirname,'application_archive_parser.py'),dir,'--',
-  ...args,'--node',node,'--temporary-parent',dir];
+  ...args,...(args[0]==='tar-inspect'?[]:['--node',node,'--temporary-parent',dir])];
  await publish(path.join(dir,'invocation.json'),json({executable:python,argv:invocation,applicationExecution:false}));
  let out,err,child,timer,escalation,abort,code,reason=null,closed,primaryError,killError;
  const stop=number=>{if(!child?.pid||child.exitCode!==null||child.signalCode!==null)return;
@@ -151,19 +154,54 @@ async function readInput(filename){
  if(raw[0]===31&&raw[1]===139){need(raw.length<=MAX_ARCHIVE,'Compressed packet exceeds 128 MiB');raw=zlib.gunzipSync(raw,{maxOutputLength:MAX});}
  need(raw.length<=MAX,'Packet exceeds 256 MiB');return {raw,packet:parse(raw)};
 }
-function inspectBinding(packet){
- const expected=['schema','archive','memberRoot','selection','source','tools','binding'];
- need(packet&&same(Object.keys(packet).sort(),expected.sort())&&packet.schema===core.SCHEMA,'Use the complete supported archive-source packet');
+function decodeBinding(packet){
+ const isTar=packet?.schema===TAR_PACKET;
+ const expected=['schema','archive','memberRoot','selection','source','tools','binding',...(isTar?['archiveFormat']:[])];
+ need(packet&&same(Object.keys(packet).sort(),expected.sort())&&(packet.schema===core.SCHEMA||isTar),'Use the complete supported archive-source packet');
+ const format=isTar?packet.archiveFormat:'zip';
+ need(!isTar||['tar','tar.gz'].includes(format),'Select tar or tar.gz explicitly');
  core.relative(packet.memberRoot,true);
  const archive=bytes(packet.archive,MAX_ARCHIVE),selection=bytes(packet.selection,MAX_SPEC),sourceRaw=bytes(packet.source);
  const source=parse(sourceRaw),spec=parse(selection);
  need(same(source.selection,spec),'Retained selection differs from the original mixed collector selection');
- const view=zip.readZipArchive(archive,{maxBytes:MAX_ARCHIVE,maxEntries:8192,maxUncompressedBytes:128*1024*1024});
- // Use the same portable receiving rules before declaring the archive receivable.
- zipReceive.describeArchive(archive,{maxBytes:MAX_ARCHIVE,maxEntries:8192,maxUncompressedBytes:128*1024*1024});
- const binding=core.bindArchiveSource({archiveView:view,memberRoot:packet.memberRoot,source,identify});
+ return {archive,selection,sourceRaw,source,binding:packet.binding,format,
+  validation:isTar?'REQUIRES_ORIGINAL_TAR_PARSER':'REQUIRES_ORIGINAL_ZIP_PARSER'};
+}
+function bindView(packet,bound,view){
+ const binding=core.bindArchiveSource({archiveView:view,memberRoot:packet.memberRoot,source:bound.source,identify});
  need(same(packet.binding,binding),'Archive/source relationship differs from the retained complete binding');
- return {archive,selection,sourceRaw,source,binding};
+ return {...bound,binding,validation:'VERIFIED'};
+}
+function inspectBinding(packet){
+ const bound=decodeBinding(packet);
+ need(bound.format==='zip','TAR requires asynchronous inspection through the original owned Python parser');
+ const view=zip.readZipArchive(bound.archive,ARCHIVE_LIMITS);
+ zipReceive.describeArchive(bound.archive,ARCHIVE_LIMITS);
+ return bindView(packet,bound,view);
+}
+async function archiveCodec(format,root,options){
+ need(['zip','tar','tar.gz'].includes(format),'Choose zip, tar or tar.gz');
+ if(format==='zip')return{schema:'commons.zip-source-receiving.v1',filename:'archive.zip',
+  parse:async(raw,limits)=>({view:zip.readZipArchive(raw,limits),entries:zip.readZipArchive(raw,limits).entries,receipt:zipReceive.describeArchive(raw,limits)})};
+ let cached=null,cacheId=null;
+ return{schema:tar.SCHEMA,filename:format==='tar'?'archive.tar':'archive.tar.gz',
+  parse:async(raw,limits)=>{
+   const key=identify(raw).sha256;
+   if(cached&&key===cacheId)return cached;
+   const filename=path.join(root,'tar-inspection-'+key+(format==='tar'?'.tar':'.tar.gz'));
+   await publish(filename,raw);
+   const inspected=await runCollector(root,['tar-inspect','--archive',filename,'--sha256',key,'--format',format],options);
+   const view=tar.viewFromResult(inspected.result,raw,{identify,format,...limits});
+   cached={view,entries:view.entries,receipt:tar.describeView(view,limits)};cacheId=key;return cached;
+  }};
+}
+async function inspectBindingAsync(packet,{directory,python,node=process.execPath,signal}={}){
+ const bound=decodeBinding(packet);
+ if(bound.format==='zip')return inspectBinding(packet);
+ await originalTools(packet.tools);
+ const root=await operation(directory,{schema:TAR_PACKET,command:'tar-binding',packet:identify(json(packet)),python,node});
+ const codec=await archiveCodec(bound.format,root,{python,node,signal});
+ return bindView(packet,bound,(await codec.parse(bound.archive,ARCHIVE_LIMITS)).view);
 }
 async function retainTools(root,rows){
  for(const row of rows){
@@ -172,20 +210,25 @@ async function retainTools(root,rows){
   await publish(path.join(directory,path.posix.basename(row.path)),raw);
  }
 }
-async function collect({archive,expectedSha256,memberRoot,selection,directory,output,gzip=false,python,node=process.execPath,signal}={}){
+async function collect({archive,archiveFormat='zip',expectedSha256,memberRoot,selection,directory,output,gzip=false,python,node=process.execPath,signal}={}){
  executable(python,'Python');executable(node,'Node');digest(expectedSha256);core.relative(memberRoot,true);
  need(archive&&selection&&output,'Supply archive, selection and complete output paths');
  const archiveRaw=await io.readOriginal(path.resolve(archive),MAX_ARCHIVE),selectionRaw=await io.readOriginal(path.resolve(selection),MAX_SPEC);
  need(identify(archiveRaw).sha256===expectedSha256,'Original ZIP differs from its independently retained SHA-256');
- const tools=await toolchain(),description=zipReceive.describeArchive(archiveRaw,{maxBytes:MAX_ARCHIVE,maxEntries:8192,maxUncompressedBytes:128*1024*1024});
- const root=await operation(directory,{schema:core.SCHEMA,command:'collect',archive:identify(archiveRaw),
+ need(['zip','tar','tar.gz'].includes(archiveFormat),'Choose zip, tar or tar.gz explicitly');
+ const tools=await toolchain();
+ const root=await operation(directory,{schema:archiveFormat==='zip'?core.SCHEMA:TAR_PACKET,command:'collect',archive:identify(archiveRaw),
+  ...(archiveFormat==='zip'?{}:{archiveFormat}),
   memberRoot,selection:identify(selectionRaw),tools:tools.map(({contentBase64,...row})=>row),python,node});
- await publish(path.join(root,'original.zip'),archiveRaw);await publish(path.join(root,'selection.json'),selectionRaw);
- const received=await zipReceive.receiveZipArchive({archive:path.join(root,'original.zip'),directory:path.join(root,'archive'),
-  expectedSha256,maxBytes:MAX_ARCHIVE,maxEntries:8192,maxUncompressedBytes:128*1024*1024});
+ const codec=await archiveCodec(archiveFormat,root,{python,node,signal});
+ const originalName=archiveFormat==='zip'?'original.zip':archiveFormat==='tar'?'original.tar':'original.tar.gz';
+ const view=(await codec.parse(archiveRaw,ARCHIVE_LIMITS)).view;
+ await publish(path.join(root,originalName),archiveRaw);await publish(path.join(root,'selection.json'),selectionRaw);
+ const received=await zipReceive.archiveReceiving.receive({archive:path.join(root,originalName),directory:path.join(root,'archive'),
+  expectedSha256,...ARCHIVE_LIMITS},codec);
  const originalRoot=memberRoot==='.'?received.members:path.join(received.members,memberRoot);
  // readZipArchive checked all paths; the selected root must be a retained original directory.
- const view=zip.readZipArchive(archiveRaw,{maxBytes:MAX_ARCHIVE,maxEntries:8192,maxUncompressedBytes:128*1024*1024});
+
  const dirs=new Set(['.']);for(const e of view.entries){const p=e.path.split('/');for(let n=1;n<p.length;n++)dirs.add(p.slice(0,n).join('/'));if(e.kind==='directory')dirs.add(e.path);}
  need(dirs.has(memberRoot),'Select an existing original application directory inside the ZIP');
  const sourceFile=path.join(root,'application-source.json');
@@ -198,9 +241,9 @@ async function collect({archive,expectedSha256,memberRoot,selection,directory,ou
  const inspection=await runCollector(root,['inspect','--input',sourceFile],{python,node,signal});
  const sourceRaw=await io.readOriginal(sourceFile,MAX),source=parse(sourceRaw);
  const binding=core.bindArchiveSource({archiveView:view,memberRoot,source,identify});
- const packet={schema:core.SCHEMA,archive:blob(archiveRaw),memberRoot,selection:blob(selectionRaw),source:blob(sourceRaw),tools,binding};
- inspectBinding(packet);await originalTools(tools);
- await zipReceive.verifyZipReceiving({directory:path.join(root,'archive'),expectedSha256});
+ const packet={schema:archiveFormat==='zip'?core.SCHEMA:TAR_PACKET,...(archiveFormat==='zip'?{}:{archiveFormat}),archive:blob(archiveRaw),memberRoot,selection:blob(selectionRaw),source:blob(sourceRaw),tools,binding};
+ bindView(packet,decodeBinding(packet),view);await originalTools(tools);
+ await zipReceive.archiveReceiving.verify({directory:path.join(root,'archive'),expectedSha256},codec);
  const raw=json(packet);need(raw.length<=MAX,'Full original archive plus selected source exceeds 256 MiB; select a smaller complete archive');
  await publish(path.join(root,'archive-source.json'),raw);await io.privateDirectory(path.join(root,'tools'),true);await retainTools(path.join(root,'tools'),tools);
  const published=gzip?zlib.gzipSync(raw,{level:6}):raw;
@@ -210,8 +253,10 @@ async function collect({archive,expectedSha256,memberRoot,selection,directory,ou
 }
 async function inspect({input,directory,python,node=process.execPath,signal}={}){
  executable(python,'Python');executable(node,'Node');
- const {packet,raw}=await readInput(input),bound=inspectBinding(packet);await originalTools(packet.tools);
- const root=await operation(directory,{schema:core.SCHEMA,command:'inspect-or-receive',packet:identify(raw),python,node});
+ const {packet,raw}=await readInput(input),decoded=decodeBinding(packet);await originalTools(packet.tools);
+ const root=await operation(directory,{schema:packet.schema,command:'inspect-or-receive',packet:identify(raw),python,node});
+ const codec=await archiveCodec(decoded.format,root,{python,node,signal});
+ const bound=bindView(packet,decoded,(await codec.parse(decoded.archive,ARCHIVE_LIMITS)).view);
  await publish(path.join(root,'archive-source.json'),raw);
  await publish(path.join(root,'application-source.json'),bound.sourceRaw);
  const review=await runCollector(root,['inspect','--input',path.join(root,'application-source.json')],{python,node,signal});
@@ -222,31 +267,33 @@ async function inspect({input,directory,python,node=process.execPath,signal}={})
 async function receive(options={}){
  options={...options,node:options.node??process.execPath};
  const result=await inspect(options);need(result.status==='COMPLETE','Resolve the original collector findings before complete receiving');
- const {packet,raw}=await readInput(options.input),bound=inspectBinding(packet);
+ const {packet,raw}=await readInput(options.input),decoded=decodeBinding(packet);
  need(same(result.packet,identify(raw)),'Original packet changed between inspection and receiving');
- const root=result.directory;
- await publish(path.join(root,'original.zip'),bound.archive);await publish(path.join(root,'selection.json'),bound.selection);
- const archive=await zipReceive.receiveZipArchive({archive:path.join(root,'original.zip'),directory:path.join(root,'archive'),
-  expectedSha256:packet.archive.sha256,maxBytes:MAX_ARCHIVE,maxEntries:8192,maxUncompressedBytes:128*1024*1024});
+ const root=result.directory,codec=await archiveCodec(decoded.format,root,options);
+ const bound=bindView(packet,decoded,(await codec.parse(decoded.archive,ARCHIVE_LIMITS)).view);
+ const originalName=decoded.format==='zip'?'original.zip':decoded.format==='tar'?'original.tar':'original.tar.gz';
+ await publish(path.join(root,originalName),bound.archive);await publish(path.join(root,'selection.json'),bound.selection);
+ const archive=await zipReceive.archiveReceiving.receive({archive:path.join(root,originalName),directory:path.join(root,'archive'),
+  expectedSha256:packet.archive.sha256,...ARCHIVE_LIMITS},codec);
  const selected=await runCollector(root,['receive','--input',path.join(root,'application-source.json'),'--directory',path.join(root,'application')],options);
  await io.privateDirectory(path.join(root,'tools'),true);await retainTools(path.join(root,'tools'),packet.tools);
  await originalTools(packet.tools);
- await zipReceive.verifyZipReceiving({directory:path.join(root,'archive'),expectedSha256:packet.archive.sha256});
+ await zipReceive.archiveReceiving.verify({directory:path.join(root,'archive'),expectedSha256:packet.archive.sha256},codec);
  const complete={schema:core.SCHEMA,status:'COMPLETE',packet:identify(raw),archive:identify(bound.archive),
-  memberRoot:packet.memberRoot,binding:bound.binding,sourceDirectory:'application/source',originalArchive:'archive/archive.zip',
+  memberRoot:packet.memberRoot,binding:bound.binding,sourceDirectory:'application/source',originalArchive:'archive/'+codec.filename,
   originalMembers:'archive/members',toolsDirectory:'tools',applicationExecution:false};
  await publish(path.join(root,'complete.json'),json(complete));
  return {...complete,directory:root,sourceDirectory:selected.result.source_directory,archiveReceipt:archive.receipt};
 }
-const HELP='Ordinary ZIP application source\n\n'+
- 'collect --archive ZIP --sha256 SHA --member-root ROOT_OR_DOT --selection JSON --directory PRIVATE_OPERATION --output FILE [--gzip]\n'+
+const HELP='Ordinary ZIP, TAR and tar.gz application source\n\n'+
+ 'collect --archive ARCHIVE [--archive-format zip|tar|tar.gz] --sha256 SHA --member-root ROOT_OR_DOT --selection JSON --directory PRIVATE_OPERATION --output FILE [--gzip]\n'+
  'inspect --input FILE --directory PRIVATE_RECEIVING\n'+
  'receive --input FILE --directory SAME_PRIVATE_RECEIVING\n'+
  'All commands require --python ABSOLUTE_PYTHON; --node ABSOLUTE_NODE defaults to this Node.\n'+
  'No application execution, dependency installation, network request, source rewrite or archive regeneration.\n';
 function argumentsFor(argv){
  const command=argv.shift();if(!command||command==='help'||command==='--help')return{command:'help'};
- const allowed={collect:['archive','sha256','member-root','selection','directory','output','gzip','python','node'],
+ const allowed={collect:['archive','archive-format','sha256','member-root','selection','directory','output','gzip','python','node'],
   inspect:['input','directory','python','node'],receive:['input','directory','python','node']}[command];
  need(allowed,'Choose collect, inspect or receive');const args={command};
  while(argv.length){const flag=argv.shift(),key=flag?.slice(2);need(flag?.startsWith('--')&&allowed.includes(key)&&!Object.hasOwn(args,key),'Unknown or repeated option');
@@ -254,6 +301,7 @@ function argumentsFor(argv){
  const required=command==='collect'?['archive','sha256','member-root','selection','directory','output','python']:['input','directory','python'];
  for(const key of required)need(args[key],'Missing --'+key);
  if(args.sha256){args.expectedSha256=args.sha256;delete args.sha256;}if(args['member-root']){args.memberRoot=args['member-root'];delete args['member-root'];}
+ if(args['archive-format']){args.archiveFormat=args['archive-format'];delete args['archive-format'];}
  return args;
 }
 async function main(argv=process.argv.slice(2)){
@@ -265,5 +313,5 @@ async function main(argv=process.argv.slice(2)){
  }catch(error){process.stderr.write(JSON.stringify({status:'ERROR',code:error.code||error.name,message:String(error.message||error),detail:error.detail},null,2)+'\n');return 1;}
  finally{process.removeListener('SIGINT',abort);process.removeListener('SIGTERM',abort);}
 }
-module.exports={collect,inspect,receive,inspectBinding,identify,argumentsFor,main};
+module.exports={collect,inspect,receive,decodeBinding,inspectBinding,inspectBindingAsync,identify,argumentsFor,main};
 if(require.main===module)main().then(code=>{process.exitCode=code;});

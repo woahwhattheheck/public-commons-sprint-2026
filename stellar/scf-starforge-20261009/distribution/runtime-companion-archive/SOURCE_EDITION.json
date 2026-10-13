@@ -1,18 +1,6 @@
 {
   "schema": "commons.runtime-companion-archive-installed-source.v1",
-  "operation": "RUNTIME-COMPANION-ARCHIVE-SOURCE-D76C-20261013",
-  "source": {
-    "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "commit": "9a5740b818554831faea42eda679efa923391169",
-    "pullRequest": 4612,
-    "archive": {
-      "filename": "runtime-companion-archive-toolkit.zip",
-      "bytes": 185257,
-      "sha256": "c6d588ea0dd1a2d3f931d60315c7d866835514dc46b3fa245505489333108b00",
-      "gitBlob": "5779df2047e1f702e2f5ec01fd8f9608e5114c19",
-      "members": 28
-    }
-  },
+  "operation": "TAR-APPLICATION-SOURCE-RECEIVING-D76C-20261013",
   "toolkitDirectory": "toolkit",
   "files": [
     {
@@ -113,9 +101,9 @@
     },
     {
       "path": "host/connected_zip_receive.cjs",
-      "bytes": 15726,
-      "sha256": "638a5db86b656e2e802eaac35c181b2febb38e809caa861593693cc20d6401af",
-      "gitBlob": "246a896259b717223e25bed9bf873d24a401d275"
+      "bytes": 16262,
+      "sha256": "cdbdb3398e95fac1b436d45378a93b3e8a7ccc3f391da89db454dadf8f6e0c6f",
+      "gitBlob": "39f2593eec29a4c4b33fded70a4b669251bcc292"
     },
     {
       "path": "host/connected_gzip.cjs",
@@ -131,15 +119,15 @@
     },
     {
       "path": "host/connected_application_archive.cjs",
-      "bytes": 3998,
-      "sha256": "1691e86a1c78022383c9ad4ddaa0ea844e6a5b0e5563732a71dfd5fdd927c3bc",
-      "gitBlob": "b9e91fde07fedf4ef5e28b1c52f4bedf5b89b00e"
+      "bytes": 4091,
+      "sha256": "b76a2a42621b2bbe54b23415433ad415d50c4e6003c1d4f2049126bfc6f4a540",
+      "gitBlob": "99313757bc6236b8793aef1bdac7174e3b6e1b5e"
     },
     {
       "path": "host/application_archive_source.cjs",
-      "bytes": 19724,
-      "sha256": "58fbc83cfd77b49af6c4b6d3ef444fdbb1167d5f7d1c553fe8d3070e05c42353",
-      "gitBlob": "0314b1b09f19cdd9fc3b0d07d3e6e5a95ead69f3"
+      "bytes": 22931,
+      "sha256": "a48af0eec597c1fcda7f6e8692c4dd021792916d456c185ce7863417534757a5",
+      "gitBlob": "6066d474df1dd2989ef8ae1ff7a1dc9fb54d07ec"
     },
     {
       "path": "host/APPLICATION_ARCHIVE_SOURCE.md",
@@ -155,9 +143,9 @@
     },
     {
       "path": "host/application_archive_parser.py",
-      "bytes": 3461,
-      "sha256": "8ef0ae17d886a6555c642c5941897ea641508fa9b4c07e904f31df8998b854f6",
-      "gitBlob": "0ba86ad02efe1946e383ee4f8a7ad7da82bc76d4"
+      "bytes": 3623,
+      "sha256": "c927d11a53fd028eb8a9c283948ed1c032e0fac9182dbd6bd93e4209f741213e",
+      "gitBlob": "2dd10e911487dd099f98f4df960d9f94bd7ac19c"
     },
     {
       "path": "AGENTS.md",
@@ -167,9 +155,9 @@
     },
     {
       "path": "host/runtime_companion_archive.cjs",
-      "bytes": 24261,
-      "sha256": "262af906b5a8ce2bc4610a9c70b256bf9d22f10e24bf0d4c146f20597548e841",
-      "gitBlob": "1fc75a05ab116bc6c070dc3f44831f807ceb2f9c"
+      "bytes": 25512,
+      "sha256": "42a97f644c07ec1b9152ac1f8d37402a3b3711ad371e97212e59bdb7dcb1499c",
+      "gitBlob": "d10008182f4aad0ef0f95b1b761e863e0a52b67b"
     },
     {
       "path": "host/RUNTIME_COMPANION_ARCHIVE.md",
@@ -179,9 +167,27 @@
     },
     {
       "path": "README.md",
-      "bytes": 1980,
-      "sha256": "384551633e2afe92917361ed59ccd5d6d0ed2aed7e53b30eeb3d4c681c38c2f1",
-      "gitBlob": "02e0b91ffbe49c3853cb3fa2ae515035a4ed832e"
+      "bytes": 2162,
+      "sha256": "6421c2923cb8b613dbddfd6be206f97385f5f209e79477067d0e9b0027d8d16b",
+      "gitBlob": "7db8b97a5a8f8c05c5f2f4787272efe2b7b78298"
+    },
+    {
+      "path": "host/application_tar_source.py",
+      "bytes": 8886,
+      "sha256": "784f0534256eb1663e201c356bf9ba5163ee1ea1a3e824ee6588010c3d32a450",
+      "gitBlob": "b653251db94f90cbb6edb66c15b48c7cad9f0566"
+    },
+    {
+      "path": "host/connected_tar_archive.cjs",
+      "bytes": 2520,
+      "sha256": "8523d6bb991d5d9ab58f23aff5bb2ee3d05326a3a365e4707bcc390b2593c66f",
+      "gitBlob": "d96d0d1b4ea9f004d6074299e04b13e14afe84d6"
+    },
+    {
+      "path": "host/TAR_APPLICATION_SOURCE.md",
+      "bytes": 12964,
+      "sha256": "e19b251af4be6c350dd0b636289040fadcd1b5d10a4befedbce9a529b425c219",
+      "gitBlob": "510e48dccdada046b180005474cb8778e13ba771"
     }
   ],
   "installedCommands": [
@@ -190,5 +196,28 @@
   ],
   "runtimeSource": "../runtime-workspace",
   "runtimeSourceBinding": "Six original entry modules are bound by the unchanged consumer; full installed source identity remains the maintained distribution manifest.",
-  "applicationExecution": false
+  "applicationExecution": false,
+  "predecessor": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "commit": "9a5740b818554831faea42eda679efa923391169",
+    "pullRequest": 4612,
+    "archive": {
+      "filename": "runtime-companion-archive-toolkit.zip",
+      "bytes": 185257,
+      "sha256": "c6d588ea0dd1a2d3f931d60315c7d866835514dc46b3fa245505489333108b00",
+      "gitBlob": "5779df2047e1f702e2f5ec01fd8f9608e5114c19",
+      "members": 28
+    }
+  },
+  "source": {
+    "kind": "complete-current-source",
+    "packetSchema": "commons.application-archive-source.v2",
+    "formats": [
+      "zip",
+      "tar",
+      "tar.gz"
+    ],
+    "historicalZipPacketSchema": "commons.application-archive-source.v1"
+  },
+  "nativeExecuted": false
 }
