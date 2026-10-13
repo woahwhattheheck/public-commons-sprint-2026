@@ -78,11 +78,39 @@ This requires a prepared source and forwards the server-bound original collectio
 
 Nitrogen and phosphorus retain kg/year. Sediment retains metric tonnes/year, normalized to the original paired report's t/year spelling. Each constituent and unit stays separate. The source adds no economic weighting or cross-pollutant physical total and does not change the original model units.
 
-The report retains both common-support and full-valid totals. A difference between full-valid totals cannot replace the exact paired contrast when coverage differs. Percent change uses the common-valid baseline; a zero baseline leaves the percent undefined.
+The report shows the original quantities in separate tables so the geographic basis stays visible:
 
-Figures and case ranges are separated by scenario, constituent, unit and exact common-valid mask SHA256. Equal cell counts alone do not establish common geography. A figure page contains at most sixteen selected cases. Case numbers are presentation positions; each point retains its original profile/member/scenario/run identity and JSON pointer.
+| Visible result | Original meaning |
+| --- | --- |
+| Common-support baseline and alternative masses | Annual mass summed over cells valid in both selected runs. |
+| Signed annual change | The original alternative-minus-baseline change on those common cells. For parameter sensitivity, the alternative is the varied-profile baseline and the reference is the first selected profile's baseline. |
+| Percent change | The producer's stored percent relative to the common-support baseline mass. A zero common baseline leaves this percent undefined, including when both common masses are zero. |
+| Own-valid baseline and alternative totals | Each run's original integrated mass sum over its own finite, non-NoData cells inside the retained reporting mask. These two totals can cover different cells. |
+| Common, own-valid and only-valid cell counts | The original membership counts for the paired support; the two only-valid counts show the cells excluded from that paired contrast. |
 
-The minimum and maximum describe the completed named parameter set on one exact support mask. They are descriptive case ranges. Failed, pending and other-support cases remain explicit. No bootstrap, fit, uncertainty estimator or native solve is performed by this source adapter.
+Use the common-support table for the physical change. Use the own-valid totals to understand each original run's available result. Subtracting the latter can combine a physical change with a change in valid geographic coverage.
+
+The original report prints the stored values; the scientific source does not recalculate annual mass, change or percent. Native nitrogen and phosphorus export densities are integrated by the model workflow using the actual pixel hectares once before these mass artifacts are created. No additional pixel-area conversion belongs in the report.
+
+### Interpret missing values and geographic coverage
+
+The coverage table exposes both identities: **baseline valid = common + baseline only**, and **alternative valid = common + alternative only**. “Baseline only” means valid in the baseline but unavailable in the alternative; “alternative only” is the converse. These cells are excluded from the paired change. Neither count includes cells unavailable in both runs or cells outside the reporting polygon. The table therefore does not express a percentage of the whole catchment.
+
+A zero common baseline has a valid annual mass change when common cells exist, but its percent change is undefined. Read the displayed reason beside the stored percent. A legacy row with no common valid cells has no defined paired quantity; its explicit reason stays visible and it contributes no zero effect to a figure or range. The current paired producer records a no-common-cell comparison as an original error, which remains in the report's native messages.
+
+“Pair masks identical” means both only-valid counts are zero for every included pair. The two runs can still share missing cells. Read the reporting geography and original raster inventory before describing the extent covered by the model.
+
+The own-valid totals and paired sums retain their original producers and numerical precision. Minor rounding differences can arise between a stored difference raster and a double-precision paired sum; the scientific report keeps the original quantities rather than forcing a recomputed equality.
+
+Figures and case ranges are separated by scenario, constituent, unit and exact common-valid mask SHA256. Equal cell counts alone do not establish common geography. A figure page contains at most sixteen selected cases.
+
+Every original report row has a stable visible key: `LC0001` denotes the first row in `paired_rows`, and `PS0001` denotes the first row in `parameter_rows`. Each subsequent key uses that original row's one-based index. These keys belong to the retained report edition; they do not restart when figures split into support groups or pages. The same key appears on the figure ticks, figure coordinates and report tables.
+
+Use the visible case index to find the member, scenario, constituent and unit for a plotted key. Parameter sensitivity also identifies its original reference member/profile and varied profile. The complete original member, profile, scenario and native run IDs remain in the source records and coordinate companions.
+
+The minimum and maximum describe the completed named parameter set on one exact support mask. The range table shows its common-cell count and whether the pair masks are identical. It does not pool other masks or physical units. Percent ranges include only members with a defined stored percent, so a valid mass-change member with a zero baseline need not contribute to that percentage range.
+
+These are descriptive case ranges. The included case count is a count of retained physical contrast rows in that group, distinct from the study's native-run completion count. Failed, pending and other-support cases remain explicit. No bootstrap, fit, uncertainty estimator or native solve is performed by this source adapter.
 
 ## Figures and original coordinates
 
@@ -91,7 +119,13 @@ For each retained geographic support group, the source produces two panels:
 - original baseline/reference and alternative/varied annual masses on the same common-valid cells;
 - original paired annual change, with an explicit zero-change line.
 
-Land-cover and baseline-parameter figures remain distinct. The first profile's reference role is preserved in the parameter figure source records. The complete scientific figure specification and coordinate CSV carry every original plotted quantity and source pointer. The maintained shared renderer draws the same specification in PDF; independent monochrome SVGs travel with it.
+Land-cover and baseline-parameter figures remain distinct. Each caption states the original common-cell count, exact support hash and signed direction: negative change means lower modeled export. The parameter caption and case table retain the original reference profile.
+
+Read the detail table immediately after each figure in PDF, HTML or Markdown. It maps every visible row key to the actual member/profile and reference profile, with the original valid, common and only-valid cell counts. The common-mass table, coverage table and own-valid totals use the same keys, making the displayed value traceable without opening a separate CSV.
+
+The complete scientific figure specification and coordinate CSV carry every original plotted quantity and source pointer. The maintained shared renderer draws the same specification in PDF; independent monochrome SVGs travel with it. The standalone SVG's keys refer to the same original case index and accompanying report tables.
+
+For a brief operator explanation: “This key names the saved model case. These two values use the same valid cells, and their signed change is printed here. The next table shows which cells were excluded. The full totals remain available on each run's own support. This profile reference and source record explain the assumptions.”
 
 If an older retained report has zero common valid cells or lacks an exact common-support hash, its row remains in the original numeric report and is explicitly listed as omitted from the grouped figure. No geographic mask or zero-valued physical result is inferred.
 
@@ -105,7 +139,7 @@ The scientific source includes:
 - exact saved design and native run snapshots, native comparison records, prepared grid metadata and every selected profile/scenario record;
 - original biophysical CSV bodies and all their retained companions;
 - complete source collection/entry identities, original scenario-mask source bindings, alignment statistics and original/aligned raster descriptors;
-- scientific report recipe, all original figure coordinates, full vector specification and standalone SVGs.
+- scientific report recipe, the stable case-key index and per-figure detail tables, all original figure coordinates, full vector specification and standalone SVGs.
 
 Native-input-inventory.json marks which original source bytes are included. The complete numeric and graphical report can be reopened from its scientific source archive. Original model DEM, land cover, climate, R/K, scenario geometry, physical output rasters and native logs stay under their exact paths and hashes in the full Workspace archive. Use that existing complete-project transfer to inspect or rerun the hydrologic model.
 
