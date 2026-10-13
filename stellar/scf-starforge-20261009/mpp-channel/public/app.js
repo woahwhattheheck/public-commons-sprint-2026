@@ -215,8 +215,7 @@ function renderOpenings() {
    items.push(['Setup input',()=>downloadBlob(new Blob([json({openingId:row.id,profile:row.config})+'\n'],
     {type:'application/json'}),row.id+'-setup.json')]);
    if(row.phase==='OPENED')items.push(['Channel identity',()=>downloadBlob(new Blob([
-    json({channel:row.config.channel,dependencyRoot:row.config.dependencyRoot,openingId:row.id,
-     transaction:tx.open?.transaction})+'\n'],{type:'application/json'}),row.id+'-channel.json')]);
+    json(row.config.channel)+'\n'],{type:'application/json'}),row.id+'-channel.json')]);
    return [row.config.title+' / '+row.id,row.phase,row.config.channel.address,
     row.config.opening.initialAmountAtomic,tx.open?.transaction||tx.code?.transaction||'Prepared',actions(items)];
   }));
