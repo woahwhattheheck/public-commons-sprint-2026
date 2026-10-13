@@ -1,0 +1,37 @@
+{
+  "schema": "tjlabs.provider-public-adoption.v1",
+  "operation": "AIRTABLE-NETSUITE-PUBLIC-INSTALL-3459-20261013",
+  "source": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "a82bbb8d082d624f6996b2100010d4b58fbac20d",
+    "path": "products/migration-acceptance/adaptations/airtable-netsuite",
+    "originalManifest": {
+      "gitBlob": "a3b0dd720184331b350c973160ae319254ce93c0",
+      "bytes": 6167,
+      "sha256": "a2dc0113a5acf14e9d1f3ef33f495813f934394afac62f77977bf7cdc7e85d93"
+    }
+  },
+  "destination": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "path": "products/migration-acceptance/adaptations/airtable-netsuite"
+  },
+  "nativeWorkbench": {
+    "manifest": {
+      "bytes": 38875,
+      "sha256": "fbabde0b35342409e652fab1514e1892876ad865591067ddd59b4d4eb7bd90a5"
+    },
+    "edition": "public-software-1",
+    "engineChanges": false
+  },
+  "changes": [
+    "Installed command and package export registration",
+    "Complete installed operator/receiving guide and source lineage",
+    "Add-on manifest extended to include the installed guide and provenance"
+  ],
+  "custody": "Reusable software and authored reference data only. Tenant inputs, credentials, private commercial documents and correspondence remain outside this software edition.",
+  "readiness": {
+    "sourceIntegrated": true,
+    "nativeReceiving": "original operation owner",
+    "renderedReceiving": "requires actual exact-version recipient course"
+  }
+}

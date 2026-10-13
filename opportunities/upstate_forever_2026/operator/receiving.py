@@ -140,6 +140,8 @@ def main():
     parser.add_argument("--operator-state", type=Path)
     parser.add_argument("--scratch", required=True, type=Path)
     parser.add_argument("--source-revision", required=True)
+    parser.add_argument("--synthesis-input", type=Path,
+                        help="Continue the complete attributed two-edition source in this original receiving programme.")
     parser.add_argument("--node", required=True, type=Path)
     parser.add_argument("--node-modules", required=True, type=Path)
     parser.add_argument("--chromium", required=True, type=Path)
@@ -156,6 +158,26 @@ def main():
             raise ValueError("Select the actual installed receiving runtime: " + str(path))
     model, workspace, original = checked_model(args.model_receiving, args.workspace)
     output = args.output.resolve()
+    synthesis, prior_delivery_archive = None, None
+    if args.synthesis_input:
+        synthesis_body = args.synthesis_input.expanduser().resolve(strict=True).read_bytes()
+        synthesis = json.loads(synthesis_body)
+        if (synthesis.get("schema") != "upstate.scientific-synthesis-receiving-input/v1"
+                or synthesis.get("project_id") != model["workspace_id"]):
+            raise ValueError("Select the complete authored input for this original native project")
+        # Keep the original completed programme and all its exports untouched.
+        prior_progress = output / "operator-browser-progress.json"
+        if prior_progress.exists():
+            prior = json.loads(prior_progress.read_text())
+            if (prior.get("model_receiving_sha256") != hashlib.sha256(original).hexdigest()
+                    or prior.get("workspace_id") != model["workspace_id"]):
+                raise ValueError("The prior receiving programme belongs to another original model")
+            candidate = prior.get("delivery_archive")
+            if candidate:
+                if record(candidate["path"]) != candidate:
+                    raise ValueError("The original completed model delivery changed")
+                prior_delivery_archive = candidate
+        output = output / "scientific-synthesis-continuations" / hashlib.sha256(synthesis_body).hexdigest()
     output.mkdir(parents=True, exist_ok=True, mode=0o700)
     scratch = args.scratch.resolve()
     scratch.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -180,6 +202,22 @@ def main():
                     item = accepted[name]
                     if record(item["path"]) != item:
                         raise ValueError("The completed receiving artifact differs: " + name)
+                if synthesis:
+                    from scientific_synthesis_receiving import inspect_downloads, verify_received
+                    inspect_downloads(output / "scientific-synthesis")
+                    receiving = accepted["received"]
+                    if not Path(receiving["directory"]).exists():
+                        from model.portable import restore
+                        archive = accepted["workspace_archive"]
+                        restored = restore(archive["path"], receiving["directory"])
+                        if (restored["project"]["id"] != model["workspace_id"]
+                                or restored["archive_sha256"] != archive["sha256"]):
+                            raise ValueError("Reconstructed receiving differs from the retained original")
+                    restored_workspace = Workspace(receiving["workspace"])
+                    verify_received(restored_workspace, output / "scientific-synthesis")
+                    retained_browser = json.loads((output / "scientific-synthesis" / "synthesis-receiving.json").read_text())
+                    if not retained_browser.get("complete"):
+                        raise ValueError("Continue the independently reopened authored browser phase")
                 print(json.dumps({"complete": True, "reused": True,
                                   "source_revision": accepted["source_revision"],
                                   "workspace_id": model["workspace_id"], "result": record(result_path),
@@ -219,10 +257,14 @@ def main():
                     "model_receiving_sha256": source_sha, "source_revision": args.source_revision,
                     "output": str(output), "progress": str(progress), "node_modules": str(args.node_modules.resolve()),
                     "chromium": str(args.chromium.resolve()), "include_intermediates": not args.omit_native_intermediates,
-                    "resume_failed_tasks": args.resume_failed_tasks, "task_timeout_seconds": args.task_timeout_seconds})
+                    "resume_failed_tasks": args.resume_failed_tasks, "task_timeout_seconds": args.task_timeout_seconds,
+                    **({"scientific_synthesis": synthesis, "prior_delivery_archive": prior_delivery_archive} if synthesis else {})})
                 run_command([str(args.node), str(application / "operator/receiving.mjs"), str(control)],
                             attempt_dir, mode + "-browser")
             browser("operate", server, APP)
+            if synthesis:
+                from scientific_synthesis_receiving import inspect_downloads
+                inspect_downloads(output / "scientific-synthesis")
             stage = json.loads(progress.read_text())
             server.close()
             server = None
@@ -240,6 +282,10 @@ def main():
             server = OperatorProcess(application, directory, output / "private/received-operator",
                                      scratch / "received-again", attempt_dir, "delivered", args.upload_limit_mib)
             browser("reopened", server, application)
+            if synthesis:
+                from scientific_synthesis_receiving import verify_received
+                synthesis_received = verify_received(Workspace(directory), output / "scientific-synthesis")
+                result["scientific_synthesis"] = synthesis_received
             stage = json.loads(progress.read_text())
             if not stage.get("complete"):
                 raise ValueError("The delivered original browser did not finish")

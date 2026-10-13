@@ -1757,10 +1757,15 @@
     "scientific-setup": {
       "title": "scientific setup",
       "paths": [
-        "operator/extensions/scientific-setup.json"
+        "operator/extensions/scientific-setup.json",
+        "model/setup_configuration.py",
+        "model/experiment_profiles.py",
+        "operator/web/setup_configuration.mjs",
+        "source_tools/receive_scientific_configuration_browser.mjs"
       ],
       "requires": [
-        "core"
+        "core",
+        "profile-workbench"
       ]
     },
     "source-preparation": {
@@ -2935,12 +2940,17 @@
         "source_tools/receive_keowee_reviews.py",
         "source_tools/receive_scientific_setup.py",
         "source_tools/receive_watershed_edition.py",
-        "source_tools/review_reconciliation.source.json"
+        "source_tools/review_reconciliation.source.json",
+        "model/setup_configuration.py",
+        "model/experiment_profiles.py",
+        "operator/web/setup_configuration.mjs",
+        "source_tools/receive_scientific_configuration_browser.mjs"
       ],
       "requires": [
         "core",
         "conservation",
-        "watershed-context"
+        "watershed-context",
+        "profile-workbench"
       ],
       "source_reference": {
         "schema": "commons.source-bank/v1",

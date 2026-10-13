@@ -40,26 +40,41 @@ export async function receiveScientificConfiguration({page,api,workspace,workspa
  const keep=async values=>{Object.assign(journal,values);await atomic(journalPath,journal);};
  const selected={...clone(base.selection),title:base.selection.title+' · selected configuration revision',profile_id:revisionProfileId};
  const originalViewport=page.viewportSize(),originalUrl=page.url();
- const download=async(locator,name)=>{
+ const download=async(locator,name,expected=null)=>{
   const [transfer]=await Promise.all([page.waitForEvent('download'),locator.click()]);
   const target=path.join(root,name);await transfer.saveAs(target);const body=await readFile(target);
-  journal.downloads=journal.downloads.filter(row=>row.name!==name);journal.downloads.push({name,bytes:body.length,sha256:hash(body)});await keep({downloads:journal.downloads});return body;
+  if(expected)need(body.length===expected.bytes&&hash(body)===expected.sha256,'The downloaded '+name+' differs from its original retained source descriptor.');
+  journal.downloads=journal.downloads.filter(row=>row.name!==name);journal.downloads.push({name,bytes:body.length,sha256:hash(body),...(expected?{original:clone(expected)}:{})});await keep({downloads:journal.downloads});return body;
  };
  const capture=async(name,width,height)=>{
   await page.setViewportSize({width,height});
   const target=path.join(root,name+'.png');await page.screenshot({path:target,fullPage:true});
   const bytes=await readFile(target);journal.screenshots=journal.screenshots.filter(row=>row.name!==name);journal.screenshots.push({name,path:target,sha256:hash(bytes),bytes:bytes.length});await keep({screenshots:journal.screenshots});
  };
+ const checkTask=task=>{
+  need(task?.id&&task.workspace===workspace&&task.action==='scientific.setup.create'&&same(task.payload,selected),'The retained task must belong to the original Workspace and entire selected setup payload.');
+  if(journal.task_id)need(task.id===journal.task_id,'Keep the original accepted task identity on continuation.');
+  return task;
+ };
  const poll=async task=>{
-  await keep({task_id:task.id});
+  checkTask(task);await keep({task_id:task.id});
+  // Resume one already interrupted/failed/cancelled original task per receiving
+  // invocation, exactly as the maintained desk does. A fresh failure stops for
+  // its actual cause; it is never retried repeatedly in this polling loop.
+  if(['failed','interrupted','cancelled'].includes(task.state)){
+   await keep({resume_requested:{task_id:task.id,state:task.state,at:new Date().toISOString()}});
+   task=checkTask(await api('/api/task/resume',{method:'POST',body:{id:task.id}}));
+  }
   while(task.state!=='complete'){
    if(['failed','interrupted','cancelled'].includes(task.state))throw Error('Open the retained original task '+task.id+': '+(task.error?.message||task.state));
-   await page.waitForTimeout(700);task=await api('/api/task?'+q(workspace,{id:task.id}));
+   await page.waitForTimeout(700);task=checkTask(await api('/api/task?'+q(workspace,{id:task.id})));
   }
-  need(task.action==='scientific.setup.create'&&same(task.payload,selected),'The accepted task must preserve the entire selected setup payload.');
   await keep({task_id:task.id,accepted_operation_id:task.operation_id,setup_id:task.result.setup_id,result:task.result});
   return task;
  };
+ const continueRequest=async request=>poll(journal.task_id?
+  await api('/api/task?'+q(workspace,{id:journal.task_id})):
+  await api('/api/actions',{method:'POST',body:request}));
  try{
   if(!journal.request&&!journal.setup_id){
    const keys={pending:'upstate-scientific-setup:v1:'+workspace+':'+base.project.id+':operation',
@@ -68,7 +83,7 @@ export async function receiveScientificConfiguration({page,api,workspace,workspa
    if(retained.pending){
     const pending=retained.pending;
     need(pending.workspace===workspace&&pending.action==='scientific.setup.create'&&same(pending.payload,selected),'Reconcile the other original setup request before this receiving journey.');
-    await keep({request:{workspace:pending.workspace,action:pending.action,payload:pending.payload,operation_id:pending.operation_id}});
+    await keep({request:{workspace:pending.workspace,action:pending.action,payload:pending.payload,operation_id:pending.operation_id},...(pending.task_id?{task_id:pending.task_id}:{})});
    }else if(retained.active&&retained.active!==setupId){
     const active=await api('/api/scientific-setup/detail?'+q(workspace,{setup_id:retained.active}));
     if(same(active.setup.selection,selected))await keep({setup_id:active.setup_id,task_id:active.setup.operation_id,recovered_original_active:true});
@@ -80,7 +95,7 @@ export async function receiveScientificConfiguration({page,api,workspace,workspa
   }else if(journal.request){
    need(journal.request.workspace===workspace&&journal.request.action==='scientific.setup.create'&&same(journal.request.payload,selected),'Retain the exact earlier setup request.');
    // Same original request ID, never a new setup mutation on continuation.
-   await poll(await api('/api/actions',{method:'POST',body:journal.request}));
+   await continueRequest(journal.request);
   }else{
    await page.locator('[data-view="scientific-setup"]').click();
    await page.locator('[data-setup-action="open"][data-setup-id="'+setupId+'"]').click();
@@ -111,8 +126,8 @@ export async function receiveScientificConfiguration({page,api,workspace,workspa
    const pending=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),pendingKey);
    if(pending){
     need(pending.workspace===workspace&&pending.action==='scientific.setup.create'&&same(pending.payload,selected),'Reconcile the other original setup request before receiving this revision.');
-    await keep({request:{workspace:pending.workspace,action:pending.action,payload:pending.payload,operation_id:pending.operation_id}});
-    await poll(await api('/api/actions',{method:'POST',body:journal.request}));
+    await keep({request:{workspace:pending.workspace,action:pending.action,payload:pending.payload,operation_id:pending.operation_id},...(pending.task_id?{task_id:pending.task_id}:{})});
+    await continueRequest(journal.request);
    }else{
     const [request]=await Promise.all([page.waitForRequest(request=>request.method()==='POST'&&new URL(request.url()).pathname==='/api/actions'&&request.postDataJSON()?.action==='scientific.setup.create'),
      page.locator('[data-setup-action="create"]').click()]);
@@ -121,7 +136,7 @@ export async function receiveScientificConfiguration({page,api,workspace,workspa
     await keep({request:actual});
     // Reconcile the same idempotent original action even if its browser
     // response was lost; an identical active task can be coalesced by server.
-    await poll(await api('/api/actions',{method:'POST',body:actual}));
+    await continueRequest(actual);
    }
   }
   const saved=await api('/api/scientific-setup/detail?'+q(workspace,{setup_id:journal.setup_id}));
@@ -133,12 +148,19 @@ export async function receiveScientificConfiguration({page,api,workspace,workspa
   await page.locator('[data-setup-action="open"][data-setup-id="'+journal.setup_id+'"]').click();
   const panel=page.locator('[data-setup-detail]');
   await panel.locator('[data-config-profile="'+revisionProfileId+'"]').waitFor();
-  const csv=await download(panel.getByRole('link',{name:'Selected parameters, units and original methods'}),'selected-parameters.csv');
+  const expectedNames=['specification.json','index.html','source-inventory.csv','prepared-inputs.csv','scenario-changes.csv','selected-parameters.csv'];
+  const descriptors=saved._downloads;
+  need(Array.isArray(descriptors)&&descriptors.length===expectedNames.length&&
+   same(descriptors.map(item=>item.filename).sort(),[...expectedNames].sort()),'Receive all six original retained setup attachments.');
+  const received=new Map();
+  for(const item of descriptors){
+   need(item.workspace===workspace&&Number.isSafeInteger(item.bytes)&&item.bytes>=0&&/^[a-f0-9]{64}$/.test(item.sha256)&&typeof item.label==='string','Open an exact original Workspace download descriptor.');
+   received.set(item.filename,await download(panel.getByRole('link',{name:item.label,exact:true}),item.filename,item));
+  }
+  const csv=received.get('selected-parameters.csv'),html=received.get('index.html');
   need(csv.toString('utf8').includes('target,label,value,units,model,selected_for_grid,description,reference'),'Open the full actual native parameter CSV.');
-  const html=await download(panel.getByRole('link',{name:'Readable scientific setup'}),'selected-setup.html');
   need(html.toString('utf8').includes('Original coefficient table'),'Open the actual complete readable setup attachment.');
-  await download(panel.getByRole('link',{name:'Scientific setup specification'}),'selected-specification.json');
-  const opened=JSON.parse(await readFile(path.join(root,'selected-specification.json'),'utf8'));
+  const opened=JSON.parse(received.get('specification.json').toString('utf8'));
   need(same(opened,saved.specification),'The downloaded original specification changed.');
   await capture('retained-desktop',1440,1000);await capture('retained-narrow',390,844);
   const attachment=await page.context().newPage();

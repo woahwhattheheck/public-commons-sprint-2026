@@ -144,3 +144,24 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
+
+## Complete executable browser continuation
+
+After the original native timeline receiving operation completes, use
+operator/landcover_timeline_browser.mjs with the actual receiving.json,
+selected-inputs.json, workspace.json identity, original operator ready file and
+workspace key. The complete control and continuation contract is in
+operator/LANDCOVER_TIMELINE_BROWSER.md.
+
+The default existing mode opens the actual completed edition after exercising
+the ordered input form and checked native preview. It preserves the original
+native selection, including settings not exposed by the visible form, and sends
+no second model action. Optional build-if-identical requires equality of the
+entire normalized visible selection before using the same original action.
+
+The course operates the real operator and report at desktop and390 pixels,
+all nine observed-history maps, blank-band and reordered-source correction,
+full original ticket downloads, the original Python portable reader, and cold
+input/report reopening. It preserves the selected source, real task identities
+and complete interruption outputs. The producing peer must open and LOOK at
+the actual screenshots and every outgoing attachment as required above.

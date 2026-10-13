@@ -1,0 +1,400 @@
+{
+  "schema": "upstate.scientific-synthesis-authored-recipe/v1",
+  "operation_id": "ECO-SCIENTIFIC-SYNTHESIS-R24C-20261013",
+  "source_requirements": [
+    {
+      "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+      "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+      "body_bytes": 63806,
+      "installed_manifest": "observations/landcover_2023_2025/scientific-report/source-manifest.json",
+      "original_manifest_git_sha": "b882fd99a64dfb18d00d725832dc9a9f3973fda0",
+      "original_recipe_git_sha": "64121854f5c7efd8333f84b0247e20fbbea5e319"
+    }
+  ],
+  "documents": [
+    {
+      "schema": "upstate.scientific-synthesis-document/v1",
+      "series_id": "landcover-2023-2025-synthesis-r24c-20261013",
+      "title": "Interpreting the retained 2023–2025 land-cover changes",
+      "revision_name": "Paired-support synthesis",
+      "question": "Which retained land-cover changes merit a closer source review, and what can the two-date classifications support for the next scientific decision?",
+      "scope": "Authored TJLabs research preparation for the complete original 217-HUC12 domain. It interprets the retained endpoint classification tables and defines follow-up work; it does not add a scientific model run or infer pollutant response.",
+      "change_note": "Initial attributed synthesis of the retained paired-support report.",
+      "author": {
+        "name": "TJLabs research preparation",
+        "organization": "TJLabs",
+        "email": ""
+      },
+      "sources": [],
+      "sections": [
+        {
+          "id": "paired-coverage",
+          "kind": "finding",
+          "heading": "Changed-class area has a fixed paired-cell denominator",
+          "text": "Across the 217 original HUC12 watersheds, the retained 2023–2025 comparison reports 20,949,527 paired valid cells covering 1,885,457.43 hectares. Of these, 1,089,063 cells (98,015.67 hectares) changed class, representing 5.19851% of paired valid cells. The retained source reports no earlier-only valid, later-only valid or both-NoData cells within this paired selection. These are endpoint land-cover classifications on the original common pixel support.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/1",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/0",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "net-and-gross",
+          "kind": "finding",
+          "heading": "Net class balances and directional exchanges answer different questions",
+          "text": "The domain group balance reports forest decreasing by 18,215.55 hectares and developed classes increasing by 4,470.57 hectares. The largest listed directional exchange is evergreen forest to grassland/herbaceous, 25,840.62 hectares; substantial exchanges also run from grassland/herbaceous to shrub/scrub and from shrub/scrub to evergreen forest. The net forest decrease cannot be assigned wholesale to developed land. The full directional matrix is needed to describe destinations and offsetting exchanges.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/1/1/1",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/2/1/1",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "huc-ranking",
+          "kind": "finding",
+          "heading": "High changed share is not the same as net forest loss",
+          "text": "Middle Fishing Creek (HUC12 030601030704) has the highest changed share in the retained sorted table, 17.051%, with 1,268.37 changed hectares. Its forest net balance is +43.11 hectares and developed net balance is +2.79 hectares. Log Creek (030601070205) follows at 16.079% changed share and has a forest net balance of −423 hectares. A priority list based solely on changed share would therefore combine different kinds of landscape transition.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/3/1/1",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "decision-use",
+          "kind": "interpretation",
+          "heading": "Use the comparison to direct an explicit review of transition mechanisms",
+          "text": "For an initial review, retain separate columns for changed share, changed hectares, forest net balance, developed net balance and the dominant directional class exchanges. Compare those measures within each selected HUC before deciding which areas warrant closer investigation. This is an authored screening approach; the retained two-date classification does not by itself establish a cause of change or a water-quality effect.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/1/1/0",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/2/1/0",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/3/1/0",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "interpretation-limits",
+          "kind": "limitation",
+          "heading": "Keep endpoint classification, spatial support and observation evidence distinct",
+          "text": "A changed classification alone does not identify its cause, the timing of change within 2023–2025 or classification accuracy. The source uses native pixel-centre area accounting; its separate fractional-pixel ledger is a different retained method. Named HUC areas are not exact gauge catchments or drinking-water protection footprints. This chapter makes no measured pollutant-load or concentration claim from land-cover class changes.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/2",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/3",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/3/1/0",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "followup",
+          "kind": "next-work",
+          "heading": "Inspect original transitions and select the actual reporting boundary before modelling",
+          "text": "Open the complete HUC transition records for the areas chosen by the scientist, preserve their original HUC12 string identifiers, and review the underlying source and reconciliation files. If the decision concerns a gauge catchment or protection footprint, select that actual spatial support before comparing model runs or monitoring observations. Preserve the original paired-cell method and use the separate fractional-area result only under its own declared accounting method.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/4/1/2",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/4/1/3",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/3",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/3/1/0",
+              "member_path": "observed-report.json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema": "upstate.scientific-synthesis-document/v1",
+      "series_id": "landcover-2023-2025-synthesis-r24c-20261013",
+      "title": "Interpreting the retained 2023–2025 land-cover changes",
+      "revision_name": "Transition and reporting-boundary revision",
+      "question": "Which retained land-cover changes merit a closer source review, and what can the two-date classifications support for the next scientific decision?",
+      "scope": "Authored TJLabs research preparation for the complete original 217-HUC12 domain. It interprets the retained endpoint classification tables and defines follow-up work; it does not add a scientific model run or infer pollutant response.",
+      "change_note": "Adds an explicit source-accounting finding and separates complete-domain totals from rectangular raster coverage before any follow-up modelling.",
+      "author": {
+        "name": "TJLabs research preparation",
+        "organization": "TJLabs",
+        "email": ""
+      },
+      "sources": [],
+      "sections": [
+        {
+          "id": "paired-coverage",
+          "kind": "finding",
+          "heading": "Changed-class area has a fixed paired-cell denominator",
+          "text": "Across the 217 original HUC12 watersheds, the retained 2023–2025 comparison reports 20,949,527 paired valid cells covering 1,885,457.43 hectares. Of these, 1,089,063 cells (98,015.67 hectares) changed class, representing 5.19851% of paired valid cells. The retained source reports no earlier-only valid, later-only valid or both-NoData cells within this paired selection. These are endpoint land-cover classifications on the original common pixel support.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/1",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/0",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "net-and-gross",
+          "kind": "finding",
+          "heading": "Net class balances and directional exchanges answer different questions",
+          "text": "The domain group balance reports forest decreasing by 18,215.55 hectares and developed classes increasing by 4,470.57 hectares. The largest listed directional exchange is evergreen forest to grassland/herbaceous, 25,840.62 hectares; substantial exchanges also run from grassland/herbaceous to shrub/scrub and from shrub/scrub to evergreen forest. The net forest decrease cannot be assigned wholesale to developed land. The full directional matrix is needed to describe destinations and offsetting exchanges.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/1/1/1",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/2/1/1",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "huc-ranking",
+          "kind": "finding",
+          "heading": "High changed share is not the same as net forest loss",
+          "text": "Middle Fishing Creek (HUC12 030601030704) has the highest changed share in the retained sorted table, 17.051%, with 1,268.37 changed hectares. Its forest net balance is +43.11 hectares and developed net balance is +2.79 hectares. Log Creek (030601070205) follows at 16.079% changed share and has a forest net balance of −423 hectares. A priority list based solely on changed share would therefore combine different kinds of landscape transition.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/3/1/1",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "domain-accounting",
+          "kind": "finding",
+          "heading": "The rectangular raster extent is larger than the selected watershed union",
+          "text": "The source retains 40,713,317 full-rectangle cells, including 19,763,790 cells outside the selected watershed domain. Union totals count selected pixels once, and original overlap is reported as zero cells. The paired-domain totals should therefore remain the denominator for this chapter; the larger rectangular raster extent is not an additional watershed population.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/4/1/1",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/1",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "decision-use",
+          "kind": "interpretation",
+          "heading": "Use the comparison to direct an explicit review of transition mechanisms",
+          "text": "For an initial review, retain separate columns for changed share, changed hectares, forest net balance, developed net balance and the dominant directional class exchanges. Compare those measures within each selected HUC before deciding which areas warrant closer investigation. This is an authored screening approach; the retained two-date classification does not by itself establish a cause of change or a water-quality effect.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/1/1/0",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/2/1/0",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/3/1/0",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "interpretation-limits",
+          "kind": "limitation",
+          "heading": "Keep endpoint classification, spatial support and observation evidence distinct",
+          "text": "A changed classification alone does not identify its cause, the timing of change within 2023–2025 or classification accuracy. The source uses native pixel-centre area accounting; its separate fractional-pixel ledger is a different retained method. Named HUC areas are not exact gauge catchments or drinking-water protection footprints. This chapter makes no measured pollutant-load or concentration claim from land-cover class changes.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/2",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/3",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/3/1/0",
+              "member_path": "observed-report.json"
+            }
+          ]
+        },
+        {
+          "id": "followup",
+          "kind": "next-work",
+          "heading": "Inspect original transitions and select the actual reporting boundary before modelling",
+          "text": "Open the complete HUC transition records for the areas chosen by the scientist, preserve their original HUC12 string identifiers, and review the underlying source and reconciliation files. If the decision concerns a gauge catchment or protection footprint, select that actual spatial support before comparing model runs or monitoring observations. Preserve the original paired-cell method and use the separate fractional-area result only under its own declared accounting method.",
+          "reference_ids": [],
+          "reference_selectors": [
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/4/1/2",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/4/1/3",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/0/1/3",
+              "member_path": "observed-report.json"
+            },
+            {
+              "source_id": "original-landcover-change-d6dd7d3306c830d710b647ca",
+              "body_sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
+              "kind": "block",
+              "pointer": "/sections/3/1/0",
+              "member_path": "observed-report.json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "report": {
+    "title": "Interpreting the retained 2023–2025 land-cover changes",
+    "contact": {
+      "name": "TJLabs research preparation",
+      "organization": "TJLabs",
+      "email": ""
+    }
+  },
+  "authorship": "Source-backed organizational research preparation by TJLabs; the receiving scientist can edit this complete authored text before use."
+}

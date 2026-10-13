@@ -27,6 +27,7 @@ import zipfile
 import preservation as p
 import roda
 import roda_client
+import collection_accession as collection
 
 SCHEMA = "stellar-forge.preservation-workbench.v1"
 SNAPSHOT_SCHEMA = SCHEMA + ".snapshot"
@@ -35,7 +36,7 @@ MAX_SNAPSHOT = 8 * 1024 * 1024 * 1024
 MAX_SNAPSHOT_MEMBER = 2 * 1024 * 1024 * 1024
 ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,95}")
 HASH = re.compile(r"[0-9a-f]{64}")
-STATIC = {"workbench.html", "workbench.js"}
+STATIC = {"workbench.html", "workbench.js", "collection_accession.js"}
 APPLICATION = (
     "research/preservation/preservation.py",
     "research/preservation/roda.py",
@@ -69,6 +70,14 @@ ARCHIVEMATICA_APPLICATION = (
     "research/preservation/ARCHIVEMATICA.md",
     "research/preservation/ARCHIVEMATICA_PROVIDER_CONTRACT.md",
     "research/preservation/archivematica-requirements.txt",
+)
+
+COLLECTION_APPLICATION = (
+    "research/preservation/collection_accession.py",
+    "research/preservation/collection_accession.js",
+    "research/preservation/COLLECTION_ACCESSION.md",
+    "research/preservation/receiving/collection_accession_receive.py",
+    "research/preservation/receiving/collection_accession_browser.mjs",
 )
 
 
@@ -409,6 +418,7 @@ class Workbench:
             self.worker = None
             self.closing = False
             self.operations = directory(self.control / "operations")
+            self.accessions = self.control / "accessions"
             self.packages = directory(self.control / "packages")
             self.deliveries = directory(self.control / "deliveries")
             self.jobs_path = self.control / "jobs.json"
@@ -667,7 +677,8 @@ class Workbench:
                 "jobs": jobs[-100:], "jobCount": len(jobs), "artifacts": artifacts,
                 "migrations": migrations, "providers": provider_templates(),
                  "reviewHistory": review_history(self.root, status) if status is not None else [],
-                "editableFields": sorted(p.REVIEW_FIELDS)}
+                "editableFields": sorted(p.REVIEW_FIELDS),
+                "accessions": collection.bindings(self.accessions)}
 
     def preview(self, supplied=None, query="", included="all", offset=0, limit=50):
         with p.project_lock(self.root):
@@ -696,6 +707,42 @@ class Workbench:
                     "offset": offset, "limit": limit, "total": len(selected),
                     "counts": {"source": len(rows), "included": sum(x["include"] for x in rows),
                                "excluded": sum(not x["include"] for x in rows)}}
+
+    def accession(self, accession_id):
+        return self.accessions / collection.ident(accession_id)
+
+    def inspect_accession(self, source):
+        value = collection.inspect(source)
+        root = directory(self.control / "accession-inspections")
+        target = root / (value["inventory"]["sha256"] + ".json")
+        if target.exists():
+            if read_json(target) != value["inventory"]:
+                raise Problem("SOURCE_CHANGED", "The retained inspection differs from its original inventory.")
+        else:
+            write_json(target, value["inventory"])
+        return {"source": value["source"], "inventorySha256": value["inventory"]["sha256"],
+                "files": len(value["inventory"]["files"]), "directories": len(value["inventory"]["directories"]),
+                "bytes": value["inventory"]["bytes"], "notice": value["notice"]}
+
+    def initialize_accession(self, source, root, selected, inventory_sha256):
+        expected = self.control / "accession-inspections" / (inventory_sha256 + ".json")
+        if not HASH.fullmatch(str(inventory_sha256)) or not expected.is_file():
+            raise Problem("SOURCE_REVIEW", "Inspect this original collection first.")
+        inspected = collection.validate_inventory(read_json(expected))
+        if inspected["sha256"] != inventory_sha256:
+            raise Problem("SOURCE_CHANGED", "The original inspection identity changed.")
+        value = collection.initialize(source, root, selected, inventory_sha256)
+        return {key: value[key] for key in ("id", "revision", "reviewSha256", "settings", "summary", "reused")}
+
+    def build_accession(self, accession_id, revision):
+        root = self.accession(accession_id)
+        current = collection.show(root)
+        if current["revision"] != revision:
+            raise Problem("STALE_REVISION", "Choose the current saved accession review.")
+        name = "Collection_" + accession_id + "_" + str(revision) + "_" + current["reviewSha256"][:16] + ".zip"
+        output = self.packages / name
+        receipt = collection.build(root, output, revision)
+        return {"package": receipt, "artifact": self.artifact(output, "collection-transfer")}
 
     def build_package(self, selection):
         selection = selected_review(selection)
@@ -930,12 +977,45 @@ def snapshot_manifest(archive):
         total += value["bytes"]
     if total > MAX_SNAPSHOT:
         raise Problem("SNAPSHOT_LIMIT", "The complete snapshot exceeds its receiving limit.")
-    selected_review(manifest.get("selection"))
-    required = {"workspace/project.json", "workspace/prepared.json", "workspace/current.json",
-                "operator/jobs.json", "operator/artifacts.json"}
+    collection_only = manifest.get("collectionOnly", False)
+    if type(collection_only) is not bool:
+        raise Problem("SNAPSHOT_MANIFEST", "Invalid collection-only snapshot selection.")
+    if collection_only:
+        if manifest.get("selection") is not None or not manifest.get("collectionBindings"):
+            raise Problem("SNAPSHOT_MANIFEST", "Collection-only snapshots retain their original accessions.")
+        if any(name.startswith("workspace/") for name in descriptors):
+            raise Problem("SNAPSHOT_MANIFEST", "A collection-only snapshot cannot substitute a research workspace.")
+    else:
+        selected_review(manifest.get("selection"))
+    required = {"operator/jobs.json", "operator/artifacts.json"}
+    if not collection_only:
+        required.update({"workspace/project.json", "workspace/prepared.json", "workspace/current.json"})
     required.update("application/" + name for name in APPLICATION)
     provider_groups = {"preservica": PRESERVICA_APPLICATION, "libnova": LIBNOVA_APPLICATION,
-                       "archivematica": ARCHIVEMATICA_APPLICATION}
+                       "archivematica": ARCHIVEMATICA_APPLICATION, "collections": COLLECTION_APPLICATION}
+    selected_collections = manifest.get("collectionBindings", [])
+    if not isinstance(selected_collections, list):
+        raise Problem("SNAPSHOT_MANIFEST", "Invalid accession bindings.")
+    collection_ids = set()
+    for item in selected_collections:
+        if (not isinstance(item, dict) or set(item) != {"id", "title", "inventorySha256", "revision", "reviewSha256", "summary"}
+                or collection.ident(item.get("id")) in collection_ids
+                or not HASH.fullmatch(str(item.get("inventorySha256", "")))
+                or not HASH.fullmatch(str(item.get("reviewSha256", "")))
+                or type(item.get("revision")) is not int or item["revision"] < 0):
+            raise Problem("SNAPSHOT_MANIFEST", "Invalid original accession binding.")
+        collection_ids.add(item["id"])
+        required.update("operator/accessions/" + item["id"] + "/" + name
+                        for name in ("accession.json", "inventory.json", "current.json", "reviews/00000000.json"))
+    actual_collection_ids = {name.split("/")[2] for name in descriptors
+                            if name.startswith("operator/accessions/") and len(name.split("/")) > 3
+                            and not name.split("/")[2].startswith(".")}
+    # Interrupted private accession stages remain full archive members. Only
+    # published ordinary accession roots participate in the selected bindings.
+    if collection_ids != actual_collection_ids:
+        raise Problem("SNAPSHOT_MANIFEST", "The complete accession inventory differs from its selection.")
+    if collection_ids:
+        required.update("application/" + name for name in COLLECTION_APPLICATION)
     for source_group in provider_groups.values():
         provider_names = {"application/" + name for name in source_group}
         if provider_names & set(descriptors):
@@ -979,11 +1059,25 @@ def export_workspace(app, output):
     application_root = Path(__file__).resolve().parent.parent.parent
     stage = None
     with contextlib.ExitStack() as locks:
-        locks.enter_context(p.project_lock(app.root))
-        project, prepared = p.project_files(app.root)
-        current, saved = p.current_review(app.root, prepared)
-        selection = {"sourceManifestSha256": project["binding"]["manifestSha256"],
-                     "revision": current["revision"], "reviewSha256": current["reviewSha256"]}
+        collection_only = not app.root.exists()
+        if not collection_only:
+            locks.enter_context(p.project_lock(app.root))
+            project, prepared = p.project_files(app.root)
+            current, saved = p.current_review(app.root, prepared)
+            selection = {"sourceManifestSha256": project["binding"]["manifestSha256"],
+                         "revision": current["revision"], "reviewSha256": current["reviewSha256"]}
+        else:
+            prepared, saved, selection = {"records": []}, None, None
+        if app.accessions.exists():
+            locks.enter_context(p.project_lock(app.accessions))
+            for child in sorted(app.accessions.iterdir()):
+                if child.name.startswith(".") or child.name == "workspace.lock":
+                    continue
+                collection.ident(child.name)
+                locks.enter_context(p.project_lock(child))
+        accession_bindings = collection.bindings(app.accessions, True, locked=True)
+        if collection_only and not accession_bindings:
+            raise Problem("EMPTY_WORKSPACE", "Receive a research source or an original collection before exporting.")
         libnova_operations = set()
         archivematica_operations = set()
         for operation_root in sorted(app.operations.iterdir()):
@@ -1018,7 +1112,7 @@ def export_workspace(app, output):
             members["operator/" + name] = path
         source_names = list(APPLICATION)
         for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION),
-                                    ("Archivematica", ARCHIVEMATICA_APPLICATION)):
+                                    ("Archivematica", ARCHIVEMATICA_APPLICATION), ("Collection accession", COLLECTION_APPLICATION)):
             present = [(application_root / name).is_file() for name in source_group]
             if any(present):
                 if not all(present):
@@ -1038,7 +1132,8 @@ def export_workspace(app, output):
                     "applicationEntry": "application/research/preservation/workbench.py",
                     "workspacePath": "workspace", "operatorPath": "operator",
                     "sourceRecords": len(prepared["records"]),
-                    "includedRecords": sum(x["include"] for x in p.mapped_records(prepared, saved["review"])),
+                    "includedRecords": sum(x["include"] for x in p.mapped_records(prepared, saved["review"])) if saved else 0,
+                    "collectionOnly": collection_only, "collectionBindings": accession_bindings,
                     "files": descriptors,
                     "previousCompleteExports": previous_exports,
                     "exportHistory": "Prior complete ZIP files are listed by identity. This snapshot contains the current source, retained review revisions and current operation/workspace files."}
@@ -1104,9 +1199,16 @@ def receive_workspace(source, output):
                 retained = read_json(output / "RECEIVED.json")
                 if retained.get("archive") != identity or retained.get("manifest") != manifest:
                     raise Problem("EXISTING_RECEIVER", "The receiving directory belongs to another original handoff.")
-                current = p.show(output / "workspace")
-                if current["project"]["binding"]["manifestSha256"] != manifest["selection"]["sourceManifestSha256"]:
+                current = None if manifest.get("collectionOnly", False) else p.show(output / "workspace")
+                if current is not None and current["project"]["binding"]["manifestSha256"] != manifest["selection"]["sourceManifestSha256"]:
                     raise Problem("RECEIVED_SOURCE", "The received original source changed.")
+                received_accessions = collection.bindings(output / "workspace.operator/accessions", True)
+                original_accessions = {item["id"]: item for item in manifest.get("collectionBindings", [])}
+                current_accessions = {item["id"]: item for item in received_accessions}
+                if not set(original_accessions) <= set(current_accessions) or any(
+                        current_accessions[key]["inventorySha256"] != item["inventorySha256"]
+                        for key, item in original_accessions.items()):
+                    raise Problem("RECEIVED_SOURCE", "The received original accession changed.")
                 for name, expected in manifest["files"].items():
                     if name.startswith("application/") and file_digest(output / name) != expected:
                         raise Problem("RECEIVED_APPLICATION", "The received application differs from its original handoff.", member=name)
@@ -1132,9 +1234,12 @@ def receive_workspace(source, output):
                         os.fsync(out.fileno())
                     if {"bytes": size, "sha256": sha.hexdigest()} != expected:
                         raise Problem("RECEIVED_MEMBER", "Received member differs from the original snapshot.", member=name)
-                status = p.show(stage / "workspace")
-                if source_selection(status) != manifest["selection"]:
+                status = None if manifest.get("collectionOnly", False) else p.show(stage / "workspace")
+                if status is not None and source_selection(status) != manifest["selection"]:
                     raise Problem("RECEIVED_REVIEW", "The received source/review selection differs.")
+                collection.restore_directories(stage / "workspace.operator/accessions")
+                if collection.bindings(stage / "workspace.operator/accessions", True) != manifest.get("collectionBindings", []):
+                    raise Problem("RECEIVED_REVIEW", "The received accession source/review selection differs.")
                 # Application bytes are retained, not imported or executed while receiving an external archive.
                 write_json(stage / "RECEIVED.json", {"schema": SCHEMA + ".received",
                     "receivedAt": p.utc(), "archive": identity, "manifest": manifest})
@@ -1143,7 +1248,8 @@ def receive_workspace(source, output):
                 os.rename(stage, output)
                 stage = None
                 p.fsync_dir(output.parent)
-                status["workspace"] = str(output / "workspace")
+                if status is not None:
+                    status["workspace"] = str(output / "workspace")
                 return {"received": True, "reused": False, "directory": str(output),
                         "archive": identity, "status": status,
                         "entry": str(output / manifest["applicationEntry"])}
@@ -1306,7 +1412,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.base_checks()
             request = urlsplit(self.path)
             args = parse_qs(request.query)
-            if request.path in {"/", "/workbench.html", "/workbench.js"}:
+            if request.path in {"/", "/workbench.html", "/workbench.js", "/collection_accession.js"}:
                 name = "workbench.html" if request.path == "/" else request.path.lstrip("/")
                 if name not in STATIC:
                     raise Problem("PATH", "Unknown application asset.")
@@ -1319,6 +1425,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_json(200, self.app.launch)
             elif request.path == "/api/state":
                 self.send_json(200, self.app.state())
+            elif request.path == "/api/accessions":
+                self.send_json(200, {"accessions": collection.bindings(self.app.accessions)})
+            elif request.path == "/api/accession":
+                self.send_json(200, collection.show(self.app.accession(args.get("id", [""])[0])))
             elif request.path == "/api/preview":
                 self.send_json(200, self.app.preview(query=args.get("q", [""])[0],
                     included=args.get("filter", ["all"])[0], offset=args.get("offset", [0])[0]))
@@ -1363,7 +1473,35 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.base_checks(mutation=True)
             body = self.body()
             path = urlsplit(self.path).path
-            if path == "/api/init":
+            if path == "/api/accession-inspect":
+                if set(body) != {"source"}:
+                    raise Problem("SOURCE", "Select the complete original source directory.")
+                result = self.app.queue("collection-inspect", body,
+                    lambda job: self.app.inspect_accession(Path(body["source"]).expanduser().absolute()))
+            elif path == "/api/accession-init":
+                if set(body) != {"source", "settings", "inventorySha256"}:
+                    raise Problem("SOURCE", "Submit the inspected source and its exact inventory digest.")
+                selected = collection.settings(body["settings"])
+                root = self.app.accession(selected["id"])
+                source = Path(body["source"]).expanduser().absolute()
+                if self.app.control.resolve().is_relative_to(source.resolve()):
+                    raise Problem("SOURCE", "The source cannot contain this operator's mutable control directory.")
+                result = self.app.queue("collection-intake", body, lambda job:
+                    self.app.initialize_accession(source, root, selected, body["inventorySha256"]))
+            elif path == "/api/accession-review":
+                if set(body) != {"id", "review", "expectedRevision"}:
+                    raise Problem("REVIEW", "Send the complete selected accession review.")
+                with self.app.guard:
+                    if self.app.active:
+                        raise Problem("BUSY", "Finish the current operator action before saving.")
+                    result = collection.save_review(self.app.accession(body["id"]), body["review"], body["expectedRevision"])
+            elif path == "/api/accession-build":
+                if set(body) != {"id", "expectedRevision"} or type(body["expectedRevision"]) is not int:
+                    raise Problem("REVIEW", "Choose the saved accession and review revision.")
+                accession_id = collection.ident(body["id"])
+                result = self.app.queue("collection-transfer", body, lambda job:
+                    self.app.build_accession(accession_id, body["expectedRevision"]))
+            elif path == "/api/init":
                 if set(body) != {"source", "prefix", "organization", "contact"}:
                     raise Problem("SOURCE", "Source intake requires its path, prefix, organization and contact.")
                 source = Path(body["source"]).expanduser().absolute()
@@ -1490,7 +1628,7 @@ def managed_binding(workspace):
     source_root = Path(__file__).resolve().parents[2]
     names = list(APPLICATION)
     for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION),
-                                    ("Archivematica", ARCHIVEMATICA_APPLICATION)):
+                                    ("Archivematica", ARCHIVEMATICA_APPLICATION), ("Collection accession", COLLECTION_APPLICATION)):
         optional = [(source_root / name).exists() for name in source_group]
         if any(optional):
             if not all(optional):

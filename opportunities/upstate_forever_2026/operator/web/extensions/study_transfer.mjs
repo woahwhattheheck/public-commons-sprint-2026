@@ -10,7 +10,9 @@ const ROOTS = [
   ['experiments', 'Experiment programmes'],
   ['parameter-studies', 'Parameter studies'],
   ['multivariate-controls', 'Matched-control designs'],
+  ['multivariate-control-outcomes', 'Matched-control native outcomes'],
   ['climate-forcing-studies', 'Climate forcing studies'],
+  ['management-cases', 'Land-management designs'],
   ['runs', 'Native runs'],
   ['ensemble-products', 'Paired raster analyses'],
   ['robust-decisions', 'Decision studies'],
@@ -186,9 +188,39 @@ export function attachStudyTransfer(host) {
     root.querySelector('[data-study-action="preview"]').textContent=busy==='preview'?'Reading contents…':'Preview contents';
     for(const field of root.querySelectorAll('[data-study-field]'))field.disabled=Boolean(busy);
     for(const field of root.querySelectorAll('[data-study-root]'))field.disabled=Boolean(busy)||field.dataset.studyUnavailable==='true';
-    for(const field of root.querySelectorAll('[data-study-action="open-spatial"],[data-study-action="open-monitoring"],[data-study-action="open-sampling"],[data-study-action="open-paired"],[data-study-action="open-report-comparison"]'))field.disabled=Boolean(busy);
+    for(const field of root.querySelectorAll('[data-study-action="open-spatial"],[data-study-action="open-monitoring"],[data-study-action="open-sampling"],[data-study-action="open-paired"],[data-study-action="open-report-comparison"],[data-study-action="open-management-design"]'))field.disabled=Boolean(busy);
   }
 
+  function controlOutcomeControl(row){
+    if(row?.kind!=='multivariate-control-outcomes'||row.state==='unreadable'||
+       !/^[0-9a-f]{64}$/.test(row?.id||'')||typeof host.openDesk!=='function')return '';
+    return button('open-control-outcome','Open native control outcomes','data-study-id="'+escapeHTML(row.id)+'"');
+  }
+  async function openControlOutcome(id){
+    const row=[...visiblePage().items,...(plan?.nodes||[])].find(value=>
+      value.kind==='multivariate-control-outcomes'&&value.id===id&&value.state!=='unreadable');
+    if(!row||typeof host.openDesk!=='function')throw Error('Refresh the original saved matched-control outcome.');
+    const origin=workspaceNow();
+    try{return await host.openDesk('multivariate-control-outcomes','openSavedOutcome',{workspace_key:origin,outcome_id:id});}
+    catch(error){if(workspaceNow()!==origin)return null;throw error;}
+  }
+
+  function managementDesignControl(row){
+    if(row?.kind!=='management-cases'||row.state==='unreadable'||
+       !/^[0-9a-f]{64}$/.test(row?.id||'')||typeof host.openDesk!=='function')return '';
+    return button('open-management-design','Open saved management design','data-study-id="'+escapeHTML(row.id)+'"');
+  }
+  async function openManagementDesign(id){
+    const row=[...visiblePage().items,...(plan?.nodes||[])].find(value=>
+      value.kind==='management-cases'&&value.id===id&&value.state!=='unreadable');
+    if(!row||typeof host.openDesk!=='function')throw Error('Refresh the original saved management design.');
+    const captured=stamp(),binding=row.selection||{};
+    try{return await host.openDesk('profile-workbench','openSavedManagementDesign',{
+      workspace_key:captured.workspace,management_case_id:id,
+      ...(binding.profile_id?{profile_id:binding.profile_id}:{}),
+      ...(binding.profile_set_id?{profile_set_id:binding.profile_set_id}:{})
+    });}catch(error){if(workspaceNow()!==captured.workspace)return null;throw error;}
+  }
   function controlDesignControl(row){
     if(row?.kind!=='multivariate-controls'||row.state==='unreadable'||
        !/^[0-9a-f]{64}$/.test(row?.id||'')||typeof host.openDesk!=='function')return '';
@@ -301,7 +333,7 @@ export function attachStudyTransfer(host) {
             '<strong>'+escapeHTML(row.title||row.id.slice(0,12))+'</strong>'+
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
-            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+controlDesignControl(row)+climateForcingControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+
+            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+
             (row.state!=='unreadable'&&samplingOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-sampling','Open sampling priorities','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
@@ -364,7 +396,7 @@ export function attachStudyTransfer(host) {
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Record</th>'+
       '<th scope="col">Type</th><th scope="col">Reason included</th></tr></thead><tbody>'+
       plan.nodes.map(row=>'<tr><td><strong>'+escapeHTML(row.title)+'</strong><small class="st-identity">'+
-        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+controlDesignControl(row)+climateForcingControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
+        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
         '</td><td>'+escapeHTML(row.reasons.join('; '))+'</td></tr>').join('')+'</tbody></table></div></details>';
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
@@ -569,7 +601,9 @@ export function attachStudyTransfer(host) {
           workspace_key:captured.workspace,current:()=>current(captured)&&serial===retainedRecordRequest,
         });
       }
+      else if(action==='open-management-design'){await openManagementDesign(target.dataset.studyId);}
       else if(action==='open-control-design'){await openControlDesign(target.dataset.studyId);}
+      else if(action==='open-control-outcome'){await openControlOutcome(target.dataset.studyId);}
       else if(action==='open-climate-forcing'){await openClimateForcing(target.dataset.studyId);}
       else if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}

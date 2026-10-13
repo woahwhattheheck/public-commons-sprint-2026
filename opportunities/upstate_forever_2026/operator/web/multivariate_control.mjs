@@ -64,7 +64,7 @@ export function createMultivariateControlWorkbench(host){
  }
  function render(){
   if(!node)return;
-  node.innerHTML='<div class="mc-desk" data-mc-desk><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH MODELING</p><h1>Matched controls</h1><p>Prepare, inspect and run source-bound counterfactual land-cover controls.</p></div><div class="mc-actions">'+button("reload","Refresh retained designs")+button("footprints","Scenario footprints")+button("sources","Original sources")+button("export","Export desk choices")+button("import","Reopen desk choices")+button("backup","Export original Workspace")+'</div></header>'+
+  node.innerHTML='<div class="mc-desk" data-mc-desk><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH MODELING</p><h1>Matched controls</h1><p>Prepare, inspect and run source-bound counterfactual land-cover controls.</p></div><div class="mc-actions">'+button("reload","Refresh retained designs")+button("outcomes","Native control outcomes")+button("footprints","Scenario footprints")+button("sources","Original sources")+button("export","Export desk choices")+button("import","Reopen desk choices")+button("backup","Export original Workspace")+'</div></header>'+
    '<div role="alert" data-mc-error hidden></div><div role="status" aria-live="polite" data-mc-notice hidden></div>'+
    '<input type="file" accept=".json,application/json" data-mc-import hidden>'+
    '<section class="mc-section" data-mc-form>'+form()+'</section>'+
@@ -132,6 +132,7 @@ export function createMultivariateControlWorkbench(host){
   const action=target.dataset.mcAction, clickWorkspace=workspace, clickGeneration=generation;
   try{
    if(action==="reload"){await loadCatalog();return;}
+   if(action==="outcomes"){await host.navigate("multivariate-control-outcomes");return;}
    if(action==="footprints"){await host.navigate("scenario-footprint");return;}
    if(action==="sources"){await host.navigate("sources");return;}
    if(action==="export"){if(!desk)throw Error("Load the original project first.");download(desk,"matched-control-desk.json");return;}

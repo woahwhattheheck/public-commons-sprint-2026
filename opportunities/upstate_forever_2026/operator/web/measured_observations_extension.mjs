@@ -5,14 +5,14 @@ import {mountCollectionPanel} from './measured_collections.mjs';
 import {mountMeasurements} from './measured_observations.mjs';
 /** Existing extension-host lifecycle, authenticated API and Workspace selection. */
 export function createMeasuredObservations(capabilities){
-  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),lateResults=new Map();
+  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map();
   const personIdentity=()=>JSON.stringify(getState?.()?.person??null);
   let person=personIdentity(),displayedPerson=null;
   let instance=null,collections=null,largeFiles=null,chemistry=null,returnedReviews=null,root=null,key=null,generation=0;
   let paintCurrentNotice=()=>{};
   const stale=()=>{const error=new Error('This Measurements view was closed or its workspace changed. Reopen the original workspace to inspect any submitted operation.');error.name='AbortError';return error;};
-  const writes=(path,method)=>method!=='GET'&&!['/preview','/collections/preview','/provider-query'].includes(path);
-  function syncPerson(){const next=personIdentity();if(next===person)return false;person=next;lateResults.clear();return true;}
+  const writes=(path,method)=>method!=='GET'&&!['/preview','/collections/preview','/provider-query','/handbacks/preview'].includes(path);
+  function syncPerson(){const next=personIdentity();if(next===person)return false;person=next;lateResults.clear();handbackMemory.clear();return true;}
   function remember(workspace,owner,path,method,response,error){
     syncPerson();if(owner!==person)return;
     const identities={};let native=response;
@@ -89,7 +89,7 @@ export function createMeasuredObservations(capabilities){
         guard();status.textContent=`${result.count} original identifiers registered; source SHA-256 ${result.source_sha256}`;await refresh();
       }catch(error){if(active())status.textContent=error.message;}
     });
-    instance=mountMeasurements(component,{transport:request,css:'/web/measured_observations.css'});
+    instance=mountMeasurements(component,{transport:request,css:'/web/measured_observations.css',sourceHandbackCss:'/web/source_handback.css',sourceHandbackState:handbackMemory.get(boundWorkspace)||null,onSourceHandbackState:value=>{if(personIdentity()===boundPerson)handbackMemory.set(boundWorkspace,JSON.parse(JSON.stringify(value)));}});
     paintCurrentNotice();
   }
   function suspend(){

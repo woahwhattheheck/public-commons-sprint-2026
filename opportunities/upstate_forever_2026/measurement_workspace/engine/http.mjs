@@ -1,6 +1,10 @@
+import {flowStudyBundle,flowLoadBundle} from './flow_bundles.mjs';
+import {flowLoadOperation,readFlowLoadResult,flowLoadCSV} from './flow_results.mjs';
+import {renderFlowStudy,renderFlowLoads} from './flow_reports.mjs';
 import {reconciliationOperation,reconciliationReport,reconciliationCSV} from './source_reconciliation.mjs';
 import {sourceReviewHTML} from '../web/source_reconciliation.mjs';
 import {intakeOperation} from './intake.mjs';
+import {handbackOperation,handbackMember} from './source_handback.mjs';
 import {flowOperation,readFlowStudy,flowCSV} from './flow_workspace.mjs';
 import {largeOperation} from './large_http.mjs';
 import {previewCollection,receiveCollection,listCollections,publishCollection,readEdition,editionMember,editionBundle} from './collections.mjs';
@@ -50,10 +54,31 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
         send(response,200,reconciliationOperation(s,method,parts.slice(1),query,method==='POST'?await readBody(request):{}));return;
       }
       if(parts[0]==='flow'){
+        if(method==='GET'&&parts.length===4&&parts[3]==='bundle'){
+          if(parts[1]==='studies'){send(response,200,flowStudyBundle(s,parts[2]));return;}
+          if(parts[1]==='load-results'){send(response,200,flowLoadBundle(s,parts[2]));return;}
+        }
+        if(method==='GET'&&parts[1]==='studies'&&parts.length===4&&parts[3]==='report.html'){send(response,200,renderFlowStudy(readFlowStudy(s,parts[2])),'text/html; charset=utf-8','daily-discharge-study.html');return;}
+        if(parts[1]?.startsWith('load-')){
+          if(method==='GET'&&parts[1]==='load-results'&&parts.length===4){
+            const result=readFlowLoadResult(s,parts[2]),format=parts[3];
+            if(format==='report.html'){send(response,200,renderFlowLoads(result),'text/html; charset=utf-8','concentration-discharge.html');return;}
+            if(['daily.csv','periods.csv','context.csv','annual.csv'].includes(format)){send(response,200,flowLoadCSV(result,format.split('.')[0]),'text/csv; charset=utf-8',format);return;}
+          }
+          send(response,200,await flowLoadOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
+        }
         if(method==='GET'&&parts[1]==='studies'&&parts.length===4&&['daily.csv','periods.csv','samples.csv'].includes(parts[3])){send(response,200,flowCSV(readFlowStudy(s,parts[2]),parts[3].split('.')[0]),'text/csv; charset=utf-8',parts[3]);return;}
         send(response,200,await flowOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
       }
       if(parts[0]==='large'){send(response,200,await largeOperation(s,method,parts.slice(1),query,['POST','PUT'].includes(method)?await readBody(request):{}));return;}
+      if(parts[0]==='handbacks'){
+        if(method==='GET'&&parts.length===3&&parts[2]==='files'){
+          const member=handbackMember(s,parts[1],query.name);
+          response.writeHead(200,{'Content-Type':member.type,'Content-Length':member.data.length,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Disposition':'attachment; filename="source-return-member"'});
+          response.end(member.data);return;
+        }
+        send(response,200,handbackOperation(s,method,parts.slice(1),query,method==='POST'?await readBody(request):{}));return;
+      }
       const reaches=async()=>reachProvider?await reachProvider():await baseData(s.directory,'reaches.json');
       if(parts[0]==='collections'){
         if(method==='GET'&&parts.length===1){send(response,200,{collections:listCollections(s)});return;}

@@ -1,5 +1,6 @@
 /** Guided operation of the existing Upper Savannah scientific workspace. */
 import {attachRegionalJourney} from './regional_journey.mjs';
+import {renderOperatorReference,operatorReferenceDocument,referenceSections} from './operator_reference.mjs';
 import {validateCommunityView} from './community.mjs';
 const SCHEMA='upstate.operating-journey/v1';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -511,7 +512,7 @@ export function attachOperatingJourney(host){
  const renderers={study,inputs,change,calculate,compare,maps,delivery,reopen,review};
  function render(){
   const step=journeySteps.find(x=>x.id===preferences.step)||journeySteps[0],index=journeySteps.indexOf(step);
-  return '<div class="operating-journey"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH</p><h1>Guided operating journey</h1><p>Use the saved project, original calculations and actual delivery controls.</p></div><div class="page-actions">'+action('export','Download selections')+action('notes','Operating notes')+'</div></header>'+
+  return '<div class="operating-journey"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH</p><h1>Guided operating journey</h1><p>Use the saved project, original calculations and actual delivery controls.</p></div><div class="page-actions">'+action('reference-open','Operator reference')+action('export','Download selections')+action('notes','Operating notes')+'</div></header>'+
    (storageMessage?notice(storageMessage):'')+
    '<nav class="journey-steps" aria-label="Operating journey steps">'+journeySteps.map((item,i)=>action('step',String(i+1)+'. '+item.title,'data-step="'+item.id+'" aria-current="'+(item.id===step.id?'step':'false')+'"')).join('')+'</nav>'+
    '<section class="journey-main" aria-labelledby="journey-step-title"><p class="eyebrow">STEP '+(index+1)+' OF '+journeySteps.length+'</p><h2 id="journey-step-title">'+esc(step.title)+'</h2>'+
@@ -520,7 +521,7 @@ export function attachOperatingJourney(host){
    '<div class="journey-step-actions">'+(index?action('step','Previous step','data-step="'+journeySteps[index-1].id+'"'):'<span></span>')+(index<journeySteps.length-1?action('step','Next: '+journeySteps[index+1].title,'data-step="'+journeySteps[index+1].id+'"',true):action('view','Open workspace overview','data-view-name="overview"'))+'</div></section>'+
    (preferences.community?'<section class="journey-notes"><h2>Community context</h2><p>Original table '+esc(short(preferences.community.table_id))+' · '+esc(preferences.community.tab)+' · '+preferences.community.compare_geoids.length+' compared block groups</p><div class="page-actions">'+action('community-open','Open selected Community view')+'</div></section>':'')+
    '<section class="journey-notes"><h2>Notes for this project</h2><label><span>Decisions and questions to carry forward</span><textarea data-journey-field="notes" rows="5">'+esc(preferences.notes)+'</textarea></label>'+list(preferences.note_versions).map(version=>'<details><summary>Retained notes · '+esc(when(version.recorded_at))+'</summary><pre class="journey-note-version">'+esc(version.text)+'</pre></details>').join('')+'</section>'+operationTable()+
-   '<details class="journey-reference"><summary>Control guide and plain language</summary><dl>'+journeyVocabulary.map(([term,meaning])=>'<dt>'+esc(term)+'</dt><dd>'+esc(meaning)+'</dd>').join('')+'</dl><h3>Questions to be ready for</h3><ul><li>Which source editions and model period are selected?</li><li>Where is the reporting boundary, and how much upstream context is included?</li><li>What exactly changed between the baseline and this alternative?</li><li>Did the biophysical profile also change?</li><li>What are the units and valid-cell coverage of this result?</li><li>Is this a saved result, a current calculation, or a continuation?</li><li>Which observations can be compared with the modeled annual loads?</li><li>Can the recipient reopen the working project and original maps?</li></ul></details></div>';
+   '<details class="journey-reference" data-operator-reference-panel><summary>Operator reference — controls, units and complete project reopening</summary>'+renderOperatorReference({state:state(),availableViews:[...document.querySelectorAll('[data-view]')].map(node=>node.dataset.view),interactive:true})+'</details></div>';
  }
  function focusState(container){
   const node=document.activeElement;
@@ -533,11 +534,13 @@ export function attachOperatingJourney(host){
   if(node){node.focus({preventScroll:true});if(typeof saved.start==='number'&&typeof node.setSelectionRange==='function')node.setSelectionRange(saved.start,saved.end);}
  }
  function mount(container,next=host.getState()){
+  const referenceWorkspace=workspace(),referenceOpen=Boolean(container.querySelector('[data-operator-reference-panel]')?.open);
   observe(next,hostView());
   if(preferences&&!preferences.active){preferences.active=true;save();}
   if(!preferences)return;
   const focus=focusState(container);detach();mounted=container;
   container.innerHTML=render();
+  if(referenceOpen&&workspace()===referenceWorkspace)container.querySelector('[data-operator-reference-panel]').open=true;
   regional.mount(container.querySelector('[data-journey-regional-slot]'),preferences.step);
   const input=event=>{
    if(event.target.dataset.journeyField==='notes'){preferences.notes=event.target.value;save();}
@@ -665,6 +668,16 @@ export function attachOperatingJourney(host){
   if(name?.startsWith('regional-'))return regional.dispatch(button);
   if(name==='home'){preferences.active=true;save();if(mounted)mount(mounted);return host.navigate('journey');}
   if(name==='step'){if(!journeySteps.some(x=>x.id===button.dataset.step))return;preferences.step=button.dataset.step;preferences.active=true;save();if(mounted)mount(mounted);return host.navigate('journey');}
+  if(name==='reference-open'){
+   const panel=mounted?.querySelector('[data-operator-reference-panel]');if(panel){panel.open=true;panel.scrollIntoView({block:'start'});}return;
+  }
+  if(name==='reference-section'){
+   if(!referenceSections.some(section=>section.id===button.dataset.referenceSection))return;
+   mounted?.querySelector('#operator-reference-'+button.dataset.referenceSection)?.scrollIntoView({block:'start'});return;
+  }
+  if(name==='reference-download'){
+   download('Upper_Savannah_Operator_Reference.html',operatorReferenceDocument({state:state()}),'text/html;charset=utf-8');return;
+  }
   if(name==='view')return host.navigate(button.dataset.viewName);
   if(name==='review-open'||name==='review-read'){
    const selectedWorkspace=workspace(),generation=preferences.generation,id=preferences.selection.calibration_review_id;

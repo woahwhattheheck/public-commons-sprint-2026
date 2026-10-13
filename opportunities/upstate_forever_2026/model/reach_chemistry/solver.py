@@ -8,6 +8,7 @@ floating-point tolerance of scipy.sparse.linalg.expm_multiply.
 from __future__ import annotations
 from dataclasses import dataclass
 from collections import defaultdict
+from bisect import bisect_right
 from typing import Callable
 import time
 import numpy as np
@@ -32,6 +33,7 @@ class Trajectory:
     elapsed_seconds: float
     step_count: int
     input_tag: str | None
+    storage_steps: list[dict] | None = None
 
     def result(self) -> dict:
         p = self.project
@@ -60,15 +62,15 @@ class Trajectory:
         # Never normalize away a scientific model or unit error.
         if any(abs(x["relative_residual"]) > 1e-8 for x in budgets):
             raise ArithmeticError(f"mass conservation tolerance exceeded: {budgets}")
-        return {"schema": "reach-chemistry-result/1", "title": p.title,
+        result = {"schema": "reach-chemistry-result/1", "title": p.title,
                 "project_sha256": p.fingerprint, "duration_days": p.end_day, "input_tag": self.input_tag,
                 "model": {"form": "piecewise-constant fixed-volume completely-mixed reach network",
                           "time_solver": "sparse augmented matrix exponential", "reaches": p.nr,
                           "species": p.ns, "states": p.n, "steps": self.step_count},
-                "final": p.state_rows(self.final_mass), "samples": self.samples,
+                "final": p.state_rows(self.final_mass, p.end_day), "samples": self.samples,
                 "boundary_export_by_state": [{"reach": row["reach"], "species": row["species"],
                                                "basis": row["basis"], "kg": float(self.outlet_kg[i])}
-                                              for i, row in enumerate(p.state_rows(self.final_mass))],
+                                              for i, row in enumerate(p.state_rows(self.final_mass, p.end_day))],
                 "reactions": reactions, "budgets": budgets,
                 "water_balances": [{"until_day": phase["until_day"], "reaches": p.check_water(phase)}
                                    for phase in p.phases],
@@ -76,6 +78,18 @@ class Trajectory:
                 "provenance": {"project": p.raw.get("provenance"),
                                "coefficient_sources": {"reactions": p.raw.get("reactions", []),
                                                        "loads": p.raw.get("loads", [])}}}
+        if p.variable_storage:
+            result["model"].update(
+                form="piecewise-flow variable-storage completely-mixed reach network",
+                time_solver="SciPy Radau with exact sparse Jacobian; original matrix exponential at constant period storage")
+            result["storage_budgets"] = p.storage_budgets()
+            result["storage"] = p.storage_rows(p.end_day)
+            result["numerics"]["storage_steps"] = self.storage_steps or []
+            result["model"]["nominal_turnover"] = (
+                "Instantaneous volume divided by total outgoing water; not an age distribution.")
+            if any(abs(row["relative_residual"]) > 1e-10 for row in result["storage_budgets"]):
+                raise ArithmeticError("water storage balance tolerance exceeded")
+        return result
 
 def validate_times(p: Project, times: list[float] | None) -> list[float]:
     values = [0.0, p.end_day] if times is None else list(times)
@@ -117,6 +131,7 @@ def simulate(project: Project | dict, sample_days: list[float] | None = None, *,
     step = 0
     resume_day = 0.0
     previous_elapsed = 0.0
+    storage_steps = []
     signature = sha256(canonical_bytes({"project": p.fingerprint, "times": times,
                                        "targets": targets, "input_tag": input_tag})).hexdigest()
     if resume is not None:
@@ -137,12 +152,15 @@ def simulate(project: Project | dict, sample_days: list[float] | None = None, *,
         samples = list(resume["samples"])
         minimum, step = float(resume["minimum_mass"]), int(resume["steps"])
         previous_elapsed = float(resume.get("elapsed_seconds", 0))
+        storage_steps = list(resume.get("storage_steps", []))
     def sample(day: float):
+        volumes = p.state_volumes_at(day)
         samples.append({"day": day, "values": [{"reach": t["reach"], "species": t["species"],
                                                  "basis": p.species[t["species"]]["basis"],
                                                  "kg": float(mass[j]),
-                                                 "mg_l": float(mass[j] * 1000 / p.state_volumes[j])}
-                                                for t, j in zip(targets, indexes)]})
+                                                 "mg_l": float(mass[j] * 1000 / volumes[j])}
+                                                for t, j in zip(targets, indexes)],
+                        **({"storage": p.storage_rows(day)} if p.variable_storage else {})})
     if resume is None and 0.0 in times: sample(0.0)
     start = 0.0
     for phase in p.phases:
@@ -155,23 +173,32 @@ def simulate(project: Project | dict, sample_days: list[float] | None = None, *,
             b = np.zeros(p.n)
             for index, amount in op.forcing_by_tag.get(input_tag, {}).items():
                 b[index] = amount
-        endpoints = sorted(set([t for t in times if start < t <= phase["until_day"]] + [float(phase["until_day"])]))
+        selected_times = times[bisect_right(times, start):bisect_right(times, float(phase["until_day"]))]
+        endpoints = sorted(set(selected_times + [float(phase["until_day"])]))
         day = max(start, resume_day)
         for end in endpoints:
             if end <= day: continue
             if cancelled is not None and cancelled(): raise Cancelled("reach chemistry run cancelled")
             dt = end - day
-            mass, integral = propagate(op.A, b, mass, dt)
+            if p.variable_storage:
+                from .storage import propagate_storage
+                mass, integral, scaled_integral, numerical_step = propagate_storage(
+                    p, op, b, mass, day, end, cancelled=cancelled)
+                storage_steps.append(numerical_step)
+            else:
+                mass, integral = propagate(op.A, b, mass, dt)
+                scaled_integral = integral
             minimum = min(minimum, float(mass.min()))
             tolerance = 1e-10 * max(1.0, float(np.max(np.abs(mass))))
             if float(mass.min()) < -tolerance:
                 raise ArithmeticError(f"negative modeled mass {minimum} exceeds roundoff tolerance")
             # Preserve small numerical residuals; do not clip/renormalize state.
             inputs += b * dt
-            exports += op.external_rate * integral
+            exports += op.external_rate * scaled_integral
             for rec in op.reactions:
                 key = (rec["id"], rec["reach"])
-                extents[key] += float(rec["rate_day"] * integral[rec["source_index"]])
+                reacted_integral = scaled_integral if rec.get("volume_scaling") == "inverse" else integral
+                extents[key] += float(rec["rate_day"] * reacted_integral[rec["source_index"]])
                 records[key] = rec
             day = end; step += 1
             if end in times: sample(end)
@@ -181,12 +208,14 @@ def simulate(project: Project | dict, sample_days: list[float] | None = None, *,
                             "extents": [{"reaction": key[0], "reach": key[1], "kg": kg} for key, kg in extents.items()],
                             "reaction_records": list(records.values()), "samples": samples,
                             "minimum_mass": minimum, "steps": step,
+                            **({"storage_steps": storage_steps} if p.variable_storage else {}),
                             "elapsed_seconds": previous_elapsed + time.perf_counter() - started})
             if progress is not None:
                 progress({"stage": "transport", "day": end, "duration_days": p.end_day, "step": step})
         start = float(phase["until_day"])
     return Trajectory(p, samples, mass, exports, inputs, dict(extents), records,
-                      minimum, previous_elapsed + time.perf_counter() - started, step, input_tag)
+                      minimum, previous_elapsed + time.perf_counter() - started, step, input_tag,
+                      storage_steps if p.variable_storage else None)
 
 def attribute_sources(project: Project | dict, sample_days: list[float] | None = None, *,
                       targets: list[dict] | None = None, cancelled=None, progress=None) -> dict:

@@ -1059,7 +1059,9 @@ def build(workspace, selection, *, expected_binding=None):
             manifest["client_report"] = {
                 "edition": CLIENT_REPORT_EDITION, "renderer": scientific_report.REPORT_VERSION,
                 **{name: state["files"][name]["path"] for name in
-                   ("report", "report_html", "report_markdown", "report_data")}}
+                   ("report", "report_html", "report_markdown", "report_data")},
+                **{name: state["files"][name]["path"] for name in
+                   ("report_odt", "report_workbook") if name in state["files"]}}
             manifest["client_companion"] = {
                 "edition": client_report.REPORT_EDITION,
                 **{name: state["files"][name]["path"] for name in companion_keys}}

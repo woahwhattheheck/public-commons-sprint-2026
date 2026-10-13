@@ -9,6 +9,7 @@ const stable = value => JSON.stringify(value, function (key, item) {
   }
   return item;
 });
+let collectionPanel = null;
 const S = {
   data: null, csrf: "", connected: false, tab: "overview", stateBusy: false,
   requestBusy: false, savePending: false, reviewEpoch: 0, rawEpoch: 0, rawDirty: false,
@@ -124,7 +125,7 @@ function savedSelection(id) {
   return clone(item.selection);
 }
 function switchTab(tab, focus = false) {
-  if (!["overview", "records", "destinations", "delivery", "activity"].includes(tab)) return;
+  if (!["overview", "collections", "records", "destinations", "delivery", "activity"].includes(tab)) return;
   S.tab = tab;
   for (const button of document.querySelectorAll("[data-tab]")) {
     const selected = button.dataset.tab === tab;
@@ -133,6 +134,7 @@ function switchTab(tab, focus = false) {
     $("page-" + button.dataset.tab).hidden = !selected;
     if (selected && focus) button.focus();
   }
+  if (tab === "collections") collectionPanel?.refresh().catch(report);
   if (tab === "records" && S.data?.initialized && !S.preview) refreshPreview().catch(report);
   if (tab === "destinations" && S.selectedMigration) refreshMigration().catch(report);
 }
@@ -227,12 +229,13 @@ function renderState() {
   $("footer-status").textContent = data.initialized
     ? "Original edition " + shortHash(data.status.project.binding.manifestSha256) +
       " · Saved review r" + data.status.revision + " · " + data.migrations.length + " saved destinations"
-    : "Receive an original research edition to open the review and destination workflow.";
+    : (data.accessions?.length ? data.accessions.length+" retained original file collections · Collections opens their saved review." : "Open Collections for original files, or receive a research edition for repository destinations.");
   renderHistory();
   renderDestinationList();
   ensureDestinationDraft();
   renderArtifacts();
   renderActivity();
+  collectionPanel?.update(data);
   renderControls();
 }
 function renderHistory() {
@@ -270,7 +273,8 @@ function renderControls() {
   const available = Boolean(S.data?.providers?.[S.provider]?.available);
   $("prepare-destination").disabled = !initialized || !S.connected || busy || dirty || !available;
   $("build-package").disabled = !initialized || !S.connected || busy || dirty;
-  $("export-workspace").disabled = !initialized || !S.connected || busy || dirty;
+  $("export-workspace").disabled = (!initialized && !S.data?.accessions?.length) || !S.connected || busy || dirty || Boolean(collectionPanel?.dirty());
+  collectionPanel?.controls({busy, connected:S.connected});
   for (const id of ["run-migration", "refresh-migration", "resume-preparation", "reconcile-migration"]) {
     $(id).disabled = !S.selectedMigration || !S.connected || busy;
   }
@@ -1171,12 +1175,13 @@ on("export-archivematica-destination", "click", async () => {
   await mutation("/api/export-destination", {operationId: selected.id}); await refreshState();
 });
 on("export-workspace", "click", async () => {
-  completeDraft();
+  if (S.data?.initialized) completeDraft();
+  if (collectionPanel?.dirty()) throw new Error("Save the collection review before exporting the complete workspace.");
   if (reviewDirty()) throw new Error("Save the review draft before exporting the complete workspace.");
   await mutation("/api/export", {}); await refreshState();
 });
 window.addEventListener("beforeunload", event => {
-  if (reviewDirty() || Object.values(S.destinationDrafts).some(draft => draft?.touched)) {
+  if (reviewDirty() || collectionPanel?.dirty() || Object.values(S.destinationDrafts).some(draft => draft?.touched)) {
     event.preventDefault(); event.returnValue = "";
   }
 });
@@ -1190,6 +1195,7 @@ async function poll() {
     S.timer = setTimeout(poll, delay);
   }
 }
+collectionPanel = window.createCollectionAccessionPanel({root:$("collection-panel"),api,mutation,refreshState,notifyChange:renderControls});
 renderControls();
 refreshState().catch(report).finally(() => { S.timer = setTimeout(poll, 2500); });
 })();

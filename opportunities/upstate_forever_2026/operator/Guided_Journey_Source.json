@@ -4,28 +4,44 @@
   "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-1FB3-GUIDED-JOURNEY",
   "files": {
     "operator/install_guided_journey.py": {
-      "bytes": 22254,
-      "sha256": "5fb0c06d9435f47d39c6d0380b934bf5467d47fd7b37eafc1d5e93516d47c6f2"
+      "bytes": 23254,
+      "sha256": "88b8a0b07739d719858b34f62cf46744b94979824912b28a548c7084b737fe43"
     },
     "operator/Guided_Journey_Integration.json": {
       "bytes": 21577,
       "sha256": "125025839b7903982a73f67977288b6e8051c2cc3612d9c08fc74991371f8371"
     },
     "operator/extensions/guided-journey.json": {
-      "bytes": 1453,
-      "sha256": "f3957f17d155acf21add2cb9a11a010dd872a0738ea295fd0ee277b1750136c6"
+      "bytes": 1550,
+      "sha256": "f7af35db6b86175474dacab9253380b7cec22d7bdd41f2381be4c845bd3e5532"
     },
     "operator/web/journey.mjs": {
-      "bytes": 81111,
-      "sha256": "ba4cd9709984cbd13be6824dad7d7e5ce67c4c790c59816a3f521e0fe47ccd02"
+      "bytes": 81633,
+      "sha256": "d531c30f651422cf61d60242fb42573e5e59ed0de9d3b728dbedc928fc766ce4"
     },
     "operator/web/journey.css": {
       "bytes": 6235,
       "sha256": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a"
     },
     "operator/GUIDED_JOURNEY.md": {
-      "bytes": 30006,
-      "sha256": "1f3810783f074e15ed386b1549b7a8464082684d69d8451bcef747a4494ee822"
+      "bytes": 32464,
+      "sha256": "5a608c7fa200cd6f9fcf35c29ccf96999fa48f2b7c43912ccc835057c2343434"
+    },
+    "operator/web/operator_reference.mjs": {
+      "bytes": 19888,
+      "sha256": "174f5cee6a1b631daa7a499d31595f85ae0a3223a69bb840c5cc6f96c8e4ee37"
+    },
+    "operator/web/operator_reference.css": {
+      "bytes": 1939,
+      "sha256": "9ec48d33be8fdbae094fdc581d93985f17e8df28c43dc18d53f6c9db611c9afa"
+    },
+    "operator/OPERATOR_REFERENCE.html": {
+      "bytes": 16517,
+      "sha256": "33974a529b57309c0cad846213dd5d373ce624bc7f9cd1dde3fd329c4a8d1169"
+    },
+    "operator/OPERATOR_REFERENCE.md": {
+      "bytes": 11466,
+      "sha256": "b951867f5df62fb389dd993d0f2dfd4a8a5803c8c68fffd7f394e066cf1aa4c0"
     }
   },
   "source_context": {
@@ -69,6 +85,13 @@
       "owner_direction": "CURRENT_OWNER_DIRECTION.md v2026-10-13.4 and original 52-order post-call bank F0C8R2SQ0NP",
       "receiving": "Actual desktop/narrow operation and all outgoing attachments remain required in the original receiving course.",
       "current_host": "Retains current scientificInspection and Calibration → Parameter-study callbacks; full original admission/revision submitAction remains unchanged."
+    },
+    "operator_reference": {
+      "operation_id": "ECO-OPERATOR-REFERENCE-379A-WO43-20261013",
+      "original_case": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791913846837249?thread_ts=1791724121.853269",
+      "route": "Guided journey → Operator reference → actual existing screen / complete offline reference",
+      "owner_direction": "CURRENT_OWNER_DIRECTION.md v2026-10-13.4; AGENTS.md2026-10-13.1; full post-call52 ordersF0C8R2SQ0NP",
+      "receiving": "Same original first-study receiver; actual populated and offline HTML desktop/390 viewing."
     }
   }
 }

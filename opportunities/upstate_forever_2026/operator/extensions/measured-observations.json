@@ -17,7 +17,9 @@
     "measured_intake.mjs",
     "flow_loads_ui.mjs",
     "source_reconciliation.mjs",
-    "source_reconciliation.css"
+    "source_reconciliation.css",
+    "source_handback.mjs",
+    "source_handback.css"
   ],
   "backend": {
     "module": "measurement_workspace.extension",

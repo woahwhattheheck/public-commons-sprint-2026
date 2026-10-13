@@ -108,7 +108,7 @@ def render_table(rows: Sequence[Mapping], fields: Sequence[tuple[str, str]], cap
 # END readable table renderer
 
 
-REPORT_EDITION = "reach-chemistry-scientific-report/4"
+REPORT_EDITION = "reach-chemistry-scientific-report/5"
 PARAMETER_UNITS = {
     "reaction_rate_day": "day^-1",
     "load_kg_day": "kg of declared basis/day",
@@ -402,30 +402,239 @@ def _scatter(project, observations):
     return "<div class='figures'>" + "".join(panels) + "</div>" if panels else ""
 
 
+
+def _hydrology_mode(project, run=None):
+    run = run or {}
+    variable = "storage_budgets" in run or project.raw.get("hydrology", {}).get("mode") == "variable-storage"
+    return "variable-storage" if variable else "fixed-volume"
+
+
+def _storage_geometry(project, run):
+    """Read the already validated original phase endpoints; do not propagate."""
+    if run.get("project_sha256") != project.fingerprint:
+        return []
+    rows = []
+    for ordinal, segment in enumerate(getattr(project, "hydraulic_segments", []), 1):
+        for index, reach in enumerate(project.rids):
+            water = segment["water"][index]
+            rows.append({"record": str(ordinal) + " / " + reach, "period": ordinal, "reach": reach,
+                         "from_day": float(segment["start_day"]),
+                         "until_day": float(segment["until_day"]),
+                         "initial_volume_m3": float(segment["initial"][index]),
+                         "final_volume_m3": float(segment["final"][index]),
+                         "incoming_m3_day": water["incoming_m3_day"],
+                         "outgoing_m3_day": water["outgoing_m3_day"],
+                         "storage_change_m3_day": float(segment["rate"][index])})
+    return rows
+
+
+def _storage_figures(project, run, geometry):
+    """Plot every original phase endpoint and retained sample without resampling."""
+    figures = []
+    support = project.raw.get("source_period_support", {})
+    supported = support.get("periods", []) if isinstance(support, dict) else []
+    for reach in project.rids:
+        segments = [row for row in geometry if row["reach"] == reach]
+        line = []
+        for row in segments:
+            for point in [(row["from_day"], row["initial_volume_m3"]),
+                          (row["until_day"], row["final_volume_m3"])]:
+                if not line or line[-1] != point:
+                    line.append(point)
+        samples = [(sample["day"], row["volume_m3"])
+                   for sample in run.get("samples", [])
+                   for row in sample.get("storage", []) if row["reach"] == reach]
+        observations = []
+        elapsed = 0.0
+        if run.get("project_sha256") == project.fingerprint:
+            for period in supported:
+                elapsed += period["duration_days"]
+                for row in period.get("storage", []):
+                    original = row.get("observed_storage") or {}
+                    if row["reach"] == reach and original.get("state") == "retained":
+                        observations.append((elapsed, original["volume_m3"], original["timestamp"]))
+        values = [(float(day), float(volume)) for day, volume in line + samples]
+        values += [(float(day), float(volume)) for day, volume, _ in observations]
+        if not values:
+            continue
+        if any(not math.isfinite(x) or not math.isfinite(y) for x, y in values):
+            raise ValueError("Nonfinite original water-storage plot coordinates")
+        xmax = max(float(project.end_day), max(x for x, _ in values), 1e-12)
+        minimum, maximum = min(y for _, y in values), max(y for _, y in values)
+        padding = max(maximum - minimum, abs(maximum) * 0.04, 1e-9) * 0.1
+        low, high = max(0.0, minimum - padding), maximum + padding
+        if high <= low:
+            high = low + 1.0
+        X = lambda value: 88 + float(value) / xmax * 460
+        Y = lambda value: 360 - (float(value) - low) / (high - low) * 304
+        caption = ("Solid line: every validated original phase boundary; volume is linear within each water-flow period. "
+                   if line else "No phase trajectory is joined to this result; only its retained sampled volumes are plotted. ")
+        caption += ("Filled circle: retained model sample. Open diamond: accepted-quality original storage observation. "
+                    "Later observations do not reset modeled storage. The volume axis uses the displayed range; all exact values follow in the tables.")
+        pieces = ["<figure><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 440' role='img' aria-label='"
+                  + _escape("Water storage in " + reach) + "'><title>"
+                  + _escape("Water storage in " + reach) + "</title><desc>" + _escape(caption)
+                  + "</desc><rect width='620' height='440' fill='white'/>"
+                  + "<g font-family='sans-serif' font-size='12' fill='#171717'>"
+                  + "<path d='M88 56V360H548' fill='none' stroke='#171717'/>"]
+        for index in range(5):
+            day, volume = xmax * index / 4, low + (high - low) * index / 4
+            pieces += [f"<text x='{X(day):.3f}' y='383' text-anchor='middle'>" + _escape(format(day, ".5g")) + "</text>",
+                       f"<text x='77' y='{Y(volume)+4:.3f}' text-anchor='end'>" + _escape(format(volume, ".5g")) + "</text>",
+                       f"<path d='M88 {Y(volume):.3f}H548' stroke='#dedede' fill='none'/>"]
+        if line:
+            coordinates = " ".join(f"{X(day):.3f},{Y(volume):.3f}" for day, volume in line)
+            pieces.append("<polyline points='" + coordinates + "' stroke='#171717' stroke-width='1.6' fill='none'/>")
+        for day, volume in samples:
+            pieces.append(f"<circle cx='{X(day):.3f}' cy='{Y(volume):.3f}' r='3' fill='#171717'><title>"
+                          + _escape({"reach": reach, "day": day, "volume_m3": volume, "kind": "retained model sample"}) + "</title></circle>")
+        for day, volume, timestamp in observations:
+            pieces.append(f"<path d='M{X(day):.3f} {Y(volume)-5:.3f}l5 5 -5 5 -5 -5Z' fill='white' stroke='#171717'><title>"
+                          + _escape({"reach": reach, "day": day, "timestamp": timestamp, "volume_m3": volume,
+                                     "kind": "retained original observation"}) + "</title></path>")
+        pieces += ["<text x='318' y='417' text-anchor='middle'>Model day from selected origin</text>"
+                   "<text transform='translate(20 208) rotate(-90)' text-anchor='middle'>Water volume (m³)</text>"
+                   "</g></svg><figcaption><strong>" + _escape(reach) + ".</strong> " + _escape(caption) + "</figcaption></figure>"]
+        figures.append("".join(pieces))
+    return "<div class='figures'>" + "".join(figures) + "</div>" if figures else ""
+
+
+def _storage_sections(project, run):
+    if "storage_budgets" not in run:
+        return ""
+    geometry = _storage_geometry(project, run)
+    samples = [{"record": str(sample["day"]) + " / " + row["reach"], "day": sample["day"], **row} for sample in run.get("samples", [])
+               for row in sample.get("storage", [])]
+    water = [{"record": str(phase["until_day"]) + " / " + row["reach"], "until_day": phase["until_day"], **row}
+             for phase in run.get("water_balances", []) for row in phase["reaches"]]
+    steps = [{"step": index, **row} for index, row in enumerate(run.get("numerics", {}).get("storage_steps", []), 1)]
+    return ("<h2 id='water-storage'>Water storage and transport</h2>"
+        + _items(list(run.get("model", {}).items()), "Recorded model and propagation method")
+        + "<p>Water volumes follow the original phasewise flow schedule continuously. Chemical concentrations use the contemporaneous volume. Water-only outflows retain their explicit solute-transport selection. Nominal turnover is instantaneous volume divided by total outgoing water, not a water-age distribution; it is undefined when outgoing water is zero. A missing turnover value in the original result is retained as not supplied.</p>"
+        + _table(run["storage_budgets"], [
+            ("reach", "Reach"), ("initial_storage_m3", "Initial storage (m³)"),
+            ("inflow_m3", "Integrated inflow (m³)"), ("outflow_m3", "Integrated outflow (m³)"),
+            ("final_storage_m3", "Final storage (m³)"), ("residual_m3", "Water-balance residual (m³)"),
+            ("relative_residual", "Relative water-balance residual")], "Complete retained water account")
+        + "<p>The signed water residual is initial storage plus integrated inflow minus integrated outflow minus final storage. It is the original solver result, without clipping or normalization. Water conservation and chemical mass conservation are reported separately.</p>"
+        + _storage_figures(project, run, geometry)
+        + _table(run.get("storage", []), [
+            ("reach", "Reach"), ("volume_m3", "Final storage (m³)"),
+            ("incoming_m3_day", "Incoming water (m³/day)"), ("outgoing_m3_day", "Outgoing water (m³/day)"),
+            ("storage_change_m3_day", "Storage change (m³/day)"),
+            ("nominal_turnover_days", "Nominal turnover (days; undefined at zero outflow)")], "Final retained hydraulic state")
+        + _table(samples, [
+            ("record", "Day / reach"), ("day", "Model day"), ("reach", "Reach"), ("volume_m3", "Sampled storage (m³)"),
+            ("incoming_m3_day", "Incoming water (m³/day)"), ("outgoing_m3_day", "Outgoing water (m³/day)"),
+            ("storage_change_m3_day", "Storage change (m³/day)"),
+            ("nominal_turnover_days", "Nominal turnover (days)")], "Every retained hydraulic sample")
+        + "<p>At an internal phase boundary, a stored hydraulic sample reports the next operating period's flow while volume remains continuous. The final endpoint uses the last period's flow.</p>"
+        + _table(geometry, [
+            ("record", "Phase / reach"), ("period", "Phase"), ("reach", "Reach"), ("from_day", "Start day"), ("until_day", "End day"),
+            ("initial_volume_m3", "Start volume (m³)"), ("final_volume_m3", "End volume (m³)"),
+            ("incoming_m3_day", "Incoming water (m³/day)"), ("outgoing_m3_day", "Outgoing water (m³/day)"),
+            ("storage_change_m3_day", "Storage change (m³/day)")], "Original validated phase endpoints used by the volume curves")
+        + _table(water, [("record", "Phase end / reach"), ("until_day", "Phase ends (day)"), ("reach", "Reach"),
+            ("incoming_m3_day", "Incoming water (m³/day)"), ("outgoing_m3_day", "Outgoing water (m³/day)"),
+            ("residual_m3_day", "Incoming minus outgoing (m³/day)")], "Every retained phase water rate")
+        + _table(steps, [("step", "Accepted interval"), ("from_day", "Start day"), ("until_day", "End day"),
+            ("method", "Actual propagation method"), ("rtol", "Relative tolerance"), ("atol", "Absolute tolerance"),
+            ("function_evaluations", "Function evaluations"), ("jacobian_evaluations", "Jacobian evaluations"),
+            ("lu_decompositions", "LU decompositions")], "Complete retained variable-storage execution intervals"))
+
+
+def _source_period_sections(project):
+    support = project.raw.get("source_period_support")
+    if not isinstance(support, dict):
+        return ""
+    periods = support.get("periods", [])
+    flows, storage, observations = [], [], []
+    for period in periods:
+        identity = {key: period.get(key) for key in ("period", "begin", "end", "duration_days")}
+        for flow_id, flow in period.get("flows", {}).items():
+            flows.append({**identity, **flow, "flow_id": flow_id, "record": str(period["period"]) + " / " + flow_id})
+        for row in period.get("storage", []):
+            key = str(period["period"]) + " / " + row["reach"]
+            storage.append({**identity, **row, "record": key})
+            observed = row.get("observed_storage")
+            if observed is not None:
+                observations.append({**identity, **observed, "reach": row["reach"], "record": key,
+                    "predicted_volume_m3": row.get("predicted_volume_m3"),
+                    "observed_minus_predicted_m3": row.get("observed_minus_predicted_m3")})
+    originals = [{"record": row["source_collection_id"] + " / " + row["source_id"], **row}
+                 for row in support.get("originals", [])]
+    references = support.get("source_refs", [])
+    return ("<h2 id='source-periods'>Original source periods and storage comparisons</h2>"
+        + "<p>The complete source selection below fixes the timestamp support, units, quality codes and aggregation policy. Only the selected initial storage observation sets the starting volume. Later original observations remain comparisons and never reset the continuous trajectory. A comparison difference is reported only for a retained observation; excluded, missing or nonpositive observations keep their original state and value.</p>"
+        + _items([(key, support.get(key)) for key in ("schema", "template_case_id", "template_project_sha256")],
+                 "Original source-period identity")
+        + _items(list(support.get("selection", {}).items()), "Complete explicit source and period selection")
+        + _items(list(support.get("decisions", {}).items()), "Retained modeling decisions")
+        + _table(originals, [("record", "Collection / source"), ("source_id", "Original source"), ("source_collection_id", "Collection"),
+            ("name", "Series name"), ("office", "Office"), ("units", "Original units"),
+            ("values", "Original row count"), ("first", "First timestamp"), ("last", "Last timestamp"),
+            ("uri", "Original URI"), ("vintage", "Vintage"), ("bytes", "Complete bytes"),
+            ("sha256", "SHA256")], "Every original file selected by the flow and storage bindings")
+        + _table([{"index": index, "reference": row} for index, row in enumerate(references, 1)],
+                 [("index", "Source reference"), ("reference", "Complete retained reference")],
+                 "Complete source collection identities")
+        + _table(periods, [("period", "Period"), ("begin", "Begin UTC"), ("end", "End UTC"),
+            ("duration_days", "Duration (days)")], "Every selected original period")
+        + _table(flows, [("record", "Period / flow"), ("flow_id", "Flow"), ("begin", "Begin UTC"), ("end", "End UTC"),
+            ("state", "Selection state"), ("expected_values", "Expected intervals"), ("present_values", "Nonmissing values"),
+            ("missing_count", "Missing intervals"), ("off_grid_count", "Timestamps outside the selected interval grid"),
+            ("rejected_quality_count", "Excluded-quality values"),
+            ("quality_codes", "Original quality-code counts")], "Complete original flow coverage by period")
+        + _table(flows, [("record", "Period / flow"), ("missing_first", "First retained missing timestamps (up to 12)"),
+            ("off_grid_first", "First retained off-grid timestamps (up to 12)"),
+            ("rejected_quality_first", "First retained excluded-quality timestamps (up to 12)"),
+            ("negative_original_values", "Signed negative original values"),
+            ("original_units", "Original units"), ("minimum_original_value", "Original minimum"),
+            ("maximum_original_value", "Original maximum"), ("original_mean", "Original interval mean"),
+            ("mean_cms", "Converted mean (m³/s)"), ("m3_day", "Water rate (m³/day)"),
+            ("volume_m3", "Period water volume (m³)")], "Original numeric support and explicit unit conversion")
+        + "<p>The coverage counts cover the whole selected period. The source builder retains up to twelve example timestamps for each missing, off-grid or excluded-quality category; the complete original files accompany the case. Signed original values are preserved when calculating the selected interval mean. Missing, off-grid or excluded-quality intervals are not filled or removed to manufacture a complete period.</p>"
+        + _table(storage, [("record", "Period / reach"), ("reach", "Reach"), ("begin", "Begin UTC"), ("end", "End UTC"),
+            ("duration_days", "Duration (days)"), ("initial_volume_m3", "Initial volume (m³)"),
+            ("inflow_m3_day", "Incoming water (m³/day)"), ("outflow_m3_day", "Outgoing water (m³/day)"),
+            ("change_m3", "Storage change (m³)"), ("predicted_volume_m3", "Flow-derived final volume (m³)"),
+            ("observed_minus_predicted_m3", "Retained observed minus predicted (m³)")], "Complete period storage account from the original source preparation")
+        + _table(observations, [("record", "Period / reach"), ("timestamp", "Original timestamp"), ("state", "Observation state"),
+            ("original_value", "Original value"), ("original_units", "Original units"), ("quality_code", "Original quality code"),
+            ("volume_m3", "Converted original volume (m³)"), ("predicted_volume_m3", "Flow-derived volume (m³)"),
+            ("observed_minus_predicted_m3", "Retained observed minus predicted (m³)")], "Every retained period-end storage observation")
+        + (_items([(key, value) for key, value in support.items()
+                   if key not in {"schema", "template_case_id", "template_project_sha256", "selection",
+                                  "decisions", "source_refs", "originals", "periods"}],
+                  "Additional retained source-period fields")
+           if set(support) - {"schema", "template_case_id", "template_project_sha256", "selection",
+                              "decisions", "source_refs", "originals", "periods"} else ""))
+
+
 def _input_sections(project):
     species = [{**value, "id": key, **_provenance(value.get("provenance"))}
                for key, value in project.species.items()]
     reaches = [{**value, "id": key, **_provenance(value.get("provenance"))}
                for key, value in project.reaches.items()]
-    flows = [{**value, "id": key, **_provenance(value.get("provenance"))}
+    flows = [{**value, "id": key, "solute_transport": value.get("solute_transport", True), **_provenance(value.get("provenance"))}
              for key, value in project.flows.items()]
     loads = [_species(project, {**value, "id": key, **_provenance(value.get("provenance"))})
              for key, value in project.loads.items()]
-    reactions = [{**value, "id": key,
+    reactions = [{**value, "id": key, "volume_scaling": value.get("volume_scaling", "constant"),
                   "basis": project.species[value["source"]]["basis"],
                   **_provenance(value.get("provenance"))} for key, value in project.reactions.items()]
     return ("<details><summary>Complete original physical assumptions and coefficient sources</summary>"
             + _table(species, [("id", "Species"), ("basis", "Conserved mass basis"),
                                ("source_kind", "Source kind"), ("source_reference", "Original source")], "Species definitions")
-            + _table(reaches, [("id", "Reach"), ("volume_m3", "Fixed volume (m³)"),
+            + _table(reaches, [("id", "Reach"), ("volume_m3", "Initial storage (m³)" if _hydrology_mode(project) == "variable-storage" else "Fixed volume (m³)"),
                                ("temperature_c", "Temperature (°C)"), ("source_reference", "Original source")], "Completely mixed reaches")
             + _table(flows, [("id", "Flow"), ("source", "Source reach / boundary"), ("target", "Target reach / boundary"),
-                             ("m3_day", "Water flow (m³/day)"), ("concentration_mg_l", "Boundary concentrations (mg basis/L by species)"),
+                             ("m3_day", "Water flow (m³/day)"), ("solute_transport", "Transports solute"), ("concentration_mg_l", "Boundary concentrations (mg basis/L by species)"),
                              ("source_reference", "Original source")], "Original water transport")
             + _table(loads, [("id", "Load"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
                              ("kg_day", "External load (kg basis/day)"), ("source_reference", "Original source")], "External chemical loading")
             + _table(reactions, [("id", "Reaction"), ("source", "Reactant"), ("basis", "Basis"),
-                                 ("rate_day", "Rate (day⁻¹)"), ("products", "Product basis-mass fractions"),
+                                 ("rate_day", "Rate (day⁻¹)"), ("volume_scaling", "Volume scaling: constant or inverse"), ("products", "Product basis-mass fractions"),
                                  ("sink_label", "Untracked sink"), ("theta", "Temperature factor θ"),
                                  ("reference_temperature_c", "Reference temperature (°C)"),
                                  ("reach_ids", "Selected reaches (unsupplied means all)"),
@@ -443,6 +652,8 @@ def _input_sections(project):
 def report(project, result, request=None, *, identity=None, links=None):
     request = request or {}
     info = summary(project, result, request)
+    run = result.get("baseline", result)
+    hydrology = _hydrology_mode(project, run)
     provenance = project.raw.get("provenance", {})
     source_rows = []
     if isinstance(provenance, dict):
@@ -452,20 +663,23 @@ def report(project, result, request=None, *, identity=None, links=None):
         + _items([("Analysis", info["mode"]), ("Result schema", info["result_schema"]),
                   ("Reach count", project.nr), ("Species count", project.ns),
                   ("Total duration (days)", project.end_day), ("Project SHA256", project.fingerprint),
-                  ("Presentation edition", REPORT_EDITION),
+                  ("Presentation edition", REPORT_EDITION), ("Hydrology", hydrology),
                   ("Recorded solver elapsed seconds", info["recorded_solver_elapsed_seconds"])], "Retained analysis identity")
         + _table(source_rows, [("item", "Provenance field"), ("value", "Original value")], "Original project provenance")
-        + "<p>Concentrations and masses use each species' declared conserved basis. For example, nitrogen-basis mg/L is an elemental nitrogen concentration, not the molecular mass concentration of an ammonium or nitrate compound. Each reach is completely mixed at a fixed volume, with phasewise-constant linear coefficients. Times are model days from the project origin. Composite measurements retain their declared positive weighted sum of species on one conserved basis; that sum is an observation operator, not an additional modeled species.</p>"]
+        + "<p>Concentrations and masses use each species' declared conserved basis. For example, nitrogen-basis mg/L is an elemental nitrogen concentration, not the molecular mass concentration of an ammonium or nitrate compound. Each reach is completely mixed. "
+        + ("Water storage varies continuously with the original phasewise flows; concentrations use the contemporaneous volume and explicitly selected volume-scaled coefficients. "
+           if hydrology == "variable-storage" else "Volume is fixed, with phasewise-constant linear coefficients. ")
+        + "Times are model days from the project origin. Composite measurements retain their declared positive weighted sum of species on one conserved basis; that sum is an observation operator, not an additional modeled species.</p>"]
     if identity:
         sections.append(_items(list(identity.items()), "Saved native result and source identities"))
-    run = result.get("baseline", result)
+    sections.append(_storage_sections(project, run))
     if "budgets" in run:
         sections.append("<h2>Conserved mass across the full duration</h2>"
             + _table(run["budgets"], [("basis", "Basis"), ("initial_kg", "Initial kg"), ("input_kg", "Added kg"),
                     ("final_storage_kg", "Final stored kg"), ("boundary_export_kg", "Exported kg"),
                     ("untracked_reaction_sink_kg", "Other sinks kg"), ("residual_kg", "Balance residual kg"),
                     ("relative_residual", "Relative balance residual")], "Integrated model mass account")
-            + _items(list(run.get("numerics", {}).items()), "Original numerical execution metadata")
+            + _items([(key, value) for key, value in run.get("numerics", {}).items() if key != "storage_steps"], "Original numerical execution metadata")
             + "<p>Boundary export and reaction extents are integrated over the full duration. These masses are not annual loads or endpoint concentration averages. A small budget residual describes numerical conservation of this model.</p>"
             + _table(run["final"], [("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
                     ("mg_l", "Final mg basis/L"), ("kg", "Final stored kg")], "Final reach conditions")
@@ -559,6 +773,7 @@ def report(project, result, request=None, *, identity=None, links=None):
             + _table(rows, [("id", "Target"), ("reach", "Reach"), ("operator_label", "Measurement"), ("operator_expression", "Weighted pools"), ("basis", "Basis"), ("components", "Original components"),
                       ("day", "Day"), ("p05_mg_l", "5th percentile (mg basis/L)"), ("median_mg_l", "Median (mg basis/L)"),
                       ("p95_mg_l", "95th percentile (mg basis/L)"), ("mean_mg_l", "Mean (mg basis/L)")], "Original target-by-target ensemble quantiles"))
+    sections.append(_source_period_sections(project))
     sections.append(_input_sections(project))
     if links:
         sections.append("<h2>Complete retained inputs and outputs</h2><ul>"

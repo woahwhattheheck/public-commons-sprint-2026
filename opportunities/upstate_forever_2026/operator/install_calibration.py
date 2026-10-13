@@ -47,7 +47,10 @@ FILES = ("model/calibration_execution.py", "model/calibration.py", "model/CALIBR
          "operator/web/extensions/study_transfer.mjs",
          "model/calibration_followup.py", "model/calibration_study_transfer.py",
          "model/CALIBRATION_FOLLOWUP.md",
-         "integration/component_fragments/calibration-reference-followup.json")
+         "integration/component_fragments/calibration-reference-followup.json",
+         "model/calibration_history.py", "model/calibration_history_export.py",
+         "operator/web/calibration_history.mjs", "model/CALIBRATION_HISTORY.md",
+         "integration/component_fragments/calibration-profile-history.json")
 SHARED = ("operator/server.py", "operator/web/app.mjs", "operator/web/index.html",
           "model/scientific_figures.py")
 DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.mjs",
@@ -215,6 +218,11 @@ PREDECESSORS.setdefault("model/parameter_study_transfer.py", set()).add("292ec1f
 PREDECESSORS.setdefault("operator/calibration.py", set()).add("2cc21211bb7685e6f4d34c8bca11eb94bf5bf78fcb3e52c4a05a920ae7621789")
 PREDECESSORS.setdefault("operator/web/calibration.mjs", set()).add("4874c1968b36bfff9e643ce07af72e426a97284c4ea83b7a71a748d3daaa071d")
 PREDECESSORS.setdefault("operator/install_calibration.py", set()).add("bb2dee4e058aa49519ce0fd8abc8332c7aa2d488834c39b5c2cf14b5403357cf")
+
+PREDECESSORS.setdefault("operator/calibration.py", set()).add("a48a7fcbc1547737f194ed12e3c6e52e5e0e32ce6562889710410b382f1a2738")
+PREDECESSORS.setdefault("operator/web/calibration.mjs", set()).add("d4bfed6479f270f970fe3228206a5f87ea5532a19d7922a2af21a784b4d487eb")
+PREDECESSORS.setdefault("operator/install_calibration.py", set()).add("392049d851647f1e82853cb8360d411a5d500d30ff5716a5b0324678669927f8")
+PREDECESSORS.setdefault("operator/extensions/calibration.json", set()).add("220f00c388201fed5afd341442e3c6d4be51e6febdc95f6db11564432587c81a")
 
 def _hash(data):
     return hashlib.sha256(data).hexdigest()

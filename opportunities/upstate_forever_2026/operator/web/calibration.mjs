@@ -1,3 +1,4 @@
+import {createCalibrationHistory} from './calibration_history.mjs';
 import {createCalibrationReviews} from './calibration_review.mjs';
 import {createCalibrationMaps} from './calibration_maps.mjs';
 import {analyzeCalibrationDesign,calibrationDesignHTML} from './calibration_design.mjs';
@@ -43,6 +44,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   };
   const draftKey = () => 'upstate-calibration-draft:'+current();
   const form = () => $('#operation-form');
+  const historyDesk=createCalibrationHistory({section,button,number,esc,table});
   const mapsDesk=createCalibrationMaps({current,read,submitAction,openForm,fileList,detail,repaint,
     getReport:()=>activeReport,getUncertainty:()=>activeUncertainty,getData:calibrationData,
     openReport,openUncertainty,activate:()=>{if(!mounted)location.hash='calibration';else repaint();}});
@@ -869,6 +871,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         ['Validation groups',number(independent),independent?'Assessment: '+human(view.validation_state):'All selected groups were used for calibration.'],
         ['Non-dominated candidate runs',number(view.pareto_run_ids?.length),'Candidate tradeoffs retained across pollutant metrics.'],
       ].map(([title,value,note])=>'<div class="card"><h3>'+esc(title)+'</h3><strong class="calibration-card-value">'+esc(value)+'</strong><p>'+esc(note)+'</p></div>').join('')+'</div>'+
+      historyDesk.render(activeReport.profile_history)+
       (view.observations.length?section('Observed and modeled annual loads','The dashed diagonal marks equal observed and modeled load. Circles show calibration catchments; outlined squares show validation catchments.',
         '<div class="calibration-plots">'+pollutants.map(name=>scatter(view.observations,name)).join('')+'</div>'):'')+
       uncertaintyList()+
@@ -881,6 +884,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         '<details class="technical"><summary>Original complete analysis record</summary><pre class="json-view">'+esc(pretty(report))+'</pre></details>');
   }
   function bindReport(){
+    historyDesk.bind(mounted,repaint);
     const search=$('#calibration-result-search',mounted);
     if(search)search.addEventListener('input',()=>{query=search.value;page=0;$('#calibration-result-table',mounted).innerHTML=resultTable();});
   }
@@ -1045,6 +1049,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         button('review-source-delivery','Open mapped report form',value.calibration_report_source_id):'')+'</div>';
   }
   async function dispatch(node){
+    if(historyDesk.dispatch(node,repaint))return;
     if(node.dataset.action?.startsWith('calibration-review-')){resultRequest++;return reviewsDesk.dispatch(node);}
     if(node.dataset.action?.startsWith('calibration-maps-')){reviewsDesk.reset();resultRequest++;return mapsDesk.dispatch(node);}
     const action=node.dataset.action?.replace(/^calibration-/,''),id=node.dataset.id;
@@ -1064,6 +1069,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(action==='uncertainty-new')return uncertaintyForm(id);
     if(action==='uncertainty')return openUncertainty(id);
     if(action==='uncertainty-nominal')return openReport(id);
+    if(action==='history-export')return submitAction('calibration.history.export',{report_id:id});
     if(action==='uncertainty-export')return submitAction('calibration.uncertainty.export',{uncertainty_id:id});
     if(action==='design-holdout'){
       if(!previewResult||!isCurrentDraft(formToken))throw Error('Inspect the original catchments in the current draft first.');

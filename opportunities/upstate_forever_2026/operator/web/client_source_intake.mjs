@@ -15,6 +15,12 @@ const roles = {raster:['CONTEXT','DEM','NLCD','PRECIPITATION','R_FACTOR','K_FACT
   vector:['CONTEXT','MODEL_DOMAIN','REPORTING_AREA','WATERSHEDS','STATIONS'],
   table:['CONTEXT','BIOPHYSICAL','MEASUREMENTS'],document:['CONTEXT']};
 const bioFields = ['lucode','load_n','load_p','load_type_n','load_type_p','eff_n','eff_p','crit_len_n','crit_len_p','proportion_subsurface_n','usle_c','usle_p'];
+const bioLabels = {lucode:'Land-cover code',load_n:'Nitrogen load',load_p:'Phosphorus load',
+  load_type_n:'Nitrogen loading definition',load_type_p:'Phosphorus loading definition',
+  eff_n:'Nitrogen retention efficiency',eff_p:'Phosphorus retention efficiency',
+  crit_len_n:'Nitrogen critical retention length',crit_len_p:'Phosphorus critical retention length',
+  proportion_subsurface_n:'Subsurface nitrogen fraction',usle_c:'Sediment cover-management factor',
+  usle_p:'Sediment support-practice factor'};
 const roleLabels = {CONTEXT:'Context / reference',DEM:'Elevation',NLCD:'Land-cover classes',PRECIPITATION:'Precipitation / reviewed runoff proxy',
   R_FACTOR:'Rainfall erosivity',K_FACTOR:'Soil erodibility',MODEL_DOMAIN:'Complete model domain',REPORTING_AREA:'Reporting area',
   WATERSHEDS:'Watershed polygons',STATIONS:'Monitoring locations',BIOPHYSICAL:'Native biophysical parameters',MEASUREMENTS:'Original measurements'};
@@ -184,6 +190,26 @@ export function createClientSourceIntake(host){
     if(!part.fields?.length)return '';
     return '<div class="ci-scroll" role="region" tabindex="0" aria-label="'+esc(part.name+' original preview')+'"><table><caption>Original sample'+(part.more_rows?' — additional records remain in the retained file':'')+'</caption><thead><tr><th scope="col">Source row</th>'+part.fields.map(x=>'<th scope="col">'+esc(x.display||x.label)+'</th>').join('')+'</tr></thead><tbody>'+arr(part.rows).map(row=>'<tr><th scope="row">'+esc(row.feature_id??row.row)+'</th>'+part.fields.map((x,i)=>'<td>'+esc(row.cells[i]??'')+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
   }
+  function requiredFields(choice){
+    const definitions=catalog?.required_table_fields;
+    if(!definitions||!choice.models.every(model=>Array.isArray(definitions[model])))return null;
+    const wanted=new Set(choice.models.flatMap(model=>definitions[model]));
+    return bioFields.filter(name=>wanted.has(name));
+  }
+  function mappingStatus(choice){
+    const required=requiredFields(choice);
+    if(!required)return 'Review each original column against the selected native model requirements.';
+    const missing=required.filter(name=>!choice.mapping[name]);
+    return (required.length-missing.length)+' of '+required.length+' required fields mapped for '+choice.models.map(x=>x.toUpperCase()).join(' and ')+'. '+
+      (missing.length?'Choose original columns for: '+missing.map(name=>bioLabels[name]+' ('+name+')').join(', ')+'.':'Review their meanings and units before confirming.');
+  }
+  function mappingControls(choice,fieldValues){
+    const required=requiredFields(choice),primary=required||bioFields;
+    const additional=required?bioFields.filter(name=>!required.includes(name)):[];
+    const fields=names=>'<div class="ci-fields">'+names.map(name=>selectField(bioLabels[name]+' ('+name+')','mapping.'+name,fieldValues,choice.mapping[name]||'')).join('')+'</div>';
+    return '<p data-ci-mapping-status role="status" aria-live="polite">'+esc(mappingStatus(choice))+'</p>'+fields(primary)+
+      (additional.length?'<details><summary data-ci-additional-summary>Additional native columns · '+additional.filter(name=>choice.mapping[name]).length+' selected</summary><p>These optional selections remain saved and included in the projected table. They are not required by the chosen model.</p>'+fields(additional)+'</details>':'');
+  }
   function interpretation(choice,index){
     const file=inspection.files[choice.file_index],part=file.inspection.parts[choice.part_index];
     const fieldValues=[['','Not selected'],...arr(part.fields).map(x=>[x.id,x.display||x.label])];
@@ -203,7 +229,7 @@ export function createClientSourceIntake(host){
         inputField('Conversion source / reference','conversion.reference',choice.conversion?.reference??'')+'</div></fieldset>':'')+
       (part.kind==='table'&&choice.role==='BIOPHYSICAL'?'<fieldset><legend>Map original columns to native parameters</legend><p>Only reviewed column selections produce the native CSV. The complete original workbook, all sheets, formulas and extra columns remain retained. Values are validated by the existing NDR/SDR table reader.</p>'+
         selectField('Native model validation','models',[['ndr,sdr','NDR and SDR'],['ndr','NDR'],['sdr','SDR']],choice.models.join(','))+
-        '<div class="ci-fields">'+bioFields.map(name=>selectField(name,'mapping.'+name,fieldValues,choice.mapping[name]||'')).join('')+'</div></fieldset>':'')+
+        mappingControls(choice,fieldValues)+'</fieldset>':'')+
       '<label class="ci-confirm"><input type="checkbox" data-ci-field="confirmed" '+(choice.confirmed?'checked':'')+' data-ci-mutating> I reviewed this original source, its scientific meaning, units and selected transformations.</label>'+
       actionButton('remove-choice','Remove this source selection','data-ci-index="'+index+'" data-ci-mutating')+'</article>';
   }
@@ -360,7 +386,10 @@ export function createClientSourceIntake(host){
           }
         });
         if(['role','models'].includes(field))renderChoices();
-        else{const checked=choice.querySelector('[data-ci-field="confirmed"]');if(checked)checked.checked=draft.selections[index].confirmed;}
+        else{const checked=choice.querySelector('[data-ci-field="confirmed"]');if(checked)checked.checked=draft.selections[index].confirmed;
+          const status=choice.querySelector('[data-ci-mapping-status]');if(status)status.textContent=mappingStatus(draft.selections[index]);
+          const extra=choice.querySelector('[data-ci-additional-summary]'),required=requiredFields(draft.selections[index]);
+          if(extra&&required)extra.textContent='Additional native columns · '+bioFields.filter(name=>!required.includes(name)&&draft.selections[index].mapping[name]).length+' selected';}
       }else if(upload){
         const index=Number(upload.dataset.ciUpload);
         saveChange(v=>{v.uploads[index].options[field]=field==='header_row'?Number(target.value):target.value;});
