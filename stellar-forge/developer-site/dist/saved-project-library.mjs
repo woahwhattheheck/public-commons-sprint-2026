@@ -1,5 +1,5 @@
 // MIT. Complete shared-draft inventory, receiving and selective recovery.
-import {listDrafts,loadDraft,saveDraft,readDraftRecords,commitDraftRecords} from './drafts.mjs';
+import {listDrafts,loadDraft,saveDraft,projectDraftRecords,commitDraftRecords} from './drafts.mjs';
 
 export const MAX_ARCHIVE_BYTES=256*1024*1024;
 export const MAX_RECORDS=5000;
@@ -11,6 +11,526 @@ const PREFIX='draft-library-journal:';
 const WORK_PREFIX='draft-library-working:';
 const SCOPE='The original shared Stellar Forge drafts store. Separate companion-reader and Source Desk stores are outside this archive.';
 const enc=new TextEncoder();
+// Reuse the retained upstream implementation on TextEncoder's actual bytes.
+// It is synchronous so a record can be hashed within the original IDB cursor
+// without letting the transaction auto-commit during an asynchronous digest.
+const savedRecordDigest=(()=>{
+  const module={exports:{}};
+/**
+ * Strict UTF-8 SHA-256 for retained complete text, with no runtime imports.
+ *
+ * Bundled upstream: emn178/js-sha256 1.0.0, build/sha256.cjs
+ * Commit: 9a54fb31d4594762987e1b5d175265f6bac921de
+ * Upstream blob: e3a08633357cb7ca248e14751f9270d95fbbbdf2
+ * The upstream source between the markers is unchanged.
+ *
+ * Upstream license:
+ * Copyright (c) 2014-2026 Chen, Yi-Cyuan
+ * 
+ * MIT License
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+// BEGIN UNCHANGED UPSTREAM SOURCE
+/**
+ * [js-sha256]{@link https://github.com/emn178/js-sha256}
+ *
+ * @version 1.0.0
+ * @author Chen, Yi-Cyuan [emn178@gmail.com]
+ * @copyright Chen, Yi-Cyuan 2014-2026
+ * @license MIT
+ */
+'use strict';
+
+var INPUT_ERROR = 'input is invalid type';
+var FINALIZE_ERROR = 'finalize already called';
+
+var ARRAY_BUFFER = typeof ArrayBuffer !== 'undefined';
+
+var formatMessage = function (message) {
+  var type = typeof message;
+  if (type === 'string') {
+    return [message, true];
+  }
+  if (Array.isArray(message)) {
+    return [message, false];
+  }
+  if (ARRAY_BUFFER && message) {
+    if (message.constructor === ArrayBuffer) {
+      return [new Uint8Array(message), false];
+    } else if (ArrayBuffer.isView(message)) {
+      return [message, false];
+    }
+  }
+  throw new Error(INPUT_ERROR);
+};
+
+var HEX_CHARS = '0123456789abcdef'.split('');
+var EXTRA = [-2147483648, 8388608, 32768, 128];
+var SHIFT = [24, 16, 8, 0];
+var K = [
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+];
+var OUTPUT_TYPES = ['hex', 'array', 'digest', 'arrayBuffer'];
+
+var blocks = [];
+
+var createOutputMethod = function (outputType, is224) {
+  return function (message) {
+    return new Sha256(is224, true).update(message)[outputType]();
+  };
+};
+
+var createMethod = function (is224) {
+  var method = createOutputMethod('hex', is224);
+  method.create = function () {
+    return new Sha256(is224);
+  };
+  method.update = function (message) {
+    return method.create().update(message);
+  };
+  for (var i = 0; i < OUTPUT_TYPES.length; ++i) {
+    var type = OUTPUT_TYPES[i];
+    method[type] = createOutputMethod(type, is224);
+  }
+  return method;
+};
+
+var createHmacOutputMethod = function (outputType, is224) {
+  return function (key, message) {
+    return new HmacSha256(key, is224, true).update(message)[outputType]();
+  };
+};
+
+var createHmacMethod = function (is224) {
+  var method = createHmacOutputMethod('hex', is224);
+  method.create = function (key) {
+    return new HmacSha256(key, is224);
+  };
+  method.update = function (key, message) {
+    return method.create(key).update(message);
+  };
+  for (var i = 0; i < OUTPUT_TYPES.length; ++i) {
+    var type = OUTPUT_TYPES[i];
+    method[type] = createHmacOutputMethod(type, is224);
+  }
+  return method;
+};
+
+function Sha256(is224, sharedMemory) {
+  if (sharedMemory) {
+    blocks[0] = blocks[16] = blocks[1] = blocks[2] = blocks[3] =
+      blocks[4] = blocks[5] = blocks[6] = blocks[7] =
+      blocks[8] = blocks[9] = blocks[10] = blocks[11] =
+      blocks[12] = blocks[13] = blocks[14] = blocks[15] = 0;
+    this.blocks = blocks;
+  } else {
+    this.blocks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  }
+
+  if (is224) {
+    this.h0 = 0xc1059ed8;
+    this.h1 = 0x367cd507;
+    this.h2 = 0x3070dd17;
+    this.h3 = 0xf70e5939;
+    this.h4 = 0xffc00b31;
+    this.h5 = 0x68581511;
+    this.h6 = 0x64f98fa7;
+    this.h7 = 0xbefa4fa4;
+  } else { // 256
+    this.h0 = 0x6a09e667;
+    this.h1 = 0xbb67ae85;
+    this.h2 = 0x3c6ef372;
+    this.h3 = 0xa54ff53a;
+    this.h4 = 0x510e527f;
+    this.h5 = 0x9b05688c;
+    this.h6 = 0x1f83d9ab;
+    this.h7 = 0x5be0cd19;
+  }
+
+  this.block = this.start = this.bytes = this.hBytes = 0;
+  this.finalized = this.hashed = false;
+  this.first = true;
+  this.is224 = is224;
+}
+
+Sha256.prototype.update = function (message) {
+  if (this.finalized) {
+    throw new Error(FINALIZE_ERROR);
+  }
+  var result = formatMessage(message);
+  message = result[0];
+  var isString = result[1];
+  var code, index = 0, i, length = message.length, blocks = this.blocks;
+  while (index < length) {
+    if (this.hashed) {
+      this.hashed = false;
+      blocks[0] = this.block;
+      this.block = blocks[16] = blocks[1] = blocks[2] = blocks[3] =
+        blocks[4] = blocks[5] = blocks[6] = blocks[7] =
+        blocks[8] = blocks[9] = blocks[10] = blocks[11] =
+        blocks[12] = blocks[13] = blocks[14] = blocks[15] = 0;
+    }
+
+    if (isString) {
+      for (i = this.start; index < length && i < 64; ++index) {
+        code = message.charCodeAt(index);
+        if (code < 0x80) {
+          blocks[i >>> 2] |= code << SHIFT[i++ & 3];
+        } else if (code < 0x800) {
+          blocks[i >>> 2] |= (0xc0 | (code >>> 6)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+        } else if (code < 0xd800 || code >= 0xe000) {
+          blocks[i >>> 2] |= (0xe0 | (code >>> 12)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | ((code >>> 6) & 0x3f)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+        } else {
+          code = 0x10000 + (((code & 0x3ff) << 10) | (message.charCodeAt(++index) & 0x3ff));
+          blocks[i >>> 2] |= (0xf0 | (code >>> 18)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | ((code >>> 12) & 0x3f)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | ((code >>> 6) & 0x3f)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+        }
+      }
+    } else {
+      for (i = this.start; index < length && i < 64; ++index) {
+        blocks[i >>> 2] |= message[index] << SHIFT[i++ & 3];
+      }
+    }
+
+    this.lastByteIndex = i;
+    this.bytes += i - this.start;
+    if (i >= 64) {
+      this.block = blocks[16];
+      this.start = i - 64;
+      this.hash();
+      this.hashed = true;
+    } else {
+      this.start = i;
+    }
+  }
+  if (this.bytes > 4294967295) {
+    this.hBytes += this.bytes / 4294967296 << 0;
+    this.bytes = this.bytes % 4294967296;
+  }
+  return this;
+};
+
+Sha256.prototype.finalize = function () {
+  if (this.finalized) {
+    return;
+  }
+  this.finalized = true;
+  var blocks = this.blocks, i = this.lastByteIndex;
+  blocks[16] = this.block;
+  blocks[i >>> 2] |= EXTRA[i & 3];
+  this.block = blocks[16];
+  if (i >= 56) {
+    if (!this.hashed) {
+      this.hash();
+    }
+    blocks[0] = this.block;
+    blocks[16] = blocks[1] = blocks[2] = blocks[3] =
+      blocks[4] = blocks[5] = blocks[6] = blocks[7] =
+      blocks[8] = blocks[9] = blocks[10] = blocks[11] =
+      blocks[12] = blocks[13] = blocks[14] = blocks[15] = 0;
+  }
+  blocks[14] = this.hBytes << 3 | this.bytes >>> 29;
+  blocks[15] = this.bytes << 3;
+  this.hash();
+};
+
+Sha256.prototype.hash = function () {
+  var a = this.h0, b = this.h1, c = this.h2, d = this.h3, e = this.h4, f = this.h5, g = this.h6,
+    h = this.h7, blocks = this.blocks, j, s0, s1, maj, t1, t2, ch, ab, da, cd, bc;
+
+  for (j = 16; j < 64; ++j) {
+    // rightrotate
+    t1 = blocks[j - 15];
+    s0 = ((t1 >>> 7) | (t1 << 25)) ^ ((t1 >>> 18) | (t1 << 14)) ^ (t1 >>> 3);
+    t1 = blocks[j - 2];
+    s1 = ((t1 >>> 17) | (t1 << 15)) ^ ((t1 >>> 19) | (t1 << 13)) ^ (t1 >>> 10);
+    blocks[j] = blocks[j - 16] + s0 + blocks[j - 7] + s1 << 0;
+  }
+
+  bc = b & c;
+  for (j = 0; j < 64; j += 4) {
+    if (this.first) {
+      if (this.is224) {
+        ab = 300032;
+        t1 = blocks[0] - 1413257819;
+        h = t1 - 150054599 << 0;
+        d = t1 + 24177077 << 0;
+      } else {
+        ab = 704751109;
+        t1 = blocks[0] - 210244248;
+        h = t1 - 1521486534 << 0;
+        d = t1 + 143694565 << 0;
+      }
+      this.first = false;
+    } else {
+      s0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      s1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      ab = a & b;
+      maj = ab ^ (a & c) ^ bc;
+      ch = (e & f) ^ (~e & g);
+      t1 = h + s1 + ch + K[j] + blocks[j];
+      t2 = s0 + maj;
+      h = d + t1 << 0;
+      d = t1 + t2 << 0;
+    }
+    s0 = ((d >>> 2) | (d << 30)) ^ ((d >>> 13) | (d << 19)) ^ ((d >>> 22) | (d << 10));
+    s1 = ((h >>> 6) | (h << 26)) ^ ((h >>> 11) | (h << 21)) ^ ((h >>> 25) | (h << 7));
+    da = d & a;
+    maj = da ^ (d & b) ^ ab;
+    ch = (h & e) ^ (~h & f);
+    t1 = g + s1 + ch + K[j + 1] + blocks[j + 1];
+    t2 = s0 + maj;
+    g = c + t1 << 0;
+    c = t1 + t2 << 0;
+    s0 = ((c >>> 2) | (c << 30)) ^ ((c >>> 13) | (c << 19)) ^ ((c >>> 22) | (c << 10));
+    s1 = ((g >>> 6) | (g << 26)) ^ ((g >>> 11) | (g << 21)) ^ ((g >>> 25) | (g << 7));
+    cd = c & d;
+    maj = cd ^ (c & a) ^ da;
+    ch = (g & h) ^ (~g & e);
+    t1 = f + s1 + ch + K[j + 2] + blocks[j + 2];
+    t2 = s0 + maj;
+    f = b + t1 << 0;
+    b = t1 + t2 << 0;
+    s0 = ((b >>> 2) | (b << 30)) ^ ((b >>> 13) | (b << 19)) ^ ((b >>> 22) | (b << 10));
+    s1 = ((f >>> 6) | (f << 26)) ^ ((f >>> 11) | (f << 21)) ^ ((f >>> 25) | (f << 7));
+    bc = b & c;
+    maj = bc ^ (b & d) ^ cd;
+    ch = (f & g) ^ (~f & h);
+    t1 = e + s1 + ch + K[j + 3] + blocks[j + 3];
+    t2 = s0 + maj;
+    e = a + t1 << 0;
+    a = t1 + t2 << 0;
+    this.chromeBugWorkAround = true;
+  }
+
+  this.h0 = this.h0 + a << 0;
+  this.h1 = this.h1 + b << 0;
+  this.h2 = this.h2 + c << 0;
+  this.h3 = this.h3 + d << 0;
+  this.h4 = this.h4 + e << 0;
+  this.h5 = this.h5 + f << 0;
+  this.h6 = this.h6 + g << 0;
+  this.h7 = this.h7 + h << 0;
+};
+
+Sha256.prototype.hex = function () {
+  this.finalize();
+
+  var h0 = this.h0, h1 = this.h1, h2 = this.h2, h3 = this.h3, h4 = this.h4, h5 = this.h5,
+    h6 = this.h6, h7 = this.h7;
+
+  var hex = HEX_CHARS[(h0 >>> 28) & 0x0F] + HEX_CHARS[(h0 >>> 24) & 0x0F] +
+    HEX_CHARS[(h0 >>> 20) & 0x0F] + HEX_CHARS[(h0 >>> 16) & 0x0F] +
+    HEX_CHARS[(h0 >>> 12) & 0x0F] + HEX_CHARS[(h0 >>> 8) & 0x0F] +
+    HEX_CHARS[(h0 >>> 4) & 0x0F] + HEX_CHARS[h0 & 0x0F] +
+    HEX_CHARS[(h1 >>> 28) & 0x0F] + HEX_CHARS[(h1 >>> 24) & 0x0F] +
+    HEX_CHARS[(h1 >>> 20) & 0x0F] + HEX_CHARS[(h1 >>> 16) & 0x0F] +
+    HEX_CHARS[(h1 >>> 12) & 0x0F] + HEX_CHARS[(h1 >>> 8) & 0x0F] +
+    HEX_CHARS[(h1 >>> 4) & 0x0F] + HEX_CHARS[h1 & 0x0F] +
+    HEX_CHARS[(h2 >>> 28) & 0x0F] + HEX_CHARS[(h2 >>> 24) & 0x0F] +
+    HEX_CHARS[(h2 >>> 20) & 0x0F] + HEX_CHARS[(h2 >>> 16) & 0x0F] +
+    HEX_CHARS[(h2 >>> 12) & 0x0F] + HEX_CHARS[(h2 >>> 8) & 0x0F] +
+    HEX_CHARS[(h2 >>> 4) & 0x0F] + HEX_CHARS[h2 & 0x0F] +
+    HEX_CHARS[(h3 >>> 28) & 0x0F] + HEX_CHARS[(h3 >>> 24) & 0x0F] +
+    HEX_CHARS[(h3 >>> 20) & 0x0F] + HEX_CHARS[(h3 >>> 16) & 0x0F] +
+    HEX_CHARS[(h3 >>> 12) & 0x0F] + HEX_CHARS[(h3 >>> 8) & 0x0F] +
+    HEX_CHARS[(h3 >>> 4) & 0x0F] + HEX_CHARS[h3 & 0x0F] +
+    HEX_CHARS[(h4 >>> 28) & 0x0F] + HEX_CHARS[(h4 >>> 24) & 0x0F] +
+    HEX_CHARS[(h4 >>> 20) & 0x0F] + HEX_CHARS[(h4 >>> 16) & 0x0F] +
+    HEX_CHARS[(h4 >>> 12) & 0x0F] + HEX_CHARS[(h4 >>> 8) & 0x0F] +
+    HEX_CHARS[(h4 >>> 4) & 0x0F] + HEX_CHARS[h4 & 0x0F] +
+    HEX_CHARS[(h5 >>> 28) & 0x0F] + HEX_CHARS[(h5 >>> 24) & 0x0F] +
+    HEX_CHARS[(h5 >>> 20) & 0x0F] + HEX_CHARS[(h5 >>> 16) & 0x0F] +
+    HEX_CHARS[(h5 >>> 12) & 0x0F] + HEX_CHARS[(h5 >>> 8) & 0x0F] +
+    HEX_CHARS[(h5 >>> 4) & 0x0F] + HEX_CHARS[h5 & 0x0F] +
+    HEX_CHARS[(h6 >>> 28) & 0x0F] + HEX_CHARS[(h6 >>> 24) & 0x0F] +
+    HEX_CHARS[(h6 >>> 20) & 0x0F] + HEX_CHARS[(h6 >>> 16) & 0x0F] +
+    HEX_CHARS[(h6 >>> 12) & 0x0F] + HEX_CHARS[(h6 >>> 8) & 0x0F] +
+    HEX_CHARS[(h6 >>> 4) & 0x0F] + HEX_CHARS[h6 & 0x0F];
+  if (!this.is224) {
+    hex += HEX_CHARS[(h7 >>> 28) & 0x0F] + HEX_CHARS[(h7 >>> 24) & 0x0F] +
+      HEX_CHARS[(h7 >>> 20) & 0x0F] + HEX_CHARS[(h7 >>> 16) & 0x0F] +
+      HEX_CHARS[(h7 >>> 12) & 0x0F] + HEX_CHARS[(h7 >>> 8) & 0x0F] +
+      HEX_CHARS[(h7 >>> 4) & 0x0F] + HEX_CHARS[h7 & 0x0F];
+  }
+  return hex;
+};
+
+Sha256.prototype.toString = Sha256.prototype.hex;
+
+Sha256.prototype.digest = function () {
+  this.finalize();
+
+  var h0 = this.h0, h1 = this.h1, h2 = this.h2, h3 = this.h3, h4 = this.h4, h5 = this.h5,
+    h6 = this.h6, h7 = this.h7;
+
+  var arr = [
+    (h0 >>> 24) & 0xFF, (h0 >>> 16) & 0xFF, (h0 >>> 8) & 0xFF, h0 & 0xFF,
+    (h1 >>> 24) & 0xFF, (h1 >>> 16) & 0xFF, (h1 >>> 8) & 0xFF, h1 & 0xFF,
+    (h2 >>> 24) & 0xFF, (h2 >>> 16) & 0xFF, (h2 >>> 8) & 0xFF, h2 & 0xFF,
+    (h3 >>> 24) & 0xFF, (h3 >>> 16) & 0xFF, (h3 >>> 8) & 0xFF, h3 & 0xFF,
+    (h4 >>> 24) & 0xFF, (h4 >>> 16) & 0xFF, (h4 >>> 8) & 0xFF, h4 & 0xFF,
+    (h5 >>> 24) & 0xFF, (h5 >>> 16) & 0xFF, (h5 >>> 8) & 0xFF, h5 & 0xFF,
+    (h6 >>> 24) & 0xFF, (h6 >>> 16) & 0xFF, (h6 >>> 8) & 0xFF, h6 & 0xFF
+  ];
+  if (!this.is224) {
+    arr.push((h7 >>> 24) & 0xFF, (h7 >>> 16) & 0xFF, (h7 >>> 8) & 0xFF, h7 & 0xFF);
+  }
+  return arr;
+};
+
+Sha256.prototype.array = Sha256.prototype.digest;
+
+Sha256.prototype.arrayBuffer = function () {
+  this.finalize();
+
+  var buffer = new ArrayBuffer(this.is224 ? 28 : 32);
+  var dataView = new DataView(buffer);
+  dataView.setUint32(0, this.h0);
+  dataView.setUint32(4, this.h1);
+  dataView.setUint32(8, this.h2);
+  dataView.setUint32(12, this.h3);
+  dataView.setUint32(16, this.h4);
+  dataView.setUint32(20, this.h5);
+  dataView.setUint32(24, this.h6);
+  if (!this.is224) {
+    dataView.setUint32(28, this.h7);
+  }
+  return buffer;
+};
+
+function HmacSha256(key, is224, sharedMemory) {
+  var i, result = formatMessage(key);
+  key = result[0];
+  if (result[1]) {
+    var bytes = [], length = key.length, index = 0, code;
+    for (i = 0; i < length; ++i) {
+      code = key.charCodeAt(i);
+      if (code < 0x80) {
+        bytes[index++] = code;
+      } else if (code < 0x800) {
+        bytes[index++] = (0xc0 | (code >>> 6));
+        bytes[index++] = (0x80 | (code & 0x3f));
+      } else if (code < 0xd800 || code >= 0xe000) {
+        bytes[index++] = (0xe0 | (code >>> 12));
+        bytes[index++] = (0x80 | ((code >>> 6) & 0x3f));
+        bytes[index++] = (0x80 | (code & 0x3f));
+      } else {
+        code = 0x10000 + (((code & 0x3ff) << 10) | (key.charCodeAt(++i) & 0x3ff));
+        bytes[index++] = (0xf0 | (code >>> 18));
+        bytes[index++] = (0x80 | ((code >>> 12) & 0x3f));
+        bytes[index++] = (0x80 | ((code >>> 6) & 0x3f));
+        bytes[index++] = (0x80 | (code & 0x3f));
+      }
+    }
+    key = bytes;
+  }
+
+  if (key.length > 64) {
+    key = (new Sha256(is224, true)).update(key).array();
+  }
+
+  var oKeyPad = [], iKeyPad = [];
+  for (i = 0; i < 64; ++i) {
+    var b = key[i] || 0;
+    oKeyPad[i] = 0x5c ^ b;
+    iKeyPad[i] = 0x36 ^ b;
+  }
+
+  Sha256.call(this, is224, sharedMemory);
+
+  this.update(iKeyPad);
+  this.oKeyPad = oKeyPad;
+  this.inner = true;
+  this.sharedMemory = sharedMemory;
+}
+HmacSha256.prototype = new Sha256();
+
+HmacSha256.prototype.finalize = function () {
+  Sha256.prototype.finalize.call(this);
+  if (this.inner) {
+    this.inner = false;
+    var innerHash = this.array();
+    Sha256.call(this, this.is224, this.sharedMemory);
+    this.update(this.oKeyPad);
+    this.update(innerHash);
+    Sha256.prototype.finalize.call(this);
+  }
+};
+
+var sha256 = createMethod();
+var sha224 = createMethod(true);
+sha256.sha256 = sha256;
+sha256.sha224 = sha224;
+sha256.hmac = createHmacMethod();
+sha224.hmac = createHmacMethod(true);
+
+module.exports = sha256;
+// END UNCHANGED UPSTREAM SOURCE
+
+const connectedSha256Upstream = module.exports;
+
+/**
+ * Hash a complete well-formed UTF-16 string as its exact UTF-8 content bytes.
+ * No normalization, byte-order mark insertion, newline conversion or I/O.
+ * @returns {{bytes: number, sha256: string}}
+ */
+function sha256Utf8(value) {
+  if (typeof value !== 'string') throw new TypeError('sha256Utf8 requires a string');
+  let bytes = 0;
+  for (const char of value) {
+    const code = char.codePointAt(0);
+    if (code >= 0xd800 && code <= 0xdfff) throw new TypeError('Unpaired UTF-16 surrogate');
+    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+  }
+  // A separate hasher owns its working state for each invocation.
+  const sha256 = connectedSha256Upstream.create().update(value).hex();
+  return {bytes, sha256};
+}
+
+/** Hash exact binary source bytes with the same maintained upstream implementation. */
+function sha256Bytes(value) {
+  if (!(value instanceof Uint8Array)) throw new TypeError('sha256Bytes requires a Uint8Array');
+  return {bytes: value.byteLength,
+    sha256: connectedSha256Upstream.create().update(value).hex()};
+}
+
+module.exports = {sha256Utf8, sha256Bytes};
+
+  return module.exports.sha256Bytes;
+})();
+
 const clone=value=>structuredClone(value);
 const need=(test,message)=>{if(!test)throw new Error(message);};
 const own=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
@@ -86,7 +606,15 @@ function unpack(value){
   }
   return scalar(value[1]);
 }
-async function pin(record){recordShape(record);const value=pack(record),raw=JSON.stringify(value),bytes=utf8(raw).length;need(bytes<=MAX_ARCHIVE_BYTES,'One saved record exceeds the complete archive limit.');return {id:record.id,bytes,sha256:await sha(raw),value};}
+function pinSnapshot(record){
+  recordShape(record);
+  need(globalThis.crypto?.subtle,'Open this desk through HTTPS or the original loopback host.');
+  const value=pack(record),raw=utf8(JSON.stringify(value));
+  need(raw.byteLength<=MAX_ARCHIVE_BYTES,'One saved record exceeds the complete archive limit.');
+  const digest=savedRecordDigest(raw);
+  return {id:record.id,bytes:digest.bytes,sha256:digest.sha256,value};
+}
+async function pin(record){return pinSnapshot(record);}
 async function unpin(row){need(row&&typeof row==='object'&&typeof row.sha256==='string'&&/^[a-f0-9]{64}$/.test(row.sha256),'The original record digest is absent.');const raw=JSON.stringify(row.value);need(utf8(raw).length===row.bytes&&await sha(raw)===row.sha256,'A complete original saved record changed.');const r=recordShape(unpack(row.value));need(r.id===row.id,'The original record identity changed.');return r;}
 function typeOf(r){
   const s=r.input?.schema;
@@ -97,13 +625,25 @@ function typeOf(r){
   if(Array.isArray(r.input?.resources)&&typeof r.input?.folder==='string'&&!String(s||'').startsWith('stellar-forge.grant-'))return ['merchant','Merchant setup',{label:'Open merchant setup',href:'./index.html?draft='+encodeURIComponent(r.id)+'#merchant-setup'}];
   return ['other','Other retained project',null];
 }
-async function summary(r,p=null){p=p||await pin(r);const [kind,kindLabel,workflow]=typeOf(r);return {id:r.id,revision:r.revision,name:r.name,updatedAt:r.updatedAt,kind,kindLabel,bytes:p.bytes,sha256:p.sha256,workflow};}
+function snapshotSummary(r,p){const [kind,kindLabel,workflow]=typeOf(r);return {id:r.id,revision:r.revision,name:r.name,updatedAt:r.updatedAt,kind,kindLabel,bytes:p.bytes,sha256:p.sha256,workflow};}
+async function summary(r,p=null){return snapshotSummary(r,p||await pin(r));}
+async function pinnedSnapshot(ids){
+  const rows=await projectDraftRecords(r=>{
+    const pinned=pinSnapshot(r);
+    return {id:r.id,pin:pinned,summary:snapshotSummary(r,pinned),ordinary:ordinary(r)};
+  },{ids});
+  return new Map(rows.map(row=>[row.id,row]));
+}
 function receiptSummary(r){const v=r.input.receipt;return {id:r.id,requestId:v.requestId,kind:v.kind,at:v.at,label:v.label,archiveId:v.archiveId??null,records:(v.restored?.length||0)+(v.replaced?.length||0)+(v.kept?.length||0)+(v.removed?.length||0)};}
 function workSummary(r){return {id:r.id,revision:r.revision,name:r.name,updatedAt:r.updatedAt};}
 function sorted(rows){return [...rows].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)||a.id.localeCompare(b.id));}
 export async function readLibrary(){
-  const rows=await readDraftRecords();
-  return {scope:SCOPE,records:await Promise.all(sorted(rows.filter(ordinary)).map(r=>summary(r))),receipts:sorted(rows.filter(isJournal)).map(receiptSummary),working:sorted(rows.filter(isWork)).map(workSummary)};
+  const rows=await projectDraftRecords(r=>ordinary(r)?{group:'records',value:snapshotSummary(r,pinSnapshot(r))}:
+    isJournal(r)?{group:'receipts',value:receiptSummary(r),updatedAt:r.updatedAt,id:r.id}:
+    {group:'working',value:workSummary(r)});
+  return {scope:SCOPE,records:sorted(rows.filter(r=>r.group==='records').map(r=>r.value)),
+    receipts:sorted(rows.filter(r=>r.group==='receipts')).map(r=>r.value),
+    working:sorted(rows.filter(r=>r.group==='working').map(r=>r.value))};
 }
 async function download(value,filename){const raw=typeof value==='string'?value:text(value),bytes=utf8(raw).length;need(bytes<=MAX_ARCHIVE_BYTES,'The complete selected download exceeds 256 MiB; choose fewer projects without changing their contents.');return {text:raw,filename,bytes,sha256:await sha(raw)};}
 function archiveShape(body){need(body?.schema===BODY&&typeof body.label==='string'&&typeof body.scope==='string','Unsupported complete saved-project archive.');iso(body.createdAt);for(const name of ['projects','history','working'])need(Array.isArray(body[name]),'The complete '+name+' inventory is absent.');const rows=[...body.projects,...body.history,...body.working];need(rows.length>0&&rows.length<=MAX_RECORDS&&new Set(rows.map(r=>r.id)).size===rows.length,'The complete inventory exceeds its limit or repeats an ID.');return rows;}
@@ -114,17 +654,33 @@ async function archiveView(raw){
   archiveShape(env.body);const bodyHash=await sha(JSON.stringify(env.body));
   need(bodyHash===env.sha256&&env.id==='saved-projects-'+bodyHash,'The complete archive identity does not match its original content.');
   const groups={};
-  for(const name of ['projects','history','working']){groups[name]=[];for(const row of env.body[name]){const r=await unpin(row);need(name==='projects'?ordinary(r):name==='history'?isJournal(r):isWork(r),'A retained record is in the wrong archive group.');groups[name].push(r);}}
-  return {id:env.id,label:env.body.label,createdAt:env.body.createdAt,records:await Promise.all(groups.projects.map((r,i)=>summary(r,env.body.projects[i]))),history:groups.history.map(receiptSummary),working:groups.working.map(workSummary),sha256:await sha(raw),bytes:utf8(raw).length,_text:raw};
+  for(const name of ['projects','history','working']){
+    groups[name]=[];
+    for(const row of env.body[name]){
+      const r=await unpin(row);
+      need(name==='projects'?ordinary(r):name==='history'?isJournal(r):isWork(r),'A retained record is in the wrong archive group.');
+      groups[name].push(name==='projects'?snapshotSummary(r,row):name==='history'?receiptSummary(r):workSummary(r));
+    }
+  }
+  return {id:env.id,label:env.body.label,createdAt:env.body.createdAt,records:groups.projects,history:groups.history,working:groups.working,sha256:await sha(raw),bytes:utf8(raw).length,_text:raw};
 }
 export async function exportProjects({ids,label='Saved Stellar Forge projects',includeHistory=true,includeWorking=true}={}){
   need(Array.isArray(ids)&&new Set(ids).size===ids.length,'Select distinct complete saved projects.');
   need(typeof includeHistory==='boolean'&&typeof includeWorking==='boolean','Choose explicit complete history and working-copy options.');
-  const rows=await readDraftRecords(),byId=new Map(rows.map(r=>[r.id,r]));
-  const selected=ids.map(id=>{key(id);const row=byId.get(id);need(row&&ordinary(row),'A selected project changed or is no longer available. Refresh the original inventory.');return row;});
-  const histories=includeHistory?rows.filter(isJournal):[],working=includeWorking?rows.filter(isWork):[];
+  const wanted=new Set(ids.map(id=>key(id)));let captured=0,selectedBytes=0;
+  const rows=await projectDraftRecords(r=>{
+    const group=ordinary(r)&&wanted.has(r.id)?'projects':includeHistory&&isJournal(r)?'history':includeWorking&&isWork(r)?'working':null;
+    if(!group)return undefined;
+    need(++captured<=MAX_RECORDS,'Choose 1–5,000 complete project, history and working records for this archive.');
+    const pinned=pinSnapshot(r);selectedBytes+=pinned.bytes;
+    need(selectedBytes<=MAX_ARCHIVE_BYTES,'The complete selected download exceeds 256 MiB; choose fewer projects without changing their contents.');
+    return {group,pin:pinned};
+  },{ids:includeHistory||includeWorking?null:ids});
+  const byId=new Map(rows.filter(r=>r.group==='projects').map(r=>[r.pin.id,r.pin]));
+  const selected=ids.map(id=>{const row=byId.get(id);need(row,'A selected project changed or is no longer available. Refresh the original inventory.');return row;});
+  const histories=rows.filter(r=>r.group==='history').map(r=>r.pin),working=rows.filter(r=>r.group==='working').map(r=>r.pin);
   const count=selected.length+histories.length+working.length;need(count>0&&count<=MAX_RECORDS,'Choose 1–5,000 complete project, history and working records for this archive.');
-  const body={schema:BODY,label:String(label),createdAt:now(),scope:SCOPE,projects:await Promise.all(selected.map(pin)),history:await Promise.all(histories.map(pin)),working:await Promise.all(working.map(pin))};
+  const body={schema:BODY,label:String(label),createdAt:now(),scope:SCOPE,projects:selected,history:histories,working};
   const digest=await sha(JSON.stringify(body)),id='saved-projects-'+digest;
   const file=await download({schema:ARCHIVE,id,sha256:digest,body},cleanName(label)+'.saved-projects.json');
   return {...file,archiveId:id,summary:{label:body.label,createdAt:body.createdAt,records:body.projects.length,receipts:body.history.length,working:body.working.length}};
@@ -134,19 +690,22 @@ async function selectedArchive(value){need(value&&typeof value._text==='string',
 async function reviewHash(value){const copy=clone(value);delete copy.reviewSha256;return sha(JSON.stringify(copy));}
 async function validateReview(review,kind){need(review?.kind===kind&&await reviewHash(review)===review.reviewSha256,'The retained original comparison changed. Prepare an explicit new comparison.');return review;}
 export async function reviewReceiving(archive){
-  const a=await selectedArchive(archive),body=JSON.parse(a._text).body,current=new Map((await readDraftRecords()).map(r=>[r.id,r])),rows=[],expected=[];
+  const a=await selectedArchive(archive),body=JSON.parse(a._text).body,current=await pinnedSnapshot(body.projects.map(r=>r.id)),rows=[],expected=[];
   for(let i=0;i<body.projects.length;i++){
-    const original=body.projects[i],existing=current.get(original.id)||null,p=existing?await pin(existing):null;
-    need(!existing||ordinary(existing),'An existing library journal reserves this project identity.');
+    const original=body.projects[i],existing=current.get(original.id)||null,p=existing?.pin||null;
+    need(!existing||existing.ordinary,'An existing library journal reserves this project identity.');
     const status=!existing?'NEW':p.sha256===original.sha256?'IDENTICAL':'CONFLICT';
-    rows.push({id:original.id,incoming:a.records[i],current:existing?await summary(existing,p):null,status,defaultChoice:status==='NEW'?'restore':'keep',allowed:status==='NEW'?['restore','keep']:status==='CONFLICT'?['replace','keep']:['keep']});
+    rows.push({id:original.id,incoming:a.records[i],current:existing?.summary||null,status,defaultChoice:status==='NEW'?'restore':'keep',allowed:status==='NEW'?['restore','keep']:status==='CONFLICT'?['replace','keep']:['keep']});
     expected.push({id:original.id,record:p});
   }
   const review={kind:'receive',archiveId:a.id,archiveSha256:a.sha256,rows,_expected:expected};
   review.reviewSha256=await reviewHash(review);return review;
 }
 function requestId(value){key(value,'receiving request ID');need(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}$/.test(value),'Use a stable original receiving request ID.');return value;}
-async function currentFor(ids){const map=new Map((await readDraftRecords()).map(r=>[r.id,r]));return Promise.all(ids.map(id=>map.has(id)?summary(map.get(id)):Promise.resolve({id,absent:true})));}
+async function currentFor(ids){
+  const rows=await projectDraftRecords(r=>snapshotSummary(r,pinSnapshot(r)),{ids}),map=new Map(rows.map(r=>[r.id,r]));
+  return ids.map(id=>map.get(id)||{id,absent:true});
+}
 function storedReceiptShape(r){need(isJournal(r)&&r.input.receipt?.id===r.id,'The original receiving receipt is absent or inconsistent.');return r.input;}
 async function completed(id,requestHash){
   const row=await loadDraft(id);if(!row)return null;const value=storedReceiptShape(row);
@@ -187,12 +746,12 @@ export async function exportReceipt(id){const row=await loadDraft(key(id));store
 export async function reviewUndo(receiptId){
   const saved=await loadDraft(key(receiptId)),value=storedReceiptShape(saved);
   need(value.receipt.kind==='receive','Select an original receiving receipt for selective restoration.');
-  const originals=new Map(value.before.map(x=>[x.id,x.record])),current=new Map((await readDraftRecords()).map(r=>[r.id,r])),rows=[],expected=[];
+  const originals=new Map(value.before.map(x=>[x.id,x.record])),current=await pinnedSnapshot(value.after.map(r=>r.id)),rows=[],expected=[];
   for(const applied of value.after){
     const oldPin=originals.get(applied.id)||null,old=oldPin?await unpin(oldPin):null;
-    const received=await unpin(applied.record),actual=current.get(applied.id)||null,actualPin=actual?await pin(actual):null;
+    const received=await unpin(applied.record),actual=current.get(applied.id)||null,actualPin=actual?.pin||null;
     const status=!actual?'ABSENT':actualPin.sha256===applied.record.sha256?'UNCHANGED':'STAFF_CHANGED';
-    rows.push({id:applied.id,status,canRestore:status==='UNCHANGED',before:old?await summary(old,oldPin):null,current:actual?await summary(actual,actualPin):null,after:await summary(received,applied.record)});
+    rows.push({id:applied.id,status,canRestore:status==='UNCHANGED',before:old?await summary(old,oldPin):null,current:actual?.summary||null,after:await summary(received,applied.record)});
     expected.push({id:applied.id,record:actualPin,before:oldPin,accepted:applied.record});
   }
   const review={kind:'undo',receiptId,receiptSha256:(await pin(saved)).sha256,rows,_expected:expected};review.reviewSha256=await reviewHash(review);return review;
