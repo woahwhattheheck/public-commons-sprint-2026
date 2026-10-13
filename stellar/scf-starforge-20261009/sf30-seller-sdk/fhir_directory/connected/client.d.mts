@@ -50,7 +50,9 @@ export type DirectoryConformanceReviewInput={"label":string;"actor":string;"asse
 export type DirectoryConformanceCompareInput={"label":string;"actor":string;"beforeAssessmentId":SHA256;"afterAssessmentId":SHA256;"scopeNote":string;"note"?:string};
 export type DirectoryConformanceCollection='conformancePlans'|'conformanceAssessments'|'conformanceReviews'|'conformanceComparisons';
 export type DirectoryConformanceFileCollection='assessments'|'reviews'|'comparisons';
-export type DirectoryConformanceFileKind='report'|'findings'|'rows'|'index'|'rules'|'summary'|'package';
+export type DirectoryConformanceOriginalFileKind='report'|'findings'|'rows'|'index'|'rules'|'summary'|'package';
+export type DirectoryForeignKeyFileKind='foreignKeys'|'foreignKeyCandidates'|'foreignKeyMatches'|'foreignKeyCoverage';
+export type DirectoryConformanceFileKind=DirectoryConformanceOriginalFileKind|DirectoryForeignKeyFileKind;
 export type DirectoryConformanceSeverity='error'|'warning'|'not-evaluated';
 export type DirectoryConformanceOutcome='pass'|'annotation'|'error'|'warning'|'not-evaluated';
 export type DirectoryConformanceCounts=Record<DirectoryConformanceOutcome,number>;
@@ -68,6 +70,56 @@ export interface DirectoryConformanceRow{
 export interface DirectoryConformancePage<T>{
  assessmentId:SHA256;rows:T[];total:number;offset:number;limit:number;nextOffset:number|null;bytes:number;byteBudget:number;
 }
+export type DirectoryForeignKeyState='resolved'|'ambiguous'|'missing-target'|'null-reference'|'invalid-key'|
+ 'target-table-unavailable'|'representation-not-tabular'|'unsupported-declaration'|'nonmatching-value';
+export type DirectoryForeignKeyCandidateState='value'|'null'|'invalid'|'nonmatching'|'representation-not-tabular';
+export interface DirectoryForeignKeyRef extends DirectoryRecordRef{
+ nativeRef:Json;table?:string;rowOrdinal?:number;rowSha256?:SHA256;resourceSha256?:SHA256;
+ memberName?:string;memberSha256?:SHA256;pointer?:string;rawRange?:Json;representation?:string;
+ parentRecordId?:SHA256|null;nativeId?:string|null;
+}
+export interface DirectoryForeignKeyComponent{
+ field:string;pointer:string;originalPointer:string;fieldDeclaration:Json;physical:Json;state:string;
+ headerPositions?:number[];logicalNull?:boolean;matchedMarker?:Json;logical?:Json;reason?:string;
+}
+export interface DirectoryForeignKeyTargetCoverage{
+ targetTable:string;groupId:SHA256;presentSelectedDocuments:number;establishedTabularCoverage:boolean;
+ candidateStates:Partial<Record<DirectoryForeignKeyCandidateState,number>>;scope:string;
+}
+export interface DirectoryForeignKeyOutcome{
+ id:SHA256;schema:'stellar-forge.directory-conformance-foreign-keys.v1';kind:'outcome';
+ declarationId:SHA256;table:string;ref:DirectoryForeignKeyRef;source:Json;requirement:Json;
+ representation:string;state:DirectoryForeignKeyState;constraintOutcome:'pass'|'error'|'not-evaluated';
+ resolutionOutcome:DirectoryForeignKeyState;components:DirectoryForeignKeyComponent[];
+ keyJson:string|null;keySha256:SHA256|null;candidateCount:number;candidateGroupId:SHA256|null;
+ targetCoverage:DirectoryForeignKeyTargetCoverage|null;targetMatches:string;nullPolicy:string|null;
+}
+export interface DirectoryForeignKeyCandidate{
+ id:SHA256;schema:'stellar-forge.directory-conformance-foreign-keys.v1';kind:'candidate';
+ groupId:SHA256;table:string;ref:DirectoryForeignKeyRef;representation:string;
+ state:DirectoryForeignKeyCandidateState;components:DirectoryForeignKeyComponent[];
+ keyJson:string|null;keySha256:SHA256|null;reason?:string;
+}
+export interface DirectoryForeignKeyMatch{
+ id:SHA256;schema:'stellar-forge.directory-conformance-foreign-keys.v1';kind:'match';
+ outcomeId:SHA256;candidateId:SHA256;declarationId:SHA256;sourceRef:DirectoryForeignKeyRef;
+ targetRef:DirectoryForeignKeyRef;keySha256:SHA256;groupId:SHA256;
+}
+export interface DirectoryForeignKeySummary{
+ implementationEdition:string;declaredForeignKeys:number;selectedDeclarations:number;
+ declaredCompositeKeys:number;selectedCompositeKeys:number;
+ outcomeRows:number;candidateRows:number;matchRows:number;states:Record<DirectoryForeignKeyState,number>;
+}
+export interface DirectoryForeignKeyCoverage extends DirectoryForeignKeySummary{
+ schema:'stellar-forge.directory-conformance-foreign-keys.v1';policy:JsonObject;originalStandard:Json;
+ originalDatapackageVersion:Json;subjectKind:'sources'|'editions';subjectId:SHA256;
+ selectedChildTables:string[];selectedSources:Json[];contextOriginalRows:number;
+ declarations:Json[];targetGroups:Json[];tableDomains:Json[];limits:JsonObject;meaning:string;
+}
+export type DirectoryForeignKeyFilters={table?:string;state?:string;ruleId?:SHA256;sourceId?:SHA256;recordId?:SHA256};
+export type DirectoryForeignKeyCandidateFilters={table?:string;state?:string;groupId?:SHA256;sourceId?:SHA256;recordId?:SHA256};
+export type DirectoryForeignKeyMatchFilters={outcomeId?:SHA256;candidateId?:SHA256};
+export type DirectoryForeignKeyPage<T>=DirectoryConformancePage<T>&{byteBudget:4194304};
 export interface DirectoryConformanceSummary{
  schema:'stellar-forge.directory-conformance.v1';planId:SHA256;requestSha256:SHA256;
  selectedRows:number;originalRows:number;populations:Record<string,number>;findings:number;
@@ -75,6 +127,7 @@ export interface DirectoryConformanceSummary{
  checks:Array<{code:string}&DirectoryConformanceCounts>;
  tableChecks:Array<{table:string;code:string}&DirectoryConformanceCounts>;
  ruleCoverage:Record<string,number>;rules:number;formatPolicy:'annotation'|'assert';meaning:string;
+ foreignKeys?:DirectoryForeignKeySummary;
 }
 export type DirectoryConformancePlan=DirectoryConformancePlanInput&{
  id:SHA256;schema:'stellar-forge.directory-conformance.v1';population:Record<string,number>;
@@ -83,7 +136,7 @@ export type DirectoryConformancePlan=DirectoryConformancePlanInput&{
 export type DirectoryConformanceAssessment=DirectoryConformanceAssessInput&{
  id:SHA256;schema:'stellar-forge.directory-conformance.v1';requestSha256:SHA256;subjectKind:'sources'|'editions';
  subjectId:SHA256;family:'hsds-3.3.1'|'fhir-hsd-1.0.0';engine:JsonObject;summary:DirectoryConformanceSummary;
- files:Record<DirectoryConformanceFileKind,FileIdentity>;createdAt?:string;
+ files:Record<DirectoryConformanceOriginalFileKind,FileIdentity>&Partial<Record<DirectoryForeignKeyFileKind,FileIdentity>>;createdAt?:string;
 };
 export type DirectoryConformanceReview=DirectoryConformanceReviewInput&{
  id:SHA256;schema:'stellar-forge.directory-conformance.v1';requestSha256:SHA256;planId:SHA256;
@@ -105,6 +158,9 @@ export interface DirectoryConformanceArguments{
  directory_conformance_findings:{workspace:WorkspaceAlias;assessmentId:SHA256}&DirectoryConformanceFindingFilters&Pick<DirectoryPageInput,'offset'|'limit'>;
  directory_conformance_finding:{workspace:WorkspaceAlias;assessmentId:SHA256;findingId:SHA256};
  directory_conformance_rows:{workspace:WorkspaceAlias;assessmentId:SHA256;table?:string}&Pick<DirectoryPageInput,'offset'|'limit'>;
+ directory_conformance_foreign_keys:{workspace:WorkspaceAlias;assessmentId:SHA256}&DirectoryForeignKeyFilters&Pick<DirectoryPageInput,'offset'|'limit'>;
+ directory_conformance_foreign_key_candidates:{workspace:WorkspaceAlias;assessmentId:SHA256}&DirectoryForeignKeyCandidateFilters&Pick<DirectoryPageInput,'offset'|'limit'>;
+ directory_conformance_foreign_key_matches:{workspace:WorkspaceAlias;assessmentId:SHA256}&DirectoryForeignKeyMatchFilters&Pick<DirectoryPageInput,'offset'|'limit'>;
  directory_conformance_file:{workspace:WorkspaceAlias;collection:DirectoryConformanceFileCollection;recordId:SHA256;fileKind:DirectoryConformanceFileKind};
 }
 export interface DirectoryConformanceResultValues{
@@ -113,6 +169,9 @@ export interface DirectoryConformanceResultValues{
  directory_conformance_findings:DirectoryConformancePage<DirectoryConformanceFinding>;
  directory_conformance_finding:DirectoryConformanceFinding;
  directory_conformance_rows:DirectoryConformancePage<DirectoryConformanceRow>;
+ directory_conformance_foreign_keys:DirectoryForeignKeyPage<DirectoryForeignKeyOutcome>;
+ directory_conformance_foreign_key_candidates:DirectoryForeignKeyPage<DirectoryForeignKeyCandidate>;
+ directory_conformance_foreign_key_matches:DirectoryForeignKeyPage<DirectoryForeignKeyMatch>;
  directory_conformance_file:Json;
 }
 
@@ -264,10 +323,50 @@ export function assessHumanServicesDirectoryConformance(options:{
 }&({plan:DirectoryConformancePlanInput;planId?:never}|{plan?:never;planId:SHA256})):
  Promise<{planId:SHA256;planResult?:RetainedResult<DirectoryConformancePlan>;result:RetainedResult<DirectoryConformanceAssessment>;assessment:DirectoryConformanceAssessment}>;
 export function iterateHumanServicesDirectoryConformance(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;limit?:number;requestOptions?:RequestOptions;
+ kind?:'findings';filters?:DirectoryConformanceFindingFilters;
+}):AsyncGenerator<{page:DirectoryConformancePage<DirectoryConformanceFinding>;result:RetainedResult},void,unknown>;
+export function iterateHumanServicesDirectoryConformance(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;limit?:number;requestOptions?:RequestOptions;
+ kind:'rows';filters?:{table?:string};
+}):AsyncGenerator<{page:DirectoryConformancePage<DirectoryConformanceRow>;result:RetainedResult},void,unknown>;
+export function iterateHumanServicesDirectoryConformance(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;limit?:number;requestOptions?:RequestOptions;
+ kind:'foreign_keys';filters?:DirectoryForeignKeyFilters;
+}):AsyncGenerator<{page:DirectoryConformancePage<DirectoryForeignKeyOutcome>;result:RetainedResult},void,unknown>;
+export function iterateHumanServicesDirectoryConformance(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;limit?:number;requestOptions?:RequestOptions;
+ kind:'foreign_key_candidates';filters?:DirectoryForeignKeyCandidateFilters;
+}):AsyncGenerator<{page:DirectoryConformancePage<DirectoryForeignKeyCandidate>;result:RetainedResult},void,unknown>;
+export function iterateHumanServicesDirectoryConformance(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;limit?:number;requestOptions?:RequestOptions;
+ kind:'foreign_key_matches';filters?:DirectoryForeignKeyMatchFilters;
+}):AsyncGenerator<{page:DirectoryConformancePage<DirectoryForeignKeyMatch>;result:RetainedResult},void,unknown>;
+export function iterateHumanServicesDirectoryConformance(options:{
  client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;
  limit?:number;requestOptions?:RequestOptions;
-}&({kind?:'findings';filters?:DirectoryConformanceFindingFilters}|{kind:'rows';filters?:{table?:string}})):
- AsyncGenerator<{page:DirectoryConformancePage<DirectoryConformanceFinding|DirectoryConformanceRow>;result:RetainedResult},void,unknown>;
+}&({kind?:'findings';filters?:DirectoryConformanceFindingFilters}|{kind:'rows';filters?:{table?:string}}|
+ {kind:'foreign_keys';filters?:DirectoryForeignKeyFilters}|
+ {kind:'foreign_key_candidates';filters?:DirectoryForeignKeyCandidateFilters}|
+ {kind:'foreign_key_matches';filters?:DirectoryForeignKeyMatchFilters})):
+ AsyncGenerator<{page:DirectoryConformancePage<DirectoryConformanceFinding|DirectoryConformanceRow|DirectoryForeignKeyOutcome|DirectoryForeignKeyCandidate|DirectoryForeignKeyMatch>;result:RetainedResult},void,unknown>;
+export function iterateHumanServicesDirectoryForeignKeys(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;limit?:number;requestOptions?:RequestOptions;
+ kind?:'outcomes';filters?:DirectoryForeignKeyFilters;
+}):AsyncGenerator<{page:DirectoryForeignKeyPage<DirectoryForeignKeyOutcome>;result:RetainedResult},void,unknown>;
+export function iterateHumanServicesDirectoryForeignKeys(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;limit?:number;requestOptions?:RequestOptions;
+ kind:'candidates';filters?:DirectoryForeignKeyCandidateFilters;
+}):AsyncGenerator<{page:DirectoryForeignKeyPage<DirectoryForeignKeyCandidate>;result:RetainedResult},void,unknown>;
+export function iterateHumanServicesDirectoryForeignKeys(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;limit?:number;requestOptions?:RequestOptions;
+ kind:'matches';filters?:DirectoryForeignKeyMatchFilters;
+}):AsyncGenerator<{page:DirectoryForeignKeyPage<DirectoryForeignKeyMatch>;result:RetainedResult},void,unknown>;
+export function iterateHumanServicesDirectoryForeignKeys(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;assessmentId:SHA256;limit?:number;requestOptions?:RequestOptions;
+}&({kind?:'outcomes';filters?:DirectoryForeignKeyFilters}|{kind:'candidates';filters?:DirectoryForeignKeyCandidateFilters}|
+ {kind:'matches';filters?:DirectoryForeignKeyMatchFilters})):
+ AsyncGenerator<{page:DirectoryForeignKeyPage<DirectoryForeignKeyOutcome|DirectoryForeignKeyCandidate|DirectoryForeignKeyMatch>;result:RetainedResult},void,unknown>;
 export function downloadHumanServicesDirectoryConformance(options:
  Omit<DownloadOptions,'exportId'|'expectedManifestSha256'|'client'>&{
  client:HumanServicesDirectoryClient;collection:DirectoryConformanceFileCollection;recordId:SHA256;
