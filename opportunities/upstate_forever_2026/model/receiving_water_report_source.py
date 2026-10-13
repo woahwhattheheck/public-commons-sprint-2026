@@ -532,6 +532,9 @@ def prepare(workspace, selection, *, progress=None):
                      "sha256": file_digest(directory / "report-source.json"),
                      "companions": companions, "role": "receiving-water-report-source",
                      "metadata": {"report_schema": observed_context.SCHEMA,
+                                  "report_context_kind": "receiving-water-scientific-study",
+                                  "report_source_id": key,
+                                  "project_id": workspace.project["id"],
                                   "mode": "completed_analysis" if analysis else "source_plan",
                                   "plan_id": plan["id"], "analysis_id": analysis["id"] if analysis else None,
                                   "new_native_calculation": False}}
