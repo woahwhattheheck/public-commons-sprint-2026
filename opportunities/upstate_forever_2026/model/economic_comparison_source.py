@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from copy import deepcopy
+from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -15,7 +16,7 @@ from .common import atomic_json, describe_file, digest, file_digest, held, read_
 from .workspace import Workspace
 
 SCHEMA = "upstate.economic-comparison-source/v1"
-EDITION = "economic-comparison-scientific-source-20261013-v1"
+EDITION = "economic-comparison-scientific-source-20261013-v2-programme"
 ROOT = "economic-comparison-report-sources"
 RECIPE_NAME = "observed-report.json"
 MANIFEST_NAME = "model-sources.json"
@@ -94,7 +95,274 @@ def _changed_rows(changes):
              display(row["second"], row["second_present"])] for row in changes]
 
 
-def report_sections(comparison):
+
+def _money_minor(value):
+    """Format retained integer cents; never estimate or recalculate a cost."""
+    if value is None:
+        return "Unstated"
+    require(type(value) is int, "Retained cost source amounts must remain whole cents.")
+    sign = "-" if value < 0 else ""
+    whole, cents = divmod(abs(value), 100)
+    return sign + str(whole) + "." + format(cents, "02d")
+
+
+def _retained_editions(directory, comparison, record, members):
+    """Read the original captured inputs, including their complete review audits."""
+    by_name = {item["path"]: item for item in members}
+    result = {}
+    for side in ("first", "second"):
+        name = side + "-edition.json"
+        require(name in by_name, "The comparison omits an original saved Economic input.")
+        edition = read_json(_member(directory, by_name[name]))
+        require(edition.get("schema") == "upstate.economic-edition/v1"
+                and edition.get("id") == comparison[side]["id"]
+                and digest(edition) == record["identity"][side + "_record_sha256"],
+                "The captured Economic input differs from its original comparison identity.")
+        original = edition["input"]
+        require(original["report_id"] == comparison[side]["producer_report_id"]
+                and original["report_sha256"] == comparison[side]["report_sha256"]
+                and original["zone_id"] == comparison[side]["zone_id"],
+                "The captured Economic input names a different physical source.")
+        result[side] = edition
+    return result
+
+
+def _review_audit(cost, edition, run_id):
+    pointer = cost.get("field12_cost_review")
+    if not pointer:
+        return None
+    require(isinstance(pointer, dict), "Retain the complete FIELD12 review pointer.")
+    key = _id(pointer.get("operation_id"))
+    require(pointer.get("source_pointer") == "/field12_cost_reviews/" + key,
+            "The reviewed cost points to a different original audit.")
+    audit = edition["input"]["selection"].get("field12_cost_reviews", {}).get(key)
+    require(isinstance(audit, dict)
+            and audit.get("schema") == "upstate.implementation-cost-review-source/v1"
+            and audit.get("operation_id") == key,
+            "The original reviewed cost audit is absent from its saved selection.")
+    binding = audit.get("binding") or {}
+    summary, review = audit.get("summary") or {}, audit.get("review") or {}
+    require(digest({"schema": "upstate.implementation-cost-review-operation/v1",
+                    "edition": audit.get("edition"), "binding": binding, "review": review}) == key,
+            "The retained review operation identity differs from its original binding or decisions.")
+    source_match = (binding.get("run_id") == run_id
+                    and all(binding.get(k) == edition["input"].get(k)
+                            for k in ("report_id", "report_sha256", "zone_id")))
+    def same_cents(value, minor):
+        try:
+            return type(minor) is int and Decimal(str(value)) == Decimal(minor) / 100
+        except (ValueError, ArithmeticError):
+            return False
+    def same_number(first, second):
+        try:
+            return Decimal(str(first)) == Decimal(str(second))
+        except (ValueError, ArithmeticError):
+            return False
+    amounts_match = (cost.get("currency") == "USD"
+                     and same_cents(cost.get("capital"), summary.get("capital_minor"))
+                     and same_cents(cost.get("annual_operating"), summary.get("annual_operating_forecast_minor"))
+                     and same_number(cost.get("horizon_years"), summary.get("horizon_years"))
+                     and same_number(cost.get("discount_rate"), summary.get("discount_rate")))
+    original_scope = review.get("scope") or {}
+    current_scope = cost.get("scope") or {}
+    scope_match = (original_scope.get("kind") == current_scope.get("kind")
+                   and original_scope.get("kind") in {"whole_scenario", "reporting_zone"})
+    if original_scope.get("kind") == "reporting_zone":
+        scope_match = bool(scope_match and current_scope.get("producer_report_id") == binding.get("report_id")
+                           and current_scope.get("zone_id") == binding.get("zone_id"))
+    reference = cost.get("source") or {}
+    expected_uri = ("implementation/plans/" + str(binding.get("plan_id")) + "/revisions/" +
+                    ("%016d.json" % binding["revision"]) + "#cost-review-" + key)
+    reference_match = (reference.get("uri") == expected_uri
+                       and reference.get("as_of") == review.get("as_of"))
+    return {"audit": audit, "current_source_matches": source_match,
+            "current_review_reference_matches": reference_match,
+            "current_amounts_and_finance_match": amounts_match,
+            "current_scope_matches": scope_match,
+            "current_basis_matches": bool(source_match and amounts_match and scope_match and reference_match)}
+
+
+def _programme_blocks(cost, labels, row, editions):
+    programme, priced, bound = (cost.get(key) for key in ("programme", "priced_basis", "native_binding"))
+    if not isinstance(programme, dict) or not isinstance(priced, dict):
+        return []
+    if (programme.get("schema") != "upstate.simulated-restoration-programme/v1"
+            or priced.get("schema") != "upstate.simulated-restoration-pricing/v1"):
+        return ["Additional original design metadata is retained in the saved Economic input; "
+                "its schema has no derived interpretation in this report."]
+    bound = bound if isinstance(bound, dict) else {}
+    binding_matches = {}
+    for side in labels:
+        original_row = row.get(side) or {}
+        binding_matches[side] = bool(
+            bound.get("run_id") == row["run_id"]
+            and all(bound.get(k) == editions[side]["input"].get(k)
+                    for k in ("report_id", "report_sha256", "zone_id"))
+            and all(bound.get(k) == original_row.get(k)
+                    for k in ("grid_id", "profile_id", "scenario_id")))
+    planting, schedule = programme.get("planting") or {}, programme.get("programme") or {}
+    source_rows = {item["id"]: item for item in priced.get("original_source_rows", [])}
+    require(priced.get("currency") == "USD", "Retain the original programme pricing currency.")
+    original_method = priced.get("selected_method")
+    selected = priced.get("selected") or {}
+    materials = priced.get("material_comparison") or {}
+    assistance = priced.get("assistance_comparison") or {}
+    species = [
+        str(item.get("species", item.get("catalogue_row_id"))) + ": " +
+        str(item.get("planting_count")) + " positions"
+        for item in materials.get("lines", [])
+    ]
+    heading = " / ".join(side.capitalize() for side in labels)
+    blocks = [
+        heading + " original implementation design. This is the retained basis supplied with "
+        "the original cost input. A later FIELD12 forecast can replace its financial amounts "
+        "while preserving this design and pricing metadata as provenance.",
+        _table(["Retained design field", "Original value"], [
+            ["Authored role", programme.get("scenario_role")],
+            ["Original title", programme.get("title")],
+            ["Binding matches current edition", binding_matches],
+            ["Treatment footprint", str(priced.get("treatment_hectares")) + " ha; " +
+             str(programme.get("expected_footprint", {}).get("net_changed_cells")) +
+             " changed cells; native footprint " + str(bound.get("footprint_id"))],
+            ["Original class transitions", programme.get("expected_footprint", {}).get("changed_transitions")],
+            ["Planting layout", str(planting.get("spacing_x_ft")) + " × " +
+             str(planting.get("spacing_y_ft")) + " ft; " +
+             str(priced.get("planting_positions")) + " positions; original method " + str(original_method)],
+            ["Species quantities", "; ".join(species)],
+            ["Proposed start", schedule.get("start_date")],
+            ["Authored task durations (days)", schedule.get("task_duration_days")],
+            ["Recurring maintenance", schedule.get("maintenance_recurrence")],
+        ], "Implementation hectares are the retained treatment quantity. Shared model support and "
+           "reporting-zone area are separate quantities. Dates and durations are planning assumptions, "
+           "not evidence of completed fieldwork. A nonmatching binding means this is historical "
+           "design context, not a verified treatment quantity for the current physical source."),
+    ]
+    components = []
+    for line in selected.get("capital_lines", []):
+        source = source_rows.get(line.get("catalogue_row_id")) or {}
+        reference = (str(source.get("title")) + "; " + str(source.get("source_id")) +
+                     "; page " + str(source.get("source_page"))) if source else "Authored allowance"
+        components.append([line.get("label"), _money_minor(line.get("amount_minor")),
+                           line.get("basis"), reference])
+    components.extend([
+        ["Original capital total", _money_minor(selected.get("capital_minor")),
+         "Retained original " + str(original_method) + " option", "Original basis, not a later reviewed forecast"],
+        ["Original annual maintenance", _money_minor(selected.get("annual_operating_minor")),
+         "Authored recurring forecast per year", programme.get("cost_assumptions", {}).get("annual_forecast_basis")],
+        ["Separate stock-only comparison", _money_minor(materials.get("total_minor")),
+         "Included in capital: " + _text(materials.get("included_in_capital")), materials.get("meaning")],
+        ["Separate assistance multiplication", _money_minor(assistance.get("amount_minor")),
+         "Deducted from costs: " + _text(assistance.get("deducted_from_costs")) +
+         "; eligibility confirmed: " + _text(assistance.get("eligibility_confirmed")), assistance.get("meaning")],
+    ])
+    blocks.append(_table(["Original component", "USD", "Price meaning", "Source or qualification"], components,
+                         "Amounts are copied from the original priced basis. No component is added, "
+                         "subtracted, annualized or repriced by this report."))
+    sources = []
+    for source in source_rows.values():
+        sources.append([source.get("title"), source.get("price_kind"),
+                        _money_minor(source.get("rate_cents")) + " USD / " + str(source.get("source_unit")),
+                        source.get("source_page"), source.get("scope"), source.get("exclusions")])
+    blocks.append(_table(["Published item", "Price type", "Original rate/unit", "Page", "Scope", "Exclusions"],
+                         sources, "FY25 benchmark costs, FY26 assistance and material quotes have distinct "
+                         "meanings. Original publisher references and complete rows are retained in the "
+                         "saved Economic input; no eligibility or current quotation is inferred."))
+    blocks.extend([
+        "Design limitations: " + _text(planting.get("species_interpretation")) + " " +
+        _text(schedule.get("monitoring_note")),
+        "Benchmark applicability: " + _text(schedule.get("benchmark_applicability")),
+        "Unpriced scope: " + _text(priced.get("unpriced_excluded_scopes")),
+    ])
+    return blocks
+
+
+def _review_blocks(context, side):
+    audit = context["audit"]
+    review, summary, binding = audit["review"], audit["summary"], audit["binding"]
+    forecasts = []
+    for key, label in (("remaining_capital", "Remaining capital forecast"),
+                       ("annual_operating", "Recurring annual operating forecast")):
+        value = review[key]
+        source = value["source"]
+        forecasts.append([label, _money_minor(value["amount_minor"]),
+                          source.get("title"), source.get("as_of"),
+                          source.get("uri"), value.get("note")])
+    blocks = [
+        side.capitalize() + (" matching reviewed cost basis: saved plan " if context["current_basis_matches"]
+                             else " historical reviewed cost context: saved plan ") + str(binding.get("plan_id")) +
+        ", revision " + str(binding.get("revision")) + ", as of " + str(review.get("as_of")) + ". " +
+        str(review.get("note") or ""),
+        _table(["Reviewed amount", "USD", "Source", "Source date", "Reference", "Rationale"], forecasts,
+               ("The current saved cost retains these reviewed amounts and financial assumptions."
+                if context["current_basis_matches"] else
+                "The current saved cost or physical binding differs from this retained review. Read the "
+                "current edition amounts in the original comparison table; these forecasts are historical context.") +
+               " Inherited programme metadata is not recalculated or relabeled as the successor option."),
+        _table(["Review correspondence", "Matches current edition"], [
+            ["Physical source and scenario", context["current_source_matches"]],
+            ["Currency, amounts, horizon and rate", context["current_amounts_and_finance_match"]],
+            ["Declared cost scope", context["current_scope_matches"]],
+            ["Review source reference and date", context["current_review_reference_matches"]],
+        ]),
+        _table(["Original ledger / reviewed basis", "USD"], [
+            ["Candidate budget (context)", _money_minor(summary.get("budget_minor"))],
+            ["Candidate commitments (context)", _money_minor(summary.get("commitment_minor"))],
+            ["Candidate actual ledger total (context)", _money_minor(summary.get("actual_minor"))],
+            ["Selected actual capital", _money_minor(summary.get("selected_actual_capital_minor"))],
+            ["Selected actual operating history", _money_minor(summary.get("selected_actual_operating_minor"))],
+            ["Remaining capital forecast", _money_minor(summary.get("remaining_capital_minor"))],
+            ["Resulting reviewed capital", _money_minor(summary.get("capital_minor"))],
+            ["Explicit annual operating forecast", _money_minor(summary.get("annual_operating_forecast_minor"))],
+        ], "Budget, commitment and actual are separate ledger classifications. Selected operating history "
+           "is context; it is not automatically added to or annualized into the explicit annual forecast."),
+        _table(["Ledger row / kind", "Original USD", "Reviewed classification", "Selected USD",
+                "Attribution / allocation", "Reason"], [
+            [str(item["id"]) + " / " + str(item["kind"]), _money_minor(item["amount_minor"]),
+             item["decision"]["classification"], _money_minor(item["decision"]["amount_minor"]),
+             "; ".join(str(item["decision"].get(key) or "")
+                       for key in ("attribution_reason", "allocation_reason")).strip("; "),
+             item["decision"].get("reason")]
+            for item in audit.get("ledger_rows", [])
+        ], "Every original row and full source/attachment association remains in the saved selection audit."),
+        "Reviewed financial assumptions: " + str(summary.get("horizon_years")) + " years; real discount rate " +
+        str(summary.get("discount_rate")) + ". Scope: " + _text(review.get("scope")) + ".",
+    ]
+    return blocks
+
+
+def _implementation_sections(row, editions):
+    if not editions:
+        return []
+    cc, blocks, groups = row["cost_comparison"], [], {}
+    for side in ("first", "second"):
+        cost = cc.get(side + "_input")
+        if not isinstance(cost, dict):
+            continue
+        retained = editions[side]["input"]["selection"]
+        originals = [item for item in retained.get("costs", []) if item.get("run_id") == row["run_id"]]
+        require(len(originals) == 1 and originals[0] == cost,
+                "The comparison cost differs from the original captured Economic selection.")
+        if isinstance(cost.get("programme"), dict):
+            key = digest({name: cost.get(name) for name in ("programme", "priced_basis", "native_binding")})
+            groups.setdefault(key, {"cost": cost, "sides": []})["sides"].append(side)
+    for item in groups.values():
+        blocks.extend(_programme_blocks(item["cost"], item["sides"], row, editions))
+    for side in ("first", "second"):
+        cost = cc.get(side + "_input")
+        if isinstance(cost, dict):
+            audit = _review_audit(cost, editions[side], row["run_id"])
+            if audit:
+                blocks.extend(_review_blocks(audit, side))
+    if not blocks:
+        return []
+    blocks.append({"kind": "links", "items": [
+        {"title": "First complete saved input and original source audit", "path": "comparison/first-edition.json"},
+        {"title": "Second complete saved input and reviewed source audit", "path": "comparison/second-edition.json"},
+    ]})
+    return [[row["label"] + " — implementation design and reviewed costs", blocks]]
+
+
+def report_sections(comparison, *, retained_editions=None):
     first, second = comparison["first"], comparison["second"]
     sections = [[comparison["title"], [
         "The first and second columns follow the saved editions selected by the operator. "
@@ -192,11 +460,25 @@ def report_sections(comparison):
         blocks.append(_table(["Edition", "Original quantity", "Support", "Valid cells", "Shared area (ha)"],
                              support, "Shared model support is not an implementation treatment quantity. "
                                       "Complete original output fields remain in comparison.json."))
+        cost_effectiveness = []
+        for side, original in zip(("First", "Second"), originals):
+            for metric, result in (original.get("economics") or {}).items():
+                cost_effectiveness.append([
+                    side, metric, result.get("annualized_cost_per_unit"),
+                    result.get("units"), result.get("basis"),
+                ])
+        if cost_effectiveness:
+            blocks.append(_table(["Edition", "Original quantity", "Saved cost per avoided mass",
+                                  "Units", "Original basis"], cost_effectiveness,
+                                 "Values are copied from the completed Economic report. Unavailable values "
+                                 "remain unstated; no new benefit or unit-cost calculation is performed."))
+
         if row["changes"]:
             blocks.append(_table(["Original field", "Change", "First", "Second"],
                                  _changed_rows(row["changes"]),
                                  "Long values are shortened for this table and retained in full in comparison.json."))
         sections.append([row["label"] + " — original scenario comparison", blocks])
+        sections.extend(_implementation_sections(row, retained_editions))
     sections.append(["Financial interpretation and complete original files", [
         *comparison["interpretation"],
         {"kind": "links", "items": [
@@ -265,17 +547,11 @@ def _context(workspace, comparison_id, selection, *, retained_source_key=None):
                 "comparison_sha256": record["comparison_sha256"],
                 "first_edition_id": comparison["first"]["id"], "second_edition_id": comparison["second"]["id"],
                 "members": members, "adapter_sha256": file_digest(Path(__file__))}
-    recipe = {"schema": observed_context.SCHEMA, "edition": EDITION,
-              "title": comparison["title"], "sections": report_sections(comparison),
-              "inputs": [{"path": "comparison/" + item["path"], "bytes": item["bytes"],
-                          "sha256": item["sha256"]} for item in members],
-              "source_links": ["comparison/index.html", "comparison/comparison.json"],
-              "report_context_kind": "economic-comparison",
-              "economic_comparison_identity": deepcopy(identity)}
-    source_key = digest({"identity": identity, "recipe": recipe})
-    if retained_source_key is not None and _id(retained_source_key) != source_key:
-        root = _inside(workspace.root, ROOT, retained_source_key)
-        intent = read_json(_inside(root, "intent.json"))
+    retained_path = (_inside(workspace.root, ROOT, _id(retained_source_key), "intent.json")
+                     if retained_source_key is not None else None)
+    if retained_path is not None and retained_path.is_file():
+        # Reconnect the captured presentation before evaluating any newer source interpretation.
+        intent = read_json(retained_path)
         retained_identity = intent.get("source_identity")
         require(intent.get("schema") == SCHEMA and intent.get("source_key") == retained_source_key
                 and digest({"identity": retained_identity, "recipe": intent["recipe"]}) == retained_source_key,
@@ -284,6 +560,18 @@ def _context(workspace, comparison_id, selection, *, retained_source_key=None):
                     for key in identity if key not in {"edition", "adapter_sha256"}),
                 "The retained source names another original comparison or project.")
         identity, recipe, source_key = retained_identity, intent["recipe"], retained_source_key
+    else:
+        editions = _retained_editions(directory, comparison, record, members)
+        recipe = {"schema": observed_context.SCHEMA, "edition": EDITION,
+                  "title": comparison["title"], "sections": report_sections(comparison, retained_editions=editions),
+                  "inputs": [{"path": "comparison/" + item["path"], "bytes": item["bytes"],
+                              "sha256": item["sha256"]} for item in members],
+                  "source_links": ["comparison/index.html", "comparison/comparison.json"],
+                  "report_context_kind": "economic-comparison",
+                  "economic_comparison_identity": deepcopy(identity)}
+        source_key = digest({"identity": identity, "recipe": recipe})
+        require(retained_source_key is None or retained_source_key == source_key,
+                "The comparison presentation changed; preview its current source before importing.")
     selected, choices, binding = _selection(workspace, selection)
     handoff = {"schema": SCHEMA + "/handoff", "source_identity": identity, "source_key": source_key,
                "original_delivery_selection": selected if selection is not None else None,
