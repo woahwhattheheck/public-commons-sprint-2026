@@ -232,6 +232,20 @@
         "application-input-set-editions.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/operation-history.mjs",
+      [
+        "operation-history.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operation-history-model.mjs",
+      [
+        "operation-history-model.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }
