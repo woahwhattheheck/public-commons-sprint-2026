@@ -9,7 +9,7 @@
       "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
       "kind": "blob",
       "path": "products/worldbank/PROGRAMMES.md",
-      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "commit": "a6a3c7a8760586ac387d8834af164fbee3f269dd",
       "required": true,
       "editions": [
         {
@@ -17,6 +17,12 @@
           "git_blob": "3414c431e63278f290ae63aa47fdc82dcd36f13a",
           "bytes": 10669,
           "sha256": "ceb5eccdb04bd572ad92d52b952027979bddd338a2e10f8180dcfb51faa82930"
+        },
+        {
+          "commit": "a6a3c7a8760586ac387d8834af164fbee3f269dd",
+          "git_blob": "d46c9f7f7e03196cf1b85f7662efd72676ab237f",
+          "bytes": 14462,
+          "sha256": "744f6b4e34eee37dff30dc8dc672337578d8b49581dde4f461a3559987d2cedd"
         }
       ]
     },
@@ -111,7 +117,7 @@
       "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
       "kind": "blob",
       "path": "products/worldbank/INSTALLED_PROGRAMME_RECEIVING.md",
-      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "commit": "a6a3c7a8760586ac387d8834af164fbee3f269dd",
       "required": true,
       "editions": [
         {
@@ -119,6 +125,12 @@
           "git_blob": "0e1d153204ee1aca21637bcf836eb1aae95a7535",
           "bytes": 5330,
           "sha256": "aa4fbf142d7c7563e3ee752fa3b7a60588a5bdfcd16d27e9f13e8ce28cb091f5"
+        },
+        {
+          "commit": "a6a3c7a8760586ac387d8834af164fbee3f269dd",
+          "git_blob": "1c2884b7b7ee8a8d114a3f102be07ea2a5043b1c",
+          "bytes": 6337,
+          "sha256": "d53286f131f7ac4910327b1d08a3aefb9b1883faaaaf8f0051396afeee0df8b4"
         }
       ]
     },
@@ -176,13 +188,19 @@
       "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
       "kind": "blob",
       "path": "products/worldbank/OPERATING.md",
-      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "commit": "a6a3c7a8760586ac387d8834af164fbee3f269dd",
       "editions": [
         {
           "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
           "git_blob": "f15ac2a667d66b9f0eacdb3fb96e2b3696c9271b",
           "bytes": 8427,
           "sha256": "c9c5922c4701a4d80135f8174d74bd5557215dd2e54f7d21af34d142d47ffd78"
+        },
+        {
+          "commit": "a6a3c7a8760586ac387d8834af164fbee3f269dd",
+          "git_blob": "852a8940e20d0b1080f1383c2f3368fcb93e93d4",
+          "bytes": 8660,
+          "sha256": "9e6b2ce448ee65fb69ccc027faa1e5f1d7144b6bdf7eeb293b748a34fb6f71b9"
         }
       ]
     },
