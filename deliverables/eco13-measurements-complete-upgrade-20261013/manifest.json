@@ -1,41 +1,48 @@
 {
   "schema": "upstate.measurements-source-upgrade/v1",
-  "source_commit": "0c039477feefe6c1b6195cb505ffb283727e08b1",
+  "source_commit": "f93a648ba7c75304b29048bef605daebf6d308a7",
   "source_root": "opportunities/upstate_forever_2026",
-  "operation_id": "ECO13-MEASUREMENTS-COMPLETE-DD6B-20261013",
+  "operation_id": "ECO13-MEASUREMENTS-RETURNED-REVIEW-DD6B-20261013",
   "installer": "operator/install_measurements.py",
   "inventory": "integration/measurements/INSTALLATION.json",
-  "source_files": 59,
-  "installed_files": 57,
-  "source_bytes": 730392,
+  "source_files": 76,
+  "installed_files": 74,
+  "source_bytes": 933078,
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 289914,
-      "sha256": "2215bcbe16486e508e5d3c2bc9219adcc8497e5878896480c23376c240e49e9c",
+      "bytes": 295967,
+      "sha256": "c8e7fb9c9f1c83b6be1fcf1ab8168643c166d5869e91627ea7b15427da577441",
       "members": 22,
-      "source_bytes": 213830
+      "source_bytes": 218421
     },
     {
       "path": "source-02.json",
-      "bytes": 278105,
-      "sha256": "65d4ecacaa5199f1a139cfabe28e6e74e351580bc2de48db8f638fc950cd799a",
+      "bytes": 277403,
+      "sha256": "beebc012ac068caab89798769575eceff004268005d0c4f22b78da3605f20a61",
       "members": 16,
       "source_bytes": 205891
     },
     {
       "path": "source-03.json",
-      "bytes": 292689,
-      "sha256": "6a8b3e9aea2366530eb497a08433559f7389d6108b4a142d207a9fe635328053",
+      "bytes": 296927,
+      "sha256": "d053772c00129961c7cd58299602c110cab436cacce1315dba818621cd5cca89",
       "members": 15,
-      "source_bytes": 216940
+      "source_bytes": 220672
     },
     {
       "path": "source-04.json",
-      "bytes": 126463,
-      "sha256": "7bcb3829bf697d7d2f80ce3d563e2709e4021acef9e1a56a58960c1dea735384",
+      "bytes": 126470,
+      "sha256": "e3bf2a30629fae6606b72eae72f17ee3c997400693fb905389d36c2c20409f71",
       "members": 6,
       "source_bytes": 93731
+    },
+    {
+      "path": "source-05.json",
+      "bytes": 262290,
+      "sha256": "8cc7f015a5c73626065cc134f33c1e57813e5eb3cea0b3238069bcaec4d6aba4",
+      "members": 17,
+      "source_bytes": 194363
     }
   ],
   "files": [
@@ -49,36 +56,6 @@
       "path": "CURRENT_OWNER_DIRECTION.md",
       "bytes": 4889,
       "sha256": "2454c14e18ad3257e10aed4c0dd321d0d1fbd6c21a7dc12a427cfccfd4e496d8",
-      "role": "installed_component"
-    },
-    {
-      "path": "install_measurement_large_files.py",
-      "bytes": 12865,
-      "sha256": "21fb84d41642a04f1c2c3d8794bc8b30f78a3d351f859b4938111264335b92b8",
-      "role": "installed_component"
-    },
-    {
-      "path": "integration/component_fragments/measurement-chemistry.json",
-      "bytes": 1543,
-      "sha256": "f8fcf75b6012bb24df0adac24c52e32c42394a9b88a27faa366e87e584e45013",
-      "role": "installed_component"
-    },
-    {
-      "path": "integration/component_fragments/measurement-collections.json",
-      "bytes": 1649,
-      "sha256": "0d871954f93fa6d4457cfd41eb42cf189c6c4d7847ce3da992d26a0bbf4c4d1c",
-      "role": "installed_component"
-    },
-    {
-      "path": "integration/component_fragments/measurement-large-files.json",
-      "bytes": 1555,
-      "sha256": "a2f5db4eba22ad8b0a230b2f04a9fc626f17ccaa9137b6516e5dad7bb16e2282",
-      "role": "installed_component"
-    },
-    {
-      "path": "integration/measurements/INSTALLATION.json",
-      "bytes": 22443,
-      "sha256": "ea88ad205b8977b629178c22d5ea328dcd7af367a297328830aa596170a29d2e",
       "role": "installed_component"
     },
     {
@@ -100,15 +77,105 @@
       "role": "installed_component"
     },
     {
-      "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 8504,
-      "sha256": "c375d715e00d67828bdbc3430ca621aa781cb8cf3b9ae14eca2bd3a6283bfd59",
-      "role": "installed_component"
-    },
-    {
       "path": "MEASUREMENT_LARGE_FILES.md",
       "bytes": 22348,
       "sha256": "984be9c2f4613ebe05bf30522c09bd86c21fe612d90ef234cd1647fd9feae78a",
+      "role": "installed_component"
+    },
+    {
+      "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
+      "bytes": 9271,
+      "sha256": "9f7740f9043d79f54810362a502be56ea3fef20ecae286dd6a54d55e7b54d696",
+      "role": "installed_component"
+    },
+    {
+      "path": "MEASUREMENT_RETURNED_REVIEWS.md",
+      "bytes": 10267,
+      "sha256": "6d6b7f77494178b8994a0acadada29d1e65b1f78aa16751feaa95c6f91aba850",
+      "role": "installed_component"
+    },
+    {
+      "path": "MEASUREMENT_RETURNED_REVIEWS_SOURCE.json",
+      "bytes": 1723,
+      "sha256": "341fefc51c2f423310a49e3a3fed45f990766700375fe66f15e8252301a97c0e",
+      "role": "installed_component"
+    },
+    {
+      "path": "checks/measurement_returned_reviews_operator.py",
+      "bytes": 17623,
+      "sha256": "ce7bca4caaf64b387a50afdb931abb254fa0edf542b2dc362770cc193a23d83f",
+      "role": "installed_component"
+    },
+    {
+      "path": "checks/returned_review_capacity.mjs",
+      "bytes": 8950,
+      "sha256": "24c6b8c0e8f32aeb69a538c885c421b779858b7a87b9759ca19a188ee6994d9c",
+      "role": "installed_component"
+    },
+    {
+      "path": "checks/returned_review_journey.mjs",
+      "bytes": 10088,
+      "sha256": "6f901f4e0eaa7e1721e73db53b9eb4eae1521f1652b62976f0ea73ced5435152",
+      "role": "installed_component"
+    },
+    {
+      "path": "install_measurement_large_files.py",
+      "bytes": 12865,
+      "sha256": "21fb84d41642a04f1c2c3d8794bc8b30f78a3d351f859b4938111264335b92b8",
+      "role": "installed_component"
+    },
+    {
+      "path": "install_measurement_returned_reviews.py",
+      "bytes": 6131,
+      "sha256": "f295be2ff1a40bab01296c87bcc952d4d2cda41f616cb622cefbc16bf06b20d1",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/component_fragments/measurement-chemistry.json",
+      "bytes": 1543,
+      "sha256": "f8fcf75b6012bb24df0adac24c52e32c42394a9b88a27faa366e87e584e45013",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/component_fragments/measurement-collections.json",
+      "bytes": 1761,
+      "sha256": "42543acc7bb429243284ee832f7213e2ffc92c322a282da5a876cc0ee5a7c30d",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/component_fragments/measurement-large-files.json",
+      "bytes": 1555,
+      "sha256": "a2f5db4eba22ad8b0a230b2f04a9fc626f17ccaa9137b6516e5dad7bb16e2282",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/component_fragments/measurement-returned-reviews-native.json",
+      "bytes": 937,
+      "sha256": "e16de5a4089e4c9789065aa82193a422b6b262b26f2d6ce985be87c50fe6e761",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/component_fragments/measurement-returned-reviews.json",
+      "bytes": 1002,
+      "sha256": "9a8a059d7c57c0974df2cc5581e7481dd5fa3ed26153b9ee6683da2d711027ae",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/measurements/INSTALLATION.json",
+      "bytes": 26155,
+      "sha256": "cfd83871230a85d8a9a964ba7f9a88c87f424c13f48b9a1eef42ffffef406991",
+      "role": "installed_component"
+    },
+    {
+      "path": "measurement_workspace/ATOMIC_SNAPSHOT.md",
+      "bytes": 3586,
+      "sha256": "2fee4765c26299edd3be0c43c7f560bf9b70dbb724eee38857bbeea52cce655e",
+      "role": "installed_component"
+    },
+    {
+      "path": "measurement_workspace/LEGACY_CHEMISTRY.md",
+      "bytes": 9345,
+      "sha256": "b77421baa56f8d8185131c4f69f10411713c97cac72b54827ba2e1352f253c7f",
       "role": "installed_component"
     },
     {
@@ -116,12 +183,6 @@
       "bytes": 40,
       "sha256": "4952e0eec7fa862a4603ae7612b02661dfc97aa20a5910229fad70bade543332",
       "role": "preserved_base_reference"
-    },
-    {
-      "path": "measurement_workspace/ATOMIC_SNAPSHOT.md",
-      "bytes": 3586,
-      "sha256": "2fee4765c26299edd3be0c43c7f560bf9b70dbb724eee38857bbeea52cce655e",
-      "role": "installed_component"
     },
     {
       "path": "measurement_workspace/chemistry.py",
@@ -220,6 +281,24 @@
       "role": "installed_component"
     },
     {
+      "path": "measurement_workspace/engine/returned_review_cli.mjs",
+      "bytes": 2977,
+      "sha256": "3c95ea1dd7a66d93c09359e3e5510a64f06dac93676be666a8e083b2d4277543",
+      "role": "installed_component"
+    },
+    {
+      "path": "measurement_workspace/engine/returned_review_reports.mjs",
+      "bytes": 19382,
+      "sha256": "9748999764b696c18c8408543491173d08b3c5047707b43f69f8b60592c00c40",
+      "role": "installed_component"
+    },
+    {
+      "path": "measurement_workspace/engine/returned_reviews.mjs",
+      "bytes": 32888,
+      "sha256": "1a4ec5d181f96828e71e53f9c1b37614339b4e293a13be38cfddd891f7200eea",
+      "role": "installed_component"
+    },
+    {
       "path": "measurement_workspace/engine/stream_csv.mjs",
       "bytes": 2704,
       "sha256": "08324ba99c7337fe82b2f1c76c7c1c2979b0064ee81762ba4881a7fbb31a16ff",
@@ -250,12 +329,6 @@
       "role": "installed_component"
     },
     {
-      "path": "measurement_workspace/LEGACY_CHEMISTRY.md",
-      "bytes": 9345,
-      "sha256": "b77421baa56f8d8185131c4f69f10411713c97cac72b54827ba2e1352f253c7f",
-      "role": "installed_component"
-    },
-    {
       "path": "measurement_workspace/legacy_chemistry.py",
       "bytes": 18503,
       "sha256": "bfb2ddf892170abf3157819844d36687930785dd23c225872cbfd3214e2b02aa",
@@ -281,14 +354,20 @@
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 7437,
-      "sha256": "7194eec1453cf39034e38f2a359e7ba474bf438773de0418c4b0d4b5865b349f",
+      "bytes": 7961,
+      "sha256": "7f94db4b1de020b61a5fe6b4536e271110a8cc6cae26129afbac7d96bc4e6131",
       "role": "installed_component"
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
       "bytes": 17979,
       "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12",
+      "role": "installed_component"
+    },
+    {
+      "path": "measurement_workspace/web/returned_reviews.mjs",
+      "bytes": 21786,
+      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
       "role": "installed_component"
     },
     {
@@ -304,21 +383,21 @@
       "role": "installed_component"
     },
     {
+      "path": "model/MEASUREMENTS_PORTABLE.md",
+      "bytes": 9625,
+      "sha256": "7d526a90464720e9b7c36ac8ffea57bad8b33a3c7aa875588a452aa810e2de47",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/portable_databases.py",
+      "bytes": 7984,
+      "sha256": "b15b5c7a26cbb39d686ec746d96f7ca51e33a96a60f35218983edd7cd5f61871",
+      "role": "installed_component"
+    },
+    {
       "path": "observations/eighteenmile_stoichiometry_20261013/stoichiometry.py",
       "bytes": 16516,
       "sha256": "6d629814e4d97d39cd23ebb17b308176592102f8f2090132868a0e217ce4ae6a",
-      "role": "installed_component"
-    },
-    {
-      "path": "operator/extensions/measured-observations.json",
-      "bytes": 1910,
-      "sha256": "70b84f908e8aa8d48bfec814f4a5f01f83c1f6cc5bf420ddeb2daa5514a768f6",
-      "role": "installed_component"
-    },
-    {
-      "path": "operator/install_measurements.py",
-      "bytes": 11769,
-      "sha256": "f0614c40895818084ce4964c9d9d5355a067853817be25d5416e15ccc4b3cbf5",
       "role": "installed_component"
     },
     {
@@ -329,8 +408,38 @@
     },
     {
       "path": "operator/MEASUREMENTS_INSTALLATION.md",
-      "bytes": 10100,
-      "sha256": "a847ef9dfe90212b21f5ae231495ad3d10947287c63d9b3627b9403d57ba5446",
+      "bytes": 12775,
+      "sha256": "cb7387d6ee2340f85cf0c7c42c0de3c9d490c1d7863091f93c237f2e23c88d15",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
+      "bytes": 7800,
+      "sha256": "e9b175c5ba661119fc8b33a7222dac4f713247b625879a2f826bb01572164a85",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/extensions/measured-observations.json",
+      "bytes": 1910,
+      "sha256": "70b84f908e8aa8d48bfec814f4a5f01f83c1f6cc5bf420ddeb2daa5514a768f6",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/extensions/measurement-returned-reviews-native.json",
+      "bytes": 1393,
+      "sha256": "de4788ab5dcda6cd09b0116a7bfe3456481c8cf5b7b46680dc61d226698bf8d5",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/install_measurements.py",
+      "bytes": 11769,
+      "sha256": "f0614c40895818084ce4964c9d9d5355a067853817be25d5416e15ccc4b3cbf5",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/measurement_returned_reviews_native.py",
+      "bytes": 19789,
+      "sha256": "35d281cf3572650fc479143146f358cf7c317add533d981dc152e43b25202432",
       "role": "installed_component"
     },
     {
@@ -352,12 +461,6 @@
       "role": "installed_component"
     },
     {
-      "path": "operator/web/measured_observations_extension.mjs",
-      "bytes": 7477,
-      "sha256": "e9c156bcf97225c8debda52fa2e1553a0af80e4e237e06350e0bd27613d068b3",
-      "role": "installed_component"
-    },
-    {
       "path": "operator/web/measured_observations.css",
       "bytes": 4996,
       "sha256": "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039",
@@ -367,6 +470,18 @@
       "path": "operator/web/measured_observations.mjs",
       "bytes": 22052,
       "sha256": "e29054f855bc5da1d2c13707364e72a34cd574f42c9dde359bb7be5a6b354dd1",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/measured_observations_extension.mjs",
+      "bytes": 8010,
+      "sha256": "94deae59dc244f1d18822336b47cc2bc937aee5939acdf74fed94009f79d9b14",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/measured_returned_reviews.mjs",
+      "bytes": 21786,
+      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
       "role": "installed_component"
     },
     {
@@ -382,16 +497,10 @@
       "role": "installed_component"
     },
     {
-      "path": "model/portable_databases.py",
-      "role": "installed_component",
-      "bytes": 7984,
-      "sha256": "b15b5c7a26cbb39d686ec746d96f7ca51e33a96a60f35218983edd7cd5f61871"
-    },
-    {
-      "path": "model/MEASUREMENTS_PORTABLE.md",
-      "role": "installed_component",
-      "bytes": 9625,
-      "sha256": "7d526a90464720e9b7c36ac8ffea57bad8b33a3c7aa875588a452aa810e2de47"
+      "path": "source_tools/print_measurement_return.py",
+      "bytes": 9841,
+      "sha256": "395f43610cdf838a4c64926091ee49025ecada3c7b2ece3a078f9de586b388b4",
+      "role": "installed_component"
     }
   ],
   "bootstrap": {
@@ -439,7 +548,7 @@
     ],
     "guard": "The scoped installer uses the original shared extension-install lock, exact complete member hashes and documented predecessor identities; it preserves unknown newer source."
   },
-  "native_workflow": "Complete original Measurements1.2 streamed source intake and receiving -> consistent reviewed source snapshot and original collections -> explicit native Chemistry binding -> native report and editable receiving",
+  "native_workflow": "Complete original Measurements1.2 streamed source intake and receiving -> consistent reviewed source snapshot and original collections -> explicit native Chemistry binding -> native report and editable receiving -> original returned-review 1.0.2 three-way comparison -> explicit saved decisions -> independent editable incorporation and original source handoff",
   "owner_instruction": {
     "path": "AGENTS.md",
     "bytes": 7593,
@@ -458,6 +567,16 @@
   },
   "original_download_lifecycle_commit": "6af867c99ba8ac84141adbf5b31a2d3efe9130f8",
   "original_outer_snapshot_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc",
-  "previous_source_commit": "0827b03567e3d901c316696471e463bc57da2fd5",
-  "workspace_transport": "Delayed form inputs and response admission remain tied to the original mount workspace and generation; the native operation body and identity are preserved once admitted."
+  "previous_source_commit": "0c039477feefe6c1b6195cb505ffb283727e08b1",
+  "workspace_transport": "Delayed form inputs and response admission remain tied to the original mount workspace and generation; the native operation body and identity are preserved once admitted.",
+  "returned_review_source": {
+    "engine_commit": "c2579cad55bd617085e769400c26eb60a705c017",
+    "provider_commit": "8caee9462899baa0003f92e42330c0791800cbf0",
+    "panel_commit": "0b93b60b53318c2a996b24e5cf965921bea4ced7",
+    "original_source_files": 10,
+    "original_source_bytes": 103249,
+    "readme": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
+    "receiving_course": "checks/measurement_returned_reviews_operator.py",
+    "receiving_source_commit": "3cc2c54194124ef3644d66f1e389848ed13a4409"
+  }
 }
