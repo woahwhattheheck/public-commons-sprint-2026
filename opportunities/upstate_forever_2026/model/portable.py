@@ -68,6 +68,9 @@ APPLICATION_FILES = (
     "install_native_supervision.py",
     "install_ensemble.py",
     "portable_sqlite_check.py",
+    "science_catalog_delivery.py",
+    "SCIENTIFIC_CATALOG.md",
+    "install_intelligence_operator.py",
 )
 APPLICATION_DIRECTORIES = (
     "model",
@@ -168,7 +171,8 @@ def _application(source_root):
                     files.append(path)
     return sorted(set(files))
 
-def backup(workspace, destination, *, include_intermediates=True, include_deliveries=True):
+def backup(workspace, destination, *, include_intermediates=True, include_deliveries=True,
+           frozen_databases=None):
     root = workspace.root
     destination = Path(destination).absolute()
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -201,7 +205,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             inputs += [("application/" + relative, source_root / relative, identity)
                        for relative, identity in application.items()]
             inputs, databases, database_sources = stack.enter_context(
-                snapshot_databases(inputs, destination.parent))
+                snapshot_databases(inputs, destination.parent, frozen=frozen_databases))
             with zipfile.ZipFile(pending, "x", compression=zipfile.ZIP_DEFLATED,
                                  compresslevel=3, allowZip64=True) as archive:
                 for name, path, before in inputs:
