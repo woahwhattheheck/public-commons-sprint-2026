@@ -3,6 +3,8 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const opt=(v,t,s)=>'<option value="'+esc(v)+'"'+(v===s?' selected':'')+'>'+esc(t)+'</option>';
 const labels={station:'Station identifier',organization:'Source organisation',activity:'Sampling activity identifier',result:'Result identifier',date:'Sample date (YYYY-MM-DD)',datetime:'Sample date and time',time:'Sample time',zone:'Source time zone',characteristic:'Measured characteristic',value:'Measured value',unit:'Source unit',detection:'Detection condition',qualifier:'Result qualifier',fraction:'Sample fraction',status:'Result status',valueType:'Value type',medium:'Sample medium',activityType:'Activity type',method:'Analytical method',laboratory:'Laboratory',pcode:'USGS parameter code',name:'Station name',latitude:'Latitude',longitude:'Longitude',datum:'Coordinate datum',comment:'Source comment'};
 const json=x=>JSON.stringify(x);
+// Saved values are JSON records; object property order is not an edit.
+const valueSignature=value=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a<b?-1:a>b?1:0)):v);
 const clone=x=>JSON.parse(json(x));
 const digest=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const read=async file=>new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer());
@@ -61,7 +63,7 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
     for(const s of form.querySelectorAll('[data-map]'))selected.value.mapping[s.dataset.map]=s.value;
     remember();
   }
-  function dirty(){return selected&&json(selected.value)!==selected.savedValue;}
+  function dirty(){return selected&&(!selected.savedValue||valueSignature(selected.value)!==valueSignature(JSON.parse(selected.savedValue)));}
   function sourceLine(line){
     const lineage=selected?.value?.lineage;if(!lineage)return String(line);
     const source=lineage.rows.find(row=>row.line===line);

@@ -10,6 +10,21 @@ Download complete working choices saves the entire original selection, source de
 
 A pending native operation continues through the existing request identity and queue. Before dispatch, the pane verifies that its complete request key and operation ID were retained in browser storage. A browser-storage failure leaves the editable working file available for download.
 
+## Install through the maintained application
+
+The complete `gis-projects` family includes the working-selection module, portable format and every source-selection receiving leaf. Its additive declaration is `integration/component_fragments/gis-source-selection.json`. Keep this declaration and all twelve product/receiving files together when composing the existing application source map. The normal component-fragment loader extends the existing GIS family, preserving the baseline catalogue and every peer declaration. Original core and delivery-dataset dependencies remain selected by that family.
+
+The ordinary cumulative application assembler and installer discover the declaration without a new flag. Run their current complete source inspection against the actual composed application. A source-family export must contain the declaration, installed GIS browser/stylesheet/extension, pure working format, native/browser helpers and original county/edition-review programmes. Preserve the original application and Workspace; current source is installed at the same owner's normal safe boundary.
+
+For an existing original scientific application using the direct GIS installer, stage a complete current application source, then use its existing command:
+
+```sh
+python -B install_gis_projects.py --application ACTUAL_APPLICATION --source-root COMPLETE_CURRENT_SOURCE --dry-run
+python -B install_gis_projects.py --application ACTUAL_APPLICATION --source-root COMPLETE_CURRENT_SOURCE
+```
+
+Use that application's actual Python interpreter and paths. The original dry-run, current shared-report predecessor checks, exact registration comparisons, backups and rollback remain authoritative. The installer now copies the complete source-selection implementation and its component declaration. Registered hosts use the existing extension's asset list; a retained legacy host also admits the new pure working-selection module through its original static-file set. This is the same GIS installation and receiving operation.
+
 ## Existing original county producer
 
 The maintained source_tools/receive_webmap_gis.py completes its existing export, receiving, adopted original sources, table receiving and native task reopening first. It then calls operator/gis_source_selection_receiving.py:prepare using that same Operator, project, original collection and independently adopted collection. The additional output is:

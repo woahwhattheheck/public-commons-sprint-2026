@@ -28,6 +28,7 @@ import preservation as p
 import roda
 import roda_client
 import collection_accession as collection
+import collection_review as portable_review
 import transfer_inspection as transfers
 
 SCHEMA = "stellar-forge.preservation-workbench.v1"
@@ -37,7 +38,7 @@ MAX_SNAPSHOT = 8 * 1024 * 1024 * 1024
 MAX_SNAPSHOT_MEMBER = 2 * 1024 * 1024 * 1024
 ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,95}")
 HASH = re.compile(r"[0-9a-f]{64}")
-STATIC = {"workbench.html", "workbench.js", "collection_accession.js", "transfer_inspection.js"}
+STATIC = {"workbench.html", "workbench.js", "collection_accession.js", "collection_review.js", "transfer_inspection.js"}
 APPLICATION = (
     "research/preservation/preservation.py",
     "research/preservation/roda.py",
@@ -89,6 +90,13 @@ TRANSFER_APPLICATION = (
     "research/preservation/receiving/transfer_inspection_browser.mjs",
 )
 
+
+PORTABLE_REVIEW_APPLICATION = (
+    "research/preservation/collection_review.py",
+    "research/preservation/collection_review.js",
+    "research/preservation/COLLECTION_REVIEW.md",
+    "research/preservation/receiving/collection_review_receive.mjs",
+)
 
 class Problem(Exception):
     def __init__(self, code, message, **details):
@@ -1069,7 +1077,7 @@ def snapshot_manifest(archive):
     required.update("application/" + name for name in APPLICATION)
     provider_groups = {"preservica": PRESERVICA_APPLICATION, "libnova": LIBNOVA_APPLICATION,
                        "archivematica": ARCHIVEMATICA_APPLICATION, "collections": COLLECTION_APPLICATION,
-                       "transfers": TRANSFER_APPLICATION}
+                       "transfers": TRANSFER_APPLICATION, "portableReviews": PORTABLE_REVIEW_APPLICATION}
     selected_collections = manifest.get("collectionBindings", [])
     if not isinstance(selected_collections, list):
         raise Problem("SNAPSHOT_MANIFEST", "Invalid accession bindings.")
@@ -1235,7 +1243,8 @@ def export_workspace(app, output):
         source_names = list(APPLICATION)
         for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION),
                                     ("Archivematica", ARCHIVEMATICA_APPLICATION), ("Collection accession", COLLECTION_APPLICATION),
-                                    ("Transfer inspection", TRANSFER_APPLICATION)):
+                                    ("Transfer inspection", TRANSFER_APPLICATION),
+                                    ("Portable review", PORTABLE_REVIEW_APPLICATION)):
             present = [(application_root / name).is_file() for name in source_group]
             if any(present):
                 if not all(present):
@@ -1543,7 +1552,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.base_checks()
             request = urlsplit(self.path)
             args = parse_qs(request.query)
-            if request.path in {"/", "/workbench.html", "/workbench.js", "/collection_accession.js", "/transfer_inspection.js"}:
+            if request.path in {"/", "/workbench.html", "/workbench.js", "/collection_accession.js", "/collection_review.js", "/transfer_inspection.js"}:
                 name = "workbench.html" if request.path == "/" else request.path.lstrip("/")
                 if name not in STATIC:
                     raise Problem("PATH", "Unknown application asset.")
@@ -1561,6 +1570,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     args.get("offset", [0])[0], args.get("q", [""])[0], args.get("changed", ["false"])[0] == "true"))
             elif request.path == "/api/accessions":
                 self.send_json(200, {"accessions": collection.bindings(self.app.accessions)})
+            elif request.path == "/api/accession-review-source":
+                revision = args.get("revision", [None])[0]
+                selected_sha = args.get("reviewSha256", [None])[0]
+                if revision is not None:
+                    try:
+                        revision = int(revision)
+                    except ValueError:
+                        raise Problem("ACCESSION_REVISION", "Select an original saved review revision.")
+                self.send_json(200, portable_review.source(self.app.accession(args.get("id", [""])[0]),
+                    revision, selected_sha))
             elif request.path == "/api/accession":
                 self.send_json(200, collection.show(self.app.accession(args.get("id", [""])[0])))
             elif request.path == "/api/preview":
@@ -1768,7 +1787,8 @@ def managed_binding(workspace):
     names = list(APPLICATION)
     for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION),
                                     ("Archivematica", ARCHIVEMATICA_APPLICATION), ("Collection accession", COLLECTION_APPLICATION),
-                                    ("Transfer inspection", TRANSFER_APPLICATION)):
+                                    ("Transfer inspection", TRANSFER_APPLICATION),
+                                    ("Portable review", PORTABLE_REVIEW_APPLICATION)):
         optional = [(source_root / name).exists() for name in source_group]
         if any(optional):
             if not all(optional):
