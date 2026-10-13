@@ -185,6 +185,30 @@ action. An original scientific source imported from another project keeps its
 contained source bytes and project provenance. Its donor's editable study is
 included when transferring from that original Workspace.
 
+### Open the received Parameter source and its saved study
+
+In **Study transfer → Received studies**, open the received Study. Its
+**Parameter studies and saved source editions** cards distinguish **Captured
+report edition** from **Current retained study**. The captured case counts and
+original result SHA256 identify the report's immutable edition; current progress
+belongs to the retained editable study and can advance independently.
+
+Choose **Open saved study** to open that exact original ID in the existing
+**Parameter studies** desk. **Open reference run** and each **Open saved run**
+open the original native run records. **Add source to report** sends the exact
+retained scientific source to the ordinary composer. Switching to another
+received Study or Workspace while an opening is pending cancels the obsolete
+opening before it changes the selected study.
+
+Expand **Original selected cases**, **Source identities and reference**,
+**Captured study results and exports**, and **Complete original source, inputs
+and methods** to inspect the original selection and download its retained files.
+Each related scientific report's downloads remain available alongside its
+source. An external-project report exposes its original captured inputs and
+results; it opens an editable study when received from that study's original
+Workspace with its complete dependency records. Opening and inspecting these
+cards starts no native computation.
+
 ### Continue the actual received case
 
 Use the saved scientific report edition ID returned by the original report
