@@ -453,7 +453,10 @@ def apply_edits(path, payload, edits):
             if not outside:
                 outcomes.append({"id": edit["id"], "status": "already_applied"})
                 continue
-        if len(old) == 1 and not new:
+        contained_after = (len(old) == 1 and len(new) == 1
+                           and old[0] <= new[0]
+                           and new[0] + len(after) <= old[0] + len(before))
+        if len(old) == 1 and (not new or contained_after):
             index = old[0]
             text = text[:index] + after + text[index + len(before):]
             outcomes.append({"id": edit["id"], "status": "applied"})
