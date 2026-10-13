@@ -4,9 +4,10 @@ Operation ECO-PROFILES-DD6B · Upper Savannah application
 
 Receiving operators must read and carry the complete application
 [CURRENT_OWNER_DIRECTION.md](../CURRENT_OWNER_DIRECTION.md), version
-`2026-10-13.3`, into the existing execution handoff. It retains the October 13,
-2026 14:00 UTC demo cutoff and prioritizes the actual prepared native case,
-editable scientific sources/results and complete working handoff. Continue the
+`2026-10-13.4`, into the existing execution handoff. The owner renewed the work
+after the earlier October 13, 2026 14:00 UTC checkpoint. Continue the original
+unfinished integration and receiving until the working product is delivered,
+with editable scientific sources, actual results and a complete working handoff. Continue the
 accepted operation and open, use and inspect the actual outgoing populated
 application and every exported attachment under the standing producer rule
 below.
@@ -152,7 +153,7 @@ This is the maintained receiving course for the coefficient evidence, original-t
 
 Owner instruction of October 13, 2026, repository version `2026-10-13.1`, applies to this course. Before calling the application, report or export ready, the producing worker must open/run/render the exact outgoing populated version, LOOK at its actual screen or real screenshots, and operate its important controls. Check the actual screenshare width and a narrow/mobile width where relevant; populated, empty, loading and error states; downloads, exports and reopening. Capturing screenshots without viewing them does not complete this work. Fix unstyled, cramped, clipped, overflowing, unreadable or otherwise broken output in the authorized source and reopen the corrected output. Code review, source parsing, HTTP success, DOM counts or another worker's approval do not replace seeing the product.
 
-Use the existing industrial presentation: readable tables, plain controls, clear hierarchy, consistent typography and spacing. Review the actual saved scientific workspace and completed reports. Preserve current engineering ownership and the original operation rather than launching a second native study. Include this instruction in every delegated receiving assignment. It does not extend the Ecosystem sprint beyond October 13, 2026, 10:00 America/Kentucky/Louisville (14:00 UTC).
+Use the existing industrial presentation: readable tables, plain controls, clear hierarchy, consistent typography and spacing. Review the actual saved scientific workspace and completed reports. Preserve current engineering ownership and the original operation rather than launching a second native study. Include this instruction in every delegated receiving assignment. The current owner direction `2026-10-13.4` supersedes the earlier October 13, 2026 10:00 Eastern / 14:00 UTC cutoff. Preserve completed runs and active ownership; continue unfinished product work from its actual saved state.
 
 ### Bind to the actual saved profile
 
