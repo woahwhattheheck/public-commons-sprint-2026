@@ -178,7 +178,7 @@ def selected_limits(value):
 
 def selection(value):
     allowed = {"schema", "label", "entrypoints", "module_roots", "resources",
-               "external_modules", "dynamic_imports", "limits"}
+               "external_modules", "dynamic_imports", "limits", "context_analysis", "branch_contexts"}
     if not isinstance(value, dict) or set(value) - allowed or value.get("schema") != SELECTION_SCHEMA:
         fail("SOURCE_SELECTION", "Use the complete supported Python source selection.")
     roots = value.get("module_roots")
@@ -245,6 +245,35 @@ def selection(value):
         if key in seen:
             fail("SOURCE_DYNAMIC", "Duplicate dynamic source position.")
         seen.add(key)
+    if value.get("context_analysis") not in (None, "package-context-v1"):
+        fail("SOURCE_CONTEXT", "Use the supported explicit context analysis version.")
+    branches = value.get("branch_contexts", [])
+    if not isinstance(branches, list) or (branches and value.get("context_analysis") != "package-context-v1"):
+        fail("SOURCE_CONTEXT", "Observed branch selections require package-context-v1.")
+    seen_branches = set()
+    for branch in branches:
+        required = {"source", "source_sha256", "line", "column", "expression",
+                    "module", "package", "branch", "evidence", "evidence_sha256"}
+        if not isinstance(branch, dict) or set(branch) != required:
+            fail("SOURCE_CONTEXT", "Retain the complete source, context, branch and original observation.")
+        for key in ("source", "evidence"):
+            portable(branch[key])
+        for key in ("source_sha256", "evidence_sha256"):
+            if not isinstance(branch[key], str) or not _HEX.fullmatch(branch[key]):
+                fail("SOURCE_CONTEXT", "Bind source and observation to complete SHA-256.")
+        module_name(branch["module"])
+        module_name(branch["package"], empty=True)
+        if type(branch["line"]) is not int or branch["line"] < 1 or type(branch["column"]) is not int or branch["column"] < 0:
+            fail("SOURCE_CONTEXT", "Use original AST line and column.")
+        if not isinstance(branch["expression"], str) or not branch["expression"]:
+            fail("SOURCE_CONTEXT", "Retain the exact complete try expression.")
+        if branch["branch"] != "body" and not (isinstance(branch["branch"], str) and
+                re.fullmatch(r"handler:[0-9]+", branch["branch"])):
+            fail("SOURCE_CONTEXT", "Select body or the original handler index.")
+        key = (branch["source"], branch["line"], branch["column"], branch["module"], branch["package"])
+        if key in seen_branches:
+            fail("SOURCE_CONTEXT", "Duplicate source-context branch selection.")
+        seen_branches.add(key)
     selected_limits(value.get("limits"))
     # Keep the original selection byte-for-byte as JSON values; do not infer an environment.
     return value
@@ -371,6 +400,8 @@ class Collector:
         self.namespace_directories = set()
         self.dynamic = {(r["source"], r["line"], r["column"]): r for r in spec.get("dynamic_imports", [])}
         self.used_dynamic = set()
+        self.branch_contexts = {(r["source"], r["line"], r["column"], r["module"], r["package"]): r for r in spec.get("branch_contexts", [])}
+        self.used_branches, self.context_decisions = set(), []
         if python_environment is None:
             python_environment = {
                 "implementation": sys.implementation.name, "version": list(sys.version_info[:3]),
@@ -503,6 +534,68 @@ class Collector:
                 self.add(loaded["path"], loaded["module"], loaded["package"])
         self.computed.append(record)
 
+    def context_nodes(self, tree, name, module, package, text, assignments):
+        """Walk the selected package context; retain every original source byte."""
+        if self.spec.get("context_analysis") != "package-context-v1":
+            yield from ast.walk(tree)
+            return
+
+        def package_value(node):
+            if "__package__" in assignments:
+                return None
+            if isinstance(node, ast.Name) and node.id == "__package__":
+                return bool(package)
+            if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+                value = package_value(node.operand)
+                return None if value is None else not value
+            return None
+
+        def walk(node):
+            yield node
+            if isinstance(node, ast.If):
+                value = package_value(node.test)
+                if value is not None:
+                    self.context_decisions.append({
+                        "source": name, "source_sha256": self.files[name]["sha256"],
+                        "module": module, "package": package,
+                        "line": node.lineno, "column": node.col_offset,
+                        "expression": ast.get_source_segment(text, node.test),
+                        "branch": "body" if value else "else", "basis": "python_package_context"})
+                    yield from walk(node.test)
+                    for child in node.body if value else node.orelse:
+                        yield from walk(child)
+                    return
+            if isinstance(node, ast.Try):
+                key = (name, node.lineno, node.col_offset, module, package)
+                selected = self.branch_contexts.get(key)
+                if selected is not None:
+                    expression = ast.get_source_segment(text, node) or ast.unparse(node)
+                    if selected["source_sha256"] != self.files[name]["sha256"] or selected["expression"] != expression:
+                        fail("SOURCE_CONTEXT_CHANGED", "Observed branch source or expression changed.", {"source": name, "line": node.lineno})
+                    evidence = self.add(selected["evidence"])
+                    if evidence["sha256"] != selected["evidence_sha256"]:
+                        fail("SOURCE_CONTEXT_CHANGED", "Original branch observation changed.", {"path": selected["evidence"]})
+                    selected_branch = selected["branch"]
+                    self.used_branches.add(key)
+                    self.context_decisions.append({**selected, "basis": "retained_execution_observation"})
+                    # Imports before the original exception can still have executed.
+                    for child in node.body:
+                        yield from walk(child)
+                    if selected_branch == "body":
+                        for child in node.orelse:
+                            yield from walk(child)
+                    else:
+                        index = int(selected_branch.split(":")[1])
+                        if index >= len(node.handlers):
+                            fail("SOURCE_CONTEXT", "Selected original exception handler does not exist.", selected)
+                        yield from walk(node.handlers[index])
+                    for child in node.finalbody:
+                        yield from walk(child)
+                    return
+            for child in ast.iter_child_nodes(node):
+                yield from walk(child)
+        yield from walk(tree)
+
     def scan(self, name, module, package):
         raw = row_bytes(self.files[name])
         try:
@@ -542,7 +635,17 @@ class Collector:
                 assignments.add(node.id)
             elif isinstance(node, ast.arg):
                 assignments.add(node.arg)
-        nodes = sorted((node for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom, ast.Call))),
+            if self.spec.get("context_analysis") == "package-context-v1":
+                if isinstance(node, (ast.Import, ast.ImportFrom)):
+                    for item in node.names:
+                        bound = item.asname or item.name.split(".")[0]
+                        if bound == "__package__" or item.name == "*":
+                            assignments.add("__package__")
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == "__package__":
+                    assignments.add("__package__")
+                if isinstance(node, ast.ExceptHandler) and node.name == "__package__":
+                    assignments.add("__package__")
+        nodes = sorted((node for node in self.context_nodes(tree, name, module, package, text, assignments) if isinstance(node, (ast.Import, ast.ImportFrom, ast.Call))),
                        key=lambda node: (node.lineno, node.col_offset))
         for node in nodes:
             if isinstance(node, ast.Import):
@@ -652,6 +755,10 @@ class Collector:
         if unused:
             fail("SOURCE_DYNAMIC_UNUSED", "A dynamic mapping does not match a selected computed import.",
                  {"positions": [list(key) for key in sorted(unused)]})
+        unused_branches = set(self.branch_contexts) - self.used_branches
+        if unused_branches:
+            fail("SOURCE_CONTEXT_UNUSED", "An observed branch does not match a selected original source context.",
+                 {"positions": [list(key) for key in sorted(unused_branches)]})
         unmapped = sum(not row["mapped"] for row in self.computed)
         directories = set(root for root in self.spec["module_roots"] if root != ".")
         directories.update(self.namespace_directories)
@@ -670,7 +777,8 @@ class Collector:
             directory_aliases[alias] = name
             if self.source.kind(name) != "directory":
                 fail("SOURCE_DIRECTORY", "A selected source directory changed.", {"path": name})
-        return {"schema": SCHEMA, "selection": self.spec, "python": self.python,
+        return {**({"context_decisions": self.context_decisions} if self.spec.get("context_analysis") else {}),
+                "schema": SCHEMA, "selection": self.spec, "python": self.python,
                 "files": [self.files[name] for name in sorted(self.files)],
                 "directories": sorted(directories),
                 "observations": [{"path": name, "kind": kind} for name, kind in sorted(self.source.probes.items())],
@@ -703,6 +811,8 @@ def inspect_source(packet):
         if result[key] != packet.get(key):
             fail("SOURCE_ANALYSIS_CHANGED", "The retained source analysis does not match its original members/selection.",
                  {"field": key})
+    if spec.get("context_analysis") and result["context_decisions"] != packet.get("context_decisions"):
+        fail("SOURCE_ANALYSIS_CHANGED", "Retained context decisions differ from original source and selection.")
     return result
 
 
@@ -832,7 +942,8 @@ def receive_source(packet, original_raw, directory):
 
 
 def summary(result):
-    return {"schema": result["schema"], "status": "COMPLETE" if result["coverage"]["complete"] else "INCOMPLETE",
+    return {**({"context_decisions": result["context_decisions"]} if "context_decisions" in result else {}),
+            "schema": result["schema"], "status": "COMPLETE" if result["coverage"]["complete"] else "INCOMPLETE",
             "coverage": result["coverage"], "directories": result["directories"], "contexts": result["contexts"],
             "resolved": result["resolved"], "external": result["external"],
             "computed": result["computed"], "errors": result["errors"],
