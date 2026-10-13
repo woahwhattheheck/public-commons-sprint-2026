@@ -1,4 +1,5 @@
 // MIT. Complete native Tyk portfolio, migration review and original-request recovery.
+import { createTykGatewayCommissioningMethods } from './gateway-commissioning-model.mjs';
 import { createTykCommissioningMethods } from './commissioning-model.mjs';
 import { randomUUID } from 'node:crypto';
 import { normalizeTykConnection, planTykRequest, createTykTransport, inspectTykDefinition,
@@ -9,7 +10,7 @@ import { need, digest, now } from '../../../distribution/runtime-workspace/stora
 import { exportTykDelivery, inspectTykDelivery, adoptTykDelivery, stageTykDelivery, ensureTykDeliveryFile } from './delivery.mjs';
 
 const TERMINAL_PHASES = new Set(['COMPLETED', 'PREPARE_FAILED', 'STALE', 'INTERRUPTED']);
-const READABLE = new Set(['view', 'listRecords', 'getRecord', 'readDefinition', 'readSource', 'adaptDefinition', 'readReview', 'readCommissioning', 'deliveryFile', 'sourceFile']);
+const READABLE = new Set(['view', 'listRecords', 'getRecord', 'readDefinition', 'readSource', 'adaptDefinition', 'readReview', 'readCommissioning', 'readGatewayCommissioning', 'deliveryFile', 'sourceFile']);
 function errorInfo(error) {
   return {
     code: typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]{0,120}$/.test(error.code) ? error.code : 'TYK_OPERATION_FAILED',
@@ -468,6 +469,7 @@ export async function openTykWorkspace({
     if (record.value.phase !== 'PREPARED') return record;
     need(record.revision === input.expectedRevision, 'TYK_RECORD_CONFLICT', 'Refresh the saved review.', 409);
     await commissioning.validateCommissioningDispatch(record);
+    await gatewayCommissioning.validateGatewayCommissioningDispatch(record);
     const connection = await sameConfiguration(record), plan = await store.getJSON(record.value.plan);
     const selection = await store.getJSON(record.value.selection);
     need(planTykRequest(connection, selection).sha256 === plan.sha256, 'TYK_NATIVE_PLAN_CHANGED');
@@ -549,7 +551,9 @@ export async function openTykWorkspace({
   }
   const commissioning = createTykCommissioningMethods({store,lookupConnection,replay,initial,getRecord,prepareRollout,capture});
   const {validateCommissioningDispatch,...commissioningActions}=commissioning;
-  const methods = { ...commissioningActions, view, listRecords, getRecord, readDefinition, readSource, adaptDefinition, readReview, saveConnection, capture,
+  const gatewayCommissioning=createTykGatewayCommissioningMethods({store,lookupConnection,replay,initial,getRecord,prepareRollout,reconcileRollout,capture,adaptDefinition});
+  const {validateGatewayCommissioningDispatch,...gatewayCommissioningActions}=gatewayCommissioning;
+  const methods = { ...gatewayCommissioningActions, ...commissioningActions, view, listRecords, getRecord, readDefinition, readSource, adaptDefinition, readReview, saveConnection, capture,
     importCapture, createCohort, prepareRollout, dispatchRollout, reconcileRollout, exportWorkspace,
     inspectDelivery, adoptDelivery, deliveryFile, sourceFile };
   async function close() {
