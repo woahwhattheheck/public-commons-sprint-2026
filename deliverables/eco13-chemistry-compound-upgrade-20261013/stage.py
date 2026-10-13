@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
 import sys
 import types
 from pathlib import Path
@@ -28,6 +29,19 @@ def main():
     if manifest.get("schema") not in {"upstate.monitoring-source-upgrade/v1",
                                      "upstate.chemistry-source-upgrade/v1"}:
         raise ValueError("Choose the complete original component upgrade manifest.")
+
+    for capability in manifest.get("base_contract", {}).get("required_capabilities", []):
+        if capability.get("id") != "scientific-report-source-selection-replace-v1":
+            raise ValueError("Use the maintained stager for this required application capability.")
+        relative = capability.get("path")
+        path = application / relative
+        if (relative != "operator/web/source_report_editions.mjs"
+                or path.is_symlink() or not path.resolve().is_relative_to(application)):
+            raise ValueError("Keep the original scientific composer inside its application.")
+        text = path.read_text(encoding="utf-8") if path.is_file() else ""
+        if not re.search(r"""export\s+const\s+SCIENTIFIC_REPORT_SOURCE_SELECTION\s*=\s*(['"])replace-v1\1""", text):
+            raise ValueError("Install the maintained Scientific Reports composer from "
+                             + capability["source_reference"] + " before this Chemistry edition.")
     def verified_body(record):
         name = record["path"]
         path = bank / name
@@ -44,11 +58,14 @@ def main():
     original = manifest["bootstrap"]
     module_path, _ = verified_body(original)
     companion_records = original.get("companions", [])
-    if (len(companion_records) != 1
-            or companion_records[0]["path"] != "bootstrap/source_tools/application_components.py"
+    expected_companions = {"bootstrap/source_tools/application_components.py",
+                           "bootstrap/source_tools/component_fragments.py"}
+    if (len(companion_records) != len(expected_companions)
+            or {record["path"] for record in companion_records} != expected_companions
             or original["path"] != "bootstrap/source_tools/application_assembly.py"):
-        raise ValueError("Receive the complete matching original assembler and component reader.")
-    companion_path, _ = verified_body(companion_records[0])
+        raise ValueError("Receive the complete matching assembler, component reader and fragment helper.")
+    companion_paths = {Path(record["path"]).stem: verified_body(record)[0]
+                       for record in companion_records}
     instruction_path, instruction_body = verified_body(manifest["owner_instruction"])
     if manifest["owner_instruction"]["path"] != "AGENTS.md":
         raise ValueError("Retain the current owner instruction at the bank root.")
@@ -60,7 +77,8 @@ def main():
     package.__path__ = [str(module_path.parent)]
     package.__package__ = package_name
     sys.modules[package_name] = package
-    for leaf, path in (("application_components", companion_path),
+    for leaf, path in (("component_fragments", companion_paths["component_fragments"]),
+                       ("application_components", companion_paths["application_components"]),
                        ("application_assembly", module_path)):
         spec = importlib.util.spec_from_file_location(package_name + "." + leaf, path)
         loaded = importlib.util.module_from_spec(spec)
