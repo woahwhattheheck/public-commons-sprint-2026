@@ -1,0 +1,23 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-comparison-report",
+  "components": {
+    "monitoring-comparison-report": {
+      "title": "Saved Monitoring budget comparison in scientific delivery",
+      "requires": [
+        "monitoring-budget-comparison",
+        "monitoring-report"
+      ],
+      "paths": [
+        "model/monitoring_comparison_report.py",
+        "model/monitoring_report_source.py",
+        "model/monitoring_report_cli.py",
+        "model/MONITORING_REPORT_SOURCE.md",
+        "operator/web/monitoring-report.mjs"
+      ]
+    }
+  },
+  "required_components": [
+    "monitoring-comparison-report"
+  ]
+}
