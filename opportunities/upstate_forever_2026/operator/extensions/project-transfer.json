@@ -1,0 +1,41 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "project-transfer",
+  "title": "Complete project handover",
+  "version": "1",
+  "order": 90,
+  "assets": [],
+  "backend": {
+    "module": "project_transfer",
+    "factory": {
+      "handler": "ProjectTransfers",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "project.transfer.capture",
+      "project.transfer.accept",
+      "project.transfer.receive",
+      "project.transfer.parts",
+      "project.transfer.archive",
+      "project.transfer.restore",
+      "project.transfer.report",
+      "project.transfer.inspect",
+      "project.transfer.diff"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  }
+}
