@@ -6,6 +6,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 from pathlib import Path, PurePosixPath
 import subprocess
 import sys
@@ -101,12 +102,45 @@ def source_members(pending, manifest_name):
                             "bytes": len(pending[target]), "sha256": sha(pending[target])})
     return checked
 
+
+def scientific_report_host(application):
+    """Require the maintained standalone composer before installing its consumer."""
+    contracts = {
+        "operator/web/app.mjs": (
+            r"\bfunction\s+openScientificReport\s*\(",
+            r"\bsourceReports\s*\.\s*openForSources\s*\(",
+            r"\bcreateExtensionHost\s*\(\s*\{[\s\S]*?\bopenScientificReport\b",
+        ),
+        "operator/web/source_reports.mjs": (
+            r"\battachScientificReportEditions\b",
+            r"\bfunction\s+openForSources\s*\(",
+            r"\bscientific\s*\.\s*openForSources\s*\(",
+        ),
+        "operator/web/source_report_editions.mjs": (
+            r"\bfunction\s+attachScientificReportEditions\s*\(",
+            r"\bfunction\s+openForSources\s*\(",
+            r"\borderedReportSources\s*\(",
+        ),
+    }
+    checked = []
+    for name, patterns in contracts.items():
+        path = application / name
+        if not path.is_file():
+            raise ValueError("Receive the maintained Scientific reports application before installing assessment report controls: " + name)
+        body = path.read_bytes()
+        source = body.decode("utf-8")
+        if any(re.search(pattern, source) is None for pattern in patterns):
+            raise ValueError("The installed Scientific reports host does not expose its original openForSources workflow: " + name)
+        checked.append({"path": name, "bytes": len(body), "sha256": sha(body)})
+    return checked
+
 def install(application, source_root, *, dry_run=False):
     application, source_root = Path(application).resolve(strict=True), Path(source_root).resolve(strict=True)
     for name in ("model/workspace.py", "model/spatial_esri.py", "model/observed_context.py", "operator/server.py",
                  "operator/web/app.mjs", "operator/extension_registry.py", "operator/web/extension_host.mjs"):
         if not (application / name).is_file():
             raise ValueError("Receive the complete existing application before adding station geography: " + name)
+    report_host = scientific_report_host(application)
     pending, previous = {}, {}
     for name in FILES:
         body = (source_root / name).read_bytes()
@@ -130,7 +164,7 @@ def install(application, source_root, *, dry_run=False):
         raise ValueError("Retain the existing authored install_extensions.py to join its original operator host")
     receipt = {"schema": "upstate.station-geography-install/v1", "application": str(application),
         "dry_run": dry_run, "changed": changed, "existing_host_install_needed": host_needed,
-        "original_sources": original_sources,
+        "original_sources": original_sources, "scientific_report_host": report_host,
         "files": [{"path": name, "bytes": len(pending[name]), "sha256": sha(pending[name]),
                   "previous_sha256": sha(previous[name]) if previous[name] is not None else None} for name in FILES]}
     if dry_run:
@@ -143,6 +177,9 @@ def install(application, source_root, *, dry_run=False):
             target = staging / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(pending[name])
+        for member in report_host:
+            if sha((application / member["path"]).read_bytes()) != member["sha256"]:
+                raise RuntimeError("Scientific reports host changed during station installation: " + member["path"])
         for name in changed:
             target = application / name
             current = target.read_bytes() if target.exists() else None
