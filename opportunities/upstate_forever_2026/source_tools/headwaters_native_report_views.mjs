@@ -1,0 +1,76 @@
+const FOLDER="source/headwaters_native_interpretation_20261013";
+const INPUT="source/headwaters_input_interpretation_20261013";
+const textNumber=(x,d=3)=>Number.isFinite(x)?x.toFixed(d):"—";
+const name=k=>({nitrogen_export:"Nitrogen",phosphorus_export:"Phosphorus",sediment_export:"Sediment"})[k]||k;
+const units=k=>k==="sediment_export"?"t/year":"kg/year";
+const escape=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+function table(columns,rows){return {kind:"table",columns,rows};}
+function csv(rows){if(!rows.length)return "";const cols=Object.keys(rows[0]);const field=x=>{const s=x===undefined||x===null?"":typeof x==="object"?JSON.stringify(x):String(x);return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};return [cols,...rows.map(r=>cols.map(c=>r[c]))].map(row=>row.map(field).join(",")).join("\n")+"\n";}
+export function nativeReportOutputs(a, inputs) {
+ const first=a.placement_rows.filter(r=>r.routing==="mfd"&&r.l_max===122);
+ const sections=[
+ ["Decision and scope",[
+  "In the original completed 1,296 ha simulated teaching case, corridor restoration reduces modeled stream export more than the matched off-corridor control for nitrogen, phosphorus and sediment under all four retained profiles. Both alternatives change the same 635 original cells (57.15 ha), with the same pasture/crop counts and closely matched precipitation. The ranking holds within each profile's exact common support.",
+  "This report joins the completed twelve original InVEST 3.20.0 runs to the independently replayed input chapter. It retains the original generated square, assumed physical/biophysical inputs, exact run/profile IDs and full numerical source. The Upper Savannah geographic edition is a separate case.",
+  table(["Quantity","Retained value"],[["Native course",a.source.progress.complete+"/"+a.source.progress.total+" complete"],["Grid","120 × 120; 30 m; EPSG:26917; 1,296 ha"],["Each changed layout","635 cells; 57.15 ha"],["Profiles","MFD / D8 × SDR Lmax 122 / 333"],["N and P units","kg/year delivered to modeled streams"],["Sediment units","metric tonnes/year delivered to modeled streams"]]),
+  "Read these as modeled annual masses. The report does not convert them into intake concentration or measured water quality; a receiving-water and flow/concentration analysis has its own source and support."
+ ]],
+ ["Source change and placement",[
+  "The original full-grid source arithmetic gives nearly equal assumed nutrient-source changes: corridor versus control reductions are 891.301394 versus 891.288826 kg N/year and 72.906282 versus 72.905246 kg P/year. Their differences are 0.0125676163 kg N/year and 0.0010358655 kg P/year. All four original profile records name the exact same coefficient-table SHA as that replay.",
+  "Native stream-export reductions therefore differ substantially despite nearly balanced source-loading changes. The comparison supports a placement-sensitive model result. It does not isolate distance from the generated stream axis as a single causal variable: the retained layouts also differ in elevation and in opposing class-specific K factors. Original changes in cover/retention and routing remain part of the modeled intervention.",
+  table(["Profile","Pollutant","Corridor reduction","Control reduction","Extra corridor reduction","Reduction ratio"],a.placement_rows.map(r=>[r.routing.toUpperCase()+"/"+r.l_max,name(r.pollutant)+" ("+units(r.pollutant)+")",textNumber(r.riparian_reduction),textNumber(r.control_reduction),textNumber(r.placement_margin),textNumber(r.reduction_ratio,4)])),
+  "The ratio compares two positive modeled reductions on identical cells within one profile. It is not a quoted price or a financial return. Full-grid assumed input loads and valid native export masks have different coverage; this report does not divide one by the other to infer a delivery fraction."
+ ]],
+ ["Native baseline, restoration and matched control",[
+  "Each row below uses a common baseline and exactly the same valid-cell mask across all three scenarios. The two saved scenario comparisons have identical baseline ID, support SHA and cell count; those identities are checked before this three-way table is derived.",
+  table(["Profile","Pollutant","Baseline","Corridor","Control","Common cells"],a.placement_rows.map(r=>[r.routing.toUpperCase()+"/"+r.l_max,name(r.pollutant)+" ("+units(r.pollutant)+")",textNumber(r.baseline),textNumber(r.riparian),textNumber(r.matched_control),String(r.common_cells)])),
+  "For MFD/122, nitrogen reduction is 69.9102% in the corridor versus 29.0500% in the control; phosphorus is 70.4879% versus 29.5772%; sediment is 18.2616% versus 16.2623%. These percentages use each original common-support baseline.",
+  "The complete scenario CSV retains full precision, both original run IDs, comparison IDs, profile IDs, support hashes and source JSON pointers."
+ ]],
+ ["Routing sensitivity on the actual intersection",[
+  "Routing changes valid coverage. Comparing the full MFD and D8 totals directly mixes a routing change with a support change. The original parameter comparisons instead restrict both baseline surfaces to their exact intersection.",
+  table(["Profile versus MFD/122","Pollutant","Reference common","Alternative common","Change (%)","Common cells"],a.parameter_rows.map(r=>[r.routing.toUpperCase()+"/"+r.l_max,name(r.pollutant)+" ("+units(r.pollutant)+")",textNumber(r.reference_common),textNumber(r.alternative_common),textNumber(r.percent_change,4),String(r.common_cells)])),
+  "On those original intersections, switching the baseline from MFD to D8 changes nitrogen by +0.3870%, phosphorus by +0.2809%, and sediment by +43.6874%. The D8-only 130 nutrient cells and 188 sediment cells are excluded from these contrasts. Complete per-scenario placement rankings above use each routing profile's own common support.",
+  table(["Pollutant","Whole-total difference","Common-cell difference","D8-only amount","D8-only cells"],a.parameter_rows.filter(r=>r.routing==="d8"&&r.l_max===122).map(r=>[name(r.pollutant)+" ("+units(r.pollutant)+")",textNumber(r.whole_total_difference,6),textNumber(r.delta_common,6),textNumber(r.support_only_difference,6),String(r.alternative_only_cells)])),
+  "These three exact decompositions separate the changed common-cell mass from mass on newly valid D8 cells. Added coverage is 11.70 ha for nutrients and 16.92 ha for sediment. The full-precision parameter CSV retains the zero residual of each identity; no raster was regridded or re-summed here.",
+  "The recorded supports are 14,034 cells (1,263.06 ha) for MFD nutrients, 13,976 cells (1,257.84 ha) for MFD sediment, and 14,164 cells (1,274.76 ha) for D8. The native grid itself remains 14,400 cells (1,296 ha). This is an assumption sensitivity exercise, not a probability distribution or confidence interval."
+ ]],
+ ["Slope-length-cap result",[
+  "Changing SDR Lmax from 122 to 333 produces identical saved sums and byte-identical original and converted export rasters for all 18 routing × scenario × pollutant comparisons. The report checks both native-output SHA256 and converted-output SHA256 from the original complete run records.",
+  table(["Routing","Scenario","Pollutant","Native SHA identical","Converted SHA identical"],a.cap_identity.map(r=>[r.routing.toUpperCase(),r.scenario_id===a.profiles[0].runs[0].scenario_id?"baseline":r.scenario_id===a.profiles[0].runs[1].scenario_id?"corridor":"control",name(r.pollutant),String(r.native_sha_identical),String(r.converted_sha_identical)])),
+  "This is a no-response result for the two tested cap values in this retained case. It does not establish a universal lack of sediment sensitivity or infer an unexamined LS-factor distribution. The two routing choices remain materially different. All twelve retained SDR stages record their correct routing and Lmax in the original execution-input signature and were executed without stage reuse. NDR does not use the SDR cap; six equivalent NDR stages were retained through the original reuse mechanism."
+ ]],
+ ["Recorded execution and source identities",[
+  "The original retained model-stage start is "+a.timing.first_retained_model_stage_start+"; the final original run completed at "+a.timing.last_run_complete+". The recorded interval is "+textNumber(a.timing.stage_window_seconds,3)+" seconds and includes six reused model stages among 24 retained NDR/SDR stages. This interval excludes environment setup, source preparation, report generation and editable handover; it is not a new end-to-end benchmark.",
+  table(["Original identity","Value"],[["Ensemble",a.source.ensemble_id],["Report",a.source.report_id],["Run signature",a.source.run_signature],["Native model version",a.source.native_version],["Report created",a.source.report_created_at]]),
+  "The native inventory retains all 36 original output descriptors, full units, original and converted hashes, run IDs and completion timestamps. Original stage timing and reuse fields are retained alongside the unchanged source bodies."
+ ]],
+ ["Use in the RFP workshare",[
+  "For Tim's review, open the original scenario inputs, show the two equal-area land-cover edits, select a retained profile, and compare the original annual output maps with this table. Change an explicit input or alternative through the maintained workflow, then save and independently reopen the editable case. The input and native chapters can be selected together in the existing scientific report viewer.",
+  "The useful engineering handoff is the reproducible model/reporting workflow with editable assumptions, exact original sources, support-aware comparisons and a retained project. Scientific direction, scenario choice and interpretation remain with the modeling team. Apply the same sequence to the separate actual Upper Savannah source geography and RFP scope.",
+  "The existing original-native report owns its 15 scientific figures and raster views. This companion contributes the joined input/result interpretation and complete numerical audit paths without replacing those maps."
+ ]],
+ ["Complete source and machine-readable outputs",[
+  {kind:"links",items:[
+   {title:"Full precision interpretation",path:FOLDER+"/analysis.json"},
+   {title:"All 24 original scenario comparisons",path:FOLDER+"/scenario-comparisons.csv"},
+   {title:"All 12 within-profile placement contrasts",path:FOLDER+"/placement-comparisons.csv"},
+   {title:"All 9 original parameter comparisons",path:FOLDER+"/parameter-comparisons.csv"},
+   {title:"All 18 cap identity checks",path:FOLDER+"/cap-identity.csv"},
+   {title:"All 36 original output descriptors",path:FOLDER+"/native-inventory.csv"},
+   {title:"Original native numerical report",path:FOLDER+"/retained/numeric/report.json"},
+   {title:"Original twelve native run records",path:FOLDER+"/retained/original/native-runs.json"},
+   {title:"Original input analysis",path:INPUT+"/analysis.json"},
+   {title:"Original class-specific covariate balance",path:INPUT+"/covariate-balance.csv"},
+   {title:"Readable chapter",path:FOLDER+"/CHAPTER.md"},
+   {title:"Offline report",path:FOLDER+"/report.html"}
+  ]}
+ ]]
+ ];
+ const recipe={schema:"upstate.observed-report/v1",edition:"headwaters-native-interpretation-20261013-v1",title:"Original headwaters demonstration: source loading, native delivery and routing",classification:a.classification,sections,inputs,source_links:sections.at(-1)[1][0].items.map(x=>x.path)};
+ const md=["# "+recipe.title,"", "**"+a.classification+"**",""];
+ for(const [heading,blocks] of sections){md.push("## "+heading,"");for(const b of blocks){if(typeof b==="string")md.push(b,"");else if(b.kind==="table"){md.push("| "+b.columns.join(" | ")+" |","| "+b.columns.map(()=>"---").join(" | ")+" |",...b.rows.map(r=>"| "+r.map(v=>String(v).replace(/\|/g,"\\|")).join(" | ")+" |"),"");}else md.push(...b.items.map(x=>"- ["+x.title+"]("+(x.path.startsWith(FOLDER+"/")?x.path.slice(FOLDER.length+1):"../../"+x.path)+")"),"");}}
+ const html=['<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(recipe.title)+'</title><style>body{font:16px/1.5 system-ui,sans-serif;color:#171717;background:#fff;max-width:1160px;margin:auto;padding:24px}h1{font-size:1.7rem}h2{font-size:1.3rem;margin-top:2.2em}p,td,code,a{overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;font-size:.88rem}th,td{border:1px solid #bbb;padding:7px;text-align:left;vertical-align:top}th{background:#eee}.table{overflow:auto;margin:18px 0}header{border-bottom:2px solid #333}a{color:inherit;text-decoration:underline}@media(max-width:500px){body{padding:12px}.table table{min-width:630px}h1{font-size:1.35rem}}@media print{body{max-width:none;padding:0;font-size:10pt}table{font-size:8pt}.table{overflow:visible}tr{break-inside:avoid}h2{break-after:avoid}a{text-decoration:none}}</style><header><h1>'+escape(recipe.title)+'</h1><p><strong>'+escape(a.classification)+'</strong></p><p>Original completed twelve-run teaching case · 13 October 2026</p></header>'];
+ for(const [heading,blocks] of sections){html.push("<section><h2>"+escape(heading)+"</h2>");for(const b of blocks){if(typeof b==="string")html.push("<p>"+escape(b)+"</p>");else if(b.kind==="table")html.push('<div class="table"><table><thead><tr>'+b.columns.map(x=>"<th>"+escape(x)+"</th>").join("")+"</tr></thead><tbody>"+b.rows.map(r=>"<tr>"+r.map(x=>"<td>"+escape(x)+"</td>").join("")+"</tr>").join("")+"</tbody></table></div>");else html.push("<ul>"+b.items.map(x=>"<li><a href=\""+escape(x.path.startsWith(FOLDER+"/")?x.path.slice(FOLDER.length+1):"../../"+x.path)+"\">"+escape(x.title)+"</a></li>").join("")+"</ul>");}html.push("</section>");}html.push("</html>\n");
+ return {"analysis.json":JSON.stringify(a,null,2)+"\n","scenario-comparisons.csv":csv(a.scenario_rows),"placement-comparisons.csv":csv(a.placement_rows),"parameter-comparisons.csv":csv(a.parameter_rows),"cap-identity.csv":csv(a.cap_identity),"native-inventory.csv":csv(a.native_inventory),"scientific-report.json":JSON.stringify(recipe,null,2)+"\n","CHAPTER.md":md.join("\n")+"\n","report.html":html.join("\n")};
+}
