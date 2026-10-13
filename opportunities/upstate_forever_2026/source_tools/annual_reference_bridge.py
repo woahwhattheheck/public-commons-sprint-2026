@@ -142,7 +142,7 @@ def build(preset_path, targets_path):
         "interpretation": {
             "relationship": "Seven original station, reach, constituent and period matches agree within the retained P9 mapper precision. Treat these as related reference editions when interpreting model comparisons.",
             "uncertainty": "F7 supplies published standard errors for the selected final estimators. These are uncertainty on annual reference estimates; they are not confidence intervals or observations of model error.",
-            "time": "The annual rates use the 1999-10-01 to 2014-10-01 exclusive flow window and 2012 reference conditions. Station-specific water-quality windows and detrending flags remain separate original fields.",
+            "time": "All seven annual rates use the 1999-10-01 to 2014-10-01 exclusive flow window. The release has a 2012 reference base year: six selected Beale estimates are published long-term means; the Stevens Creek phosphorus Fluxmaster estimate is detrended. Station-specific water-quality windows remain separate original fields.",
             "sampling": "Counts and censored counts describe the original source samples used in annual-load estimation. They do not establish a new independent holdout sample.",
             "geography": "The successor preparation reuses original retained reach catchments and records a new source identity. Published flow-station drainage areas remain explicit; a station name alone never changes the catchment.",
             "units": "Original F7 values and standard errors are kg/year. The two TSS comparisons divide both by exactly 1000 to match P9 metric tonnes/year.",
