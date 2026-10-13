@@ -189,10 +189,14 @@ export function createGeographicWorkbench(host) {
   async function openCase(id){
     const key=workspace,own=version,generation=++caseGeneration;
     allocationGeneration++;allocationResult=null;activeAllocationId=null;
+    const pendingDetail=container.querySelector("[data-geo-case-detail]");
+    pendingDetail.innerHTML='<p role="status">Opening the saved geographic case…</p>';pendingDetail.hidden=false;
     let result;
     try {result=await read("case",{case_id:id},key);}
-    catch(error){if(active(key,own)&&generation===caseGeneration)status(error.message,true);return;}
-    if(!active(key,own)||generation!==caseGeneration)return;openedCase=result;allocationChoice={};
+    catch(error){if(active(key,own)&&generation===caseGeneration){status(error.message,true);pendingDetail.innerHTML='<p class="geo-error" role="alert">'+esc(error.message)+'</p>';}return;}
+    if(!active(key,own)||generation!==caseGeneration)return;
+    if(result.case?.id!==id){pendingDetail.innerHTML='<p class="geo-error" role="alert">The returned case differs from the saved selection.</p>';return;}
+    openedCase=result;allocationChoice={};
     const target=container.querySelector("[data-geo-case-detail]");
     target.innerHTML='<h3>'+esc(result.case.selection.title)+'</h3><p>The full original selection, input receipts and declared assumptions are available below.</p>'+
       '<div class="geo-actions">'+list(result._downloads).filter(f=>String(f.url).startsWith("/api/file/")).map(f=>'<a href="'+esc(f.url+(f.url.includes("?")?"&":"?")+"download=1")+'" download>'+esc(f.label||f.filename)+'</a>').join("")+'</div>'+

@@ -21,6 +21,20 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/geographic_scenario_contrasts.py",
+    "model/GEOGRAPHIC_PHYSICAL_CONTRASTS.md",
+    "model/geographic_utility_groups.py",
+    "operator/geographic_preparation.py",
+    "operator/extensions/geographic-headwaters.json",
+    "operator/web/geographic_workbench.mjs",
+    "operator/web/geographic_workbench.css",
+    "operator/web/geographic_allocation.mjs",
+    "operator/GEOGRAPHIC_HEADWATERS.md",
+    "integration/component_fragments/geographic-operator.json",
+    "operator/source_preparation.py",
+    "operator/extensions/source-preparation.json",
+    "operator/web/source_workbench.mjs",
+    "operator/web/source_workbench.css",
     "model/geographic_scenario_allocation.py",
     "model/geographic_scenario_allocation_report.py",
     "model/GEOGRAPHIC_SCENARIO_ALLOCATION.md",
@@ -257,6 +271,20 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/geographic_scenario_contrasts.py",
+    "model/GEOGRAPHIC_PHYSICAL_CONTRASTS.md",
+    "model/geographic_utility_groups.py",
+    "operator/geographic_preparation.py",
+    "operator/extensions/geographic-headwaters.json",
+    "operator/web/geographic_workbench.mjs",
+    "operator/web/geographic_workbench.css",
+    "operator/web/geographic_allocation.mjs",
+    "operator/GEOGRAPHIC_HEADWATERS.md",
+    "integration/component_fragments/geographic-operator.json",
+    "operator/source_preparation.py",
+    "operator/extensions/source-preparation.json",
+    "operator/web/source_workbench.mjs",
+    "operator/web/source_workbench.css",
     "model/geographic_scenario_allocation.py",
     "model/geographic_scenario_allocation_report.py",
     "model/GEOGRAPHIC_SCENARIO_ALLOCATION.md",
@@ -866,14 +894,85 @@ def verify_geographic_allocation_dependencies(application, pending):
         "source_tools/precipitation_matching.py", "source_tools/headwaters_parameter_course.py",
         "model/ensembles.py", "model/ensemble_operations.py", "model/ensemble_report.py",
     }
+    optional_modules = (
+        ("geographic_scenario_contrasts", kernel, (
+            "model/geographic_scenario_contrasts.py",
+            "model/GEOGRAPHIC_PHYSICAL_CONTRASTS.md")),
+        ("geographic_utility_groups", context, (
+            "model/geographic_utility_groups.py",
+            "source/receptor-profiles/utility-focus-20261012.json")),
+    )
+    for module, importer, members in optional_modules:
+        if importer is not None and module.encode("ascii") in importer:
+            for name in members:
+                assembled_data(application, pending, name)
+            needed.update(members)
     if (fragment.get("schema") != "upstate.application-component-fragment/v1"
             or fragment.get("id") != "geographic-receiving-context"
             or not needed.issubset(set(family.get("paths", [])))):
         raise ValueError("Retain Geographic allocation in its original complete component family")
 
 
+
+def verify_geographic_operator_dependencies(application, pending):
+    """Keep the existing Geographic desk and its read-only allocation view together."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    view_name = "operator/web/geographic_allocation.mjs"
+    workbench_name = "operator/web/geographic_workbench.mjs"
+    workbench = source(workbench_name)
+    if (source(view_name) is None
+            and (workbench is None or b"geographic_allocation.mjs" not in workbench)):
+        return
+    members = (
+        "operator/geographic_preparation.py",
+        "operator/extensions/geographic-headwaters.json",
+        workbench_name, "operator/web/geographic_workbench.css", view_name,
+        "operator/GEOGRAPHIC_HEADWATERS.md",
+    )
+    for name in members + (
+            "integration/component_fragments/geographic-operator.json",
+            "operator/source_preparation.py",
+            "operator/extensions/source-preparation.json",
+            "operator/web/source_workbench.mjs", "operator/web/source_workbench.css",
+            "operator/extension_registry.py", "operator/web/extension_host.mjs",
+            "model/geographic_receiving_context.py",
+            "model/geographic_scenario_allocation.py",
+            "model/geographic_scenario_allocation_report.py"):
+        assembled_data(application, pending, name)
+    workbench = assembled_data(application, pending, workbench_name)
+    descriptor = json.loads(assembled_data(
+        application, pending, "operator/extensions/geographic-headwaters.json"))
+    assets = set(descriptor.get("assets", []))
+    backend = descriptor.get("backend", {})
+    allocation_routes = [route for route in backend.get("routes", [])
+                         if route.get("path") == "/api/geographic-headwaters/allocation"]
+    if (len(allocation_routes) != 1
+            or allocation_routes[0].get("operation") != "allocation"
+            or allocation_routes[0].get("handler") != "read"
+            or allocation_routes[0].get("args") != ["workspace_key", "operation", "payload"]
+            or backend.get("module") != "geographic_preparation"):
+        raise ValueError("Retain the original read-only Geographic allocation route")
+    if (descriptor.get("id") != "geographic-headwaters"
+            or not {"geographic_allocation.mjs", "geographic_workbench.mjs",
+                    "geographic_workbench.css", "source_workbench.mjs",
+                    "source_workbench.css"}.issubset(assets)
+            or b"geographic_allocation.mjs" not in workbench
+            or descriptor.get("client", {}).get("module") != "/web/geographic_workbench.mjs"):
+        raise ValueError("Compose the allocation view with its original Geographic desk and asset registration")
+    fragment = json.loads(assembled_data(
+        application, pending, "integration/component_fragments/geographic-operator.json"))
+    family = fragment.get("components", {}).get("geographic-operator", {})
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "geographic-operator"
+            or not set(members).issubset(set(family.get("paths", [])))):
+        raise ValueError("Retain the allocation view in the complete original Geographic operator family")
+
+
 def verify_composition(application, pending):
     verify_geographic_allocation_dependencies(application, pending)
+    verify_geographic_operator_dependencies(application, pending)
     verify_received_study_dependencies(application, pending)
     verify_economic_study_dependencies(application, pending)
     for name in REQUIRED:

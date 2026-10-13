@@ -2,7 +2,7 @@
 const esc = value => String(value ?? "").replace(/[&<>"']/g, x => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const list = value => Array.isArray(value) ? value : [];
 const label = value => String(value ?? "").replaceAll("_"," ");
-const variableNames = {DEM:"Elevation",PRECIPITATION:"Annual precipitation",R_FACTOR:"Rainfall erosivity",K_FACTOR:"Soil erodibility",R_TIMES_K:"Rainfall × soil factor"};
+const variableNames = {DEM:"Elevation",PRECIPITATION:"NDR runoff proxy",R_FACTOR:"Rainfall erosivity",K_FACTOR:"Soil erodibility",R_TIMES_K:"Rainfall × soil factor"};
 const pollutantNames = {nitrogen_export:"Nitrogen",phosphorus_export:"Phosphorus",sediment_export:"Sediment"};
 export function allocationNumber(value, signed=false) {
   if(typeof value!=="number"||!Number.isFinite(value))return "Unavailable";
@@ -42,7 +42,7 @@ function downloads(files) {
     return url?'<a href="'+esc(url)+'" download>'+esc(file.label||file.filename||"Retained source")+"</a>":"";
   }).join("");
 }
-function physicalMarkup(region,current) {
+function physicalMarkup(region,current,binding) {
   const classes=list(region.physical_contrasts?.classes);
   if(!classes.length)return "";
   const selected=classes.find(x=>String(x.baseline_class)===current)||classes[0];
@@ -51,18 +51,48 @@ function physicalMarkup(region,current) {
   const means=[],coverage=[];
   for(const variable of variables){
     const a=sample.restoration?.[variable]||{},b=sample.control?.[variable]||{},difference=differences[variable]||{};
-    const name=(variableNames[variable]||label(variable))+" ("+(a.units||b.units||difference.units||"see source")+")";
+    const variableLabel=binding?.variables?.[variable]?.label||(variable==="PRECIPITATION"&&(a.units||b.units)==="mm/year"?"Annual precipitation":variableNames[variable]||label(variable));
+    const name=variableLabel+" ("+(a.units||b.units||difference.units||"see source")+")";
     means.push([name,allocationNumber(a.mean),allocationNumber(b.mean),allocationNumber(difference.restoration_minus_control,true)]);
-    coverage.push([variableNames[variable]||label(variable),allocationNumber(a.valid_cells)+" / "+allocationNumber(a.selected_cells),
+    coverage.push([variableLabel,allocationNumber(a.valid_cells)+" / "+allocationNumber(a.selected_cells),
       allocationNumber(b.valid_cells)+" / "+allocationNumber(b.selected_cells),allocationNumber(a.population_standard_deviation),allocationNumber(b.population_standard_deviation)]);
   }
-  return '<section class="geo-allocation-section"><h4>Physical conditions on changed cells</h4><p>Descriptive contrasts in the retained simulated physical inputs at the actual changed source pixels. Each variable uses its own valid cells; the original files retain the full distributions and source units.</p>'+
+  return '<section class="geo-allocation-section"><h4>Physical conditions on changed cells</h4><p>Descriptive contrasts in the retained prepared physical inputs at the actual changed source pixels. Each variable uses its own valid cells; the original files retain the full distributions and source units.</p>'+
     '<div class="geo-allocation-controls">'+select("physical","Original land-cover group",classes.map(x=>({value:String(x.baseline_class),title:x.baseline_class==="all"?"All original classes":x.baseline_class==="other"?"All other original classes":"Baseline class "+x.baseline_class})),String(selected.baseline_class))+"</div>"+
     table(["Changed land","Restoration cells","Control cells","Changed in both"],[
       ["Selected original class",allocationNumber(selected.changed_cells?.restoration),allocationNumber(selected.changed_cells?.control),allocationNumber(selected.overlap_changed_cells)]])+
     table(["Input and units","Restoration mean","Control mean","R − C mean"],means)+
     '<details><summary>Physical input coverage and variation</summary>'+
     table(["Input","R valid / selected cells","C valid / selected cells","R population SD","C population SD"],coverage)+"</details></section>";
+}
+function sitingMarkup(region) {
+  const entries=Object.entries(region.siting_contrasts||{});
+  if(!entries.length)return "";
+  const support=[],mass=[],normalized=[],partitions=[],basis=[],shared=[];
+  for(const [variable,value] of entries){
+    const name=(pollutantNames[variable]||label(variable))+" ("+value.units+")";
+    support.push([name,allocationNumber(value.native_common_cells),allocationNumber(value.native_common_hectares),allocationNumber(value.categorical_and_native_common_cells)]);
+    shared.push([name,value.equal_positive_local_area_and_class_budget===true?"Equal positive area and class counts":value.equal_positive_local_area_and_class_budget===false?"Different or zero local budgets":"Unavailable",allocationNumber(value.shared_changed_hectares),allocationNumber(value.advantage_per_shared_changed_ha,true)]);
+    mass.push([name,allocationNumber(value.mass?.baseline),allocationNumber(value.mass?.restoration),allocationNumber(value.mass?.control),allocationNumber(value.restoration_advantage_mass,true)]);
+    for(const arm of ["restoration","control"]){
+      const item=value.alternatives?.[arm]||{};
+      normalized.push([name+" · "+arm,allocationNumber(item.actual_changed_hectares),allocationNumber(item.avoided_export_mass,true),allocationNumber(item.avoided_export_percent,true),allocationNumber(item.avoided_export_per_changed_ha,true)]);
+      if(item.normalization_basis)basis.push(name+" · "+arm+": "+item.normalization_basis);
+      for(const [partition,part] of Object.entries(item.source_cell_partitions||{})){
+        partitions.push([name+" · "+arm+" · "+label(partition),allocationNumber(part.cells),allocationNumber(part.baseline_mass),allocationNumber(part.alternative_mass),allocationNumber(part.avoided_export_mass,true)]);
+      }
+    }
+  }
+  return '<section class="geo-allocation-section"><h4>Native comparison on the same source pixels</h4><p>These retained three-way quantities share the exact same addressed source-pixel mask within each quantity. Positive restoration advantage (control minus restoration) means less modeled export under restoration. Zero common support remains unavailable.</p>'+
+    table(["Quantity and annual units","Baseline","Restoration","Control","Restoration advantage"],mass)+
+    '<details><summary>Shared support, changed-area normalization and source-cell response</summary>'+
+    table(["Quantity","Native common cells","Native common ha","Categorical + native cells"],support)+
+    '<p>Avoided export is baseline minus the selected alternative on the retained common support. Each per-hectare value uses its displayed actual changed area and original normalization basis.</p>'+
+    table(["Quantity / alternative","Actual changed ha","Avoided annual export","Avoided percent","Avoided export / changed ha"],normalized)+
+    table(["Quantity","Local area and origin-class budget","Shared changed ha","Advantage / shared changed ha"],shared)+
+    '<p>Source-pixel partitions distinguish changed land, unchanged land and missing categorical support. They describe where source export changed under the modeled scenario.</p>'+
+    table(["Quantity / alternative / source pixels","Cells","Baseline","Alternative","Avoided export"],partitions)+
+    '<ul>'+basis.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul></details></section>";
 }
 export function allocationMarkup(result,requested={}) {
   const chosen=allocationSelection(result,requested),row=chosen.selected,report=result?.report;
@@ -94,9 +124,10 @@ export function allocationMarkup(result,requested={}) {
   if(list(row.anchor_huc12s).length)html+="<p>Original utility anchors: "+esc(row.anchor_huc12s.join(", "))+". Distinct upstream HUCs: "+esc(list(row.upstream_huc12s).length)+".</p>";
   if(row.vector_geometry_empty_with_selected_cells)html+="<p>The original mask retains boundary cells while its display geometry is empty. The counts below keep those original cells.</p>";
   html+=table(["Coverage","Cells"],[["Original region mask",allocationNumber(row.selected_cells)],["Baseline valid",allocationNumber(row.valid_cells?.baseline)],["Restoration valid",allocationNumber(row.valid_cells?.restoration)],["Control valid",allocationNumber(row.valid_cells?.control)],["Common to all three",allocationNumber(common)]])+
-    '<h4>Changed area by original class</h4>'+table(["Original baseline class","Restoration ha","Control ha","R − C ha"],origins)+physicalMarkup(row,chosen.physicalClass)+
+    '<h4>Changed area by original class</h4>'+table(["Original baseline class","Restoration ha","Control ha","R − C ha"],origins)+physicalMarkup(row,chosen.physicalClass,report.identity?.physical_input_binding)+
     '<h4>Common native-output support</h4><p>These counts intersect the three saved native output masks separately for each quantity. Changed hectares also require common categorical cells.</p>'+
     (support.length?table(["Quantity","Three-run native cells","Native + categorical cells","R changed ha","C changed ha"],support):"<p>No native support rows are retained in this edition.</p>")+
+    sitingMarkup(row)+
     '<details><summary>Original baseline comparisons and annual quantities</summary><p>Each row uses its own original baseline-versus-alternative common support. Annual quantities describe export originating from those source pixels and modeled as delivered to streams. Signed change is the original alternative-minus-baseline Float32 difference-pixel sum.</p>'+
     (quantities.length?table(["Quantity / scenario / units","Pairwise cells","Baseline","Alternative","Alt − baseline"],quantities):"<p>This group retains allocation and three-run support. Its saved source does not contain a separate original native mass analysis for this exact union.</p>")+"</details>"+
     '<details><summary>Every land-cover transition in this region</summary>'+table(["Scenario","Original → final class","Cells","Hectares"],transitions)+"</details>"+
