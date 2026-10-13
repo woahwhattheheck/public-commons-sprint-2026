@@ -1,0 +1,22 @@
+{
+  "schema": "tjlabs.water-reconciliation.browser-continuation.v1",
+  "operation": "WATER-RECONCILIATION-RECEIVING-E258-20261013",
+  "predecessor": {
+    "commit": "638b1d135ab8b959ed47ec121862c7bed0b90d4e",
+    "path": "tools/water-reconciliation-e258-20261013/receiving_water_browser.mjs",
+    "bytes": 19879,
+    "sha256": "2cb210396e81432344ab054306748c3bff90f617d2f0a4743b25a706cf829b15"
+  },
+  "successor": {
+    "path": "receiving_water_browser.mjs",
+    "bytes": 26878,
+    "sha256": "c2170ead6272d3b2fb455f11ddad1d3367d66d1a8192891b803da5bce8c36e03"
+  },
+  "native_case": "Original completed receiving.json, native archives and selected source remain unchanged",
+  "transport": "scoped-read-only-loopback-http",
+  "resume_flags": [
+    "--resume",
+    "--adopt-loopback"
+  ],
+  "source_review": "Prepared; actual resumed browser outcome belongs to the existing accepting receiver"
+}
