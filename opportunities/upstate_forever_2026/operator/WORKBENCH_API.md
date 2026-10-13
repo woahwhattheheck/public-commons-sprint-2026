@@ -26,6 +26,16 @@ continues to provide human-readable results. The client accepts only the origina
 local `http://127.0.0.1` operator; it never sends the capability to another host.
 Use `--workspace <existing-key>` to select another workspace on that operator.
 
+For an independently hosted deployment, use the public HTTPS base returned in
+the installed OpenAPI document and that deployment's separately issued recipient
+credential. The original native listener and startup capability remain private;
+the authenticated transport maps only its fixed original operator routes. The
+local Python client above is for the recipient's own local runtime. It never
+connects to a Bryce computer or silently forwards native credentials to a host.
+An operator's explicit `--public-origin` / `ECO_WORKBENCH_PUBLIC_ORIGIN` configures
+one canonical HTTPS authority while preserving exact Host/Origin validation and
+the private loopback API. Do not infer the origin from forwarded headers.
+
 The running maintained API exposes:
 
 | Method and route | What it does |
