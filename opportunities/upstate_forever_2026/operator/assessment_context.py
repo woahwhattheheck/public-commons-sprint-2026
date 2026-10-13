@@ -1,10 +1,11 @@
 """Assessment geographic-context extension for the maintained operator queue."""
 from pathlib import Path
-from model import assessment_context as model
-from model.common import identifier, relative_file
+from model import assessment_context as model, assessment_report_context as report
+from model.common import identifier, relative_file, verify_file
 
 ACTIONS=frozenset(("assessment.context.build","assessment.context.receive",
-                   "assessment.context.parcels","assessment.context.receive_parcels"))
+                   "assessment.context.parcels","assessment.context.receive_parcels",
+                   "assessment.context.report"))
 
 class AssessmentContext:
     def __init__(self,operator,fault):
@@ -45,6 +46,9 @@ class AssessmentContext:
     def invoke(self,task):
         action=task.get("action");value=task.get("payload") or {}
         ws=self.operator.ws(task["workspace"])
+        if action=="assessment.context.report":
+            return report.prepare(ws,identifier(value.get("context_id")),
+                parcel_id=value.get("parcel_id") or None, delivery_id=value.get("delivery_id") or None)
         if action=="assessment.context.build":
             result=model.build(ws,value.get("selection",value))
         elif action in ("assessment.context.receive","assessment.context.receive_parcels"):
@@ -63,6 +67,13 @@ class AssessmentContext:
         if task.get("action") not in ACTIONS or task.get("state")!="complete":
             return task
         result=task.get("result") or {}
+        if task["action"]=="assessment.context.report":
+            ws=self.operator.ws(task["workspace"])
+            task.setdefault("_downloads",[]).extend(self.operator._ticket(task["workspace"],
+                verify_file(ws.root,item),item,Path(item["path"]).name) for item in result.get("files",[]))
+            task["_assessment_context"]={"id":result.get("context_id"),"view":"assessment-context",
+                "report":True,"parcel_id":result.get("parcel_id")}
+            return task
         if result.get("id"):
             parcels=task["action"] in ("assessment.context.parcels","assessment.context.receive_parcels")
             row=self.edition(task["workspace"],result["id"],complete=False,parcels=parcels)

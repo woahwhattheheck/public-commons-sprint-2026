@@ -22,18 +22,20 @@ export function attachAssessmentContext(host){
  let selectedPolygon='',query='',page=0,taskFingerprint='';
  let parcelEdition=null,selectedParcelEdition=null,parcelQuery='',parcelPage=0;
  let optionsRequest=0,editionRequest=0,parcelRequest=0,pendingEdition=null,optionsLoading=false;
+ let reportDelivery='',reportReady=null;
  const parcelActions=new Set(['assessment.context.parcels','assessment.context.receive_parcels']);
  const read=(operation,value={})=>host.api('/api/assessment-context/'+operation,{method:'POST',body:{workspace,...value},signal:controller?.signal});
  function persist(){
   if(!workspace)return;
-  try{sessionStorage.setItem('assessment-context:'+workspace,JSON.stringify({draft,requests:requests.slice(-30),currentTask,selectedEdition,selectedPolygon,query,page,selectedParcelEdition,parcelQuery,parcelPage}));}catch{}
+  try{sessionStorage.setItem('assessment-context:'+workspace,JSON.stringify({draft,requests:requests.slice(-30),currentTask,selectedEdition,selectedPolygon,query,page,selectedParcelEdition,parcelQuery,parcelPage,reportDelivery,reportReady}));}catch{}
  }
  function restore(){
-  draft=empty();requests=[];currentTask=null;selectedEdition=null;selectedPolygon='';query='';page=0;selectedParcelEdition=null;parcelQuery='';parcelPage=0;
+  draft=empty();requests=[];currentTask=null;selectedEdition=null;selectedPolygon='';query='';page=0;selectedParcelEdition=null;parcelQuery='';parcelPage=0;reportDelivery='';reportReady=null;
   try{const v=JSON.parse(sessionStorage.getItem('assessment-context:'+workspace)||'{}');draft={...draft,...(v.draft||{})};
    requests=list(v.requests);currentTask=v.currentTask||null;selectedEdition=v.selectedEdition||null;
    selectedPolygon=v.selectedPolygon||'';query=v.query||'';page=Number(v.page)||0;
-   selectedParcelEdition=v.selectedParcelEdition||null;parcelQuery=v.parcelQuery||'';parcelPage=Number(v.parcelPage)||0;}catch{}
+   selectedParcelEdition=v.selectedParcelEdition||null;parcelQuery=v.parcelQuery||'';parcelPage=Number(v.parcelPage)||0;
+   reportDelivery=v.reportDelivery||'';reportReady=v.reportReady||null;}catch{}
  }
  function fail(e){if(e?.name==='AbortError')return;error=e?.message||String(e);message='';notice();}
  function notice(){const t=node?.querySelector('[data-ac-notice]');if(t){t.textContent=error||message;t.className=error?'ac-notice ac-error':'ac-notice';}}
@@ -152,6 +154,24 @@ export function attachAssessmentContext(host){
   return list(parcelEdition?.result?.rows).filter(r=>!term||[r.parcel_id,r.label,r.association_status,
     list(r.station_ids).join(' '),JSON.stringify(r.original_parcel_attributes)].join(' ').toLowerCase().includes(term));
  }
+ function reportControls(contextId,parcelId=null){
+  const ready=reportReady?.context_id===contextId&&(reportReady.parcel_id||null)===(parcelId||null);
+  return '<section class="ac-report"><h3>Scientific and client report</h3><label>Keep an existing report selection<select data-ac-report-delivery>'+
+   '<option value="">New report selection</option>'+list(state?.data?.deliveries).map(row=>'<option value="'+esc(row.id)+'" '+(row.id===reportDelivery?'selected':'')+'>'+esc(row.title||row.id)+'</option>').join('')+'</select></label>'+
+   '<div class="ac-toolbar">'+btn('prepare-report','Use saved '+(parcelId?'parcel and assessment':'assessment')+' context in report',
+    'data-context="'+esc(contextId)+'" data-parcel="'+esc(parcelId||'')+'" '+(busy?'disabled':''))+
+   (ready?btn('open-report','Open prepared report form'):'')+'</div>'+
+   '<p>The complete saved selection and original packages become one ordered scientific source. Existing native runs and previously selected studies remain in the chosen report. Current table searches do not replace the saved selection.</p></section>';
+ }
+ function acceptReport(task){
+  if(task?.workspace!==workspace||task?.action!=='assessment.context.report'||task.state!=='complete'||
+     !task.result?.source||!task.result?.delivery_selection)return;
+  reportReady=clone(task.result);persist();renderResult();renderParcelResult();
+ }
+ async function openReport(value){
+  if(!value?.source||!value?.delivery_selection)throw Error('Finish the retained assessment report-source operation first.');
+  await host.openDelivery(clone(value.delivery_selection));
+ }
  function renderParcels(){
   const target=node?.querySelector('[data-ac-parcels]');if(!target)return;
   if(!edition){target.innerHTML='';return;}
@@ -190,6 +210,7 @@ export function attachAssessmentContext(host){
     '<label class="ac-search">Find original parcel, station, association or source text<input data-ac-parcel-search value="'+esc(parcelQuery)+'"></label>'+
     '<div data-ac-parcel-rows></div><h4>Complete parcel association exports</h4><div class="ac-downloads">'+
     list(parcelEdition._downloads).map(f=>'<a href="'+esc(f.url)+'" download="'+esc(f.filename)+'">'+esc(f.filename)+'</a>').join('')+'</div>';
+  target.insertAdjacentHTML('beforeend',reportControls(parcelEdition.context_id,parcelEdition.id));
   renderParcelRows();
  }
  function downloadCsv(headers,rows,filename){
@@ -209,6 +230,7 @@ export function attachAssessmentContext(host){
    '<details><summary>Original assessment editions and cause/use groups</summary><pre>'+esc(JSON.stringify(r.assessment_groups,null,2))+'</pre></details><div data-ac-map class="ac-map"></div><label class="ac-search">Find original station, cause, watershed or source text<input data-ac-search value="'+esc(query)+'"></label>'+
    '<div data-ac-rows></div><section data-ac-parcels></section><h3>Complete source and editable package</h3><div class="ac-downloads">'+
    list(edition._downloads).filter(f=>f.filename!=='started.json'&&f.filename!=='original-station-geography.zip').map(f=>'<a href="'+esc(f.url)+'" download="'+esc(f.filename)+'">'+esc(f.filename)+'</a>').join('')+'</div>';
+  result.insertAdjacentHTML('beforeend',reportControls(edition.id));
   renderMap();renderRows();renderParcels();
  }
  function exportRows(){
@@ -223,6 +245,7 @@ export function attachAssessmentContext(host){
  function renderTasks(){
   const target=node?.querySelector('[data-ac-tasks]');if(!target)return;
   target.innerHTML=ownedTasks().slice(-15).reverse().map(t=>'<div class="ac-task">'+btn('task',t.action+' · '+t.state,'data-id="'+esc(t.id)+'"')+
+   (t.state==='complete'&&t.action==='assessment.context.report'&&t.result?.source?btn('report-task','Open report form','data-id="'+esc(t.id)+'"'):'')+
    (t.state==='complete'&&t.result?.id?btn('open-result','Open saved result','data-id="'+esc(t.result.id)+'" data-parcels="'+(parcelActions.has(t.action)?'1':'0')+'"'):'')+(t.error?'<span>'+esc(t.error.message||t.error)+'</span>':'')+'</div>').join('')||'<p>Operations appear here after submission. They remain in the original queue when this desk closes.</p>';
  }
  async function submit(action,payload){
@@ -231,9 +254,9 @@ export function attachAssessmentContext(host){
   busy=true;error='';message='Saving this source selection in the original task queue…';persist();notice();
   try{const t=await host.api('/api/actions',{method:'POST',body:{workspace,action,payload,operation_id:request.id}});
    if(workspaceNow!==workspace||gen!==epoch)return;currentTask=t.id;persist();await host.refresh({force:true});if(gen!==epoch||workspaceNow!==workspace)return;state=host.getState();
-   message='Context operation '+t.state+'.';renderTasks();notice();
+   message='Context operation '+t.state+'.';renderTasks();acceptReport(t);notice();
    if(t.state==='complete'&&t.result?.id){await loadCatalog();if(gen!==epoch||workspaceNow!==workspace)return;if(parcelActions.has(action))await openParcels(t.result.id);else await openEdition(t.result.id);}
-  }catch(e){if(workspaceNow===workspace&&gen===epoch)fail(e);}finally{if(workspaceNow===workspace&&gen===epoch){busy=false;renderForm();renderParcels();}}
+  }catch(e){if(workspaceNow===workspace&&gen===epoch)fail(e);}finally{if(workspaceNow===workspace&&gen===epoch){busy=false;renderForm();renderParcels();renderResult();renderParcelResult();}}
  }
  function edit(event){
   const t=event.target,item=list(draft.inventories).find(row=>key(row.table)===t.dataset.acInventory);
@@ -245,6 +268,7 @@ export function attachAssessmentContext(host){
  }
  async function change(event){
   edit(event);const t=event.target;
+  if(t.matches('[data-ac-report-delivery]')){reportDelivery=t.value;persist();renderResult();renderParcelResult();return;}
   if(t.matches('[data-ac-field="station_geography_id"]')){draft.filters=empty().filters;await loadOptions(t.value);}
   else if(t.matches('[data-ac-inventory-toggle]')){
    const identity=t.dataset.acInventoryToggle,found=list(options?.tables).find(row=>key(row.reference)===identity);
@@ -267,7 +291,16 @@ export function attachAssessmentContext(host){
   if(polygon){selectedPolygon=polygon.dataset.acPolygon;page=0;persist();renderMap();renderRows();return;}
   const t=event.target.closest('[data-ac-action]');if(!t)return;
   const a=t.dataset.acAction;
-  if(a==='use-context'&&edition){draft={...empty(),...clone(edition.selection||edition.result.selection)};await loadOptions(draft.station_geography_id,true);persist();}
+  if(a==='prepare-report'){
+   await submit('assessment.context.report',{context_id:t.dataset.context,...(t.dataset.parcel?{parcel_id:t.dataset.parcel}:{}),
+    ...(reportDelivery?{delivery_id:reportDelivery}:{})});
+  }
+  else if(a==='open-report'){try{await openReport(reportReady);}catch(e){fail(e);}}
+  else if(a==='report-task'){
+   const task=ownedTasks().find(task=>task.id===t.dataset.id);
+   try{await openReport(task?.result);}catch(e){fail(e);}
+  }
+  else if(a==='use-context'&&edition){draft={...empty(),...clone(edition.selection||edition.result.selection)};await loadOptions(draft.station_geography_id,true);persist();}
   else if(a==='open-result'){if(t.dataset.parcels==='1')await openParcels(t.dataset.id);else await openEdition(t.dataset.id);}
   else if(a==='reload'){await loadCatalog();await loadOptions(draft.station_geography_id,true);}
   else if(a==='clear-polygon'){selectedPolygon='';page=0;persist();renderMap();renderRows();}
@@ -291,12 +324,23 @@ export function attachAssessmentContext(host){
  }
  function taskActions(task){
   const current=host.getWorkspace()||host.getState()?.workspace_key;
+  if(task?.state==='complete'&&task.action==='assessment.context.report'&&task.workspace===current&&task.result?.source){
+   return '<button type="button" data-action="assessment-context-report-open" data-workspace="'+esc(task.workspace)+
+    '" data-task="'+esc(task.id)+'">Open assessment report form</button>';
+  }
   if(task?.state!=='complete'||!String(task.action||'').startsWith('assessment.context.')||
      task.workspace!==current||!/^[a-f0-9]{64}$/.test(String(task.result?.id||'')))return '';
   return '<button type="button" data-action="assessment-context-result-open" data-workspace="'+esc(task.workspace)+
    '" data-id="'+esc(task.result.id)+'" data-parcels="'+(parcelActions.has(task.action)?'1':'0')+'">Open assessment context result</button>';
  }
  async function dispatch(button){
+  if(button?.dataset?.action==='assessment-context-report-open'){
+   const keyNow=host.getWorkspace()||host.getState()?.workspace_key;
+   if(!keyNow||button.dataset.workspace!==keyNow)throw Error('Open the original report-source Workspace first.');
+   const task=list(host.getState()?.tasks).find(item=>item.id===button.dataset.task&&item.workspace===keyNow);
+   if(task?.state!=='complete'||task.action!=='assessment.context.report')throw Error('Open the completed original report-source task.');
+   host.closeDetail();await openReport(task.result);return true;
+  }
   if(button?.dataset?.action!=='assessment-context-result-open')return false;
   const keyNow=host.getWorkspace()||host.getState()?.workspace_key;
   if(!keyNow||button.dataset.workspace!==keyNow||!/^[a-f0-9]{64}$/.test(String(button.dataset.id||'')))
@@ -322,6 +366,7 @@ export function attachAssessmentContext(host){
   const fingerprint=canonical(ownedTasks().map(t=>[t.id,t.state,t.result?.id,t.error]));
   if(fingerprint!==taskFingerprint){taskFingerprint=fingerprint;renderTasks();
    const t=ownedTasks().find(t=>t.id===currentTask);
+   acceptReport(t);
    if(t?.state==='complete'&&t.result?.id){
     if(parcelActions.has(t.action)&&t.result.id!==selectedParcelEdition){loadCatalog();openParcels(t.result.id);}
     else if(!parcelActions.has(t.action)&&t.result.id!==selectedEdition){loadCatalog();openEdition(t.result.id);}
