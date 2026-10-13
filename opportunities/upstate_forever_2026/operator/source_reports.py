@@ -82,10 +82,185 @@ def document_policy(body):
     )
 
 
+# These are ordinary source manifests shipped with the installed application.
+# Additional editions use the existing --source-manifest or --source-root options.
+BUNDLED_REPORT_MANIFESTS = (
+    "results/assessment-association-review-20261013/sources.json",
+    "results/assessment-source-scope-review-20261013/sources.json",
+    "source/station-assessment-context/native159-source-context-20261013/sources-complete.json",
+    "source/station-assessment-context/native159-source-context-20261013/sources-all-editions.json",
+    "source/water_context/sources-20261013.json",
+)
+
+
+def manifest_reports(value):
+    """Describe readable originals without opening any report or source body."""
+    result = []
+    for row in value["entries"]:
+        names = [member_name(row["path"])] + [
+            member_name(item["path"]) for item in row.get("companions", [])
+        ]
+        html = [
+            name for name in names
+            if PurePosixPath(name).suffix.lower() in (".html", ".htm")
+            and (name == names[0] or re.search(
+                r"(^open[_-]|report|review|^index\.)",
+                PurePosixPath(name).name, re.IGNORECASE))
+        ]
+        if html:
+            result.append({
+                "source_id": row["id"], "title": row["title"],
+                "kind": row["kind"], "role": row.get("role"),
+                "vintage": row["vintage"], "documents": html,
+            })
+    return result
+
+
+def manifest_readiness(path, value):
+    """Check installed member metadata; Workspace import verifies original bytes."""
+    root = path.parent.resolve()
+    members, problems = {}, []
+    for row in value["entries"]:
+        for item in [row, *row.get("companions", [])]:
+            name = member_name(item["path"])
+            prior = members.setdefault(name, dict(item))
+            for key in ("bytes", "sha256"):
+                incoming = item.get(key)
+                if incoming is None:
+                    continue
+                if prior.get(key) is not None and prior[key] != incoming:
+                    problems.append({"member": name, "reason": "Conflicting declared source " + key})
+                else:
+                    prior[key] = incoming
+    for name, item in members.items():
+        try:
+            target = (root / name).resolve(strict=True)
+            if not target.is_relative_to(root) or not target.is_file():
+                raise ValueError("Source member is outside its edition or is not a file")
+            expected = item.get("bytes")
+            if expected is not None and (
+                    not isinstance(expected, int) or isinstance(expected, bool)
+                    or expected < 0 or target.stat().st_size != expected):
+                raise ValueError("Installed file size differs from its declared original")
+        except (OSError, ValueError) as error:
+            problems.append({"member": name, "reason": str(error)})
+    return {"ready": not problems, "member_count": len(members), "problems": problems}
+
+
+
 class SourceReports:
-    def __init__(self, operator, fault):
+    def __init__(self, operator, fault, source_roots=()):
         self.operator, self.Fault = operator, fault
         self._archive_lock = threading.RLock()
+        self._source_roots = tuple(source_roots)
+        self._managed_registered_ids = set()
+        self._available_editions = []
+        self._discovery_issues = []
+        self.refresh_registered()
+
+    def _manifest_candidates(self, registered):
+        """Use selected directories only; never traverse a scientific Workspace."""
+        candidates, seen = [], set()
+
+        def add(path, origin, *, required=False):
+            path = Path(path).expanduser()
+            try:
+                resolved = path.resolve(strict=required)
+            except OSError as error:
+                self._discovery_issues.append({"manifest": path.name, "reason": str(error)})
+                return
+            if resolved in seen or (not required and not resolved.is_file()):
+                return
+            seen.add(resolved)
+            candidates.append((resolved, origin))
+
+        for row in registered.values():
+            add(row["path"], "Registered source", required=True)
+        application = Path(__file__).resolve().parents[1]
+        for relative in BUNDLED_REPORT_MANIFESTS:
+            add(application / relative, "Included with this application")
+        for root_value in self._source_roots:
+            root = Path(root_value).expanduser()
+            if root.is_file():
+                add(root, "Configured source")
+                continue
+            if not root.is_dir():
+                self._discovery_issues.append({
+                    "manifest": root.name, "reason": "Configured source directory is unavailable"
+                })
+                continue
+            for relative in BUNDLED_REPORT_MANIFESTS:
+                add(root / relative, "Configured source")
+            # Accept manifest files directly inside the explicitly selected edition.
+            # No recursive search or source-body read is needed.
+            for pattern in ("sources*.json", "*.sources.json", "*-sources.json", "source-manifest.json"):
+                for path in sorted(root.glob(pattern)):
+                    add(path, "Configured source")
+        return candidates
+
+    def refresh_registered(self):
+        """Populate the original operator registry, keeping explicit registrations first."""
+        with self._archive_lock, self.operator.lock:
+            current = self.operator.registered
+            registered = {key: row for key, row in current.items()
+                          if key not in self._managed_registered_ids}
+            explicit_by_path = {str(Path(row["path"]).resolve()): row
+                                for row in registered.values()}
+            managed, available = set(), []
+            self._discovery_issues = []
+            for path, origin in self._manifest_candidates(registered):
+                try:
+                    raw = path.read_bytes()
+                    value = json.loads(raw)
+                    if not isinstance(value, dict) or value.get("schema") != "upstate.sources/v1":
+                        continue
+                    summary = self.operator._manifest_summary(value)
+                    report_rows = manifest_reports(value)
+                    regional = any(row.get("role") == "SOURCE_WATER_CONTEXT"
+                                   for row in value["entries"])
+                    if not report_rows and not regional:
+                        continue
+                    sha = hashlib.sha256(raw).hexdigest()
+                    ready = manifest_readiness(path, value)
+                    explicit = explicit_by_path.get(str(path))
+                    if explicit is not None:
+                        key = explicit["id"]
+                        if explicit["sha256"] != sha:
+                            ready["ready"] = False
+                            ready["problems"].append({
+                                "member": path.name,
+                                "reason": "Registered manifest changed; restart with its new edition"
+                            })
+                    else:
+                        key = digest({"path": str(path), "sha256": sha})
+                        if ready["ready"]:
+                            existing = registered.get(key)
+                            record = {
+                                "id": key, "path": str(path), "sha256": sha,
+                                "title": summary["title"], "entries": len(value["entries"])
+                            }
+                            if existing is not None and any(existing.get(field) != record[field]
+                                    for field in ("id", "path", "sha256")):
+                                raise ValueError("Registered source ID has a different identity")
+                            registered.setdefault(key, record)
+                            managed.add(key)
+                    available.append({
+                        "registered_id": key if ready["ready"] else None,
+                        "manifest_sha256": sha, "manifest_name": path.name,
+                        "title": summary["title"], "origin": origin,
+                        "entry_count": len(value["entries"]), "reports": report_rows,
+                        "source_ids": [row["id"] for row in value["entries"]],
+                        "regional_context": regional,
+                        "vintages": list(dict.fromkeys(str(row["vintage"]) for row in value["entries"])),
+                        **ready,
+                    })
+                except (OSError, ValueError, TypeError, KeyError, self.Fault) as error:
+                    self._discovery_issues.append({"manifest": path.name, "reason": str(error)})
+            # Replace the dictionary atomically, retaining the original explicit order.
+            self.operator.registered = registered
+            self._managed_registered_ids = managed
+            self._available_editions = available
+
 
     def _entry(self, workspace, collection_id, selected_key):
         if not re.fullmatch(r"[0-9a-f]{64}", str(collection_id or "")):
@@ -122,13 +297,33 @@ class SourceReports:
             "source_relationships": metadata.get("source_relationships", []),
         }
 
-    def catalog(self, workspace):
+    def catalog(self, workspace, *, refresh=False):
+        if refresh:
+            self.refresh_registered()
         reports = []
-        for collection in self.operator.ws(workspace).sources():
+        collections = self.operator.ws(workspace).sources()
+        for collection in collections:
             for entry in collection.get("entries", []):
                 if html_members(entry):
                     reports.append(self._row(workspace, collection, entry))
-        return {"workspace_key": workspace, "reports": reports}
+        editions = []
+        for original in self._available_editions:
+            retained = [row for row in collections
+                        if row.get("original_manifest", {}).get("sha256")
+                        == original["manifest_sha256"]]
+            retained_ids = {row["id"] for row in retained}
+            editions.append({
+                **original,
+                "retained_collections": [{"id": row["id"], "title": row.get("title", row["id"])}
+                                         for row in retained],
+                "retained_reports": [
+                    {"collection_id": row["collection_id"], "entry_key": row["entry_key"],
+                     "title": row["title"], "source_id": row["source_id"]}
+                    for row in reports if row["collection_id"] in retained_ids
+                ],
+            })
+        return {"workspace_key": workspace, "reports": reports,
+                "available_editions": editions, "discovery_issues": self._discovery_issues}
 
     def detail(self, workspace, payload):
         collection, entry, members = self._entry(
@@ -274,7 +469,7 @@ class SourceReports:
 
     def read(self, workspace, operation, payload):
         if operation == "catalog":
-            return self.catalog(workspace)
+            return self.catalog(workspace, refresh=str(payload.get("refresh", "")).lower() in {"1", "true"})
         if operation == "detail":
             return self.detail(workspace, payload)
         if operation == "archive":

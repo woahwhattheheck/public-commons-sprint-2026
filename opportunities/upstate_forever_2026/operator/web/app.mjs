@@ -524,9 +524,13 @@ function bindCollection(name,targets,chosenValues={}){
 }
 function sourceForm(options={}){
  sourcePreview=null;
- const registered=state.registered_sources||[];
+ const registered=[...(state.registered_sources||[])];
+ if(options.registeredManifest&&!registered.some(row=>row.id===options.registeredManifest.id))
+  registered.push(options.registeredManifest);
+ if(options.registeredId&&!registered.some(row=>row.id===options.registeredId))
+  throw Error('Refresh and choose an available registered source edition.');
  openForm('Import original source data','Preview the original metadata and file selection, then retain the edition in the native workspace.',
- '<div class="form-grid">'+field('Source selection',select('source_mode',[...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],options.mode==='archive'?'archive':registered.length?'registered':'archive'))+
+ '<div class="form-grid">'+field('Source selection',select('source_mode',[...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],options.mode==='archive'?'archive':options.mode==='registered'&&registered.length?'registered':registered.length?'registered':'archive'))+
  '<div id="source-selection-body" class="full"></div><div id="source-preview" class="full"></div></div>','Preview source',
  async()=>{
   if(sourcePreview)return submitAction('source.import',{preview_id:sourcePreview.id});
@@ -555,7 +559,7 @@ function sourceForm(options={}){
    formContext.sourcePreviewGeneration=(formContext.sourcePreviewGeneration||0)+1;
    sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';
    const mode=val('source_mode');
-   $('#source-selection-body').innerHTML=mode==='registered'?field('Registered manifest',select('registered_id',registered.map(x=>[x.id,x.title+' · '+x.entries+' sources'])),'',true):
+   $('#source-selection-body').innerHTML=mode==='registered'?field('Registered manifest',select('registered_id',registered.map(x=>[x.id,x.title+' · '+x.entries+' sources']),options.registeredId||registered[0]?.id),'',true):
     '<div class="form-grid">'+field(mode==='archive'?'Original source ZIP':'Original source file',input('source_file','file','','required '+(mode==='archive'?'accept=".zip"':'')),'Files are uploaded as their original bytes.',true)+
     (mode==='archive'?field('Manifest entry, when the ZIP has several manifests',input('manifest_member','text',options.manifestMember||''),'Optional. Use the exact original relative path.',true):
      field('Title',input('source_title','text','','required'))+field('Original source URI',input('source_uri','url','','required'))+field('Source vintage',input('source_vintage','text','','required'),'Edition, release date or actual observation period.')+field('Kind',select('source_kind',[['table','Table'],['raster','Raster'],['vector','Vector'],['document','Document']],'table'))+field('Units',input('source_units'))+field('Role',input('source_role'),'Optional original source role.')+field('Layer',input('source_layer'))+field('Source notes',area('source_notes'),'One note per line.',true))+'</div>';

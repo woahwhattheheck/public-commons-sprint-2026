@@ -1,0 +1,559 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah complete original source editions for the 164-station assessment study",
+  "captured_at": "2026-10-13",
+  "description": "Complete original705/WQP8/WQP2 station sources, original192-record published contextual report, optional73 WQP metadata overlay, both complete normalized published assessment editions and original101-row2026 draft inventory. The maintained all-editions study retains293 distinct records at164 original stations across77 publisher HUC12s; original model-domain geometry remains selected by its decoded source hash.",
+  "entries": [
+    {
+      "id": "scdes-wqp-assessment159-additional-two-20261013",
+      "title": "RS-21038 and RS-22075 original WQP station-page locations",
+      "uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/",
+      "vintage": "Retrieved 2026-10-13; original WQP reported station coordinates",
+      "kind": "vector",
+      "path": "source_data/wqp_assessment159_additional_two_20261013/wqp_two_monitoring_sites.geojson",
+      "sha256": "5588a64fbae5229687aef7063948083f05b5f0639dfd108ae0c3db40614677cd",
+      "format": "GeoJSON",
+      "role": "MONITORING_STATIONS",
+      "station_id_field": "MonitoringLocationName",
+      "native_id_field": "MonitoringLocationIdentifier",
+      "source_crs": "EPSG:4326",
+      "metadata": {
+        "source_representation": "GeoJSON derived from official WQP station-page coordinates; original reported fields retained as strings",
+        "source_pages": [
+          {
+            "site": "RS-21038",
+            "uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-21038/",
+            "native_id": "21SC60WQ_WQX-RS-21038"
+          },
+          {
+            "site": "RS-22075",
+            "uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-22075/",
+            "native_id": "21SC60WQ_WQX-RS-22075"
+          }
+        ],
+        "coordinate_derivation": "Point coordinates are exact numeric copies of the original LongitudeMeasure and LatitudeMeasure strings. No reprojection or coordinate averaging was performed."
+      },
+      "companions": [
+        {
+          "path": "source_data/wqp_assessment159_additional_two_20261013/wqp_two_station_page_extractions.json",
+          "sha256": "eaa608090903f409ddd89ac93982c580f60da709ab09075ce5bcf97f55a0ba6b"
+        },
+        {
+          "path": "source_data/wqp_assessment159_additional_two_20261013/wqp_two_source_metadata.json",
+          "sha256": "72be42d0b6294b9950641cf75bd51dc0db0065bacf847bb6e0902a5ab89f943f"
+        },
+        {
+          "path": "source_data/wqp_assessment159_additional_two_20261013/assessment159_native_identity_crosswalk.csv",
+          "sha256": "b5a658b16a9cb0b891426d53db78de01429f4363b83f2ff30625f9dbf932d84c"
+        }
+      ]
+    },
+    {
+      "id": "scdes-bw-monitoring-savannah-native-20261013",
+      "title": "SCDES original Savannah monitoring stations — 705 native features",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/BW_Monitoring_Stations/MapServer/9",
+      "vintage": "Retained 2026-10-13 official source capture",
+      "kind": "vector",
+      "path": "source_data/scdes_savannah705_20261013/scdes-savannah705-native.esri.json",
+      "sha256": "14b1a945ee8d5f172f63435b4fd955e9dada6894fcbca2964160c6e2e52d79f0",
+      "format": "EsriJSON",
+      "role": "MONITORING_STATIONS",
+      "station_id_field": "STAT",
+      "native_id_field": "OBJECTID",
+      "source_crs": "EPSG:26917",
+      "metadata": {
+        "native_feature_count": 705,
+        "original_query": "https://gis.des.sc.gov/gisserver/rest/services/water/BW_Monitoring_Stations/MapServer/9/query?where=BASIN%3D'Savannah'&outFields=*&returnGeometry=true&f=pjson",
+        "geometry_representation": "Original unmodified Esri feature-set response; native coordinates and every original attribute retained"
+      },
+      "companions": [
+        {
+          "path": "source_data/scdes_savannah705_20261013/original-count-response.html",
+          "sha256": "d110bed49ce5c04505eba11c314a48b8d6615417ab68e11882526aaabe0a9487"
+        },
+        {
+          "path": "source_data/scdes_savannah705_20261013/source-provenance.json",
+          "sha256": "f7c7c2e6eb9ef1992380f605afcda599e7cccbbd925956132d91ac585b31b2fc"
+        }
+      ]
+    },
+    {
+      "id": "scdes-wqp-additional-eight-20261013",
+      "title": "SCDES WQP original locations for eight additional assessment stations",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-SV-376%3B21SC60WQ_WQX-RS-24163%3B21SC60WQ_WQX-RS-21014%3B21SC60WQ_WQX-RL-21217%3B21SC60WQ_WQX-RL-24073%3B21SC60WQ_WQX-RL-21209%3B21SC60WQ_WQX-RS-22078%3B21SC60WQ_WQX-RL-21225&mimeType=csv",
+      "vintage": "Retrieved 2026-10-13",
+      "kind": "vector",
+      "path": "source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
+      "sha256": "d7322856d96cdd6898a5cef555e97529f99ec4d6dad7ab45d18f4d53f3b646e6",
+      "format": "GeoJSON",
+      "role": "MONITORING_STATIONS",
+      "station_id_field": "MonitoringLocationName",
+      "native_id_field": "MonitoringLocationIdentifier",
+      "source_crs": "EPSG:4326",
+      "companions": [
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_native.csv",
+          "sha256": "21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_source_metadata.json",
+          "sha256": "cd9bece111d31aa68748507ae68ddfa0ac0a739f9d215f52149cde5d302d0605"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_station_page_extractions.json",
+          "sha256": "691f1020850d35deb2c06c4e765590e1df747824bf5ea70d955263ff4595d91f"
+        }
+      ]
+    },
+    {
+      "id": "scdes-wqp-coordinate-context73-20261013",
+      "title": "Independent WQP coordinate metadata for73 existing assessment locations",
+      "uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/",
+      "vintage": "Retrieved2026-10-13; publisher station coordinate metadata",
+      "kind": "vector",
+      "path": "source_data/wqp_coordinate_context73_20261013/wqp_coordinate_context.geojson",
+      "sha256": "2c9a06c77e9d55320c779af7edea68fd091c0c8458b85b0ec32de9d999cc687e",
+      "source_crs": "EPSG:4326",
+      "role": "MONITORING_LOCATION_CONTEXT",
+      "station_id_field": "MonitoringLocationName",
+      "native_id_field": "MonitoringLocationIdentifier",
+      "metadata": {
+        "purpose": "Additional source context alongside the primary159 native station identities",
+        "source_representation": "Numeric point copies of original WGS84 metadata with all original reported strings retained",
+        "station_count": 73,
+        "station_publisher_huc8_agreements": 73,
+        "assessment_publisher_huc8_difference_stations": [
+          "SV-809"
+        ],
+        "primary_locations": "Original705 +WQP8 +WQP2 retained for the prepared159 study"
+      },
+      "companions": [
+        {
+          "path": "source_data/wqp_coordinate_context73_20261013/wqp_station_pages.json",
+          "sha256": "059da5e2e898286b6249356c9ef4a1771516eccb6462a5fd0e1ae523dd1e8640"
+        }
+      ]
+    },
+    {
+      "id": "upstate-published-station-assessment-context159-20261013",
+      "title": "Published assessment editions joined to159 native station coordinates",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3017",
+      "vintage": "2024 published assessment and2026-07-28 TMDL status; locations retained2026-10-13",
+      "kind": "table",
+      "path": "results/station-assessment-context.csv",
+      "sha256": "4ca9e11c10f2da79144622a9aec5bf89f7dadad5d2adbbd4972f7df3aa0d21d9",
+      "role": "STATION_ASSESSMENT_CONTEXT",
+      "station_id_field": "station_id",
+      "record_id_field": "assessment_record_id",
+      "metadata": {
+        "coordinate_reference": "native_crs per row; native_x/native_y preserve original source coordinate strings",
+        "source_editions": [
+          "2024",
+          "2026-07-28"
+        ],
+        "publisher_huc_comparison": "assessment HUC12 versus station publisher HUC12/HUC8",
+        "location_source_counts": {
+          "scdes-bw-monitoring-savannah-native-20261013": 152,
+          "scdes-wqp-additional-eight-20261013": 5,
+          "scdes-wqp-assessment159-additional-two-20261013": 2
+        },
+        "original_normalized_bank_sources": [
+          {
+            "path": "inputs/303d-2024-pdf-table-normalized.json",
+            "bytes": 2674649,
+            "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c",
+            "role": "complete_normalized_assessment_edition",
+            "source_id": "scdes-303d-published-2024-pdf-table-normalized",
+            "vintage": "2024"
+          },
+          {
+            "path": "inputs/tmdl-attainment-native-20260728.json",
+            "bytes": 1260570,
+            "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522",
+            "role": "complete_normalized_assessment_edition",
+            "source_id": "scdes-tmdl-attainment-native-20260728",
+            "vintage": "2026-07-28"
+          }
+        ],
+        "related_source_ids": [
+          "scdes-bw-monitoring-savannah-native-20261013",
+          "scdes-wqp-additional-eight-20261013",
+          "scdes-wqp-assessment159-additional-two-20261013",
+          "scdes-wqp-coordinate-context73-20261013",
+          "scdes-303d-published-2024-pdf-table-normalized",
+          "scdes-tmdl-attainment-native-20260728"
+        ],
+        "source_relationships": [
+          {
+            "id": "scdes-bw-monitoring-savannah-native-20261013",
+            "relationship": "primary_native_locations",
+            "selected_station_count": 152
+          },
+          {
+            "id": "scdes-wqp-additional-eight-20261013",
+            "relationship": "primary_native_locations",
+            "selected_station_count": 5
+          },
+          {
+            "id": "scdes-wqp-assessment159-additional-two-20261013",
+            "relationship": "primary_native_locations",
+            "selected_station_count": 2
+          },
+          {
+            "id": "scdes-wqp-coordinate-context73-20261013",
+            "relationship": "supplemental_coordinate_context",
+            "station_count": 73
+          },
+          {
+            "id": "scdes-303d-published-2024-pdf-table-normalized",
+            "relationship": "complete_original_assessment_edition",
+            "vintage": "2024",
+            "path": "inputs/303d-2024-pdf-table-normalized.json",
+            "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c"
+          },
+          {
+            "id": "scdes-tmdl-attainment-native-20260728",
+            "relationship": "complete_original_assessment_edition",
+            "vintage": "2026-07-28",
+            "path": "inputs/tmdl-attainment-native-20260728.json",
+            "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522"
+          }
+        ],
+        "original_source_bank": {
+          "uri": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8R6K30US",
+          "schema": "commons.source-map/1",
+          "files": 25,
+          "payload_bytes": 3468234,
+          "payload_sha256": "693674c1ce8c28511d7304ffebbfbc5b0f8c9a66a850a145d2f8c0b768285eda"
+        },
+        "scientific_selection": {
+          "study_id": "upper-savannah-published-assessments-2024-2026-159",
+          "station_count": 159,
+          "assessment_record_count": 192,
+          "model_domain_huc12_count": 217,
+          "primary_location_source_ids": [
+            "scdes-bw-monitoring-savannah-native-20261013",
+            "scdes-wqp-additional-eight-20261013",
+            "scdes-wqp-assessment159-additional-two-20261013"
+          ],
+          "supplemental_coordinate_context_source_id": "scdes-wqp-coordinate-context73-20261013"
+        }
+      },
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 5613,
+          "sha256": "14ca780aeeb1c04cd39ad6c3ed9c0bc4b5649b9d222b8c8b4cd0f52672e6f855"
+        },
+        {
+          "path": "artifact-manifest.json",
+          "bytes": 4756,
+          "sha256": "c575d9d042e533b7820483f9a14ae325beb1f7455069e608d4fdce09fd5afd2c"
+        },
+        {
+          "path": "assessment-context-sources.json",
+          "bytes": 2618,
+          "sha256": "b81ae2360bf075c6117428e733dd7bd3255b70477f68214fe8624ec697657ea5"
+        },
+        {
+          "path": "inputs/303d-2024-pdf-table-normalized.json",
+          "bytes": 2674649,
+          "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c"
+        },
+        {
+          "path": "inputs/303d-2024-publisher-pdf-table-text.json",
+          "bytes": 688155,
+          "sha256": "9be7679b79ca2a8a4d4d21227ad57371b88fd6082e8b29c7efc6d9a18ab0edce"
+        },
+        {
+          "path": "inputs/tmdl-attainment-native-20260728.json",
+          "bytes": 1260570,
+          "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522"
+        },
+        {
+          "path": "normalized-assessment-sources.json",
+          "bytes": 2155,
+          "sha256": "353b4fac9e1f2cecd694aef14a0e41ab468c75bbe6cd13fb7b7d2ed4ef0dc60f"
+        },
+        {
+          "path": "results/OPEN_STATION_ASSESSMENTS.html",
+          "bytes": 39730,
+          "sha256": "90c554509eeea8f99c1762c8ca470aa17a0099807f0fdf11a005c53d39d428cd"
+        },
+        {
+          "path": "results/station-assessment-context.json",
+          "bytes": 1187125,
+          "sha256": "9bce42134d1c9434539c2982eef8f511f9966fd4f1a52150852ae04d2e9bc54a"
+        },
+        {
+          "path": "results/station-assessment-summary.json",
+          "bytes": 2075,
+          "sha256": "51a2f02fa357d409f49150d4ff0916e3022512ef72f522f9377bf5972a8bb5ce"
+        },
+        {
+          "path": "source_data/scdes_savannah705_20261013/original-count-response.html",
+          "bytes": 41,
+          "sha256": "d110bed49ce5c04505eba11c314a48b8d6615417ab68e11882526aaabe0a9487"
+        },
+        {
+          "path": "source_data/scdes_savannah705_20261013/scdes-savannah705-native.esri.json",
+          "bytes": 1043696,
+          "sha256": "14b1a945ee8d5f172f63435b4fd955e9dada6894fcbca2964160c6e2e52d79f0"
+        },
+        {
+          "path": "source_data/scdes_savannah705_20261013/source-provenance.json",
+          "bytes": 931,
+          "sha256": "f7c7c2e6eb9ef1992380f605afcda599e7cccbbd925956132d91ac585b31b2fc"
+        },
+        {
+          "path": "source_data/scdes_savannah705_20261013/sources.json",
+          "bytes": 1525,
+          "sha256": "4f586bfe326c485ce917622e5d091082c17e407b0d5005ae9fe2f79a39dd273a"
+        },
+        {
+          "path": "source_data/wqp_assessment159_additional_two_20261013/README.md",
+          "bytes": 2209,
+          "sha256": "ca70ca241bbf5d93e9bdbea04f7e9df2351e3012b400d2c5f06b16e2a6d8a46b"
+        },
+        {
+          "path": "source_data/wqp_assessment159_additional_two_20261013/assessment159_native_identity_crosswalk.csv",
+          "bytes": 42751,
+          "sha256": "b5a658b16a9cb0b891426d53db78de01429f4363b83f2ff30625f9dbf932d84c"
+        },
+        {
+          "path": "source_data/wqp_assessment159_additional_two_20261013/sources.json",
+          "bytes": 2222,
+          "sha256": "3cd6a6b9a7244808ca45491f45d851330b2321fb903efddcf859ba5bc1531fc6"
+        },
+        {
+          "path": "source_data/wqp_assessment159_additional_two_20261013/wqp_two_monitoring_sites.geojson",
+          "bytes": 2433,
+          "sha256": "5588a64fbae5229687aef7063948083f05b5f0639dfd108ae0c3db40614677cd"
+        },
+        {
+          "path": "source_data/wqp_assessment159_additional_two_20261013/wqp_two_source_metadata.json",
+          "bytes": 2502,
+          "sha256": "72be42d0b6294b9950641cf75bd51dc0db0065bacf847bb6e0902a5ab89f943f"
+        },
+        {
+          "path": "source_data/wqp_assessment159_additional_two_20261013/wqp_two_station_page_extractions.json",
+          "bytes": 12827,
+          "sha256": "eaa608090903f409ddd89ac93982c580f60da709ab09075ce5bcf97f55a0ba6b"
+        },
+        {
+          "path": "source_data/wqp_coordinate_context73_20261013/sources.json",
+          "bytes": 1523,
+          "sha256": "e7be50103b7034d89eba19216ce4170f23f94aebf98f04356190fb31614aeb3e"
+        },
+        {
+          "path": "source_data/wqp_coordinate_context73_20261013/wqp_coordinate_context.geojson",
+          "bytes": 90279,
+          "sha256": "2c9a06c77e9d55320c779af7edea68fd091c0c8458b85b0ec32de9d999cc687e"
+        },
+        {
+          "path": "source_data/wqp_coordinate_context73_20261013/wqp_station_pages.json",
+          "bytes": 489141,
+          "sha256": "059da5e2e898286b6249356c9ef4a1771516eccb6462a5fd0e1ae523dd1e8640"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/sources.json",
+          "bytes": 1533,
+          "sha256": "e2a566cad4d08ff4f2c61aae6ca44a097bf0eecb8a86f94b5cde2fa18c96b76a"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
+          "bytes": 17794,
+          "sha256": "d7322856d96cdd6898a5cef555e97529f99ec4d6dad7ab45d18f4d53f3b646e6"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_native.csv",
+          "bytes": 3640,
+          "sha256": "21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_source_metadata.json",
+          "bytes": 4364,
+          "sha256": "cd9bece111d31aa68748507ae68ddfa0ac0a739f9d215f52149cde5d302d0605"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_station_page_extractions.json",
+          "bytes": 50756,
+          "sha256": "691f1020850d35deb2c06c4e765590e1df747824bf5ea70d955263ff4595d91f"
+        }
+      ]
+    },
+    {
+      "id": "scdes-303d-published-2024-pdf-table-normalized",
+      "title": "Published 2024 impairment listing — complete normalized PDF-table edition",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf",
+      "vintage": "2024",
+      "kind": "table",
+      "path": "inputs/303d-2024-pdf-table-normalized.json",
+      "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c",
+      "role": "WATER_QUALITY_ASSESSMENTS",
+      "format": "normalized",
+      "evidence_kind": "303d_listing",
+      "publication_status": "published",
+      "source_representation": "publisher_pdf_table_text",
+      "companions": [
+        {
+          "path": "inputs/303d-2024-publisher-pdf-table-text.json",
+          "sha256": "9be7679b79ca2a8a4d4d21227ad57371b88fd6082e8b29c7efc6d9a18ab0edce"
+        }
+      ]
+    },
+    {
+      "id": "scdes-tmdl-attainment-native-20260728",
+      "title": "July28 2026 TMDL attainment — complete native normalized edition",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf",
+      "vintage": "2026-07-28",
+      "kind": "table",
+      "path": "inputs/tmdl-attainment-native-20260728.json",
+      "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522",
+      "role": "WATER_QUALITY_ASSESSMENTS",
+      "format": "normalized",
+      "evidence_kind": "tmdl_attainment",
+      "publication_status": "published"
+    },
+    {
+      "id": "scdes-draft-ir-2026-assessment-station-inventory",
+      "title": "Original 101 draft 2026 assessment records at 87 Upper Savannah monitoring sites",
+      "uri": "https://apps.des.sc.gov/PublicNotices/SearchAndDisplay/PDF/302110",
+      "vintage": "2026 draft integrated report",
+      "kind": "table",
+      "path": "source_data/wqp_eight_20261013/assessment_listed_causes_2026_draft_original.csv",
+      "bytes": 14033,
+      "sha256": "545a4e1413012b8f17c81c8afe815dd1e225ade5f5b9792ca22e83ef8723307f",
+      "station_id_field": "site",
+      "role": "STUDY_STATION_INVENTORY",
+      "format": "csv",
+      "publication_status": "draft",
+      "evidence_kind": "303d_listing",
+      "companions": [
+        {
+          "path": "source_data/wqp_eight_20261013/assessment87_native_identity_crosswalk.csv",
+          "bytes": 29712,
+          "sha256": "45eac88f327e4795b833bf96eb5b8698d3ceaaea3c69e57201f06968e96a41d0"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/assessment87_station_ids.json",
+          "bytes": 1115,
+          "sha256": "57bc3a5309ac674cf9f99a3538c734db365f355ad6b7d79a7eee0032ddbbc5c7"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/sources.json",
+          "bytes": 1533,
+          "sha256": "e2a566cad4d08ff4f2c61aae6ca44a097bf0eecb8a86f94b5cde2fa18c96b76a"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_native.csv",
+          "bytes": 3640,
+          "sha256": "21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
+          "bytes": 17794,
+          "sha256": "d7322856d96cdd6898a5cef555e97529f99ec4d6dad7ab45d18f4d53f3b646e6"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_source_metadata.json",
+          "bytes": 4364,
+          "sha256": "cd9bece111d31aa68748507ae68ddfa0ac0a739f9d215f52149cde5d302d0605"
+        },
+        {
+          "path": "source_data/wqp_eight_20261013/wqp_eight_station_page_extractions.json",
+          "bytes": 50756,
+          "sha256": "691f1020850d35deb2c06c4e765590e1df747824bf5ea70d955263ff4595d91f"
+        }
+      ],
+      "notes": [
+        "Retains the original source_id scdes-draft-ir-2026 and original page, section, cause, impaired-use and priority fields.",
+        "The 2026 draft edition remains distinct from published2024 and July2026 TMDL attainment records.",
+        "Publisher HUC assignments are source attributes; the maintained station geography engine calculates original polygon memberships."
+      ],
+      "metadata": {
+        "source_bank": {
+          "uri": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8J8FE4GK",
+          "schema": "upstate.source-files/v1",
+          "bytes": 165487,
+          "sha256": "01408c58917614b9c912470f7de645d4a56a6df913fce9d4c0dfa97631c98355",
+          "original_files": 8
+        },
+        "related_source_ids": [
+          "scdes-bw-monitoring-savannah-native-20261013",
+          "scdes-wqp-additional-eight-20261013",
+          "scdes-wqp-assessment159-additional-two-20261013",
+          "scdes-303d-published-2024-pdf-table-normalized",
+          "scdes-tmdl-attainment-native-20260728",
+          "upstate-published-station-assessment-context159-20261013"
+        ],
+        "source_relationships": [
+          {
+            "id": "scdes-bw-monitoring-savannah-native-20261013",
+            "relationship": "primary_native_locations",
+            "selected_draft_sites": 79,
+            "selected_all_editions_sites": 154
+          },
+          {
+            "id": "scdes-wqp-additional-eight-20261013",
+            "relationship": "primary_native_locations",
+            "selected_draft_sites": 8,
+            "selected_all_editions_sites": 8
+          },
+          {
+            "id": "scdes-wqp-assessment159-additional-two-20261013",
+            "relationship": "primary_native_locations",
+            "selected_draft_sites": 0,
+            "selected_all_editions_sites": 2
+          },
+          {
+            "id": "scdes-303d-published-2024-pdf-table-normalized",
+            "relationship": "separate_published_assessment_edition",
+            "vintage": "2024",
+            "selected_records": 108
+          },
+          {
+            "id": "scdes-tmdl-attainment-native-20260728",
+            "relationship": "separate_published_assessment_edition",
+            "vintage": "2026-07-28",
+            "selected_records": 84
+          },
+          {
+            "id": "upstate-published-station-assessment-context159-20261013",
+            "relationship": "published_only_source_context_report",
+            "selected_records": 192,
+            "selected_stations": 159
+          }
+        ],
+        "scientific_selection": {
+          "schema": "upstate.station-all-editions-source-selection/v1",
+          "study_id": "upper-savannah-assessments-all-editions-164",
+          "records": 293,
+          "stations": 164,
+          "published_records": 192,
+          "published_stations": 159,
+          "draft_records": 101,
+          "draft_stations": 87,
+          "shared_stations": 82,
+          "draft_only_sites": [
+            "RL-24073",
+            "RS-24163",
+            "SV-236",
+            "SV-344",
+            "SV-376"
+          ],
+          "publisher_huc12_count": 77,
+          "native_source_counts": {
+            "atlas": 154,
+            "wqp8": 8,
+            "wqp2": 2
+          },
+          "draft_crosswalk_matches": 87,
+          "original_domain_hucs": 217,
+          "native_engine": "model.station_study",
+          "domain_decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
+        }
+      }
+    }
+  ]
+}
