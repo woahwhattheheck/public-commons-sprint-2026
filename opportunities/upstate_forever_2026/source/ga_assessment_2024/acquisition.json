@@ -1,0 +1,60 @@
+{
+  "schema": "commons.original-source-intake/v1",
+  "edition": "GA-APPROVED-2024-PUBLIC-SOURCE-CATALOG-20261013",
+  "acquired_at": "2026-10-13T08:19:00Z",
+  "official_index": "https://epd.georgia.gov/https%3A/epd.georgia.gov/assessment/water-quality-georgia",
+  "official_gis_index": "https://epd.georgia.gov/geographic-information-systems-gis-databases-and-documentation",
+  "files": [
+    {
+      "filename": "georgia-2024-305b-303d-original.xlsx",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305b303dexcelversionxlsx/download",
+      "status": "public_original_for_native_receiving",
+      "bytes": 344383,
+      "native_sha256": "compute_from_received_original"
+    },
+    {
+      "filename": "georgia-2024-305b-303d-shapefile-original.zip",
+      "source_uri": "https://epd.georgia.gov/document/document/ga2024305b303dshapefilezip/download",
+      "status": "public_original_for_native_receiving",
+      "publisher_display_size": "33.12MB"
+    },
+    {
+      "filename": "georgia-2024-305b-303d-streams-original.pdf",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305bstreamspdf/download",
+      "status": "public_original_for_native_receiving",
+      "bytes": 2378857,
+      "native_sha256": "compute_from_received_original"
+    },
+    {
+      "filename": "georgia-2024-305b-303d-lakes-original.pdf",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305blakespdf/download",
+      "status": "public_original_for_native_receiving",
+      "bytes": 188552,
+      "native_sha256": "compute_from_received_original"
+    }
+  ],
+  "interpretation": "EPA-approved September 3, 2024 assessment edition. Preserve original ReachID, use/cause/category associations, units and assessment periods. Final methodology includes both 5 and 5R in 303(d); a reach may have different categories for different causes. Source capture date is distinct from assessment-data dates.",
+  "supporting_documents": [
+    {
+      "filename": "georgia-2024-assessment-description-original.pdf",
+      "source_uri": "https://epd.georgia.gov/document/document/descriptionof305b303dlistofwaters2024updatedocxpdf/download",
+      "bytes": 82683
+    },
+    {
+      "filename": "georgia-2024-assessment-methodology-original.pdf",
+      "source_uri": "https://epd.georgia.gov/document/document/finallistingassessmentmethodology2024305b303dpdf/download",
+      "bytes": 287153
+    },
+    {
+      "filename": "georgia-2024-data-source-code-key-original.pdf",
+      "source_uri": "https://epd.georgia.gov/document/document/data-sourcecode-key-abbreviations-2024-list/download",
+      "bytes": 36397
+    },
+    {
+      "filename": "georgia-2024-epa-approval-original.pdf",
+      "source_uri": "https://epd.georgia.gov/document/document/epa2024303dapprovalletterpdf/download",
+      "bytes": 235705
+    }
+  ],
+  "receiving_note": "This public catalog contains publisher URLs and observed original response byte counts; receive each original binary and compute its own SHA256 before processing. The exporter preserves the complete received workbook and every original ZIP member."
+}
