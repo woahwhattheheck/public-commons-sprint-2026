@@ -83,8 +83,9 @@ def _validate(workspace, capture_id, capture, identity, result, operation):
         raise ValueError("The original report selection file is missing.")
     if any(item.get("path") in ("edition.json", ".adoption.json") for item in files.values()):
         raise ValueError("An original report file uses the saved-edition metadata path.")
-    if not isinstance(identity.get("selection"), dict):
-        raise ValueError("Keep the original report's source selection object.")
+    if (not isinstance(identity.get("selection"), dict)
+            or not isinstance(identity["selection"].get("source_roles", {}), dict)):
+        raise ValueError("Keep the original report's source selection object and role mapping.")
     choices = observed_context.source_choices(identity["selection"])
     sources = result.get("sources")
     if (not isinstance(sources, list) or any(not isinstance(row, dict) for row in sources)
