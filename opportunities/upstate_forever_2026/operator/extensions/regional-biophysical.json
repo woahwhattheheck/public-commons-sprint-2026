@@ -1,0 +1,134 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "regional-biophysical",
+  "title": "Regional biophysical library",
+  "version": "1.0.0",
+  "order": 48,
+  "requires_actions": [],
+  "assets": [
+    "regional_biophysical.mjs",
+    "regional_biophysical.css"
+  ],
+  "backend": {
+    "module": "regional_biophysical",
+    "factory": {
+      "handler": "RegionalBiophysical",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "regional-biophysical.prepare",
+      "regional-biophysical.export",
+      "regional-biophysical.experiment.prepare"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/regional-biophysical/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/regional-biophysical/library",
+        "operation": "library",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/regional-biophysical/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/regional-biophysical/detail",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "regional-biophysical-profiles",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/regional_biophysical.mjs",
+    "factory": "attachRegionalBiophysical",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "refresh"
+    ],
+    "styles": [
+      "/web/regional_biophysical.css"
+    ],
+    "view": {
+      "id": "regional-biophysical",
+      "title": "Regional coefficients",
+      "after": "profiles"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}
