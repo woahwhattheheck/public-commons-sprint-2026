@@ -9,7 +9,8 @@ import shutil
 import stat
 import tempfile
 import zipfile
-from .common import SCHEMA, atomic_json, canonical, file_digest, held, now, read_json
+from .common import (SCHEMA, atomic_json, canonical, file_digest, held, identifier,
+                     now, read_json, relative_file)
 from .portable_databases import snapshot_databases, without_database_files, verify_database_sources
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
@@ -67,6 +68,7 @@ APPLICATION_FILES = (
     "install_native_supervision.py",
     "install_ensemble.py",
     "portable_sqlite_check.py",
+    "APPLICATION_SOURCE_RECEIPT.json",
 )
 APPLICATION_DIRECTORIES = (
     "model",
@@ -74,6 +76,7 @@ APPLICATION_DIRECTORIES = (
     "source_tools",
     "source",
     "source_data",
+    "delivery",
     "ecsa_runs",
     "eco_intelligence",
     "measurement_workspace",
@@ -167,7 +170,124 @@ def _application(source_root):
                     files.append(path)
     return sorted(set(files))
 
-def backup(workspace, destination, *, include_intermediates=True, include_deliveries=True):
+def application_digest():
+    """Identify the complete current source used by a newly requested delivery."""
+    source_root = Path(__file__).resolve().parent.parent
+    selected = {path.relative_to(source_root).as_posix(): _identity(path)
+                for path in _application(source_root)}
+    records = {}
+    for relative, identity in selected.items():
+        path = source_root / relative
+        if _identity(path) != identity:
+            raise ValueError("Application changed before delivery selection: " + relative)
+        records[relative] = {"bytes": identity[2], "sha256": file_digest(path)}
+        if _identity(path) != identity:
+            raise ValueError("Application changed during delivery selection: " + relative)
+    current = {path.relative_to(source_root).as_posix(): _identity(path)
+               for path in _application(source_root)}
+    if current != selected:
+        raise ValueError("Application changed during delivery selection")
+    return hashlib.sha256(canonical(records)).hexdigest()
+
+
+def _delivery_inputs(directory, files, state=None):
+    if directory is None and files is None and state is None:
+        return [], {}, None
+    if directory is None or not isinstance(files, dict) or not files:
+        raise ValueError("Delivery capture requires its original directory and explicit file records")
+    directory = Path(directory).resolve(strict=True)
+    key = identifier(directory.name)
+    inputs, expected, selected = [], {}, {}
+    for role, item in files.items():
+        if not isinstance(role, str) or not isinstance(item, dict):
+            raise ValueError("Delivery capture requires named original artifact records")
+        relative = member_name(item["path"]).as_posix()
+        name = "delivery/" + relative
+        path = relative_file(directory, relative)
+        identity = _identity(path)
+        wanted = {"bytes": item["bytes"], "sha256": item["sha256"]}
+        if identity[2] != wanted["bytes"]:
+            raise ValueError("Selected delivery file changed length: " + relative)
+        if name in expected and expected[name] != wanted:
+            raise ValueError("Selected delivery roles disagree on original bytes: " + relative)
+        if name not in expected:
+            inputs.append((name, path, identity))
+            expected[name] = wanted
+        selected[role] = {**item, "path": name}
+    delivery = {"directory": "delivery", "id": key, "files": selected}
+    if state is not None:
+        if (not isinstance(state, dict) or state.get("schema") != "upstate.delivery/v1"
+                or state.get("id") != key or not isinstance(state.get("selection"), dict)):
+            raise ValueError("Delivery capture requires its original selected delivery record")
+        original = {name: {**item, "path": item["path"][len("delivery/"):]}
+                    for name, item in selected.items()}
+        by_path = {item["path"]: item for item in original.values()}
+        maps = {}
+        for name, item in state.get("maps", {}).items():
+            retained = by_path.get(item["path"])
+            if retained is None or any(item[field] != retained[field]
+                                       for field in ("bytes", "sha256")):
+                raise ValueError("Delivery capture omits a selected original map")
+            maps[name] = item
+        omitted = {"files", "maps", "package", "manifest", "error", "reused", "completed_at"}
+        record = {name: value for name, value in state.items() if name not in omitted}
+        record.update(state="received_snapshot", files=original, maps=maps,
+                      received_snapshot={"original_state": state.get("state"),
+                                         "original_completed_at": state.get("completed_at")})
+        delivery["record"] = record
+    return inputs, expected, delivery
+
+
+def _register_received_delivery(manifest, destination):
+    """Register the verified snapshot where the original operator lists deliveries."""
+    delivery = manifest.get("delivery") or {}
+    record = delivery.get("record")
+    if record is None:
+        return
+    key = identifier(delivery["id"])
+    directory = Path(destination) / "workspace" / "deliveries" / key
+    directory.mkdir(parents=True, exist_ok=True)
+    state_path = directory / "delivery-state.json"
+    if state_path.exists():
+        existing = read_json(state_path)
+        if existing.get("id") != key or existing.get("selection") != record["selection"]:
+            raise ValueError("Received delivery registration conflicts with retained work")
+        if existing.get("state") == "complete":
+            return
+    for item in record["files"].values():
+        relative = member_name(item["path"]).as_posix()
+        source = Path(destination) / "delivery" / relative
+        target = directory.joinpath(*member_name(relative).parts)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            if target.is_symlink() or (target.stat().st_size != item["bytes"]
+                                      or file_digest(target) != item["sha256"]):
+                raise ValueError("Received delivery artifact conflicts with retained work: " + relative)
+        else:
+            # Both trees live on the receiving filesystem; a link retains one data copy.
+            os.link(source, target)
+    atomic_json(state_path, record)
+
+
+def received_delivery(manifest, destination):
+    """Expose reports and their original operator record after ordinary receiving."""
+    delivery = manifest.get("delivery")
+    if not delivery:
+        return {}
+    destination = Path(destination)
+    result = {"id": delivery["id"], "directory": str(destination / delivery["directory"]),
+              "files": {name: {**item, "path": str(destination / item["path"])}
+                        for name, item in delivery["files"].items()}}
+    if delivery.get("record") is not None:
+        directory = destination / "workspace" / "deliveries" / identifier(delivery["id"])
+        result.update(workspace_directory=str(directory),
+                      record=str(directory / "delivery-state.json"),
+                      state=read_json(directory / "delivery-state.json")["state"])
+    return {"delivery": result}
+
+
+def backup(workspace, destination, *, include_intermediates=True, include_deliveries=True,
+           delivery_root=None, delivery_files=None, delivery_state=None):
     root = workspace.root
     destination = Path(destination).absolute()
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -180,6 +300,14 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
     excluded = {destination, pending}
     selection = {"include_intermediates": bool(include_intermediates),
                  "include_deliveries": bool(include_deliveries)}
+    inventory_selection = dict(selection)
+    extra_inputs, expected_delivery, delivery = _delivery_inputs(
+        delivery_root, delivery_files, delivery_state)
+    if any(path in excluded for _, path, _ in extra_inputs):
+        raise ValueError("A working archive cannot include itself")
+    if delivery:
+        selection["delivery_id"] = delivery["id"]
+        selection["include_delivery_assets"] = True
     records = {}
     try:
         with contextlib.ExitStack() as stack:
@@ -192,13 +320,14 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "receiving-water-analyses").glob("*/.analysis.lock")):
                 stack.enter_context(held(path, blocking=False))
-            initial = _inventory(root, excluded=excluded, **selection)
+            initial = _inventory(root, excluded=excluded, **inventory_selection)
             application = {p.relative_to(source_root).as_posix(): _identity(p)
                            for p in _application(source_root)}
             inputs = [("workspace/" + relative, root / relative, identity)
                       for relative, identity in initial.items()]
             inputs += [("application/" + relative, source_root / relative, identity)
                        for relative, identity in application.items()]
+            inputs += extra_inputs
             inputs, databases, database_sources = stack.enter_context(
                 snapshot_databases(inputs, destination.parent))
             with zipfile.ZipFile(pending, "x", compression=zipfile.ZIP_DEFLATED,
@@ -217,8 +346,10 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                     if _identity(path) != before:
                         raise ValueError("Source changed during archive capture: " + name)
                     records[name] = {"bytes": size, "sha256": digest.hexdigest()}
+                    if name in expected_delivery and records[name] != expected_delivery[name]:
+                        raise ValueError("Selected delivery differs from its retained bytes: " + name)
                 verify_database_sources(database_sources)
-                current = _inventory(root, excluded=excluded, **selection)
+                current = _inventory(root, excluded=excluded, **inventory_selection)
                 if (without_database_files(current, databases, "workspace") !=
                         without_database_files(initial, databases, "workspace")):
                     raise ValueError("Workspace changed while its archive was captured")
@@ -232,6 +363,15 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                             "database_snapshots": databases,
                             "receiving": "python application/model/cli.py restore ARCHIVE NEW_DIRECTORY",
                             "source_views": "Recreated from the original content-addressed objects on demand"}
+                if delivery:
+                    expected_application = (delivery.get("record", {}).get("selection") or {}).get(
+                        "application_sha256")
+                    if expected_application:
+                        captured_application = {name[len("application/"):]: item
+                            for name, item in records.items() if name.startswith("application/")}
+                        if hashlib.sha256(canonical(captured_application)).hexdigest() != expected_application:
+                            raise ValueError("Application changed since the delivery was selected")
+                    manifest["delivery"] = delivery
                 archive.writestr("ARCHIVE.json", canonical(manifest) + b"\n")
             with pending.open("rb") as file:
                 os.fsync(file.fileno())
@@ -275,7 +415,7 @@ def inspect_archive(path, *, verify=True):
             raise ValueError("Archive lacks the original project identity")
         for name, record in declared.items():
             member_name(name)
-            if not name.startswith(("workspace/", "application/")):
+            if not name.startswith(("workspace/", "application/", "delivery/")):
                 raise ValueError("Unexpected archive member namespace")
             info = archive.getinfo(name)
             if info.file_size != record["bytes"]:
@@ -287,6 +427,45 @@ def inspect_archive(path, *, verify=True):
                         h.update(block)
                 if h.hexdigest() != record["sha256"]:
                     raise ValueError("Archived file bytes differ: " + name)
+        delivery_members = {name for name in declared if name.startswith("delivery/")}
+        if delivery_members:
+            delivery = manifest.get("delivery")
+            if (not isinstance(delivery, dict) or delivery.get("directory") != "delivery"
+                    or not isinstance(delivery.get("files"), dict)):
+                raise ValueError("Delivery snapshot requires its original artifact index")
+            selected_members = set()
+            for item in delivery["files"].values():
+                if not isinstance(item, dict):
+                    raise ValueError("Delivery snapshot artifact must retain its descriptor")
+                name = member_name(item["path"]).as_posix()
+                if name not in delivery_members or any(
+                        item[key] != declared[name][key] for key in ("bytes", "sha256")):
+                    raise ValueError("Delivery snapshot descriptor differs from its archived bytes")
+                selected_members.add(name)
+            if selected_members != delivery_members:
+                raise ValueError("Delivery snapshot index omits an archived file")
+            identifier(delivery["id"])
+            record = delivery.get("record")
+            if record is not None:
+                if (not isinstance(record, dict) or record.get("schema") != "upstate.delivery/v1"
+                        or record.get("id") != delivery["id"]
+                        or record.get("state") != "received_snapshot"
+                        or not isinstance(record.get("selection"), dict)
+                        or not isinstance(record.get("maps"), dict)):
+                    raise ValueError("Delivery snapshot has no original receiving registration")
+                original_files = {name: {**item, "path": item["path"][len("delivery/"):]}
+                                  for name, item in delivery["files"].items()}
+                if record.get("files") != original_files:
+                    raise ValueError("Delivery registration differs from its archived artifacts")
+                by_path = {item["path"]: item for item in original_files.values()}
+                for item in record["maps"].values():
+                    if not isinstance(item, dict) or item.get("path") not in by_path:
+                        raise ValueError("Delivery registration includes an absent map")
+                    retained = by_path[item["path"]]
+                    if any(item[field] != retained[field] for field in ("bytes", "sha256")):
+                        raise ValueError("Delivery registration changes an original map")
+        elif manifest.get("delivery"):
+            raise ValueError("Delivery snapshot index has no archived files")
         project = json.loads(archive.read("workspace/workspace.json"))
         if project != manifest["project"]:
             raise ValueError("Archived project identity differs")
@@ -314,6 +493,7 @@ def restore(archive_path, destination):
                     os.fsync(output.fileno())
                 if h.hexdigest() != expected["sha256"] or target.stat().st_size != expected["bytes"]:
                     raise ValueError("Receiving file differs: " + name)
+        _register_received_delivery(manifest, pending)
         restored = Workspace(pending / "workspace")
         if restored.project != manifest["project"]:
             raise ValueError("Receiving changed the original workspace identity")
@@ -384,7 +564,8 @@ def restore(archive_path, destination):
                 "application": str(destination / "application"),
                 "archive_sha256": file_digest(archive_path), "members": len(manifest["members"]),
                 "selection": manifest["selection"], "identity": "MATCH",
-                "database_snapshots": manifest.get("database_snapshots", {})}
+                "database_snapshots": manifest.get("database_snapshots", {}),
+                **received_delivery(manifest, destination)}
     finally:
         if pending is not None:
             shutil.rmtree(pending)

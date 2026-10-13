@@ -21,6 +21,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
+DELIVERY_EDITION = "2026-10-13-integrated-report-1"
 DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-5"
 
 def _copy(source, target, expected=None):
@@ -226,6 +227,9 @@ def build(workspace, selection):
     if economic_link is not None:
         selection["economic_edition_sha256"] = economic_link["edition_sha256"]
     selection["client_report_edition"] = CLIENT_REPORT_EDITION
+    selection["report_renderer_version"] = scientific_report.REPORT_VERSION
+    selection["delivery_edition"] = DELIVERY_EDITION
+    selection["application_sha256"] = portable.application_digest()
     review_ids = selection.get("spatial_review_ids", [])
     export_ids = selection.get("spatial_export_ids", [])
     if not isinstance(review_ids, list) or not isinstance(export_ids, list):
@@ -520,6 +524,17 @@ def build(workspace, selection):
                                    for value in selection.get("observation_comparison_ids", [])]
             if any(v["run_id"] not in [baseline["id"]] + scenario_ids for v in observation_results):
                 raise ValueError("Observation comparison is not bound to a selected delivery run")
+            from .scenario_summary import build_delivery_summary, write_summary
+            summary_keys = ("scenario_summary_json", "scenario_summary_csv", "scenario_summary_markdown")
+            if not all(name in state["files"] for name in summary_keys):
+                summary = build_delivery_summary(workspace, selection, comparison,
+                    baseline=baseline, alternatives=alternatives, grid=grid)
+                for name, item in write_summary(directory, summary).items():
+                    state["files"]["scenario_summary_" + name] = item
+                state["scenario_summary_id"] = summary["id"]
+                atomic_json(state_path, state)
+            else:
+                summary = read_json(verify_file(directory, state["files"]["scenario_summary_json"]))
             if not all(name in state["files"] for name in ("report", "report_html", "report_markdown", "report_data")):
                 sections = [
                     ("Study scope", [selection.get("title", workspace.project["title"]),
@@ -632,12 +647,40 @@ def build(workspace, selection):
             working = directory / "working" / "scientific-workspace.zip"
             if "working_archive" not in state["files"]:
                 working.parent.mkdir(parents=True, exist_ok=True)
+                snapshot = {**state["files"], **{
+                    "map_" + name: item for name, item in state["maps"].items()}}
                 if working.exists():
                     previous = portable.inspect_archive(working, verify=True)
-                    if previous["project"] != workspace.project:
-                        raise ValueError("Existing working archive belongs to another original project")
-                else:
-                    portable.backup(workspace, working, include_intermediates=True, include_deliveries=False)
+                    captured = previous.get("delivery", {})
+                    retained = captured.get("files", {})
+                    matches = (
+                        previous["project"] == workspace.project
+                        and captured.get("id") == state["id"]
+                        and captured.get("record", {}).get("selection") == state["selection"]
+                        and set(retained) == set(snapshot)
+                        and all(retained[name].get("path") == "delivery/" + item["path"]
+                                and all(retained[name].get(field) == item[field]
+                                        for field in ("bytes", "sha256"))
+                                for name, item in snapshot.items()))
+                    if not matches:
+                        label = "scientific-workspace-previous-" + digest(previous)
+                        retained_path = working.with_name(label + ".zip")
+                        suffix = 0
+                        while retained_path.exists():
+                            suffix += 1
+                            retained_path = working.with_name(label + "-" + str(suffix) + ".zip")
+                        working.rename(retained_path)
+                        state.setdefault("previous_working_archives", []).append({
+                            "path": retained_path.relative_to(directory).as_posix(),
+                            "project_id": previous["project"].get("id"),
+                            "delivery_id": captured.get("id"),
+                            "reason": "Retained capture selects different delivery assets",
+                            "retained_at": now()})
+                        atomic_json(state_path, state)
+                if not working.exists():
+                    portable.backup(workspace, working, include_intermediates=True,
+                        include_deliveries=False, delivery_root=directory,
+                        delivery_files=snapshot, delivery_state=state)
                 state["files"]["working_archive"] = describe_file(directory, working)
                 atomic_json(state_path, state)
             manifest = {"schema": "upstate-ec-sdc-2026/delivery-v1",
@@ -647,15 +690,22 @@ def build(workspace, selection):
                           "profile_id": profile["id"], "grid_id": grid["id"]},
                 "source_data": records, "rasters": {},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
+                "report_edition": CLIENT_REPORT_EDITION,
+                "report_renderer_version": scientific_report.REPORT_VERSION,
+                "delivery_edition": DELIVERY_EDITION,
                 "project_assets": [state["files"]["combined_priority"]["path"],
                                    state["files"]["working_archive"]["path"],
                                    state["files"]["display_scales"]["path"]]}
             for name in rasters.MASS_UNITS:
                 manifest["rasters"][name] = {"path": state["files"][name]["path"],
                     "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
-            manifest["project_assets"].extend(item["path"] for name, item in state["files"].items()
-                                             if name.startswith(("parcel_", "spatial_review_", "spatial_export_", "receptor_",
-                                                                 "map_atlas", "source_report_", "economic_")))
+            primary_files = set(rasters.MASS_UNITS) | {
+                name + "_metadata" for name in rasters.MASS_UNITS} | {
+                "report", "manifest", "package_index", "delivery_archive"}
+            map_paths = {item["path"] for item in state["maps"].values()}
+            manifest["project_assets"] = list(dict.fromkeys(
+                item["path"] for name, item in state["files"].items()
+                if name not in primary_files and item["path"] not in map_paths))
             if report_link is not None:
                 manifest["source_report"] = report_link
             if economic_link is not None:
