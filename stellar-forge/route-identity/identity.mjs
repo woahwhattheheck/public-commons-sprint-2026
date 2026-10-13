@@ -97,7 +97,7 @@ function bindPath(template, actual, claimed) {
     const p=PARAM.exec(parts[i]);
     if(p) {
       if(!value) return fail('TEMPLATE_EMPTY_PARAM');
-      bindings[p[1]]=value;
+      Object.defineProperty(bindings,p[1],{value,enumerable:true,writable:true,configurable:true});
     } else if(value!==parts[i]) {
       return fail('TEMPLATE_PATH_MISMATCH');
     }
