@@ -17,7 +17,7 @@ def perform(operator, task):
     action = task["action"]
     if action not in ACTIONS: raise ValueError("Select a registered monitoring write")
     workspace = operator.ws(task["workspace"])
-    if action == "monitoring.export":
+    if action in {"monitoring.export", "monitoring.context.export"}:
         return export_task(operator, workspace, task)
     return invoke(workspace, action.removeprefix("monitoring."), task["payload"],
                   export_root=operator.root / "outputs" / "monitoring")
@@ -54,7 +54,7 @@ def export_task(operator, workspace, task):
                     or file_sha256(path) != result["sha256"]):
                 raise ValueError("The completed monitoring export changed")
             return result
-        result = invoke(workspace, "export", intent["payload"], export_root=root)
+        result = invoke(workspace, task["action"].removeprefix("monitoring."), intent["payload"], export_root=root)
         atomic_json(result_path, {"request_sha256": request, "result": result}, immutable=True)
         return result
 
@@ -65,7 +65,7 @@ def read(operator, workspace_key, action, payload):
 
 
 def decorate_task(operator, task):
-    if task.get("action") != "monitoring.export" or task.get("state") != "complete": return task
+    if task.get("action") not in {"monitoring.export", "monitoring.context.export"} or task.get("state") != "complete": return task
     result = task.get("result", {})
     target = Path(result["path"]).resolve(strict=True)
     allowed = (operator.root / "outputs" / "monitoring").resolve()
@@ -124,4 +124,5 @@ def verify_workspace(workspace):
         for record in current["events"]:
             service.get("plans", record["plan_id"])
             service.get("networks", record["network_id"])
-    return {**counts, "campaigns": len(campaigns)}
+    from model.monitoring_observed_context import verify_workspace as verify_observed
+    return {**counts, "campaigns": len(campaigns), **verify_observed(workspace)}

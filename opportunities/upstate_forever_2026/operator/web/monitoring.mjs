@@ -1,5 +1,5 @@
 /* Native host adapter: original authorization, task queue and file tickets. */
-const READS = new Set(['list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
+const READS = new Set(['context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
 let componentReady;
 function component() {
   // The component is derived from the same shipped legacy entry, with external
