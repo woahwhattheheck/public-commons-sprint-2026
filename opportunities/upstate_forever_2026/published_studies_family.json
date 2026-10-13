@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "24c49dd1c852eb863d6a89c7bd78cda71b5b15bc",
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 11950,
-      "sha256": "7e19cde389356a8768170c3994be68d0df79325a25a67f9e2eb72623b57f139d"
+      "bytes": 11993,
+      "sha256": "6b446c3b1df72a08f5e073eff84f1302e608b473550e9d08affc4ef0d130be5e"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -88,8 +88,8 @@
     },
     {
       "path": "measurement_workspace/SV833_OBSERVATIONS.md",
-      "bytes": 6308,
-      "sha256": "1bfe68f5d8d41f73c17c8416cd2ba0bdf98b68b961ba11dd09b08e0165421c8b"
+      "bytes": 8147,
+      "sha256": "190609918e4eccd683d941d6d5a61b1068478fb83b18d1b3eda108bec9321f05"
     },
     {
       "path": "measurement_workspace/sv833_observations.py",
@@ -1069,7 +1069,7 @@
     {
       "path": "operator/extensions/published-studies.json",
       "bytes": 2476,
-      "sha256": "14830d8a5f9409f93978c61e36543a2c67b74dac39a58137bfc18698d1291371"
+      "sha256": "780b3a476f9c796dc4327ca0cca31fd3b44c57c5ac1b3f7b5d38b4542b7327a9"
     },
     {
       "path": "operator/published_study_operator.py",
@@ -1100,6 +1100,11 @@
       "path": "source_tools/build_eighteenmile_stream_study.mjs",
       "bytes": 15219,
       "sha256": "75d8a835a20bd9e55b5ab02a74a3d9586b56c17e9d7d2348e9a4d10247f2aafa"
+    },
+    {
+      "path": "source_tools/receive_sv833_study.py",
+      "bytes": 12772,
+      "sha256": "7bf64528bcffe3422da4c8e7259f994517593822be8b44c761898b378190eca0"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/analysis-summary.json",
