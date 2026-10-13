@@ -109,7 +109,7 @@ def install(application, source_root):
                     raise ValueError("An original Programme native reuse composition preimage differs")
                 if not saved.exists():
                     _atomic(saved, original)
-        result = {"schema": "upstate.programme-native-reuse-install/v1", "version": "1.1.0",
+        result = {"schema": "upstate.programme-native-reuse-install/v1", "version": "1.1.1",
                   "patch_sha256": _sha(spec_bytes), "files": metadata}
         _atomic(pending_path, _encoded(result))
         for name in candidates:
