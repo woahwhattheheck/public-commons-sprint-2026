@@ -3,6 +3,7 @@
  * Scientific selections and calculations remain in model.workspace/native.
  */
 import {attachRunAssembly} from './run_assembly_workbench.mjs';
+import {attachNativeRunHistory} from './native_run_history.mjs';
 
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
@@ -321,6 +322,9 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     attachRunAssembly({api, getState, openForm, submitAction, openItem}) : null;
   let programmeActivityMode = 'unknown', programmeActivityRecords = new Map();
   let sourceIndex = null, rowCache = null, selectionRevision = 0;
+  const runHistory = attachNativeRunHistory({getState, api, submitOriginal, openItem, showTask,
+    getRunIds: () => currentRows().filter(row => row.selected && row.run).map(row => row.run.id),
+    onChange: paint});
   function currentIndex() {
     if (!sourceIndex || sourceIndex.data !== current?.data || sourceIndex.taskSource !== current?.tasks ||
         sourceIndex.workspace !== current?.workspace_key) sourceIndex = runDeskIndex(current);
@@ -747,7 +751,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       '</div>' + htmlButton('download-results', 'Download selected native totals', {},
         !selected.some(row => row.models.some(model => modelOutputs[model].some(name => !!row.run?.artifacts?.[name])))) + '</footer></section>' +
       '<section class="section"><header class="section-header"><div><h2>3. Compare and deliver completed pairs</h2><p>Signed comparison outputs use alternative minus baseline. The completed pairs below retain one common profile and grid.</p></div></header>' +
-      '<div class="section-body">' + renderGroups(rows) + '</div></section>' + renderProcessReports(rows) + '</div>';
+      '<div class="section-body">' + renderGroups(rows) + '</div></section>' + renderProcessReports(rows) + runHistory.render() + '</div>';
     for (const [key, left, top] of scroll) {
       const node = [...host.querySelectorAll('[data-rd-scroll]')].find(value => value.dataset.rdScroll === key);
       if (node) { node.scrollLeft = left; node.scrollTop = top; }
@@ -765,11 +769,13 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   function update(snapshot) {
     sourceIndex = null; rowCache = null;
     synchronize(snapshot);
+    runHistory.update(snapshot);
     refreshProgrammeActivity().catch(error => { programmeMessage = error.message; paint(); });
     refreshAssemblyAvailability();
     paint();
   }
   function change(event) {
+    if (runHistory.change(event)) return;
     const node = event.target;
     if (node.dataset.rdField) {
       const field = node.dataset.rdField;
@@ -799,12 +805,13 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       draft.excluded = [...excluded]; draft.included = [...included]; persist(); paint();
     }
   }
-  function input(event) { if (event.target.dataset.rdField === 'search') change(event); }
+  function input(event) { if (runHistory.change(event)) return; if (event.target.dataset.rdField === 'search') change(event); }
   function mount(node, snapshot = getState()) {
     if (host !== node) { detach(); host = node; host.addEventListener('change', change); host.addEventListener('input', input); }
     update(snapshot);
   }
   function detach() {
+    runHistory.detach();
     if (host) { host.removeEventListener('change', change); host.removeEventListener('input', input); }
     host = null;
     sourceIndex = null; rowCache = null;
@@ -981,6 +988,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     } finally { busy = false; submission = null; paint(); }
   }
   async function dispatch(button) {
+    if (button.dataset.action?.startsWith('run-desk-history-')) return runHistory.dispatch(button);
     const action = button.dataset.action?.replace(/^run-desk-/, '');
     if (['prepare','start','cancel'].includes(action)) return operate(action);
     if (action === 'prepare-one' || action === 'start-one') return operate(action === 'prepare-one' ? 'prepare' : 'start', button.dataset.key);
