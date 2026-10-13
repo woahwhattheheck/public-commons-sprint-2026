@@ -1,0 +1,33 @@
+{
+  "schema": "upstate.station-assessment-source-release/v1",
+  "released_at": "2026-10-13",
+  "files": 633,
+  "installed_members": 630,
+  "provenance": {
+    "baseline_commit": "c4f0d53884357046368c70d9a2f185753b43fe4d",
+    "patch_commits": [
+      "454b350b47249b9ccb75306b2e9cb55f35a43413",
+      "2a1c83642aadacbb7fe2dd1e7a52a8ad85f537af"
+    ],
+    "member_git_blobs": "Retained in the decoded family; its mixed coherent edition is not a claim of equality with every file on later main."
+  },
+  "decoded_json": {
+    "bytes": 22113947,
+    "sha256": "1c9206cc14882c763e89e6c443b082954919de5c089f544f2602c2ed483d6c45"
+  },
+  "gzip": {
+    "path": "station_assessment_633.family.json.gz",
+    "bytes": 3170676,
+    "sha256": "f3694cde7429bc134bdbd10b4f1f099f468bd4d5c254ccdddf8e651dc074805e",
+    "git_blob": "b2a1d93ce05535b236e9b0a3ebcae97cad858e98"
+  },
+  "base64": {
+    "path": "station_assessment_633.family.json.gz.base64.txt",
+    "bytes": 4227569,
+    "sha256": "3294d40107b204ff01249ea1428b44c051445227de7deb5836b5ee592d1dd4cd",
+    "git_blob": "bf1db2a5904dc867790e0d7d9d62808df2b09f0c"
+  },
+  "source_family": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C9KGS3K40",
+  "receiving_command": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791874731085779?thread_ts=1791724121.853269",
+  "isolated_receiving": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791892251584229?thread_ts=1791724121.853269"
+}
