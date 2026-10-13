@@ -248,8 +248,20 @@ def operate(args):
     if output == workspace or output in workspace.parents or workspace in output.parents:
         raise ValueError("Keep the scientific Workspace and demo output in separate sibling directories")
     output.mkdir(parents=True, exist_ok=True)
+    from source_tools.demo_deadline import cutoff_guard, retain_checkpoint
     with held(output / ".demo-operation.lock", blocking=False):
-        return operate_locked(args, output)
+        try:
+            with cutoff_guard():
+                return operate_locked(args, output)
+        except BaseException as exc:
+            from model.native_execution import process_interrupted
+            if not isinstance(exc, Exception) or process_interrupted(exc):
+                try:
+                    retain_checkpoint(output, workspace, exc)
+                except Exception as receipt_error:
+                    if hasattr(exc, "add_note"):
+                        exc.add_note("Could not save the demo checkpoint: " + str(receipt_error))
+            raise
 
 
 def operate_locked(args, output):
@@ -278,16 +290,26 @@ def operate_locked(args, output):
         save(active_stage=name, state="running")
         event("demo_stage_started", stage=name)
         try:
+            from source_tools.demo_deadline import check_cutoff
+            check_cutoff()
             result = operation()
-        except Exception as exc:
-            receipt["stages"].setdefault(name, {})["last_error"] = {
+        except BaseException as exc:
+            from model.native_execution import process_interrupted
+            interrupted = not isinstance(exc, Exception) or process_interrupted(exc)
+            attempt_state = "interrupted" if interrupted else "failed"
+            retained = receipt["stages"].setdefault(name, {})
+            retained["last_error"] = {
                 "type": type(exc).__name__, "message": str(exc), "at": utc_now()}
+            retained["last_attempt_state"] = attempt_state
+            if retained.get("state") != "complete":
+                retained["state"] = attempt_state
             try:
-                save(state="failed")
-            except OSError as receipt_error:
+                save(state=attempt_state)
+            except Exception as receipt_error:
                 exc.demo_receipt_error = {
                     "type": type(receipt_error).__name__,
-                    "message": str(receipt_error), "errno": receipt_error.errno,
+                    "message": str(receipt_error),
+                    "errno": getattr(receipt_error, "errno", None),
                 }
                 if hasattr(exc, "add_note"):
                     exc.add_note("Could not retain the demo failure record: " + str(receipt_error))
@@ -401,6 +423,20 @@ def operate_locked(args, output):
          fieldwork_plan_id=campaign["plan_id"], fieldwork=campaign)
     atomic_json(output / "fieldwork-campaign.json", campaign)
 
+    from model.simulated_customer_review import continue_review, export_review_case
+    customer = phase("customer_review_ready", lambda: continue_review(
+        ws, campaign["operation_id"], through="ready"))
+    if (customer["phase"] != "ready" or customer["project_id"] != ws.project["id"]
+            or customer["field_operation_id"] != campaign["operation_id"]):
+        raise ValueError("Complete the original field case's exact customer engineering handback")
+    customer_identity = {key: customer[key] for key in (
+        "operation_id", "original_review_id", "response_id", "planning_handback_id",
+        "revised_review_id", "handback_id")}
+    customer_packages = phase("customer_review_packages", lambda: export_review_case(
+        ws, customer["operation_id"], output / "customer-review" / customer["operation_id"]))
+    save(customer_review=customer_identity, customer_review_packages=customer_packages)
+    atomic_json(output / "customer-review-case.json", customer)
+
     if args.field_only:
         save(state="field_complete", active_stage=None)
         return receipt
@@ -486,6 +522,8 @@ def operate_locked(args, output):
         "delivery_id": delivery["id"], "spatial_review_ids": spatial_reviews,
         "fieldwork_operation_id": campaign["operation_id"],
         "fieldwork_revision": campaign["current_revision"],
+        "customer_review": customer_identity,
+        "customer_review_source_sha256": sha256(APP / "model" / "simulated_customer_review.py"),
         "ensemble_id": parameter_plan["ensemble_id"],
         "receiving_source_sha256": sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
     }
@@ -498,11 +536,19 @@ def operate_locked(args, output):
     records = receipt.setdefault("archive_editions", {})
     record = records.setdefault(edition_id, {})
     required_members = [
+        "application/source_tools/simulated_headwaters_receiving.py",
+        "application/model/simulated_customer_review.py",
         "workspace/workspace.json",
         *["workspace/runs/" + run["id"] + "/run.json" for run in runs],
         "workspace/deliveries/" + delivery["id"] + "/delivery-state.json",
         *["workspace/spatial-reviews/" + key + ".json" for key in spatial_reviews.values()],
         "workspace/implementation/simulated-fieldwork/" + campaign["operation_id"] + "/completed.json",
+        "workspace/" + customer["directory"] + "/06-ready-handback.result.json",
+        *["workspace/reviews/" + customer[key] + ".json"
+          for key in ("original_review_id", "revised_review_id")],
+        "workspace/review-responses/" + customer["response_id"] + ".json",
+        *["workspace/review-handbacks/" + customer[key] + ".json"
+          for key in ("planning_handback_id", "handback_id")],
         "workspace/ensemble_results/" + parameter_plan["ensemble_id"] + "/headwaters-results.json",
 
     ]
@@ -594,6 +640,11 @@ def operate_locked(args, output):
     from source_tools.simulated_headwaters_receiving import cold_reopen
     cold_receiving = phase("cold_reopen", lambda: cold_reopen(
         restored, manifest, receipt, output / "cold-reopen", extra_checks=[
+            {"kind": "customer_review", "operation_id": customer["operation_id"],
+             "expected": {**customer_identity, "project_id": ws.project["id"],
+                          "field_operation_id": campaign["operation_id"]},
+             "source": customer_packages["directory"],
+             "output": str(output / "customer-review-reopened" / edition_id)},
             {"kind": "parameter_course", "ensemble_id": receipt["ensemble_id"],
              "expected": {"project_id": ws.project["id"]}},
             {"kind": "field_campaign", "operation_id": campaign["operation_id"],
@@ -622,9 +673,16 @@ def main(argv=None):
     modes.add_argument("--field-only", action="store_true",
                        help="Prepare the same scientific case and complete its native field/lab chapter before model execution.")
     args = parser.parse_args(argv)
-    result = operate(args)
+    try:
+        result = operate(args)
+    except KeyboardInterrupt as exc:
+        event("demo_interrupted", error_type=type(exc).__name__, message=str(exc),
+              checkpoint=str(args.output.resolve() / "demo-checkpoint.json"),
+              automatic_resume=False)
+        return 130
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

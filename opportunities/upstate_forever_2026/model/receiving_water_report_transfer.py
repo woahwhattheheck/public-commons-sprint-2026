@@ -239,8 +239,13 @@ def _capture(closure, key, collection_id, entry, recipe, members, plan, analysis
     required_modules = {"producer", "plan_reader"} | ({"exporter", "scientific_formatter"} if analysis else set())
     if recipe["edition"] == "receiving-water-report-source/2":
         required_modules |= {"map_capture", "map_renderer", "scientific_figures"}
+    supported_modules = [required_modules]
+    if analysis and recipe["edition"] == "receiving-water-report-source/2":
+        # Accounting-aware captures retain the exact formatter used for their
+        # physical partition tables; earlier completed /2 captures stay intact.
+        supported_modules.append(required_modules | {"accounting_formatter"})
     implementation = identity.get("capture_implementation", {})
-    if set(implementation) != required_modules:
+    if set(implementation) not in supported_modules:
         raise ValueError("Receiving report lost its original capture implementation")
     for name, checksum in implementation.items():
         descriptor = members.get("implementation/" + name + ".py")

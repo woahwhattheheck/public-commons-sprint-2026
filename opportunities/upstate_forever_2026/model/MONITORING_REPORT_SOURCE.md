@@ -189,3 +189,12 @@ The complete original comparison ZIP and every member are retained, hashed and s
 The unchanged original plan/campaign report path remains available. Older saved reports are inspected using their retained source editions. The new comparison helper's full source digest participates in the preparation identity, so a formatter change produces its own report edition.
 
 For this report kind, the scientific composer uses the prepared per-plan observed sections. It preserves every nested original companion while skipping its separate single-published-study concentration inference, which cannot combine distinct study editions into one source. Other original report kinds retain their current enrichment behavior.
+
+
+### Figures inside the composed comparison report
+
+New comparison report sources register their figures with the existing scientific report renderer. The PDF and HTML contain one plot of original feasible budget choices and one complete geometry map per feasible saved plan. The selected baseline has a distinct marker; each point retains its original plan ID, integer-cent budget, currency and planning weight. Unavailable solver outcomes remain in the complete report table.
+
+All map panels use the same extent. Gray polygons show the original network, dark outlines identify selected catchment search areas, and point symbols use actual retained source station coordinates. The source specification retains every projected vertex and hole, the complete original network file identity, exact selected/covered IDs and the explicit WGS84-to-EPSG:5070 display transformation. The original geometry and previously linked Monitoring SVGs remain in the package.
+
+The figure specification and SVGs are ordinary report companions. PDF drawings and SVGs use the same maintained vector renderer. New report identities bind the installed figure-renderer bodies, pyproj/PROJ and ReportLab versions. Original saved reports keep their prior retained content and inspector behavior. This course uses the application's existing ReportLab, pyproj, scientific_figures.py and scientific_map_figures.py dependencies.

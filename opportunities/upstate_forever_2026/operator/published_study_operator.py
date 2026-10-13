@@ -8,7 +8,7 @@ import re
 from typing import Any
 from urllib.parse import quote
 
-from model.common import describe_file
+from model.common import describe_file, held, verify_file
 from measurement_workspace.study_reviews import PublishedStudyReviews
 from measurement_workspace.source_observations import builtin_companion
 from measurement_workspace import utility_microbiology as microbial
@@ -17,7 +17,8 @@ from measurement_workspace import rl18151_observations as rl18151
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report",
-           "published-study.review.save", "published-study.review.export", "published-study.review.import")
+           "published-study.review.save", "published-study.review.export", "published-study.review.import",
+           "published-study.review.prepare-source")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
 BUILTIN_DIRECTORIES = {
     BUILTIN_ID: "eighteenmile_2023",
@@ -303,6 +304,14 @@ class PublishedStudyProvider:
                 result["study"] = self._source_links(workspace_key, ws, store, result["study"])
                 result["context"] = self._source_links(workspace_key, ws, store, result["context"])
                 return result
+            if operation in ("review-source-preview", "review-sources", "review-source"):
+                from model import published_review_report_source as scientific
+                if operation == "review-source-preview":
+                    return scientific.preview(ws, payload.get("review_id"))
+                if operation == "review-sources":
+                    result = scientific.catalog(ws, review_id=payload.get("review_id"))
+                    return {"review_id": payload.get("review_id"), "sources": result["items"]}
+                return scientific.inspect(ws, payload.get("id"))
             if operation == "review":
                 result = PublishedStudyReviews(store).get(payload.get("review_id"))
                 result["context"] = self._source_links(workspace_key, ws, store, result["context"])
@@ -375,6 +384,18 @@ class PublishedStudyProvider:
                     "view": "published-studies",
                     "artifacts": [self._artifact(ws, manifest_path, "Study context source manifest")],
                 }
+            if action == "published-study.review.prepare-source":
+                from model import published_review_report_source as scientific
+                with held(ws.root / ".workspace.lock", blocking=False):
+                    result = scientific.prepare(
+                        ws, payload.get("review_id"),
+                        expected_preview_id=payload.get("expected_preview_id"))
+                directory = ws.root / scientific.FOLDER / result["id"]
+                artifacts = []
+                for name, item in result["files"].items():
+                    path = verify_file(directory, item)
+                    artifacts.append(self._artifact(ws, path, "Saved review scientific source: " + name))
+                return {**result, "view": "published-studies", "artifacts": artifacts}
             if action.startswith("published-study.review."):
                 reviews = PublishedStudyReviews(store)
                 if action == "published-study.review.save":
