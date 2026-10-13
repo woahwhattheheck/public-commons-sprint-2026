@@ -17,10 +17,11 @@ from .common import atomic_bytes, atomic_json, digest
 from .implementation_schema import document_digest, validate_plan
 
 SCHEMA = "upstate.implementation-observation-quality/v1"
-EDITION = "field-measurement-support-20261013-v1"
+EDITION = "field-measurement-support-20261013-v2-source-method-context"
 TYPES = ("numeric", "censored", "text", "missing")
 DIMENSIONS = ("site_id", "parameter", "unit", "basis", "fraction", "method",
-              "activity_method", "qa_status", "qualifier")
+              "method_context", "method_name", "activity_method",
+              "activity_method_context", "activity_method_name", "qa_status", "qualifier")
 RESULT_FIELDS = ("result_rows", "numeric", "censored", "text", "missing")
 WQP_LIMIT_FIELDS = (
     "DetectionQuantitationLimitTypeName",
@@ -34,7 +35,8 @@ TABLES = {
         "distinct_collection_instants", "distinct_local_dates", "observation_ids")),
     "definition-variants.csv": ("definition_variants", (
         "site_id", "parameter", "result_rows", "strata_count", "units", "bases",
-        "fractions", "methods", "activity_methods", "qa_codes", "qualifiers",
+        "fractions", "methods", "method_contexts", "method_names", "activity_methods",
+        "activity_method_contexts", "activity_method_names", "qa_codes", "qualifiers",
         "stratum_ids", "observation_ids")),
     "campaign-coverage.csv": ("campaign_coverage", (
         "campaign_id", "campaign_title", "site_id", "parameter", "linked_visits",
@@ -53,6 +55,12 @@ TABLES = {
         "observation_id", "site_id", "parameter", "result_type", "original_result",
         "result_unit", "limit_origin", "limit_type", "limit_value", "limit_unit",
         "source_link_id", "source_record", "original_pointer")),
+    "method-inventory.csv": ("method_inventory", (
+        "id", "parameter", "method", "method_context", "method_name", "method_binding",
+        "activity_method", "activity_method_context", "activity_method_name", "activity_method_binding",
+        "collection_equipment", "original_analytical_method", "original_collection_method",
+        "collection_field_origins", "original_collection_conflicts", *RESULT_FIELDS,
+        "site_ids", "activity_ids", "observation_ids", "source_link_ids", "original_pointers")),
     "metadata-availability.csv": ("metadata_availability", (
         "field", "recorded_rows", "unstated_rows", "total_rows", "meaning")),
 }
@@ -96,6 +104,159 @@ def _original_pointer(index, collection="observations"):
     return "original/plan.json#/" + collection + "/" + str(index)
 
 
+COLLECTION_SOURCE_FIELDS = {
+    "identifier": "SampleCollectionMethod/MethodIdentifier",
+    "context": "SampleCollectionMethod/MethodIdentifierContext",
+    "name": "SampleCollectionMethod/MethodName",
+    "qualifier": "SampleCollectionMethod/MethodQualifierTypeName",
+    "description": "SampleCollectionMethod/MethodDescriptionText",
+    "equipment": "SampleCollectionEquipmentName",
+    "equipment_comment": "SampleCollectionMethod/SampleCollectionEquipmentCommentText",
+    "container_type": "SampleContainerTypeName",
+    "container_color": "SampleContainerColorName",
+    "chemical_preservative": "ChemicalPreservativeUsedName",
+    "thermal_preservative": "ThermalPreservativeUsedName",
+    "transport_storage": "SampleTransportStorageDescription",
+}
+
+
+def _declared(value):
+    return value if isinstance(value, str) else ""
+
+
+def method_context(observation, activity):
+    """Expose original declared method definitions without replacing native fields."""
+    lab = observation.get("lab_source")
+    lab = lab if isinstance(lab, dict) else {}
+    raw = lab.get("original_row")
+    raw = raw if isinstance(raw, dict) else {}
+    original_activity = activity.get("original_activity")
+    original_activity = original_activity if isinstance(original_activity, dict) else {}
+    analytical = {
+        "identifier": _declared(raw.get("ResultAnalyticalMethod/MethodIdentifier")),
+        "context": _declared(raw.get("ResultAnalyticalMethod/MethodIdentifierContext")),
+        "name": _declared(raw.get("ResultAnalyticalMethod/MethodName")),
+        "description": _declared(raw.get("MethodDescriptionText")),
+    }
+    collection, origins, conflicts = {}, {}, []
+    definition_fields = ("identifier", "context", "name", "qualifier", "description")
+    # Keep one original collection-method declaration together. Independent
+    # equipment/container fields may fall back without creating a mixed method.
+    activity_definition = any(_declared(original_activity.get(COLLECTION_SOURCE_FIELDS[key])).strip()
+                              for key in definition_fields)
+    definition_source = (original_activity if activity_definition else raw)
+    definition_origin = ("activity.original_activity" if activity_definition
+                         else "observation.lab_source.original_row")
+    for field, header in COLLECTION_SOURCE_FIELDS.items():
+        from_activity = _declared(original_activity.get(header))
+        from_result = _declared(raw.get(header))
+        if field in definition_fields:
+            collection[field] = _declared(definition_source.get(header))
+            origins[field] = definition_origin if collection[field].strip() else ""
+        elif from_activity.strip():
+            collection[field], origins[field] = from_activity, "activity.original_activity"
+        elif from_result.strip():
+            collection[field], origins[field] = from_result, "observation.lab_source.original_row"
+        else:
+            collection[field], origins[field] = "", ""
+        if from_activity.strip() and from_result.strip() and from_activity != from_result:
+            conflicts.append({"field": field, "header": header,
+                              "original_activity": from_activity, "original_result_row": from_result})
+
+    def bind(canonical, native_context, native_name, original):
+        canonical = _declared(canonical)
+        explicit_context, explicit_name = _declared(native_context), _declared(native_name)
+        explicit_context = explicit_context if explicit_context.strip() else ""
+        explicit_name = explicit_name if explicit_name.strip() else ""
+        matches_id = bool(canonical.strip() and original["identifier"].strip()
+                          and canonical.strip() == original["identifier"].strip())
+        matches_name = bool(canonical.strip() and original["name"].strip()
+                            and canonical.strip() == original["name"].strip())
+        linked = matches_id or matches_name
+        context_agrees = (not explicit_context.strip() or not original["context"].strip()
+                          or explicit_context.strip() == original["context"].strip())
+        binding = ("explicit_native_context" if explicit_context else
+                   "matches_original_identifier" if matches_id else
+                   "matches_original_name" if matches_name else
+                   "original_definition_retained_separately")
+        return {
+            "context": explicit_context or (original["context"] if linked else ""),
+            "name": explicit_name or (original["name"] if linked and context_agrees else ""),
+            "binding": binding,
+        }
+
+    laboratory = bind(observation.get("method"), observation.get("method_context"),
+                      observation.get("method_name"), analytical)
+    field = bind(activity.get("method"), activity.get("method_context"),
+                 activity.get("method_name"), collection)
+    original_link = activity.get("original_source")
+    original_link = original_link if isinstance(original_link, dict) else {}
+    return {
+        "method_context": laboratory["context"], "method_name": laboratory["name"],
+        "method_binding": laboratory["binding"],
+        "activity_method_context": field["context"], "activity_method_name": field["name"],
+        "activity_method_binding": field["binding"],
+        "collection_equipment": collection["equipment"],
+        "original_analytical_method": analytical,
+        "original_collection_method": collection,
+        "collection_field_origins": origins,
+        "original_collection_conflicts": conflicts,
+        "original_source_links": list(dict.fromkeys(value for value in (
+            lab.get("source_link_id"), original_link.get("source_link_id"), activity.get("source_ref"))
+            if isinstance(value, str) and value)),
+        "original_lab_record": lab.get("record"),
+        "original_activity_record": original_link.get("csv_record"),
+    }
+
+
+def _method_inventory(records):
+    grouped = defaultdict(list)
+    for record in records:
+        method = record["method_definition"]
+        definition = {
+            "parameter": record["observation"]["parameter"],
+            "method": record["observation"].get("method") or "",
+            "activity_method": record["activity"].get("method") or "",
+            **{key: method[key] for key in (
+                "method_context", "method_name", "method_binding",
+                "activity_method_context", "activity_method_name", "activity_method_binding",
+                "collection_equipment", "original_analytical_method", "original_collection_method",
+                "collection_field_origins", "original_collection_conflicts")},
+        }
+        grouped[digest(definition)].append((definition, record))
+    inventory = []
+    for key, values in sorted(grouped.items()):
+        definition = values[0][0]
+        rows = [item[1] for item in values]
+        inventory.append({
+            "id": "field-method-" + key[:24], **definition, **_counts(rows),
+            "site_ids": sorted({row["site"]["id"] for row in rows}),
+            "activity_ids": sorted({row["activity"]["id"] for row in rows}),
+            "observation_ids": [row["observation"]["id"] for row in rows],
+            "source_link_ids": sorted({source for row in rows
+                                      for source in row["method_definition"]["original_source_links"]}),
+            "original_pointers": [row["original_pointer"] for row in rows],
+        })
+    return inventory
+
+
+def _method_label(code, context, name):
+    return "\n".join(label + ": " + value for label, value in
+                     (("Identifier", _declared(code)), ("Context", _declared(context)),
+                      ("Name", _declared(name))) if value)
+
+
+def _collection_label(method):
+    collection = method["original_collection_method"]
+    lines = [_method_label(collection["identifier"], collection["context"], collection["name"])]
+    lines.extend(label + ": " + collection[field] for field, label in (
+        ("equipment", "Equipment"), ("container_type", "Container"),
+        ("container_color", "Container colour"), ("chemical_preservative", "Chemical preservation"),
+        ("thermal_preservative", "Thermal preservation"), ("transport_storage", "Transport / storage"))
+        if collection[field])
+    return "\n".join(line for line in lines if line)
+
+
 def summarize_field_quality(saved_plan, *, attachment_inventory=()):
     """Return source-bound, descriptive support for one original saved revision."""
     plan = validate_plan(saved_plan)
@@ -110,13 +271,17 @@ def summarize_field_quality(saved_plan, *, attachment_inventory=()):
         activity = activities[observation["activity_id"]]
         visit = visits[activity["visit_id"]]
         site = sites[activity["site_id"]]
+        method = method_context(observation, activity)
         dimensions = {
             "site_id": site["id"], "parameter": observation["parameter"],
             "unit": observation["unit"], "activity_method": activity.get("method") or "",
+            **{key: method[key] for key in ("method_context", "method_name",
+                                          "activity_method_context", "activity_method_name")},
             **{key: observation.get(key) or "" for key in ("basis", "fraction", "method", "qa_status", "qualifier")},
         }
         record = {"observation": observation, "activity": activity, "visit": visit,
-                  "site": site, "dimensions": dimensions, "original_pointer": _original_pointer(index)}
+                  "site": site, "dimensions": dimensions, "method_definition": method,
+                  "original_pointer": _original_pointer(index)}
         records.append(record)
         by_activity[activity["id"]].append(record)
         comparison[tuple(dimensions[field] for field in DIMENSIONS)].append(record)
@@ -176,7 +341,9 @@ def summarize_field_quality(saved_plan, *, attachment_inventory=()):
             "strata_count": len(selected),
             **{title: _values(group, field) for title, field in (
                 ("units", "unit"), ("bases", "basis"), ("fractions", "fraction"),
-                ("methods", "method"), ("activity_methods", "activity_method"),
+                ("methods", "method"), ("method_contexts", "method_context"), ("method_names", "method_name"),
+                ("activity_methods", "activity_method"), ("activity_method_contexts", "activity_method_context"),
+                ("activity_method_names", "activity_method_name"),
                 ("qa_codes", "qa_status"), ("qualifiers", "qualifier"))},
             "stratum_ids": selected,
             "observation_ids": [row["observation"]["id"] for row in group],
@@ -253,6 +420,11 @@ def summarize_field_quality(saved_plan, *, attachment_inventory=()):
     availability = []
     for field, getter, meaning in (
         ("laboratory_method", lambda row: row["observation"].get("method"), "Original result method string"),
+        ("laboratory_method_context", lambda row: row["method_definition"]["method_context"], "Explicit native or source-bound method identifier context"),
+        ("laboratory_method_name", lambda row: row["method_definition"]["method_name"], "Explicit native or source-bound full analytical method name"),
+        ("collection_method_context", lambda row: row["method_definition"]["activity_method_context"], "Explicit native or source-bound collection method identifier context"),
+        ("collection_method_name", lambda row: row["method_definition"]["activity_method_name"], "Explicit native or source-bound full collection method name"),
+        ("collection_equipment", lambda row: row["method_definition"]["collection_equipment"], "Original declared sampling equipment; not a substitute for a collection method"),
         ("collection_method", lambda row: row["activity"].get("method"), "Original sample/measurement activity method"),
         ("chemical_basis", lambda row: row["observation"].get("basis"), "Declared basis; blank is not assumed equivalent to another basis"),
         ("fraction", lambda row: row["observation"].get("fraction"), "Declared result fraction"),
@@ -268,6 +440,7 @@ def summarize_field_quality(saved_plan, *, attachment_inventory=()):
         present = sum(bool(value.strip()) if isinstance(value, str) else value is not None for value in values)
         availability.append({"field": field, "recorded_rows": present,
                              "unstated_rows": len(records) - present, "total_rows": len(records), "meaning": meaning})
+    method_inventory = _method_inventory(records)
     source_states = Counter(item.get("state", "unspecified") for item in attachment_inventory)
     summary = {
         **_counts(records), **_times(records),
@@ -278,6 +451,11 @@ def summarize_field_quality(saved_plan, *, attachment_inventory=()):
         "samples_with_only_missing_results": sum(row["state"] == "only_missing_result_records" for row in followup),
         "sample_collection_time_unrecorded_without_results": sum(row["state"] == "collection_time_unrecorded_no_results" for row in followup),
         "comparison_strata": len(strata),
+        "method_definitions": len(method_inventory),
+        "rows_with_method_context": sum(bool(row["method_definition"]["method_context"]) for row in records),
+        "rows_with_method_name": sum(bool(row["method_definition"]["method_name"]) for row in records),
+        "rows_with_collection_equipment": sum(bool(row["method_definition"]["collection_equipment"]) for row in records),
+        "rows_with_collection_source_differences": sum(bool(row["method_definition"]["original_collection_conflicts"]) for row in records),
         "site_parameter_groups_with_definition_variants": sum(row["strata_count"] > 1 for row in definitions),
         "declared_campaigns": len(campaigns),
         "declared_site_parameter_pairs": sum(row["declared_site_parameter_pairs"] for row in campaign_summaries),
@@ -293,9 +471,10 @@ def summarize_field_quality(saved_plan, *, attachment_inventory=()):
         "summary": summary, "comparison_strata": strata, "definition_variants": definitions,
         "campaigns": campaign_summaries, "campaign_coverage": coverage,
         "sample_followup": followup, "sampling_calendar": months, "source_limits": source_limits,
-        "metadata_availability": availability,
+        "metadata_availability": availability, "method_inventory": method_inventory,
         "interpretation": {
-            "comparison": "Strata match exact site, parameter, unit, basis, fraction, laboratory method, activity method, QA and qualifier strings. Matching labels describe recorded definitions, not demonstrated laboratory equivalence.",
+            "comparison": "Strata match exact site, parameter, unit, basis, fraction, laboratory method and its declared context/name, activity method and its declared context/name, QA and qualifier strings. Matching labels describe recorded definitions, not demonstrated laboratory equivalence.",
+            "methods": "Original analytical method identifiers, their naming contexts and full names remain together. A source context/name attaches to the selected native method only when it matches the original identifier/name, or the native record explicitly declares it. Collection method and equipment metadata retain their original activity/result-row origins; conflicting original declarations remain in the complete inventory. Canonical field records, Outcomes and QC rules are unchanged.",
             "numeric_range": "Minimum/maximum use only original numeric records in the exact stratum. Censored, text and missing results are counted separately and never substituted into numeric ranges.",
             "campaign": "Declared site/parameter combinations are crossed exactly within each saved monitoring plan. Result records join only through visits explicitly linked to that campaign. Counts describe retained records; frequency text is not converted into an expected sampling schedule or a per-visit requirement.",
             "calendar": "Months and distinct dates use the original collection timestamp's local calendar. First/last timestamps are ordered by actual instant. A date span is not continuous monitoring coverage.",
@@ -342,7 +521,8 @@ def quality_sections(quality, *, prefix="field/quality/"):
                    [[row["site_id"], row["parameter"],
                      "\n".join(label + ": " + _text(row[key]) for key, label in
                                (("unit", "Unit"), ("basis", "Basis"), ("fraction", "Fraction"))),
-                     "Laboratory: " + _text(row["method"]) + "\nCollection: " + _text(row["activity_method"]),
+                     "Laboratory\n" + _method_label(row["method"], row["method_context"], row["method_name"]) +
+                     "\nCollection\n" + _method_label(row["activity_method"], row["activity_method_context"], row["activity_method_name"]),
                      "QA: " + _text(row["qa_status"]) + "\nQualifier: " + _text(row["qualifier"]),
                      "\n".join(label + ": " + _text(row[key]) for key, label in
                                (("numeric", "Numeric"), ("censored", "Censored"), ("text", "Text"),
@@ -350,6 +530,24 @@ def quality_sections(quality, *, prefix="field/quality/"):
                     for row in strata[:100]]),
             str(len(strata)) + " exact metadata strata; the first " + str(min(100, len(strata))) +
             " are shown. The complete table retains every original observation ID.",
+        ]],
+        ["Original analytical and collection method definitions", [
+            quality["interpretation"]["methods"],
+            _table(["Parameter", "Recorded method", "Original analytical definition",
+                    "Original collection / equipment", "Result counts", "Sites / source records"],
+                   [[row["parameter"],
+                     _method_label(row["method"], row["method_context"], "") +
+                     "\nBinding: " + row["method_binding"],
+                     _method_label(row["original_analytical_method"]["identifier"],
+                                   row["original_analytical_method"]["context"],
+                                   row["original_analytical_method"]["name"]),
+                     _collection_label(row),
+                     "\n".join(kind + ": " + str(row[kind]) for kind in TYPES),
+                     ", ".join(row["site_ids"]) + "\nSources: " + ", ".join(row["source_link_ids"])]
+                    for row in quality["method_inventory"][:100]]),
+            str(len(quality["method_inventory"])) + " distinct retained method definitions; first " +
+            str(min(100, len(quality["method_inventory"]))) +
+            " shown. The complete method inventory retains descriptions, source differences and every original observation ID.",
         ]],
         ["Campaign coverage and sample follow-up", [
             quality["interpretation"]["campaign"],
