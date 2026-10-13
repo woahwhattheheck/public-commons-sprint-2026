@@ -214,6 +214,7 @@ const sourceReports=attachSourceReports({
  hasView:id=>extensions.hasView(id),openSourceImport:options=>sourceForm(options),
  showTask,refresh,openBackup:()=>backupForm(),
  prepareCustomerReview:value=>customerReviews.prepareScientificReportReview(value),
+ openGISStudy:value=>extensions.openDesk('gis-projects','createForNativeStudy',value),
  openStudy:selection=>extensions.openExtension('study-transfer','openForStudies',selection)
 });
 const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle,mapFamilies,mapTitles,section,pageHeader,table,
