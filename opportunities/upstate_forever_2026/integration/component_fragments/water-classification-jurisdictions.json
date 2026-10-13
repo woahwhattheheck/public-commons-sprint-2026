@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "water-classification-jurisdictions",
+  "extend_components": {
+    "water_source_review": {
+      "paths": [
+        "source_tools/water_classifications.py",
+        "source_tools/high_quality_waters.py",
+        "source_tools/high_quality_water_crosswalk.py",
+        "operator/WATER_CLASSIFICATION_JURISDICTIONS.md",
+        "source/high_quality_waters/native-field-binding.schema.json"
+      ],
+      "source_manifests": [
+        "ga_classified_water_sources.json"
+      ]
+    }
+  },
+  "source_reference": "Original SC v1 compatibility; NC/GA jurisdiction-qualified source, intake, crosswalk and source review."
+}
