@@ -1,3 +1,5 @@
+import {installPdfBundles} from './pdf-bundles.mjs';
+let pdfBundles;
 // MIT. Full document preparation and receiving on the original customer host.
 const $=id=>document.getElementById(id);
 const state={token:location.hash.slice(1),host:null,payload:null,selected:null,selectedId:null,
@@ -144,6 +146,7 @@ function updateProvider(){
   $('recipe').value=JSON.stringify(request,null,2);
 }
 function showNew(){
+  pdfBundles?.hide();
   state.selected=null;state.selectedId=null;state.followId=null;state.selectionEpoch++;
   $('new-panel').hidden=false;$('saved-panel').hidden=true;
   history.replaceState(null,'','/documents/#'+state.token);
@@ -411,14 +414,14 @@ async function loadComposition(id,offset=0){
   const epoch=++state.selectionEpoch;state.selectedId=id;state.selectedOffset=offset;state.followId=id;
   const selected=await api('composition?id='+encodeURIComponent(id)+'&offset='+offset+'&limit=100');
   if(epoch!==state.selectionEpoch||state.selectedId!==id)return;
-  state.selected=selected;drawSelection(selected);
+  pdfBundles?.hide();state.selected=selected;drawSelection(selected);
   history.replaceState(null,'','/documents/?id='+encodeURIComponent(id)+'#'+state.token);
   if(selected.active)watch(selected.active);
   if(state.assemblySelected&&selected.assemblies?.some(item=>item.id===state.assemblySelected))
     await loadAssembly(state.assemblySelected);
 }
 function drawOperation(operation){
-  $('operation-panel').hidden=false;$('operation-title').textContent=titles[operation.kind]||human(operation.kind);
+  $('operation-panel').hidden=Boolean(pdfBundles&&!$('pdf-bundles-panel').hidden);$('operation-title').textContent=titles[operation.kind]||human(operation.kind);
   $('operation-progress').textContent=operation.compositionId+' · '+human(operation.state);
   if(operation.progress){
     const progress=operation.progress;
@@ -559,11 +562,17 @@ for(const [id,path]of [['request-link','/jobs/request/'],['checkout-link','/jobs
   ['jobs-link','/jobs/'],['library-link','/'],['collections-link','/collections']])
   $(id).href=path+'#'+state.token;
 
+pdfBundles=installPdfBundles({api,guard,onOpen(){
+  state.selected=null;state.selectedId=null;state.followId=null;state.selectionEpoch++;
+  $('new-panel').hidden=true;$('saved-panel').hidden=true;$('operation-panel').hidden=true;markSelected();
+}});
+
 await guard(async()=>{
   if(!/^[a-f0-9]{64}$/.test(state.token))throw Error('Open Document production from the current private customer launch URL.');
   await refreshList();$('provider').value=state.host.defaults.provider;
   $('merchant-origin').value=state.host.defaults.merchantOrigin??'';updateProvider();
-  const selected=new URL(location.href).searchParams.get('id');
-  if(selected)await loadComposition(selected);else{showNew();await fileTask(loadExample);}
+  const query=new URL(location.href).searchParams,selected=query.get('id');
+  if(query.has('pdf'))await pdfBundles.open(query.get('pdf'));
+  else if(selected)await loadComposition(selected);else{showNew();await fileTask(loadExample);}
   if(!state.operation&&state.host.active.length)watch(state.host.active[0]);
 });

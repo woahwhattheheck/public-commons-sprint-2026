@@ -22,7 +22,7 @@ import zipfile
 
 from .common import (atomic_json, canonical, digest, held, identifier, now,
                      read_json)
-from . import portable, study_delivery_transfer as delivery_transfer
+from . import portable, study_delivery_transfer as delivery_transfer, study_report_transfer as report_transfer
 
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
@@ -125,7 +125,7 @@ def _record_path(kind, key):
 
 
 class _Closure:
-    def __init__(self, workspace, selection, *, decision_database=None):
+    def __init__(self, workspace, selection, *, decision_database=None, report_lineage=True):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -139,6 +139,8 @@ class _Closure:
         self.decision_database = decision_database
         self.decision_records = {}
         self.delivery_records = {}
+        self.report_source_records = {}
+        self.report_lineage_enabled = report_lineage
         self.external_decision_dependencies = []
 
     def add_file(self, relative, expected=None):
@@ -265,6 +267,7 @@ class _Closure:
                 self._body(entry["body"])
                 for companion in entry.get("companions", []):
                     self._body(companion)
+                report_transfer.include(self, key, entry)
         elif kind in {"profiles", "scenarios"}:
             self.need("sources", value["source_collection_id"], reason)
             self._source_refs(value, reason)
@@ -423,8 +426,8 @@ class _Closure:
             self._diagnostic(key, value, reason)
         elif kind == "comparisons":
             ids = [value["baseline_run_id"]] + [row["run_id"] for row in value["alternatives"]]
-            if value.get("id") != key or digest({"runs": ids, "direction": value["direction"]}) != key:
-                raise ValueError("The original native comparison changed its run cohort.")
+            from .native_versions import validate_run_comparison
+            validate_run_comparison(self.workspace, value, expected_id=key)
             for run_id in ids:
                 self.need("runs", run_id, "Native comparison cohort")
             self.tree(prefix.rstrip("/"))
@@ -540,6 +543,7 @@ class _Closure:
             "related_result_issues": self.related_issues,
             "external_decision_dependencies": self.external_decision_dependencies,
             "completed_deliveries": delivery_transfer.receipt(self),
+            "scientific_report_sources": report_transfer.receipt(self),
             "decision_history": {"studies": len(self.decision_records),
                                  "revisions": sum(len(row["revisions"]) for row in self.decision_records.values()),
                                  "calculations": sum(len(row["runs"]) for row in self.decision_records.values())},
@@ -786,6 +790,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             "planned_cases": plan["planned_cases"],
             "related_result_issues": plan["related_result_issues"],
         }
+        if closure.report_source_records:
+            identity["scientific_report_sources"] = report_transfer.receipt(closure)
         if closure.delivery_records:
             identity["completed_deliveries"] = delivery_transfer.receipt(closure)
         if dependencies:
@@ -852,9 +858,11 @@ def verify_received_studies(workspace):
                 or digest(receipt.get("identity")) != path.stem
                 or receipt["identity"]["project_id"] != workspace.project["id"]):
             raise ValueError("The received scientific study has a different original identity.")
-        closure = _Closure(workspace, receipt["identity"]["selection"]).resolve(
+        closure = _Closure(workspace, receipt["identity"]["selection"],
+                           report_lineage="scientific_report_sources" in receipt["identity"]).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
         delivery_transfer.verify_receipt(closure, receipt["identity"].get("completed_deliveries", []))
+        report_transfer.verify_receipt(closure, receipt["identity"].get("scientific_report_sources", []))
         present = set(closure.nodes)
         required = {(row["kind"], row["id"]) for row in receipt["identity"]["nodes"]}
         if not required.issubset(present):

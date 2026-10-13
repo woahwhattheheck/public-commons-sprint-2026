@@ -274,6 +274,8 @@ Replace the capitalized input descriptions with the actual retained acquisition 
 
 The browser driver uses the installed Playwright Chromium runtime. It first resolves installed `playwright` or `playwright-core` from the application environment and runtime module directories. If a host keeps those dependencies elsewhere, supply `browser.module` with the actual module path and `browser.executablePath` with the installed Chromium executable. The native model runtime uses the same environment as the application server.
 
+When an installed browser moves during a retained operation, select its current absolute executable with `AUDIT_BROWSER_EXECUTABLE` and, if necessary, the installed Playwright module with `AUDIT_BROWSER_MODULE`. Continue with the same original input file, operation directory and saved requests. These environment settings change the execution runtime for that attempt. The driver retains the original browser selection, effective executable, launch arguments and actual browser version in `browser/runtime-selections/`; it keeps the original commissioning inputs and completed customer actions intact. Use `--adopt-source` when continuing after a complete driver correction.
+
 Start the one original operation:
 
 ```sh

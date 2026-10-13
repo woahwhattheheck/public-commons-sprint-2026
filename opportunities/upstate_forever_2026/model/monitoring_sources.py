@@ -106,6 +106,36 @@ def verify_retained_binding(workspace, binding):
             original = path
     return original
 
+def source_export_members(workspace, label, binding):
+    """Describe exact retained members without loading original native files.
+
+    The existing bytes-dictionary export remains available below. Packet writers
+    can stream these verified source paths and keep canonical metadata in memory.
+    """
+    from .monitoring_packet import bytes_member, file_member
+    path, entry, collection = source_record(
+        workspace, binding["source_id"], binding.get("source_collection_id"))
+    verify_binding(workspace, binding)
+    if not binding.get("source_collection_id"):
+        yield f"sources/{label}.json", file_member(
+            path, binding["bytes"], binding["object_sha256"])
+        yield f"sources/{label}-native-record.json", bytes_member(canonical_bytes(collection))
+        return
+    yield f"sources/{label}-source-edition.json", bytes_member(canonical_bytes(collection))
+    for body in [entry["body"], *entry.get("companions", [])]:
+        name = body.get("view_path", body["filename"])
+        member = PurePosixPath(name)
+        if (member.is_absolute() or ".." in member.parts or not member.parts
+                or str(member) != name or "\\" in name or "\0" in name):
+            raise ContractError("Native source companion has a nonportable name")
+        original = (workspace.root / body["object"]).resolve(strict=True)
+        if not original.is_relative_to(workspace.root.resolve()) or not original.is_file():
+            raise ContractError("Native source companion must remain in the original object store")
+        if original.stat().st_size != body["bytes"] or file_sha256(original) != body["sha256"]:
+            raise ContractError("Original source companion changed during export")
+        yield f"sources/{label}/{member}", file_member(original, body["bytes"], body["sha256"])
+
+
 def export_source(workspace, label, binding):
     path, entry, collection = source_record(workspace, binding["source_id"], binding.get("source_collection_id"))
     verify_binding(workspace, binding)

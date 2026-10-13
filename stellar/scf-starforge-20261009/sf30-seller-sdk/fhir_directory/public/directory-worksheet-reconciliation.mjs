@@ -17,9 +17,8 @@ function validateWorking(v,workspaceId){
  need(object(v)&&v.schema===WORKING&&v.workspaceId===workspaceId,'Choose a complete reconciliation working copy for this workspace.');
  for(const k of ['returnId','currentEditionId','label','actor','note','query','table','reviewLabel','reviewNote'])
   need(typeof v[k]==='string','Keep the complete '+k+'.');
- for(const k of ['returnId','currentEditionId'])need(v[k]===''||SHA.test(v[k]),'Keep the exact '+k+'.');
  need(v.predecessorId===null||SHA.test(v.predecessorId||''),'Keep the accepted predecessor or null.');
- if(v.openedReturnId===undefined)v.openedReturnId=v.returnId||null;if(v.openedEditionId===undefined)v.openedEditionId=v.currentEditionId||null;
+ if(v.openedReturnId===undefined)v.openedReturnId=SHA.test(v.returnId)?v.returnId:null;if(v.openedEditionId===undefined)v.openedEditionId=SHA.test(v.currentEditionId)?v.currentEditionId:null;
  for(const k of ['openedReturnId','openedEditionId'])need(v[k]===null||SHA.test(v[k]||''),'Keep the exact opened basis identity.');
  if(v.lastResponse===undefined)v.lastResponse=null;
  need(v.lastResponse===null||(object(v.lastResponse)&&['prepare','review','export'].includes(v.lastResponse.action)&&object(v.lastResponse.input)&&SHA.test(v.lastResponse.recordId||'')&&(KINDS.includes(v.lastResponse.kind)||v.lastResponse.kind==='exports')),'Keep the original accepted response identity.');

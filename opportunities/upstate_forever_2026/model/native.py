@@ -16,6 +16,7 @@ from .reuse import native_companions, registry_snapshot, verify_stage
 from .stage_cache import runtime_environment, signature, recover, register, execution_slot
 from .native_arguments import build_native_arguments
 from .native_execution import NativeExecution
+from .native_stats import bounded_raster_statistics
 
 
 def runtime(selection=None):
@@ -175,7 +176,11 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
                                              "; ".join(message for _, message in errors))
                         execution.phase("native", model=name)
                         started = now()
-                        registry = module.execute(args)
+                        with bounded_raster_statistics() as statistics_handoff:
+                            try:
+                                registry = module.execute(args)
+                            finally:
+                                state.setdefault("statistics_handoff", {})[name] = statistics_handoff
                         if not isinstance(registry, dict):
                             raise ValueError("Native engine did not return its original output registry")
                         files, outputs, additional_files = registry_snapshot(directory, name, registry)
@@ -185,7 +190,8 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
                                  "registry_outputs": outputs,
                                  "additional_files": additional_files,
                                  "companions": native_companions(directory, files),
-                                 "input_signature": selected, "runtime": runtime_source}
+                                 "input_signature": selected, "runtime": runtime_source,
+                                 "statistics_handoff": statistics_handoff}
                         state["stages"][name] = stage
                         execution.phase("retain_stage", model=name)
                         register(workspace, key, name, stage)

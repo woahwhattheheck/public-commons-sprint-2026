@@ -1,0 +1,1852 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Observed Upper Savannah hydrology and Eighteenmile scientific context",
+  "captured_at": "2026-10-13",
+  "entries": [
+    {
+      "id": "eighteenmile-observed-report-20261013",
+      "title": "Observed Upper Savannah hydrology and Eighteenmile scientific context",
+      "kind": "document",
+      "path": "observed_hydrology_context.report.json",
+      "bytes": 121814,
+      "sha256": "67bf18630c746c7f4bbe3a2db00420ab9ebb5967a1b94805179505b8ceb354a7",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 water quality and discharge; 2020–2025 observed hydrology; source recovery 2026-10-13",
+      "metadata": {
+        "report_schema": "upstate.observed-report/v1",
+        "source_year": 2023,
+        "context_layer": true,
+        "original_chlorophyll_activities": 75,
+        "original_water_quality_results": 920,
+        "original_daily_flow_records": 59701,
+        "flow_gauges": 29,
+        "eighteenmile_daily_flow_records": 2192,
+        "original_scientific_sections": 5,
+        "scientific_figures": 4,
+        "routine_nutrient_result_rows": 96,
+        "routine_nutrient_activities": 24,
+        "routine_nutrient_value_rows": 120,
+        "numeric_daily_flow_records": 59700,
+        "gauge_years": 174,
+        "complete_numeric_gauge_years": 149,
+        "fully_approved_complete_gauge_years": 144,
+        "scientific_sections": 13,
+        "original_whole_basins": 14,
+        "original_basin_vertices": 29049,
+        "original_point_catchment_pairs": 169
+      },
+      "companions": [
+        {
+          "path": "eighteenmile_lake_paired_analysis.sources.json",
+          "bytes": 37871,
+          "sha256": "34af2770b39339760994263833e981692cc1c75806206f78dbd9705c30b8eee8"
+        },
+        {
+          "path": "eighteenmile_routine_nutrient_flow.sources.json",
+          "bytes": 148361,
+          "sha256": "7194c489dec601281a398b07f390923e723c8582142688c8ee23dcbfc57d4b54"
+        },
+        {
+          "path": "observations/calibration_context_20261013/assessment.json",
+          "bytes": 31899,
+          "sha256": "b10e72b665bed3bf610e1ede4abf2ad897cded67dc8dae27f2fd7c7eeaa823e0"
+        },
+        {
+          "path": "observations/calibration_context_20261013/combined-flow-context.json",
+          "bytes": 186450,
+          "sha256": "0c579ba251583a9721f4edca21dcbff0d5703c3ad4a6c87c108b51ca10fab46b"
+        },
+        {
+          "path": "observations/calibration_context_20261013/combined-flow-quality.csv",
+          "bytes": 36272,
+          "sha256": "b52d7e445dd2a06441eb4e79affbb5e117cb1a2fd319784297bc64a968ab1e86"
+        },
+        {
+          "path": "observations/calibration_context_20261013/observed-flow-report.html",
+          "bytes": 3835729,
+          "sha256": "09c1c37022fc25b9ccaf8755b8a29554e6a6e4a74a48b39827c1ed9c2782898e"
+        },
+        {
+          "path": "observations/calibration_context_20261013/README.md",
+          "bytes": 6797,
+          "sha256": "030f9fa787956d6012630224cb6a0d01fd2a219fa0894755b73f6678e15b43e0"
+        },
+        {
+          "path": "observations/calibration_context_20261013/station_year_context.csv",
+          "bytes": 3085,
+          "sha256": "c9e8da04d1dc3d30e028bd58a0dbedcea4ebab541aae795b9aeb70c77352753e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+          "bytes": 8067,
+          "sha256": "e16b9acc3d4674f905a0c3d5ea3295d7f7b5a40f93939ea82ecd0b73cd747613"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
+          "bytes": 644,
+          "sha256": "91ede9238f0ec14f05d337e219718920a0eea5ce2c322fd6b7b5fbaa952dde36"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+          "bytes": 7667,
+          "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+          "bytes": 8424,
+          "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+          "bytes": 4380,
+          "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+          "bytes": 1149,
+          "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+          "bytes": 8581,
+          "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+          "bytes": 1926,
+          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+          "bytes": 43187,
+          "sha256": "d77d5138cd7aa0f5a78171059f831c4519f90455942f5c93c0ac99e9f14fcf0d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/continuous_monthly_do.csv",
+          "bytes": 2338,
+          "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/continuous_monthly_ph.csv",
+          "bytes": 2166,
+          "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/chlorophyll_antecedent_context.svg",
+          "bytes": 30211,
+          "sha256": "435b67f3bc27fa4c6b4e047da0bc0b377acd481e26a5ad0b1a8117a5a721130c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/chlorophyll_distributions.svg",
+          "bytes": 23969,
+          "sha256": "c958f42af36013efceb018e53d8a62ec365db91f465a32b23f8f9076f1fc8ba4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/chlorophyll_time_series.svg",
+          "bytes": 30745,
+          "sha256": "895f4cc0246535fa2280b9dfe2e98dfc69d51e923ccab7b5c7264f48b93244b0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/distribution-statistics.csv",
+          "bytes": 828,
+          "sha256": "f2a7fdb675a74f82985773e958b77d81835c1ea20ad5addd07d99f531c06866c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/figure_core.mjs",
+          "bytes": 22714,
+          "sha256": "bc72e5744f1799d828dc8b6964ecd0c902b65f8574bf1719b1e4bea32dfc2bd0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/figure-sources.json",
+          "bytes": 5064,
+          "sha256": "983baa0dd5f0f75edb50246bf5de11c3d3ebbcc1ad3def1a883abf7df4fd0d90"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/figure-spec.json",
+          "bytes": 416117,
+          "sha256": "02adae24859bd08e785d235d3988b923beb6405bff59f9fc17ef7dc4e984bde8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/model-sources.json",
+          "bytes": 23349,
+          "sha256": "b7648d7b768584ea1d90b414a66a923e0aafbf00e5eff6e9d49e76f491d73324"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/plot-data.csv",
+          "bytes": 109654,
+          "sha256": "a4a39b47b16fb38709ea1057ddbc56c934d90f96c9f429695ca2767c68b3f66a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/README.md",
+          "bytes": 4468,
+          "sha256": "4db229474aa9be4beb7e2aecf6683d56d3b46f382ca0af849819c8602f54836a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/rebuild_figures.mjs",
+          "bytes": 3050,
+          "sha256": "dd7c99b782e766c8aa428f55e36179671081ee60123434816a96d5867a79aa5a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/sampling_flow_context.svg",
+          "bytes": 13003,
+          "sha256": "7840ea3d5d846801ed9bf7971c2ee405ac4af5a68bcde4083445051deb9f258b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-array.cjs",
+          "bytes": 17204,
+          "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-array.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-path.cjs",
+          "bytes": 2433,
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-path.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-shape.cjs",
+          "bytes": 30898,
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "observations/eighteenmile_2023/figures/vendor/d3-shape.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        },
+        {
+          "path": "observations/eighteenmile_2023/map-layer-capture.json",
+          "bytes": 3819,
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/model-sources.json",
+          "bytes": 62644,
+          "sha256": "061f23a74dc5c73e11321284b4bfc45610f66d5439a467b9dc0ea5dc20094a5e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/NATIVE_IMPORT.md",
+          "bytes": 2049,
+          "sha256": "63d1bb4a80ded270809627177fb27acd884bfa3dcb90593687be0d4267df8b13"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/capture.json",
+          "bytes": 32826,
+          "sha256": "434dd8d458e646581224878cc4f4f110f91100af25048f30b70765c8e872fe9c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/derived/annual_loads.csv",
+          "bytes": 13416,
+          "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/derived/period_loads.csv",
+          "bytes": 141817,
+          "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/derived/summary.json",
+          "bytes": 35142,
+          "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/DMR_LOADS.md",
+          "bytes": 9421,
+          "sha256": "fb5b82f3654b14562ed02024308c955e7d081a49d8f8c7b229167cff6ad5d71f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+          "bytes": 11329,
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/dmr_records.csv",
+          "bytes": 515108,
+          "sha256": "220204d5858981b56a203bb94e3a0a7459706e2ec037bee8b6e12a6503634ac9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/derived/facility_monthly.csv",
+          "bytes": 232814,
+          "sha256": "167f05866888f290d19385a6eb06a9c33e7c071ca5a7d523c0d7db7b8cef1252"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/derived/gauge_monthly.csv",
+          "bytes": 1502,
+          "sha256": "2839d45b09f54c3525fcf370aa60d17d97263eae51c8ec251772852356869bee"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/derived/summary.json",
+          "bytes": 7039,
+          "sha256": "2b5d1e55ee3c39646fc4867d9e5105d5509bd46130a8db8fa7089cf8e5afecb6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/derived/upstream_annual.csv",
+          "bytes": 1373,
+          "sha256": "791e1f2fdbf9ef7b96b8f94a1463bdcdb4ddca139e7eca5839a37f23921887f0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/derived/upstream_monthly.csv",
+          "bytes": 25897,
+          "sha256": "2978b536683e51bf0962ed24ebf7deca75e8092d0eef5e3c9d75f1554db25430"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/inputs.json",
+          "bytes": 2215,
+          "sha256": "89b565d43e67b665a27254e778351eb20e80dfbcbfda3707accf3b20df9426a4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/inputs/outfall_gauge_relations.csv",
+          "bytes": 3398,
+          "sha256": "6d76f4cc627de9acaa79de11af9df936e6ee3a941e19dceccc5c5d778ae501b2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/inputs/period_loads.csv",
+          "bytes": 141817,
+          "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/inputs/usgs_02186702_2023_original.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/model-sources.json",
+          "bytes": 6154,
+          "sha256": "2fdd6c67ff73bf41b7838275a764fbc434cf099bd7d4b7476877345709f33d58"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/monthly_flow_core.mjs",
+          "bytes": 11375,
+          "sha256": "308d1b9ee0b13653b0dd285569d5eacd79eb6e215c7dc62a42bc8aaf1cb590a0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/README.md",
+          "bytes": 5960,
+          "sha256": "f5265db21f936204d267db0130930809ca9a7b487f0692d72c8169ea5ac76f4d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/flow_context/rebuild_monthly_flow.mjs",
+          "bytes": 8530,
+          "sha256": "cd388d37dcc6522a16ac9c0c4879a7f7a06b9eec72ced694bb75f5a85c0d8e51"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/map-layer-capture.json",
+          "bytes": 10478,
+          "sha256": "c6a83003f474bd031a485f397cfda2e61722ca61cd0fd33a594ea661c56dbb73"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/model-sources.json",
+          "bytes": 31528,
+          "sha256": "3a621b46350c20488ce6410188dce8247e182a44b8519196802f2ea875840d9f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/NATIVE_IMPORT.md",
+          "bytes": 2813,
+          "sha256": "6e2abe804ef62ab5f1400bfc89bceb2d7931e579c809201a65ae3a526bf3b1da"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/des_four_npdes_outfall_features.json",
+          "bytes": 19462,
+          "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/des_npdes_layer21_metadata.json",
+          "bytes": 12951,
+          "sha256": "f1260fda40481fe22524971a144d72002011017c3b2b49f91c325854c56f6ecb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00530_2023.json",
+          "bytes": 117178,
+          "sha256": "f6d782ebb4512132adef1acac25aa9d68b678e30886b680e7bc7056675d7a9d0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00610_2023.json",
+          "bytes": 35170,
+          "sha256": "33e0a6acbf1c21cbf8a1543e8f926d02f7628430e6d12ce83152f3586e0539ee"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00620_2023.json",
+          "bytes": 118771,
+          "sha256": "aecf79e0f1a2194921879b55dde6a7172ccb41302d543957369ee6768a72548a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_00665_2023.json",
+          "bytes": 88067,
+          "sha256": "f138da40ca7d73b3f96a901e478446468bbafdc48d3a5cd79c655efe28b41067"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_2023_inventory.json",
+          "bytes": 3804,
+          "sha256": "e7d8ee26dacc939acf25b07de891de1be561f5860deac8c82dec86c403858e3f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0000477_50050_2023.json",
+          "bytes": 59043,
+          "sha256": "48ad94742a16e0d06f78cc94a72e648bed1d309983308ec89ffee13bc359289a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00530_2023.json",
+          "bytes": 59193,
+          "sha256": "325975cd22e1d74318f578a9a8f3fcde7dea1e34f3091da92a28847ea33ce413"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00600_2023.json",
+          "bytes": 58421,
+          "sha256": "955e7700bd4efa980a971e72b88aa91402080f255afb318ef1a8729c51665811"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00610_2023.json",
+          "bytes": 62375,
+          "sha256": "01b3bb30d74dd2c75d8470eafe800e5cc57c582ba8e4de8e018df703ffb03a25"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_00665_2023.json",
+          "bytes": 58753,
+          "sha256": "99106e19c23fe55a507dc8b7cfa7a4c37f7bf3f78c6c75ca7e729dca3935f3ff"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_2023_inventory.json",
+          "bytes": 4166,
+          "sha256": "8d812c75b4c1185252b8ba0dcf30fe3a03c0fa37bfce84eee909ed97dfdeabf9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0035700_50050_2023.json",
+          "bytes": 30109,
+          "sha256": "deaca45550a108094158be654e6c8abc5f5f0638b30738d1c24c3e5402b0d9c4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00530_2023.json",
+          "bytes": 58956,
+          "sha256": "bb9aa13245f9d1938542ec6dd3174e3e6e948ad59e688b33393dc624b7d28dbf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00600_2023.json",
+          "bytes": 53692,
+          "sha256": "a54c2fb1e278e7a28269c215c10962ec557818dcb92d5cbb146d839dc1142fe6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00610_2023.json",
+          "bytes": 59611,
+          "sha256": "adec3fb0bd7df3d06da23f4b6d23c74db7eda3e071ec29e8400ec2aaee617407"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_00665_2023.json",
+          "bytes": 58896,
+          "sha256": "a47883f829abe169d618dc79b07d0ecddd6e1c6050e8063e5d62eed338f5dcdb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_inventory.json",
+          "bytes": 3520,
+          "sha256": "af3f79a8d09fe3d494922b411375a380f876b8e1a91fb9fbeb610911954c69d4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_2023_january_all_parameters.json",
+          "bytes": 51680,
+          "sha256": "68b577ac0275ad491d154d4cb5932803819bfec82855f9a0bdc5dac7aefc15da"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0042994_50050_2023.json",
+          "bytes": 30014,
+          "sha256": "ba2c20ea9abc201f344c2be9b6444d2a97b2fa48eb7be4c15514f2d3cd71b675"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00530_2023.json",
+          "bytes": 58966,
+          "sha256": "5a5270796fc2e91206a4db2ac70c605d7edd0833e0568399b2947291607f377e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00600_2023.json",
+          "bytes": 53687,
+          "sha256": "62775560cf5a0e39f3ac4956285d5b93bb0e4a33be95400c30d51012cd35356f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00610_2023.json",
+          "bytes": 60354,
+          "sha256": "6b8b6995af174e32940ce86a4c65b26559d4e089b778c65eb49d3fec4b236eb1"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_00665_2023.json",
+          "bytes": 58803,
+          "sha256": "667e8edd23dc8e50248f74f4f28dc3883b19f1779654e222854e5b227122b204"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_inventory.json",
+          "bytes": 3855,
+          "sha256": "43d195131e1615a1d29244d5e7ba5cea7e3099a2ce7acf80e8ef8cf68a1b704e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_2023_january_all_parameters.json",
+          "bytes": 43563,
+          "sha256": "1cccc9a8bdfe005dc27ee1362469bd2536d020eddfd52ed53e2fa0a04a476e5d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/originals/SC0047856_50050_2023.json",
+          "bytes": 30013,
+          "sha256": "9f546e57a7a4c1b8c5a70eed279c06cc53358e7511ffa1f7b0bc0430dfe7c0d3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing-model-sources.json",
+          "bytes": 22896,
+          "sha256": "5c92445d829edc194770a75811d2f8d7c70ba960fcebeaabafbd05782771584e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/capture.json",
+          "bytes": 5573,
+          "sha256": "dc4e6b0baeacc3776854886617d80f74d0b897f9279214acd79ef77558521911"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/derived/annual_quantities_with_routing.csv",
+          "bytes": 14034,
+          "sha256": "62ad3646420b25f53693fd6a02f2d6dcd4ea8a309763a4a3a6f306bd39dfba1c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/derived/outfall_gauge_relations.csv",
+          "bytes": 3398,
+          "sha256": "6d76f4cc627de9acaa79de11af9df936e6ee3a941e19dceccc5c5d778ae501b2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson",
+          "bytes": 8502,
+          "sha256": "3d719668f1e4e6f2de37186f8ebd03e37de01bc045f42782b5de3b437b8ce10e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson",
+          "bytes": 8562,
+          "sha256": "b5baceee2122c703325f4bb19692740e24b46aaa0eb30593e0e3c7cabfad52d4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/derived/reported_quantities_by_gauge_relation.csv",
+          "bytes": 7247,
+          "sha256": "aa755c73bf33c6bb0a15be6fa2b464547a9434d208e482a0d7d3f9f7c577df9c"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/derived/routing_summary.json",
+          "bytes": 24295,
+          "sha256": "6eefbf9de8cc14c227f6b156cf288ee6f2dc76be3333c576d026b0c872989205"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/originals/gauge_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/originals/gauge_upstream_flowlines.json",
+          "bytes": 2889,
+          "sha256": "6ce13adba6daeae9aad3c0df882fe45b387c1a9dc924ecbce46871e811f4b9ac"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/originals/gauge_whole_basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/originals/SC0000477_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "7dda475f10cd9aeec371dcb0bf460b1e02234575a9bf7965a189dd5811ac25e0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/originals/SC0035700_hydrolocation.json",
+          "bytes": 725,
+          "sha256": "65416857dc18cc941edba4a1f1ac437923331464227ee281fb66f8d29cedf9ad"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/originals/SC0042994_hydrolocation.json",
+          "bytes": 738,
+          "sha256": "03c8e90fa588799fb51e7eb7ba870febd46b8a800cbdb753b4645e727dc03adf"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/originals/SC0047856_hydrolocation.json",
+          "bytes": 727,
+          "sha256": "b67163f914768c4918677625ed05f3985c21a67604858aedccc3d25ce557e4e5"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/originals/state_outfalls_wgs84.json",
+          "bytes": 1124,
+          "sha256": "ea36ea9293d44b5de33db11d7da48c6cc2b22eee016a1b8d6ddf61afdd5b15d4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/rebuild_routing.mjs",
+          "bytes": 2237,
+          "sha256": "f50d691e20ea218efbde8095330e239be891031dd1186e64369b01c67e845083"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/routing_core.mjs",
+          "bytes": 8010,
+          "sha256": "a842d08202f145f66ece040693c4a689406450e8c02c4f5bc5c0bcff92c44ce5"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/routing/ROUTING.md",
+          "bytes": 6094,
+          "sha256": "5d566d6960e311276e5a98d8e1bbc6a03051de76b94f624526d1f3d15da4c2e1"
+        },
+        {
+          "path": "observations/eighteenmile_2023/npdes/summarize_dmr.mjs",
+          "bytes": 20347,
+          "sha256": "dfd36aae420220a2e34a4bce98f29cd5ad715c20ecded4d6acf8c77924bd53f0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/build_paired_analysis.mjs",
+          "bytes": 2429,
+          "sha256": "6ef3f2d64800d3808e327e93d639b8518668dab0ce805d417b275f1fbf07e13a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/chlorophyll-pair-summary.csv",
+          "bytes": 1843,
+          "sha256": "76819273f6bcf20e67df4c60d75dd1eb2ea04df7e92092e3ffdd6d2fa7bdd8c6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/chlorophyll-pairs.csv",
+          "bytes": 34728,
+          "sha256": "857e88df18b3afd96e953b66d3d040a5ed47c148865b733039db6749b46dbe75"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/chlorophyll-station-summary.csv",
+          "bytes": 394,
+          "sha256": "a133e613bb42976311bad1185b36fa1ff510e73ae6a6b65483aed623c89e0836"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/cross-analyte-links.csv",
+          "bytes": 48164,
+          "sha256": "2ed47ca6dbbee1ee24a246a0c594ec5b60c058047b1f5cbe49f68efd4b0fce72"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/input-manifest.json",
+          "bytes": 3476,
+          "sha256": "3b3e8c4daa96c82b4f1943cec5b8fbf78727edf267965865cb12c4dc1ff13aab"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/methods.json",
+          "bytes": 2604,
+          "sha256": "4b674bf9ec972ae857000d04f710e1bae41553872165e6c49e1ad9735be97b23"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/microcystin-campaign-support.csv",
+          "bytes": 22959,
+          "sha256": "84268ac3973433dbff7bb0e93e5c18e48f62de40c32dbc5b3f4f090ec21174b2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/microcystin-pair-summary.csv",
+          "bytes": 999,
+          "sha256": "d4e6795d03face071f6ee69275fe10aad596a3b56432003106a7f51a8c09136e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/microcystin-pairs.csv",
+          "bytes": 32274,
+          "sha256": "951cc21b3ec387079a6243f7bde0f070b94550f09647fd8ef49ab6000395644a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+          "bytes": 12502,
+          "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/paired_analysis.mjs",
+          "bytes": 14000,
+          "sha256": "f550d2c2ac73dde011c4d052a17a1b9c11bd6e05f5239e44afb48bb2e667d874"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/paired_report.mjs",
+          "bytes": 14277,
+          "sha256": "97d5e652810e9dce7d56376599002c51089db3aee1be98bbfc8953d4c4f9ccc8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/paired-observations-report.html",
+          "bytes": 16606,
+          "sha256": "2eab15e17422dece65c34ceb4f4dcc8b7bdb5f4676fb208e8db5f22dfdd33b49"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/paired-observations.json",
+          "bytes": 456848,
+          "sha256": "db6a21764d0c56a18d55d73a4e179156f2a47de0c68fead5c825d815244afe0b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/README.md",
+          "bytes": 5057,
+          "sha256": "30dfdb28eaa342623c985f9142e031abdd4600d1a3f687f447f182cdbd6ef755"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_analysis/source-records.csv",
+          "bytes": 123444,
+          "sha256": "56f1fdc441d0039704877518a9059670cb201f24b8c4f19953ecd487813d1bbc"
+        },
+        {
+          "path": "observations/eighteenmile_2023/paired_station_observations.csv",
+          "bytes": 503,
+          "sha256": "f1bf9a6459b64cb4161e67be0ef5d5a0aeee6597f31b11748cb76f85d05ea971"
+        },
+        {
+          "path": "observations/eighteenmile_2023/README.md",
+          "bytes": 2360,
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/reported_npdes_permits.csv",
+          "bytes": 769,
+          "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2"
+        },
+        {
+          "path": "observations/eighteenmile_2023/seasonal_summaries.csv",
+          "bytes": 8170,
+          "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/source_notes.json",
+          "bytes": 3408,
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb"
+        },
+        {
+          "path": "observations/eighteenmile_2023/stations.csv",
+          "bytes": 2246,
+          "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/stations.json",
+          "bytes": 4331,
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/study_sites_nad83.geojson",
+          "bytes": 6449,
+          "sha256": "b9975a274834087c9de2e9d296576e57b75f1e216c9d20771c71aca75bfddad9"
+        },
+        {
+          "path": "observations/eighteenmile_2023/study_sites_wgs84.geojson",
+          "bytes": 4456,
+          "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95"
+        },
+        {
+          "path": "observations/eighteenmile_2023/study.json",
+          "bytes": 2697,
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8"
+        },
+        {
+          "path": "observations/eighteenmile_2023/surface_ranges.csv",
+          "bytes": 1234,
+          "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
+          "bytes": 34350,
+          "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
+          "bytes": 281844,
+          "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
+          "bytes": 10282,
+          "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/report-reconciliation.json",
+          "bytes": 6288,
+          "sha256": "f59fe99960e39ff224a9dabab97bcf4403054082d758f7fb41caf8e72cf91f10"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/source-acquisition.json",
+          "bytes": 3615,
+          "sha256": "20b01c904177216037d3e611f79fbe507a96a7ee696af73a3be472c42652207f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+          "bytes": 24946,
+          "sha256": "a4f36e75c22603e134e737bee3428cc9e4970cf017ecab907fb73869da02081f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-microcystins-2023-original.csv",
+          "bytes": 22213,
+          "sha256": "cede3d8895eb0b5122fac940403dab3277c8658ec2e0a401e57b66a96169cc88"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+          "bytes": 32166,
+          "sha256": "8118f52771b1bc87822e821f52c4980bdd8ab3471c8a5b790a9c8129ccf72f85"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-chlorophyll-schedule.csv",
+          "bytes": 4482,
+          "sha256": "b80145b5f8f8760e6cb134412e98eb6d553fc7c8a00eca1059c9530d5bb67112"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-observations.csv",
+          "bytes": 19733,
+          "sha256": "f5a33909cbcb030c25a8c1760bfbe5b84efe0a9061bad0655303223b24b1a522"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+          "bytes": 47412,
+          "sha256": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-series-coverage.csv",
+          "bytes": 1089,
+          "sha256": "1aff9be45f5288f03f56ff66f9483235f32e769a62d6e90a41c9ed87fd74a410"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+          "bytes": 1764,
+          "sha256": "85a33ed59d36327d6ec127e9d2f83cf688095103ef887b7ab1d408b45d4ec8e3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/build_flow_context.mjs",
+          "bytes": 2495,
+          "sha256": "f7504dd68a817b929597034c519c10fa931cf0aa10b60b1be759374362efb68f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/capture.json",
+          "bytes": 6595,
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/derived/activities.csv",
+          "bytes": 181411,
+          "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/derived/calendar.csv",
+          "bytes": 6430,
+          "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/derived/chlorophyll_summary.csv",
+          "bytes": 10709,
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/derived/coverage.csv",
+          "bytes": 92908,
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/derived/measurements.csv",
+          "bytes": 863082,
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/derived/selected_chlorophyll.csv",
+          "bytes": 98672,
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/derived/summary.json",
+          "bytes": 2993,
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/FLOW_CONTEXT_README.md",
+          "bytes": 3553,
+          "sha256": "e1f7884d510e1620772e4e80a260ff974f7eeed682372a42c5b27c1bc031c2b6"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/flow_context.mjs",
+          "bytes": 4678,
+          "sha256": "2d53a3b41a2a8a8032f1c05a2245c798b7c69a3c6cf761a3c5e922044607a3da"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/flow-context-sources.json",
+          "bytes": 2514,
+          "sha256": "1c846c4016acc44ab27b4e67bd5dd5a72115dd5d4fa88b07334ccd25e7a5cfde"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/normalize_core.mjs",
+          "bytes": 12817,
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/normalize.mjs",
+          "bytes": 1230,
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/observed_chlorophyll_nad83.geojson",
+          "bytes": 6096,
+          "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/observed_chlorophyll_wgs84.geojson",
+          "bytes": 4172,
+          "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-245-2023.csv",
+          "bytes": 11724,
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-375-2023.csv",
+          "bytes": 71625,
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-376-2023.csv",
+          "bytes": 71632,
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-591-2023.csv",
+          "bytes": 1754,
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-591-legacy-org-2023.csv",
+          "bytes": 1754,
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/README.md",
+          "bytes": 3362,
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa"
+        },
+        {
+          "path": "observations/eighteenmile_2023/wqp/study_flow_dates.csv",
+          "bytes": 27050,
+          "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/CALIBRATION_CONTEXT.md",
+          "bytes": 20608,
+          "sha256": "789a8d62c853e26891aec0939768a4c990e25f99725b4422a0c4a61e7f9616b5"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/calibration-context.json",
+          "bytes": 29339,
+          "sha256": "db0efcbadc09c23c401fbeef970e8d12f025cc52cb2924a73b45e4b07ccd5baa"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/calendar_month_flow.csv",
+          "bytes": 334352,
+          "sha256": "0ea7464700941ae5ff747629cde13f1ac003710e3ee7225b55ad0fa1f439995f"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/calendar_year_flow.csv",
+          "bytes": 29200,
+          "sha256": "79dd0fbc02203ec2994b971613376147fd02fd6905e3cf8f77a0559923d5b9bf"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/calendar_year_stage.csv",
+          "bytes": 650,
+          "sha256": "6035eacca48b465688d4edf1a39c236456a695c83b754b8687706cc8e7f8db64"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/coverage.json",
+          "bytes": 2168,
+          "sha256": "4f13fadd07a683dc2c08569529ad9fce2f3ec1e62649d8eeab0c583d2297919f"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+          "bytes": 2273280,
+          "sha256": "59df488cc9820a6eef7750d6938cf91573f701c8ad4683a6c102ec26c7a04863"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/daily_stage.csv",
+          "bytes": 60112,
+          "sha256": "ba0a82dcf20b48d037358b3273a0be0e1ef163571a3081d4ebff9e7f3b0d9959"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/eighteenmile_gage_whole_catchments.geojson",
+          "bytes": 41692,
+          "sha256": "8f19b120756c1a2822f8f0a2b977279cd0caa8f76c9002f3921cf176b8da3691"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/monitoring_stations_nad83.geojson",
+          "bytes": 155365,
+          "sha256": "b42d862f55d4dbf20dab9852f4f6ede927ae3977e80053a84ba17b588759b45e"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/nutrient_activity_total_nitrogen.csv",
+          "bytes": 6639,
+          "sha256": "abdd1ddee9852679dd2c6c174f4aed3e8602885f371a18ab765e65c720dfde04"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/nutrient_concentration_summary.csv",
+          "bytes": 1197,
+          "sha256": "fca1ba6019adb0976fc8212543890e98d4fd0ac9ded0951aecafc40757016e3e"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/nutrient_results_with_flow.csv",
+          "bytes": 36518,
+          "sha256": "67b8349bf110ff2ca012bb92a20a67894213d7a65d1f0bb62c6da6fdf87c7831"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/nutrient_source_coverage.csv",
+          "bytes": 1417,
+          "sha256": "51465ac5145a59f1b673da9ba81a0bdbdb83035193199d31a87c54f1c8c42d32"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/original_series_metadata.json",
+          "bytes": 135659,
+          "sha256": "c692f2c9f43c2effbec1d47c8d9ceda410175460c41cf7f0827a934c3f3e2765"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/derived/study_period_flow.csv",
+          "bytes": 5385,
+          "sha256": "df954baa0926a635bccb727f119cef8869328913ec2d7e892a25ae4b440e53d0"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/hydrology_core.mjs",
+          "bytes": 22803,
+          "sha256": "789d5d515e8eae2b9860d5291acb80d6923a88a8dfb805386304fdc027ef9bde"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/inputs.json",
+          "bytes": 48663,
+          "sha256": "6e1aab71f84ce1cbc690cbe79606188f9c5a8702d03c819acd96fdf476e30a02"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/model-sources.json",
+          "bytes": 25766,
+          "sha256": "48efe065df256ee81b614dbe42ac10efd17a2a3dd36e77b52aae9b700acecd37"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/compute.mjs",
+          "bytes": 14115,
+          "sha256": "7b6e2e6b3aeca619d965ac83bb7904f53c44c0939ee6334a3be3c6261e838d46"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/dated_values.csv",
+          "bytes": 171981,
+          "sha256": "0cccdbcc3831f376caad25bb81b783ab76dda3430197ace0927ec42a126e5a2b"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/import_into_workspace.py",
+          "bytes": 4092,
+          "sha256": "19d5ab4e4e39c40c73add805af0b52bedb6d6a40260f45709e30a043dcaff724"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/inputs.json",
+          "bytes": 1236,
+          "sha256": "bd74db1c9e62b5ec1726ce2242814b97c5ee04e7ab8946970018199e0b946e29"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/june12_contrast.csv",
+          "bytes": 3669,
+          "sha256": "fa4eef5696dbb8cca9cbc7aa0e031eebd89f269cf41ef3bc034a295ef4a2e93f"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/methods.json",
+          "bytes": 1544,
+          "sha256": "8ddc526972d3ec669d4b25a5de8dd886db7b3242cdf620bfe05ef4d8dc48222c"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/model-sources.json",
+          "bytes": 11704,
+          "sha256": "4429768ba2fafebb2399bb038282d943b598a49549436644247323cf8144e11b"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/README.md",
+          "bytes": 5573,
+          "sha256": "33ef6a32859f72cb81a935c41d976dfb160fd75057868bfd1b39472b310db852"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/replay.mjs",
+          "bytes": 1379,
+          "sha256": "9365a67a04973b1662724d779fdfe3ec336fa7290315c321a61b49263899950e"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/report-sections.json",
+          "bytes": 10624,
+          "sha256": "20dc830f374b351ed2f0d1c04d3b934300b3821237d07fbc4e880efdb97eaf3b"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/same_date.csv",
+          "bytes": 1922,
+          "sha256": "47d4516fee1f7a14089270b2ee1d3b270a3edb3c5ee1412d66c9bb8d31231392"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/sampling_calendar.csv",
+          "bytes": 8008,
+          "sha256": "c7775e8948e8ed775776bb3dab17a3f5b66252e88adc4bd5a8a80b4088674a89"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/station_contrasts.csv",
+          "bytes": 13645,
+          "sha256": "ee99785f67ecdd1673bee08d818e31b918d05c7690354fc17e77d71b6fb8b09b"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/nutrient_flow_contrasts/station_flow_summary.csv",
+          "bytes": 37633,
+          "sha256": "6034e6740be5fd3fd87be57c189b3acf62cedab8c68bc1e2eb16c37a28224fd7"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/chauga_series_metadata.json",
+          "bytes": 8239,
+          "sha256": "d965e63760432bc4e4e4536e241276536f81e858fcfaa1509c255e3c02548e75"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/chauga_stage_2023.json",
+          "bytes": 8421,
+          "sha256": "0f5db8664955927823f12e702c5e38a3f3ada7755afe93d9fd787bc666d0d792"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/chauga_stage_2024_2025.json",
+          "bytes": 55755,
+          "sha256": "f02b4f14cf350bf2d9859158ebc73a9dc0d9b073638d65a2975da1f6ca2e5647"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02176930_2020_2021.json",
+          "bytes": 55528,
+          "sha256": "2872c62a982c8a4b0ce6c956bc5e74f416bc10072163e45764cd6e4440c872f5"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02176930_2022_2023.json",
+          "bytes": 55669,
+          "sha256": "ffe7afbb905b7d707fc031a9f90a0e51d79c93be2ecc716abff82816816d7a26"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02176930_2024_2025.json",
+          "bytes": 55683,
+          "sha256": "9330b65674c5f2d991307d5a22ced1b3bd607ed11938ef9021b0a8948a59f995"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2020_2021.json",
+          "bytes": 55595,
+          "sha256": "3c3768fb8cba3444fedf6e4923ae0a0b888d0d88d9ec87f771e36086c68059a6"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+          "bytes": 55405,
+          "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2024_2025.json",
+          "bytes": 55290,
+          "sha256": "e7c587289520a672420db4cb1c29288c9bb908aa77daf2736ca4f3b8e9551c47"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02178400_2020_2021.json",
+          "bytes": 55484,
+          "sha256": "5267c47c0d3718de5031a601e1e6d44213db36a597b09e834391b9de625be299"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02178400_2022_2023.json",
+          "bytes": 55581,
+          "sha256": "2c6740dc5826b07b24221d5bcacf09bc5a405befc372058ce8afd62a8e47d199"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02178400_2024_2025.json",
+          "bytes": 55512,
+          "sha256": "627b12a65b6d0efe40840f3abe9522261886ab42bd4ba6888b0835f949eaa505"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02180400_2020_2021.json",
+          "bytes": 40728,
+          "sha256": "f758b79de4ef630bcadadd83a1c4dd8ea1f781e96cf18347228b646b0d5e1088"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02180400_2022_2023.json",
+          "bytes": 56001,
+          "sha256": "31d612ef5f75c6cab4de048771e465311398e133afc49dc4c389ed0919f7bd57"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02180400_2024_2025.json",
+          "bytes": 56072,
+          "sha256": "a30ce5ff5e2f5ee3d62044564825e57144ae9e8ead59ac46a72a3f7e8c41d26c"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02181350_2020_2021.json",
+          "bytes": 55965,
+          "sha256": "9e3f5d820a741f0b94af993d4adea5e5db7a0b4b26c1f8a839fca2dad878644a"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02181350_2022_2023.json",
+          "bytes": 55881,
+          "sha256": "975fa755c56c375d453680d0cda5badb9c1d571f08f54ff2bbf8f275e3950d4d"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02181350_2024_2025.json",
+          "bytes": 55838,
+          "sha256": "f186d856915ecc9d95f0063942c4839a4114fbdb601add3424041c18d99df6f4"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02181580_2020_2021.json",
+          "bytes": 56048,
+          "sha256": "afa80b13c3eb0bad6ba92f43b43739b0c32741eaee415c43cb4782917ce49907"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02181580_2022_2023.json",
+          "bytes": 55933,
+          "sha256": "126508186d0e8ad178f0f41a1c325afb26246665aebda0cc852fd08a52d3b413"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02181580_2024_2025.json",
+          "bytes": 56170,
+          "sha256": "e1012815e5e428d9296c77e34743216d7a68d63cf88e66c491859f17b8a57acd"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02185010_2020_2021.json",
+          "bytes": 42941,
+          "sha256": "1bbc36bd93fa29f3cece08a11dbd24b69e31e2e358d79d67248880276c6c06cb"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02185010_2022_2023.json",
+          "bytes": 55880,
+          "sha256": "a7def4a665b0e142d26d5347352cef6d4d8075d7e0653306c1108f71902054c7"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02185010_2024_2025.json",
+          "bytes": 56401,
+          "sha256": "c3e8bb20bc350a837fca318981ab6430d46d5a2aa25071dfa98b15718ab9e8db"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186000_2020_2021.json",
+          "bytes": 55442,
+          "sha256": "11b593a97242ec33540918885c25455a2d0f1d51b3549c5d87d22a47044b1723"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186000_2022_2023.json",
+          "bytes": 55624,
+          "sha256": "e70ad3b7bdf58f0dfe283b2b93bde3584ba51344d545fe013208edc651f14783"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186000_2024_2025.json",
+          "bytes": 55880,
+          "sha256": "803f1c5a3af7b57434c1fbb671c098ed0abcb681e05fbd25a179f1c80e9ef751"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186645_2020_2021.json",
+          "bytes": 2442,
+          "sha256": "4af67973f7a8cdde1a6c2056cfe79995cf7e0337b28aaa6cd58ae11e7d5e2e14"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186645_2022_2023.json",
+          "bytes": 19939,
+          "sha256": "480a6a503ed916e739dbf5d68f233cf1488590ee5af86e7bb96a3bad124584f9"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186645_2024_2025.json",
+          "bytes": 55934,
+          "sha256": "17fd8028a244bf4ebe0480d65079f087ab29fc88eebb24396841aa5241d614e9"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2020_2020.json",
+          "bytes": 29226,
+          "sha256": "9e2e9bb3ea640d84bca1b1cf1a90b1073ec5506f58461cf8012330dfad4fbd4c"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2021_2021.json",
+          "bytes": 29353,
+          "sha256": "8fb74ba84877b38995350ecd4120c8437ada515893d12af7d52d6d93a23bc933"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2022_2022.json",
+          "bytes": 29216,
+          "sha256": "8428422778feb5b07534db9b49f55ec4eab19b1297451b8a82ff41b094e07b32"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2024_2024.json",
+          "bytes": 29295,
+          "sha256": "03f7561b6e5a41948e97934a74c300645ba70f10b574148b56050115e4e98650"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2025_2025.json",
+          "bytes": 29522,
+          "sha256": "2247249df5fe769f9cec48479e61646d0b3fd5d90398c46a9ad4f35099bb848e"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02187910_2020_2021.json",
+          "bytes": 56094,
+          "sha256": "915bfbb45a13b9b4b66e0bb251a40e823ad8e2ee39bb62fdcb0251446fff53f3"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02187910_2022_2023.json",
+          "bytes": 55791,
+          "sha256": "5371e44939230f8f62e8f2c38eb529e3865831d1c520ad02b54e68a1e892ab70"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02187910_2024_2025.json",
+          "bytes": 56514,
+          "sha256": "17c5470800a2f70280bc8231d8b6ae68f3dacbe867c1954ae973256879691895"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02188600_2020_2021.json",
+          "bytes": 55927,
+          "sha256": "08735af3e5de4fbdbfb1d562fb2fef86f6e606a9054faddd74e41c90221ed032"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02188600_2022_2023.json",
+          "bytes": 56114,
+          "sha256": "5bc4b297173f08e4e529faa0dd845c40372b6d75bc8bd58a9975ac8299677b81"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02188600_2024_2025.json",
+          "bytes": 56178,
+          "sha256": "f8e9c8893f4cb2050342d8c16a7c45f730d831ba6925d8ebda543bc72cce92e2"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02191227_2020_2021.json",
+          "bytes": 55965,
+          "sha256": "8f7de521d23c02269168950dba482e3103e03768ff5937aeb912ac502e37c756"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02191227_2022_2023.json",
+          "bytes": 55913,
+          "sha256": "e3650eae08d0c591a89a35dc0a17652d219561fa9941ed59445ef08f0a1c4b36"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02191227_2024_2025.json",
+          "bytes": 56054,
+          "sha256": "7b0e470c59dada23c2a3bd736a11e8789dc2228d993b64a0d492104f7f2c6bfa"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02191300_2020_2021.json",
+          "bytes": 55540,
+          "sha256": "c3c96f66a841e9b49ae2edc0de805e5319d4a9d8d67fb83f4f13e952a0bb3fc3"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02191300_2022_2023.json",
+          "bytes": 55518,
+          "sha256": "a2d5727d2c80c5e76229149a8404e8175e3b330d81397441fcae6a18ff465631"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02191300_2024_2025.json",
+          "bytes": 55383,
+          "sha256": "db483fa220aa0b7315475f3335075b45428564cd2ce5a16f1b9e6df3a3317bc4"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02192000_2020_2021.json",
+          "bytes": 56009,
+          "sha256": "bf847ef6120559dfd7b03e28ec862c6b23713f12213c8fab4b494f2c019872e2"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02192000_2022_2023.json",
+          "bytes": 55553,
+          "sha256": "b49261c25aeba2dd3ed2ead185d5d5568b1b75658ca608cd8461cb11b5c2c9da"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02192000_2024_2025.json",
+          "bytes": 55577,
+          "sha256": "2b6e880259b2d2242df9b1df4a2a9b66b20b601664cac5b9c9284691fa1aa89f"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02192500_2020_2021.json",
+          "bytes": 55506,
+          "sha256": "f9100025aa603ac2bc3a80af34c1195e84063081fc7d8cfd0cd957813cc46ce6"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02192500_2022_2023.json",
+          "bytes": 55605,
+          "sha256": "f46e28faf8e2ff9bbcf6d07da34f159f3eab4ed125d6493922b9df012252c698"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/daily/usgs_02192500_2024_2025.json",
+          "bytes": 55734,
+          "sha256": "5e82a1967c2f3c5163f4883c5c9a54a64f4956bdc9ab64a7cec467db22541073"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/eighteenmile_nldi_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/eighteenmile_nldi_whole_basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/eighteenmile_station_metadata.json",
+          "bytes": 3671,
+          "sha256": "24585cb3c63a1e92e38e371d3741628abd8cb7f8e08a8a84f205e35e0c407a56"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-268_2023.csv",
+          "bytes": 19192,
+          "sha256": "bcd93081e98fc9c9abdda3b920a1020052b6d56a60e6c3cb202d99bd36ad6400"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-374_2023.csv",
+          "bytes": 19783,
+          "sha256": "9ee56281988e39171afac146d08f3c28df87c6f1a771d01cb8e61d7d89d900ed"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-838_2023.csv",
+          "bytes": 1754,
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-839_2023.csv",
+          "bytes": 1754,
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/nutrients/wqp_SV-840_2023.csv",
+          "bytes": 1754,
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/series_seneca_tugaloo.rdb",
+          "bytes": 10347,
+          "sha256": "cc8866b8fd3a5a224346b1b1696b16c0673d76d616e9ee67f05be48f482c9707"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/series_upper_savannah_broad.rdb",
+          "bytes": 7811,
+          "sha256": "c22ce4ce0219d11366d256cea880526ec01627f599e9ea35abbc49b54ddb4fbb"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/sites_seneca_tugaloo.rdb",
+          "bytes": 9026,
+          "sha256": "c32e2e296a92464471a09a4c5275af31252d99782be2b3cc68757e6425834f32"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/sites_upper_savannah_broad.rdb",
+          "bytes": 12446,
+          "sha256": "df6fdf7ffc31001e93dc739c4989c233c136c75ce02ebda269943c9bfef5c994"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/usgs_daily_queryables.json",
+          "bytes": 19821,
+          "sha256": "574b3d93e2d64f1d861b798a626b900d72dc414e59d3d0a0c3a1c226226ea637"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/usgs_nldi_basin_method.html",
+          "bytes": 4962,
+          "sha256": "3eea0f5fa49dc48e1b650adad82daa06ce0f6daf7a319b2c3de7efed4c9ca2de"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/original/usgs_series_queryables.json",
+          "bytes": 9747,
+          "sha256": "3c635ccc35cdc40c1b5f843583655b6931e6610474ab2796ae3e1ed43a50fe03"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/README.md",
+          "bytes": 11469,
+          "sha256": "60a439ab4f0d14aea8e3e38f719c60e6f877e218f83bf442142491588318ad4d"
+        },
+        {
+          "path": "observations/observed_hydrology_20261013/rebuild_hydrology.mjs",
+          "bytes": 2411,
+          "sha256": "19ecc87b71a3e74c4ee714015e0885cd0d62a4570e1ff61fd60d9a88160354bc"
+        },
+        {
+          "path": "source_tools/assess_observed_context.mjs",
+          "bytes": 1764,
+          "sha256": "edbaa86c3dd8d54c999ffaba82f0bf874dae9a952b09df1a70288f3e3e9ced2f"
+        },
+        {
+          "path": "source_tools/build_observed_flow_report.mjs",
+          "bytes": 4476,
+          "sha256": "bcf126d94bb0134579e12676d584b7d8b6e317e08577fb142a82a0463e7b6ebe"
+        },
+        {
+          "path": "source_tools/observed_context.mjs",
+          "bytes": 15516,
+          "sha256": "71f9929288059da19124886e04cb0808a919424ce742dfc9066b869276e110e9"
+        },
+        {
+          "path": "source_tools/observed_flow_inputs.mjs",
+          "bytes": 7617,
+          "sha256": "68de68f2b2348447bda1816ebdb4708b5192a382e0ccc8053e0785ab00164b1d"
+        },
+        {
+          "path": "source_tools/observed_flow_map.mjs",
+          "bytes": 9144,
+          "sha256": "82161691eec7989fbf9763cf4fc56e0d9d1c920c5e78b0b99665a5e6e4b85d5d"
+        },
+        {
+          "path": "source_tools/observed_flow_report.mjs",
+          "bytes": 32743,
+          "sha256": "1b44442de38216f21a4f7e98d22ece6f5d63914cd82dbf523eb063529d19f6a0"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/CALIBRATION_CONTEXT.md",
+          "bytes": 8144,
+          "sha256": "c4d865c335fe40309909b1b116787a8b7209fa59830688fab88cef2a20782ce1"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/calibration_context.mjs",
+          "bytes": 11158,
+          "sha256": "ca69d3a00fbdf276fde107e2f28e5ac5236b215c1a586ad8048f7ac0f4d22143"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/calibration-inputs.json",
+          "bytes": 1786,
+          "sha256": "b64c7094b33dff5747c1ed1f16203c491c26723e32039812313dac74aa519a34"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derive-discharge.mjs",
+          "bytes": 8245,
+          "sha256": "e74fd12b74d3a5da67e5a4ad6c37699f0fed2f5e3b817e2e58358240ec38ae05"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/2023_reference_flow_context.csv",
+          "bytes": 4027,
+          "sha256": "c0affc764dffd97b0775ab28c450f1ebf168f5980ea941f6ed5ad9a03ffc3690"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_month_flow.csv",
+          "bytes": 348121,
+          "sha256": "13ef890e4656cefdf05a7daeb5763207504072b85e6ff2e7897c533d0f29276e"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calendar_year_flow.csv",
+          "bytes": 33415,
+          "sha256": "0ad6e1ebe8537d65e2b5725482f1f571b2291d224a05ccf6232b0adc3d5a39c1"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
+          "bytes": 30153,
+          "sha256": "7b3c37a20656ddfcfe630d47b0ebff831f26fa2df70125c31727fadcd4bd62d9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/calibration-coverage.json",
+          "bytes": 3824,
+          "sha256": "d337fad2db65b62fedd83bd9612d78d6ad65fcf2a2eefaef0fa7059b557b2c6c"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/daily-discharge.csv",
+          "bytes": 2399079,
+          "sha256": "d2bf012d49325226b2c5c4fb3bf365ce1f2cf46b798949d1eaef23506957d964"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.csv",
+          "bytes": 9682,
+          "sha256": "e24b4545a30712f390702315832ea2197d7b6c908b405e095dd8228747c327b7"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/station-year-coverage.json",
+          "bytes": 65562,
+          "sha256": "c1387806f3e6a8c26b8f3adb57ff7b601438b5c0c97c70e219af536752ca0247"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/derived/study_period_flow.csv",
+          "bytes": 5904,
+          "sha256": "53b70e15262ae352b22fe5c36d1768553a1669415459f47567dc4d9541409712"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/model-sources.json",
+          "bytes": 14382,
+          "sha256": "80c734ea0ac720295d8e202831c279503385f26e3fb56b4c56f793eb4e62d683"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
+          "bytes": 45027,
+          "sha256": "9465e8f4fd99aa93fb0f8fa55b5bb1dc0b89c798a50876056317fa72c68c9f7a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
+          "bytes": 8749,
+          "sha256": "0ed096240ed2a79c16e06c393a1952a5de188e0af7abd63c15ead4428698b238"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/gauge-catchment-applicability.csv",
+          "bytes": 7356,
+          "sha256": "4953cc3288adb2e44a8fad522499808a3def506a2c44e96a514960a499d063b6"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/gauge-catchment-applicability.json",
+          "bytes": 99965,
+          "sha256": "0e4e90484de6f057cef0ab186ae19c3b410d700a5c68b3fa84054f687df114af"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/gauge-catchment-membership.csv",
+          "bytes": 40067,
+          "sha256": "0bcaebdbe5ebe0aecce49a6b7d6ab4e7d31db28340bc1ee0e3150d20f42bfc44"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.csv",
+          "bytes": 10633,
+          "sha256": "33c74734e42c2a2b57abcb8074031731399bab928d7f84da148007f1a981c284"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/station-basin-bindings.json",
+          "bytes": 24197,
+          "sha256": "82ef58d3033676582d1759b08a64cf1d9be3528f12860c1817a9378697691cc4"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+          "bytes": 21927,
+          "sha256": "b7df40fc5bfd60cfc526dec7b86c6c71a50f7f98315f0169f3d3e1f70bd81f63"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/derived/upstream-whole-catchments.geojson",
+          "bytes": 838639,
+          "sha256": "649768194700a001ea8fe0f15f3022a314f70551aed67b6c37d08e8edf16902b"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/GEOGRAPHIC_SUPPORT.md",
+          "bytes": 4126,
+          "sha256": "2a81e07acc4ec01755699aa7ab9bc228bdc21b4246708a331171bf182475e2fa"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/geographic_support.mjs",
+          "bytes": 7686,
+          "sha256": "01db0ebd8ea3bd94939b34d4d6b70ed27ca77a7d42dedcb2858069933a56c12e"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/geographic-support-sources.json",
+          "bytes": 28534,
+          "sha256": "e414ed446f39e4bce2374b378a283bb0be2b7e2a6487cd5bf13463ca5f401e45"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/model-sources.json",
+          "bytes": 19991,
+          "sha256": "7f5c2985875bad50ebd0338cda43894d23a8632dbc1cf620096898871faf5687"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.feature.json",
+          "bytes": 596,
+          "sha256": "23d332963a69ffd5ae54242337ac98bb595ee310547e06176add067489113ed6"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193340.whole-basin.geojson",
+          "bytes": 9132,
+          "sha256": "a892378611a28fc798ca8100a49dc7f2be3c32c588247e5bca60d43d041a15d9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.feature.json",
+          "bytes": 595,
+          "sha256": "330228706772c62a4a4472af55b90184481a53effad631b65a537d2e54f04086"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02193500.whole-basin.geojson",
+          "bytes": 25562,
+          "sha256": "7e330aaac56c381b194700e05c293555880449d1b4285262d156d84f701a97e3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.feature.json",
+          "bytes": 604,
+          "sha256": "6a22d1aec28674fbe079481535e7e0fd7e3f39cfe3d7dcaf59704e28f4ef749c"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195320.whole-basin.geojson",
+          "bytes": 15832,
+          "sha256": "654965e9a73e1e06cc01f3e6206eb2ceb8c2024d3ae20f15199f93184b234697"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.feature.json",
+          "bytes": 605,
+          "sha256": "0efbb1fdd83ea1612d63d9c4253d57e51d11dea87dffe22d656da83ebf328083"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02195470.whole-basin.geojson",
+          "bytes": 13947,
+          "sha256": "78292e9aa36ef00e558317a90ec8becf0871168dcdc93fbca917e174c3fc54d8"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.feature.json",
+          "bytes": 595,
+          "sha256": "f800f80c0f73e8d32a0c922b1a3dc2af0f0e9cbc077581f3891cdd04e0d484be"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196000.whole-basin.geojson",
+          "bytes": 36821,
+          "sha256": "085fdb1de8ea007178c3d1255730588aaffdddfd92adb643b5df3f03de1589bd"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.feature.json",
+          "bytes": 563,
+          "sha256": "363f7f8adab932d1ef5af423ad8a704dcd5c190aab91518a41c092ccf2049b98"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196485.whole-basin.geojson",
+          "bytes": 154777,
+          "sha256": "469b2e058649bf0ed6998eb573d8f0fd341774d6e61c7305a63b1786e804838a"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.feature.json",
+          "bytes": 593,
+          "sha256": "008215b7586108aa1df798029ad169753f10e9d66a76a02fca9b2ce1be2e0e86"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196690.whole-basin.geojson",
+          "bytes": 18675,
+          "sha256": "2a9f50811427606366ef761afabae938ee40cf771054ffb74ed0bae193d0efad"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.feature.json",
+          "bytes": 615,
+          "sha256": "accc5487f229fa2392f180c49e247829ec795321a53818bba17b13f98666c707"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02196835.whole-basin.geojson",
+          "bytes": 4530,
+          "sha256": "bb97245eab693fc84942b9aba8df864ccf3f154a07c08b21b00fc7e97bf77df9"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.feature.json",
+          "bytes": 618,
+          "sha256": "9f1221b806b7383c2e19e786f457fd04aa49a1a67e5f9991e62fc18b6b5750a2"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021968385.whole-basin.geojson",
+          "bytes": 5534,
+          "sha256": "e61f9d14e4e36d1f8f9403356746eb9383a46a5a18a44879092085ca6ac58dec"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.feature.json",
+          "bytes": 596,
+          "sha256": "7fdf7e536999a2dacdbc14f14334b33048a1ff75f09b69a1307947006c0ce389"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197000.whole-basin.geojson",
+          "bytes": 163278,
+          "sha256": "66854edf59cb0cb32d7475a010ecdb64c26e14a55ec715b49de7e0a274a94cbc"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.feature.json",
+          "bytes": 606,
+          "sha256": "b1f4c70fd34553a70fa37d5ab27e9e114861fc25f169013a4d06746f9952f381"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197020.whole-basin.geojson",
+          "bytes": 7565,
+          "sha256": "e2b59cec104cc5bfcfea73c148ad6836885d7d933e6108f13c5f11d871e51ae5"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.feature.json",
+          "bytes": 605,
+          "sha256": "7fc729dc6815294332f3debe857972185d91fe2f96a9a0893b2b1f25cb4ad8ea"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/021973269.whole-basin.geojson",
+          "bytes": 177165,
+          "sha256": "9e3015314526dda15f773b584655b5643dad228c37e97de598460301aef5d5c3"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.feature.json",
+          "bytes": 615,
+          "sha256": "3af7e67b207ae68732f62228898382af2f998b69f83095c417918fe9128d368e"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/original/02197500.whole-basin.geojson",
+          "bytes": 191118,
+          "sha256": "0dc9ab16aab5836edd3b1ba002383966a7cecbd9b2524e77900d2572ae5bb668"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/README.md",
+          "bytes": 6637,
+          "sha256": "392685a3e8d36dcb0b6dbfbc0f37285f82c032b89f07adf531598d446bab0826"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/nldi/rebuild_geographic_support.mjs",
+          "bytes": 1623,
+          "sha256": "afce2d8fdcaa916751b0ea7c7f7892370f523618ff4468233f907334aa0928e0"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-discharge-series-catalog.tsv",
+          "bytes": 17523,
+          "sha256": "c9e2cf137da39cb1871b09bf6f99893a25dc83e1fe62f5607f07440d26dedaba"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2020.tsv",
+          "bytes": 133043,
+          "sha256": "54460e938caffff76a364b3a46b5867a42d6a40be894aac0ca0fbc90930dc75f"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2021.tsv",
+          "bytes": 140830,
+          "sha256": "f1c46f795512254222d0ecf872b81502b27a4007e638bdc659bb7b61feab5fea"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2022.tsv",
+          "bytes": 150441,
+          "sha256": "95f94a96ca5cc8e911f63b138a220a741e626feaf25d6036091cd1bd15b7ff8c"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2023.tsv",
+          "bytes": 158068,
+          "sha256": "df191ed9cb57638595c25f7a3c2eafd1727bb790d35f25f068f5f791feeb0c5d"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2024.tsv",
+          "bytes": 156274,
+          "sha256": "76f1693c81b47590567acab378073323025823b2bfe06d90f6206d0d8f8e94a0"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-huc05-07-daily-discharge-2025.tsv",
+          "bytes": 147925,
+          "sha256": "168459c0c71eadbcd43bcd10ecd5a9809013c3be1ffbfa01f27794b132841c3c"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
+          "bytes": 22544,
+          "sha256": "b770a323c67e91a328098aad3132da9fda7a83466875c6dc6855527475009c60"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/README.md",
+          "bytes": 5914,
+          "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
+          "bytes": 2975,
+          "sha256": "e8d1d790c17fe8f86c31374c6f4435d255d5a1e46c7febc2444a328872a41ccd"
+        },
+        {
+          "path": "source/hydrology-huc05-07-20261013/source-manifest.json",
+          "bytes": 19443,
+          "sha256": "1db072352acd22b55148fc8378d2c6b4b045804bb7cb43dd0589b816deab7797"
+        }
+      ]
+    }
+  ]
+}

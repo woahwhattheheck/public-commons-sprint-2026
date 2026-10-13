@@ -227,6 +227,19 @@ def _sections(report, report_sha256):
                 for row in report.get("common_support", [])
             ]),
         ]],
+        ["Producing model versions for the selected support", [
+            "Compatibility follows the versions that produced the completed selected model stages. "
+            "The original requested-version label remains provenance. Each metric uses its own model family: "
+            "NDR for nitrogen and phosphorus, SDR for sediment. An incompatible selected family remains "
+            "explicitly unavailable while other compatible metric cohorts remain interpretable.",
+            _table(["Metric", "Version support", "Producing versions", "Original explanation"], [
+                [row.get("metric"), row.get("native_version_state",
+                                          (row.get("native_versions") or {}).get("state")),
+                 (row.get("native_versions") or {}).get("versions"),
+                 row.get("native_version_reason", (row.get("native_versions") or {}).get("reason"))]
+                for row in report.get("common_support", [])
+            ]),
+        ]],
         ["Matched scenario effects and parameter interactions", [
             "The canonical scenario response is alternative minus baseline within the same parameter profile. "
             "A negative value is a reduction. A positive reduction in a Decision or delivery table uses the opposite sign. "
@@ -291,20 +304,22 @@ def _sections(report, report_sha256):
     ):
         sections.append([heading, [
             explanation,
-            _table(["Request", "Profile", "Parameter / units", "Rows", "Mean bias", "RMSE", "NSE", "Undefined reasons"], [
+            _table(["Request", "Profile", "Parameter / units", "Rows", "Mean bias", "RMSE", "NSE", "Score state", "Original reason"], [
                 [row.get("request_id"), profile(row.get("profile_id")),
                  str(row.get("parameter")) + " / " + str(row.get("units")),
                  (row.get(key) or {}).get("n"), (row.get(key) or {}).get("mean_bias"),
                  (row.get(key) or {}).get("rmse"), (row.get(key) or {}).get("nash_sutcliffe_efficiency"),
-                 (row.get(key) or {}).get("undefined_reasons")]
+                 row.get("score_state", "available" if row.get(key) else "unavailable"),
+                 {"native_versions": row.get("native_version_reason"),
+                  "undefined_metrics": (row.get(key) or {}).get("undefined_reasons")}]
                 for row in scores
             ]),
         ]])
     sections += [
         ["Original run matrix", [
-            _table(["Profile", "Scenario", "Native models", "State", "Original run"], [
+            _table(["Profile", "Scenario", "Native models", "Producing versions", "State", "Original run"], [
                 [profile(row.get("profile_id")), scenario(row.get("scenario_id")),
-                 row.get("models"), row.get("state"), row.get("run_id")]
+                 row.get("models"), row.get("native_version_summary"), row.get("state"), row.get("run_id")]
                 for row in report.get("run_matrix", [])
             ]),
         ]],

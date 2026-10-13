@@ -1,9 +1,9 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "24c49dd1c852eb863d6a89c7bd78cda71b5b15bc",
+  "source_reference_base": "2d8fe39c96ca83436896e439ca763f5d66097f54",
   "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe.",
   "external_source_edition": {
     "files": 62,
@@ -83,18 +83,18 @@
     },
     {
       "path": "measurement_workspace/study_context.py",
-      "bytes": 5481,
-      "sha256": "81f4087443bfc7c6c9cd21f851107fec940892aa0592c4bd7294cc0c4b2cbe89"
+      "bytes": 5856,
+      "sha256": "a58616563bab55818d79579cb706747b6be36bd35e6ec5f90944ac86ee2164db"
     },
     {
       "path": "measurement_workspace/SV833_OBSERVATIONS.md",
-      "bytes": 8147,
-      "sha256": "190609918e4eccd683d941d6d5a61b1068478fb83b18d1b3eda108bec9321f05"
+      "bytes": 9511,
+      "sha256": "febb3f395b6dd388ec5e47b10b7bf77cfda40761d0397dd413cfd92f185e043a"
     },
     {
       "path": "measurement_workspace/sv833_observations.py",
-      "bytes": 15137,
-      "sha256": "a20ec77953d227ddd982afdc25376c38455036b93ffbd974972f8a94f6ba8bc5"
+      "bytes": 16572,
+      "sha256": "3a964c8fdd6034a6b019bbef7fb3463512e103f85deacfe038533dbc4413fe2c"
     },
     {
       "path": "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
@@ -1068,8 +1068,8 @@
     },
     {
       "path": "operator/extensions/published-studies.json",
-      "bytes": 2476,
-      "sha256": "780b3a476f9c796dc4327ca0cca31fd3b44c57c5ac1b3f7b5d38b4542b7327a9"
+      "bytes": 2477,
+      "sha256": "1d9091ac64717cd40763dda859032c579ff8c958920c9822621b2e9108d7f4ac"
     },
     {
       "path": "operator/published_study_operator.py",
@@ -1502,6 +1502,121 @@
       "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
     },
     {
+      "path": "source/sv833-hydrologic-context-20261013/analysis.mjs",
+      "bytes": 8537,
+      "sha256": "c11c9cd17e76d902deb679cf3b16b14597806e0eb520015a632f937926ebb155"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/build_study.mjs",
+      "bytes": 2281,
+      "sha256": "16bd05098b6e7db10ea5292fa09c6eef26bbdb0c3fb0660b509cb67b7b953374"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-site-context.csv",
+      "bytes": 8785,
+      "sha256": "23f64c5f1685b8cf0ea0d49f6037df086c83efac36049bdc97177044eaab97e4"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-sites.geojson",
+      "bytes": 18479,
+      "sha256": "82ec3ee78a4b70cfd9630e9116bcce943898c12848570461a9927fc09c75e558"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/figures.mjs",
+      "bytes": 6761,
+      "sha256": "be6070388859465abe77501633b9ad56c02f502d4659aa3145c24732d2395173"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/hydrologic-context-summary.json",
+      "bytes": 53129,
+      "sha256": "b508ee23eef5cfd88081be18086c17bc8998477ab7dd117ca1b6930b56efb289"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/input-manifest.json",
+      "bytes": 2978,
+      "sha256": "696b45b08bb9a2a322fa5c8b72bdac3bfbbf55c8fdd7175a0d802baeb92b108f"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+      "bytes": 722,
+      "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+      "bytes": 7935,
+      "sha256": "b1fb44f94a4a4c2d13847ec5aea343214b1d81aff2695dd59661cc7531cdad51"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+      "bytes": 42,
+      "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+      "bytes": 7993,
+      "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+      "bytes": 23115,
+      "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+      "bytes": 575,
+      "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
+      "bytes": 1169,
+      "sha256": "7ea298f81303a29189514e469abfff214cf0b5865aa83d7482f4349675d9a336"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/README.md",
+      "bytes": 5587,
+      "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/report.mjs",
+      "bytes": 12342,
+      "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/station-location-representations.csv",
+      "bytes": 826,
+      "sha256": "5f5594cfd8cb482d4caa764ec36cac4eba0bef763bdb15409cb7f7db6197c25d"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/station-location-representations.geojson",
+      "bytes": 2408,
+      "sha256": "942862ece65a7499386a0193019481483d685549ada8185ba3c38707debe0496"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
+      "bytes": 50368,
+      "sha256": "3d8b675206ec1c132e21ef37d8ad00017ab6688fb3033396b24176033b8af9b2"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.svg",
+      "bytes": 31926,
+      "sha256": "bfc8e9a482c6d91345ad465c22d0fe4f8be3c21f05bfc84037442e6067ac43a3"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/upstream-original-reaches.geojson",
+      "bytes": 88567,
+      "sha256": "09230843f840849d17f0690e94f470a5efecd0e3558279f7eb3a94b6e53c834c"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/upstream-reach-inventory.csv",
+      "bytes": 17136,
+      "sha256": "2427af7ef18fd67e3dd83cbb2f3ee8ab9bbbb89b2ba1d00ea0946ecc7e309b8f"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/whole-upstream-catchments.geojson",
+      "bytes": 23893,
+      "sha256": "79b8613423a3489bf9f6e581c64e96f4d60f20896da68ab9a93db3e4cd50ac67"
+    },
+    {
       "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
       "bytes": 17210,
       "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
@@ -1550,6 +1665,11 @@
       "path": "source/sv833-water-quality-20261013/retained-assessment-context.json",
       "bytes": 8285,
       "sha256": "582f5465696d291e3e9de8d66357227f6f405422609f83dff7dc66c2aa6a87f5"
+    },
+    {
+      "path": "sv833_hydrologic_context.sources.json",
+      "bytes": 45695,
+      "sha256": "07b6237b0a81ed1776639d5d12e2d8c59cf021e7d34a711df0291c9fe74b0b9e"
     },
     {
       "path": "sv833_water_quality.sources.json",
@@ -1608,6 +1728,13 @@
       "original_result_rows": 610,
       "original_activities": 56,
       "original_source_files": 40
+    },
+    "sv833_hydrologic_context": {
+      "commit": "311bcfb5412e133cc92548d404d79ad61f89d08a",
+      "manifest": "sv833_hydrologic_context.sources.json",
+      "manifest_sha256": "07b6237b0a81ed1776639d5d12e2d8c59cf021e7d34a711df0291c9fe74b0b9e",
+      "source_files": 26,
+      "original_result_rows": 610
     }
   }
 }
