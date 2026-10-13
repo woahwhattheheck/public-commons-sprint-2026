@@ -80,6 +80,32 @@ def verify_binding(workspace, binding):
     return path
 
 
+
+def verify_retained_binding(workspace, binding):
+    """Verify original source objects without materializing a native source view."""
+    collection_id = binding.get("source_collection_id")
+    if not collection_id:
+        return verify_binding(workspace, binding)
+    from .common import relative_file
+    collection = workspace._get("sources", collection_id)
+    if collection["id"] != binding["source_record_id"]:
+        raise ContractError("Monitoring binding names a different retained source edition")
+    entries = [entry for entry in collection["entries"] if entry["id"] == binding["source_id"]]
+    if len(entries) != 1:
+        raise ContractError("Monitoring source entry is absent or ambiguous")
+    entry = entries[0]
+    if (entry.get("kind") != "vector" or entry["body"]["bytes"] != binding["bytes"]
+            or entry["body"]["sha256"] != binding["object_sha256"]):
+        raise ContractError("Monitoring binding differs from its retained vector source")
+    original = None
+    for body in [entry["body"], *entry.get("companions", []), collection["original_manifest"]]:
+        path = relative_file(workspace.root, body["object"])
+        if path.stat().st_size != body["bytes"] or file_sha256(path) != body["sha256"]:
+            raise ContractError("Original monitoring source or companion changed")
+        if original is None:
+            original = path
+    return original
+
 def export_source(workspace, label, binding):
     path, entry, collection = source_record(workspace, binding["source_id"], binding.get("source_collection_id"))
     verify_binding(workspace, binding)

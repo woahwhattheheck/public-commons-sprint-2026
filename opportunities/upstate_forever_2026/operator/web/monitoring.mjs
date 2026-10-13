@@ -25,7 +25,8 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
       try { sessionStorage.removeItem(key); } catch {}
     }
   };
-  let active = null, generation = 0, lastCompleted = null, updating = false;
+  let active = null, generation = 0, updating = false;
+  const completedByWorkspace = new Map();
   function workspace() {const key = getState()?.workspace_key;if(!key)throw Error('Select an original workspace.');return key;}
   async function transport(key, action, payload={}) {
     if(READS.has(action))return api('/api/monitoring?'+new URLSearchParams({workspace:key,action,payload:JSON.stringify(payload)}));
@@ -67,13 +68,20 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
   }
   async function update() {
     if (!active?.isConnected || active.busy || updating) return;
+    const node = active, key = workspace(), version = generation;
+    const current = () => active === node && generation === version &&
+      node.isConnected && workspace() === key;
     const completed = JSON.stringify((getState()?.tasks || []).filter(task =>
       task.state === 'complete' && (task.action?.startsWith('monitoring.') || task.action?.startsWith('source.'))
     ).map(task => task.id).sort());
-    if (completed === lastCompleted) return;
+    if (completed === completedByWorkspace.get(key)) return;
     updating = true;
-    try { await active.refresh(); await active.refreshSources(); lastCompleted = completed; }
-    finally { updating = false; }
+    try {
+      await node.refresh();
+      if (!current()) return;
+      await node.refreshSources();
+      if (current()) completedByWorkspace.set(key, completed);
+    } finally { updating = false; }
   }
   function detach(){generation++;if(active)active.remove();active=null;}
   return {mount,update,detach,render:()=>'',dispatch:()=>false};

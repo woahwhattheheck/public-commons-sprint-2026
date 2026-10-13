@@ -1,6 +1,6 @@
 # Ecosystem Sciences — monitoring design and field operations
 
-**ASTRA-MONITOR12 · 12 October 2026 · source delivery 1.2.0**
+**ASTRA-MONITOR12 · original source 1.2.0 · current integration 1.2.1**
 
 A complete additive workstream for the original Upper Savannah scientific
 Workspace: source-bound hydrologic coverage, constrained monitoring design,
@@ -273,3 +273,8 @@ The geodesic geometry and MILP calls use primary library interfaces:
 
 Observed local environment: Python 3.13, SciPy 1.17.0, Shapely 2.1.2,
 pyproj 3.7.2 and system Chromium. No hosted Actions or paid compute were invoked.
+
+
+## Current integration 1.2.1
+
+See `integrations/monitoring/RECEIVING.md` for the installed original registry and independent receiving workflow. Campaign exports accept optional `expected_revision_id`; the current browser supplies its selected immutable revision. Queued exports retain that selection and completed native file across task resumes. Full Workspace export uses the original operator-session lock while the complete campaign snapshot uses its existing monitoring lock. Passive catalogue and receiving reads leave absent collections and native source views untouched.
