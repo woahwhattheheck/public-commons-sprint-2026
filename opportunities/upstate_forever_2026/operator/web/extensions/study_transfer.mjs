@@ -1,3 +1,4 @@
+import {attachReceivedStudies,receivedFieldworkPreview} from '../received_studies.mjs';
 /** Selected editable scientific-study transfer in the original operator.
  * TokenJunkieLabs. Uses the original task queue, downloads and receiving form.
  */
@@ -7,6 +8,8 @@ const ROOTS = [
   ['runs', 'Native runs'],
   ['robust-decisions', 'Decision studies'],
   ['scientific-report-editions', 'Saved scientific reports'],
+  ['receiving-water-plans', 'Receiving-water source plans'],
+  ['receiving-water-analyses', 'Receiving-water analyses'],
   ['community-tables', 'Community source tables'],
   ['community-plans', 'Editable Community plans'],
   ['community-reports', 'Saved Community reports'],
@@ -22,6 +25,7 @@ const ROOTS = [
   ['monitoring_observed_contexts', 'Monitoring observational context']
 ];
 const rootLabels = Object.fromEntries(ROOTS);
+const monitoringOpenKinds=new Set(['monitoring_networks','monitoring_plans','monitoring_heads','monitoring_observed_contexts']);
 const phases = {
   queued:'Queued', running:'Working', resolving:'Reading study dependencies',
   staging:'Preparing original study files', decisions:'Saving decision history', investigations:'Saving investigation history',
@@ -52,6 +56,7 @@ export function attachStudyTransfer(host) {
     throw new TypeError('The study desk needs the original operator API and workspace state.');
   }
   let root=null,workspace=null,epoch=0,searchTimer=null,exportTimer=null;
+  const received=attachReceivedStudies({...host,getWorkspace:()=>host.getWorkspace?.()??host.getState()?.workspace_key});
   let catalogue={items:[],total:0,offset:0,limit:200,next_offset:null};
   let exportsPage={items:[],total:0,offset:0,limit:50,next_offset:null};
   let selected=new Map(),title='Selected scientific study',kind='',query='',selectedOnly=false,offset=0;
@@ -116,7 +121,8 @@ export function attachStudyTransfer(host) {
       '<div data-study-plan></div></section>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Study archives</h3>'+
       button('refresh-exports','Refresh exports')+'</div><div data-study-exports></div>'+
-      '<div class="st-pagination" data-study-export-pages></div></section>';
+      '<div class="st-pagination" data-study-export-pages></div></section>'+
+      '<section class="st-panel" data-study-received></section>';
     root.querySelector('[data-study-field="kind"]').value=kind;
     root.querySelector('[data-study-field="query"]').value=query;
     root.querySelector('[data-study-field="title"]').value=title;
@@ -153,6 +159,7 @@ export function attachStudyTransfer(host) {
     root.querySelector('[data-study-action="preview"]').textContent=busy==='preview'?'Reading contents…':'Preview contents';
     for(const field of root.querySelectorAll('[data-study-field]'))field.disabled=Boolean(busy);
     for(const field of root.querySelectorAll('[data-study-root]'))field.disabled=Boolean(busy)||field.dataset.studyUnavailable==='true';
+    for(const field of root.querySelectorAll('[data-study-action="open-monitoring"]'))field.disabled=Boolean(busy);
   }
 
   function renderCatalogue() {
@@ -176,6 +183,8 @@ export function attachStudyTransfer(host) {
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
             (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+
+            (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
+              ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
             '<td><span class="st-state">'+escapeHTML(row.state||'Saved')+'</span></td>'+
             '<td>'+escapeHTML(when(row.updated_at))+'</td></tr>';
@@ -235,6 +244,7 @@ export function attachStudyTransfer(host) {
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
       plan.related_result_issues.map(row=>'<li>'+escapeHTML(row.path)+': '+escapeHTML(row.message)+'</li>').join('')+'</ul></details>';
+    html+=receivedFieldworkPreview(plan.implementation_report_sources);
     body.innerHTML=html;
   }
 
@@ -410,7 +420,13 @@ export function attachStudyTransfer(host) {
     event.preventDefault();event.stopPropagation();
     const action=target.dataset.studyAction;
     try{
-      if(action==='reload'){await loadCatalogue();}
+      if(action==='open-monitoring'){
+        const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
+        if(!row||row.state==='unreadable'||!monitoringOpenKinds.has(row.kind))
+          throw new Error('Choose an available saved Monitoring record.');
+        if(typeof host.openDesk!=='function')throw new Error('Use the current native Monitoring desk to open this study.');
+        await host.openDesk('monitoring','openStudy',{workspace_key:workspace,kind:row.kind,id:row.id});
+      }else if(action==='reload'){await loadCatalogue();}
       else if(action==='select-page'){
         for(const row of visiblePage().items)if(row.state!=='unreadable')selected.set(keyOf(row),row);
         invalidatePlan();renderCatalogue();
@@ -436,7 +452,7 @@ export function attachStudyTransfer(host) {
         await transferHandler({workspace_key:workspace,task_id:task.id,
           study_id:task.result?.id,title:task._study_transfer?.title||task.payload?.title,archive:file});
       }
-    }catch(error){fail(error);}
+    }catch(error){fail(error);if(!root&&typeof host.toast==='function')host.toast(error.message||String(error));}
   }
 
   function reset(nextWorkspace) {
@@ -470,11 +486,13 @@ export function attachStudyTransfer(host) {
     root=container.ownerDocument.createElement('div');
     root.className='study-transfer';container.replaceChildren(root);
     epoch++;skeleton();
+    received.mount(root.querySelector('[data-study-received]'));
     if(lastError)notice(lastError,true);
     loadCatalogue();loadExports(0);
   }
 
   function detach() {
+    received.detach();
     epoch++;requestSerial++;
     clearTimeout(searchTimer);clearTimeout(exportTimer);searchTimer=null;exportTimer=null;
     for(const controller of requests)controller.abort();

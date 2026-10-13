@@ -1,3 +1,5 @@
+import {createPublishedReviewReports} from "./published_review_reports.mjs";
+
 const PARAMETERS = {
   total_phosphorus: "Total phosphorus", total_nitrogen: "Total nitrogen",
   total_chlorophyll_a: "Total chlorophyll-a", microcystins: "Microcystins",
@@ -52,6 +54,10 @@ export function createPublishedStudiesDesk(host) {
   let editGeneration = 0, savedReview = null, reviewChoice = "", reviewTitle = "", reviewNotes = "";
   let loadedStudy = null, loadedSelection = null, reviewLoading = false, reviewRequest = 0, interpretationMatches = true;
   let catalogPreference = null;
+  const reviewReports = createPublishedReviewReports(host, {
+    context: () => ({workspace, review:copy(savedReview), changed:reviewChanged(), busy, view:viewGeneration, edit:editGeneration}),
+    queue: (action, payload) => queue(action, payload),
+  });
 
   let geographicInput = null, geographicPreview = null, geographicChoice = "";
   let geographicLoading = false, geographicRequest = 0, geographicPrevious = null;
@@ -225,6 +231,7 @@ export function createPublishedStudiesDesk(host) {
       ? (selection.site_ids.length ? selection.site_ids.join(", ") : "All stations") + " · " + parameterText +
         " · " + strataText + " · " + (selection.year || "All years") + " · " + monthsText + " · Table: " + label(tab)
       : "Choose a retained study to create a review.";
+    reviewReports.render(find("[data-ps-review-report]"));
     for (const rootControl of node.querySelectorAll('form[data-ps-review-import] select[name="root_id"]')) {
       const prior = rootControl.value;
       rootControl.innerHTML = arr(catalog?.source_roots).map(root => '<option value="' + esc(root.id) + '">' + esc(root.label) + '</option>').join("");
@@ -328,6 +335,7 @@ export function createPublishedStudiesDesk(host) {
       '<div class="ps-actions"><button type="submit" data-ps-action="save-review" disabled>Save review</button>' +
       '<button type="button" data-ps-action="save-new-review" disabled>Save as new review</button>' +
       '<button type="button" data-ps-action="export-review" disabled>Export saved review ZIP</button></div></form>' +
+      '<section data-ps-review-report aria-label="Saved review scientific report"></section>' +
       '<details><summary>Import a complete review ZIP</summary><form data-ps-review-import><div class="ps-form-grid">' +
       '<label>Source folder<select name="root_id" required></select></label><label>Review ZIP path<input name="relative_path" required placeholder="reviews/study-review.zip"></label></div>' +
       '<p class="ps-help">Import restores the saved review and its exact original study edition from a previously exported review ZIP.</p>' +
@@ -720,7 +728,8 @@ export function createPublishedStudiesDesk(host) {
       pending.delete(task.id); operationIds.delete(entry.key);
       if (!node || workspace !== entry.workspace || host.getWorkspace() !== entry.workspace) continue;
       relevant = true;
-      if (taskCanSelect(entry) && !["published-study.export","published-study.report","published-study.review.export"].includes(entry.action)) preferred = task.result;
+      if (reviewReports.completed(task, entry)) continue;
+      if (taskCanSelect(entry) && !["published-study.export","published-study.report","published-study.review.export","published-study.review.prepare-source"].includes(entry.action)) preferred = task.result;
     }
     if (!relevant) return;
     status("Study task completed. " + (preferred ? "" : "Saved results are available in the catalogue and task."));
@@ -734,7 +743,7 @@ export function createPublishedStudiesDesk(host) {
       viewGeneration === expectedView && host.getWorkspace() === expectedWorkspace;
     const key = canonical({workspace,action,payload});
     if (!operationIds.has(key)) operationIds.set(key, "published-study-" + crypto.randomUUID());
-    if (!["published-study.export","published-study.report","published-study.review.export"].includes(action)) ++editGeneration;
+    if (!["published-study.export","published-study.report","published-study.review.export","published-study.review.prepare-source"].includes(action)) ++editGeneration;
     const entry = {action,key,workspace:expectedWorkspace,view:expectedView,edit:editGeneration};
     busy = true; renderCatalog(); renderReview(); status("Queueing study task…");
     try {
@@ -750,7 +759,8 @@ export function createPublishedStudiesDesk(host) {
       host.showTask(task.id);
       status("Study task " + task.id + " is " + task.state + ".");
       update(host.getState());
-    } catch (error) { if (active()) showError(error); }
+      return task;
+    } catch (error) { if (active()) showError(error); return null; }
     finally { if (active()) { busy = false; renderCatalog(); renderReview(); } }
   }
   function detail(id) {
@@ -887,7 +897,7 @@ export function createPublishedStudiesDesk(host) {
     renderReview(); update(state); refreshCatalog();
   }
   function detach() {
-    remember();
+    remember(); reviewReports.detach();
     events?.abort(); for (const controller of requests) controller.abort(); requests.clear();
     ++request; ++catalogRequest; ++viewGeneration; ++reviewRequest; ++geographicRequest; catalogPreference = null;
     if (node) node.classList.remove("published-studies-desk");

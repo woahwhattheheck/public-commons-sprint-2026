@@ -13,6 +13,7 @@ import tempfile
 MARKER = "ES-SUPERVISION-20261012"
 MEMBERS = ("model/native_execution.py", "model/native_worker.py",
            "operator/native_jobs.py", "operator/programme_jobs.py",
+           "operator/parameter_study_jobs.py", "operator/parameter_study_api.py",
            "operator/web/jobs.mjs", "operator/web/jobs.css", "operator/NATIVE_JOBS.md",
            "install_native_supervision.py")
 PREVIOUS = {
@@ -78,6 +79,17 @@ PREVIOUS.setdefault("operator/native_jobs.py", []).extend(["f1211b519a6ec10759d0
 PREVIOUS.setdefault("operator/web/jobs.mjs", []).extend(["a444e9902dd6166e55accac9bbe6abe85532b1d61d4779e839f7d9ee11971331"])
 PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).extend(["d39a47eaa42cefba9507ac5dbd496b099ab7c8ca95087bf0bb1f414a75ecc5da","41a54e92a90fd6666b2786e04272e0cfd1a5cb1a39915f96c46b1b2f7fb2ec6a","e2ae8fd5912f8cccf51eb44f21d78d187a321a98cca50f92cbb9a17637916799"])
 PREVIOUS.setdefault("install_native_supervision.py", []).extend(["9690dc3d9228c53f383e283684388df7775fc3264802287ea6847437f7fa419c"])
+
+# Exact maintained source before/after saved-study supervision (PR3535).
+PREVIOUS.setdefault("model/native_execution.py", []).extend(["2050d878373662c11dd1a80ef6e65ab824b64dbee463944ee6ddf31e66a199ce"])
+PREVIOUS.setdefault("model/native_worker.py", []).extend(["6943b73989ab5e82d271f4c5fc90c0970ae413c3d996aa9d541b9ce84f019894"])
+PREVIOUS.setdefault("operator/native_jobs.py", []).extend(["b90b1f44c6328d08a5e6fdb049d0a25b6ad864855d77f7fb07c0fc607f681835","6b5ec5d607e38ae8148e744b8b97935ba027d06dcd63190847b485abac4c4f5e"])
+PREVIOUS.setdefault("operator/programme_jobs.py", []).extend(["7ee1937019c583423a04a157975e32c74cf686f961ff7c519bf054cf588a9b98"])
+PREVIOUS.setdefault("operator/web/jobs.mjs", []).extend(["3954f68136baab7e93f5025c9a03e2355b1f1869db88f56c9ae2498278f464a9"])
+PREVIOUS.setdefault("operator/parameter_study_api.py", []).extend(["a6eb20105e6f6f099a3f2a97021d914b2a9535b38cf64ee55bebb55caa3e3a11"])
+PREVIOUS.setdefault("install_native_supervision.py", []).extend(["1deba14b65ed046c7283cdeb9a97bd0702027eafc44e62993a8c54c6e1ab6e12"])
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).extend(["4f3c1dd30be3c78b585c0070662649e3c985fc56da383317e2c491b4f593b39e"])
+PREVIOUS.setdefault("operator/parameter_study_jobs.py", []).extend(["181b0dc0c401bbe4b44a6a106e0fe6236c1c776247398d5ee693532d8602217d", "7fa5a1a929c80251e75d0273722c73f83715b6ebe94c706dade354b4f0c62919"])
 
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
@@ -358,10 +370,36 @@ def atomic_write(path, body, mode=0o644):
             pending.unlink(missing_ok=True)
 
 
+def parameter_study_dependency(body):
+    """Keep the installed scientific engine and check the adapter's new API."""
+    tree = ast.parse(body.decode("utf-8"))
+    declarations = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
+    for name, arguments in (
+            ("native_case_context", ("workspace", "key", "run_id")),
+            ("record_interruption", ("workspace", "key", "error"))):
+        node = declarations.get(name)
+        if node is None:
+            raise ValueError("Receive the current complete saved-study source before native supervision: "
+                             "model/parameter_studies.py lacks " + name)
+        args = node.args
+        positional = [*args.posonlyargs, *args.args]
+        names = tuple(item.arg for item in positional)
+        required = len(positional) - len(args.defaults)
+        if (names[:len(arguments)] != arguments or required > len(arguments)
+                or any(value is None for value in args.kw_defaults)):
+            raise ValueError("Compose the current saved-study adapter with its scientific API: " + name)
+    return {"bytes": len(body), "sha256": sha(body),
+            "functions": ["native_case_context", "record_interruption"],
+            "policy": "retain installed scientific source unchanged"}
+
+
 def install(application, increment, *, retention=False):
     application, increment = Path(application).resolve(strict=True), Path(increment).resolve(strict=True)
     originals = {name: (application / name).read_bytes()
                  for name in ("operator/server.py", "operator/web/app.mjs", "model/portable.py")}
+    dependency = "model/parameter_studies.py"
+    originals[dependency] = (application / dependency).read_bytes()
+    retained_dependencies = {dependency: parameter_study_dependency(originals[dependency])}
     changed = {
         "operator/server.py": server_patch(originals["operator/server.py"].decode("utf-8"), retention=retention).encode("utf-8"),
         "operator/web/app.mjs": browser_patch(originals["operator/web/app.mjs"].decode("utf-8")).encode("utf-8"),
@@ -406,10 +444,13 @@ def install(application, increment, *, retention=False):
         mode = destination.stat().st_mode & 0o777 if destination.exists() else 0o644
         if not destination.exists() or destination.read_bytes() != changed[name]:
             atomic_write(destination, changed[name], mode)
+    if (application / dependency).read_bytes() != originals[dependency]:
+        raise ValueError("The retained scientific source changed during native supervision installation")
     receipt = {"schema": "upstate.native-supervision-install/v1", "operation_id": MARKER,
                "installed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                "edition": edition,
                "preimages": {name: sha(body) for name, body in originals.items()},
+               "retained_dependencies": retained_dependencies,
                "files": {name: {"bytes": len(body), "sha256": sha(body)} for name, body in changed.items()}}
     if not (backup / "installation.json").exists():
         atomic_write(backup / "installation.json", (json.dumps(receipt, indent=2) + "\n").encode())

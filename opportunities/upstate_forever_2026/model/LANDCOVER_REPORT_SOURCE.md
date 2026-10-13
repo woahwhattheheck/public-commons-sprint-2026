@@ -122,3 +122,9 @@ SHA inventory, input mode, selected operands and bands, native area basis and
 fractional polygon-overlap method. A later unrelated run stage may complete;
 the original captured land-cover raster descriptor and its bytes must still
 match. Missing or differing original producing records surface before packaging.
+
+## Geographic and numerical figures
+
+Newly prepared report sources also contain the full original reporting-polygon map and three native vector figures for each selected comparison: unique-union class areas, signed group changes, and per-polygon support/change coverage. The completed ledger remains the numerical authority; each percentage retains its original denominator and every unavailable quantity remains in the attached figure data. The existing PDF and HTML composer consumes the retained specification and SVGs.
+
+See [Land-cover scientific figures](LANDCOVER_REPORT_FIGURES.md) for the full figure definitions, original geometry and implementation identities, output inventory and same-operation receiving course. Existing immutable report sources and their editable Study lineage remain readable.

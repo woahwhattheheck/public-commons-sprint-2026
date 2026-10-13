@@ -182,3 +182,9 @@ The source module parses original CSVs and resolves graph relations in the sourc
 - Original WQP station/result sources and complete source hashes: source/eighteenmile-stream-nutrients-20261013/source-manifest.json.
 - Existing paired source: observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv.
 - Original flow coverage: source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json.
+
+## Open an immutable context from Study transfer
+
+Use **Open in Monitoring** on an observational-context row in the original Study transfer catalogue. The desk reads that exact context and its bound network, then opens the existing Saved context controls. This supports both network-only contexts and contexts containing an earlier saved sampling calendar. The earlier calendar stays in the context; the current campaign is not substituted for it.
+
+The context opens with no new design or campaign selected. Its original observation filters, station matches, detailed source identity and complete package export work immediately. To calculate another preview, explicitly choose the desired retained design or campaign first. Switching networks clears old selection labels and download links. Pending openings are discarded if the Workspace or active Monitoring desk changes.

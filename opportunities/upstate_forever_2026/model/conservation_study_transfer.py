@@ -21,7 +21,9 @@ LABELS = {"conservation": "Conservation studies", "conservation-plans": "Conserv
           "conservation-exports": "Conservation decision packets",
           "conservation-report-sources": "Conservation report sources"}
 REPORT_SCHEMA = "upstate.conservation-report-source/v1"
-REPORT_EDITION = "conservation-saved-plan-report/1"
+REPORT_EDITIONS = frozenset(("conservation-saved-plan-report/1",
+                             "conservation-saved-plan-report/2",
+                             "conservation-saved-plan-report/3"))
 
 
 def _path(kind, key):
@@ -144,6 +146,32 @@ def _study(closure, key, value):
     closure._source_refs(bound, "Original Conservation bound criteria and geography")
 
 
+def _optimization_analysis(study, plan, analysis):
+    """Check the producer's retained decision contract using original JSON only."""
+    reference = plan["selection"].get("optimization")
+    if (not isinstance(reference, dict)
+            or reference.get("schema") != "upstate.conservation-optimization-reference/v1"
+            or reference.get("study_id") != study["id"]):
+        raise ValueError("Retain the original saved Conservation optimization reference.")
+    key = identifier(reference.get("analysis_id"))
+    selected = analysis.get("selected_ids")
+    if (analysis.get("schema") != "upstate.conservation-optimization/v1"
+            or analysis.get("id") != key
+            or digest({name: item for name, item in analysis.items() if name != "id"}) != key
+            or analysis.get("request") != reference.get("request")
+            or analysis.get("engine") != reference.get("engine")
+            or analysis.get("normalization") != reference.get("normalization")
+            or analysis.get("optimization") != reference.get("solver_result")
+            or analysis.get("input", {}).get("study_id") != study["id"]
+            or not isinstance(selected, list)
+            or any(not isinstance(item, str) for item in selected)
+            or selected != reference.get("selected_ids")
+            or len(selected) != len(set(selected))
+            or set(selected) != set(plan["selected_ids"])):
+        raise ValueError("The original optimization and selected Conservation portfolio differ.")
+    return {"id": key, "files": reference["files"]}
+
+
 def _plan(closure, key, value):
     study_id = identifier(value["study_id"])
     closure.need("conservation", study_id, "Original Conservation portfolio candidate study")
@@ -174,9 +202,7 @@ def _plan(closure, key, value):
             raise ValueError("The portfolio lost its original optimization analysis.")
         _files(closure, state["files"], prefix)
         analysis = _read_file(closure, state["files"]["analysis"])
-        if analysis.get("id") != analysis_id or digest(
-                {name: item for name, item in analysis.items() if name != "id"}) != analysis_id:
-            raise ValueError("The portfolio optimization content identity changed.")
+        _optimization_analysis(study, value, analysis)
         closure.tree(prefix)
     catalog = selection.get("catalog_selection")
     if catalog:
@@ -247,11 +273,11 @@ def _export(closure, key, value):
 
 
 def _receipt(closure, key, value):
-    if value.get("state") != "complete" or value.get("edition") != REPORT_EDITION:
+    if value.get("state") != "complete" or value.get("edition") not in REPORT_EDITIONS:
         raise ValueError("Choose a completed original Conservation report-source capture.")
     selection = value["selection"]
     if (selection.get("project_id") != closure.workspace.project["id"]
-            or selection.get("edition") != REPORT_EDITION
+            or selection.get("edition") != value["edition"]
             or any(selection.get(name) != value.get(name) for name in ("plan_id", "study_id", "title"))):
         raise ValueError("The Conservation report source belongs to another original selection.")
     closure.tree("conservation-report-sources/" + key)
@@ -445,7 +471,7 @@ def include_source(closure, collection_id, entry):
     key = identifier(origin.get("id"))
     if (entry.get("kind") != "document" or entry.get("role") != observed_context.ROLE
             or entry.get("id") != "conservation-portfolio-" + key
-            or recipe.get("schema") != observed_context.SCHEMA or recipe.get("edition") != REPORT_EDITION
+            or recipe.get("schema") != observed_context.SCHEMA or recipe.get("edition") not in REPORT_EDITIONS
             or origin.get("schema") != REPORT_SCHEMA or metadata.get("origin") != origin):
         raise ValueError("The saved Conservation report differs from its original source producer.")
     members = {}
@@ -481,6 +507,24 @@ def include_source(closure, collection_id, entry):
             or originals.get("schema") != "upstate.conservation-report-originals/v1"
             or originals.get("study_id") != study_id):
         raise ValueError("The Conservation report lost its original study, portfolio or candidates.")
+    optimization = None
+    # Edition 1 predates separate optimization companions. Keep that immutable
+    # source valid; its editable plan still retains the original analysis tree.
+    if recipe["edition"] != "conservation-saved-plan-report/1":
+        reference = plan["selection"].get("optimization")
+        if reference is not None:
+            roles = {"analysis": "analysis.json", "candidates": "candidates.csv",
+                     "report": "index.html"}
+            if (not isinstance(reference, dict)
+                    or not isinstance(reference.get("files"), dict)
+                    or set(reference["files"]) != set(roles)):
+                raise ValueError("The Conservation report needs its original optimization files.")
+            for role, name in roles.items():
+                if not _same(reference["files"][role], members.get("optimization/" + name)):
+                    raise ValueError("The Conservation report lost an original optimization companion.")
+            optimization = _optimization_analysis(study, plan, read("optimization/analysis.json"))
+        elif any(name.startswith("optimization/") for name in members):
+            raise ValueError("The Conservation report has optimization files without its saved decision.")
     local = origin.get("project_id") == closure.workspace.project["id"]
     if not isinstance(origin.get("project_id"), str) or not origin["project_id"]:
         raise ValueError("The Conservation report needs its original project identity.")
@@ -502,7 +546,11 @@ def include_source(closure, collection_id, entry):
         identity = receipt.get("selection") or {}
         _identity("conservation-report-sources", key, receipt)
         original_entry = _source_entry(closure, receipt["source"])
-        if (identity.get("project_id") != origin["project_id"]
+        if (receipt.get("edition") != recipe["edition"]
+                or identity.get("edition") != recipe["edition"]
+                or (recipe["edition"] != "conservation-saved-plan-report/1"
+                    and identity.get("optimization") != optimization)
+                or identity.get("project_id") != origin["project_id"]
                 or identity.get("source_entries") != originals["sources"]
                 or identity.get("plan_id") != plan_id or identity.get("study_id") != study_id
                 or identity.get("packet", {}).get("id") != origin.get("packet_id")

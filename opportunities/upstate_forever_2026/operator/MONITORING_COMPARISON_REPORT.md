@@ -1,6 +1,6 @@
 # Saved Monitoring comparisons in the scientific report
 
-The original Monitoring report panel can prepare a scientific report source from an exact saved budget comparison. It uses the existing report store, native task queue and ordered delivery form.
+The original Monitoring report panel can prepare a scientific report source from an exact saved budget comparison. It uses the existing report store, native task queue and scientific report composer.
 
 ## Choose the report source
 
@@ -10,7 +10,8 @@ The original Monitoring report panel can prepare a scientific report source from
 4. Choose the exact saved comparison. The panel reads the original comparison and shows its title, number of original plans and selected baseline.
 5. Enter the **Report source title** and choose the existing **Scientific delivery**, or keep **New report selection**.
 6. Select **Prepare scientific report source**.
-7. When the original task completes, select **Open prepared report form** and review the existing delivery's native runs, source selections and ordering before preparing that delivery.
+7. When the original task completes, select **Open scientific report**. The existing Sources screen opens its scientific report composer with the prepared ordered sources. Review the selection, select **Preview selected sources**, then **Prepare PDF, HTML and data**.
+8. To combine the sources with model runs, use the separate **Open model delivery** control and review the selected delivery's native runs and settings.
 
 The current saved plan/campaign option remains the default. A comparison selection is explicit and independent of the currently open single plan. Each saved comparison retains its original frontier, ordered plans, baseline, cost and coverage values, solver states, and any selected observed-context source editions.
 
@@ -20,7 +21,9 @@ Working titles are retained for each exact plan, campaign revision or comparison
 
 The panel keeps its existing durable request ledger. Before a request is submitted, its exact comparison ID, title, optional delivery ID and operation identity are retained. Retrying a lost response reenters that original operation. An accepted task remains available through **Open saved operation**.
 
-Completed comparison report sources appear in **Saved monitoring report sources**, labeled **budget comparison**. Choose a retained source and select **Open saved report source**, then reopen its prepared report form. Downloads use the original source tickets.
+Completed comparison report sources appear in **Saved monitoring report sources**, labeled **budget comparison**. Choose a retained source and select **Open saved report source**, then select **Open scientific report**. Downloads use the original source tickets.
+
+The scientific composer opens independently of model runs. It preserves an existing report draft, appends each incoming source once in its supplied order, and uses the prepared title when the draft has no title. Existing draft title and contact fields stay intact. The separate model-delivery route retains the original delivery's run and configuration choices.
 
 The saved source can be added to an existing ordered scientific delivery. It can also travel with the full editable Workspace, which retains the original comparison and all of its source records.
 

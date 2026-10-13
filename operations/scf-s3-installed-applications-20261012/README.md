@@ -64,6 +64,8 @@ python3 -B installed-receiving/launch-installed-receiving.py \
 
 The launcher registers one operation, the original Node command and its exact source, cache and browser paths. It requests 768 MiB memory plus the original 256 MiB shared reserve, and 256 MiB installation space with a 32 MiB disk reserve. The foreground remains the original owner while the browser and local services run. A previously registered input is resumed through its existing record.
 
+The wrapper uses the maintained `start_foreground` entry point. Its cleanup covers both registration and the startup summary: once the supervisor is acquired, an inspection or output failure still enters the original handoff. Fresh launches and reused operations report the native summary's current record, state and liveness. Select a complete maintained host that exports `start_foreground` and `native_result_view.select`; the inspected current source is Commons commit `d793fc353514d265d6dbec3cdc129e2d4145f38c`.
+
 The worker retains `original-input.json` before work. The shared receiving file helper writes and fsyncs a complete temporary file before publishing a new immutable name or replacing the current journal. An interrupted filesystem write therefore leaves the final checkpoint unmodified; matching retained bytes remain recoverable. It verifies the source archive, calls the original `prepareRuntimeInstall`, and reads the original source/profile identity. If preparation was interrupted before its install plan was published, the maintained `recoverRuntime` creates one linked receiving directory and preserves the partial source.
 
 The offline intake checks all carrier parts and both source locks. It streams the selected package archives into a private npm cache without allocating a second combined tar. The two included Commons cache readers validate package-location graphs, registry integrity, scoped/nested packages and all required original archives. Their original Apache-2.0 license is in `LICENSE.commons`.
@@ -74,7 +76,7 @@ The maintained runtime installer then runs offline `npm ci`, imports the actual 
 
 The original browser uses Applications to review, save, adopt, start and open the managed S3 merchant. The merchant saves source and payment terms, selects the original versioned object by HEAD, prepares its original package, stages an SF82 release, activates that release and starts its seller.
 
-The customer receives the native payment challenge and the selected historical object's exact `version-one` bytes through the original paid transport. The original package's object and offer descriptors remain bound to that selection.
+The customer request receives the original 402 payment challenge before any provider GET. The receiving then opens the same reviewed S3 source through its original object adapter and verifies the historical `version-one` bytes. The browser downloads both complete customer descriptors and checks their byte counts and hashes against the original release.
 
 The same browser tab then edits both source and payment without saving. Applications Stop drains its owned authoring console, SF82 release console and seller. A normal fresh Start reopens the same merchant at its retained authoring port with its new capability. The existing tab keeps its browser origin and recovers the dirty draft and pending operation identifiers. The original import files are moved before restart, proving the merchant reopens its saved revision. The program checks that reopening adds no object HEAD, saves the recovered revision, reopens the retained seller/customer delivery and closes the final owned services.
 
@@ -94,6 +96,16 @@ python3 -B installed-receiving/resume-installed-receiving.py \
 For a retained recoverable launch failure, first inspect the original native record. Pass its exact eligible failure SHA with `--recover-failure`. The maintained recovery archives the original failure and state, validates the original request and resumes the same foreground operation. Existing live or completed records are reconciled by the native engine.
 
 The actual 99D0 registration exposed an older runtime's missing document-custody reader. Its corrected, already-existing runtime is `runtime-62c14-document-custody-260abed3/host`, complete identity `e6b2a5205a100814b34633229362eb847593bb4be6b8383a444be424da2d67e8`. The original eligible failure SHA is `076c829bbb0c58bf73d0506d235ca65b7f127728bbb123ef6ebffd873d646748`. Its supported recovery reached the original recovery-directory creation, where the receiving filesystem returned ENOSPC. The saved operation remains `scf-s3-applications-installed-99d0-20261012`; source, input and failure remain retained.
+
+### Restore source and inputs after a host replacement
+
+Keep the original operation and input selection while reconciling the original host record. The retained private input has SHA-256 `48a5bd383151d8bf3fa42524a2591f5611dad372696a003347f16e1412d3188e`. On the replacement host, verify the complete archive and every extracted source-manifest entry before invoking the installer. The original selected archive contains 3,481 source files, totaling 46,881,480 bytes.
+
+Reopen the public dependency carrier by its complete 26,112,000-byte identity. Its four original byte slices and the six original package/lock profiles remain the intake inputs. Check the complete SDK lock and the original S3 lock; `awsCache` names the cache's parent directory, and the original AWS compressed objects belong below `_cacache/content-v2/<algorithm>/<first two hex>/<next two hex>/<remaining hex>`. Verify all 26 original AWS archives against the locked integrity values before installation.
+
+Keep the fixture and browser selected in the original input. Reconcile an interrupted archive transfer by inspecting its original destination, retained temporary files and owning process before continuing it. A completed download must match its full byte count and hash before extraction. The existing original fixture, workspace and provider journal stay with their operation when present.
+
+Restore the complete maintained host's import closure from one coherent source selection and check its full file identities. Reopen an existing native record through the resume command above. If the original record belongs to a replaced host, retain that host's original failure and ownership observations with the restored input, and reconcile the original execution before registering a continuation. The maintained native engine continues to own admission, records, supervision and finalization.
 
 If an executed product phase fails, preserve that attempt and its journal, correct the concrete failure and use one linked execution against the same installed source, provider and merchant checkpoint. The runtime installer and merchant APIs govern their own recovery.
 

@@ -1,0 +1,30 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "carbon-customer-workspaces",
+  "description": "Source-owned agent operation of original Carbon customer and GiveCredit donor workspaces, complete originals, statements and independent receiving",
+  "components": [
+    "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/README.md",
+    "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/connection.schema.json",
+    "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/index.d.mts"
+  ],
+  "commands": {
+    "carbon-customer-agent": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/cli.mjs",
+    "carbon-customer-agent-receiving": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/receiving.mjs"
+  },
+  "commandDescriptions": {
+    "carbon-customer-agent": "Configure and operate original Carbon customer and donor workspaces through source-owned Merchant tools",
+    "carbon-customer-agent-receiving": "Operate the full customer-agent import, saved statement, lost-response recovery, complete exports and independent receiving journey from an original retained Carbon edition"
+  },
+  "exports": {
+    "./carbon/customer-agent": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/index.mjs"
+    }
+  },
+  "merchantProviders": {
+    "carbon-customer-workspaces": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/merchant-provider.mjs"
+  }
+}

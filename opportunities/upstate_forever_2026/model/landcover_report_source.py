@@ -17,7 +17,7 @@ from .common import (atomic_json, describe_file, digest, file_digest, held,
 from .reuse import copy_verified, destination_file
 
 SCHEMA = "upstate.landcover-report-source/v1"
-EDITION = "saved-landcover-report/1"
+EDITION = "saved-landcover-report/2"
 DIRECTORY = "landcover-report-sources"
 
 
@@ -371,6 +371,9 @@ def prepare(workspace, spec):
     edition, binding, report = state["edition"], state["binding"], state["report"]
     if edition.get("state") != "complete" or report.get("complete") is not True:
         raise ValueError("Choose a completed original land-cover ledger")
+    from . import landcover_report_figures
+    figure_implementation = {name: item["sha256"]
+                             for name, item in landcover_report_figures.implementation().items()}
     title = _title(spec.get("title", edition["title"]))
     originals = _original_sources(workspace, binding)
     native_members = _run_members(workspace, binding, report)
@@ -382,6 +385,7 @@ def prepare(workspace, spec):
         "project_id": workspace.project["id"], "ledger_id": edition["id"],
         "title": title, "ledger_edition": edition_file, "signature": report["signature"],
         "source_entries": originals, "native_raster_members": native_members,
+        "figure_implementation": figure_implementation,
     }
     key = digest(identity)
     directory = workspace.root / DIRECTORY / key
@@ -421,6 +425,22 @@ def prepare(workspace, spec):
                                               "sha256": item["sha256"]})
         for item in native_members:
             retain("run-rasters/" + _relative(item["path"]), item)
+        reference, comparisons = _operands(binding, report)
+        labels = {name: "Reference: " + reference["label"] + ". Comparison: " + comparisons[name]["label"]
+                  for name in report["scenarios"]}
+        figures = landcover_report_figures.prepare(directory, edition, report, labels, figure_implementation)
+        for item in figures["files"]:
+            name = _relative(item["path"])
+            if name in members:
+                raise ValueError("Land-cover figure collided with an original member")
+            members[name] = item
+        sections.append(["Saved geographic and numerical figures", [
+            "The vector map retains the original reporting polygons. Numerical figures use the completed "
+            "unique-union transition matrix and every reporting polygon on its selected common support. "
+            "Full numerical values, unavailable quantities, original IDs and figure implementation are attached.",
+            _links([("Complete land-cover figure specification", figures["figure_spec"]),
+                    ("Every original figure quantity", "figures/landcover-figure-data.json")]),
+        ]])
         recipe = {
             "schema": observed_context.SCHEMA, "edition": EDITION, "title": title,
             "origin": {"schema": SCHEMA, "id": key, "project_id": workspace.project["id"],
@@ -429,9 +449,11 @@ def prepare(workspace, spec):
                        "area_method": "fractional_polygon_overlap",
                        "area_basis": report["grid"]["area_basis"]},
             "inputs": [members[name] for name in sorted(members)], "sections": sections,
+            "figure_spec": figures["figure_spec"], "figures": figures["figures"],
             "source_links": ["records/source-bindings.json", "ledger/input-bindings.json",
                              "ledger/edition.json", "ledger/results/ledger.json",
-                             "ledger/landcover-report.zip", "ledger/results/report.html"],
+                             "ledger/landcover-report.zip", "ledger/results/report.html",
+                             figures["figure_spec"], "figures/landcover-figure-data.json"],
         }
         # Check every link against the exact published inventory before import.
         for unused, blocks in sections:
