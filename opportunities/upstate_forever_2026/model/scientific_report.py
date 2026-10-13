@@ -18,7 +18,7 @@ from .model_selection import run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v16-original-context-footprints-readable-tables-reference-basis-v1"
+REPORT_VERSION = "upstate.scientific-report/v17-readable-source-links-reference-basis-v1"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -1182,6 +1182,32 @@ def report_pdf(path, title, sections, *, contact, source_records,
             body = escape(value).replace("\n", "<br/>")
         return Paragraph(body, style or styles["BodyText"])
 
+    def source_links(block):
+        """Shorten only path-derived labels; preserve explicit source titles."""
+        targets = [_relative_link(item["path"]) for item in block["items"]]
+        titles = [str(item["title"]) for item in block["items"]]
+        path_titles = [
+            title == target or ("/" in title and target.endswith("/" + title))
+            for title, target in zip(titles, targets)
+        ]
+        for index, (title, target) in enumerate(zip(titles, targets)):
+            label = title
+            if path_titles[index]:
+                parts = target.split("/")
+                for count in range(1, len(parts) + 1):
+                    candidate = "/".join(parts[-count:])
+                    conflict = any(
+                        other_target != target
+                        and ((path_titles[other] and
+                              "/".join(targets[other].split("/")[-count:]) == candidate)
+                             or (not path_titles[other] and titles[other] == candidate))
+                        for other, other_target in enumerate(targets) if other != index
+                    )
+                    if not conflict:
+                        label = candidate
+                        break
+            yield target, label
+
     def append(block):
         if isinstance(block, dict) and block.get("kind") == "figure":
             from .scientific_figures import panel_drawings
@@ -1197,11 +1223,10 @@ def report_pdf(path, title, sections, *, contact, source_records,
                 drawings[-1], Spacer(1, .05 * inch), paragraph(figure["caption"]),
             ]))
         elif isinstance(block, dict) and block.get("kind") == "links":
-            for item in block["items"]:
-                relative = _relative_link(item["path"])
+            for relative, label in source_links(block):
                 story.append(Paragraph('<link href="' + html_escape(relative, quote=True) + '">' +
-                    escape(str(item["title"])) + "</link>", styles["BodyText"]))
-                story.extend([paragraph(relative, cell_style), Spacer(1, .05 * inch)])
+                    escape(label) + "</link>", styles["BodyText"]))
+                story.append(Spacer(1, .05 * inch))
         elif isinstance(block, dict) and block.get("kind") == "table":
             if block.get("caption"):
                 story.extend([paragraph(block["caption"]), Spacer(1, .05 * inch)])
