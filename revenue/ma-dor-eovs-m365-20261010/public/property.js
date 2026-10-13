@@ -114,7 +114,7 @@ function pendingView(){
  $('pending').hidden=!pending;$('pending-detail').textContent=pending?json(pending):'';
  $('retry-pending').hidden=true;$('return-draft').hidden=true;$('resume-pending').hidden=true;
 }
-function clearPending(){pending=null;sessionStorage.removeItem(key('pending'));pendingView();}
+function clearPending(){sessionStorage.removeItem(key('pending'));pending=null;pendingView();}
 function retainPending(){sessionStorage.setItem(key('pending'),json(pending));pendingView();}
 async function inspectPending(){
  if(!pending)return;const r=await api('operation.get',{id:pending.payload.operation_id});
