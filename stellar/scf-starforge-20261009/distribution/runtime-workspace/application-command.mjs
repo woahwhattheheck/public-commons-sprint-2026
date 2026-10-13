@@ -4,7 +4,7 @@ import { readdir, lstat, access } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, operationId,
-  recordId, operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now } from './storage.mjs';
+  recordId, operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now, runtimeWorkspaceError } from './storage.mjs';
 import { managedResult } from './managed-result.mjs';
 import { applicationEnvironment } from './application-environment.mjs';
 export { applicationEnvironment };
@@ -173,7 +173,7 @@ async function terminalRequest(root, id) {
   need(request.operation === 'managed-run' && request.terminal === true, 'APPLICATION_TERMINAL_REQUIRED');
   return { directory, request };
 }
-export async function readApplicationTerminal(root, { operationId: id, applicationId } = {}) {
+export async function readApplicationTerminal(root, { operationId: id, applicationId } = {}, observations = null) {
   const { directory, request } = await terminalRequest(root, id);
   need(request.applicationId === recordId(applicationId), 'APPLICATION_OPERATION_CHANGED');
   const process = await readJSON(join(directory, 'terminal-process.json'), true);
@@ -182,14 +182,34 @@ export async function readApplicationTerminal(root, { operationId: id, applicati
   const state = await readJSON(join(directory, 'state.json'), true);
   const commandResult = await readJSON(join(directory, 'command-result.json'), true);
   const managedOutcome = managedResult(state, commandResult);
-  const active = !result && await operationRunning(join(directory, 'worker.lock'));
+  let active, observation = null;
+  if (result || observations && state?.phase !== 'RUNNING') {
+    active = false;
+    observation = { status: 'CURRENT', source: 'RETAINED', checkedAt: now() };
+  } else if (observations) {
+    const observed = observations.get(id);
+    if (observed?.phase === state.phase && observed.updatedAt === state.updatedAt) {
+      active = observed.workerActive === true || observed.commandActive === true ? true :
+        observed.workerActive === null || observed.commandActive === null ? null : false;
+      observation = observed.observation;
+    } else {
+      active = null;
+      observation = { status: 'UNAVAILABLE', source: 'RECORD', checkedAt: now(),
+        error: { code: 'RUNTIME_WORKSPACE_OBSERVATION_CHANGED',
+          message: 'The original terminal operation changed during this refresh. Refresh its current status.' } };
+    }
+  } else active = await operationRunning(join(directory, 'worker.lock'));
   const names = (await readdir(join(directory, 'terminal-inputs')).catch(error =>
     error.code === 'ENOENT' ? [] : Promise.reject(error))).filter(name => /^[a-f0-9-]{36}\.json$/.test(name));
   const receipts = await Promise.all(names.map(name => readJSON(join(directory, 'terminal-inputs', name))));
   receipts.sort((a, b) => b.sequence - a.sequence);
-  let output = { text: '', totalBytes: 0, offset: 0 };
-  try { output = await tailFile(join(directory, 'worker.log')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  return { operationId: id, ready: active && Boolean(process) && device?.inputTTY === true && device?.outputTTY === true, active, process, device, result,
+  let output;
+  try { output = { available: true, ...await tailFile(join(directory, 'worker.log')) }; }
+  catch (error) {
+    output = { available: false, state: error.code === 'ENOENT' ? 'NOT_CREATED' : 'UNAVAILABLE',
+      text: '', totalBytes: 0, offset: 0, error: runtimeWorkspaceError(error, 'RUNTIME_WORKSPACE_LOG_UNAVAILABLE') };
+  }
+  return { operationId: id, ready: active === true && Boolean(process) && device?.inputTTY === true && device?.outputTTY === true, active, observation, process, device, result,
     managedOutcome, output, inputs: receipts.slice(0, 40) };
 }
 export async function sendApplicationTerminal(root, { operationId: id, applicationId, inputId, text } = {}) {

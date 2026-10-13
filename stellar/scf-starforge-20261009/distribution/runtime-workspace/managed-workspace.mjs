@@ -10,7 +10,7 @@ import { validatePythonManagedCommand, pythonManagedLaunch } from '../python-run
 import { activate, rollback, doctor } from '../../sf46-release/product.mjs';
 import { inspectMerchantRuntime, adoptMerchantRuntime, inspectInstalledRuntime } from '../../sf46-release/runtime-package.mjs';
 import { HOME_SCHEMA, MANIFEST, releaseId, validateId, verifyRelease, atomicFile, withHomeLock } from '../../sf46-release/release-core.mjs';
-import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
+import { absolute, privateDirectory, optionalPrivateEntries, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
   plain, need, digest, json, canonical, now, workerAlive, processIdentity, operationLease, runtimeWorkspaceError } from './storage.mjs';
 
 export const managedOperationFields = Object.freeze({
@@ -38,7 +38,6 @@ export async function initializeManagedWorkspace(root) {
   }
 }
 async function homeRecord(root, homeId) {
-  await initializeManagedWorkspace(root);
   const record = await readJSON(pathFor(root, 'managed-homes', homeId));
   need(record.id === homeId && absolute(record.directory), 'MANAGED_HOME_RECORD_INVALID');
   return record;
@@ -113,7 +112,6 @@ export async function openManagedHome(root, { directory, label } = {}) {
 // selector and review inventory used by the Managed workspace.
 export async function managedHome(root, homeId) {
   recordId(homeId);
-  await initializeManagedWorkspace(root);
   const record = await readJSON(pathFor(root, 'managed-homes', homeId), true);
   if (!record) return null;
   need(record.id === homeId && absolute(record.directory), 'MANAGED_HOME_RECORD_INVALID');
@@ -121,8 +119,7 @@ export async function managedHome(root, homeId) {
   catch (error) { return { ...record, phase: 'UNAVAILABLE', error: asError(error), releases: [], active: null }; }
 }
 export async function managedState(root, { homeId = null } = {}) {
-  await initializeManagedWorkspace(root);
-  const names = (await readdir(join(root, 'managed-homes'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name)).sort();
+  const names = (await optionalPrivateEntries(join(root, 'managed-homes'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name)).sort();
   const homes = await Promise.all(names.map(async name => {
     const record = await readJSON(join(root, 'managed-homes', name));
     try { return await homeView(record); }
@@ -131,7 +128,7 @@ export async function managedState(root, { homeId = null } = {}) {
   const selected = homeId ? homes.find(item => item.id === recordId(homeId)) ?? null : homes[0] ?? null;
   const reviews = [];
   if (selected) {
-    const names = (await readdir(join(root, 'managed-reviews'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name));
+    const names = (await optionalPrivateEntries(join(root, 'managed-reviews'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name));
     for (const name of names) {
       const review = await readJSON(join(root, 'managed-reviews', name));
       if (review.homeId === selected.id) reviews.push({ ...review, current: review.homeRevision === selected.revision });
