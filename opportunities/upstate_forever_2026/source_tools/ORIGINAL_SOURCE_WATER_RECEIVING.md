@@ -4,6 +4,8 @@ The application includes the complete original 217-HUC receiving command. It
 creates or reuses the saved receptor network, prepares the four ARJWS and 32 PRWD
 upstream polygon subsets, imports those original vectors into the scientific
 Workspace, and retains both the graph product and a complete Workspace backup.
+It also registers the unchanged full 217-HUC domain as its own native vector source,
+with the complete original graph/profile/report files as companions.
 
 Use the existing operation and the first equipped receiver that records an
 admission in the project thread. Other sessions can receive its complete product
@@ -49,6 +51,8 @@ application and source admission. Its outputs are under
 
 - `admission.json`: actual admitted runtime and original input.
 - `network-result.json`: complete original graph result, including source binding.
+- `original-domain-source.json`: the selectable original217 vector collection/source,
+  original body and decoded hashes, and native HUC12 identifier field.
 - `prepared-areas-result.json`: complete prepared areas and source collection.
 - `receiving.json`: actual Workspace UUID, network and preparation IDs,
   product directory, original source binding, area counts and product ZIP identity.
@@ -65,6 +69,12 @@ its own admission and result files. Return the original output directory's JSON
 records and both actual archives to the same project operation.
 
 The graph stays under `Workspace/receptor-networks/<network-id>`.
+The independent domain source is `original-model-domain`, titled
+“Original model domain — complete 217 HUC12 watersheds”. Existing Station geography,
+microbial studies and other native vector selectors can choose this collection.
+The original body, source CRS, full profile, links, memberships and report companions
+remain unchanged. Repeated receiving reuses the same retained source edition.
+
 Prepared original areas stay under
 `Workspace/receptor-scenario-areas/<prepared-id>` and their imported
 source collection. Open the receiving Workspace's Source water desk to select
