@@ -11,7 +11,9 @@
         "operator/web/monitoring_field_assignment.mjs",
         "operator/web/monitoring_field_assignment.css",
         "source_tools/receive_monitoring_field_assignment.py",
-        "source/monitoring_field_assignment/RECEIVING.md"
+        "source/monitoring_field_assignment/RECEIVING.md",
+        "source_tools/monitoring_field_assignment_browser.mjs",
+        "source_tools/receive_monitoring_field_assignment_browser.mjs"
       ],
       "requires": [
         "implementation",
@@ -32,7 +34,9 @@
         "operator/web/monitoring_field_assignment.mjs",
         "operator/web/monitoring_field_assignment.css",
         "source_tools/receive_monitoring_field_assignment.py",
-        "source/monitoring_field_assignment/RECEIVING.md"
+        "source/monitoring_field_assignment/RECEIVING.md",
+        "source_tools/monitoring_field_assignment_browser.mjs",
+        "source_tools/receive_monitoring_field_assignment_browser.mjs"
       ]
     }
   }
