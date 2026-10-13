@@ -1,0 +1,114 @@
+import {Buffer} from 'node:buffer';
+// MIT. Independently authored Aquarius v2 and Sushi Stellar integrations.
+import {createStellarTools} from './stellar-provider.mjs';
+import {fail,integer,contract,canonical,intent,normalizedQuote,selectedQuote,compareQuotes,isoTime} from './exchange-domain.mjs';
+const PUBLIC='Public Global Stellar Network ; September 2015';
+const TESTNET='Test SDF Network ; September 2015';
+const AQUA={
+ [PUBLIC]:{baseUrl:'https://amm-api.aqua.network/api/external/v2',router:'CBQDHNBFBZYE4MKPWBSJOPIYLW4SFSXAXUTSXJN76GNKYVYPCKWC6QUK'},
+ [TESTNET]:{baseUrl:'https://amm-api-testnet.aqua.network/api/external/v2',router:'CBCFTQSPDBAIZ6R6PJQKSQWKNKWH2QIV3I4J72SHWBIK3ADRRAM5A6GD'}
+};
+const SUSHI={[PUBLIC]:{router:'CDMIM23WOUL5CZBKX3GOA3V5R5AMVIMTCP52KCDQORWELAPLJ27WZCHL',factory:'CD3KRKGDRVWPXVB3VXLUMQKMX6XZ6Q2H334IVZD4XXNAMKSRVQL5GLYF',positionManager:'CARTUL5AWDZYBSN7HUUJZSKCAKCIAKM7M54Z76G6KRYCK4XPR3OHUQZ4'}};
+const ERROR=e=>({code:e.code??'PROVIDER_ERROR',message:e.message,details:e.details??null});
+const unique=xs=>[...new Set(xs)];
+function resolved(ctx,id){const p=ctx.config.providers?.[id]??{},preset=(id==='aqua'?AQUA:SUSHI)[ctx.config.network.passphrase]??{},contracts=p.contractIds??{};const v={...preset,...p,router:contracts.router??preset.router,factory:contracts.factory??preset.factory,positionManager:contracts.positionManager??preset.positionManager};contract(v.router,id+' router');if(id==='sushi')contract(v.factory,'Sushi factory');if(id==='aqua'){let u;try{u=new URL(v.baseUrl);}catch{fail('PROVIDER_URL','Configure the complete Aquarius v2 API base.');}if(u.protocol!=='https:'||u.username||u.password||u.search||u.hash)fail('PROVIDER_URL','Use the selected HTTPS provider base without embedded credentials.');v.baseUrl=v.baseUrl.replace(/\/+$/,'');}return v;}
+function isSimulated(result){if(result.status!=='SIMULATED')fail('CONTRACT_SIMULATION','The original contract simulation requires review.',result);}
+function secondsRemaining(q,now){const seconds=Math.floor((isoTime(q.expiresAt)-isoTime(now))/1000);if(seconds<1)fail('QUOTE_EXPIRED','Request a fresh quote.');return seconds;}
+function abi(sdk){
+ const address=v=>new sdk.Address(v).toScVal(),uint=(v,type='u128')=>sdk.nativeToScVal(type==='u32'?Number(integer(String(v),'contract integer',{max:(1n<<32n)-1n})):integer(String(v),'contract integer',{max:type==='u64'?(1n<<64n)-1n:(1n<<128n)-1n}),{type}),sint=v=>sdk.nativeToScVal(integer(String(v),'signed amount',{max:(1n<<127n)-1n}),{type:'i128'}),vector=xs=>sdk.xdr.ScVal.scvVec(xs);
+ const record=fields=>sdk.xdr.ScVal.scvMap(Object.entries(fields).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([k,val])=>new sdk.xdr.ScMapEntry({key:sdk.xdr.ScVal.scvSymbol(k),val})));
+ return{address,uint,sint,vector,record};
+}
+function chain(sdk,raw,tokenIn,tokenOut,maxHops){let v;try{v=sdk.xdr.ScVal.fromXDR(raw,'base64');}catch{fail('AQUA_CHAIN_XDR','Aquarius returned an unreadable route XDR.');}if(v.switch().name!=='scvVec')fail('AQUA_CHAIN_TYPE','Aquarius route must be the router swap-chain vector.');const hops=v.vec();if(!hops?.length||hops.length>maxHops)fail('AQUA_CHAIN_LENGTH','Aquarius route exceeds the actual endpoint hop limit.');let previous=tokenIn;const decoded=[];for(const hop of hops){if(hop.switch().name!=='scvVec'||hop.vec()?.length!==3)fail('AQUA_CHAIN_HOP','Retain complete pool tokens, pool hash and output token.');const [tokens,hash,out]=hop.vec();if(tokens.switch().name!=='scvVec'||!tokens.vec()?.length||hash.switch().name!=='scvBytes'||hash.bytes().length!==32||out.switch().name!=='scvAddress')fail('AQUA_CHAIN_HOP','Aquarius hop fields do not match the router ABI.');const addresses=tokens.vec().map(x=>{if(x.switch().name!=='scvAddress')fail('AQUA_POOL_TOKEN','Pool assets must be contract addresses.');return contract(sdk.Address.fromScVal(x).toString());}),output=contract(sdk.Address.fromScVal(out).toString());if(new Set(addresses).size!==addresses.length||!addresses.includes(previous)||!addresses.includes(output)||previous===output)fail('AQUA_CHAIN_CONTINUITY','Pool assets do not connect the selected input and output.');decoded.push({tokens:addresses,poolHash:Buffer.from(hash.bytes()).toString('hex'),tokenIn:previous,tokenOut:output});previous=output;}if(previous!==tokenOut)fail('AQUA_CHAIN_DESTINATION','The route ends at another asset.');return{value:v,hops:decoded};}
+async function aquaQuote(sdk,input,ctx){
+ const i=intent(input,ctx.config,'aqua',ctx.now),p=resolved(ctx,'aqua');new sdk.Address(i.source);new sdk.Address(i.tokenIn);new sdk.Address(i.tokenOut);
+ const maxDepth=i.mode==='EXACT_IN'?4:3,body={token_in_address:i.tokenIn,token_out_address:i.tokenOut,amount:i.amount,slippage:'0',provider_fee:'0',max_depth:maxDepth};
+ const ex=await ctx.http({url:p.baseUrl+(i.mode==='EXACT_IN'?'/find-path/':'/find-path-strict-receive/'),method:'POST',headers:{'content-type':'application/json','accept':'application/json'},bodyBase64:Buffer.from(JSON.stringify(body),'utf8').toString('base64'),...(p.credentialAlias?{credential:p.credentialAlias}:{}),semantics:'read'});
+ if(ex.status<200||ex.status>=300||ex.parseError||!ex.parsed)fail('AQUA_RESPONSE','Aquarius could not produce a readable route.',{exchangeId:ex.exchangeId,status:ex.status,parseError:ex.parseError});
+ const r=ex.parsed;if(r.success===false)return{status:'NO_ROUTE',provider:'aqua',intent:i,quotes:[],exchangeIds:[ex.exchangeId],response:r};if(r.success!==true)fail('AQUA_SUCCESS_FIELD','Aquarius response is missing its explicit success flag.',{exchangeId:ex.exchangeId});
+ const amount=integer(r.amount,'Aquarius quote amount',{min:1n}).toString(),checked=chain(sdk,r.swap_chain_xdr,i.tokenIn,i.tokenOut,maxDepth);
+ if(r.amount_with_fee!==undefined&&integer(r.amount_with_fee,'Aquarius amount with fee')!==BigInt(amount))fail('AQUA_FEE_MISMATCH','The provider adjusted a quote requested with zero slippage and zero provider fee.',{exchangeId:ex.exchangeId,amount,amountWithFee:r.amount_with_fee});
+ const q=normalizedQuote(i,{provider:'aqua',amountIn:i.mode==='EXACT_IN'?i.amount:amount,amountOut:i.mode==='EXACT_IN'?amount:i.amount,route:{router:p.router,swapChainXdr:r.swap_chain_xdr,hops:checked.hops,pools:r.pools??[],method:i.mode==='EXACT_IN'?'swap_chained':'swap_chained_strict_receive'},exchangeIds:[ex.exchangeId],snapshot:{apiBase:p.baseUrl,providerResponse:r,request:body}});
+ return{status:'QUOTED',provider:'aqua',intent:i,quotes:[q],exchangeIds:[ex.exchangeId]};
+}
+async function aquaPrepare(sdk,input,ctx){
+ const {record,quote:q,index}=selectedQuote(ctx,input,'aqua'),p=resolved(ctx,'aqua'),a=abi(sdk);if(q.route.router!==p.router||q.snapshot.apiBase!==p.baseUrl)fail('AQUA_ROUTER_CHANGED','Select the original Aquarius deployment.');
+ const c=chain(sdk,q.route.swapChainXdr,q.tokenIn,q.tokenOut,q.mode==='EXACT_IN'?4:3);
+ const args=[a.address(q.source),c.value,a.address(q.tokenIn),a.uint(q.mode==='EXACT_IN'?q.amountIn:q.amountOut),a.uint(q.mode==='EXACT_IN'?q.minAmountOut:q.maxAmountIn)];
+ const result=await createStellarTools(sdk,ctx).prepareCall({contractId:p.router,method:q.route.method,args,source:q.source,timeoutSeconds:secondsRemaining(q,ctx.now)});
+ return{...result,provider:'aqua',quote:q,quoteReference:{quoteId:record.id,routeIndex:String(index)},selection:{...result.selection,quoteId:record.id,routeIndex:String(index),intent:q.selection,router:p.router,minimumOutput:q.minAmountOut,maximumInput:q.maxAmountIn},exchangeIds:unique([...q.exchangeIds,...(result.exchangeIds??[])])};
+}
+function sortAddresses(sdk,a,b){const x=sdk.StrKey.decodeContract(a),y=sdk.StrKey.decodeContract(b);for(let i=0;i<x.length;i++){if(x[i]<y[i])return[a,b];if(x[i]>y[i])return[b,a];}fail('IDENTICAL_ASSETS','Pool assets must differ.');}
+function pathsFromGraph(graph,start,end,maxHops){const result=[];function visit(node,path,fees,pools){if(node===end){result.push({path,fees,pools});return;}if(fees.length>=maxHops)return;for(const edge of graph.get(node)??[]){if(path.includes(edge.to))continue;visit(edge.to,[...path,edge.to],[...fees,edge.fee],[...pools,edge.pool]);}}visit(start,[start],[],[]);return result;}
+function sushiParams(sdk,i,route,minOut,deadline){const a=abi(sdk);return a.record({amount_in:a.sint(i.amountIn??i.amount),amount_out_minimum:a.sint(minOut),deadline:a.uint(String(deadline),'u64'),fees:a.vector(route.fees.map(x=>a.uint(String(x),'u32'))),path:a.vector(route.path.map(a.address)),recipient:a.address(i.source),sender:a.address(i.source)});}
+async function sushiQuote(sdk,input,ctx){
+ const i=intent(input,ctx.config,'sushi',ctx.now),p=resolved(ctx,'sushi'),st=createStellarTools(sdk,ctx),a=abi(sdk);if(i.mode!=='EXACT_IN')fail('SUSHI_SWAP_MODE','The current deployed Sushi route supports exact-input quoting and execution.');integer(i.amount,'Sushi amount',{min:1n,max:(1n<<127n)-1n});new sdk.Address(i.source);
+ const mids=input.bridgeTokens??[];if(!Array.isArray(mids))fail('BRIDGE_ASSETS','Supply intermediate asset contract addresses as an array.');const tokens=unique([i.tokenIn,i.tokenOut,...mids.map(x=>contract(x,'intermediate token'))]);tokens.forEach(x=>new sdk.Address(x));const maxHops=Number(integer(input.maxHops??'2','maximum hops',{min:1n,max:4n}));
+ const fees=(input.feeTiers??['500','3000','10000']).map(x=>integer(x,'pool fee',{min:1n,max:(1n<<32n)-1n}).toString());if(!fees.length||unique(fees).length!==fees.length)fail('SUSHI_FEES','Select distinct fee tiers.');
+ const graph=new Map(tokens.map(t=>[t,[]])),discoveries=[],exchangeIds=[];
+ for(let x=0;x<tokens.length;x++)for(let y=x+1;y<tokens.length;y++)for(const fee of fees){const [left,right]=sortAddresses(sdk,tokens[x],tokens[y]);let result;try{result=await st.simulateCall({contractId:p.factory,method:'get_pool',args:[a.address(left),a.address(right),a.uint(fee,'u32')],source:i.source,timeoutSeconds:secondsRemaining(i,ctx.now)});exchangeIds.push(...(result.exchangeIds??[]));isSimulated(result);const pool=result.returnValue??null;discoveries.push({tokenA:left,tokenB:right,fee,pool,observation:result});if(pool){contract(pool,'Sushi pool');graph.get(left).push({to:right,fee,pool});graph.get(right).push({to:left,fee,pool});}}catch(error){discoveries.push({tokenA:left,tokenB:right,fee,error:ERROR(error),observation:result??null});}}
+ const routes=pathsFromGraph(graph,i.tokenIn,i.tokenOut,maxHops),quotes=[],failures=[];for(const route of routes){let result;try{result=await st.simulateCall({contractId:p.router,method:'quote_exact_input',args:[sushiParams(sdk,i,route,'0',Math.floor(isoTime(i.expiresAt)/1000))],source:i.source,timeoutSeconds:secondsRemaining(i,ctx.now)});exchangeIds.push(...(result.exchangeIds??[]));isSimulated(result);const amount=integer(result.returnValue?.amount,'Sushi output',{min:1n,max:(1n<<127n)-1n}).toString();quotes.push(normalizedQuote(i,{provider:'sushi',amountIn:i.amount,amountOut:amount,route:{router:p.router,factory:p.factory,...route,method:'swap_exact_input_hints'},exchangeIds:unique([...(result.exchangeIds??[]),...discoveries.filter(d=>route.pools.includes(d.pool)).flatMap(d=>d.observation.exchangeIds??[])]),snapshot:{quote:result,feeTiers:fees,maxHops,intermediateTokens:mids}}));}catch(error){failures.push({route,error:ERROR(error),observation:result??null});}}
+ quotes.sort((x,y)=>BigInt(x.amountOut)>BigInt(y.amountOut)?-1:BigInt(x.amountOut)<BigInt(y.amountOut)?1:canonical(x.route).localeCompare(canonical(y.route)));
+ return{status:quotes.length?'QUOTED':failures.length||discoveries.some(x=>x.error)?'QUERY_FAILED':'NO_ROUTE',provider:'sushi',intent:i,quotes,discoveries,failures,exchangeIds:unique(exchangeIds)};
+}
+async function sushiPrepare(sdk,input,ctx){
+ const {record,quote:q,index}=selectedQuote(ctx,input,'sushi'),p=resolved(ctx,'sushi'),st=createStellarTools(sdk,ctx),a=abi(sdk);
+ if(q.mode!=='EXACT_IN'||q.route.router!==p.router||q.route.factory!==p.factory)fail('SUSHI_DEPLOYMENT','Select the original Sushi exact-input deployment.');
+ const route=q.route;if(route.path[0]!==q.tokenIn||route.path.at(-1)!==q.tokenOut||route.path.length!==route.fees.length+1||route.pools.length!==route.fees.length)fail('SUSHI_PATH','Retain the complete original token, fee and pool path.');
+ const hints=[],observations=[],exchangeIds=[...q.exchangeIds];for(let k=0;k<route.pools.length;k++){const [left,right]=sortAddresses(sdk,route.path[k],route.path[k+1]),pool=contract(route.pools[k],'Sushi pool');const check=await st.simulateCall({contractId:p.factory,method:'get_pool',args:[a.address(left),a.address(right),a.uint(route.fees[k],'u32')],source:q.source,timeoutSeconds:secondsRemaining(q,ctx.now)});observations.push(check);exchangeIds.push(...(check.exchangeIds??[]));isSimulated(check);if(check.returnValue!==pool)fail('SUSHI_POOL_CHANGED','The current factory no longer resolves the selected pool.',{expected:pool,observed:check.returnValue});
+ const hint=await st.simulateCall({contractId:pool,method:'get_oracle_hints',args:[],source:q.source,timeoutSeconds:secondsRemaining(q,ctx.now)});observations.push(hint);exchangeIds.push(...(hint.exchangeIds??[]));isSimulated(hint);const v=hint.returnValue;if(!v||v.checkpoint===undefined||v.checkpoint_min===undefined||v.slot===undefined)fail('SUSHI_POOL_VERSION','This pool lacks the current oracle-hints ABI.',{pool,observation:hint});hints.push(a.record({checkpoint:a.uint(String(v.checkpoint),'u32'),checkpoint_min:a.uint(String(v.checkpoint_min),'u32'),slot:a.uint(String(v.slot),'u128')}));}
+ const result=await st.prepareCall({contractId:p.router,method:'swap_exact_input_hints',args:[sushiParams(sdk,q,route,q.minAmountOut,Math.floor(isoTime(q.expiresAt)/1000)),a.vector(hints)],source:q.source,timeoutSeconds:secondsRemaining(q,ctx.now)});
+ return{...result,provider:'sushi',quote:q,quoteReference:{quoteId:record.id,routeIndex:String(index)},selection:{...result.selection,quoteId:record.id,routeIndex:String(index),intent:q.selection,router:p.router,minimumOutput:q.minAmountOut,maximumInput:q.maxAmountIn},preparationObservations:observations,exchangeIds:unique([...exchangeIds,...(result.exchangeIds??[])])};
+}
+
+async function sushiPositions(sdk,input,ctx){
+ const p=resolved(ctx,'sushi'),manager=contract(p.positionManager,'Sushi position manager'),owner=input.owner??ctx.config.wallet?.address,source=ctx.config.wallet?.address;
+ new sdk.Address(owner);const st=createStellarTools(sdk,ctx),a=abi(sdk),observations=[],positions=[],issues=[],seen=new Set();
+ const read=async(contractId,method,args)=>{const r=await st.simulateCall({contractId,method,args,source,timeoutSeconds:300});observations.push(r);isSimulated(r);return r.returnValue;};
+ const count=integer(String(await read(manager,'balance',[a.address(owner)])),'position count',{max:(1n<<32n)-1n});
+ for(let skip=0n;skip<count;skip+=3n){let rows;try{rows=await read(manager,'get_user_positions_with_fees',[a.address(owner),a.uint(skip,'u32'),a.uint('3','u32')]);if(!Array.isArray(rows))fail('SUSHI_POSITION_PAGE','The position manager returned another shape.');if(!rows.length){issues.push({skip:skip.toString(),code:'EARLY_EMPTY_PAGE'});break;}}catch(e){issues.push({skip:skip.toString(),error:ERROR(e)});continue;}
+ for(const value of rows){const id=integer(String(value.token_id),'position token ID',{max:(1n<<32n)-1n}).toString();if(seen.has(id)){issues.push({tokenId:id,code:'REPEATED_POSITION'});continue;}seen.add(id);const result={tokenId:id,value,owner,principal:null,fees:{token0:String(value.tokens_owed0),token1:String(value.tokens_owed1)},pool:null,slot0:null,errors:[]};
+ try{const originalOwner=await read(manager,'owner_of',[a.uint(id,'u32')]);if(originalOwner!==owner)fail('POSITION_OWNER_CHANGED','Position ownership changed during the read.');const [left,right]=sortAddresses(sdk,contract(value.token0),contract(value.token1));const pool=await read(p.factory,'get_pool',[a.address(left),a.address(right),a.uint(String(value.fee),'u32')]);contract(pool,'position pool');result.pool=pool;const slot=await read(pool,'slot0',[]);result.slot0=slot;const sqrt=integer(String(slot.sqrt_price_x96),'sqrt price',{min:1n,max:(1n<<256n)-1n});const principal=await read(manager,'position_principal',[a.uint(id,'u32'),sdk.nativeToScVal(sqrt,{type:'u256'})]);if(!Array.isArray(principal)||principal.length!==2)fail('POSITION_PRINCIPAL','The original principal result must retain both token amounts.');result.principal={token0:integer(String(principal[0])).toString(),token1:integer(String(principal[1])).toString()};
+ }catch(e){result.errors.push(ERROR(e));}positions.push(result);}
+ }
+ let finalCount=null;try{finalCount=integer(String(await read(manager,'balance',[a.address(owner)])),'ending position count',{max:(1n<<32n)-1n}).toString();}catch(e){issues.push({phase:'ending-count',error:ERROR(e)});}
+ const complete=finalCount===count.toString()&&BigInt(positions.length)===count&&!issues.length&&positions.every(p=>!p.errors.length);
+ return{schema:'bim.sushi-positions.v1',status:complete?'COMPLETE_OBSERVED':'PARTIAL_OR_CHANGED',owner,manager,networkId:ctx.config.network.id,networkPassphrase:ctx.config.network.passphrase,initialCount:count.toString(),finalCount,positions,issues,observations,coverage:'Sequential original simulations with full ledger references; membership may change between pages. End count, duplicate IDs and per-position owner are checked.',exchangeIds:unique(observations.flatMap(x=>x.exchangeIds??[]))};
+}
+
+
+async function assetMetadata(sdk,input,ctx){
+ const token=contract(input.contractId,'asset'),source=ctx.config.wallet?.address,st=createStellarTools(sdk,ctx),a=abi(sdk),observations=[],values={};
+ for(const method of ['name','symbol','decimals','balance']){const r=await st.simulateCall({contractId:token,method,args:method==='balance'?[a.address(input.account??source)]:[],source,timeoutSeconds:300});observations.push(r);isSimulated(r);values[method]=r.returnValue;}
+ integer(String(values.decimals),'asset decimals',{max:38n});integer(String(values.balance),'asset balance',{max:(1n<<127n)-1n});
+ return{schema:'bim.asset-observation.v1',networkId:ctx.config.network.id,networkPassphrase:ctx.config.network.passphrase,contractId:token,account:input.account??source,...values,observations,exchangeIds:unique(observations.flatMap(x=>x.exchangeIds??[]))};
+}
+
+
+async function confirmOriginal(sdk,input,ctx){
+ const submission=(ctx.evidence??[]).find(r=>r.id===input.submissionId&&r.planId&&r.submission);if(!submission)fail('SUBMISSION_EVIDENCE','Retain the complete original signed submission.');
+ const plan=(ctx.evidence??[]).find(r=>r.id===submission.planId&&r.actionId),payload=plan?.unsignedPayload??plan?.value?.unsignedPayload;
+ if(!payload||payload.kind!=='stellar-xdr')fail('PLAN_EVIDENCE','Retain the complete original prepared Stellar envelope.');
+ if(payload.networkId!==ctx.config.network?.id||payload.networkPassphrase!==ctx.config.network?.passphrase||canonical(plan.configuration?.network)!==canonical(ctx.config.network))fail('SUBMISSION_NETWORK','Select the original prepared network before confirming.');
+ const signed=submission.submission.signedXdr??submission.submission.xdr,hash=submission.submission.transactionHash;
+ if(typeof signed!=='string')fail('SIGNED_ENVELOPE','Retain the original complete signed transaction.');
+ const st=createStellarTools(sdk,ctx),signedSelection=st.inspectEnvelope({xdr:signed,expectedSource:payload.source});
+ if(signedSelection.innerTransactionHash!==payload.transactionHash||signedSelection.transactionHash!==hash)fail('SUBMISSION_BODY','The signed original differs from the selected prepared transaction.');
+ const result=await st.confirm({transactionHash:hash,signedXdr:signed,expectedSource:payload.source});if(result.observed?.innerTransactionHash&&result.observed.innerTransactionHash!==payload.transactionHash)fail('CONFIRMATION_BODY','The observed ledger transaction differs from the prepared original.');
+ return{...result,schema:'bim.execution-confirmation.v1',submissionId:submission.id,planId:plan.id,provider:plan.value?.selected?.provider??plan.value?.provider??null,quoteReference:plan.value?.selected??plan.value?.quoteReference??null};
+}
+
+export function createExchangeAdapter({sdk}){
+ if(!sdk?.xdr||!sdk?.nativeToScVal)throw Error('Supply the pinned @stellar/stellar-sdk 16.0.1 module.');
+ const catalogue=[
+ {id:'aqua.quote',title:'Aquarius quote',provider:'aqua',mode:'read',description:'Current Aquarius v2 exact-input or exact-output route, original response and exact slippage arithmetic.',origins:['https://amm-api.aqua.network','https://amm-api-testnet.aqua.network']},
+ {id:'aqua.prepare',title:'Prepare Aquarius swap',provider:'aqua',mode:'prepare',description:'Simulate the retained router path and prepare an unsigned network-bound transaction.'},
+ {id:'sushi.quote',title:'Sushi quotes',provider:'sushi',mode:'read',description:'Discover current factory pools, enumerate the selected intermediate assets and simulate every available exact-input path.'},
+ {id:'sushi.prepare',title:'Prepare Sushi swap',provider:'sushi',mode:'prepare',description:'Verify current factory pools, obtain fresh complete oracle hints and prepare the original selected path.'},
+ {id:'sushi.positions',title:'Sushi concentrated positions',provider:'sushi',mode:'read',description:'Read every observed position page, actual owner, pool, live fees and principal from the deployed position manager.'},
+ {id:'exchange.asset',title:'Read asset and balance',provider:'exchange',mode:'read',description:'Read the selected contract name, symbol, exact precision and selected account balance.'},
+ {id:'exchange.confirm',title:'Confirm original Stellar execution',provider:'exchange',mode:'read',description:'Read the original transaction through RPC and Horizon and compare its actual ledger envelope to the prepared and signed originals.'},
+ {id:'exchange.compare',title:'Compare original routes',provider:'exchange',mode:'read',description:'Compare retained quotes for one exact intent, wallet and deployment; retain every rejected or expired route.'}
+ ];
+ return{catalogue,async execute(actionId,input,ctx){switch(actionId){case'aqua.quote':return aquaQuote(sdk,input,ctx);case'aqua.prepare':return aquaPrepare(sdk,input,ctx);case'sushi.quote':return sushiQuote(sdk,input,ctx);case'sushi.prepare':return sushiPrepare(sdk,input,ctx);case'sushi.positions':return sushiPositions(sdk,input,ctx);case'exchange.asset':return assetMetadata(sdk,input,ctx);case'exchange.confirm':return confirmOriginal(sdk,input,ctx);case'exchange.compare':{if(!Array.isArray(input.quoteIds)||!input.quoteIds.length)fail('QUOTE_REFERENCES','Choose the original quote queries.');const rows=input.quoteIds.map(id=>{const r=(ctx.evidence??[]).find(x=>x.id===id);if(!r)fail('QUOTE_EVIDENCE','The selected original quote is missing: '+id);return r;});return compareQuotes(rows,{now:ctx.now,config:ctx.config});}default:fail('ACTION_UNAVAILABLE','Unsupported exchange action: '+actionId);}}};
+}
