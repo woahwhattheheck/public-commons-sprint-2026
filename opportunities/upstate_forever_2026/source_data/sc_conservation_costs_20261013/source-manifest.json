@@ -1,0 +1,76 @@
+{
+  "schema": "upstate.public-cost-source-manifest/v1",
+  "retrieved_date": "2026-10-13",
+  "files": [
+    {
+      "source_id": "nrcs-sc-eqip-fy26",
+      "url": "https://www.nrcs.usda.gov/sites/default/files/2026-04/SC%20EQIP%20Payment%20Schedule%20-%20FY26.pdf",
+      "download_url": null,
+      "edition": "FY2026; PDF metadata March2026; URL April2026",
+      "capture": {
+        "status": "provider_timeout",
+        "http_status": 504,
+        "sha256": null
+      },
+      "filename": "nrcs-sc-eqip-fy26.pdf"
+    },
+    {
+      "source_id": "scfc-services-fy2026-27",
+      "url": "https://www.scfc.gov/management/landowner-services/fee-rental-services/",
+      "download_url": "https://www.scfc.gov/wp-content/uploads/2026/07/ServicesFY2026-27.pdf",
+      "edition": "FY2026–27",
+      "capture": {
+        "status": "complete",
+        "filename": "SCFC-services-FY2026-27-original.html",
+        "bytes": 149575,
+        "sha256": "df0e7d8b99bd806370a007cb30185d9a0a1b6e69e743064152205a1ee68e0efa",
+        "file_upload_id": "3f8dd772-3100-815a-80a7-00b25e80c211"
+      },
+      "filename": "scfc-services-fy2026-27.html"
+    },
+    {
+      "source_id": "scfc-seedlings-20261013",
+      "url": "https://www.scfc.gov/management/seedlings/",
+      "download_url": null,
+      "edition": "Live page retrieved 2026-10-13; price-effective year unstated",
+      "capture": {
+        "status": "complete",
+        "filename": "SCFC-seedlings-original-20261013.html",
+        "bytes": 145092,
+        "sha256": "41c8123ce4518c966439ce34096ee00a4e5313cf298d20ac2f87d3ba9f104db9",
+        "file_upload_id": "3f8dd772-3100-816d-8e8c-00b266269913"
+      },
+      "filename": "scfc-seedlings-20261013.html"
+    },
+    {
+      "source_id": "nrcs-sc-scenarios-fy25",
+      "url": "https://www.nrcs.usda.gov/sites/default/files/2024-11/fy25-sc-scenarios_0.pdf",
+      "download_url": null,
+      "edition": "FY2025; URL November2024",
+      "capture": {
+        "status": "provider_timeout",
+        "http_status": 504,
+        "sha256": null
+      },
+      "filename": "nrcs-sc-scenarios-fy25.pdf"
+    },
+    {
+      "source_id": "scfc-assistance-fy2026-27",
+      "url": "https://www.scfc.gov/wp-content/uploads/2026/07/FRP-SPBCost-ShareRates2026-27.pdf",
+      "download_url": null,
+      "edition": "FY2026–27",
+      "capture": {
+        "status": "provider_uploaded",
+        "bytes": 2983067,
+        "file_upload_id": "3f8dd772-3100-81f7-9905-00b2e0500d66",
+        "sha256": null
+      },
+      "filename": "scfc-assistance-fy2026-27.pdf"
+    }
+  ],
+  "scope": "Exact original public publisher bodies; preserve retrieval URL/final URL/status/content type/date/bytes/SHA-256. Never replace a known original hash with a changed live version without creating a new source edition.",
+  "remaining_pdf_originals": [
+    "https://www.nrcs.usda.gov/sites/default/files/2026-04/SC%20EQIP%20Payment%20Schedule%20-%20FY26.pdf",
+    "https://www.nrcs.usda.gov/sites/default/files/2024-11/fy25-sc-scenarios_0.pdf"
+  ]
+}
