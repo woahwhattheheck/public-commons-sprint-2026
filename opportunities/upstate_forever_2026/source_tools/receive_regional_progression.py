@@ -845,6 +845,8 @@ def main(argv=None):
         separator = known.index("--")
         known, regional_args = known[:separator], known[separator + 1:]
     args = parser.parse_args(known)
+    require(not (args.browser_channel and args.browser_executable),
+            "Choose either --browser-channel or --browser-executable before starting native work")
     require(not (args.monitoring_opening or args.monitoring_receiving) or args.monitoring_selection,
             "--monitoring-opening/--monitoring-receiving require the exact --monitoring-selection")
     require(bool(args.opening) != bool(regional_args),
