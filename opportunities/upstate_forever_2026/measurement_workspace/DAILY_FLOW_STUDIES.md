@@ -68,4 +68,24 @@ API beneath `/api/measurement-workspace`:
 
 Bundle replies carry name, MIME type, exact byte count, SHA256 and base64. Original sources and load method remain first-class parts of the complete product.
 
-The source execution used the full original 2,477 daily observations and 589 nutrient records; the selected source generated 19 context series with its original spatial relationships. The original receiving host continues the real desktop/390px open→inspect→preview/save→download→reopen course. Producers personally operate and look at the outgoing application and all its attachments under the current owner direction.
+The source execution used the full original 2,477 daily observations and 589 nutrient records; the selected source generated 19 context series with its original spatial relationships. The original receiving host continues the real desktop and 390 px open→inspect→preview/save→download→reopen course. Producers personally operate and look at the outgoing application and all its attachments under the current owner direction.
+
+
+## Current original 2026 water-quality collections
+
+The complete installation includes both original Hartwell and Eighteenmile SV-233 collections. Hartwell's characteristics-v1 selection retains 132 records from six activities and all four official Station/Activity/Result/Limit responses. SV-233's characteristics-v2 selection retains 58 records from four activities and their complete source bodies; its earlier v1 collection remains independently selectable. Suspended solids is represented as its original TSS quantity, separately from SSC, with original basis/fraction/method and explicit unit compatibility. No conversion between those quantities is implied.
+
+Use the existing collection preview, receive and publish controls with:
+
+- `observations/hartwell_2026/wqp_20261013/characteristics-v1/collection.json`
+- `observations/eighteenmile_sv233_2026/wqp_20261013/characteristics-v2/collection.json`
+
+Use each manifest's own directory as its source root. The full prior detection/v1 editions remain with the same source family. [WQP original-edition guide](../source_tools/WQP_OFFICIAL_EDITION.md) describes the explicit pinned mappings and complete command shapes.
+
+The exact prepared Hartwell (132 measurements) / 2026 daily flow (285 observations) study and saved load result are in `source/canonical-wqp-loads-20261013/`. Read its README and run the included `materialize-output.mjs` against its own `output-bank.json` and ordered source parts into an owned output directory. It recovers all 13 original output files, including the full 28,396,936-byte source family, original study/input/contract, readable report and four CSV exports. The support remains regional context; the original source does not establish co-located or matched-catchment mass. Chemical basis, speciation and normalized units remain beside their quantities in the UI and report.
+
+For the upstream connection into native Monitoring, use [Original observation handoff](NATIVE_OBSERVATION_HANDOFF.md). Select the actual saved SQLite import, preview its complete source/row/review context, explicitly prepare the native observation edition, and reopen that returned ID in the existing Monitoring desk. The full original capture accompanies native Workspace export. Existing native observation imports, monitoring results and operated scientific source remain intact.
+
+Carry `AGENTS.md` and `CURRENT_OWNER_DIRECTION.md` version 2026-10-13.4 into the same receiving course. Operate and LOOK at the actual outgoing application at desktop and 390 px, inspect every selected original attachment/report/CSV/archive, and cold-reopen its saved project. Keep the existing source receiving, original workspace and current process owners.
+
+The complete SV-233 (58 measurements) / same 2026 daily flow (285 observations) counterpart is under `observations/eighteenmile_sv233_2026/wqp_20261013/flow-context/`. Its README and materializer recover all 17 complete output files, including the three original NLDI relation bodies, the complete WQP collection, original 285 discharge observations, both readable reports and all study/load CSVs. Its thirteen quantity/method context series and explicit regional relationship remain available without annual mass admission. Keep the actual original support and source metadata when reopening through Flow receive and load-preview/save.
