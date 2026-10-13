@@ -101,9 +101,19 @@ function select(options,value,onChange) {
   if(onChange)node.addEventListener('change',()=>onChange(node.value));
   return node;
 }
+let fieldSequence=0;
 function field(label,control,hint) {
-  const node=el('label');node.append(el('span',label),control);
-  if(hint)node.append(el('span',hint,'hint'));
+  const node=el('label'),caption=el('span',label);
+  caption.id='field-caption-'+(++fieldSequence);
+  if(!control.hasAttribute('aria-labelledby')&&!control.hasAttribute('aria-label'))
+    control.setAttribute('aria-labelledby',caption.id);
+  node.append(caption,control);
+  if(hint){
+    const description=el('span',hint,'hint');description.id=caption.id+'-hint';
+    const describedBy=control.getAttribute('aria-describedby');
+    control.setAttribute('aria-describedby',[describedBy,description.id].filter(Boolean).join(' '));
+    node.append(description);
+  }
   return node;
 }
 function toolbar(...children) { const node=el('div',undefined,'toolbar');node.append(...children.filter(Boolean));return node; }

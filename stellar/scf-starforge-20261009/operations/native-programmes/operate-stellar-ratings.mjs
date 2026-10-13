@@ -29,7 +29,17 @@ const json=value=>JSON.stringify(value,(_key,item)=>typeof item==='bigint'?item.
 const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':value!==null&&typeof value==='object'?'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}':JSON.stringify(value);
 function need(value,message,details){if(!value){const error=new Error(message);error.details=details;throw error;}}
 function safeRelative(value){need(typeof value==='string'&&value&&!value.startsWith('/')&&!value.includes('\\')&&!value.includes('\0')&&!value.split('/').some(x=>!x||x==='.'||x==='..'),'Invalid retained relative path.',{path:value});return value;}
-function target(relative){return path.join(root,...safeRelative(relative).split('/'));}
+let activeGeneration=null;
+const sharedNames=new Set(['operation.json','progress.jsonl','native-operation.lock','tmp','npm-cache','bun-cache',
+ 'stellar-consumer','runtime-original','runtime-received','runtime-regular-files','private-connections.json',
+ 'workspace','inputs','observed','source-history','applications','generations']);
+function target(relative){
+ const parts=safeRelative(relative).split('/'),head=parts[0];
+ const shared=sharedNames.has(head)||head.startsWith('stale-native-lock-')||
+  (head==='requests'&&!['export','received','http'].includes(parts[1]))||
+  (head==='selections'&&!/receive|unpack|native-http/.test(parts.slice(1).join('/')));
+ return path.join(root,...(activeGeneration&&!shared?['generations',activeGeneration]:[]),...parts);
+}
 async function exists(filename){try{await fs.lstat(filename);return true;}catch(error){if(error.code==='ENOENT')return false;throw error;}}
 async function bytesAt(filename){return fs.readFile(filename);}
 async function readJSON(filename){return JSON.parse(await fs.readFile(filename,'utf8'));}
@@ -58,16 +68,16 @@ async function save(){state.updatedAt=new Date().toISOString();await replace(tar
 async function announce(event,details={}){const item={time:new Date().toISOString(),event,...details};await fs.appendFile(target('progress.jsonl'),JSON.stringify(item)+'\n',{mode:0o600});process.stdout.write(JSON.stringify(item)+'\n');}
 async function step(name,work,{repeat=false}={}){
  const previous=state.steps[name];
- if(previous?.status==='COMPLETE'&&!repeat)return readJSON(target(previous.result));
+ if(previous?.status==='COMPLETE'&&previous.sourceGeneration===activeGeneration&&!repeat)return readJSON(path.join(root,previous.result));
  const attemptId=randomUUID(),startedAt=new Date().toISOString();
- state.steps[name]={...previous,status:'RUNNING',startedAt:previous?.startedAt??startedAt,attemptId,
+ state.steps[name]={...previous,status:'RUNNING',sourceGeneration:activeGeneration,startedAt:previous?.startedAt??startedAt,attemptId,
   attempts:[...(previous?.attempts??[]),{id:attemptId,startedAt}]};await save();await announce('START',{step:name,attemptId});
  try{
   const result=await work(),file='results/'+name+'/'+attemptId+'.json';await exact(target(file),json(result));
-  state.steps[name]={...state.steps[name],status:'COMPLETE',finishedAt:new Date().toISOString(),result:file,error:null};await save();await announce('COMPLETE',{step:name,attemptId});return result;
+  state.steps[name]={...state.steps[name],status:'COMPLETE',finishedAt:new Date().toISOString(),result:path.relative(root,target(file)).split(path.sep).join('/'),error:null};await save();await announce('COMPLETE',{step:name,attemptId});return result;
  }catch(error){
   const problem=await safeError(error),file='results/'+name+'/'+attemptId+'.error.json';await exact(target(file),json(problem));
-  state.steps[name]={...state.steps[name],status:'FAILED',finishedAt:new Date().toISOString(),error:file};await save();await announce('FAILED',{step:name,attemptId,code:problem.code,message:problem.message});return {error:problem};
+  state.steps[name]={...state.steps[name],status:'FAILED',finishedAt:new Date().toISOString(),error:path.relative(root,target(file)).split(path.sep).join('/')};await save();await announce('FAILED',{step:name,attemptId,code:problem.code,message:problem.message});return {error:problem};
  }
 }
 async function command(label,executable,args,{cwd=root,env={},requireSuccess=true}={}){
@@ -88,10 +98,15 @@ async function command(label,executable,args,{cwd=root,env={},requireSuccess=tru
 }
 async function originalPacket(){
  const source=options['source-packet']?path.resolve(options['source-packet']):null;
- if(!source)return {sourceDirectory:path.resolve(options['source-directory']),sourcePacket:null};
+ if(!source){
+  const sourceDirectory=path.resolve(options['source-directory']),manifest=await fs.readFile(path.join(sourceDirectory,PREFIX,'source-files.json'));
+  return {sourceDirectory,sourcePacket:null,generation:digest(manifest)};
+ }
  const bytes=await bytesAt(source),packet=JSON.parse(bytes.toString('utf8'));
  need(Array.isArray(packet.files)&&packet.files.length>0,'Supply the complete original source carrier.');
- const sourceRoot=target('application'),seen=new Set();
+ const generation=digest(bytes),previous=await readJSON(path.join(root,'operation.json')).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
+ const known=(previous?.sourceGenerations??[]).find(item=>item.generation===generation);
+ const sourceRoot=known?.sourceDirectory??(previous?.sourcePacket?.sha256===generation?previous.sourceDirectory:target('applications/'+generation)),seen=new Set();
  for(const file of packet.files){
   const relative=safeRelative(file.path);need(!seen.has(relative),'Duplicate original source member.');seen.add(relative);
   need(typeof file.content==='string','Complete source content is required.');
@@ -100,8 +115,8 @@ async function originalPacket(){
   if(file.gitBlob||file.sha){const expected=file.gitBlob??file.sha;need(createHash('sha1').update(Buffer.from('blob '+body.length+'\0')).update(body).digest('hex')===expected,'Original Git source identity differs.',{path:relative});}
   await exact(path.join(sourceRoot,...relative.split('/')),body,mode);await fs.chmod(path.join(sourceRoot,...relative.split('/')),mode);
  }
- await exact(target('source-carrier.json'),bytes);
- return {sourceDirectory:sourceRoot,sourcePacket:{path:source,bytes:bytes.length,sha256:digest(bytes)},files:seen.size};
+ await exact(target('source-history/'+generation+'/source-carrier.json'),bytes);
+ return {sourceDirectory:sourceRoot,sourcePacket:{path:source,bytes:bytes.length,sha256:generation},files:seen.size,generation};
 }
 async function retainSourceManifest(sourceRoot){
  const filename=path.join(sourceRoot,PREFIX,'source-files.json'),bytes=await fs.readFile(filename),manifest=JSON.parse(bytes.toString('utf8'));
@@ -141,12 +156,26 @@ async function releaseNativeLock(){const own=await readJSON(path.join(lockDirect
 process.env.TMPDIR=target('tmp');process.env.TMP=target('tmp');process.env.TEMP=target('tmp');process.env.npm_config_cache=target('npm-cache');process.env.BUN_INSTALL_CACHE_DIR=target('bun-cache');
 try {
 const original=await originalPacket();
+activeGeneration=original.generation;
 if(await exists(target('operation.json'))){
  state=await readJSON(target('operation.json'));
- need(state.operation===OPERATION&&state.sourceDirectory===original.sourceDirectory&&canonical(state.sourcePacket)===canonical(original.sourcePacket),'The same native operation must retain its original source.');
+ need(state.operation===OPERATION,'The same native operation must retain its original workspace.');
+ const priorGeneration=state.activeSource?.generation??state.sourcePacket?.sha256??
+  digest(await fs.readFile(path.join(state.sourceDirectory,PREFIX,'source-files.json')));
+ state.sourceGenerations??=[{generation:priorGeneration,sourceDirectory:state.sourceDirectory,sourcePacket:state.sourcePacket,selectedAt:state.createdAt}];
+ if(priorGeneration!==activeGeneration){
+  await exact(target('source-history/'+priorGeneration+'/operation-before-'+activeGeneration+'.json'),json(state));
+  for(const item of Object.values(state.steps))item.sourceGeneration??=priorGeneration;
+  await announce('SOURCE_VERSION_CONTINUATION',{from:priorGeneration,to:activeGeneration,workspaceDirectory:target('workspace')});
+ }else for(const item of Object.values(state.steps))item.sourceGeneration??=activeGeneration;
+ if(!state.sourceGenerations.some(item=>item.generation===activeGeneration))
+  state.sourceGenerations.push({...original,selectedAt:new Date().toISOString()});
 }else{
- state={schema:'stellar-forge.stellar-ratings.native-operation.v1',operation:OPERATION,id:randomUUID(),createdAt:new Date().toISOString(),sourceDirectory:original.sourceDirectory,sourcePacket:original.sourcePacket,steps:{},requests:{},captures:{},registries:{},policies:{},runs:{},collections:{},reports:{},runtime:null};await save();
+ state={schema:'stellar-forge.stellar-ratings.native-operation.v1',operation:OPERATION,id:randomUUID(),createdAt:new Date().toISOString(),sourceDirectory:original.sourceDirectory,sourcePacket:original.sourcePacket,
+  sourceGenerations:[{...original,selectedAt:new Date().toISOString()}],steps:{},requests:{},captures:{},registries:{},policies:{},runs:{},collections:{},reports:{},runtime:null};
 }
+state.activeSource=original;state.sourceRecovery??={};await save();
+const sourceUpgrade=state.sourceGenerations.length>1;
 const appRoot=original.sourceDirectory,P=path.join(appRoot,PREFIX),workspaceDirectory=target('workspace');
 
 
@@ -333,10 +362,15 @@ async function capture(key,registryId,alias,read,{singlePage=false,selectedHost=
   if(['FAILED','PAUSED'].includes(current.capture.status)){
    if(current.capture.status==='FAILED'){
     const wait=retryTime(current.capture.lastError);
-    if(wait===null){const error=new Error('Original native capture stopped with its complete response and continuation retained.');error.code='NATIVE_CAPTURE_FAILED';error.details=await captureSources(captureId,selectedHost);throw error;}
-    await announce('NATIVE_RATE_LIMIT',{captureId,milliseconds:wait,error:current.capture.lastError});await delay(wait);
+    if(wait===null){
+     if(!(sourceUpgrade&&state.sourceRecovery['capture/'+captureId]!==activeGeneration)){
+      const error=new Error('Original native capture stopped with its complete response and continuation retained.');error.code='NATIVE_CAPTURE_FAILED';error.details=await captureSources(captureId,selectedHost);throw error;
+     }
+     state.sourceRecovery['capture/'+captureId]=activeGeneration;await save();
+     await announce('SOURCE_VERSION_CAPTURE_RESUME',{captureId,sourceGeneration:activeGeneration,originalAttemptCount:current.capture.attemptCount});
+    }else{await announce('NATIVE_RATE_LIMIT',{captureId,milliseconds:wait,error:current.capture.lastError});await delay(wait);}
    }
-   await invoke('capture/'+key+'/resume-'+current.capture.attemptCount,'capture.resume',{captureId},selectedHost);
+   await invoke('capture/'+key+'/resume-'+current.capture.attemptCount+'-'+activeGeneration,'capture.resume',{captureId},selectedHost);
    current=await selectedHost.invoke({method:'capture.read',args:{captureId,limit:1}});
   }
   if(singlePage){
@@ -344,7 +378,7 @@ async function capture(key,registryId,alias,read,{singlePage=false,selectedHost=
    await invoke('capture/'+key+'/page-'+current.capture.attemptCount,'capture.next',original,selectedHost);
   }else{
    const original=current.capture.run?.args??{captureId};
-   const result=await withProgress('capture '+key,()=>invoke('capture/'+key+'/run','capture.run',original,selectedHost));
+   const result=await withProgress('capture '+key,()=>invoke('capture/'+key+'/run'+(sourceUpgrade?'/source-'+activeGeneration:''),'capture.run',original,selectedHost));
    if(result.status==='COMPLETE')return captureSources(captureId,selectedHost);
   }
  }
@@ -485,22 +519,23 @@ async function finishRun(key,runId,selectedHost=host){
  for(;;){
   let details=await runTasks(runId,selectedHost);
   if(details.run.status==='COMPLETE')return {run:details.run,tasks:details.tasks,editionId:details.run.editionId};
-  const failed=details.tasks.filter(row=>row.status==='FAILED');
+  const failed=details.tasks.filter(row=>row.status==='FAILED'),sourceRecovery=sourceUpgrade&&state.sourceRecovery['run/'+runId]!==activeGeneration;
   if(details.run.status==='PARTIAL'){
    const retryable=failed.filter(row=>retryTime(row.error)!==null);
-   if(retryable.length===0){
+   if(retryable.length===0&&!sourceRecovery){
     const error=new Error('The full original review retained a partial source edition.');error.code='NATIVE_REVIEW_PARTIAL';error.details=details;throw error;
    }
-   const wait=Math.max(...retryable.map(row=>retryTime(row.error)));await announce('NATIVE_RATE_LIMIT',{runId,milliseconds:wait});await delay(wait);
+   if(retryable.length){const wait=Math.max(...retryable.map(row=>retryTime(row.error)));await announce('NATIVE_RATE_LIMIT',{runId,milliseconds:wait});await delay(wait);}
   }
   if(['PAUSED','PARTIAL','FAILED','WAITING_FOR_BOUNDARY'].includes(details.run.status)){
-   if(details.run.status==='FAILED'&&retryTime(details.run.lastError)===null){
+   if(details.run.status==='FAILED'&&retryTime(details.run.lastError)===null&&!sourceRecovery){
     const error=new Error('The original review retained a source planning failure.');error.code='NATIVE_REVIEW_FAILED';error.details=details;throw error;
    }
    if(details.run.status==='WAITING_FOR_BOUNDARY'){
     const error=new Error('The original source has not reached the selected UTC boundary.');error.code='WAITING_FOR_BOUNDARY';error.details=details;throw error;
    }
-   await invoke('run/'+key+'/resume-'+(details.run.steps?.length??0)+'-'+(details.run.editionIds?.length??0),'run.resume',{runId},selectedHost);
+   if(sourceRecovery){state.sourceRecovery['run/'+runId]=activeGeneration;await save();}
+   await invoke('run/'+key+'/resume-'+(details.run.steps?.length??0)+'-'+(details.run.editionIds?.length??0)+'-'+activeGeneration,'run.resume',{runId},selectedHost);
    details=await runTasks(runId,selectedHost);
   }
   const original=details.run.execution?.args??{runId};
@@ -1152,7 +1187,7 @@ await step('complete-native-final-state',async()=>{
 },{repeat:true});
 await exact(target('operate-stellar-ratings.mjs'),await fs.readFile(fileURLToPath(import.meta.url)));
 const report={schema:'stellar-forge.stellar-ratings.native-outcome.v1',operation:OPERATION,operationId:state.id,
- startedAt:state.createdAt,finishedAt:new Date().toISOString(),node:process.version,source:original,runtime:state.runtime,
+ startedAt:state.createdAt,finishedAt:new Date().toISOString(),node:process.version,source:original,sourceGenerations:state.sourceGenerations,runtime:state.runtime,
  registryId,activityRegistryId,policyId,addresses:state.walletSelection??null,period:state.period??null,steps:state.steps,
  nativeCaptureOutcomes,reports:state.reports,
  workspace:finalState?{directory:workspaceDirectory,id:finalState.workspaceId,revision:finalState.revision,counts:finalState.counts}:null,
@@ -1162,7 +1197,7 @@ const report={schema:'stellar-forge.stellar-ratings.native-outcome.v1',operation
  completed:Object.values(state.steps).filter(row=>row.status==='COMPLETE').length,
  failed:Object.entries(state.steps).filter(([_name,row])=>row.status==='FAILED').map(([name,row])=>({name,error:row.error}))};
 await replace(target('native-outcome.json'),report);
-const supportNames=['operate-stellar-ratings.mjs','source-carrier.json','native-outcome.json','operation.json','progress.jsonl',
+const supportNames=['operate-stellar-ratings.mjs','source-carrier.json','native-outcome.json','operation.json','progress.jsonl','source-history','applications',
  'application-source-manifest.json','results','commands','requests','request-attempts','responses','http','observed','selections','inputs','reports','browser',
  'final-workspace-description.json','final-history.json'];
 const available=[];for(const name of supportNames)if(await exists(target(name)))available.push(name);
@@ -1170,11 +1205,19 @@ await directory(target('artifacts'));
 const supportFiles=[];
 async function supportMembers(relative){
  const filename=target(relative),stat=await fs.lstat(filename);
- if(stat.isDirectory()){for(const name of (await fs.readdir(filename)).sort())await supportMembers(relative+'/'+name);}
- else if(stat.isFile())supportFiles.push(relative);
+ if(stat.isDirectory()){for(const name of (await fs.readdir(filename)).sort())if(name!=='node_modules')await supportMembers(relative+'/'+name);}
+ else if(stat.isFile())supportFiles.push(path.relative(root,filename).split(path.sep).join('/'));
 }
 for(const name of available)await supportMembers(name);
-await exact(target('native-support-members.nul'),Buffer.from(supportFiles.join('\0')+'\0'));
+async function previousSupport(filename){
+ const stat=await fs.lstat(filename);if(stat.isDirectory()){
+  for(const name of (await fs.readdir(filename)).sort())if(name!=='node_modules'&&name!=='artifacts')await previousSupport(path.join(filename,name));
+ }else if(stat.isFile())supportFiles.push(path.relative(root,filename).split(path.sep).join('/'));
+}
+if(sourceUpgrade)for(const name of ['results','commands','requests','request-attempts','responses','http','observed','selections','inputs','reports','browser','source-carrier.json','application-source-manifest.json','native-outcome.json']){
+ const filename=path.join(root,name);if(await exists(filename))await previousSupport(filename);
+}
+await exact(target('native-support-members.nul'),Buffer.from([...new Set(supportFiles)].sort().join('\0')+'\0'));
 try{await command('preserve-native-support','tar',['-czf',target('artifacts/bluechip-native-operation.tar.gz'),'-C',root,'--null','-T',target('native-support-members.nul')]);}
 catch(error){await announce('SUPPORT_ARCHIVE_FAILED',{error:await safeError(error)});}
 const artifacts=[];

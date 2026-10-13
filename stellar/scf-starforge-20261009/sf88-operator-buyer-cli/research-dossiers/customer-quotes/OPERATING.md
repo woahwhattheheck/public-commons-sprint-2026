@@ -195,6 +195,16 @@ An ID reused with different inputs is rejected. Review SHA and original source c
 
 The original workspace client admits a complete operation once. Metadata lookup and its dependent file transfer stay admitted while the client closes, and the host drains accepted quotation work before it closes Commerce, the original dossier owners and its listener. Failed native closers remain available to the original retry.
 
+## Python customer applications
+
+The complete [Python quotation workflow](../../python/RESEARCH-QUOTES.md) exposes
+the same original case/pricing, brief/response reviews, paid publication and
+realized-report operations through `ResearchWorkspace.quotes()`. It retains full
+raw inputs and replies, recovers the original request, and receives every native
+file. Complete quotation exports can be reopened using Python alone on another
+computer. The installed `stellar-forge-research quotes-*` commands and the full
+`examples/research_quotes_receiving.py` programme use these same operators.
+
 ## Native HTTP interface
 
 All quotation routes use the original Research authorization and original workspace/instance headers. Request JSON accepts up to 96 MiB plus 65,536 bytes so the complete original commercial receiving inputs can pass through. JSON responses use the existing 64 MiB client budget. Each streamed retained file is bounded by 256 MiB.

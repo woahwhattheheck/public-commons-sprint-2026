@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { open, mkdir, lstat, realpath, rename, readFile, link, unlink } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 
 export const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export const now = () => new Date().toISOString();
@@ -111,16 +111,65 @@ export async function workerAlive(state) {
   return Number.isInteger(state?.pid) && typeof state?.processStart === 'string' &&
     await processIdentity(state.pid) === state.processStart;
 }
+async function runFlock(fileDescriptor) {
+  const started = Date.now();
+  return new Promise(resolve => {
+    let child, error = null, stderr = Buffer.alloc(0), stderrTruncated = false;
+    let timedOut = false, timeout = null, terminate = null;
+    const errorDetails = value => value ? {
+      code: value.code ?? null, errno: value.errno ?? null,
+      syscall: value.syscall ?? null, message: String(value.message ?? value).slice(0, 512),
+    } : null;
+    const finish = (status, signal) => {
+      if (timeout) clearTimeout(timeout);
+      if (terminate) clearTimeout(terminate);
+      resolve({ status, signal, error: errorDetails(error), timedOut,
+        stderr: stderr.toString('utf8'), stderrTruncated, elapsedMs: Date.now() - started });
+    };
+    try {
+      child = spawn('flock', ['--exclusive', '--nonblock', '--conflict-exit-code', '75', '3'],
+        { stdio: ['ignore', 'ignore', 'pipe', fileDescriptor] });
+    } catch (failure) {
+      error = failure; finish(null, null); return;
+    }
+    child.on('error', failure => { error ??= failure; });
+    child.stderr?.on('data', bytes => {
+      const remaining = Math.max(0, 1024 - stderr.length);
+      if (bytes.length > remaining) stderrTruncated = true;
+      if (remaining) stderr = Buffer.concat([stderr, bytes.subarray(0, remaining)]);
+    });
+    child.stderr?.on('error', failure => { error ??= failure; });
+    // close follows process exit and drained stdio. Never release or retry the
+    // inherited open-file description while its original child can still run.
+    child.once('close', finish);
+    timeout = setTimeout(() => {
+      timedOut = true;
+      try { child.kill('SIGTERM'); } catch (failure) { error ??= failure; }
+      terminate = setTimeout(() => {
+        try { child.kill('SIGKILL'); } catch (failure) { error ??= failure; }
+      }, 250);
+    }, 5000);
+  });
+}
 export async function operationLease(path) {
   const handle = await open(path, constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW, 0o600);
   try {
     const info = await handle.stat();
     need(info.isFile() && info.nlink === 1 && !(info.mode & 0o077), 'RUNTIME_WORKSPACE_LEASE_INVALID');
-    const result = spawnSync('flock', ['--exclusive', '--nonblock', '--conflict-exit-code', '75', '3'],
-      { stdio: ['ignore', 'ignore', 'ignore', handle.fd], timeout: 5000 });
-    need(!result.error && result.status === 0,
-      result.status === 75 ? 'RUNTIME_WORKSPACE_OPERATION_RUNNING' : 'RUNTIME_WORKSPACE_FLOCK_UNAVAILABLE');
-    return handle;
+    const attempts = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const result = await runFlock(handle.fd);
+      attempts.push(result);
+      if (!result.error && result.status === 0) return handle;
+      need(result.status !== 75, 'RUNTIME_WORKSPACE_OPERATION_RUNNING');
+      const transient = result.timedOut || ['EAGAIN', 'EINTR', 'ENOMEM'].includes(result.error?.code);
+      if (!transient || attempt === 1) {
+        throw Object.assign(new Error('The original native flock process failed: ' + JSON.stringify(attempts)), {
+          code: 'RUNTIME_WORKSPACE_FLOCK_UNAVAILABLE', status: 400, flock: { attempts },
+        });
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   } catch (error) { await handle.close(); throw error; }
 }
 // The existing kernel lease remains authoritative when a container's mounted

@@ -188,8 +188,9 @@ class ResearchWorkspace:
 
     def _invoke(self, action, value, request_file, *, mutating=False, local=False, event):
         if local and (action not in {"commerce-operation", "commerce-archive-inspect",
-                                    "commerce-archive-receive"} or
-                      mutating and action != "commerce-archive-receive"):
+                                    "commerce-archive-receive", "quotes-run-inspect",
+                                    "quotes-copy-export"} or
+                      mutating and action not in {"commerce-archive-receive", "quotes-copy-export"}):
             raise StateError("RESEARCH_LOCAL_ACTION_INVALID")
         request = {"schema": _CALL, "action": action, "input": deepcopy(value),
                    "timeoutMs": self.request_timeout_ms}
@@ -246,7 +247,7 @@ class ResearchWorkspace:
 
     def _write_call(self, action, value, *, request_id, replay_safe, resume, event, local=False):
         request_id = _request_id(request_id)
-        if local and action != "commerce-archive-receive":
+        if local and action not in {"commerce-archive-receive", "quotes-copy-export"}:
             raise StateError("RESEARCH_LOCAL_ACTION_INVALID")
         if self.workspace_id is None and not local:
             self._read("status", _owned_event=event)
@@ -357,6 +358,11 @@ class ResearchWorkspace:
         """Paid customer publications, original Buyer calls and complete receiving."""
         from .research_commerce import ResearchCommerce
         return ResearchCommerce(self)
+
+    def quotes(self):
+        """Original cases, quotation reviews, paid publication and complete receiving."""
+        from .research_quotes import ResearchQuotes
+        return ResearchQuotes(self)
 
     def customer_updates(self, dossier_id):
         """Recurring customer commissioning, original delivery and receiving."""

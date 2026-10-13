@@ -77,7 +77,11 @@ The full 70551 failure history is retained. That process reverified the original
 
 ## Supported file saves in the same process
 
-The strict official Library bridge is the unchanged v2 source from public blob 147ebc054e3e33cce9034e5e175c6c65b3415c39. The retired private helper directory is not required.
+The selected official save bridge retains the full v2 implementation and its checkpoint restoration, with the observed numbered filename correction from CanadaBuys PR795. It accepts the requested basename or a positive numbered collision name such as `START_HERE(3).md`, retains that actual returned name, and preserves every original request, byte, ID, size, version and full-response check. The retired private helper directory is not required.
+
+The complete 14,682-byte predecessor and selected 15,084-byte bridge are both retained by hash under the original producer history, together with the source-adoption record. The selected bridge is also provided as `official_library_save_bridge.py`. An already successful response is reconciled from its original receipt; this correction never requests another upload.
+
+Selected bridge SHA-256: `8d8fff77773320f1c949e4d07e52d3b9ef012fd2f5d7c48a08d2c2ef536119dc`. Complete selected input: 1,757,304 bytes / SHA-256 `3e426dd17fc94860ec2d5729e231a87c8ab08a087dd0b3a821142f179356d547`. The original embedded 1,258,636-byte producer input, C998, logical requests, queued package, functional application and completed browser steps remain unchanged.
 
 For each artifact the producer retains one immutable original save request and emits LIBRARY_SAVE_REQUEST. The controller checks source/staged size and SHA-256, then calls the supported tool:
 
