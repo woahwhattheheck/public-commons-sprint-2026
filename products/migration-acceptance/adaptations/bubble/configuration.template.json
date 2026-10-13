@@ -1,0 +1,47 @@
+{
+  "schema": "bubble.capture-config.v1",
+  "operationId": "replace_capture_operation_id",
+  "endpoint": {
+    "origin": "https://replace-with-your-app.bubbleapps.io",
+    "versionPath": "/version-test"
+  },
+  "authEnv": "BUBBLE_READ_TOKEN",
+  "plan": "ordinary",
+  "types": [
+    {
+      "id": "members",
+      "typeName": "member",
+      "scope": {
+        "population": "REPLACE: exact authorized organization/time/type population and privacy scope",
+        "coverage": "filtered-live",
+        "inactive": "REPLACE: exact field/constraint policy; include inactive if required",
+        "deleted": "not-observed-by-list"
+      },
+      "partitioning": {
+        "mode": "single",
+        "populationCoverage": "selected",
+        "evidence": "REPLACE: reviewed population boundary, partition completeness and deterministic ordering rationale"
+      },
+      "partitions": [
+        {
+          "id": "selected_members",
+          "constraints": [
+            {
+              "key": "organization",
+              "constraint_type": "equals",
+              "value": "REPLACE_WITH_ORIGINAL_ORGANIZATION_ID"
+            }
+          ],
+          "sort_field": "Created Date",
+          "descending": false,
+          "additional_sort_fields": [],
+          "expectedCount": null
+        }
+      ]
+    }
+  ],
+  "consistency": {
+    "mode": "observed-interval",
+    "evidence": "REPLACE: owner, capture window and known concurrent editing conditions"
+  }
+}

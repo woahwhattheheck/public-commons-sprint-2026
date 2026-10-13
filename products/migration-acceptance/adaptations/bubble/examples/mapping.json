@@ -1,0 +1,663 @@
+{
+  "schema": "bubble.mapping.v1",
+  "id": "authored-four-type-nonprofit-mapping",
+  "expectedBasis": "Separately authored destination capture with different native Bubble IDs, explicit reviewed business keys and one intentional 0.01 amount difference. This is a reusable example, not buyer data or a passed migration.",
+  "tables": [
+    {
+      "name": "organizations",
+      "sourceTypeId": "organizations",
+      "expectedTypeId": "organizations",
+      "primaryKey": [
+        "organization_code"
+      ],
+      "columns": [
+        {
+          "name": "organization_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Organization Code",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/organization_code",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Name",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "active",
+          "type": "boolean",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Active",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/enabled",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "people",
+      "sourceTypeId": "people",
+      "expectedTypeId": "people",
+      "primaryKey": [
+        "person_code"
+      ],
+      "columns": [
+        {
+          "name": "person_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Member Code",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/member_code",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Name",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "organization_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Organization",
+            "missing": {
+              "mode": "error"
+            },
+            "lookup": {
+              "typeId": "organizations",
+              "keyPointer": "/_id",
+              "valuePointer": "/Organization Code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/organization",
+            "missing": {
+              "mode": "error"
+            },
+            "lookup": {
+              "typeId": "organizations",
+              "keyPointer": "/_id",
+              "valuePointer": "/organization_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "kind": "field",
+            "pointer": "/Email",
+            "missing": {
+              "mode": "null"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/email",
+            "missing": {
+              "mode": "null"
+            }
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Created Date",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/created_at",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "cases",
+      "sourceTypeId": "cases",
+      "expectedTypeId": "cases",
+      "primaryKey": [
+        "case_code"
+      ],
+      "columns": [
+        {
+          "name": "case_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Case Code",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/case_code",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "organization_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Organization",
+            "missing": {
+              "mode": "error"
+            },
+            "lookup": {
+              "typeId": "organizations",
+              "keyPointer": "/_id",
+              "valuePointer": "/Organization Code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/organization",
+            "missing": {
+              "mode": "error"
+            },
+            "lookup": {
+              "typeId": "organizations",
+              "keyPointer": "/_id",
+              "valuePointer": "/organization_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        },
+        {
+          "name": "person_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Person",
+            "missing": {
+              "mode": "error"
+            },
+            "lookup": {
+              "typeId": "people",
+              "keyPointer": "/_id",
+              "valuePointer": "/Member Code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/person",
+            "missing": {
+              "mode": "error"
+            },
+            "lookup": {
+              "typeId": "people",
+              "keyPointer": "/_id",
+              "valuePointer": "/member_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        },
+        {
+          "name": "amount",
+          "type": "decimal",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Amount",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/amount",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "precision": 18,
+          "scale": 2
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Case Status",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/status",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "opened_date",
+          "type": "date",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Opened Date",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/opened_date",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "closed_date",
+          "type": "date",
+          "nullable": true,
+          "source": {
+            "kind": "field",
+            "pointer": "/Closed Date",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/closed_date",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "documents",
+      "sourceTypeId": "documents",
+      "expectedTypeId": "documents",
+      "primaryKey": [
+        "document_code"
+      ],
+      "columns": [
+        {
+          "name": "document_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Document Code",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/document_code",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "case_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Case",
+            "missing": {
+              "mode": "error"
+            },
+            "lookup": {
+              "typeId": "cases",
+              "keyPointer": "/_id",
+              "valuePointer": "/Case Code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/case",
+            "missing": {
+              "mode": "error"
+            },
+            "lookup": {
+              "typeId": "cases",
+              "keyPointer": "/_id",
+              "valuePointer": "/case_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Name",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "asset_metadata_json",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Asset",
+            "missing": {
+              "mode": "error"
+            },
+            "encoding": "canonical-json"
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/asset",
+            "missing": {
+              "mode": "error"
+            },
+            "encoding": "canonical-json"
+          }
+        },
+        {
+          "name": "active",
+          "type": "boolean",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Active",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/enabled",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "person_organizations",
+      "sourceTypeId": "people",
+      "expectedTypeId": "people",
+      "sourceRows": {
+        "mode": "list",
+        "pointer": "/Allowed Organizations",
+        "missing": {
+          "mode": "value",
+          "value": []
+        }
+      },
+      "expectedRows": {
+        "mode": "list",
+        "pointer": "/allowed_organizations",
+        "missing": {
+          "mode": "value",
+          "value": []
+        }
+      },
+      "primaryKey": [
+        "person_code",
+        "organization_code"
+      ],
+      "columns": [
+        {
+          "name": "person_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/Member Code",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/member_code",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "organization_code",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "list-item",
+            "pointer": "",
+            "lookup": {
+              "typeId": "organizations",
+              "keyPointer": "/_id",
+              "valuePointer": "/Organization Code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          "expected": {
+            "kind": "list-item",
+            "pointer": "",
+            "lookup": {
+              "typeId": "organizations",
+              "keyPointer": "/_id",
+              "valuePointer": "/organization_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "people_org",
+      "childTable": "people",
+      "childColumns": [
+        "organization_code"
+      ],
+      "parentTable": "organizations",
+      "parentColumns": [
+        "organization_code"
+      ],
+      "nulls": "reject"
+    },
+    {
+      "id": "case_org",
+      "childTable": "cases",
+      "childColumns": [
+        "organization_code"
+      ],
+      "parentTable": "organizations",
+      "parentColumns": [
+        "organization_code"
+      ],
+      "nulls": "reject"
+    },
+    {
+      "id": "case_person",
+      "childTable": "cases",
+      "childColumns": [
+        "person_code"
+      ],
+      "parentTable": "people",
+      "parentColumns": [
+        "person_code"
+      ],
+      "nulls": "reject"
+    },
+    {
+      "id": "document_case",
+      "childTable": "documents",
+      "childColumns": [
+        "case_code"
+      ],
+      "parentTable": "cases",
+      "parentColumns": [
+        "case_code"
+      ],
+      "nulls": "reject"
+    },
+    {
+      "id": "membership_person",
+      "childTable": "person_organizations",
+      "childColumns": [
+        "person_code"
+      ],
+      "parentTable": "people",
+      "parentColumns": [
+        "person_code"
+      ],
+      "nulls": "reject"
+    },
+    {
+      "id": "membership_org",
+      "childTable": "person_organizations",
+      "childColumns": [
+        "organization_code"
+      ],
+      "parentTable": "organizations",
+      "parentColumns": [
+        "organization_code"
+      ],
+      "nulls": "reject"
+    }
+  ],
+  "acceptance": {
+    "title": "Authored four-type migration: original keys, relationships and exact organization totals",
+    "controls": [
+      {
+        "id": "case_amount_by_org",
+        "objectId": "cases",
+        "groupBy": [
+          "organization_code"
+        ],
+        "measure": {
+          "kind": "sum",
+          "column": "amount",
+          "scale": 2
+        },
+        "nulls": "reject",
+        "acceptance": "required"
+      }
+    ]
+  }
+}

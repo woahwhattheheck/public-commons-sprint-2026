@@ -1,0 +1,843 @@
+{
+  "manifest": {
+    "schema": "bubble.prepared.v1",
+    "operationId": "authored-bubble-source-20261013",
+    "expectedOperationId": "authored-bubble-expected-20261013",
+    "mappingId": "authored-four-type-nonprofit-mapping",
+    "files": [
+      {
+        "path": "inputs/organizations.json",
+        "bytes": 203,
+        "sha256": "da760c999339d30097d97299fd42cbcdc6605f02d6985a54286dcf9ab93c9f26"
+      },
+      {
+        "path": "expected/organizations.json",
+        "bytes": 793,
+        "sha256": "d372f404e90557e5a9d1665de46fbe9937bbd462e34b49c0a25d6aca220669be"
+      },
+      {
+        "path": "inputs/people.json",
+        "bytes": 329,
+        "sha256": "be2e3f2138d24bb2b6cb29c967b6a0dabb486df81ee58ce4dc04c5e94c9c46ef"
+      },
+      {
+        "path": "expected/people.json",
+        "bytes": 1169,
+        "sha256": "0262b033ebb2d1f73965f1d184e8dba382dd469899e9b154c8d973106c855dd7"
+      },
+      {
+        "path": "inputs/cases.json",
+        "bytes": 418,
+        "sha256": "0bf6258a60db68cbd0d47a63a8c8ae57e258e3b827a7de2a9935f67774aea654"
+      },
+      {
+        "path": "expected/cases.json",
+        "bytes": 1541,
+        "sha256": "acc6321b14a95a4b1ab2ff0460fa283de897da4d0348024bb469163a08bfb42f"
+      },
+      {
+        "path": "inputs/documents.json",
+        "bytes": 408,
+        "sha256": "964e9e0b822b367043eefdc6657af123b990f9a94a042968306f344a3344c8b7"
+      },
+      {
+        "path": "expected/documents.json",
+        "bytes": 1276,
+        "sha256": "dc1de77074d9477de92116f915e3e2ad590303a5decdbd67a4601dccd0b22c1b"
+      },
+      {
+        "path": "inputs/person_organizations.json",
+        "bytes": 213,
+        "sha256": "95602e1c4aa78440f8417ea3997516e13091d933c9106371f48e09850b471ee1"
+      },
+      {
+        "path": "expected/person_organizations.json",
+        "bytes": 720,
+        "sha256": "d19d425ff94626c25f4dd62865d15f02414df42642ff4bf10bf5b6fc256fe9a2"
+      },
+      {
+        "path": "capture.json",
+        "bytes": 36311,
+        "sha256": "af998e005be6c435994084bf7c7ea1fc1fa7c8b7ab5a8ad3251fc97e834d7fd5"
+      },
+      {
+        "path": "source-capture.json",
+        "bytes": 17352,
+        "sha256": "fce5c0394bbcb9d58d4fd8e9ef1a66c6a71b0d96732af26ddaac229d2602d5ff"
+      },
+      {
+        "path": "expected-capture.json",
+        "bytes": 17444,
+        "sha256": "7740fbe4b7d4e21a28d2a3f6f37ac899670c42ad42a76e09dcfe49f1ed2a9fa7"
+      },
+      {
+        "path": "mapping.json",
+        "bytes": 15902,
+        "sha256": "de41ea2c4ef81cdb7e057112e06ef14ecd5205fd8431e490c790fdb2769f6b09"
+      },
+      {
+        "path": "projection.json",
+        "bytes": 32468,
+        "sha256": "b9d37fd56372e45e6949ec8e48aa0438ac69b906efd6a86dffb2e61c8c4e0b58"
+      }
+    ],
+    "tables": [
+      {
+        "name": "organizations",
+        "sourcePath": "inputs/organizations.json",
+        "expectedPath": "expected/organizations.json",
+        "columns": [
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Organization Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/organization_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Name",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/name",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "active",
+            "type": "boolean",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Active",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/enabled",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ],
+        "primaryKey": [
+          "organization_code"
+        ],
+        "sourceRows": 2,
+        "expectedRows": 2
+      },
+      {
+        "name": "people",
+        "sourcePath": "inputs/people.json",
+        "expectedPath": "expected/people.json",
+        "columns": [
+          {
+            "name": "person_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Member Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/member_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Name",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/name",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/Organization Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/organization_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "email",
+            "type": "text",
+            "nullable": true,
+            "source": {
+              "kind": "field",
+              "pointer": "/Email",
+              "missing": {
+                "mode": "null"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/email",
+              "missing": {
+                "mode": "null"
+              }
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Created Date",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/created_at",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ],
+        "primaryKey": [
+          "person_code"
+        ],
+        "sourceRows": 2,
+        "expectedRows": 2
+      },
+      {
+        "name": "cases",
+        "sourcePath": "inputs/cases.json",
+        "expectedPath": "expected/cases.json",
+        "columns": [
+          {
+            "name": "case_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Case Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/case_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/Organization Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/organization_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "person_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Person",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "people",
+                "keyPointer": "/_id",
+                "valuePointer": "/Member Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/person",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "people",
+                "keyPointer": "/_id",
+                "valuePointer": "/member_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "decimal",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Amount",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/amount",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "precision": 18,
+            "scale": 2
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Case Status",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/status",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "opened_date",
+            "type": "date",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Opened Date",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/opened_date",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "closed_date",
+            "type": "date",
+            "nullable": true,
+            "source": {
+              "kind": "field",
+              "pointer": "/Closed Date",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/closed_date",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ],
+        "primaryKey": [
+          "case_code"
+        ],
+        "sourceRows": 2,
+        "expectedRows": 2
+      },
+      {
+        "name": "documents",
+        "sourcePath": "inputs/documents.json",
+        "expectedPath": "expected/documents.json",
+        "columns": [
+          {
+            "name": "document_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Document Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/document_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "case_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Case",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "cases",
+                "keyPointer": "/_id",
+                "valuePointer": "/Case Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/case",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "cases",
+                "keyPointer": "/_id",
+                "valuePointer": "/case_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Name",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/name",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "asset_metadata_json",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Asset",
+              "missing": {
+                "mode": "error"
+              },
+              "encoding": "canonical-json"
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/asset",
+              "missing": {
+                "mode": "error"
+              },
+              "encoding": "canonical-json"
+            }
+          },
+          {
+            "name": "active",
+            "type": "boolean",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Active",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/enabled",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ],
+        "primaryKey": [
+          "document_code"
+        ],
+        "sourceRows": 2,
+        "expectedRows": 2
+      },
+      {
+        "name": "person_organizations",
+        "sourcePath": "inputs/person_organizations.json",
+        "expectedPath": "expected/person_organizations.json",
+        "columns": [
+          {
+            "name": "person_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Member Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/member_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "list-item",
+              "pointer": "",
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/Organization Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "list-item",
+              "pointer": "",
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/organization_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          }
+        ],
+        "primaryKey": [
+          "person_code",
+          "organization_code"
+        ],
+        "sourceRows": 3,
+        "expectedRows": 3
+      }
+    ],
+    "relationships": [
+      {
+        "id": "people_org",
+        "provider": "source",
+        "childTable": "people",
+        "parentTable": "organizations",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "people_org",
+        "provider": "expected",
+        "childTable": "people",
+        "parentTable": "organizations",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "case_org",
+        "provider": "source",
+        "childTable": "cases",
+        "parentTable": "organizations",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "case_org",
+        "provider": "expected",
+        "childTable": "cases",
+        "parentTable": "organizations",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "case_person",
+        "provider": "source",
+        "childTable": "cases",
+        "parentTable": "people",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "case_person",
+        "provider": "expected",
+        "childTable": "cases",
+        "parentTable": "people",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "document_case",
+        "provider": "source",
+        "childTable": "documents",
+        "parentTable": "cases",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "document_case",
+        "provider": "expected",
+        "childTable": "documents",
+        "parentTable": "cases",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "membership_person",
+        "provider": "source",
+        "childTable": "person_organizations",
+        "parentTable": "people",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "membership_person",
+        "provider": "expected",
+        "childTable": "person_organizations",
+        "parentTable": "people",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "membership_org",
+        "provider": "source",
+        "childTable": "person_organizations",
+        "parentTable": "organizations",
+        "orphans": [],
+        "count": 0
+      },
+      {
+        "id": "membership_org",
+        "provider": "expected",
+        "childTable": "person_organizations",
+        "parentTable": "organizations",
+        "orphans": [],
+        "count": 0
+      }
+    ],
+    "consistency": {
+      "source": {
+        "mode": "observed-interval"
+      },
+      "expected": {
+        "mode": "observed-interval"
+      },
+      "expectedBasis": "Separately authored destination capture with different native Bubble IDs, explicit reviewed business keys and one intentional 0.01 amount difference. This is a reusable example, not buyer data or a passed migration."
+    }
+  },
+  "files": [
+    {
+      "path": "inputs/organizations.json",
+      "content": "[\n  {\n    \"organization_code\": \"ORG-N\",\n    \"name\": \"Example North Services\",\n    \"active\": true\n  },\n  {\n    \"organization_code\": \"ORG-S\",\n    \"name\": \"Example South Services\",\n    \"active\": true\n  }\n]\n",
+      "bytes": 203,
+      "sha256": "da760c999339d30097d97299fd42cbcdc6605f02d6985a54286dcf9ab93c9f26"
+    },
+    {
+      "path": "expected/organizations.json",
+      "content": "{\n  \"schema\": \"dlthub.expected-table.v1\",\n  \"table\": \"organizations\",\n  \"complete\": true,\n  \"rowCount\": 2,\n  \"columns\": [\n    {\n      \"name\": \"organization_code\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"name\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"active\",\n      \"type\": \"BOOLEAN\"\n    }\n  ],\n  \"rows\": [\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"ORG-N\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"Example North Services\"\n      },\n      {\n        \"type\": \"boolean\",\n        \"value\": \"true\"\n      }\n    ],\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"ORG-S\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"Example South Services\"\n      },\n      {\n        \"type\": \"boolean\",\n        \"value\": \"true\"\n      }\n    ]\n  ]\n}\n",
+      "bytes": 793,
+      "sha256": "d372f404e90557e5a9d1665de46fbe9937bbd462e34b49c0a25d6aca220669be"
+    },
+    {
+      "path": "inputs/people.json",
+      "content": "[\n  {\n    \"person_code\": \"P-001\",\n    \"name\": \"Example Person A\",\n    \"organization_code\": \"ORG-N\",\n    \"email\": null,\n    \"created_at\": \"2026-10-01T09:00:00Z\"\n  },\n  {\n    \"person_code\": \"P-002\",\n    \"name\": \"Example Person B\",\n    \"organization_code\": \"ORG-S\",\n    \"email\": null,\n    \"created_at\": \"2026-10-02T10:00:00Z\"\n  }\n]\n",
+      "bytes": 329,
+      "sha256": "be2e3f2138d24bb2b6cb29c967b6a0dabb486df81ee58ce4dc04c5e94c9c46ef"
+    },
+    {
+      "path": "expected/people.json",
+      "content": "{\n  \"schema\": \"dlthub.expected-table.v1\",\n  \"table\": \"people\",\n  \"complete\": true,\n  \"rowCount\": 2,\n  \"columns\": [\n    {\n      \"name\": \"person_code\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"name\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"organization_code\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"email\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"created_at\",\n      \"type\": \"TIMESTAMP WITH TIME ZONE\"\n    }\n  ],\n  \"rows\": [\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"P-001\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"Example Person A\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"ORG-N\"\n      },\n      {\n        \"type\": \"null\"\n      },\n      {\n        \"type\": \"timestamp\",\n        \"value\": \"2026-10-01T09:00:00Z\"\n      }\n    ],\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"P-002\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"Example Person B\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"ORG-S\"\n      },\n      {\n        \"type\": \"null\"\n      },\n      {\n        \"type\": \"timestamp\",\n        \"value\": \"2026-10-02T10:00:00Z\"\n      }\n    ]\n  ]\n}\n",
+      "bytes": 1169,
+      "sha256": "0262b033ebb2d1f73965f1d184e8dba382dd469899e9b154c8d973106c855dd7"
+    },
+    {
+      "path": "inputs/cases.json",
+      "content": "[\n  {\n    \"case_code\": \"CASE-001\",\n    \"organization_code\": \"ORG-N\",\n    \"person_code\": \"P-001\",\n    \"amount\": \"1234.50\",\n    \"status\": \"open\",\n    \"opened_date\": \"2026-10-01\",\n    \"closed_date\": null\n  },\n  {\n    \"case_code\": \"CASE-002\",\n    \"organization_code\": \"ORG-S\",\n    \"person_code\": \"P-002\",\n    \"amount\": \"0.00\",\n    \"status\": \"closed\",\n    \"opened_date\": \"2026-10-02\",\n    \"closed_date\": \"2026-10-10\"\n  }\n]\n",
+      "bytes": 418,
+      "sha256": "0bf6258a60db68cbd0d47a63a8c8ae57e258e3b827a7de2a9935f67774aea654"
+    },
+    {
+      "path": "expected/cases.json",
+      "content": "{\n  \"schema\": \"dlthub.expected-table.v1\",\n  \"table\": \"cases\",\n  \"complete\": true,\n  \"rowCount\": 2,\n  \"columns\": [\n    {\n      \"name\": \"case_code\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"organization_code\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"person_code\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"amount\",\n      \"type\": \"DECIMAL(18,2)\"\n    },\n    {\n      \"name\": \"status\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"opened_date\",\n      \"type\": \"DATE\"\n    },\n    {\n      \"name\": \"closed_date\",\n      \"type\": \"DATE\"\n    }\n  ],\n  \"rows\": [\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"CASE-001\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"ORG-N\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"P-001\"\n      },\n      {\n        \"type\": \"decimal\",\n        \"value\": \"1234.49\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"open\"\n      },\n      {\n        \"type\": \"date\",\n        \"value\": \"2026-10-01\"\n      },\n      {\n        \"type\": \"null\"\n      }\n    ],\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"CASE-002\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"ORG-S\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"P-002\"\n      },\n      {\n        \"type\": \"decimal\",\n        \"value\": \"0.00\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"closed\"\n      },\n      {\n        \"type\": \"date\",\n        \"value\": \"2026-10-02\"\n      },\n      {\n        \"type\": \"date\",\n        \"value\": \"2026-10-10\"\n      }\n    ]\n  ]\n}\n",
+      "bytes": 1541,
+      "sha256": "acc6321b14a95a4b1ab2ff0460fa283de897da4d0348024bb469163a08bfb42f"
+    },
+    {
+      "path": "inputs/documents.json",
+      "content": "[\n  {\n    \"document_code\": \"DOC-001\",\n    \"case_code\": \"CASE-001\",\n    \"name\": \"Example intake attachment\",\n    \"asset_metadata_json\": \"{\\\"name\\\":\\\"intake.pdf\\\",\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\"}\",\n    \"active\": true\n  },\n  {\n    \"document_code\": \"DOC-002\",\n    \"case_code\": \"CASE-002\",\n    \"name\": \"Example closure attachment\",\n    \"asset_metadata_json\": \"null\",\n    \"active\": false\n  }\n]\n",
+      "bytes": 408,
+      "sha256": "964e9e0b822b367043eefdc6657af123b990f9a94a042968306f344a3344c8b7"
+    },
+    {
+      "path": "expected/documents.json",
+      "content": "{\n  \"schema\": \"dlthub.expected-table.v1\",\n  \"table\": \"documents\",\n  \"complete\": true,\n  \"rowCount\": 2,\n  \"columns\": [\n    {\n      \"name\": \"document_code\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"case_code\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"name\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"asset_metadata_json\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"active\",\n      \"type\": \"BOOLEAN\"\n    }\n  ],\n  \"rows\": [\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"DOC-001\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"CASE-001\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"Example intake attachment\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"{\\\"name\\\":\\\"intake.pdf\\\",\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\"}\"\n      },\n      {\n        \"type\": \"boolean\",\n        \"value\": \"true\"\n      }\n    ],\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"DOC-002\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"CASE-002\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"Example closure attachment\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"null\"\n      },\n      {\n        \"type\": \"boolean\",\n        \"value\": \"false\"\n      }\n    ]\n  ]\n}\n",
+      "bytes": 1276,
+      "sha256": "dc1de77074d9477de92116f915e3e2ad590303a5decdbd67a4601dccd0b22c1b"
+    },
+    {
+      "path": "inputs/person_organizations.json",
+      "content": "[\n  {\n    \"person_code\": \"P-001\",\n    \"organization_code\": \"ORG-N\"\n  },\n  {\n    \"person_code\": \"P-001\",\n    \"organization_code\": \"ORG-S\"\n  },\n  {\n    \"person_code\": \"P-002\",\n    \"organization_code\": \"ORG-S\"\n  }\n]\n",
+      "bytes": 213,
+      "sha256": "95602e1c4aa78440f8417ea3997516e13091d933c9106371f48e09850b471ee1"
+    },
+    {
+      "path": "expected/person_organizations.json",
+      "content": "{\n  \"schema\": \"dlthub.expected-table.v1\",\n  \"table\": \"person_organizations\",\n  \"complete\": true,\n  \"rowCount\": 3,\n  \"columns\": [\n    {\n      \"name\": \"person_code\",\n      \"type\": \"VARCHAR\"\n    },\n    {\n      \"name\": \"organization_code\",\n      \"type\": \"VARCHAR\"\n    }\n  ],\n  \"rows\": [\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"P-001\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"ORG-N\"\n      }\n    ],\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"P-001\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"ORG-S\"\n      }\n    ],\n    [\n      {\n        \"type\": \"text\",\n        \"value\": \"P-002\"\n      },\n      {\n        \"type\": \"text\",\n        \"value\": \"ORG-S\"\n      }\n    ]\n  ]\n}\n",
+      "bytes": 720,
+      "sha256": "d19d425ff94626c25f4dd62865d15f02414df42642ff4bf10bf5b6fc256fe9a2"
+    },
+    {
+      "path": "capture.json",
+      "content": "{\n  \"schema\": \"bubble.reconciliation-capture.v1\",\n  \"source\": {\n    \"schema\": \"bubble.capture.v1\",\n    \"operationId\": \"authored-bubble-source-20261013\",\n    \"state\": \"complete\",\n    \"configuration\": {\n      \"schema\": \"bubble.capture-config.v1\",\n      \"operationId\": \"authored-bubble-source-20261013\",\n      \"endpoint\": {\n        \"origin\": \"https://example-source.bubbleapps.io\",\n        \"versionPath\": \"/version-test\"\n      },\n      \"authEnv\": \"BUBBLE_SOURCE_TOKEN\",\n      \"plan\": \"ordinary\",\n      \"consistency\": {\n        \"mode\": \"observed-interval\"\n      },\n      \"types\": [\n        {\n          \"id\": \"organizations\",\n          \"typeName\": \"organizations\",\n          \"scope\": {\n            \"population\": \"Explicit authored organizations roster; no customer or API request\",\n            \"coverage\": \"all-live\",\n            \"inactive\": \"Both authored active and inactive rows retained\",\n            \"deleted\": \"not-observed-by-list\"\n          },\n          \"partitioning\": {\n            \"mode\": \"single\",\n            \"populationCoverage\": \"complete-declared\",\n            \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n          },\n          \"partitions\": [\n            {\n              \"id\": \"all\",\n              \"constraints\": [],\n              \"sort_field\": \"Created Date\",\n              \"descending\": false,\n              \"additional_sort_fields\": [\n                {\n                  \"sort_field\": \"_id\",\n                  \"descending\": false\n                }\n              ],\n              \"expectedCount\": {\n                \"value\": 2,\n                \"source\": \"examples/README.md#authored-record-roster\",\n                \"evidence\": \"Exact authored full roster retained in this capture body.\"\n              }\n            }\n          ]\n        },\n        {\n          \"id\": \"people\",\n          \"typeName\": \"people\",\n          \"scope\": {\n            \"population\": \"Explicit authored people roster; no customer or API request\",\n            \"coverage\": \"all-live\",\n            \"inactive\": \"Both authored active and inactive rows retained\",\n            \"deleted\": \"not-observed-by-list\"\n          },\n          \"partitioning\": {\n            \"mode\": \"single\",\n            \"populationCoverage\": \"complete-declared\",\n            \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n          },\n          \"partitions\": [\n            {\n              \"id\": \"all\",\n              \"constraints\": [],\n              \"sort_field\": \"Created Date\",\n              \"descending\": false,\n              \"additional_sort_fields\": [\n                {\n                  \"sort_field\": \"_id\",\n                  \"descending\": false\n                }\n              ],\n              \"expectedCount\": {\n                \"value\": 2,\n                \"source\": \"examples/README.md#authored-record-roster\",\n                \"evidence\": \"Exact authored full roster retained in this capture body.\"\n              }\n            }\n          ]\n        },\n        {\n          \"id\": \"cases\",\n          \"typeName\": \"cases\",\n          \"scope\": {\n            \"population\": \"Explicit authored cases roster; no customer or API request\",\n            \"coverage\": \"all-live\",\n            \"inactive\": \"Both authored active and inactive rows retained\",\n            \"deleted\": \"not-observed-by-list\"\n          },\n          \"partitioning\": {\n            \"mode\": \"single\",\n            \"populationCoverage\": \"complete-declared\",\n            \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n          },\n          \"partitions\": [\n            {\n              \"id\": \"all\",\n              \"constraints\": [],\n              \"sort_field\": \"Created Date\",\n              \"descending\": false,\n              \"additional_sort_fields\": [\n                {\n                  \"sort_field\": \"_id\",\n                  \"descending\": false\n                }\n              ],\n              \"expectedCount\": {\n                \"value\": 2,\n                \"source\": \"examples/README.md#authored-record-roster\",\n                \"evidence\": \"Exact authored full roster retained in this capture body.\"\n              }\n            }\n          ]\n        },\n        {\n          \"id\": \"documents\",\n          \"typeName\": \"documents\",\n          \"scope\": {\n            \"population\": \"Explicit authored documents roster; no customer or API request\",\n            \"coverage\": \"all-live\",\n            \"inactive\": \"Both authored active and inactive rows retained\",\n            \"deleted\": \"not-observed-by-list\"\n          },\n          \"partitioning\": {\n            \"mode\": \"single\",\n            \"populationCoverage\": \"complete-declared\",\n            \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n          },\n          \"partitions\": [\n            {\n              \"id\": \"all\",\n              \"constraints\": [],\n              \"sort_field\": \"Created Date\",\n              \"descending\": false,\n              \"additional_sort_fields\": [\n                {\n                  \"sort_field\": \"_id\",\n                  \"descending\": false\n                }\n              ],\n              \"expectedCount\": {\n                \"value\": 2,\n                \"source\": \"examples/README.md#authored-record-roster\",\n                \"evidence\": \"Exact authored full roster retained in this capture body.\"\n              }\n            }\n          ]\n        }\n      ]\n    },\n    \"startedAt\": \"2026-10-13T00:00:00Z\",\n    \"completedAt\": \"2026-10-13T00:03:00Z\",\n    \"consistency\": {\n      \"mode\": \"observed-interval\"\n    },\n    \"types\": [\n      {\n        \"id\": \"organizations\",\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"pages\": [\n              {\n                \"request\": {\n                  \"cursor\": 0,\n                  \"limit\": 100,\n                  \"exclude_remaining\": false,\n                  \"selectionSha256\": \"426b1c10324c7969fe9e80a82f5d5df33a6c6c3b539ad81b9b9d07008b3ad5ca\"\n                },\n                \"status\": 200,\n                \"receivedAt\": \"2026-10-13T00:01:00Z\",\n                \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-source-n\\\",\\\"Organization Code\\\":\\\"ORG-N\\\",\\\"Name\\\":\\\"Example North Services\\\",\\\"Region\\\":\\\"North\\\",\\\"Active\\\":true},{\\\"_id\\\":\\\"org-source-s\\\",\\\"Organization Code\\\":\\\"ORG-S\\\",\\\"Name\\\":\\\"Example South Services\\\",\\\"Region\\\":\\\"South\\\",\\\"Active\\\":true}]}}\",\n                \"bytes\": 289,\n                \"sha256\": \"ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9\"\n              }\n            ],\n            \"countBefore\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"426b1c10324c7969fe9e80a82f5d5df33a6c6c3b539ad81b9b9d07008b3ad5ca\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:01:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-source-n\\\",\\\"Organization Code\\\":\\\"ORG-N\\\",\\\"Name\\\":\\\"Example North Services\\\",\\\"Region\\\":\\\"North\\\",\\\"Active\\\":true},{\\\"_id\\\":\\\"org-source-s\\\",\\\"Organization Code\\\":\\\"ORG-S\\\",\\\"Name\\\":\\\"Example South Services\\\",\\\"Region\\\":\\\"South\\\",\\\"Active\\\":true}]}}\",\n              \"bytes\": 289,\n              \"sha256\": \"ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9\"\n            },\n            \"countAfter\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"426b1c10324c7969fe9e80a82f5d5df33a6c6c3b539ad81b9b9d07008b3ad5ca\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:02:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-source-n\\\",\\\"Organization Code\\\":\\\"ORG-N\\\",\\\"Name\\\":\\\"Example North Services\\\",\\\"Region\\\":\\\"North\\\",\\\"Active\\\":true},{\\\"_id\\\":\\\"org-source-s\\\",\\\"Organization Code\\\":\\\"ORG-S\\\",\\\"Name\\\":\\\"Example South Services\\\",\\\"Region\\\":\\\"South\\\",\\\"Active\\\":true}]}}\",\n              \"bytes\": 289,\n              \"sha256\": \"ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"people\",\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"pages\": [\n              {\n                \"request\": {\n                  \"cursor\": 0,\n                  \"limit\": 100,\n                  \"exclude_remaining\": false,\n                  \"selectionSha256\": \"281019d2020e0c43f79d9402d64c23f6fb7585373116eddd7722f85b95a33fe8\"\n                },\n                \"status\": 200,\n                \"receivedAt\": \"2026-10-13T00:01:00Z\",\n                \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-source-a\\\",\\\"Member Code\\\":\\\"P-001\\\",\\\"Name\\\":\\\"Example Person A\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Allowed Organizations\\\":[\\\"org-source-n\\\",\\\"org-source-s\\\"],\\\"Email\\\":null,\\\"Created Date\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-source-b\\\",\\\"Member Code\\\":\\\"P-002\\\",\\\"Name\\\":\\\"Example Person B\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Allowed Organizations\\\":[\\\"org-source-s\\\"],\\\"Created Date\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n                \"bytes\": 455,\n                \"sha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\"\n              }\n            ],\n            \"countBefore\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"281019d2020e0c43f79d9402d64c23f6fb7585373116eddd7722f85b95a33fe8\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:01:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-source-a\\\",\\\"Member Code\\\":\\\"P-001\\\",\\\"Name\\\":\\\"Example Person A\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Allowed Organizations\\\":[\\\"org-source-n\\\",\\\"org-source-s\\\"],\\\"Email\\\":null,\\\"Created Date\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-source-b\\\",\\\"Member Code\\\":\\\"P-002\\\",\\\"Name\\\":\\\"Example Person B\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Allowed Organizations\\\":[\\\"org-source-s\\\"],\\\"Created Date\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n              \"bytes\": 455,\n              \"sha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\"\n            },\n            \"countAfter\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"281019d2020e0c43f79d9402d64c23f6fb7585373116eddd7722f85b95a33fe8\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:02:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-source-a\\\",\\\"Member Code\\\":\\\"P-001\\\",\\\"Name\\\":\\\"Example Person A\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Allowed Organizations\\\":[\\\"org-source-n\\\",\\\"org-source-s\\\"],\\\"Email\\\":null,\\\"Created Date\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-source-b\\\",\\\"Member Code\\\":\\\"P-002\\\",\\\"Name\\\":\\\"Example Person B\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Allowed Organizations\\\":[\\\"org-source-s\\\"],\\\"Created Date\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n              \"bytes\": 455,\n              \"sha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"cases\",\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"pages\": [\n              {\n                \"request\": {\n                  \"cursor\": 0,\n                  \"limit\": 100,\n                  \"exclude_remaining\": false,\n                  \"selectionSha256\": \"29889848ffba7cb3260dedeab8bd019abf8d66de255f0abfe6b836508a7a6d99\"\n                },\n                \"status\": 200,\n                \"receivedAt\": \"2026-10-13T00:01:00Z\",\n                \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-source-a\\\",\\\"Case Code\\\":\\\"CASE-001\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Person\\\":\\\"person-source-a\\\",\\\"Amount\\\":\\\"1234.50\\\",\\\"Case Status\\\":\\\"open\\\",\\\"Opened Date\\\":\\\"2026-10-01\\\",\\\"Closed Date\\\":null},{\\\"_id\\\":\\\"case-source-b\\\",\\\"Case Code\\\":\\\"CASE-002\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Person\\\":\\\"person-source-b\\\",\\\"Amount\\\":\\\"0.00\\\",\\\"Case Status\\\":\\\"closed\\\",\\\"Opened Date\\\":\\\"2026-10-02\\\",\\\"Closed Date\\\":\\\"2026-10-10\\\"}]}}\",\n                \"bytes\": 448,\n                \"sha256\": \"cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb\"\n              }\n            ],\n            \"countBefore\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"29889848ffba7cb3260dedeab8bd019abf8d66de255f0abfe6b836508a7a6d99\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:01:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-source-a\\\",\\\"Case Code\\\":\\\"CASE-001\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Person\\\":\\\"person-source-a\\\",\\\"Amount\\\":\\\"1234.50\\\",\\\"Case Status\\\":\\\"open\\\",\\\"Opened Date\\\":\\\"2026-10-01\\\",\\\"Closed Date\\\":null},{\\\"_id\\\":\\\"case-source-b\\\",\\\"Case Code\\\":\\\"CASE-002\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Person\\\":\\\"person-source-b\\\",\\\"Amount\\\":\\\"0.00\\\",\\\"Case Status\\\":\\\"closed\\\",\\\"Opened Date\\\":\\\"2026-10-02\\\",\\\"Closed Date\\\":\\\"2026-10-10\\\"}]}}\",\n              \"bytes\": 448,\n              \"sha256\": \"cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb\"\n            },\n            \"countAfter\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"29889848ffba7cb3260dedeab8bd019abf8d66de255f0abfe6b836508a7a6d99\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:02:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-source-a\\\",\\\"Case Code\\\":\\\"CASE-001\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Person\\\":\\\"person-source-a\\\",\\\"Amount\\\":\\\"1234.50\\\",\\\"Case Status\\\":\\\"open\\\",\\\"Opened Date\\\":\\\"2026-10-01\\\",\\\"Closed Date\\\":null},{\\\"_id\\\":\\\"case-source-b\\\",\\\"Case Code\\\":\\\"CASE-002\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Person\\\":\\\"person-source-b\\\",\\\"Amount\\\":\\\"0.00\\\",\\\"Case Status\\\":\\\"closed\\\",\\\"Opened Date\\\":\\\"2026-10-02\\\",\\\"Closed Date\\\":\\\"2026-10-10\\\"}]}}\",\n              \"bytes\": 448,\n              \"sha256\": \"cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"documents\",\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"pages\": [\n              {\n                \"request\": {\n                  \"cursor\": 0,\n                  \"limit\": 100,\n                  \"exclude_remaining\": false,\n                  \"selectionSha256\": \"d005937a4ae9b664bfdfabd1218926d9d3aebf3d2acf0aa22082757381d1efc1\"\n                },\n                \"status\": 200,\n                \"receivedAt\": \"2026-10-13T00:01:00Z\",\n                \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-source-a\\\",\\\"Document Code\\\":\\\"DOC-001\\\",\\\"Case\\\":\\\"case-source-a\\\",\\\"Name\\\":\\\"Example intake attachment\\\",\\\"Asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"Active\\\":true},{\\\"_id\\\":\\\"doc-source-b\\\",\\\"Document Code\\\":\\\"DOC-002\\\",\\\"Case\\\":\\\"case-source-b\\\",\\\"Name\\\":\\\"Example closure attachment\\\",\\\"Asset\\\":null,\\\"Active\\\":false}]}}\",\n                \"bytes\": 396,\n                \"sha256\": \"304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67\"\n              }\n            ],\n            \"countBefore\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"d005937a4ae9b664bfdfabd1218926d9d3aebf3d2acf0aa22082757381d1efc1\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:01:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-source-a\\\",\\\"Document Code\\\":\\\"DOC-001\\\",\\\"Case\\\":\\\"case-source-a\\\",\\\"Name\\\":\\\"Example intake attachment\\\",\\\"Asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"Active\\\":true},{\\\"_id\\\":\\\"doc-source-b\\\",\\\"Document Code\\\":\\\"DOC-002\\\",\\\"Case\\\":\\\"case-source-b\\\",\\\"Name\\\":\\\"Example closure attachment\\\",\\\"Asset\\\":null,\\\"Active\\\":false}]}}\",\n              \"bytes\": 396,\n              \"sha256\": \"304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67\"\n            },\n            \"countAfter\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"d005937a4ae9b664bfdfabd1218926d9d3aebf3d2acf0aa22082757381d1efc1\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:02:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-source-a\\\",\\\"Document Code\\\":\\\"DOC-001\\\",\\\"Case\\\":\\\"case-source-a\\\",\\\"Name\\\":\\\"Example intake attachment\\\",\\\"Asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"Active\\\":true},{\\\"_id\\\":\\\"doc-source-b\\\",\\\"Document Code\\\":\\\"DOC-002\\\",\\\"Case\\\":\\\"case-source-b\\\",\\\"Name\\\":\\\"Example closure attachment\\\",\\\"Asset\\\":null,\\\"Active\\\":false}]}}\",\n              \"bytes\": 396,\n              \"sha256\": \"304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67\"\n            }\n          }\n        ]\n      }\n    ],\n    \"observation\": \"AUTHORED EXAMPLE: bodies were created from the explicit fictional roster. No Bubble account was accessed.\"\n  },\n  \"expected\": {\n    \"schema\": \"bubble.capture.v1\",\n    \"operationId\": \"authored-bubble-expected-20261013\",\n    \"state\": \"complete\",\n    \"configuration\": {\n      \"schema\": \"bubble.capture-config.v1\",\n      \"operationId\": \"authored-bubble-expected-20261013\",\n      \"endpoint\": {\n        \"origin\": \"https://example-expected.bubbleapps.io\",\n        \"versionPath\": \"/version-test\"\n      },\n      \"authEnv\": \"BUBBLE_EXPECTED_TOKEN\",\n      \"plan\": \"ordinary\",\n      \"consistency\": {\n        \"mode\": \"observed-interval\"\n      },\n      \"types\": [\n        {\n          \"id\": \"organizations\",\n          \"typeName\": \"organizations\",\n          \"scope\": {\n            \"population\": \"Explicit authored organizations roster; no customer or API request\",\n            \"coverage\": \"all-live\",\n            \"inactive\": \"Both authored active and inactive rows retained\",\n            \"deleted\": \"not-observed-by-list\"\n          },\n          \"partitioning\": {\n            \"mode\": \"single\",\n            \"populationCoverage\": \"complete-declared\",\n            \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n          },\n          \"partitions\": [\n            {\n              \"id\": \"all\",\n              \"constraints\": [],\n              \"sort_field\": \"Created Date\",\n              \"descending\": false,\n              \"additional_sort_fields\": [\n                {\n                  \"sort_field\": \"_id\",\n                  \"descending\": false\n                }\n              ],\n              \"expectedCount\": {\n                \"value\": 2,\n                \"source\": \"examples/README.md#authored-record-roster\",\n                \"evidence\": \"Exact authored full roster retained in this capture body.\"\n              }\n            }\n          ]\n        },\n        {\n          \"id\": \"people\",\n          \"typeName\": \"people\",\n          \"scope\": {\n            \"population\": \"Explicit authored people roster; no customer or API request\",\n            \"coverage\": \"all-live\",\n            \"inactive\": \"Both authored active and inactive rows retained\",\n            \"deleted\": \"not-observed-by-list\"\n          },\n          \"partitioning\": {\n            \"mode\": \"single\",\n            \"populationCoverage\": \"complete-declared\",\n            \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n          },\n          \"partitions\": [\n            {\n              \"id\": \"all\",\n              \"constraints\": [],\n              \"sort_field\": \"Created Date\",\n              \"descending\": false,\n              \"additional_sort_fields\": [\n                {\n                  \"sort_field\": \"_id\",\n                  \"descending\": false\n                }\n              ],\n              \"expectedCount\": {\n                \"value\": 2,\n                \"source\": \"examples/README.md#authored-record-roster\",\n                \"evidence\": \"Exact authored full roster retained in this capture body.\"\n              }\n            }\n          ]\n        },\n        {\n          \"id\": \"cases\",\n          \"typeName\": \"cases\",\n          \"scope\": {\n            \"population\": \"Explicit authored cases roster; no customer or API request\",\n            \"coverage\": \"all-live\",\n            \"inactive\": \"Both authored active and inactive rows retained\",\n            \"deleted\": \"not-observed-by-list\"\n          },\n          \"partitioning\": {\n            \"mode\": \"single\",\n            \"populationCoverage\": \"complete-declared\",\n            \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n          },\n          \"partitions\": [\n            {\n              \"id\": \"all\",\n              \"constraints\": [],\n              \"sort_field\": \"Created Date\",\n              \"descending\": false,\n              \"additional_sort_fields\": [\n                {\n                  \"sort_field\": \"_id\",\n                  \"descending\": false\n                }\n              ],\n              \"expectedCount\": {\n                \"value\": 2,\n                \"source\": \"examples/README.md#authored-record-roster\",\n                \"evidence\": \"Exact authored full roster retained in this capture body.\"\n              }\n            }\n          ]\n        },\n        {\n          \"id\": \"documents\",\n          \"typeName\": \"documents\",\n          \"scope\": {\n            \"population\": \"Explicit authored documents roster; no customer or API request\",\n            \"coverage\": \"all-live\",\n            \"inactive\": \"Both authored active and inactive rows retained\",\n            \"deleted\": \"not-observed-by-list\"\n          },\n          \"partitioning\": {\n            \"mode\": \"single\",\n            \"populationCoverage\": \"complete-declared\",\n            \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n          },\n          \"partitions\": [\n            {\n              \"id\": \"all\",\n              \"constraints\": [],\n              \"sort_field\": \"Created Date\",\n              \"descending\": false,\n              \"additional_sort_fields\": [\n                {\n                  \"sort_field\": \"_id\",\n                  \"descending\": false\n                }\n              ],\n              \"expectedCount\": {\n                \"value\": 2,\n                \"source\": \"examples/README.md#authored-record-roster\",\n                \"evidence\": \"Exact authored full roster retained in this capture body.\"\n              }\n            }\n          ]\n        }\n      ]\n    },\n    \"startedAt\": \"2026-10-13T00:10:00Z\",\n    \"completedAt\": \"2026-10-13T00:13:00Z\",\n    \"consistency\": {\n      \"mode\": \"observed-interval\"\n    },\n    \"types\": [\n      {\n        \"id\": \"organizations\",\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"pages\": [\n              {\n                \"request\": {\n                  \"cursor\": 0,\n                  \"limit\": 100,\n                  \"exclude_remaining\": false,\n                  \"selectionSha256\": \"5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c\"\n                },\n                \"status\": 200,\n                \"receivedAt\": \"2026-10-13T00:11:00Z\",\n                \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-target-100\\\",\\\"organization_code\\\":\\\"ORG-N\\\",\\\"name\\\":\\\"Example North Services\\\",\\\"region\\\":\\\"North\\\",\\\"enabled\\\":true},{\\\"_id\\\":\\\"org-target-200\\\",\\\"organization_code\\\":\\\"ORG-S\\\",\\\"name\\\":\\\"Example South Services\\\",\\\"region\\\":\\\"South\\\",\\\"enabled\\\":true}]}}\",\n                \"bytes\": 295,\n                \"sha256\": \"ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7\"\n              }\n            ],\n            \"countBefore\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:11:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-target-100\\\",\\\"organization_code\\\":\\\"ORG-N\\\",\\\"name\\\":\\\"Example North Services\\\",\\\"region\\\":\\\"North\\\",\\\"enabled\\\":true},{\\\"_id\\\":\\\"org-target-200\\\",\\\"organization_code\\\":\\\"ORG-S\\\",\\\"name\\\":\\\"Example South Services\\\",\\\"region\\\":\\\"South\\\",\\\"enabled\\\":true}]}}\",\n              \"bytes\": 295,\n              \"sha256\": \"ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7\"\n            },\n            \"countAfter\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:12:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-target-100\\\",\\\"organization_code\\\":\\\"ORG-N\\\",\\\"name\\\":\\\"Example North Services\\\",\\\"region\\\":\\\"North\\\",\\\"enabled\\\":true},{\\\"_id\\\":\\\"org-target-200\\\",\\\"organization_code\\\":\\\"ORG-S\\\",\\\"name\\\":\\\"Example South Services\\\",\\\"region\\\":\\\"South\\\",\\\"enabled\\\":true}]}}\",\n              \"bytes\": 295,\n              \"sha256\": \"ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"people\",\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"pages\": [\n              {\n                \"request\": {\n                  \"cursor\": 0,\n                  \"limit\": 100,\n                  \"exclude_remaining\": false,\n                  \"selectionSha256\": \"27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e\"\n                },\n                \"status\": 200,\n                \"receivedAt\": \"2026-10-13T00:11:00Z\",\n                \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-target-100\\\",\\\"member_code\\\":\\\"P-001\\\",\\\"name\\\":\\\"Example Person A\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"allowed_organizations\\\":[\\\"org-target-100\\\",\\\"org-target-200\\\"],\\\"email\\\":null,\\\"created_at\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-target-200\\\",\\\"member_code\\\":\\\"P-002\\\",\\\"name\\\":\\\"Example Person B\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"allowed_organizations\\\":[\\\"org-target-200\\\"],\\\"created_at\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n                \"bytes\": 465,\n                \"sha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\"\n              }\n            ],\n            \"countBefore\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:11:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-target-100\\\",\\\"member_code\\\":\\\"P-001\\\",\\\"name\\\":\\\"Example Person A\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"allowed_organizations\\\":[\\\"org-target-100\\\",\\\"org-target-200\\\"],\\\"email\\\":null,\\\"created_at\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-target-200\\\",\\\"member_code\\\":\\\"P-002\\\",\\\"name\\\":\\\"Example Person B\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"allowed_organizations\\\":[\\\"org-target-200\\\"],\\\"created_at\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n              \"bytes\": 465,\n              \"sha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\"\n            },\n            \"countAfter\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:12:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-target-100\\\",\\\"member_code\\\":\\\"P-001\\\",\\\"name\\\":\\\"Example Person A\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"allowed_organizations\\\":[\\\"org-target-100\\\",\\\"org-target-200\\\"],\\\"email\\\":null,\\\"created_at\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-target-200\\\",\\\"member_code\\\":\\\"P-002\\\",\\\"name\\\":\\\"Example Person B\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"allowed_organizations\\\":[\\\"org-target-200\\\"],\\\"created_at\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n              \"bytes\": 465,\n              \"sha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"cases\",\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"pages\": [\n              {\n                \"request\": {\n                  \"cursor\": 0,\n                  \"limit\": 100,\n                  \"exclude_remaining\": false,\n                  \"selectionSha256\": \"20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc\"\n                },\n                \"status\": 200,\n                \"receivedAt\": \"2026-10-13T00:11:00Z\",\n                \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-target-100\\\",\\\"case_code\\\":\\\"CASE-001\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"person\\\":\\\"person-target-100\\\",\\\"amount\\\":\\\"1234.49\\\",\\\"status\\\":\\\"open\\\",\\\"opened_date\\\":\\\"2026-10-01\\\",\\\"closed_date\\\":null},{\\\"_id\\\":\\\"case-target-200\\\",\\\"case_code\\\":\\\"CASE-002\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"person\\\":\\\"person-target-200\\\",\\\"amount\\\":\\\"0.00\\\",\\\"status\\\":\\\"closed\\\",\\\"opened_date\\\":\\\"2026-10-02\\\",\\\"closed_date\\\":\\\"2026-10-10\\\"}]}}\",\n                \"bytes\": 450,\n                \"sha256\": \"8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b\"\n              }\n            ],\n            \"countBefore\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:11:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-target-100\\\",\\\"case_code\\\":\\\"CASE-001\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"person\\\":\\\"person-target-100\\\",\\\"amount\\\":\\\"1234.49\\\",\\\"status\\\":\\\"open\\\",\\\"opened_date\\\":\\\"2026-10-01\\\",\\\"closed_date\\\":null},{\\\"_id\\\":\\\"case-target-200\\\",\\\"case_code\\\":\\\"CASE-002\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"person\\\":\\\"person-target-200\\\",\\\"amount\\\":\\\"0.00\\\",\\\"status\\\":\\\"closed\\\",\\\"opened_date\\\":\\\"2026-10-02\\\",\\\"closed_date\\\":\\\"2026-10-10\\\"}]}}\",\n              \"bytes\": 450,\n              \"sha256\": \"8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b\"\n            },\n            \"countAfter\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:12:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-target-100\\\",\\\"case_code\\\":\\\"CASE-001\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"person\\\":\\\"person-target-100\\\",\\\"amount\\\":\\\"1234.49\\\",\\\"status\\\":\\\"open\\\",\\\"opened_date\\\":\\\"2026-10-01\\\",\\\"closed_date\\\":null},{\\\"_id\\\":\\\"case-target-200\\\",\\\"case_code\\\":\\\"CASE-002\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"person\\\":\\\"person-target-200\\\",\\\"amount\\\":\\\"0.00\\\",\\\"status\\\":\\\"closed\\\",\\\"opened_date\\\":\\\"2026-10-02\\\",\\\"closed_date\\\":\\\"2026-10-10\\\"}]}}\",\n              \"bytes\": 450,\n              \"sha256\": \"8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"documents\",\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"pages\": [\n              {\n                \"request\": {\n                  \"cursor\": 0,\n                  \"limit\": 100,\n                  \"exclude_remaining\": false,\n                  \"selectionSha256\": \"dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328\"\n                },\n                \"status\": 200,\n                \"receivedAt\": \"2026-10-13T00:11:00Z\",\n                \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-target-100\\\",\\\"document_code\\\":\\\"DOC-001\\\",\\\"case\\\":\\\"case-target-100\\\",\\\"name\\\":\\\"Example intake attachment\\\",\\\"asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"enabled\\\":true},{\\\"_id\\\":\\\"doc-target-200\\\",\\\"document_code\\\":\\\"DOC-002\\\",\\\"case\\\":\\\"case-target-200\\\",\\\"name\\\":\\\"Example closure attachment\\\",\\\"asset\\\":null,\\\"enabled\\\":false}]}}\",\n                \"bytes\": 406,\n                \"sha256\": \"5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165\"\n              }\n            ],\n            \"countBefore\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:11:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-target-100\\\",\\\"document_code\\\":\\\"DOC-001\\\",\\\"case\\\":\\\"case-target-100\\\",\\\"name\\\":\\\"Example intake attachment\\\",\\\"asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"enabled\\\":true},{\\\"_id\\\":\\\"doc-target-200\\\",\\\"document_code\\\":\\\"DOC-002\\\",\\\"case\\\":\\\"case-target-200\\\",\\\"name\\\":\\\"Example closure attachment\\\",\\\"asset\\\":null,\\\"enabled\\\":false}]}}\",\n              \"bytes\": 406,\n              \"sha256\": \"5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165\"\n            },\n            \"countAfter\": {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:12:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-target-100\\\",\\\"document_code\\\":\\\"DOC-001\\\",\\\"case\\\":\\\"case-target-100\\\",\\\"name\\\":\\\"Example intake attachment\\\",\\\"asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"enabled\\\":true},{\\\"_id\\\":\\\"doc-target-200\\\",\\\"document_code\\\":\\\"DOC-002\\\",\\\"case\\\":\\\"case-target-200\\\",\\\"name\\\":\\\"Example closure attachment\\\",\\\"asset\\\":null,\\\"enabled\\\":false}]}}\",\n              \"bytes\": 406,\n              \"sha256\": \"5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165\"\n            }\n          }\n        ]\n      }\n    ],\n    \"observation\": \"AUTHORED EXAMPLE: bodies were created from the explicit fictional roster. No Bubble account was accessed.\"\n  }\n}\n",
+      "bytes": 36311,
+      "sha256": "af998e005be6c435994084bf7c7ea1fc1fa7c8b7ab5a8ad3251fc97e834d7fd5"
+    },
+    {
+      "path": "source-capture.json",
+      "content": "{\n  \"schema\": \"bubble.capture.v1\",\n  \"operationId\": \"authored-bubble-source-20261013\",\n  \"state\": \"complete\",\n  \"configuration\": {\n    \"schema\": \"bubble.capture-config.v1\",\n    \"operationId\": \"authored-bubble-source-20261013\",\n    \"endpoint\": {\n      \"origin\": \"https://example-source.bubbleapps.io\",\n      \"versionPath\": \"/version-test\"\n    },\n    \"authEnv\": \"BUBBLE_SOURCE_TOKEN\",\n    \"plan\": \"ordinary\",\n    \"consistency\": {\n      \"mode\": \"observed-interval\"\n    },\n    \"types\": [\n      {\n        \"id\": \"organizations\",\n        \"typeName\": \"organizations\",\n        \"scope\": {\n          \"population\": \"Explicit authored organizations roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        },\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"constraints\": [],\n            \"sort_field\": \"Created Date\",\n            \"descending\": false,\n            \"additional_sort_fields\": [\n              {\n                \"sort_field\": \"_id\",\n                \"descending\": false\n              }\n            ],\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"people\",\n        \"typeName\": \"people\",\n        \"scope\": {\n          \"population\": \"Explicit authored people roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        },\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"constraints\": [],\n            \"sort_field\": \"Created Date\",\n            \"descending\": false,\n            \"additional_sort_fields\": [\n              {\n                \"sort_field\": \"_id\",\n                \"descending\": false\n              }\n            ],\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"cases\",\n        \"typeName\": \"cases\",\n        \"scope\": {\n          \"population\": \"Explicit authored cases roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        },\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"constraints\": [],\n            \"sort_field\": \"Created Date\",\n            \"descending\": false,\n            \"additional_sort_fields\": [\n              {\n                \"sort_field\": \"_id\",\n                \"descending\": false\n              }\n            ],\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"documents\",\n        \"typeName\": \"documents\",\n        \"scope\": {\n          \"population\": \"Explicit authored documents roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        },\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"constraints\": [],\n            \"sort_field\": \"Created Date\",\n            \"descending\": false,\n            \"additional_sort_fields\": [\n              {\n                \"sort_field\": \"_id\",\n                \"descending\": false\n              }\n            ],\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            }\n          }\n        ]\n      }\n    ]\n  },\n  \"startedAt\": \"2026-10-13T00:00:00Z\",\n  \"completedAt\": \"2026-10-13T00:03:00Z\",\n  \"consistency\": {\n    \"mode\": \"observed-interval\"\n  },\n  \"types\": [\n    {\n      \"id\": \"organizations\",\n      \"partitions\": [\n        {\n          \"id\": \"all\",\n          \"pages\": [\n            {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"426b1c10324c7969fe9e80a82f5d5df33a6c6c3b539ad81b9b9d07008b3ad5ca\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:01:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-source-n\\\",\\\"Organization Code\\\":\\\"ORG-N\\\",\\\"Name\\\":\\\"Example North Services\\\",\\\"Region\\\":\\\"North\\\",\\\"Active\\\":true},{\\\"_id\\\":\\\"org-source-s\\\",\\\"Organization Code\\\":\\\"ORG-S\\\",\\\"Name\\\":\\\"Example South Services\\\",\\\"Region\\\":\\\"South\\\",\\\"Active\\\":true}]}}\",\n              \"bytes\": 289,\n              \"sha256\": \"ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9\"\n            }\n          ],\n          \"countBefore\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"426b1c10324c7969fe9e80a82f5d5df33a6c6c3b539ad81b9b9d07008b3ad5ca\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:01:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-source-n\\\",\\\"Organization Code\\\":\\\"ORG-N\\\",\\\"Name\\\":\\\"Example North Services\\\",\\\"Region\\\":\\\"North\\\",\\\"Active\\\":true},{\\\"_id\\\":\\\"org-source-s\\\",\\\"Organization Code\\\":\\\"ORG-S\\\",\\\"Name\\\":\\\"Example South Services\\\",\\\"Region\\\":\\\"South\\\",\\\"Active\\\":true}]}}\",\n            \"bytes\": 289,\n            \"sha256\": \"ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9\"\n          },\n          \"countAfter\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"426b1c10324c7969fe9e80a82f5d5df33a6c6c3b539ad81b9b9d07008b3ad5ca\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:02:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-source-n\\\",\\\"Organization Code\\\":\\\"ORG-N\\\",\\\"Name\\\":\\\"Example North Services\\\",\\\"Region\\\":\\\"North\\\",\\\"Active\\\":true},{\\\"_id\\\":\\\"org-source-s\\\",\\\"Organization Code\\\":\\\"ORG-S\\\",\\\"Name\\\":\\\"Example South Services\\\",\\\"Region\\\":\\\"South\\\",\\\"Active\\\":true}]}}\",\n            \"bytes\": 289,\n            \"sha256\": \"ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9\"\n          }\n        }\n      ]\n    },\n    {\n      \"id\": \"people\",\n      \"partitions\": [\n        {\n          \"id\": \"all\",\n          \"pages\": [\n            {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"281019d2020e0c43f79d9402d64c23f6fb7585373116eddd7722f85b95a33fe8\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:01:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-source-a\\\",\\\"Member Code\\\":\\\"P-001\\\",\\\"Name\\\":\\\"Example Person A\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Allowed Organizations\\\":[\\\"org-source-n\\\",\\\"org-source-s\\\"],\\\"Email\\\":null,\\\"Created Date\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-source-b\\\",\\\"Member Code\\\":\\\"P-002\\\",\\\"Name\\\":\\\"Example Person B\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Allowed Organizations\\\":[\\\"org-source-s\\\"],\\\"Created Date\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n              \"bytes\": 455,\n              \"sha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\"\n            }\n          ],\n          \"countBefore\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"281019d2020e0c43f79d9402d64c23f6fb7585373116eddd7722f85b95a33fe8\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:01:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-source-a\\\",\\\"Member Code\\\":\\\"P-001\\\",\\\"Name\\\":\\\"Example Person A\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Allowed Organizations\\\":[\\\"org-source-n\\\",\\\"org-source-s\\\"],\\\"Email\\\":null,\\\"Created Date\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-source-b\\\",\\\"Member Code\\\":\\\"P-002\\\",\\\"Name\\\":\\\"Example Person B\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Allowed Organizations\\\":[\\\"org-source-s\\\"],\\\"Created Date\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n            \"bytes\": 455,\n            \"sha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\"\n          },\n          \"countAfter\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"281019d2020e0c43f79d9402d64c23f6fb7585373116eddd7722f85b95a33fe8\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:02:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-source-a\\\",\\\"Member Code\\\":\\\"P-001\\\",\\\"Name\\\":\\\"Example Person A\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Allowed Organizations\\\":[\\\"org-source-n\\\",\\\"org-source-s\\\"],\\\"Email\\\":null,\\\"Created Date\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-source-b\\\",\\\"Member Code\\\":\\\"P-002\\\",\\\"Name\\\":\\\"Example Person B\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Allowed Organizations\\\":[\\\"org-source-s\\\"],\\\"Created Date\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n            \"bytes\": 455,\n            \"sha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\"\n          }\n        }\n      ]\n    },\n    {\n      \"id\": \"cases\",\n      \"partitions\": [\n        {\n          \"id\": \"all\",\n          \"pages\": [\n            {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"29889848ffba7cb3260dedeab8bd019abf8d66de255f0abfe6b836508a7a6d99\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:01:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-source-a\\\",\\\"Case Code\\\":\\\"CASE-001\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Person\\\":\\\"person-source-a\\\",\\\"Amount\\\":\\\"1234.50\\\",\\\"Case Status\\\":\\\"open\\\",\\\"Opened Date\\\":\\\"2026-10-01\\\",\\\"Closed Date\\\":null},{\\\"_id\\\":\\\"case-source-b\\\",\\\"Case Code\\\":\\\"CASE-002\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Person\\\":\\\"person-source-b\\\",\\\"Amount\\\":\\\"0.00\\\",\\\"Case Status\\\":\\\"closed\\\",\\\"Opened Date\\\":\\\"2026-10-02\\\",\\\"Closed Date\\\":\\\"2026-10-10\\\"}]}}\",\n              \"bytes\": 448,\n              \"sha256\": \"cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb\"\n            }\n          ],\n          \"countBefore\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"29889848ffba7cb3260dedeab8bd019abf8d66de255f0abfe6b836508a7a6d99\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:01:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-source-a\\\",\\\"Case Code\\\":\\\"CASE-001\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Person\\\":\\\"person-source-a\\\",\\\"Amount\\\":\\\"1234.50\\\",\\\"Case Status\\\":\\\"open\\\",\\\"Opened Date\\\":\\\"2026-10-01\\\",\\\"Closed Date\\\":null},{\\\"_id\\\":\\\"case-source-b\\\",\\\"Case Code\\\":\\\"CASE-002\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Person\\\":\\\"person-source-b\\\",\\\"Amount\\\":\\\"0.00\\\",\\\"Case Status\\\":\\\"closed\\\",\\\"Opened Date\\\":\\\"2026-10-02\\\",\\\"Closed Date\\\":\\\"2026-10-10\\\"}]}}\",\n            \"bytes\": 448,\n            \"sha256\": \"cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb\"\n          },\n          \"countAfter\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"29889848ffba7cb3260dedeab8bd019abf8d66de255f0abfe6b836508a7a6d99\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:02:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-source-a\\\",\\\"Case Code\\\":\\\"CASE-001\\\",\\\"Organization\\\":\\\"org-source-n\\\",\\\"Person\\\":\\\"person-source-a\\\",\\\"Amount\\\":\\\"1234.50\\\",\\\"Case Status\\\":\\\"open\\\",\\\"Opened Date\\\":\\\"2026-10-01\\\",\\\"Closed Date\\\":null},{\\\"_id\\\":\\\"case-source-b\\\",\\\"Case Code\\\":\\\"CASE-002\\\",\\\"Organization\\\":\\\"org-source-s\\\",\\\"Person\\\":\\\"person-source-b\\\",\\\"Amount\\\":\\\"0.00\\\",\\\"Case Status\\\":\\\"closed\\\",\\\"Opened Date\\\":\\\"2026-10-02\\\",\\\"Closed Date\\\":\\\"2026-10-10\\\"}]}}\",\n            \"bytes\": 448,\n            \"sha256\": \"cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb\"\n          }\n        }\n      ]\n    },\n    {\n      \"id\": \"documents\",\n      \"partitions\": [\n        {\n          \"id\": \"all\",\n          \"pages\": [\n            {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"d005937a4ae9b664bfdfabd1218926d9d3aebf3d2acf0aa22082757381d1efc1\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:01:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-source-a\\\",\\\"Document Code\\\":\\\"DOC-001\\\",\\\"Case\\\":\\\"case-source-a\\\",\\\"Name\\\":\\\"Example intake attachment\\\",\\\"Asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"Active\\\":true},{\\\"_id\\\":\\\"doc-source-b\\\",\\\"Document Code\\\":\\\"DOC-002\\\",\\\"Case\\\":\\\"case-source-b\\\",\\\"Name\\\":\\\"Example closure attachment\\\",\\\"Asset\\\":null,\\\"Active\\\":false}]}}\",\n              \"bytes\": 396,\n              \"sha256\": \"304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67\"\n            }\n          ],\n          \"countBefore\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"d005937a4ae9b664bfdfabd1218926d9d3aebf3d2acf0aa22082757381d1efc1\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:01:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-source-a\\\",\\\"Document Code\\\":\\\"DOC-001\\\",\\\"Case\\\":\\\"case-source-a\\\",\\\"Name\\\":\\\"Example intake attachment\\\",\\\"Asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"Active\\\":true},{\\\"_id\\\":\\\"doc-source-b\\\",\\\"Document Code\\\":\\\"DOC-002\\\",\\\"Case\\\":\\\"case-source-b\\\",\\\"Name\\\":\\\"Example closure attachment\\\",\\\"Asset\\\":null,\\\"Active\\\":false}]}}\",\n            \"bytes\": 396,\n            \"sha256\": \"304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67\"\n          },\n          \"countAfter\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"d005937a4ae9b664bfdfabd1218926d9d3aebf3d2acf0aa22082757381d1efc1\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:02:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-source-a\\\",\\\"Document Code\\\":\\\"DOC-001\\\",\\\"Case\\\":\\\"case-source-a\\\",\\\"Name\\\":\\\"Example intake attachment\\\",\\\"Asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"Active\\\":true},{\\\"_id\\\":\\\"doc-source-b\\\",\\\"Document Code\\\":\\\"DOC-002\\\",\\\"Case\\\":\\\"case-source-b\\\",\\\"Name\\\":\\\"Example closure attachment\\\",\\\"Asset\\\":null,\\\"Active\\\":false}]}}\",\n            \"bytes\": 396,\n            \"sha256\": \"304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67\"\n          }\n        }\n      ]\n    }\n  ],\n  \"observation\": \"AUTHORED EXAMPLE: bodies were created from the explicit fictional roster. No Bubble account was accessed.\"\n}\n",
+      "bytes": 17352,
+      "sha256": "fce5c0394bbcb9d58d4fd8e9ef1a66c6a71b0d96732af26ddaac229d2602d5ff"
+    },
+    {
+      "path": "expected-capture.json",
+      "content": "{\n  \"schema\": \"bubble.capture.v1\",\n  \"operationId\": \"authored-bubble-expected-20261013\",\n  \"state\": \"complete\",\n  \"configuration\": {\n    \"schema\": \"bubble.capture-config.v1\",\n    \"operationId\": \"authored-bubble-expected-20261013\",\n    \"endpoint\": {\n      \"origin\": \"https://example-expected.bubbleapps.io\",\n      \"versionPath\": \"/version-test\"\n    },\n    \"authEnv\": \"BUBBLE_EXPECTED_TOKEN\",\n    \"plan\": \"ordinary\",\n    \"consistency\": {\n      \"mode\": \"observed-interval\"\n    },\n    \"types\": [\n      {\n        \"id\": \"organizations\",\n        \"typeName\": \"organizations\",\n        \"scope\": {\n          \"population\": \"Explicit authored organizations roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        },\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"constraints\": [],\n            \"sort_field\": \"Created Date\",\n            \"descending\": false,\n            \"additional_sort_fields\": [\n              {\n                \"sort_field\": \"_id\",\n                \"descending\": false\n              }\n            ],\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"people\",\n        \"typeName\": \"people\",\n        \"scope\": {\n          \"population\": \"Explicit authored people roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        },\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"constraints\": [],\n            \"sort_field\": \"Created Date\",\n            \"descending\": false,\n            \"additional_sort_fields\": [\n              {\n                \"sort_field\": \"_id\",\n                \"descending\": false\n              }\n            ],\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"cases\",\n        \"typeName\": \"cases\",\n        \"scope\": {\n          \"population\": \"Explicit authored cases roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        },\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"constraints\": [],\n            \"sort_field\": \"Created Date\",\n            \"descending\": false,\n            \"additional_sort_fields\": [\n              {\n                \"sort_field\": \"_id\",\n                \"descending\": false\n              }\n            ],\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            }\n          }\n        ]\n      },\n      {\n        \"id\": \"documents\",\n        \"typeName\": \"documents\",\n        \"scope\": {\n          \"population\": \"Explicit authored documents roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        },\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"constraints\": [],\n            \"sort_field\": \"Created Date\",\n            \"descending\": false,\n            \"additional_sort_fields\": [\n              {\n                \"sort_field\": \"_id\",\n                \"descending\": false\n              }\n            ],\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            }\n          }\n        ]\n      }\n    ]\n  },\n  \"startedAt\": \"2026-10-13T00:10:00Z\",\n  \"completedAt\": \"2026-10-13T00:13:00Z\",\n  \"consistency\": {\n    \"mode\": \"observed-interval\"\n  },\n  \"types\": [\n    {\n      \"id\": \"organizations\",\n      \"partitions\": [\n        {\n          \"id\": \"all\",\n          \"pages\": [\n            {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:11:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-target-100\\\",\\\"organization_code\\\":\\\"ORG-N\\\",\\\"name\\\":\\\"Example North Services\\\",\\\"region\\\":\\\"North\\\",\\\"enabled\\\":true},{\\\"_id\\\":\\\"org-target-200\\\",\\\"organization_code\\\":\\\"ORG-S\\\",\\\"name\\\":\\\"Example South Services\\\",\\\"region\\\":\\\"South\\\",\\\"enabled\\\":true}]}}\",\n              \"bytes\": 295,\n              \"sha256\": \"ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7\"\n            }\n          ],\n          \"countBefore\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:11:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-target-100\\\",\\\"organization_code\\\":\\\"ORG-N\\\",\\\"name\\\":\\\"Example North Services\\\",\\\"region\\\":\\\"North\\\",\\\"enabled\\\":true},{\\\"_id\\\":\\\"org-target-200\\\",\\\"organization_code\\\":\\\"ORG-S\\\",\\\"name\\\":\\\"Example South Services\\\",\\\"region\\\":\\\"South\\\",\\\"enabled\\\":true}]}}\",\n            \"bytes\": 295,\n            \"sha256\": \"ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7\"\n          },\n          \"countAfter\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:12:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"org-target-100\\\",\\\"organization_code\\\":\\\"ORG-N\\\",\\\"name\\\":\\\"Example North Services\\\",\\\"region\\\":\\\"North\\\",\\\"enabled\\\":true},{\\\"_id\\\":\\\"org-target-200\\\",\\\"organization_code\\\":\\\"ORG-S\\\",\\\"name\\\":\\\"Example South Services\\\",\\\"region\\\":\\\"South\\\",\\\"enabled\\\":true}]}}\",\n            \"bytes\": 295,\n            \"sha256\": \"ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7\"\n          }\n        }\n      ]\n    },\n    {\n      \"id\": \"people\",\n      \"partitions\": [\n        {\n          \"id\": \"all\",\n          \"pages\": [\n            {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:11:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-target-100\\\",\\\"member_code\\\":\\\"P-001\\\",\\\"name\\\":\\\"Example Person A\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"allowed_organizations\\\":[\\\"org-target-100\\\",\\\"org-target-200\\\"],\\\"email\\\":null,\\\"created_at\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-target-200\\\",\\\"member_code\\\":\\\"P-002\\\",\\\"name\\\":\\\"Example Person B\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"allowed_organizations\\\":[\\\"org-target-200\\\"],\\\"created_at\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n              \"bytes\": 465,\n              \"sha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\"\n            }\n          ],\n          \"countBefore\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:11:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-target-100\\\",\\\"member_code\\\":\\\"P-001\\\",\\\"name\\\":\\\"Example Person A\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"allowed_organizations\\\":[\\\"org-target-100\\\",\\\"org-target-200\\\"],\\\"email\\\":null,\\\"created_at\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-target-200\\\",\\\"member_code\\\":\\\"P-002\\\",\\\"name\\\":\\\"Example Person B\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"allowed_organizations\\\":[\\\"org-target-200\\\"],\\\"created_at\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n            \"bytes\": 465,\n            \"sha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\"\n          },\n          \"countAfter\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:12:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"person-target-100\\\",\\\"member_code\\\":\\\"P-001\\\",\\\"name\\\":\\\"Example Person A\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"allowed_organizations\\\":[\\\"org-target-100\\\",\\\"org-target-200\\\"],\\\"email\\\":null,\\\"created_at\\\":\\\"2026-10-01T09:00:00Z\\\"},{\\\"_id\\\":\\\"person-target-200\\\",\\\"member_code\\\":\\\"P-002\\\",\\\"name\\\":\\\"Example Person B\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"allowed_organizations\\\":[\\\"org-target-200\\\"],\\\"created_at\\\":\\\"2026-10-02T10:00:00Z\\\"}]}}\",\n            \"bytes\": 465,\n            \"sha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\"\n          }\n        }\n      ]\n    },\n    {\n      \"id\": \"cases\",\n      \"partitions\": [\n        {\n          \"id\": \"all\",\n          \"pages\": [\n            {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:11:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-target-100\\\",\\\"case_code\\\":\\\"CASE-001\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"person\\\":\\\"person-target-100\\\",\\\"amount\\\":\\\"1234.49\\\",\\\"status\\\":\\\"open\\\",\\\"opened_date\\\":\\\"2026-10-01\\\",\\\"closed_date\\\":null},{\\\"_id\\\":\\\"case-target-200\\\",\\\"case_code\\\":\\\"CASE-002\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"person\\\":\\\"person-target-200\\\",\\\"amount\\\":\\\"0.00\\\",\\\"status\\\":\\\"closed\\\",\\\"opened_date\\\":\\\"2026-10-02\\\",\\\"closed_date\\\":\\\"2026-10-10\\\"}]}}\",\n              \"bytes\": 450,\n              \"sha256\": \"8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b\"\n            }\n          ],\n          \"countBefore\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:11:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-target-100\\\",\\\"case_code\\\":\\\"CASE-001\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"person\\\":\\\"person-target-100\\\",\\\"amount\\\":\\\"1234.49\\\",\\\"status\\\":\\\"open\\\",\\\"opened_date\\\":\\\"2026-10-01\\\",\\\"closed_date\\\":null},{\\\"_id\\\":\\\"case-target-200\\\",\\\"case_code\\\":\\\"CASE-002\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"person\\\":\\\"person-target-200\\\",\\\"amount\\\":\\\"0.00\\\",\\\"status\\\":\\\"closed\\\",\\\"opened_date\\\":\\\"2026-10-02\\\",\\\"closed_date\\\":\\\"2026-10-10\\\"}]}}\",\n            \"bytes\": 450,\n            \"sha256\": \"8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b\"\n          },\n          \"countAfter\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:12:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"case-target-100\\\",\\\"case_code\\\":\\\"CASE-001\\\",\\\"organization\\\":\\\"org-target-100\\\",\\\"person\\\":\\\"person-target-100\\\",\\\"amount\\\":\\\"1234.49\\\",\\\"status\\\":\\\"open\\\",\\\"opened_date\\\":\\\"2026-10-01\\\",\\\"closed_date\\\":null},{\\\"_id\\\":\\\"case-target-200\\\",\\\"case_code\\\":\\\"CASE-002\\\",\\\"organization\\\":\\\"org-target-200\\\",\\\"person\\\":\\\"person-target-200\\\",\\\"amount\\\":\\\"0.00\\\",\\\"status\\\":\\\"closed\\\",\\\"opened_date\\\":\\\"2026-10-02\\\",\\\"closed_date\\\":\\\"2026-10-10\\\"}]}}\",\n            \"bytes\": 450,\n            \"sha256\": \"8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b\"\n          }\n        }\n      ]\n    },\n    {\n      \"id\": \"documents\",\n      \"partitions\": [\n        {\n          \"id\": \"all\",\n          \"pages\": [\n            {\n              \"request\": {\n                \"cursor\": 0,\n                \"limit\": 100,\n                \"exclude_remaining\": false,\n                \"selectionSha256\": \"dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328\"\n              },\n              \"status\": 200,\n              \"receivedAt\": \"2026-10-13T00:11:00Z\",\n              \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-target-100\\\",\\\"document_code\\\":\\\"DOC-001\\\",\\\"case\\\":\\\"case-target-100\\\",\\\"name\\\":\\\"Example intake attachment\\\",\\\"asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"enabled\\\":true},{\\\"_id\\\":\\\"doc-target-200\\\",\\\"document_code\\\":\\\"DOC-002\\\",\\\"case\\\":\\\"case-target-200\\\",\\\"name\\\":\\\"Example closure attachment\\\",\\\"asset\\\":null,\\\"enabled\\\":false}]}}\",\n              \"bytes\": 406,\n              \"sha256\": \"5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165\"\n            }\n          ],\n          \"countBefore\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:11:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-target-100\\\",\\\"document_code\\\":\\\"DOC-001\\\",\\\"case\\\":\\\"case-target-100\\\",\\\"name\\\":\\\"Example intake attachment\\\",\\\"asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"enabled\\\":true},{\\\"_id\\\":\\\"doc-target-200\\\",\\\"document_code\\\":\\\"DOC-002\\\",\\\"case\\\":\\\"case-target-200\\\",\\\"name\\\":\\\"Example closure attachment\\\",\\\"asset\\\":null,\\\"enabled\\\":false}]}}\",\n            \"bytes\": 406,\n            \"sha256\": \"5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165\"\n          },\n          \"countAfter\": {\n            \"request\": {\n              \"cursor\": 0,\n              \"limit\": 100,\n              \"exclude_remaining\": false,\n              \"selectionSha256\": \"dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328\"\n            },\n            \"status\": 200,\n            \"receivedAt\": \"2026-10-13T00:12:00Z\",\n            \"body\": \"{\\\"response\\\":{\\\"cursor\\\":0,\\\"count\\\":2,\\\"remaining\\\":0,\\\"results\\\":[{\\\"_id\\\":\\\"doc-target-100\\\",\\\"document_code\\\":\\\"DOC-001\\\",\\\"case\\\":\\\"case-target-100\\\",\\\"name\\\":\\\"Example intake attachment\\\",\\\"asset\\\":{\\\"url\\\":\\\"https://example.org/authored/intake.pdf\\\",\\\"name\\\":\\\"intake.pdf\\\"},\\\"enabled\\\":true},{\\\"_id\\\":\\\"doc-target-200\\\",\\\"document_code\\\":\\\"DOC-002\\\",\\\"case\\\":\\\"case-target-200\\\",\\\"name\\\":\\\"Example closure attachment\\\",\\\"asset\\\":null,\\\"enabled\\\":false}]}}\",\n            \"bytes\": 406,\n            \"sha256\": \"5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165\"\n          }\n        }\n      ]\n    }\n  ],\n  \"observation\": \"AUTHORED EXAMPLE: bodies were created from the explicit fictional roster. No Bubble account was accessed.\"\n}\n",
+      "bytes": 17444,
+      "sha256": "7740fbe4b7d4e21a28d2a3f6f37ac899670c42ad42a76e09dcfe49f1ed2a9fa7"
+    },
+    {
+      "path": "mapping.json",
+      "content": "{\n  \"schema\": \"bubble.mapping.v1\",\n  \"id\": \"authored-four-type-nonprofit-mapping\",\n  \"expectedBasis\": \"Separately authored destination capture with different native Bubble IDs, explicit reviewed business keys and one intentional 0.01 amount difference. This is a reusable example, not buyer data or a passed migration.\",\n  \"tables\": [\n    {\n      \"name\": \"organizations\",\n      \"sourceTypeId\": \"organizations\",\n      \"expectedTypeId\": \"organizations\",\n      \"primaryKey\": [\n        \"organization_code\"\n      ],\n      \"columns\": [\n        {\n          \"name\": \"organization_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Organization Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/organization_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"name\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"active\",\n          \"type\": \"boolean\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Active\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/enabled\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"people\",\n      \"sourceTypeId\": \"people\",\n      \"expectedTypeId\": \"people\",\n      \"primaryKey\": [\n        \"person_code\"\n      ],\n      \"columns\": [\n        {\n          \"name\": \"person_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Member Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/member_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"name\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"organization_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Organization\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Organization Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/organization\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/organization_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        },\n        {\n          \"name\": \"email\",\n          \"type\": \"text\",\n          \"nullable\": true,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Email\",\n            \"missing\": {\n              \"mode\": \"null\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/email\",\n            \"missing\": {\n              \"mode\": \"null\"\n            }\n          }\n        },\n        {\n          \"name\": \"created_at\",\n          \"type\": \"timestamp\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Created Date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/created_at\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"cases\",\n      \"sourceTypeId\": \"cases\",\n      \"expectedTypeId\": \"cases\",\n      \"primaryKey\": [\n        \"case_code\"\n      ],\n      \"columns\": [\n        {\n          \"name\": \"case_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Case Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/case_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"organization_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Organization\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Organization Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/organization\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/organization_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        },\n        {\n          \"name\": \"person_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Person\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"people\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Member Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/person\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"people\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/member_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        },\n        {\n          \"name\": \"amount\",\n          \"type\": \"decimal\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Amount\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/amount\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"precision\": 18,\n          \"scale\": 2\n        },\n        {\n          \"name\": \"status\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Case Status\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/status\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"opened_date\",\n          \"type\": \"date\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Opened Date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/opened_date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"closed_date\",\n          \"type\": \"date\",\n          \"nullable\": true,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Closed Date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/closed_date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"documents\",\n      \"sourceTypeId\": \"documents\",\n      \"expectedTypeId\": \"documents\",\n      \"primaryKey\": [\n        \"document_code\"\n      ],\n      \"columns\": [\n        {\n          \"name\": \"document_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Document Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/document_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"case_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Case\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"cases\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Case Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/case\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"cases\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/case_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        },\n        {\n          \"name\": \"name\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"asset_metadata_json\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Asset\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"encoding\": \"canonical-json\"\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/asset\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"encoding\": \"canonical-json\"\n          }\n        },\n        {\n          \"name\": \"active\",\n          \"type\": \"boolean\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Active\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/enabled\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"person_organizations\",\n      \"sourceTypeId\": \"people\",\n      \"expectedTypeId\": \"people\",\n      \"sourceRows\": {\n        \"mode\": \"list\",\n        \"pointer\": \"/Allowed Organizations\",\n        \"missing\": {\n          \"mode\": \"value\",\n          \"value\": []\n        }\n      },\n      \"expectedRows\": {\n        \"mode\": \"list\",\n        \"pointer\": \"/allowed_organizations\",\n        \"missing\": {\n          \"mode\": \"value\",\n          \"value\": []\n        }\n      },\n      \"primaryKey\": [\n        \"person_code\",\n        \"organization_code\"\n      ],\n      \"columns\": [\n        {\n          \"name\": \"person_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Member Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/member_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"organization_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"list-item\",\n            \"pointer\": \"\",\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Organization Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"list-item\",\n            \"pointer\": \"\",\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/organization_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        }\n      ]\n    }\n  ],\n  \"relationships\": [\n    {\n      \"id\": \"people_org\",\n      \"childTable\": \"people\",\n      \"childColumns\": [\n        \"organization_code\"\n      ],\n      \"parentTable\": \"organizations\",\n      \"parentColumns\": [\n        \"organization_code\"\n      ],\n      \"nulls\": \"reject\"\n    },\n    {\n      \"id\": \"case_org\",\n      \"childTable\": \"cases\",\n      \"childColumns\": [\n        \"organization_code\"\n      ],\n      \"parentTable\": \"organizations\",\n      \"parentColumns\": [\n        \"organization_code\"\n      ],\n      \"nulls\": \"reject\"\n    },\n    {\n      \"id\": \"case_person\",\n      \"childTable\": \"cases\",\n      \"childColumns\": [\n        \"person_code\"\n      ],\n      \"parentTable\": \"people\",\n      \"parentColumns\": [\n        \"person_code\"\n      ],\n      \"nulls\": \"reject\"\n    },\n    {\n      \"id\": \"document_case\",\n      \"childTable\": \"documents\",\n      \"childColumns\": [\n        \"case_code\"\n      ],\n      \"parentTable\": \"cases\",\n      \"parentColumns\": [\n        \"case_code\"\n      ],\n      \"nulls\": \"reject\"\n    },\n    {\n      \"id\": \"membership_person\",\n      \"childTable\": \"person_organizations\",\n      \"childColumns\": [\n        \"person_code\"\n      ],\n      \"parentTable\": \"people\",\n      \"parentColumns\": [\n        \"person_code\"\n      ],\n      \"nulls\": \"reject\"\n    },\n    {\n      \"id\": \"membership_org\",\n      \"childTable\": \"person_organizations\",\n      \"childColumns\": [\n        \"organization_code\"\n      ],\n      \"parentTable\": \"organizations\",\n      \"parentColumns\": [\n        \"organization_code\"\n      ],\n      \"nulls\": \"reject\"\n    }\n  ],\n  \"acceptance\": {\n    \"title\": \"Authored four-type migration: original keys, relationships and exact organization totals\",\n    \"controls\": [\n      {\n        \"id\": \"case_amount_by_org\",\n        \"objectId\": \"cases\",\n        \"groupBy\": [\n          \"organization_code\"\n        ],\n        \"measure\": {\n          \"kind\": \"sum\",\n          \"column\": \"amount\",\n          \"scale\": 2\n        },\n        \"nulls\": \"reject\",\n        \"acceptance\": \"required\"\n      }\n    ]\n  }\n}\n",
+      "bytes": 15902,
+      "sha256": "de41ea2c4ef81cdb7e057112e06ef14ecd5205fd8431e490c790fdb2769f6b09"
+    },
+    {
+      "path": "projection.json",
+      "content": "{\n  \"schema\": \"bubble.projection.v1\",\n  \"mappingId\": \"authored-four-type-nonprofit-mapping\",\n  \"capture\": {\n    \"bytes\": 36311,\n    \"sha256\": \"af998e005be6c435994084bf7c7ea1fc1fa7c8b7ab5a8ad3251fc97e834d7fd5\"\n  },\n  \"mapping\": {\n    \"bytes\": 15902,\n    \"sha256\": \"de41ea2c4ef81cdb7e057112e06ef14ecd5205fd8431e490c790fdb2769f6b09\"\n  },\n  \"captureOperations\": {\n    \"source\": \"authored-bubble-source-20261013\",\n    \"expected\": \"authored-bubble-expected-20261013\"\n  },\n  \"populations\": {\n    \"source\": [\n      {\n        \"id\": \"organizations\",\n        \"typeName\": \"organizations\",\n        \"records\": 2,\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"records\": 2,\n            \"pages\": 1,\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            },\n            \"constraints\": []\n          }\n        ],\n        \"scope\": {\n          \"population\": \"Explicit authored organizations roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        }\n      },\n      {\n        \"id\": \"people\",\n        \"typeName\": \"people\",\n        \"records\": 2,\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"records\": 2,\n            \"pages\": 1,\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            },\n            \"constraints\": []\n          }\n        ],\n        \"scope\": {\n          \"population\": \"Explicit authored people roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        }\n      },\n      {\n        \"id\": \"cases\",\n        \"typeName\": \"cases\",\n        \"records\": 2,\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"records\": 2,\n            \"pages\": 1,\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            },\n            \"constraints\": []\n          }\n        ],\n        \"scope\": {\n          \"population\": \"Explicit authored cases roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        }\n      },\n      {\n        \"id\": \"documents\",\n        \"typeName\": \"documents\",\n        \"records\": 2,\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"records\": 2,\n            \"pages\": 1,\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            },\n            \"constraints\": []\n          }\n        ],\n        \"scope\": {\n          \"population\": \"Explicit authored documents roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        }\n      }\n    ],\n    \"expected\": [\n      {\n        \"id\": \"organizations\",\n        \"typeName\": \"organizations\",\n        \"records\": 2,\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"records\": 2,\n            \"pages\": 1,\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            },\n            \"constraints\": []\n          }\n        ],\n        \"scope\": {\n          \"population\": \"Explicit authored organizations roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        }\n      },\n      {\n        \"id\": \"people\",\n        \"typeName\": \"people\",\n        \"records\": 2,\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"records\": 2,\n            \"pages\": 1,\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            },\n            \"constraints\": []\n          }\n        ],\n        \"scope\": {\n          \"population\": \"Explicit authored people roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        }\n      },\n      {\n        \"id\": \"cases\",\n        \"typeName\": \"cases\",\n        \"records\": 2,\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"records\": 2,\n            \"pages\": 1,\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            },\n            \"constraints\": []\n          }\n        ],\n        \"scope\": {\n          \"population\": \"Explicit authored cases roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        }\n      },\n      {\n        \"id\": \"documents\",\n        \"typeName\": \"documents\",\n        \"records\": 2,\n        \"partitions\": [\n          {\n            \"id\": \"all\",\n            \"records\": 2,\n            \"pages\": 1,\n            \"expectedCount\": {\n              \"value\": 2,\n              \"source\": \"examples/README.md#authored-record-roster\",\n              \"evidence\": \"Exact authored full roster retained in this capture body.\"\n            },\n            \"constraints\": []\n          }\n        ],\n        \"scope\": {\n          \"population\": \"Explicit authored documents roster; no customer or API request\",\n          \"coverage\": \"all-live\",\n          \"inactive\": \"Both authored active and inactive rows retained\",\n          \"deleted\": \"not-observed-by-list\"\n        },\n        \"partitioning\": {\n          \"mode\": \"single\",\n          \"populationCoverage\": \"complete-declared\",\n          \"evidence\": \"Authored fixture roster in examples/README.md; this is not an observed live app.\"\n        }\n      }\n    ]\n  },\n  \"consistency\": {\n    \"source\": {\n      \"mode\": \"observed-interval\"\n    },\n    \"expected\": {\n      \"mode\": \"observed-interval\"\n    },\n    \"expectedBasis\": \"Separately authored destination capture with different native Bubble IDs, explicit reviewed business keys and one intentional 0.01 amount difference. This is a reusable example, not buyer data or a passed migration.\"\n  },\n  \"tables\": [\n    {\n      \"name\": \"organizations\",\n      \"sourceTypeId\": \"organizations\",\n      \"expectedTypeId\": \"organizations\",\n      \"sourcePath\": \"inputs/organizations.json\",\n      \"expectedPath\": \"expected/organizations.json\",\n      \"sourceRows\": 2,\n      \"expectedRows\": 2,\n      \"columns\": [\n        {\n          \"name\": \"organization_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Organization Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/organization_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"name\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"active\",\n          \"type\": \"boolean\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Active\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/enabled\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        }\n      ],\n      \"primaryKey\": [\n        \"organization_code\"\n      ],\n      \"sourceOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"org-source-n\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9\"\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"org-source-s\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9\"\n        }\n      ],\n      \"expectedOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"org-target-100\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7\"\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"org-target-200\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7\"\n        }\n      ],\n      \"missingCells\": {\n        \"source\": [],\n        \"expected\": []\n      }\n    },\n    {\n      \"name\": \"people\",\n      \"sourceTypeId\": \"people\",\n      \"expectedTypeId\": \"people\",\n      \"sourcePath\": \"inputs/people.json\",\n      \"expectedPath\": \"expected/people.json\",\n      \"sourceRows\": 2,\n      \"expectedRows\": 2,\n      \"columns\": [\n        {\n          \"name\": \"person_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Member Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/member_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"name\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"organization_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Organization\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Organization Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/organization\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/organization_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        },\n        {\n          \"name\": \"email\",\n          \"type\": \"text\",\n          \"nullable\": true,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Email\",\n            \"missing\": {\n              \"mode\": \"null\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/email\",\n            \"missing\": {\n              \"mode\": \"null\"\n            }\n          }\n        },\n        {\n          \"name\": \"created_at\",\n          \"type\": \"timestamp\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Created Date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/created_at\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        }\n      ],\n      \"primaryKey\": [\n        \"person_code\"\n      ],\n      \"sourceOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"person-source-a\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\"\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"person-source-b\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\"\n        }\n      ],\n      \"expectedOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"person-target-100\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\"\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"person-target-200\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\"\n        }\n      ],\n      \"missingCells\": {\n        \"source\": [\n          {\n            \"row\": 1,\n            \"recordId\": \"person-source-b\",\n            \"column\": \"email\",\n            \"selector\": {\n              \"kind\": \"field\",\n              \"pointer\": \"/Email\",\n              \"missing\": {\n                \"mode\": \"null\"\n              }\n            }\n          }\n        ],\n        \"expected\": [\n          {\n            \"row\": 1,\n            \"recordId\": \"person-target-200\",\n            \"column\": \"email\",\n            \"selector\": {\n              \"kind\": \"field\",\n              \"pointer\": \"/email\",\n              \"missing\": {\n                \"mode\": \"null\"\n              }\n            }\n          }\n        ]\n      }\n    },\n    {\n      \"name\": \"cases\",\n      \"sourceTypeId\": \"cases\",\n      \"expectedTypeId\": \"cases\",\n      \"sourcePath\": \"inputs/cases.json\",\n      \"expectedPath\": \"expected/cases.json\",\n      \"sourceRows\": 2,\n      \"expectedRows\": 2,\n      \"columns\": [\n        {\n          \"name\": \"case_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Case Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/case_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"organization_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Organization\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Organization Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/organization\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/organization_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        },\n        {\n          \"name\": \"person_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Person\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"people\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Member Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/person\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"people\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/member_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        },\n        {\n          \"name\": \"amount\",\n          \"type\": \"decimal\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Amount\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/amount\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"precision\": 18,\n          \"scale\": 2\n        },\n        {\n          \"name\": \"status\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Case Status\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/status\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"opened_date\",\n          \"type\": \"date\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Opened Date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/opened_date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"closed_date\",\n          \"type\": \"date\",\n          \"nullable\": true,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Closed Date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/closed_date\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        }\n      ],\n      \"primaryKey\": [\n        \"case_code\"\n      ],\n      \"sourceOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"case-source-a\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb\"\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"case-source-b\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb\"\n        }\n      ],\n      \"expectedOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"case-target-100\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b\"\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"case-target-200\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b\"\n        }\n      ],\n      \"missingCells\": {\n        \"source\": [],\n        \"expected\": []\n      }\n    },\n    {\n      \"name\": \"documents\",\n      \"sourceTypeId\": \"documents\",\n      \"expectedTypeId\": \"documents\",\n      \"sourcePath\": \"inputs/documents.json\",\n      \"expectedPath\": \"expected/documents.json\",\n      \"sourceRows\": 2,\n      \"expectedRows\": 2,\n      \"columns\": [\n        {\n          \"name\": \"document_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Document Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/document_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"case_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Case\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"cases\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Case Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/case\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"lookup\": {\n              \"typeId\": \"cases\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/case_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        },\n        {\n          \"name\": \"name\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/name\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"asset_metadata_json\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Asset\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"encoding\": \"canonical-json\"\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/asset\",\n            \"missing\": {\n              \"mode\": \"error\"\n            },\n            \"encoding\": \"canonical-json\"\n          }\n        },\n        {\n          \"name\": \"active\",\n          \"type\": \"boolean\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Active\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/enabled\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        }\n      ],\n      \"primaryKey\": [\n        \"document_code\"\n      ],\n      \"sourceOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"doc-source-a\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67\"\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"doc-source-b\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67\"\n        }\n      ],\n      \"expectedOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"doc-target-100\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165\"\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"doc-target-200\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165\"\n        }\n      ],\n      \"missingCells\": {\n        \"source\": [],\n        \"expected\": []\n      }\n    },\n    {\n      \"name\": \"person_organizations\",\n      \"sourceTypeId\": \"people\",\n      \"expectedTypeId\": \"people\",\n      \"sourcePath\": \"inputs/person_organizations.json\",\n      \"expectedPath\": \"expected/person_organizations.json\",\n      \"sourceRows\": 3,\n      \"expectedRows\": 3,\n      \"columns\": [\n        {\n          \"name\": \"person_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/Member Code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          },\n          \"expected\": {\n            \"kind\": \"field\",\n            \"pointer\": \"/member_code\",\n            \"missing\": {\n              \"mode\": \"error\"\n            }\n          }\n        },\n        {\n          \"name\": \"organization_code\",\n          \"type\": \"text\",\n          \"nullable\": false,\n          \"source\": {\n            \"kind\": \"list-item\",\n            \"pointer\": \"\",\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/Organization Code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          },\n          \"expected\": {\n            \"kind\": \"list-item\",\n            \"pointer\": \"\",\n            \"lookup\": {\n              \"typeId\": \"organizations\",\n              \"keyPointer\": \"/_id\",\n              \"valuePointer\": \"/organization_code\",\n              \"missing\": {\n                \"mode\": \"error\"\n              }\n            }\n          }\n        }\n      ],\n      \"primaryKey\": [\n        \"person_code\",\n        \"organization_code\"\n      ],\n      \"sourceOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"person-source-a\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\",\n          \"listOrdinal\": 0\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"person-source-a\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\",\n          \"listOrdinal\": 1\n        },\n        {\n          \"row\": 2,\n          \"recordId\": \"person-source-b\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14\",\n          \"listOrdinal\": 0\n        }\n      ],\n      \"expectedOrigins\": [\n        {\n          \"row\": 0,\n          \"recordId\": \"person-target-100\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\",\n          \"listOrdinal\": 0\n        },\n        {\n          \"row\": 1,\n          \"recordId\": \"person-target-100\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 0,\n          \"responseSha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\",\n          \"listOrdinal\": 1\n        },\n        {\n          \"row\": 2,\n          \"recordId\": \"person-target-200\",\n          \"partitionId\": \"all\",\n          \"page\": 0,\n          \"pageRow\": 1,\n          \"responseSha256\": \"e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837\",\n          \"listOrdinal\": 0\n        }\n      ],\n      \"missingCells\": {\n        \"source\": [],\n        \"expected\": []\n      }\n    }\n  ],\n  \"relationships\": [\n    {\n      \"id\": \"people_org\",\n      \"provider\": \"source\",\n      \"childTable\": \"people\",\n      \"parentTable\": \"organizations\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"people_org\",\n      \"provider\": \"expected\",\n      \"childTable\": \"people\",\n      \"parentTable\": \"organizations\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"case_org\",\n      \"provider\": \"source\",\n      \"childTable\": \"cases\",\n      \"parentTable\": \"organizations\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"case_org\",\n      \"provider\": \"expected\",\n      \"childTable\": \"cases\",\n      \"parentTable\": \"organizations\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"case_person\",\n      \"provider\": \"source\",\n      \"childTable\": \"cases\",\n      \"parentTable\": \"people\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"case_person\",\n      \"provider\": \"expected\",\n      \"childTable\": \"cases\",\n      \"parentTable\": \"people\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"document_case\",\n      \"provider\": \"source\",\n      \"childTable\": \"documents\",\n      \"parentTable\": \"cases\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"document_case\",\n      \"provider\": \"expected\",\n      \"childTable\": \"documents\",\n      \"parentTable\": \"cases\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"membership_person\",\n      \"provider\": \"source\",\n      \"childTable\": \"person_organizations\",\n      \"parentTable\": \"people\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"membership_person\",\n      \"provider\": \"expected\",\n      \"childTable\": \"person_organizations\",\n      \"parentTable\": \"people\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"membership_org\",\n      \"provider\": \"source\",\n      \"childTable\": \"person_organizations\",\n      \"parentTable\": \"organizations\",\n      \"orphans\": [],\n      \"count\": 0\n    },\n    {\n      \"id\": \"membership_org\",\n      \"provider\": \"expected\",\n      \"childTable\": \"person_organizations\",\n      \"parentTable\": \"organizations\",\n      \"orphans\": [],\n      \"count\": 0\n    }\n  ],\n  \"coverage\": {\n    \"deleted\": \"not-observed-by-list\",\n    \"privacy\": \"GET results are the population visible to the configured credential and privacy rules; hidden records/fields remain unknown.\",\n    \"partitions\": \"Complete pagination of the selected queries, with explicit reviewed partition coverage; live pages do not establish a transactional snapshot.\",\n    \"files\": \"Original file URLs/metadata remain in exact response bodies; file contents require separately retained authorized downloads.\"\n  }\n}\n",
+      "bytes": 32468,
+      "sha256": "b9d37fd56372e45e6949ec8e48aa0438ac69b906efd6a86dffb2e61c8c4e0b58"
+    }
+  ]
+}
