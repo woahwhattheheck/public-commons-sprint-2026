@@ -7,14 +7,18 @@
     "flowable-process-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-process-programme.mjs",
     "flowable-decision-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-decision-programme.mjs",
     "flowable-history-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-cli.mjs",
-    "flowable-document-capture": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/capture-alfresco-document.mjs"
+    "flowable-document-capture": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/capture-alfresco-document.mjs",
+    "flowable-installation": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation.mjs",
+    "flowable-installation-receive": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-receiving.mjs"
   },
   "commandDescriptions": {
     "flowable-workspace": "Open, operate, receive and export native Flowable process, case and decision workspaces.",
     "flowable-process-programme": "Compile a complete original-source BPMN commissioning programme for the existing Flowable operator.",
     "flowable-decision-programme": "Compile complete original DMN sources and typed cases into the existing Flowable operator programme.",
     "flowable-history-analysis": "Analyse an exact saved process-history cohort and receive its complete source into an independent workspace.",
-    "flowable-document-capture": "Retain a selected Alfresco version and complete content for reviewed native document process intake."
+    "flowable-document-capture": "Retain a selected Alfresco version and complete content for reviewed native document process intake.",
+    "flowable-installation": "Prepare and reopen a complete Flowable programme, original commercial Workshare and customer Installation.",
+    "flowable-installation-receive": "Save or select the original customer Installation and independently receive both full native applications."
   },
   "exports": {
     "./seller/flowable/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
@@ -44,7 +48,9 @@
     "./seller/flowable/workspace/document-intake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-intake.mjs",
     "./seller/flowable/workspace/document-process": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-process.mjs",
     "./seller/flowable/workspace/document-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-receiving.mjs",
-    "./seller/flowable/workspace/alfresco-document": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/alfresco-document.mjs"
+    "./seller/flowable/workspace/alfresco-document": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/alfresco-document.mjs",
+    "./seller/flowable/customer-installation": "./source/stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation.mjs",
+    "./seller/flowable/customer-installation-receiving": "./source/stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-receiving.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -117,7 +123,10 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/document-review-v1.bpmn20.xml",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/document-review-v2.bpmn20.xml",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-source-contract.json",
-    "products/flowable-merchant/DOCUMENT_INTAKE.md"
+    "products/flowable-merchant/DOCUMENT_INTAKE.md",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-customer.json",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-operations.py",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/FLOWABLE_CUSTOMER.md"
   ],
   "browserAssets": [
     {
