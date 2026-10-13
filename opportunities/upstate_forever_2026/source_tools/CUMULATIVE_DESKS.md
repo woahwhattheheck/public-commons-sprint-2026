@@ -278,3 +278,14 @@ uses the full maintained relative-import repair from original packet
 5bcb80546ad012e2d5dbc751183eb62abe3b2ce3, including complete native source-manifest
 closure. Each member's own source reference and
 hash remains in the complete source bank.
+
+## Receiving destinations and an existing application ZIP
+
+The current maintained path repair resolves the receiving directory and any
+existing parent aliases before inventory or staging. Keep the application ZIP
+outside the retained source, the canonical scientific source and the installed
+application. This prevents the ZIP from becoming one of its own future members.
+An existing completed archive is compared directly against the installed files
+using streamed bytes, original modes and creator identity. The original complete
+ZIP is reused without constructing another compressed copy. File identity checks
+also detect an input or archive that changes during that comparison.

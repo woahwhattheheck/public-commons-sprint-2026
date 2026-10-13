@@ -63,7 +63,7 @@ The combined profile applies the eight supported native settings in Appendix 1:
 | SDR connectivity k | 2 |
 | SDR stream threshold | 1000 contributing pixels |
 
-The 1000-pixel threshold corresponds to 90 ha on a 30 m grid. Routing method, SDR maximum slope length and other unreported settings retain their explicit baseline values. Current native phosphorus transport uses its surface path; only supported nitrogen subsurface parameters enter the current profile.
+The 1000-pixel threshold corresponds to 90 ha on a 30 m grid. Routing method, the dimensionless maximum RUSLE L factor (`sdr.l_max`) and other unreported settings retain their explicit baseline values. Current native phosphorus transport uses its surface path; only supported nitrogen subsurface parameters enter the current profile.
 
 ### Upper Flint, 2024
 
@@ -119,6 +119,8 @@ Pass that completed file through `--scenario-programme` to the profile command. 
 ## Read the study report
 
 After execution, the programme writes `experiments/<experiment_id>/study-report/index.html` with filterable native comparisons, actual changed areas, execution coverage and the source-profile response ranges. The report consumes the existing engine's paired-cell support groups, keeping unlike coverage separate. Its CSV preserves complete run, profile, scenario and comparison IDs.
+
+The opening sentence uses the actual selected/completed case counts: source-only profile materialization describes its coefficient sources, a partially completed programme gives the completed count out of the selected total, and a completed programme identifies all selected cases. Source interpretation tables use the same short programme profile names as the native comparison tables. Expand **Original profile definition** beside a source name to inspect its complete retained title and profile ID; full coefficient values, original titles and source identities remain in the report data and embedded CSV downloads.
 
 The native experiment link is saved before execution starts under `study-programmes/<profile_programme_id>/experiments/<experiment_id>.json`. If a native case fails, completed cases remain in the engine's partial summary and the report uses those retained results.
 

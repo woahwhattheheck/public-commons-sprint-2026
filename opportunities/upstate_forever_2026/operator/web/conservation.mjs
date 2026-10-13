@@ -2035,12 +2035,12 @@ export function attachConservation({
 
   function experimentBaselines(scope) {
     const { draft: d, data } = scope;
-    if (!scope.grid || !scope.profile || !scope.models.length || !data.invest_version) return [];
+    if (!scope.grid || !scope.profile || !scope.models.length) return [];
     const original = new Set((data.scenarios || []).filter(row => row.kind === "baseline").map(row => row.id));
     return runs().filter(run => {
       const value = run.selection || {};
       return value.grid_id === d.grid_id && value.profile_id === d.profile_id &&
-        value.invest_version === data.invest_version && original.has(value.scenario_id) &&
+        original.has(value.scenario_id) &&
         run.execution?.supported === true &&
         runModels(run).join(",") === scope.models.join(",");
     });
@@ -2051,7 +2051,8 @@ export function attachConservation({
     const missingBaseline = d.baseline_run_id && !baselines.some(run => run.id === d.baseline_run_id);
     return '<details class="cons-disclosure" open><summary>Paired experiment</summary>' +
       '<p>The baseline and the selected land-cover change use the same grid, native model choices and each profile. ' +
-      'The experiment runs and compares the original native outputs.</p><div class="cons-grid">' +
+      'The experiment runs and compares the original native outputs. Completed original runs keep their IDs and outputs; ' +
+      'compatibility uses the retained version metadata for each native model.</p><div class="cons-grid">' +
       input("scenario.experiment_title", "Experiment title", d.experiment_title || "") +
       select("scenario.baseline_run_id", "Original land-cover baseline", d.baseline_run_id, [
         ["", "Reuse or prepare a matching original baseline"],

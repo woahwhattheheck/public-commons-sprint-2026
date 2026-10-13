@@ -228,16 +228,16 @@ export function communityWatershedContextHtml(context){
     '<div class="community-metrics">'+metric('Whole watersheds',n(rows.length),'Selected original HUC12 records')+
     metric('Whole-watershed area',n(area,2)+' km²','Original regional source areas')+
     metric('Selected SCDES features',n(classificationCount),'Publisher HUC12 assignments within the source jurisdiction')+'</div></div>'+
-    table(['Watershed','Whole area (km² / acres)','NRCS priority','Selected SCDES features','Query coverage'],rows.map(row=>
+    table(['Watershed','Whole area (km² / acres)','NRCS edition / priority','Selected SCDES features','Query coverage'],rows.map(row=>
       '<tr><th scope="row">'+e(row.name||row.huc12)+'<small>'+e(row.huc12)+' · '+e(list(row.states).join(' / '))+'</small></th>'+
       '<td class="number-cell">'+n(row.area_km2,2)+' / '+n(row.area_acres,2)+'</td>'+
-      '<td>'+e(row.priority?'Priority in '+list(row.priority_states).join(', '):'No priority designation in these source rows')+
+      '<td>'+e(row.nrcs_edition||'Edition unrecorded')+' · '+e(row.priority?'Priority in '+list(row.priority_states).join(', '):'No priority designation in these source rows')+
       '<small>'+e(list(row.system_types).join(' / '))+'</small></td>'+
       '<td class="number-cell">'+n(row.selected_classification_count)+'</td><td>'+e(watershedCoverage(row,coverage))+'</td></tr>'),
       'Original whole-watershed regional context')+
-    (originalRows.length?table(['Watershed / source record','State','State-portion acres','NRCS status','System type','Resource concern'],originalRows.map(state=>
+    (originalRows.length?table(['Watershed / source record','State','State-portion acres','NRCS edition','NRCS status','System type','Resource concern'],originalRows.map(state=>
       '<tr><th scope="row">'+e(state.huc.huc12)+'<small>Original NRCS record '+e(state.OBJECTID??'—')+'</small></th>'+
-      '<td>'+e(state.st_usps)+'</td><td class="number-cell">'+n(state.st_ac,2)+'</td><td>'+e(state.fy26_status)+'</td>'+
+      '<td>'+e(state.st_usps)+'</td><td class="number-cell">'+n(state.st_ac,2)+'</td><td>'+e(state.huc.nrcs_edition||'Edition unrecorded')+'</td><td>'+e(state.fy26_status)+'</td>'+
       '<td>'+e(state.system_type)+'</td><td>'+e(state.resource_concern)+'</td></tr>'),'Retained NRCS state programme records'):'')+
     '<div class="section-body"><p class="note">SCDES counts describe the selected classification query and its South Carolina jurisdiction. Zero selected features records that query result; water-quality conclusions require measured observations. Selected query classes: '+
     e(list(coverage.selected_classes).join(', ')||'See the retained source query')+'.</p>'+

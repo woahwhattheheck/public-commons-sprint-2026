@@ -215,7 +215,14 @@ class SourcePreparation:
             raise ValueError("Choose a canonical relative path within the selected source root")
         return path
 
+    def _team_administrator(self):
+        team = getattr(self.operator, "team", None)
+        context = team.current() if team else None
+        return not context or context["principal"]["administrator"]
+
     def _root_path(self, root_id, relative, *, directory=False):
+        if not self._team_administrator():
+            self._fail("TEAM_ADMIN", "An installation administrator selects shared source directories.", 403)
         path = self.roots.get(root_id)
         if path is None:
             self._fail("SOURCE_ROOT", "Choose a source root registered by this operator.", 404)
@@ -262,6 +269,9 @@ class SourcePreparation:
         uploads = []
         for path in sorted((self.operator.root / "uploads").glob("*.json")):
             row = read_json(path)
+            team = getattr(self.operator, "team", None)
+            if team and not team.can_resource("upload", row["id"]):
+                continue
             uploads.append({"id": row["id"], "title": row["filename"], "bytes": row["bytes"],
                             "selector": {"upload_id": row["id"]}})
         prepared = []
@@ -277,10 +287,10 @@ class SourcePreparation:
             })
         return {
             "workspace_key": workspace, "methods": METHODS, "sources": sources,
-            "roots": [{"id": key, "label": str(path)} for key, path in self.roots.items()],
+            "roots": [{"id": key, "label": str(path)} for key, path in self.roots.items()] if self._team_administrator() else [],
             "bundled": bundled, "uploads": uploads, "prepared": prepared,
             "registered": [{key: value for key, value in item.items() if key != "path"}
-                           for item in self.operator.registered.values()],
+                           for item in self.operator.registered.values()] if self._team_administrator() else [],
             "limits": {"source_extraction_bytes": self.operator.extraction_limit,
                        "upload_bytes": self.operator.upload_limit},
         }
@@ -974,6 +984,8 @@ class SourcePreparation:
         prepared_ids = self._ids(value, "prepared_task_ids")
         collection_ids = self._ids(value, "source_collection_ids")
         registered_ids = self._ids(value, "registered_ids")
+        if registered_ids and not self._team_administrator():
+            self._fail("TEAM_ADMIN", "An installation administrator selects shared source manifests.", 403)
         if not (prepared_ids or collection_ids or registered_ids):
             self._fail("SOURCE_COMPOSITION", "Choose prepared sources, imported editions or registered source manifests.")
         manifests = []

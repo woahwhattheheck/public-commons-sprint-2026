@@ -56,6 +56,86 @@ For operator receiving, download **Complete editable workspace**, then use the o
 
 Use the actual existing scientific Python environment. `model/requirements-monitoring.txt` lists the original SciPy, Shapely, PyProj and Fiona requirements. No hosted CI or separate web service is needed.
 
+## Receive original observations with an existing campaign
+
+The same receiver accepts an exact saved `campaign_id` or `plan_id`. It reuses that
+original network and design. With an existing `network_id`, supply the explicit
+original `configuration`; the older `network` import selection remains supported.
+Do not supply a new network/configuration beside an already saved plan or
+campaign. Optional retained network/plan IDs must agree with the selected
+campaign.
+
+Add `observed_context` to the selection to carry the original observational
+source through the complete receiving journey:
+
+```json
+{
+  "campaign_id": "ACTUAL_RETAINED_CAMPAIGN_ID",
+  "observed_context": {
+    "source_manifest": "/ACTUAL_APPLICATION/eighteenmile_monitoring_context.sources.json",
+    "source_id": "eighteenmile-monitoring-observed-context-20261013",
+    "station_mapping": {},
+    "title": "Original observations for the saved monitoring campaign"
+  }
+}
+```
+
+Replace the application path and campaign ID with the actual retained values.
+An empty station mapping uses exact original station IDs only. If the saved
+network uses different IDs, provide the reviewed mapping from each original
+source station ID to its actual retained network station ID. The receiver does
+not assign stations or move calendar dates automatically.
+
+`source_manifest` imports through `Workspace.import_sources`, including every
+original companion. A relative manifest path is relative to the selection file.
+Instead, use `source_collection_id` and `source_id` to reuse a source edition
+already imported into the original Workspace. Choose exactly one manifest or
+collection. To reopen an existing immutable context, the whole context choice
+can be `{"context_id": "ACTUAL_SAVED_CONTEXT_ID"}`; that context must bind the
+exact campaign revision being received.
+
+Run the unchanged command shown above with an output directory outside the
+source Workspace. The receiver retains the following steps in its original
+`receiving.json`:
+
+1. Reopen the actual network, feasible plan and campaign, or complete the
+   originally supplied design selection.
+2. Import/reopen the original observation source, preview the exact station and
+   saved-calendar context, save it through the native immutable collection, and
+   inspect the saved record and source companions.
+3. Export the standalone observed context and the original field package with
+   that context attached. Read every exported member and verify its original
+   byte count and SHA256, the exact context record and the campaign revision.
+4. Capture the complete original Workspace, verify the native archive, restore
+   through `model.portable.restore`, and reopen the identical source collection,
+   network, plan, campaign revision and observational context.
+5. Append the existing independent receiving campaign revision. Reopen the
+   saved context against its retained historical revision and verify that the
+   sender campaign stayed unchanged.
+
+The output includes `observed-context-preview.json`, `observed-context.json`,
+the complete observed source ZIP, the original field package, and the full
+editable Workspace archive. `receiving.json` names their actual paths and
+hashes, the saved context and original source binding, and the received
+independent revision. A feasible completed journey has `summary.complete=true`;
+an infeasible original design instead retains its actual `design_outcome`.
+
+Rerun the same command and unchanged selection/output to continue interrupted
+work. Completed exports are verified and reused. An unrecorded restore is
+adopted only when every original archive member still matches. The source
+campaign revision is frozen for this receiving operation; after that campaign
+advances, use a new receiving output for the new revision. Later edits in the
+received campaign remain independent, while the prior immutable context stays
+attached to its original historical campaign revision. Prepare a new context
+through the normal Monitoring desk when interpreting a newly revised calendar.
+
+The source document describes observed concentrations, original stream-network
+relations and daily gauge context. Calendar overlap is evaluated on the actual
+saved dates. Its export preserves that scientific meaning and the full original
+source files.
+
+For the actual operator browser continuation, use the existing [Monitoring browser guide](../../source/MONITORING_BROWSER.md) and its maintained `source/run_monitoring_browser.mjs`, with the original preparation opening, completed receiving receipt and actual saved context ID. That driver operates the current desk, same queued exports and an independently registered received Workspace.
+
 ## Source composition and current host
 
 The original archive is Drive `1NLDkD5byBTZ2hOYxQio7Uv_KkxgBLQ8d`, 101,834 bytes, SHA256 `7b61ddcf2cb7eef3fd5d89a4f8474e677a3b13ec7b3ef07fd21050844ccf6a5e`. Its complete original member manifest remains `integrations/monitoring/MANIFEST.json`. The installed production cohort was recovered byte-for-byte from ECD1 edition 3, Slack `F0C8KFCT3S9`, whose decoded full source payload SHA256 is `4064517a7a3ca09db90dc3d936413cf07e8af96e4b30e5cb4a3c9c88a91514a8`.
@@ -63,3 +143,28 @@ The original archive is Drive `1NLDkD5byBTZ2hOYxQio7Uv_KkxgBLQ8d`, 101,834 bytes
 `integrations/monitoring/source_adoption.json` records original and current installed identities separately. The unchanged native network builder, optimization solver and calendar/cost engine remain ASTRA-MONITOR12's complete implementation. This edition changes current host integration, passive receiving, selected export consistency and asynchronous controls.
 
 The complete current files install directly under `opportunities/upstate_forever_2026/` in the public application. Preserve the current extension registry, operator server, other descriptors and moving application source. No shared host replacement is required. On a separately installed current application, compose these complete owned leaves through its existing guarded cumulative assembler, retaining identical files and reconciling any unknown newer edits. Restart the existing operator after the source is composed and reload its browser.
+
+## Scientific report source continuation
+
+The current Monitoring Reports section can prepare a retained scientific report
+source from a saved feasible plan or an exact campaign revision. Follow
+[the native report-source guide](../../model/MONITORING_REPORT_SOURCE.md) for the
+selection, source files and command. This continues the original native export
+into the existing ordered scientific report and customer-review delivery.
+
+Receive the complete source cohort: `model/monitoring_report_source.py`,
+`model/monitoring_report_cli.py`, `model/MONITORING_REPORT_SOURCE.md`,
+`operator/monitoring_report_native.py`,
+`operator/extensions/monitoring-report.json`, and
+`operator/web/monitoring-report.mjs`, together with the composed current
+Monitoring adapter and maintained installer. The component catalogue selects
+this family with both Monitoring and observed-context dependencies.
+
+The maintained `operator/install_receiving_waters.py` validates the actual
+backend-only provider, file-ticket and restore bindings before its existing
+compare-and-write transaction. Its five guarded browser joins preserve current
+observed-context reads, water-network navigation, startup readiness and all
+other current Monitoring behavior. It preserves the original archived source
+and migrations. Complete Workspace transfer takes the report-source root lock
+after the existing workspace lock, before capturing any report output or
+retained source; preparation does not acquire the workspace lock afterward.

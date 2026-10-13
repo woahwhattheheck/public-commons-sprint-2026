@@ -296,3 +296,27 @@ pyproj 3.7.2 and system Chromium. No hosted Actions or paid compute were invoked
 ## Current integration 1.2.1
 
 See `integrations/monitoring/RECEIVING.md` for the installed original registry and independent receiving workflow. Campaign exports accept optional `expected_revision_id`; the current browser supplies its selected immutable revision. Queued exports retain that selection and completed native file across task resumes. Full Workspace export uses the original operator-session lock while the complete campaign snapshot uses its existing monitoring lock. Passive catalogue and receiving reads leave absent collections and native source views untouched.
+
+## Retain a programme in the scientific report
+
+After opening a saved feasible design or a campaign revision, use **Use this
+programme in the scientific report** in Monitoring's existing Reports section.
+Prepare the source from that exact saved selection, then open the existing
+scientific delivery form. A selected existing delivery keeps its current report
+selection while adding the retained Monitoring source.
+
+The source retains the original native plan, network, explicit costs, station
+assignments, calendar and recorded field history. Water-study planning sources
+retain their original contribution-area or priority-raster provenance. The original
+source companions carried by the native field package remain retained; the
+report keeps observational context separate from planned work. Preparation records the
+expected campaign revision and preserves the original queued request on retry.
+
+See [MONITORING_REPORT_SOURCE.md](MONITORING_REPORT_SOURCE.md) for the native
+command, immutable source contract, saved-source reopening and interpretation
+limits. Install the complete current source with
+`python -B operator/install_receiving_waters.py --root .`; its existing guarded
+transaction composes the report helper into the current Monitoring adapter and
+adds the report-capture lock to portable transfer. The backend-only
+`operator/extensions/monitoring-report.json` registers the preparation action and
+read route through the original shared host. No separate report desk is needed.

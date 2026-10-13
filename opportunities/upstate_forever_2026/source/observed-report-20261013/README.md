@@ -147,3 +147,65 @@ Related maintained source:
 - Original observed hydrology and monthly discharge companion: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QAH0AQ2
 
 The module source was inspected here and the picker was parsed against the actual current app. The native receiver compiles and renders the installed Python code in the same maintained workspace.
+
+
+## Complete report archive and independent reopening
+
+The same renderer can finish a completed observed report as a complete editable
+Workspace archive. Keep the original manifest order, contact, title, Workspace
+and output directory, then add the archive and receiving paths:
+
+```sh
+python -B source/observed-report-20261013/render.py \
+  --app-root "$APPLICATION" \
+  --workspace "$WORKSPACE" \
+  --manifest "$APPLICATION/observations/eighteenmile_2023/report_context/model-sources.json" \
+  --output "$REPORT_OUTPUT" \
+  --archive "$OPERATION/observed-science-complete.zip" \
+  --receive-directory "$OPERATION/observed-science-received"
+```
+
+For a report already completed with an earlier application edition, keep its original
+`--app-root` and formatter version while invoking this updated renderer script.
+The immutable selection includes `scientific_report.REPORT_VERSION`; switching to
+a newer application requires a separate output edition. This permits an existing
+31d report to complete archive receiving without regenerating its PDF.
+
+For a new observed-source Workspace, add `--create-workspace`. For a composed
+report, repeat every original `--manifest` in its saved order and retain the same
+explicit title and contact options. Preview remains a source-selection operation;
+archive receiving requires the completed report.
+
+The renderer first verifies the saved `selection.json`, completed
+`operation.json` and every declared report/source asset. A completed report is
+reused byte for byte, including its PDF, HTML, Markdown, report data and original
+source companions. Its scientific calculations and rendering are not repeated
+during packaging.
+
+The complete report files, original operation and selected source binding are
+retained under `observed-reports/<capture-id>` in the existing Workspace.
+The maintained `Workspace.backup` captures that report with the full original
+Workspace and application. Archive inspection verifies every declared member and
+matches the exact captured report. This uses the observed report's own identity;
+it does not create a modeled-delivery record.
+
+`--receive-directory` calls the ordinary native restore into an independent
+directory. It reopens the original Workspace, verifies the same project,
+source selections, report operation and every report asset, and returns the
+actual received report paths. Open the returned `receiving.received.files`
+HTML/PDF members in the existing browser/native reader. The received Markdown
+and source links retain their relative layout.
+
+Both archive and receiving paths must be outside the original Workspace,
+application and report directory. Keep the archive outside its receiving
+directory. A repeat verifies and reuses the same archive. If a process stops
+after native restoration publishes its destination, a repeated invocation
+reconciles every original archive member before completing that same receive.
+
+The archive receipt is saved beside the ZIP as
+`<archive-name>.observed-report.json`; the restored directory retains
+`observed-report-receiving.json`. These record the original operation,
+archive identity and actual report paths. The original report's
+`operation.json` remains unchanged. Packaging without
+`--receive-directory` can be followed later by the same command with that
+option to complete independent reopening.
