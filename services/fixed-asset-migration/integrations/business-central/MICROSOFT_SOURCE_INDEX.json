@@ -1,0 +1,175 @@
+{
+  "schema": "tjlabs.business-central-microsoft-source-index.v1",
+  "edition": "2026-10-13",
+  "scope": "Official product contracts; not evidence of any customer's installed tenant, records, permissions or accounting policy.",
+  "sources": [
+    {
+      "id": "MS-ENDPOINT",
+      "title": "API endpoint structure",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/webservices/api-endpoint-structure",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Online host separates environment /v2.0 from API route /api/v2.0; tenant can be in path. Partner routes include publisher/group/version. Company can be path GUID or query parameter."
+    },
+    {
+      "id": "MS-COMPANY",
+      "title": "company resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_company",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Read actual company id, name, systemVersion and source timestamps; names do not replace GUID scope."
+    },
+    {
+      "id": "MS-SYSTEMID",
+      "title": "Table system fields",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-table-system-fields",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "SystemId is immutable GUID; a native business number is a distinct key. Audit fields are platform-managed; rowversion is not a wall-clock time."
+    },
+    {
+      "id": "MS-GLSETUP",
+      "title": "generalLedgerSetup resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_generalledgersetup",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Exposes actual localCurrencyCode, additionalReportingCurrency, posting bounds and shortcutDimension1Code through shortcutDimension8Code."
+    },
+    {
+      "id": "MS-GLSETUP-GET",
+      "title": "Get generalLedgerSetup",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/api/dynamics_generalledgersetup_get",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Documented individual GET includes company GUID and setup GUID; response is one object, not a value array. Sample GUID is illustrative."
+    },
+    {
+      "id": "MS-COMPANY-INFO",
+      "title": "companyInformation resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_companyinformation",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "currencyCode is documented as company default currency. General Ledger Setup is the direct LCY source."
+    },
+    {
+      "id": "MS-CURRENCY",
+      "title": "currency resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_currency",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "amountDecimalPlaces is a string; amountRoundingPrecision is decimal. Preserve exact source settings and actual currency identity."
+    },
+    {
+      "id": "MS-CURRENCY-BASIS",
+      "title": "Currencies in Business Central",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/finance-currencies",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "LCY is defined in General Ledger Setup; blank transaction currency represents LCY. G/L entries carry LCY; original foreign currency requires its source documents. Additional reporting currency is separate."
+    },
+    {
+      "id": "MS-DIMENSION",
+      "title": "dimension resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_dimension",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Dimension GUID/code identifies an axis; dimensionValues is its navigation."
+    },
+    {
+      "id": "MS-DIMENSION-VALUE",
+      "title": "dimensionValue resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_dimensionvalue",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Value GUID/code retains its dimensionId. Do not join a value code across unrelated dimensions."
+    },
+    {
+      "id": "MS-DIMENSION-SET",
+      "title": "dimensionSetLine resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_dimensionsetline",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "id is the line GUID. Parent identity/type and code/valueId/valueCode are available; numeric internal Dimension Set ID is not listed."
+    },
+    {
+      "id": "MS-DIMENSION-SET-GET",
+      "title": "Get dimensionSetLines",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/api/dynamics_dimensionsetline_get",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Documented reads include generalLedgerEntries(parentGUID)/dimensionSetLines(lineGUID). Use actual parent-scoped identities."
+    },
+    {
+      "id": "MS-DEFAULT-DIMENSION",
+      "title": "defaultDimension resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_defaultdimension",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Default records include parentId/type, dimensionId/code, dimensionValueId/code and postingValidation. Defaults are separate from posted dimension-set lines."
+    },
+    {
+      "id": "MS-DIMENSION-POLICY",
+      "title": "Work with dimensions",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/finance-dimensions",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Two global and up to eight shortcut dimensions do not replace full sets. Priorities and blocked combinations can affect posting; defaults can change on document lines."
+    },
+    {
+      "id": "MS-FA",
+      "title": "fixedAsset resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_fixedasset",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Standard master fields do not establish an acquisition, depreciation-book or ledger balance export."
+    },
+    {
+      "id": "MS-FA-PATCH",
+      "title": "Update fixedAssets",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/api/dynamics_fixedasset_update",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "PATCH requires If-Match; stale tag prevents update. Omitted fields remain or may recalculate. Example IDs/extra financial fields conflict with the resource table, so installed metadata and actual response govern."
+    },
+    {
+      "id": "MS-GLENTRY",
+      "title": "generalLedgerEntry resource",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/resources/dynamics_generalledgerentry",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Read-only ledger has native GUID/entry number/document/date/account, exact debit/credit, separate additional-currency amounts, and dimensionSetLines navigation."
+    },
+    {
+      "id": "MS-FA-OPENING",
+      "title": "Set up general fixed assets information",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/fa-how-setup-general",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Opening FA cost and accumulated depreciation are separate entries per book; G/L integration state matters. Preserve supplier-approved opening/history strategy and avoid duplicate posting."
+    },
+    {
+      "id": "MS-FA-REPORTS",
+      "title": "Fixed assets reports",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/fa-reports",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Book Value, Register, Document Nos. and G/L Analysis provide different accounting readback populations."
+    },
+    {
+      "id": "MS-API",
+      "title": "API v2.0 overview",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Published standard APIs are finite; additional fields require an actual supported custom API or export, not a guessed standard field."
+    },
+    {
+      "id": "MS-DEFAULT-DIMENSION-GET",
+      "title": "Get defaultDimensions for an entity",
+      "url": "https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/api-reference/v2.0/api/dynamics_defaultdimension_get",
+      "reviewed_on": "2026-10-13",
+      "publisher": "Microsoft",
+      "finding": "Documents company-level and selected item/customer/vendor/employee default-dimension routes; actual installed metadata and responses remain authoritative."
+    }
+  ]
+}
