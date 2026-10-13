@@ -23,7 +23,7 @@ def normalize(action, raw):
     keys = {
         "init": {"directory", "label"},
         "advance": {"directory", "maxRequests", "timeout"},
-        "retry": {"directory", "jobId", "reason"},
+        "retry": {"directory", "jobId", "reason", "expectedPreviousSha256"},
         "finalize": {"directory", "publisherChangeReason"},
         "checkpoint": {"directory"},
         "restore": {"directory", "checkpointRequestId"},
@@ -48,9 +48,15 @@ def normalize(action, raw):
                     "PARCEL_CAPTURE_FIELD", "Keep the original nonempty capture value.", field=field)
     if "checkpointRequestId" in value:
         require(REQUEST.fullmatch(value["checkpointRequestId"]), "PARCEL_CAPTURE_CHECKPOINT", "Select a saved capture request.")
+    if action == "retry":
+        require(isinstance(value["expectedPreviousSha256"], str) and HASH.fullmatch(value["expectedPreviousSha256"]),
+                "PARCEL_CAPTURE_RETRY_REVIEW", "Retain the exact displayed publisher-attempt review SHA-256.")
     return value
 
 def selected(workspace, directory):
+    require(isinstance(directory, str) and directory.strip() and "\0" not in directory and
+            Path(directory).expanduser().is_absolute(),
+            "PARCEL_CAPTURE_DIRECTORY", "Choose an absolute named capture directory.")
     root = Path(directory).expanduser().absolute()
     resolved = root.resolve()
     project = workspace.root.resolve()
@@ -89,6 +95,9 @@ def status(workspace, directory):
     require(not marker.exists() or (capture.root / ".analyst-capture-received.json").exists(),
             "PARCEL_CAPTURE_RECEIVING", "Continue the original capture restoration before advancing it.")
     value = capture.status()
+    for row in value["blocked"]:
+        previous = {key: item for key, item in row.items() if key != "jobId"}
+        row["reviewSha256"] = hashlib.sha256(exact_bytes(previous)).hexdigest()
     receipt_path = capture.root / "receiving.json"
     if receipt_path.exists():
         receipt = capture_json(receipt_path)
@@ -99,7 +108,7 @@ def status(workspace, directory):
         manifest = capture_json(manifest_path)
         value["receiving"] = {**receipt, "directory": str(capture.root / "delivery"),
             "publisherChangeReason": (manifest.get("capture") or {}).get("publisherChangeReview")}
-    return {"directory": str(capture.root), **value}
+    return json.loads(exact_bytes({"directory": str(capture.root), **value}), parse_float=str)
 
 def records(workspace, *, offset=0, limit=50):
     require(type(offset) is int and offset >= 0 and type(limit) is int and 1 <= limit <= 100,
@@ -211,7 +220,10 @@ def _retry_once(capture, identity, frozen, payload):
             graph = capture.graph()
             item = next((item for item in graph["pending"] if item["id"] == payload["jobId"]), None)
             require(item is not None, "CAPTURE_JOB", "Select an existing unresolved publisher request.")
-            plan = {"input": frozen, "previous": capture.blocked(item) or {},
+            previous = capture.blocked(item) or {}
+            require(hashlib.sha256(exact_bytes(previous)).hexdigest() == payload["expectedPreviousSha256"],
+                    "PARCEL_CAPTURE_RETRY_CHANGED", "The displayed publisher attempt changed; refresh status and review it again.")
+            plan = {"input": frozen, "previous": previous,
                     "existingRetries": sorted(path.name for path in (capture.root / "retries").glob("*.json"))}
             atomic(plan_path, exact_bytes(plan))
         for path in (capture.root / "retries").glob("*.json"):
@@ -223,7 +235,7 @@ def _retry_once(capture, identity, frozen, payload):
         item = next((item for item in capture.graph()["pending"] if item["id"] == payload["jobId"]), None)
         require(item is not None and (capture.blocked(item) or {}) == plan["previous"],
                 "PARCEL_CAPTURE_RETRY_CHANGED", "The publisher attempt changed; review its current status before a new retry.")
-    capture.retry(payload["jobId"], payload["reason"])
+    capture.retry(payload["jobId"], payload["reason"], expected_previous=plan["previous"])
 
 def execute(workspace, action, payload, common, progress=None):
     payload = normalize(action, payload)
@@ -234,6 +246,10 @@ def execute(workspace, action, payload, common, progress=None):
     capture = selected(workspace, payload["directory"])
     result = {}
     if action == "init":
+        with capture_lock(capture.root):
+            require(capture.config_path.exists() or
+                    not any(path.name != ".capture.lock" for path in capture.root.iterdir()),
+                    "PARCEL_CAPTURE_NEW_DIRECTORY", "Choose an empty directory for a new named refresh.")
         capture.initialize(label=payload["label"], actor=actor,
                            capture_id="capture-" + value_sha({"workspaceId": workspace.read()["id"], "requestId": identity}))
     elif action == "restore":

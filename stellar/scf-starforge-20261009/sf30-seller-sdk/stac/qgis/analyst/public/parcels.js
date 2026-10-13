@@ -142,6 +142,8 @@ export async function renderParcels(ctx) {
         label('Reason for retry', textArea(c.reason || '', value => mutate(c, 'reason', value))),
         button('Record reviewed retry', () => ctx.runCapture('retry', {directory:directory(),
           jobId:requireValue(c.jobId?.trim(), 'Choose the blocked request.'),
+          expectedPreviousSha256:requireValue(blocked.find(row => row.jobId === c.jobId?.trim())?.reviewSha256,
+            'Refresh status and choose the displayed blocked attempt.'),
           reason:requireValue(c.reason?.trim(), 'Record the reviewed reason for another attempt.')}))),
       ready && panel('Prepare the complete receiving edition',
         note('Preparation validates every retained source body and complete selected-key coverage through the original parcel intake. Metadata changes require a recorded review before publication.'),
