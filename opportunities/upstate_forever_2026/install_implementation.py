@@ -131,6 +131,41 @@ ERROR_JOIN = (
 )
 
 
+def patch_evidence_csp(source):
+    """Allow verified local image Blobs in the actual HTML response only."""
+    tree = ast.parse(source, filename="operator/server.py")
+    targets = []
+    for function in ast.walk(tree):
+        if not isinstance(function, ast.FunctionDef) or function.name != "do_GET":
+            continue
+        for call in ast.walk(function):
+            if (isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+                    and call.func.attr == "send_header" and len(call.args) >= 2
+                    and isinstance(call.args[0], ast.Constant)
+                    and call.args[0].value == "Content-Security-Policy"
+                    and isinstance(call.args[1], ast.Constant)
+                    and isinstance(call.args[1].value, str)):
+                policy = call.args[1].value
+                if any(part.strip().startswith("img-src ") for part in policy.split(";")):
+                    targets.append(call.args[1])
+    if len(targets) != 1:
+        raise ValueError("Locate the current single HTML response image CSP before joining evidence previews.")
+    node = targets[0]
+    directives = node.value.split(";")
+    index = next(i for i, part in enumerate(directives) if part.strip().startswith("img-src "))
+    if "blob:" in directives[index].split():
+        return source
+    directives[index] = directives[index].rstrip() + " blob:"
+    replacement = repr(";".join(directives)).encode("utf-8")
+    lines = source.encode("utf-8").splitlines(keepends=True)
+    start = sum(len(line) for line in lines[:node.lineno - 1]) + node.col_offset
+    end = sum(len(line) for line in lines[:node.end_lineno - 1]) + node.end_col_offset
+    raw = source.encode("utf-8")
+    result = (raw[:start] + replacement + raw[end:]).decode("utf-8")
+    ast.parse(result, filename="operator/server.py")
+    return result
+
+
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 
@@ -363,7 +398,7 @@ def run(application, source_root, *, dry_run=False, expected_preimages=None):
         app_text = patch_scientific_review_host(app_text)
         original["operator/web/app.mjs"] = app_before
         pending["operator/web/app.mjs"] = app_text.encode("utf-8")
-        server_text = patch_error(server_text)
+        server_text = patch_evidence_csp(patch_error(server_text))
         original["operator/server.py"] = server_before
         pending["operator/server.py"] = server_text.encode("utf-8")
 
