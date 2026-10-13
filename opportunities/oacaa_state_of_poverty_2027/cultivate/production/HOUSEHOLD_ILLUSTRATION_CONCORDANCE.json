@@ -1,0 +1,75 @@
+{
+  "schema": "tjl.oacaa.household-illustration-concordance.v1",
+  "sourceYear": "2025 published Table 5",
+  "originalCells": 42,
+  "items": [
+    {
+      "id": "wage-year",
+      "originalLabel": "2024 Ohio Minimum Wage (hourly)",
+      "originalValue": "10.70",
+      "actualBenchmarkId": "ohio-wage-2025",
+      "actualYear": "2025",
+      "actual2024Value": "10.45",
+      "finding": "Published amount matches the 2025 non-tipped state rate, not 2024.",
+      "sourceUrls": [
+        "https://udayton.edu/campus/_resources/files/hr/2024-ohio-mw.pdf",
+        "https://dam.assets.ohio.gov/image/upload/com.ohio.gov/DICO/WageAndHour/DICO_2025_MW_Poster.pdf"
+      ]
+    },
+    {
+      "id": "threshold-year",
+      "originalLabel": "2024 federal poverty level threshold (annual)",
+      "originalValue": "30900",
+      "actualBenchmarkId": "census-threshold-2023",
+      "actualYear": "2023",
+      "actual2024Value": "31812",
+      "finding": "Published amount matches the 2023 official four-person/two-child threshold. It is neither the 2024 cell nor a geographically varying county threshold.",
+      "sourceUrls": [
+        "https://www2.census.gov/library/publications/2024/demo/p60-283.pdf",
+        "https://www2.census.gov/library/publications/2025/demo/p60-287.pdf"
+      ]
+    },
+    {
+      "id": "monthly-components",
+      "finding": "The seven displayed component rows exceed the printed monthly required income. Retain both values and the difference. Do not infer undisclosed credit components or silently replace a published total.",
+      "counties": [
+        {
+          "id": "household-illustration-vinton",
+          "county": "Vinton County",
+          "componentSum": "5690",
+          "printedMonthly": "5226",
+          "difference": "464"
+        },
+        {
+          "id": "household-illustration-sandusky",
+          "county": "Sandusky County",
+          "componentSum": "6268",
+          "printedMonthly": "5833",
+          "difference": "435"
+        },
+        {
+          "id": "household-illustration-delaware",
+          "county": "Delaware County",
+          "componentSum": "8150",
+          "printedMonthly": "7716",
+          "difference": "434"
+        }
+      ],
+      "sourceUrls": [
+        "https://oacaa.org/wp-content/uploads/2025/07/2025-OACA-Report-small.pdf"
+      ]
+    },
+    {
+      "id": "county-selection",
+      "finding": "Vinton/Sandusky/Delaware are the actual 2025 table columns and source-note county names. The 2026 retained OCR footer has a different county list. Original 2025 publication establishes an antecedent; actual 2026 pixels and the full selected household workbook control that later reconciliation.",
+      "sourceUrls": [
+        "https://oacaa.org/wp-content/uploads/2025/07/2025-OACA-Report-small.pdf",
+        "https://oacaa.org/wp-content/uploads/2026/08/2026-state-of-poverty-report_final-low.pdf"
+      ]
+    },
+    {
+      "id": "comparison-purpose",
+      "finding": "The derived 2024 comparison columns are explicit comparisons of an actual 2024 benchmark with a published 2025 illustration. They are not a newly calculated self-sufficiency standard, a 2025 poverty threshold, or a 2026 household estimate."
+    }
+  ]
+}
