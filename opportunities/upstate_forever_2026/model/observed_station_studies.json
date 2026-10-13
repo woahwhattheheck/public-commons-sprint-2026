@@ -269,8 +269,8 @@
     },
     "wbd_site_context": {
       "path": "observations/wbd_station_join_20261013/derived/station_context.csv",
-      "sha256": "31488b1b105906240c779db7c268d69ec76c4252440d09d1aee373f09b841f0e",
-      "bytes": 433871,
+      "sha256": "af6e61b78ef6d3f666e43f9770cafa477f6667487d75fa9db9dc1394146004f7",
+      "bytes": 464600,
       "kind": "table",
       "title": "Original WBD polygon context for each station coordinate variant",
       "station_id_field": "station_id",
