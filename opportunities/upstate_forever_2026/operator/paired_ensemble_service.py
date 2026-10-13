@@ -8,6 +8,8 @@ from __future__ import annotations
 import math
 import zipfile
 
+from model.common import atomic_json, held, now
+
 from model.paired_ensemble.ensemble_workspace import EnsembleWorkspace
 from model.paired_ensemble.designs import available_outputs, design_cohort
 from model.paired_ensemble.ensemble_rasters import UNITS, SUPPORT, checked_quantiles
@@ -68,6 +70,42 @@ class PairedEnsembleService:
     def _app(self, workspace_key):
         return EnsembleWorkspace(self.operator.ws(workspace_key))
 
+    def saved_view(self, workspace_key):
+        app = self._app(workspace_key)
+        path = app.workspace.root / "paired-ensemble-view.json"
+        if not path.is_file():
+            return None
+        value = read(path)
+        if (not isinstance(value, dict) or value.get("schema") != "upstate.paired-ensemble-view/v1"
+                or value.get("project_id") != app.workspace.project["id"]):
+            raise self.Fault("PAIRED_VIEW", "Select a result to save a view for this scientific project.", 409)
+        app.describe(identifier(value["ensemble_id"]))
+        return value
+
+    def save_view(self, workspace_key, payload):
+        app = self._app(workspace_key)
+        key = identifier(payload.get("ensemble_id"))
+        app.describe(key)
+        value = {"schema": "upstate.paired-ensemble-view/v1",
+                 "project_id": app.workspace.project["id"],
+                 "ensemble_id": key, "saved_at": now()}
+        try:
+            with held(app.workspace.root / ".operator-session.lock", blocking=False):
+                atomic_json(app.workspace.root / "paired-ensemble-view.json", value)
+        except BlockingIOError as error:
+            raise self.Fault("PAIRED_VIEW_BUSY", "A project view or archive save is in progress. Reopen this result when that save finishes.", 409) from error
+        return value
+
+    def native_context(self, app, result):
+        members = result.get("selection", {}).get("members", [])
+        required = {row.get(side) for row in members
+                    for side in ("baseline_run_id", "alternative_run_id") if row.get(side)}
+        available = {row["id"] for row in app.workspace.overview().get("runs", [])}
+        native = result.get("selection", {}).get("input_kind") == "original Workspace native run artifacts"
+        return {"available_run_ids": sorted(required & available),
+                "missing_run_ids": sorted(required - available),
+                "can_resume": native and bool(required) and required <= available}
+
     def overview(self, workspace_key):
         from paired_ensemble_provider import overview
         return overview(self.operator, workspace_key)
@@ -101,10 +139,15 @@ class PairedEnsembleService:
                 "model_scope": plan.get("model_scope"),
             })
         products = self.overview(workspace_key)
+        try:
+            view, view_error = self.saved_view(workspace_key), None
+        except (KeyError, ValueError, OSError, self.Fault) as error:
+            view, view_error = None, str(error)
         return {
             "schema": "upstate.paired-ensemble-catalog/v1",
             "workspace_id": ws.project["id"],
             "workspace_key": workspace_key, "runs": runs, "designs": designs,
+            "saved_view": view, "saved_view_error": view_error,
             "grids": snapshot.get("grids", []), "profiles": snapshot.get("profiles", []),
             "scenarios": snapshot.get("scenarios", []), "products": products, "editions": products,
             "pollutants": [{"id": name, "units": UNITS[name]} for name in POLLUTANTS],
@@ -127,7 +170,8 @@ class PairedEnsembleService:
         app = self._app(workspace_key)
         value = app.describe(key)
         records = self._records(app, key, value)
-        result = {**value, "reports": value.get("reports", {}) if value.get("state") == "complete" else {}, "_downloads": [
+        result = {**value, "native_context": self.native_context(app, value),
+                  "reports": value.get("reports", {}) if value.get("state") == "complete" else {}, "_downloads": [
             self.operator._ticket(workspace_key, member(app.root / key, row["path"]), row, row["path"])
             for row in records
         ]}
@@ -180,6 +224,10 @@ class PairedEnsembleService:
         app = self._app(workspace_key)
         if operation == "catalog":
             return self.catalog(workspace_key)
+        if operation == "view":
+            return self.saved_view(workspace_key)
+        if operation == "view.save":
+            return self.save_view(workspace_key, payload)
         if operation == "edition":
             # Preserve the original shared-host report reader for earlier
             # installed views and experiment links.

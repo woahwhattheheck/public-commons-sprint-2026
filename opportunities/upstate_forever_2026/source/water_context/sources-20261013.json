@@ -41,7 +41,8 @@
     "Original domain-coverage queries confirm the same 1886 classified feature IDs across the full selected domain. The unchanged coverage companion preserves request URLs, response hashes and the original geometry reference.",
     "The full-domain context is the exact retained 152659-byte source document; its complete JSON and serialized bytes were independently reproduced with the retained water_context.mjs implementation.",
     "The coverage document's historical response filenames identify the original source capture; its associated query URLs and response hashes remain explicit. The import companions enumerate every locally supplied file.",
-    "The native-network.json companion preserves the original USGS 303-row huc12/tohuc topology unchanged. Every selected model-domain HUC is represented; the established watershed-context loader receives this companion directly."
+    "The native-network.json companion preserves the original USGS 303-row huc12/tohuc topology unchanged. Every selected model-domain HUC is represented; the established watershed-context loader receives this companion directly.",
+    "The three original SCDES query/geometry companions are retained under the exact basenames declared by the coverage record and source-edition loader. They preserve all 1886 classified features and query bytes while the core model fingerprint remains context, coverage and native network."
   ],
   "entries": [
     {
@@ -164,6 +165,24 @@
           "bytes": 71787,
           "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
           "media_type": "application/json"
+        },
+        {
+          "path": "20261013/scdes-classified-streams.esri.json",
+          "bytes": 4978867,
+          "sha256": "daae1887ba6ac25affd85fc6e1094a81ec24130e1846bbb538cf21375bdbb394",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/scdes-huc8-03060104-to-07-target-class-count.json",
+          "bytes": 11,
+          "sha256": "618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/scdes-original-domain217-classified-objectids.json",
+          "bytes": 13248,
+          "sha256": "f30b8191b0fa0d044514dbe773e86fddf07192566e1c3c4714d477db2f4ceeab",
+          "media_type": "application/json"
         }
       ],
       "native_network_reference": {
@@ -176,7 +195,8 @@
         "native_huc_rows": 303,
         "selected_domain_huc_rows": 217,
         "selected_domain_huc_rows_missing": 0
-      }
+      },
+      "source_fingerprint": "cb8ba9832d60fb47ae64b85d9e4e2c857cc2e25557572c7d251a908005bcd510"
     }
   ]
 }
