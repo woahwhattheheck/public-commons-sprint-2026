@@ -81,6 +81,7 @@ def main(argv=None):
         owns_lock = True
         application = args.application.resolve(strict=True)
         source = args.domain.resolve(strict=True)
+        workspace_root = args.workspace.resolve(strict=True) if args.workspace is not None else None
         if not application.is_dir() or not source.is_file():
             raise ValueError("Choose the complete application directory and retained original domain file")
         admission.update(application=str(application), source=str(source),
@@ -102,12 +103,13 @@ def main(argv=None):
         from model.receptor_network_cli import build
         from model.receptor_scenarios import build as prepare
 
-        if args.workspace is not None:
-            workspace_root = args.workspace.resolve(strict=True)
+        if workspace_root is not None:
             workspace = Workspace(workspace_root)
         else:
             workspace = Workspace(root / "source-water-workspace", create=True,
                                   title="Upper Savannah original source-water areas")
+        if output == workspace.root or workspace.root in output.parents:
+            raise ValueError("Choose an operation root whose receiving outputs are outside the scientific Workspace")
         network = build(source, profile, workspace.root / "receptor-networks",
                         expected_decoded_sha256=DECODED_SHA256)
         atomic_json(output / "network-result.json", network)
