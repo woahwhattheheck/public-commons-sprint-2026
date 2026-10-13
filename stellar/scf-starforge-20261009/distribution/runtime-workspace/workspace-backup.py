@@ -120,9 +120,137 @@ def relative_name(value):
             "WORKSPACE_BACKUP_MEMBER", "Archive member has an invalid relative path.")
     return value
 
+
+def relocated_config(root, config):
+    marker = read_json(root / MARKER, optional=True)
+    return (isinstance(marker, dict) and marker.get("schema") == RECEIVING_SCHEMA and
+            marker.get("mode") == "new-host" and marker.get("directory") == str(root) and
+            marker.get("originalDirectory") == config.get("directory") and
+            marker.get("workspaceId") == config.get("workspaceId"))
+
+def source_directory(manifest):
+    return manifest.get("sourceDirectory", manifest["workspace"]["directory"])
+
+def receiving_mode(params, manifest):
+    mode = params.get("mode", "original")
+    require(mode in ("original", "new-host"), "WORKSPACE_BACKUP_MODE", "Choose original-path or explicit new-host receiving.")
+    # Once history has been isolated by a new-host receipt, later archives never
+    # make those imported requests executable again, even at their old path.
+    if manifest.get("previousReceiving", {}).get("mode") == "new-host":
+        mode = "new-host"
+    return mode
+
+def received_history(manifest):
+    operations = set(); runtimes = []; homes = []; applications = {}
+    for row in manifest["entries"]:
+        path = row["path"]
+        match = re.match(r"^operations/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})(?:/|$)", path)
+        if match: operations.add(match[1])
+        match = re.fullmatch(r"applications/[a-f0-9]{24}/runs/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\.json", path)
+        if match: operations.add(match[1])
+        if row["kind"] != "file": continue
+        match = re.fullmatch(r"entries/([a-f0-9]{24})\.json", path)
+        if match: runtimes.append(match[1])
+        match = re.fullmatch(r"managed-homes/([a-f0-9]{24})\.json", path)
+        if match: homes.append(match[1])
+        match = re.fullmatch(r"applications/([a-f0-9]{24})/application\.json", path)
+        if match: applications[match[1]] = row["sha256"]
+    return {"operations": sorted(operations), "runtimes": sorted(runtimes),
+            "managedHomes": sorted(homes), "applications": applications}
+
+def original_member(target, manifest, name):
+    row = next((row for row in manifest["entries"] if row["path"] == name), None)
+    if row is None: return None
+    require(row["kind"] == "file", "WORKSPACE_BACKUP_BINDING_SOURCE", "Keep the original regular binding record.")
+    path = target / name
+    require(regular_hash(path)[0] == {"bytes": row["bytes"], "sha256": row["sha256"]},
+            "WORKSPACE_BACKUP_BINDING_SOURCE", "Original binding record changed: " + name)
+    return read_json(path)
+
+def runtime_entries(target, manifest):
+    result = []
+    prior_bindings = manifest.get("previousReceiving", {}).get("hostBindings") or {}
+    previous = {item["runtimeId"]: item["directory"] for item in prior_bindings.get("runtimes", [])}
+    for ident in received_history(manifest)["runtimes"]:
+        saved = original_member(target, manifest, "entries/" + ident + ".json")
+        require(isinstance(saved, dict) and saved.get("id") == ident, "WORKSPACE_BACKUP_BINDING_SOURCE", "Keep the original runtime entry identity.")
+        absolute(saved.get("directory"))
+        observed = original_member(target, manifest, "observations/" + ident + ".json")
+        value = (observed or {}).get("result") or {}; expected = {}; source_basis = "retained-observation"; differences = []
+        for key in ("sourceCommit", "archiveSha256", "profileId", "lockSha256", "sourceManifestSha256"):
+            if isinstance(value.get(key), str) and value[key]: expected[key] = value[key]
+        selected = absolute(previous.get(ident, saved["directory"])); source_root = absolute(source_directory(manifest))
+        if inside(selected, source_root):
+            relative = selected.relative_to(source_root).as_posix()
+            plan = original_member(target, manifest, relative + "/runtime-install.json")
+            if plan:
+                source_basis = "archived-runtime-plan"
+                values = {"sourceCommit": plan.get("source", {}).get("sourceCommit"), "archiveSha256": plan.get("archiveSha256"),
+                          "profileId": plan.get("profileId"), "sourceManifestSha256": plan.get("source", {}).get("manifestSha256")}
+                for key, value in values.items():
+                    if isinstance(value, str) and value:
+                        if key in expected and expected[key] != value:
+                            differences.append({"field": key, "observed": expected[key], "archivedPlan": value})
+                        expected[key] = value
+                lock = next((row for row in manifest["entries"] if row["path"] == relative + "/package-lock.json" and row["kind"] == "file"), None)
+                if lock: expected["lockSha256"] = lock["sha256"]
+        result.append({"runtimeId": ident, "label": saved.get("label", ident), "originalDirectory": saved["directory"],
+                       "sourceDirectory": str(selected), "expected": expected, "sourceBasis": source_basis, "earlierObservationDifferences": differences})
+    return result
+
+def normalize_host_bindings(value, entries):
+    require(isinstance(value, dict) and set(value) == {"runtimeHome", "runtimes", "actor", "note"},
+            "WORKSPACE_BACKUP_HOST_BINDINGS", "Select current runtimeHome, runtime mappings, actor and review note.")
+    home = str(absolute(value["runtimeHome"]))
+    require(isinstance(value["actor"], str) and value["actor"].strip() and len(value["actor"]) <= 160 and
+            isinstance(value["note"], str) and value["note"].strip() and len(value["note"]) <= 4000,
+            "WORKSPACE_BACKUP_HOST_BINDINGS", "Attribute the current-host selection and explain its path bindings.")
+    require(isinstance(value["runtimes"], list), "WORKSPACE_BACKUP_HOST_BINDINGS", "Select an explicit runtime mapping list; an empty list retains every old runtime as unbound history.")
+    known = {row["runtimeId"] for row in entries}; seen = set(); paths = set(); selected = []
+    for row in value["runtimes"]:
+        require(isinstance(row, dict) and set(row) == {"runtimeId", "directory"} and row["runtimeId"] in known and row["runtimeId"] not in seen,
+                "WORKSPACE_BACKUP_HOST_BINDINGS", "Map each selected original runtime ID once.")
+        directory = str(absolute(row["directory"]))
+        require(directory not in paths, "WORKSPACE_BACKUP_HOST_BINDINGS", "Keep distinct runtime entries bound to distinct current directories.")
+        seen.add(row["runtimeId"]); paths.add(directory); selected.append({"runtimeId": row["runtimeId"], "directory": directory})
+    return {"runtimeHome": home, "runtimes": sorted(selected, key=lambda item: item["runtimeId"]), "actor": value["actor"], "note": value["note"]}
+
+def new_host_review(target, manifest, current, selected):
+    entries = runtime_entries(target, manifest)
+    chosen = normalize_host_bindings(selected, entries) if selected is not None else None
+    mappings = {row["runtimeId"]: row["directory"] for row in (chosen or {}).get("runtimes", [])}
+    output = []
+    for entry in entries:
+        row = {**entry, "directory": mappings.get(entry["runtimeId"]), "status": "UNBOUND", "sourceVerified": False}
+        if row["directory"]:
+            try:
+                path = private(absolute(row["directory"])); plan = read_json(path / "runtime-install.json")
+                require(isinstance(plan, dict) and plan.get("schema") == "stellar-forge.runtime-install.v1" and plan.get("directory") == str(path),
+                        "WORKSPACE_BACKUP_SOURCE_MISMATCH", "Use the original installer to recover this runtime at its actual current directory.")
+                actual = {"sourceCommit": plan.get("source", {}).get("sourceCommit"), "archiveSha256": plan.get("archiveSha256"),
+                          "profileId": plan.get("profileId"), "sourceManifestSha256": plan.get("source", {}).get("manifestSha256"),
+                          "lockSha256": regular_hash(path / "package-lock.json")[0]["sha256"]}
+                expected = row["expected"]
+                require(all(expected.get(key) for key in ("sourceCommit", "archiveSha256", "profileId")),
+                        "WORKSPACE_BACKUP_SOURCE_MISMATCH", "This original entry lacks a complete retained source binding; leave it unbound and attach the current runtime through its original installer.")
+                comparisons = {key: {"expected": value, "actual": actual.get(key)} for key, value in expected.items()}
+                require(all(item["expected"] == item["actual"] for item in comparisons.values()),
+                        "WORKSPACE_BACKUP_SOURCE_MISMATCH", "The current runtime differs from the selected original source, profile or lock.")
+                row.update(status="PRESENT", sourceVerified=True, source=actual, comparisons=comparisons)
+            except (OSError, ValueError, Failure) as error:
+                row.update(status="SOURCE_MISMATCH", error={"code": getattr(error, "code", getattr(error, "errno", None)), "message": str(error)})
+        output.append(row)
+    try: private(absolute(chosen["runtimeHome"])); home_ready = True
+    except (OSError, ValueError, TypeError, Failure): home_ready = False
+    return {"hostBindings": chosen, "runtimeEntries": output, "runtimeHomeReady": home_ready,
+            "canOpen": chosen is not None and home_ready and not any(row["status"] == "SOURCE_MISMATCH" for row in output),
+            "bindings": [{**row, "status": "HISTORICAL_REFERENCE", "sourceVerified": False} for row in manifest["externalBindings"]],
+            "importedOperationCount": len(received_history(manifest)["operations"])}
+
+
 def config_for(root):
     root = private(root); config = read_json(root / "workspace.json")
-    require(config.get("schema") == "stellar-forge.runtime-workspace.v1" and config.get("directory") == str(root),
+    require(config.get("schema") == "stellar-forge.runtime-workspace.v1" and (config.get("directory") == str(root) or relocated_config(root, config)),
             "WORKSPACE_BACKUP_IDENTITY", "Keep the original Runtime workspace path and identity.")
     identifier(config.get("workspaceId"))
     absolute(config.get("runtimeHome"))
@@ -183,7 +311,7 @@ def included_workspace_roots(root):
         if path.is_symlink(): continue
         try: value = read_json(path)
         except (ValueError, UnicodeError): continue
-        if isinstance(value, dict) and value.get("schema") == "stellar-forge.runtime-workspace.v1" and value.get("directory") == parent:
+        if isinstance(value, dict) and value.get("schema") == "stellar-forge.runtime-workspace.v1" :
             private(path.parent); result.add(path.parent)
     return sorted(result, key=str)
 
@@ -300,7 +428,7 @@ def overview(manifest):
     rows = manifest["entries"]
     return {"reviewId": manifest["reviewId"], "reviewSha256": sha(encoded(manifest)),
             "workspaceId": manifest["workspace"]["workspaceId"], "directory": manifest["workspace"]["directory"],
-            "runtimeHome": manifest["workspace"]["runtimeHome"], "label": manifest["label"], "createdAt": manifest["createdAt"],
+            "sourceDirectory": source_directory(manifest), "runtimeHome": manifest["workspace"]["runtimeHome"], "label": manifest["label"], "createdAt": manifest["createdAt"],
             "files": sum(row["kind"] == "file" for row in rows),
             "directories": sum(row["kind"] == "directory" for row in rows),
             "links": sum(row["kind"] == "symlink" for row in rows),
@@ -312,14 +440,14 @@ def review(params):
     request_id = identifier(params["requestId"]); destination = make_private(store / "reviews" / request_id)
     prior = read_json(destination / "manifest.json", optional=True)
     if prior:
-        require(prior["workspace"]["directory"] == str(root) and prior["label"] == params["label"], "WORKSPACE_BACKUP_REVIEW_REUSED", "Request UUID belongs to another backup review.")
+        require(source_directory(prior) == str(root) and prior["label"] == params["label"], "WORKSPACE_BACKUP_REVIEW_REUSED", "Request UUID belongs to another backup review.")
         return overview(prior)
     with quiescent(root) as rows:
         config = config_for(root)
         discovery = {"parsedJsonFiles": 0, "unscannedJsonFiles": [], "externalTreesCopied": False}
         declared = bindings(root, rows, config, discovery)
         manifest = {"schema": SCHEMA, "reviewId": request_id, "label": params["label"], "createdAt": timestamp(),
-                    "workspace": config, "entries": rows, "inventorySha256": sha(encoded(rows)),
+                    "workspace": config, "sourceDirectory": str(root), "entries": rows, "inventorySha256": sha(encoded(rows)),
                     "externalBindings": declared, "externalBindingDiscovery": discovery,
                     "excluded": [{"path": GATE, "reason": "Existing kernel coordination inode; never replaced by archive or restore."}]}
         # The previous receiving marker is retained in the source inventory;
@@ -337,7 +465,7 @@ def validate_manifest(manifest):
     require(isinstance(manifest, dict) and manifest.get("schema") == SCHEMA, "WORKSPACE_BACKUP_FORMAT", "Use a complete Runtime workspace archive.")
     identifier(manifest.get("reviewId")); config = manifest.get("workspace", {})
     require(config.get("schema") == "stellar-forge.runtime-workspace.v1", "WORKSPACE_BACKUP_FORMAT", "Missing original workspace configuration.")
-    identifier(config.get("workspaceId")); absolute(config.get("directory")); absolute(config.get("runtimeHome"))
+    identifier(config.get("workspaceId")); absolute(config.get("directory")); absolute(config.get("runtimeHome")); absolute(source_directory(manifest))
     rows = manifest.get("entries")
     require(isinstance(rows, list) and len(rows) <= MAX_FILES, "WORKSPACE_BACKUP_MANIFEST", "Invalid complete member inventory.")
     names = set(); by_name = {}; total = 0
@@ -362,7 +490,7 @@ def validate_manifest(manifest):
     for binding in manifest["externalBindings"]:
         require(isinstance(binding, dict), "WORKSPACE_BACKUP_BINDINGS", "Invalid binding declaration.")
         target = absolute(binding.get("path"))
-        require(not inside(target, absolute(config["directory"])) and
+        require(not inside(target, absolute(source_directory(manifest))) and
                 isinstance(binding.get("roles"), list) and all(isinstance(role, str) and role for role in binding["roles"]) and
                 isinstance(binding.get("locations"), list) and all(isinstance(location, str) for location in binding["locations"]) and
                 isinstance(binding.get("expected"), list) and all(isinstance(item, dict) and all(isinstance(key, str) and isinstance(value, str) for key, value in item.items()) for item in binding["expected"]),
@@ -484,11 +612,26 @@ def export(params):
     return operation_record(params, "COMPLETE", result={**result, "inspectedAt": inspection["inspectedAt"]})
 
 def marker_for(params, manifest, phase):
-    return {"schema": RECEIVING_SCHEMA, "receivingId": params["operationId"], "operationId": params["operationId"],
-            "workspaceId": manifest["workspace"]["workspaceId"], "directory": manifest["workspace"]["directory"],
-            "storageDirectory": params["store"], "archiveId": params["archiveId"], "archiveSha256": params["archiveId"],
-            "manifestSha256": params["manifestSha256"], "phase": phase, "createdAt": params["createdAt"],
-            "updatedAt": timestamp(), "launchesStarted": 0}
+    value = {"schema": RECEIVING_SCHEMA, "receivingId": params["operationId"], "operationId": params["operationId"],
+             "workspaceId": manifest["workspace"]["workspaceId"], "directory": params["directory"],
+             "storageDirectory": params["store"], "archiveId": params["archiveId"], "archiveSha256": params["archiveId"],
+             "manifestSha256": params["manifestSha256"], "phase": phase, "createdAt": params["createdAt"],
+             "updatedAt": timestamp(), "launchesStarted": 0}
+    if receiving_mode(params, manifest) == "new-host":
+        value.update(mode="new-host", originalDirectory=manifest["workspace"]["directory"],
+                     sourceDirectory=source_directory(manifest), receivedHistory=received_history(manifest))
+    if value.get("mode") == "new-host" and phase != "RESTORING":
+        nested = []
+        for row in manifest["entries"]:
+            if row["kind"] != "file" or row["path"] == "workspace.json" or not row["path"].endswith("/workspace.json"): continue
+            config = original_member(absolute(params["directory"]), manifest, row["path"])
+            if isinstance(config, dict) and config.get("schema") == "stellar-forge.runtime-workspace.v1":
+                identifier(config.get("workspaceId")); absolute(config.get("directory"))
+                nested.append({"path": row["path"][:-len("/workspace.json")], "workspaceId": config["workspaceId"],
+                               "originalDirectory": config["directory"]})
+        value["nestedWorkspaces"] = nested
+    require(len(encoded(value)) <= 3 * 1024 * 1024, "WORKSPACE_BACKUP_HISTORY_LIMIT", "Keep the complete receiving history within the native marker reader limit.")
+    return value
 
 def retain_interrupted(path, directory):
     """Retain a controller-owned partial outside the restored workspace."""
@@ -580,7 +723,7 @@ def restore(params):
             value = read_json(parent / "workspace.json", optional=True)
             if not isinstance(value, dict) or value.get("schema") != "stellar-forge.runtime-workspace.v1": continue
             private(parent)
-            require(value.get("directory") == str(parent), "WORKSPACE_BACKUP_PARENT", "Keep the containing workspace identity.")
+            require(value.get("directory") == str(parent) or relocated_config(parent, value), "WORKSPACE_BACKUP_PARENT", "Keep the containing workspace identity.")
             marker = read_json(parent / MARKER, optional=True)
             require(not marker or marker.get("phase") == "BINDINGS_REVIEWED", "WORKSPACE_BACKUP_PARENT_RECEIVING",
                     "Complete the containing workspace's original receiving first.")
@@ -609,7 +752,9 @@ def restore_under_ancestors(params):
     manifest = read_json(store / "inspections" / archive_id / "manifest.json"); rows = validate_manifest(manifest)
     require(params["manifestSha256"] == receipt["manifestSha256"] == sha(encoded(manifest)), "WORKSPACE_BACKUP_REVIEW_CHANGED", "Keep the selected complete receiving review.")
     target = absolute(params["directory"]); operation_directory = private(absolute(params["operationDirectory"]))
-    require(str(target) == manifest["workspace"]["directory"], "WORKSPACE_BACKUP_ORIGINAL_PATH_REQUIRED", "Restore to the original path shown by this archive. Use native runtime recovery for a deliberate relocation.")
+    mode = receiving_mode(params, manifest)
+    require(mode == "new-host" or str(target) == manifest["workspace"]["directory"], "WORKSPACE_BACKUP_ORIGINAL_PATH_REQUIRED", "Choose explicit new-host receiving to restore the unchanged workspace at another directory.")
+    marker_for(params, manifest, "RESTORING")
     require(not inside(store, target) and not inside(target, store), "WORKSPACE_BACKUP_STORAGE_OVERLAP", "Keep the retained archive outside its destination.")
     require(target.parent.resolve() == target.parent, "WORKSPACE_BACKUP_PARENT", "Use the original real destination parent.")
     # An empty private target is adoptable, but every populated destination needs
@@ -617,6 +762,7 @@ def restore_under_ancestors(params):
     intent_file = operation_directory / "restore-intent.json"
     intent = {"receivingId": params["operationId"], "directory": str(target), "archiveId": archive_id,
               "manifestSha256": params["manifestSha256"]}
+    if params.get("mode") == "new-host": intent["mode"] = "new-host"
     previous_intent = read_json(intent_file, optional=True)
     require(previous_intent is None or previous_intent == intent, "WORKSPACE_BACKUP_RECEIVING_CHANGED", "Retain the same restore intent.")
     if previous_intent is None: atomic(intent_file, intent)
@@ -708,6 +854,27 @@ def binding_review(params):
     target = private(absolute(operation["input"]["directory"])); current = read_json(target / MARKER)
     require(current["receivingId"] == operation_id, "WORKSPACE_BACKUP_RECEIVING_CHANGED", "Keep the original receiving identity.")
     manifest = read_json(store / "inspections" / current["archiveId"] / "manifest.json"); output = []
+    if current.get("mode") == "new-host":
+        require(current["manifestSha256"] == sha(encoded(manifest)), "WORKSPACE_BACKUP_REVIEW_CHANGED", "Keep the exact original receiving manifest.")
+        if current["phase"] == "BINDINGS_REVIEWED":
+            accepted = read_json(store / "binding-reviews" / identifier(current["bindingReview"]["reviewId"]) / "review.json")
+            require(accepted["reviewSha256"] == current["bindingReview"]["reviewSha256"] and
+                    accepted["reviewSha256"] == sha(encoded({key: value for key, value in accepted.items() if key != "reviewSha256"})),
+                    "WORKSPACE_BACKUP_BINDING_REVIEW_CHANGED", "Keep the complete originally accepted binding review.")
+            if params.get("hostBindings") is not None:
+                require(normalize_host_bindings(params["hostBindings"], accepted["runtimeEntries"]) == accepted["hostBindings"],
+                        "WORKSPACE_BACKUP_BINDINGS_ACCEPTED", "This receiving already has accepted bindings. Use original runtime attach and application review/save for later changes.")
+            return accepted
+        details = new_host_review(target, manifest, current, params.get("hostBindings"))
+        result = {"reviewId": str(uuid.uuid4()), "receivingId": operation_id, "directory": str(target),
+                  "workspaceId": current["workspaceId"], "mode": "new-host", "originalDirectory": manifest["workspace"]["directory"],
+                  "sourceDirectory": source_directory(manifest), "checkedAt": timestamp(), "manifestSha256": current["manifestSha256"],
+                  "sourceReadiness": "REQUIRES_ORIGINAL_NATIVE_REVIEW", **details}
+        result["reviewSha256"] = sha(encoded(result))
+        folder = make_private(store / "binding-reviews" / result["reviewId"]); atomic(folder / "review.json", result)
+        return result
+    require(params.get("hostBindings") is None, "WORKSPACE_BACKUP_HOST_BINDINGS", "Current host bindings belong to explicit new-host receiving.")
+
     for binding in manifest["externalBindings"]:
         row = {**binding, "status": "UNAVAILABLE", "sourceVerified": False}
         path = absolute(binding["path"])
@@ -753,16 +920,27 @@ def accept(params):
     root = private(absolute(params["directory"])); inherited_gate(root)
     store = private(absolute(params["store"])); current = read_json(root / MARKER)
     review = read_json(store / "binding-reviews" / identifier(params["reviewId"]) / "review.json")
+    require(review.get("reviewSha256") == sha(encoded({key: value for key, value in review.items() if key != "reviewSha256"})),
+            "WORKSPACE_BACKUP_BINDING_REVIEW_CHANGED", "The retained full binding review bytes changed.")
     require(review["receivingId"] == params["receivingId"] == current["receivingId"] and
             review["reviewSha256"] == params["reviewSha256"] and review["manifestSha256"] == current["manifestSha256"],
             "WORKSPACE_BACKUP_BINDING_REVIEW_CHANGED", "Keep the selected original receiving and full binding review.")
     require(review["canOpen"] and review["runtimeHomeReady"], "WORKSPACE_BACKUP_BINDINGS_REQUIRED", "Receive the original private runtime home and resolve any source mismatch first.")
-    fresh = binding_review({"store": str(store), "receivingId": params["receivingId"]})
+    if current["phase"] == "BINDINGS_REVIEWED":
+        require(current["bindingReview"]["reviewId"] == review["reviewId"] and current["bindingReview"]["reviewSha256"] == review["reviewSha256"],
+                "WORKSPACE_BACKUP_BINDINGS_ACCEPTED", "Reopen the exact accepted review; later workspace edits remain retained.")
+        return {"receivingId": current["receivingId"], "directory": str(root), "workspaceId": current["workspaceId"],
+                "phase": current["phase"], "launchesStarted": 0, "reopened": True, "sourceReadiness": "REQUIRES_ORIGINAL_NATIVE_REVIEW"}
+    fresh = binding_review({"store": str(store), "receivingId": params["receivingId"], **({"hostBindings": review["hostBindings"]} if current.get("mode") == "new-host" else {})})
     stable = lambda data: {key: data[key] for key in ("directory", "workspaceId", "manifestSha256", "runtimeHomeReady", "canOpen", "bindings")}
-    require(stable(fresh) == stable(review), "WORKSPACE_BACKUP_BINDING_REVIEW_CHANGED", "Binding availability changed; review the current original bindings.")
+    require(stable(fresh) == stable(review) and all(fresh.get(key) == review.get(key) for key in ("hostBindings", "runtimeEntries", "mode", "originalDirectory", "importedOperationCount")), "WORKSPACE_BACKUP_BINDING_REVIEW_CHANGED", "Binding availability changed; review the current original bindings.")
     current.update({"phase": "BINDINGS_REVIEWED", "updatedAt": timestamp(),
                     "bindingReview": {"reviewId": review["reviewId"], "reviewSha256": review["reviewSha256"], "checkedAt": review["checkedAt"]},
                     "launchesStarted": 0})
+    if current.get("mode") == "new-host":
+        current["hostBindings"] = review["hostBindings"]
+        current["runtimeEntries"] = review["runtimeEntries"]
+        require(len(encoded(current)) <= 4 * 1024 * 1024, "WORKSPACE_BACKUP_HISTORY_LIMIT", "Complete accepted receiving metadata exceeds its native reader limit.")
     atomic(root / MARKER, current)
     return {"receivingId": current["receivingId"], "directory": str(root), "workspaceId": current["workspaceId"],
             "phase": current["phase"], "launchesStarted": 0, "sourceReadiness": "REQUIRES_ORIGINAL_NATIVE_REVIEW"}

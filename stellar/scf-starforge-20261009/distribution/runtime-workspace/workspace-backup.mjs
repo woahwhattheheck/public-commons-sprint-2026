@@ -252,8 +252,13 @@ export function createWorkspaceBackupAPI(directory_){
     async workspaceBackupRestore(options={}){
       const store=await storeFor(root,options),archiveId=hashId(options.archiveId),manifestSha256=hashId(options.manifestSha256);
       const receipt=await boundedJSON(join(store,'inspections',archiveId,'inspection.json'));
-      need(receipt.manifestSha256===manifestSha256&&receipt.review.directory===absolute(options.directory),'WORKSPACE_BACKUP_ORIGINAL_PATH_REQUIRED');
-      return startOperation(root,store,'RESTORE',{requestId:operationId(options.requestId),archiveId,manifestSha256,directory:options.directory});
+      need(receipt.manifestSha256===manifestSha256,'WORKSPACE_BACKUP_REVIEW_CHANGED');
+      const mode=options.mode??'original';need(['original','new-host'].includes(mode),'WORKSPACE_BACKUP_MODE');
+      absolute(options.directory);
+      need(mode==='new-host'||receipt.review.directory===options.directory,'WORKSPACE_BACKUP_ORIGINAL_PATH_REQUIRED',
+        'Choose explicit new-host receiving to preserve the original workspace at a different destination.');
+      return startOperation(root,store,'RESTORE',{requestId:operationId(options.requestId),archiveId,manifestSha256,directory:options.directory,
+        ...(mode==='new-host'?{mode}:{})});
     },
     async workspaceBackupContinue(options={}){
       const store=await storeFor(root,options),id=operationId(options.operationId),request=await boundedJSON(join(store,'operations',id,'request.json'));
@@ -291,7 +296,7 @@ export function createWorkspaceBackupAPI(directory_){
     },
     async workspaceBackupBindings(options={}){
       const store=await storeFor(root,options);
-      return python('bindings',{store,receivingId:operationId(options.receivingId)});
+      return python('bindings',{store,receivingId:operationId(options.receivingId),...(options.hostBindings===undefined?{}:{hostBindings:options.hostBindings})});
     },
     async workspaceBackupOpen(options={}){
       const store=await storeFor(root,options),receivingId=operationId(options.receivingId),record=await boundedJSON(join(store,'operations',receivingId,'operation.json'));
