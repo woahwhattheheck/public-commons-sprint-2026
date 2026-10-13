@@ -4,6 +4,10 @@ This complete source edition combines the merged Gateway product (installed PR16
 
 Continue **`TYK-API-MIGRATION-ROLLOUT-D76C-20261012`** through its existing native owner. This package is prepared source for that operation; it does not claim a native or rendered result.
 
+## Ordinary file download
+
+`tyk-gateway-source.zip` is a standard ZIP containing the complete original `README.md` and `source-envelope.json` from public merge `eab7bf8a3640c335b5b97da1056625d030426517`. It is 5,022,315 bytes, SHA-256 `2256efcbf461be1dec86895372474008a708e1034ea42c9d8ee697a32ff011b5`, small enough for the observed 5 MiB ordinary-file receiving limit. Both expanded files are byte-identical to that original publication. Extract both into the same directory and use the original checked command below with the extracted envelope path. This is another transport for the same source and native operation; no new host or command is created.
+
 ## Complete source and source identity
 
 `source-envelope.json` contains 1134 complete original files (11103897 source bytes), the full signed commit and the complete 18,481-entry Git tree. All 1,811 tree-object identities and every included Git blob identity were checked against the immutable source. It includes:
