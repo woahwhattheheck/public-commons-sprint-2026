@@ -305,6 +305,8 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--native-observation-course", type=Path,
         help="Authored continuation using complete original native observation records")
+    parser.add_argument("--native-observation-input", type=Path,
+        help="Original observation ZIP or explicit extracted-source JSON for normal native import")
     parser.add_argument("--evidence-selection", type=Path,
         help="Explicit authored native-evidence child selection for the same original course")
     parser.add_argument("--evidence-successor-selection", type=Path)
@@ -312,6 +314,8 @@ def main():
     args = parser.parse_args()
     if not args.evidence_selection and (args.evidence_successor_selection or args.evidence_design_configuration):
         parser.error("Evidence successor/configuration requires --evidence-selection")
+    if args.native_observation_input and not args.native_observation_course:
+        parser.error("--native-observation-input requires --native-observation-course")
     workspace = Workspace(args.workspace)
     output = args.output.resolve()
     if output == workspace.root.resolve() or output.is_relative_to(workspace.root.resolve()):
