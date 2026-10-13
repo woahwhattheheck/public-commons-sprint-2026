@@ -14,6 +14,11 @@ MARKER = "ES-SUPERVISION-20261012"
 MEMBERS = ("model/native_execution.py", "model/native_worker.py",
            "operator/native_jobs.py", "operator/programme_jobs.py",
            "operator/parameter_study_jobs.py", "operator/parameter_study_api.py",
+           "model/parameter_case_status.py", "model/parameter_result_query.py",
+           "model/record_catalog.py", "model/delivery_catalogue.py",
+           "operator/web/parameter_case_console.mjs", "operator/web/parameter_studies.mjs",
+           "operator/web/parameter_studies.css", "docs/PARAMETER_CASE_CONSOLE.md",
+           "docs/PARAMETER_RESULT_QUERIES.md", "docs/PARAMETER_STUDY_PROCESS_RECOVERY.md",
            "operator/web/jobs.mjs", "operator/web/jobs.css", "operator/NATIVE_JOBS.md",
            "install_native_supervision.py")
 PREVIOUS = {
@@ -90,6 +95,12 @@ PREVIOUS.setdefault("operator/parameter_study_api.py", []).extend(["a6eb20105e6f
 PREVIOUS.setdefault("install_native_supervision.py", []).extend(["1deba14b65ed046c7283cdeb9a97bd0702027eafc44e62993a8c54c6e1ab6e12"])
 PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).extend(["4f3c1dd30be3c78b585c0070662649e3c985fc56da383317e2c491b4f593b39e"])
 PREVIOUS.setdefault("operator/parameter_study_jobs.py", []).extend(["181b0dc0c401bbe4b44a6a106e0fe6236c1c776247398d5ee693532d8602217d", "7fa5a1a929c80251e75d0273722c73f83715b6ebe94c706dade354b4f0c62919"])
+
+# Installed source before the complete retained Parameter result/console join.
+PREVIOUS.setdefault("operator/parameter_study_api.py", []).append("4b74287a788429736026bd6a7e8c0f3f1a83d977ff51e06b9c7eaec913150ee5")
+PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("26be73f32614a1e9dabf25aea83dbb53bff243a379b5c6ed30d8b2265afa3a84")
+PREVIOUS.setdefault("install_native_supervision.py", []).append("f3a0528a818641095969898b635e7c6324f6ab6842995cbe55f90f2079aee733")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("fb4339debca8ab51cb97cdf076b16a0f61c86afcc5bef2a5a4383da6001a2b56")
 
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
@@ -370,13 +381,64 @@ def atomic_write(path, body, mode=0o644):
             pending.unlink(missing_ok=True)
 
 
+PARAMETER_QUERY_KEYS = (
+    "id", "baseline_run_id", "area_id", "pollutant", "offset", "limit",
+    "candidate_run_ids", "run_id", "attempt_id", "stream", "log_offset",
+    "expected_attempt_id", "history_offset", "range_offset", "range_limit",
+    "expected_artifact_sha256",
+)
+
+
+def parameter_result_server_patch(source):
+    """Compose current query fields and assets without narrowing peer routes."""
+    tree = ast.parse(source, filename="operator/server.py")
+    calls = [node for node in ast.walk(tree)
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+             and node.func.attr == "read" and isinstance(node.func.value, ast.Attribute)
+             and node.func.value.attr == "parameter_studies"]
+    if len(calls) != 1 or len(calls[0].args) < 3:
+        raise ValueError("Parameter results: expected one maintained native read dispatcher.")
+    query = calls[0].args[2]
+    retained = {node.value for node in ast.walk(query)
+                if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    missing = [name for name in PARAMETER_QUERY_KEYS if name not in retained]
+    if missing:
+        # AST column positions are UTF-8 bytes. Preserve any preceding Unicode
+        # and every unknown peer query field exactly.
+        raw = source.encode("utf-8")
+        lines = raw.splitlines(keepends=True)
+        start = sum(map(len, lines[:query.lineno - 1])) + query.col_offset
+        end = sum(map(len, lines[:query.end_lineno - 1])) + query.end_col_offset
+        original = raw[start:end].decode("utf-8")
+        fields = ", ".join(json.dumps(name) + ": one(" + json.dumps(name) + ")"
+                           for name in missing)
+        replacement = "(" + original + " | {" + fields + "})"
+        source = (raw[:start] + replacement.encode("utf-8") + raw[end:]).decode("utf-8")
+    matches = list(re.finditer(r"if selected not in (\(*)(\{[^}\n]+\})([^:\n]*):", source))
+    if len(matches) != 1:
+        raise ValueError("Parameter results: expected the maintained static asset registry.")
+    match = matches[0]
+    members = ast.literal_eval(match.group(2))
+    if not isinstance(members, set) or not all(isinstance(item, str) for item in members):
+        raise ValueError("Parameter results: expected the original literal asset set.")
+    required_assets = {"parameter_case_console.mjs", "parameter_studies.mjs", "parameter_studies.css"}
+    if not required_assets <= members:
+        members.update(required_assets)
+        literal = "{" + ", ".join(json.dumps(item) for item in sorted(members)) + "}"
+        source = (source[:match.start(2)] + literal + source[match.end(2):])
+    ast.parse(source, filename="operator/server.py")
+    return source
+
+
 def parameter_study_dependency(body):
     """Keep the installed scientific engine and check the adapter's new API."""
     tree = ast.parse(body.decode("utf-8"))
     declarations = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
     for name, arguments in (
             ("native_case_context", ("workspace", "key", "run_id")),
-            ("record_interruption", ("workspace", "key", "error"))):
+            ("record_interruption", ("workspace", "key", "error")),
+            ("_read", ("workspace", "key")),
+            ("_bind_state", ("workspace", "key", "spec", "state"))):
         node = declarations.get(name)
         if node is None:
             raise ValueError("Receive the current complete saved-study source before native supervision: "
@@ -389,9 +451,37 @@ def parameter_study_dependency(body):
                 or any(value is None for value in args.kw_defaults)):
             raise ValueError("Compose the current saved-study adapter with its scientific API: " + name)
     return {"bytes": len(body), "sha256": sha(body),
-            "functions": ["native_case_context", "record_interruption"],
+            "functions": ["native_case_context", "record_interruption", "_read", "_bind_state"],
             "policy": "retain installed scientific source unchanged"}
 
+
+
+def retained_reader_dependencies(application):
+    """Validate and retain scientific/context modules used by the incoming readers."""
+    required = {
+        "model/common.py": ("canonical", "digest", "held", "identifier", "relative_file",
+                            "read_json", "file_digest"),
+        "model/model_selection.py": ("selected",),
+        "model/parameter_calibration.py": ("candidates",),
+    }
+    bodies, records = {}, {}
+    for name, symbols in required.items():
+        path = application / name
+        if not path.is_file():
+            raise ValueError("Receive the complete current saved-study application first; missing " + name)
+        body = path.read_bytes()
+        tree = ast.parse(body.decode("utf-8"), filename=name)
+        declarations = {node.name for node in tree.body
+                        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+        missing = set(symbols) - declarations
+        if missing:
+            raise ValueError("Retained Parameter reader needs current " + name + ": " +
+                             ", ".join(sorted(missing)))
+        bodies[name] = body
+        records[name] = {"bytes": len(body), "sha256": sha(body),
+                         "functions": list(symbols),
+                         "policy": "retain installed scientific/context source unchanged"}
+    return bodies, records
 
 def install(application, increment, *, retention=False):
     application, increment = Path(application).resolve(strict=True), Path(increment).resolve(strict=True)
@@ -400,8 +490,12 @@ def install(application, increment, *, retention=False):
     dependency = "model/parameter_studies.py"
     originals[dependency] = (application / dependency).read_bytes()
     retained_dependencies = {dependency: parameter_study_dependency(originals[dependency])}
+    reader_bodies, reader_records = retained_reader_dependencies(application)
+    originals.update(reader_bodies)
+    retained_dependencies.update(reader_records)
     changed = {
-        "operator/server.py": server_patch(originals["operator/server.py"].decode("utf-8"), retention=retention).encode("utf-8"),
+        "operator/server.py": parameter_result_server_patch(server_patch(
+            originals["operator/server.py"].decode("utf-8"), retention=retention)).encode("utf-8"),
         "operator/web/app.mjs": browser_patch(originals["operator/web/app.mjs"].decode("utf-8")).encode("utf-8"),
         "model/portable.py": portable_patch(originals["model/portable.py"].decode("utf-8")).encode("utf-8")}
     programme_path = application / "operator/programmes.py"
@@ -444,8 +538,9 @@ def install(application, increment, *, retention=False):
         mode = destination.stat().st_mode & 0o777 if destination.exists() else 0o644
         if not destination.exists() or destination.read_bytes() != changed[name]:
             atomic_write(destination, changed[name], mode)
-    if (application / dependency).read_bytes() != originals[dependency]:
-        raise ValueError("The retained scientific source changed during native supervision installation")
+    for dependency in retained_dependencies:
+        if (application / dependency).read_bytes() != originals[dependency]:
+            raise ValueError("The retained scientific/context source changed during native supervision installation: " + dependency)
     receipt = {"schema": "upstate.native-supervision-install/v1", "operation_id": MARKER,
                "installed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                "edition": edition,
