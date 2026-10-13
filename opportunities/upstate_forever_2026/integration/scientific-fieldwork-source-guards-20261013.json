@@ -17,7 +17,7 @@
     "file_id": "file_000000003a88820b88095cbc8be34e4d"
   },
   "file_count": 99,
-  "source_bytes": 2222844,
+  "source_bytes": 2222932,
   "files": [
     {
       "path": "AGENTS.md",
@@ -1026,16 +1026,21 @@
     },
     {
       "path": "operator/web/implementation.css",
-      "bytes": 7819,
-      "sha256": "3aba9c60c349ebedb1192ce6092fe3b01d01a3a8c76f3eae35cda6e3e3c6536a",
-      "git_blob": "07633327b5b57621fe23ac1bb35ca0d7111cc9a4",
-      "source_commit": "7a40f1e59f6176d2e02d74ba042dd89c26586b27",
+      "bytes": 7907,
+      "sha256": "91ffab26e045abfab18314425a6e79402f0efbfe7a2bf115faef3d546c9ee87d",
+      "git_blob": "97ad7fbf15df253599e462948bb5f15ccaf24b1b",
+      "source_commit": "a76fe45fa5d5ed8eef68037b9ec2053802a81347",
       "accepted_preimages": [
         {
           "bytes": 6702,
           "mode": "100644",
           "sha256": "b975972f47ed5815bd1ca2b64ef72bd07568f5e8eeb5e32fb7ab9d136b503a67",
           "provenance": "original native archive application member"
+        },
+        {
+          "bytes": 7819,
+          "sha256": "3aba9c60c349ebedb1192ce6092fe3b01d01a3a8c76f3eae35cda6e3e3c6536a",
+          "provenance": "Original 99-source fieldwork handoff before merged4073 light-surface correction"
         }
       ],
       "retained_successors": []
