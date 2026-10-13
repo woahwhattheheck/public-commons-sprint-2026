@@ -1,0 +1,16 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "prism-annual-source-preparation",
+  "source_reference": "ECO-PRISM-ANNUAL-SOURCE-DESK-20261013",
+  "extend_components": {
+    "source-preparation": {
+      "paths": [
+        "source_tools/prism_annual_preparation.py",
+        "source_tools/prism_period.py",
+        "source_tools/CLIMATE_FORCING_PERIODS.md",
+        "operator/SOURCE_PREPARATION.md",
+        "integration/component_fragments/prism-annual-source-preparation.json"
+      ]
+    }
+  }
+}

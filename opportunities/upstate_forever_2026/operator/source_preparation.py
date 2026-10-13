@@ -186,6 +186,8 @@ from source_tools.nlcd_range_preparation import method_schema as nlcd_range_meth
 METHODS.append(nlcd_range_method_schema(_input, _option, DOMAIN_OPTIONS))
 from source_tools.soil_components_preparation import method_schemas as soil_component_methods
 METHODS.extend(soil_component_methods(_input, _option))
+from source_tools.prism_annual_preparation import method_schema as prism_annual_method_schema
+METHODS.append(prism_annual_method_schema(_input, _option, DOMAIN_OPTIONS))
 BY_METHOD = {item["id"]: item for item in METHODS}
 
 
@@ -856,6 +858,9 @@ class SourcePreparation:
             entry = self._stage(workspace, record, "Preparing original PRISM annual precipitation", lambda: prepare_prism(
                 output, archive_path=files.get("archive"), capture_path=files.get("capture"),
                 transfer_path=files.get("transfer")))
+        elif method_id == "prism-annual":
+            from source_tools.prism_annual_preparation import prepare_entry
+            entry = prepare_entry(self, workspace, task, native, record, files, snapshots, options)
         elif method_id == "nlcd":
             from source_tools import nlcd_static
             member_bytes = int(options.get("maximum_member_gib", 32) * 1024 ** 3)

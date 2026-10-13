@@ -195,10 +195,17 @@ def _package(archive_path, period, selected):
         if len(rasters_) != 1 or len(infos) != 1 or len(xmls) != 1:
             raise ValueError("PRISM period, variable, resolution or original metadata differs from selection")
         original_info = metadata[infos[0]]
-        match = re.search(r"(?mi)^\s*PRISM_DATASET_TYPE\s*[:=]\s*([^\r\n]+)", original_info)
-        if not match or match.group(1).strip().strip('"') != selected["dataset_type"]:
+        matches = re.findall(r"(?mi)^\s*PRISM_DATASET_TYPE\s*[:=]\s*([^\r\n]+)", original_info)
+        dataset_type = matches[0].strip().strip('"') if len(matches) == 1 else None
+        # Original AN packages can retain a detailed publisher method code, for
+        # example an91/r2112 in the actual 2025 annual release. This is an AN
+        # family marker, not the calendar period: the exact precipitation/year/
+        # resolution member names above and native grid checks still bind it.
+        if (selected["dataset_type"] != "AN" or dataset_type is None
+                or re.fullmatch(r"an(?:[0-9]{2}/r[0-9]{4})?", dataset_type, re.IGNORECASE) is None):
             raise ValueError("The original PRISM info must identify the selected AN dataset")
     return {"raster_member": rasters_[0], "members": records,
+            "dataset_family": "AN", "original_dataset_type": dataset_type,
             "original_metadata": metadata}
 
 
