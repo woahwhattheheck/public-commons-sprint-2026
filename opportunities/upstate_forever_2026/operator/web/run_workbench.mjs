@@ -2,6 +2,8 @@
  * Native run execution desk over the original operator task queue.
  * Scientific selections and calculations remain in model.workspace/native.
  */
+import {attachRunAssembly} from './run_assembly_workbench.mjs';
+
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const activeStates = new Set(['queued', 'running']);
@@ -38,6 +40,12 @@ const nativeSelection = (selection, models) => ({
 const selectedOutputsComplete = run => !!run && run.state === 'complete' &&
   modelsOf(run.selection).every(model => Object.hasOwn(run.stages || run.stage_summary || {}, model) &&
     modelOutputs[model].every(name => !!run.artifacts?.[name]));
+const reusableStage = (run, model) => {
+  const stage = run?.stages?.[model] || run?.stage_summary?.[model];
+  const fileCount = stage?.files ? Object.keys(stage.files).length : stage?.file_count;
+  return !activeStates.has(run?.state) && modelsOf(run?.selection).includes(model) &&
+    !!stage?.completed_at && Number.isInteger(fileCount) && fileCount > 0;
+};
 const fullOutputsComplete = run => selectedOutputsComplete(run) &&
   modelKey(run.selection) === 'ndr+sdr' && allOutputs.every(name => !!run.artifacts?.[name]);
 const canonical = value => JSON.stringify(value, (_, item) => {
@@ -62,7 +70,7 @@ function runDeskIndex(snapshot) {
   const profiles = new Map((data.profiles || []).map(row => [row.id, row]));
   const scenarios = new Map((data.scenarios || []).map(row => [row.id, row]));
   const grids = new Map((data.grids || []).map(row => [row.id, row]));
-  const runs = new Map(), runsById = new Map(), retainedScopes = new Map();
+  const runs = new Map(), runsById = new Map(), retainedScopes = new Map(), reusableModels = {ndr: false, sdr: false};
   function retainScope(selection, models) {
     const key = tripleKey(selection);
     if (!retainedScopes.has(key)) retainedScopes.set(key, new Map());
@@ -73,7 +81,9 @@ function runDeskIndex(snapshot) {
     const selection = run.selection || {};
     const key = selectionKey(selection), before = runs.get(key);
     if (!before || String(run.created_at || '') > String(before.created_at || '')) runs.set(key, run);
-    retainScope(selection, modelsOf(selection));
+    const models = modelsOf(selection);
+    retainScope(selection, models);
+    for (const model of models) if (reusableStage(run, model)) reusableModels[model] = true;
   }
   const tasks = [...(snapshot?.tasks || [])]
     .filter(task => !task.workspace || task.workspace === snapshot.workspace_key)
@@ -104,7 +114,7 @@ function runDeskIndex(snapshot) {
   }
   return {data: snapshot?.data, taskSource: snapshot?.tasks, workspace: snapshot?.workspace_key,
     profiles, scenarios, grids, runs, runsById, tasks, retainedScopes, preparationBySelection, startByRun,
-    runningTasks, activeComparisons, comparisons};
+    runningTasks, activeComparisons, comparisons, reusableModels};
 }
 function selectedFamilies(rows, compatibleOnly = false) {
   const families = new Map();
@@ -254,11 +264,15 @@ export function runDeskProgrammes(snapshot, draft, rows = null, index = runDeskI
   return programmes;
 }
 
-export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, toast}) {
+export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, openForm, submitAction, toast}) {
   let host = null, current = null, workspaceKey = null, draft = null;
   let busy = false, notice = '', page = 0, filter = 'all', search = '';
   let storageMessage = '', submission = null;
   let programmeStatuses = [], programmeRead = null, programmeCache = null, programmeEpoch = 0, programmeMessage = '';
+  let assemblyCapability = null, assemblyRead = null, assemblyEpoch = 0;
+  const assemblyForm = typeof openForm === 'function' && typeof submitAction === 'function' ?
+    attachRunAssembly({api, getState, openForm, submitAction, openItem}) : null;
+  let programmeActivityMode = 'unknown', programmeActivityRecords = new Map();
   let sourceIndex = null, rowCache = null, selectionRevision = 0;
   function currentIndex() {
     if (!sourceIndex || sourceIndex.data !== current?.data || sourceIndex.taskSource !== current?.tasks ||
@@ -281,6 +295,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   function resetProgrammeTracking() {
     programmeEpoch++;
     programmeStatuses = []; programmeRead = null; programmeCache = null; programmeMessage = '';
+    programmeActivityMode = 'unknown'; programmeActivityRecords = new Map();
   }
   function runningProgrammeTasks(snapshot) {
     const byProgramme = new Map();
@@ -289,6 +304,44 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       .sort((left, right) => String(left.started_at || left.created_at || '').localeCompare(String(right.started_at || right.created_at || '')));
     for (const task of tasks) if (!byProgramme.has(task.payload.programme_id)) byProgramme.set(task.payload.programme_id, task);
     return [...byProgramme.values()];
+  }
+  async function readProgrammeActivity(target, id, request) {
+    const currentRequest = () => request.epoch === programmeEpoch && programmeRead === request &&
+      getState()?.workspace_key === target;
+    if (programmeActivityMode !== 'legacy') {
+      const cached = programmeActivityRecords.get(id);
+      const query = '?workspace=' + encodeURIComponent(target) + '&programme_id=' + encodeURIComponent(id) +
+        (cached ? '&bindings_id=' + encodeURIComponent(cached.bindingsId) + '&request_id=' + encodeURIComponent(cached.requestId) : '');
+      let value;
+      try {
+        value = await api('/api/programme-activity/detail' + query);
+      } catch (error) {
+        if (programmeActivityMode === 'unknown' && [404, 405, 501].includes(error.status)) {
+          if (currentRequest()) programmeActivityMode = 'legacy';
+        } else throw error;
+      }
+      if (value) {
+        if (value.schema !== 'upstate.programme-activity/v1' || value.programme_id !== id ||
+            value.bindings_id !== id || !idPattern.test(value.request_id || '') || typeof value.active !== 'boolean')
+          throw Error('The compact programme activity does not match its original retained programme.');
+        const bindings = Array.isArray(value.bindings) ? value.bindings : cached?.bindingsId === value.bindings_id ? cached.bindings : null;
+        const requested = Array.isArray(value.requested_runs) ? value.requested_runs : cached?.requestId === value.request_id ? cached.requested : null;
+        if (!bindings || !requested)
+          throw Error('The programme activity response omitted a changed original binding or requested selection.');
+        if (Array.isArray(value.bindings) && bindings.some(row => typeof row.key !== 'string' ||
+            !idPattern.test(row.run_id || '') || !row.native_selection ||
+            ['grid_id', 'profile_id', 'scenario_id'].some(key => !idPattern.test(row.native_selection[key] || ''))))
+          throw Error('The programme activity contains an invalid original native binding.');
+        if (requested.some(key => typeof key !== 'string'))
+          throw Error('The programme activity contains an invalid requested case.');
+        if (currentRequest()) {
+          programmeActivityMode = 'compact';
+          programmeActivityRecords.set(id, {bindingsId: value.bindings_id, requestId: value.request_id, bindings, requested});
+        }
+        return {...value, runs: bindings, requested_runs: requested};
+      }
+    }
+    return api('/api/programmes/detail?workspace=' + encodeURIComponent(target) + '&programme_id=' + encodeURIComponent(id));
   }
   async function refreshProgrammeActivity(required = false) {
     const snapshot = getState(), target = snapshot?.workspace_key;
@@ -307,8 +360,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       request = {workspace: target, signature, epoch: programmeEpoch, promise: null};
       programmeRead = request;
       request.promise = Promise.allSettled(tasks.map(async task => {
-        const path = '/api/programmes/detail?workspace=' + encodeURIComponent(target) + '&programme_id=' + encodeURIComponent(task.payload.programme_id);
-        const status = await api(path);
+        const status = await readProgrammeActivity(target, task.payload.programme_id, request);
         if (!status || !Array.isArray(status.runs) || typeof status.active !== 'boolean' ||
             (status.programme_id || status.id) !== task.payload.programme_id)
           throw Error('The programme detail response does not match its retained operation.');
@@ -328,6 +380,47 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const result = await request.promise;
     if (required && result.errors.length) throw Error('Refresh the active programme before queueing these cases. ' + result.errors.join(' '));
     return result;
+  }
+
+  function resetAssemblyAvailability() {
+    assemblyEpoch++; assemblyCapability = null; assemblyRead = null;
+  }
+  async function refreshAssemblyAvailability() {
+    const target = getState()?.workspace_key;
+    if (!host || !target || !assemblyForm ||
+        (assemblyCapability?.workspace === target && (!assemblyCapability.error || Date.now() - assemblyCapability.observedAt < 30000))) return;
+    if (assemblyRead?.workspace === target) return assemblyRead.promise;
+    const request = {workspace: target, epoch: assemblyEpoch, promise: null};
+    assemblyRead = request;
+    request.promise = api('/api/run-assembly/catalog?workspace=' + encodeURIComponent(target)).then(value => {
+      if (host && assemblyRead === request && request.epoch === assemblyEpoch && getState()?.workspace_key === target) {
+        assemblyCapability = {workspace: target, supported: value?.schema === 'upstate.native-run-assembly-capabilities/v1' &&
+          value.available === true && value.action === 'run.start' && value.source_runs === true,
+          reason: value?.reason || '', observedAt: Date.now()};
+        paint();
+      }
+    }).catch(error => {
+      if (host && assemblyRead === request && request.epoch === assemblyEpoch && getState()?.workspace_key === target) {
+        assemblyCapability = {workspace: target, supported: false, error: error.status === 404 ? '' : error.message, observedAt: Date.now()};
+        paint();
+      }
+    }).finally(() => { if (assemblyRead === request) assemblyRead = null; });
+    return request.promise;
+  }
+  function canAssemble(row) {
+    const sources = currentIndex().reusableModels;
+    return assemblyCapability?.supported && !!assemblyForm && row.modelKey === 'ndr+sdr' &&
+      row.startable && ['prepared', 'failed'].includes(row.run?.state) && sources.ndr && sources.sdr;
+  }
+  async function openAssembly(key) {
+    if (busy) return;
+    synchronize(getState());
+    const target = current.workspace_key;
+    const activity = await refreshProgrammeActivity(true);
+    assertWorkspace(target); synchronize(getState());
+    const row = runDeskRows(current, draft, activity?.records || programmeStatuses, currentIndex()).find(value => value.key === key);
+    if (!row || !canAssemble(row)) throw Error('Prepare an available full target run and complete the original NDR and SDR source runs.');
+    return assemblyForm.open({selection: row.selection, run_id: row.run.id});
   }
 
   function storageKey(key) { return 'upstate-run-desk-v1:' + key; }
@@ -373,6 +466,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     current = snapshot;
     if (workspaceKey === snapshot.workspace_key && draft) return;
     resetProgrammeTracking();
+    resetAssemblyAvailability();
     workspaceKey = snapshot.workspace_key;
     sourceIndex = null; rowCache = null; selectionRevision++;
     draft = initialDraft(snapshot);
@@ -439,6 +533,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       (row.task ? htmlButton('task', 'Operation', {id: row.task.id}) : '') +
       (row.preparable ? htmlButton('prepare-one', row.task && resumableStates.has(row.task.state) ? 'Resume preparation' : 'Prepare', {key: row.key}, busy) : '') +
       (row.startable ? htmlButton('start-one', row.run.state === 'prepared' ? 'Queue run' : 'Continue run', {key: row.key}, busy) : '') +
+      (canAssemble(row) ? htmlButton('assemble', 'Reuse completed models', {key: row.key}, busy) : '') +
       '</div></td></tr>').join('');
   }
   function matchingRows(rows) {
@@ -527,6 +622,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       '<p class="rd-explanation">Preparation saves the original selections. Queueing starts the existing serial operator queue; queued model runs continue after this tab closes. Continuation reuses the original native stages.</p>' +
       '<div class="rd-notice" role="status" aria-live="polite">' + escapeHTML(submission?.workspace === workspaceKey ? submission.message : notice) + '</div>' +
       (programmeMessage ? '<div class="rd-notice" role="status">' + escapeHTML(programmeMessage) + '</div>' : '') +
+      (assemblyCapability?.error ? '<div class="rd-notice" role="status">Completed-model assembly: ' + escapeHTML(assemblyCapability.error) + '</div>' : '') +
       '<div class="rd-filter-bar"><label>Find a selected scenario or profile<input data-rd-field="search" data-rd-focus="search" value="' + escapeHTML(search) +
       '" type="search" placeholder="Scenario, profile, run ID or status"></label><label>Show<select data-rd-field="filter" data-rd-focus="filter">' +
       [['all','All matrix cells'],['selected','Selected cells'],['missing','Needs preparation'],['ready','Can queue / continue'],['active','Active operations'],['complete','Complete runs'],['attention','Needs attention']]
@@ -560,6 +656,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     sourceIndex = null; rowCache = null;
     synchronize(snapshot);
     refreshProgrammeActivity().catch(error => { programmeMessage = error.message; paint(); });
+    refreshAssemblyAvailability();
     paint();
   }
   function change(event) {
@@ -602,6 +699,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     host = null;
     sourceIndex = null; rowCache = null;
     resetProgrammeTracking();
+    resetAssemblyAvailability();
   }
   function assertWorkspace(expected) {
     if (getState()?.workspace_key !== expected) throw Error('Workspace changed. Queued operations remain with their original workspace; reopen its run desk to continue.');
@@ -776,6 +874,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const action = button.dataset.action?.replace(/^run-desk-/, '');
     if (['prepare','start','cancel'].includes(action)) return operate(action);
     if (action === 'prepare-one' || action === 'start-one') return operate(action === 'prepare-one' ? 'prepare' : 'start', button.dataset.key);
+    if (action === 'assemble') return openAssembly(button.dataset.key);
     if (action === 'record') return openItem('runs', button.dataset.id);
     if (action === 'task') return showTask(button.dataset.id);
     if (action === 'log') return showRunLog(button.dataset.id);
@@ -790,7 +889,25 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       if (!group) throw Error('Check an unchanged baseline under this profile to open its retained execution programme.');
       const open = programmeOpener();
       if (!open) throw Error('The current application has no programme controls attached.');
-      return open(group.selection);
+      let programmeSelection = group.selection;
+      if (group.models.length < 2) {
+        const target = current.workspace_key;
+        const preview = await api('/api/programmes/preview', {method: 'POST',
+          body: {workspace: target, selection: group.selection}});
+        assertWorkspace(target);
+        if (!preview?.selection || preview.selection.baseline_run !== group.selection.baseline_run ||
+            preview.runs?.length !== group.selection.runs.length)
+          throw Error('The programme preview changed the selected cases. Open the current native programme engine.');
+        const bindings = new Map((preview.runs || []).map(row => [row.key, row.native_selection]));
+        for (const requested of group.selection.runs) {
+          const native = bindings.get(requested.key);
+          if (!native || native.grid_id !== group.selection.grid_id || native.profile_id !== requested.profile_id ||
+              native.scenario_id !== requested.scenario_id || modelKey(native) !== modelKey(requested))
+            throw Error('The programme preview changed a selected native input or model scope. Use the current selected-model programme engine.');
+        }
+        programmeSelection = preview.selection;
+      }
+      return open(programmeSelection);
     }
     if (action === 'compare' || action === 'delivery') return compare(button.dataset.profile, button.dataset.models, action === 'delivery');
     if (action === 'download-selection') return downloadSelection();

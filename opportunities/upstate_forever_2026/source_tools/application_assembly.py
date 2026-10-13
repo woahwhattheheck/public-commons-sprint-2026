@@ -221,7 +221,7 @@ def decode_parts(parts):
 
 
 def decode_addon_parts(parts):
-    """Decode the complete E7A1 plain-base64 transport with its declared identity."""
+    """Decode the complete conservation transport with its declared identity."""
     first = parts[0]
     count = first.get("parts")
     if type(count) is not int or not 0 < count <= MAX_FILES:
@@ -313,7 +313,8 @@ def provider_payload(value, depth=0):
                 recovered = provider_payload(parsed, depth + 1)
                 # A text field retains the actual JSON serialization and its pin.
                 return value if is_source_document(parsed) else recovered
-        return value if FENCE in value else None
+        return value if (FENCE in value or re.search(
+            r"(?m)^SOURCE_TRANSPORT_METADATA=", value)) else None
     if isinstance(value, list):
         candidates = [provider_payload(item, depth + 1) for item in value]
         return next((item for item in candidates if item is not None), None)
@@ -345,6 +346,72 @@ def provider_payload(value, depth=0):
 
 
 
+def decode_complete_transport(text):
+    """Read the complete application exported as one or ordered text parts."""
+    marker = r"(?m)^SOURCE_TRANSPORT_METADATA=(.+)\r?$"
+    headers = list(re.finditer(marker, text))
+    if not headers:
+        return None
+    received = []
+    for index, header in enumerate(headers):
+        metadata = transport_json(header.group(1))
+        if (not isinstance(metadata, dict)
+                or metadata.get("schema") != "upstate.complete-application-transport/v1"):
+            raise ValueError("Unsupported complete application transport")
+        stop = headers[index + 1].start() if index + 1 < len(headers) else len(text)
+        section = text[header.end():stop]
+        starts = list(re.finditer(
+            r"(?m)^BEGIN_UPSTATE_SOURCE_GZIP_BASE64[ \t]*\r?$", section))
+        ends = list(re.finditer(
+            r"(?m)^END_UPSTATE_SOURCE_GZIP_BASE64[ \t]*\r?$", section))
+        if len(starts) != 1 or len(ends) != 1 or starts[0].end() >= ends[0].start():
+            raise ValueError("A complete source text part needs its original begin/end markers")
+        encoded = "".join(section[starts[0].end():ends[0].start()].split())
+        part_lines = re.findall(
+            r"(?m)^SOURCE_TRANSPORT_PART=(.+)\r?$", section[:starts[0].start()])
+        if len(part_lines) > 1:
+            raise ValueError("A complete source text part has duplicated metadata")
+        part = transport_json(part_lines[0]) if part_lines else None
+        if part is not None:
+            if (not isinstance(part, dict)
+                    or type(part.get("part")) is not int
+                    or type(part.get("parts")) is not int
+                    or part["parts"] < 1
+                    or not 1 <= part["part"] <= part["parts"]):
+                raise ValueError("Invalid complete source text part identity")
+            check_identity(encoded.encode("ascii"), part.get("base64_chars"),
+                           part.get("base64_sha256"), "complete source text part")
+        received.append((metadata, part, encoded))
+    metadata = received[0][0]
+    if any(item[0] != metadata for item in received):
+        raise ValueError("Complete source text parts belong to different application editions")
+    if all(item[1] is None for item in received):
+        if len(received) != 1:
+            raise ValueError("Multiple complete source text parts need numbered identities")
+        encoded = received[0][2]
+    else:
+        if any(item[1] is None for item in received):
+            raise ValueError("A complete source text part is missing its numbered identity")
+        total = received[0][1]["parts"]
+        if (len(received) != total
+                or any(item[1]["parts"] != total for item in received)
+                or sorted(item[1]["part"] for item in received) != list(range(1, total + 1))):
+            raise ValueError("Receive every complete source text part exactly once")
+        encoded = "".join(item[2] for item in sorted(
+            received, key=lambda item: item[1]["part"]))
+    compressed = decode_base64(encoded)
+    check_identity(compressed, metadata.get("gzip_bytes"),
+                   metadata.get("gzip_sha256"), "complete application gzip")
+    decoded = uncompress(compressed)
+    check_identity(decoded, metadata.get("json_bytes"),
+                   metadata.get("json_sha256"), "complete application JSON")
+    document = transport_json(decoded.decode("utf-8"))
+    if (not is_source_document(document)
+            or document.get("schema") != metadata["schema"]):
+        raise ValueError("The complete application differs from its transport schema")
+    return decoded
+
+
 def decode_carrier(data, _depth=0):
     """Return the complete decoded JSON bytes from a published source carrier."""
     if _depth > 12:
@@ -362,6 +429,9 @@ def decode_carrier(data, _depth=0):
         if payload is None:
             raise ValueError("Provider result contains no complete source payload")
         return decode_carrier(payload.encode("utf-8"), _depth + 1)
+    complete = decode_complete_transport(text)
+    if complete is not None:
+        return complete
     blocks = re.findall(FENCE + r"([a-zA-Z0-9_-]*)[ \t]*\r?\n(.*?)\r?\n" + FENCE,
                         text, re.S)
     parts, addon_parts, plain_parts, documents, encoded = [], [], [], [], []
@@ -435,7 +505,7 @@ def _source_fingerprint(value):
 
 def _source_inventory(root):
     roots = ("model", "operator", "source_tools", "source", "ecsa_runs",
-             "integration", "tools", "receiving", "eco_intelligence")
+             "integration", "integrations", "tools", "receiving", "eco_intelligence")
     skip = {"__pycache__", ".git", ".venv", "venv", "node_modules"}
     selected = {}
 
@@ -746,7 +816,7 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
     assembly_id = sha256(canonical(composition))
     return {
         "schema": MAP_SCHEMA, "kind": MAP_KIND, "edition": edition,
-        "repository": base.get("repository", "woahwhattheheck/commons"),
+        "repository": base.get("repository", "woahwhattheheck/public-commons-sprint-2026"),
         "source_ref": "assembly:" + assembly_id,
         "prefix": base.get("prefix", "opportunities/upstate_forever_2026"),
         "state": "source_stage_complete_application",

@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "scenario-reports",
   "title": "Watershed reports",
-  "version": "4",
+  "version": "5",
   "order": 55,
   "assets": [
     "extensions/scenario_reports.mjs",
-    "extensions/scenario_reports.css"
+    "extensions/scenario_reports.css",
+    "extensions/report_releases.css"
   ],
   "backend": {
     "module": "scenario_decision_reports",
@@ -60,6 +61,21 @@
         ],
         "path": "/api/scenario-reports/report",
         "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/scenario-reports/release",
+        "operation": "release",
         "handler": "read",
         "args": [
           "operator",
@@ -131,7 +147,8 @@
       "toast"
     ],
     "styles": [
-      "/web/extensions/scenario_reports.css"
+      "/web/extensions/scenario_reports.css",
+      "/web/extensions/report_releases.css"
     ],
     "view": {
       "id": "scenario-reports",
