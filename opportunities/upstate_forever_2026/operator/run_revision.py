@@ -468,3 +468,57 @@ def verify_workspace(workspace):
         _derive(workspace, _load(workspace, path.stem))
         count += 1
     return {"run_revisions": count}
+
+
+def decorate_task(operator, task):
+    """Link original queue records to their retained revision without reading rasters."""
+    if task.get("action") not in {*ACTIONS.values(), "run.start"}:
+        return {}
+    workspace_key = task["workspace"]
+    ws = operator.ws(workspace_key)
+    task_id = identifier(task["id"])
+    request = {"workspace": workspace_key, "action": task["action"], "payload": task["payload"]}
+    if digest(request) != task.get("request_sha256"):
+        return {"_run_revision_link_errors": ["The original task request identity changed."]}
+    candidates = set()
+    binding_path = _folder(ws) / "task-bindings" / (task_id + ".json")
+    if binding_path.is_file():
+        candidates.update(read_json(binding_path).get("revision_ids", []))
+    run_id = None
+    if task["action"] == "run.start":
+        run_id = identifier(task["payload"]["run_id"])
+        # This is small retained revision metadata, not source bodies or model outputs.
+        candidates.update(path.stem for path in _folder(ws).glob("*.json"))
+    links, errors = [], []
+    for key in sorted(candidates):
+        try:
+            record = read_json(_path(ws, key))
+            if (record.get("id") != key or record.get("schema") != SCHEMA
+                    or record.get("project_id") != ws.project["id"]
+                    or digest(_base(record)) != key):
+                raise ValueError("The retained revision identity changed.")
+            matched = False
+            for entry in record["operations"]:
+                _validate_entry(entry)
+                _check_snapshot(entry)
+                if (entry.get("task_id") == task_id and entry["workspace"] == workspace_key
+                        and entry["action"] == task["action"]
+                        and entry["request_sha256"] == task["request_sha256"]):
+                    matched = True
+                if (run_id and entry["step"] == "prepare" and entry["state"] == "complete"
+                        and entry.get("result_id") == run_id):
+                    saved = entry["accepted_task"]["result"]
+                    if (saved.get("id") != run_id
+                            or _selection(saved["selection"]) != _selection(entry["payload"])):
+                        raise ValueError("The prepared revision run differs from its original request.")
+                    matched = True
+            if matched:
+                links.append({"id": key, "title": record["title"],
+                              "baseline_run_id": record["baseline_run_id"],
+                              "run_id": run_id})
+        except ERRORS as error:
+            errors.append(str(key) + ": " + str(error))
+    result = {"_run_revisions": links} if links else {}
+    if errors:
+        result["_run_revision_link_errors"] = errors
+    return result
