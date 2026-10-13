@@ -1685,6 +1685,52 @@ export function attachConservation({
       }).join("") + '</tbody></table></div>';
   }
 
+  function sourceSuccessors(row) {
+    const id = sourceCaptureId(row);
+    return (Array.isArray(row?.continued_as) ? row.continued_as : [])
+      .filter(item => sourceCaptureId(item) && sourceCaptureId(item) !== id)
+      .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")) ||
+        sourceCaptureId(a).localeCompare(sourceCaptureId(b)));
+  }
+
+  function sourceContinuationView(row) {
+    const prior = row.continuation, successors = sourceSuccessors(row);
+    if (!prior && !successors.length && !row.implementation_changed) return "";
+    let html = '<section class="cons-source-continuation"><h3>Acquisition history</h3>';
+    if (prior?.previous_operation_id) {
+      html += '<p>This acquisition continues the original study extent, source choices and provider requests ' +
+        'from an earlier saved acquisition.</p><div class="cons-actions">' +
+        button("open-source-capture", "Open previous acquisition",
+          'data-operation-id="' + h(prior.previous_operation_id) + '"', memory().busy) + '</div>';
+      if (finite(prior.reused_requests)) {
+        html += '<p>' + number(prior.reused_requests) + ' retained provider responses reused' +
+          (finite(prior.reused_bytes) ? ' · ' + number(prior.reused_bytes) + ' bytes' : '') +
+          '. Coverage and parcel-source classifications are recalculated by the current application.</p>';
+        if (finite(prior.successful_responses) || finite(prior.retained_failures)) {
+          html += '<p class="cons-metric-note">' +
+            (finite(prior.successful_responses) ? number(prior.successful_responses) + ' successful responses' : '') +
+            (finite(prior.successful_responses) && finite(prior.retained_failures) ? ' · ' : '') +
+            (finite(prior.retained_failures) ? number(prior.retained_failures) + ' retained failed attempts' : '') +
+            '</p>';
+        }
+      }
+    }
+    if (row.implementation_changed) {
+      html += '<p>A newer version of the source-processing application is installed. ' +
+        'Continue from the saved requests to create an updated acquisition.</p>';
+    }
+    if (successors.length) {
+      html += '<div class="cons-table-wrap"><table class="cons-table"><thead><tr>' +
+        '<th>Continued acquisition</th><th>State</th><th>Open</th></tr></thead><tbody>' +
+        successors.map(item => '<tr><th scope="row">' + h(item.title || sourceCaptureId(item)) +
+          '</th><td>' + h(human(item.state || "prepared")) + '</td><td>' +
+          button("open-source-capture", "Open continued acquisition",
+            'data-operation-id="' + h(sourceCaptureId(item)) + '"', memory().busy) +
+          '</td></tr>').join("") + '</tbody></table></div>';
+    }
+    return html + '</section>';
+  }
+
   function sourceCaptureButtons(row) {
     const id = sourceCaptureId(row);
     if (!id) return "";
@@ -1694,8 +1740,17 @@ export function attachConservation({
       result += button("criteria-from-sources", "Prepare parcel criteria",
         'data-operation-id="' + h(id) + '"', memory().busy);
     }
-    if (row.state !== "complete") result += button("resume-sources", "Continue acquisition",
-      'data-operation-id="' + h(id) + '"', memory().busy);
+    const current = memory().overview?.source_acquisitions?.find(item => sourceCaptureId(item) === id);
+    if (current) row = { ...row, ...current };
+    const continued = sourceSuccessors(row)[0];
+    if (continued) {
+      result += button("open-source-capture", "Open continued acquisition",
+        'data-operation-id="' + h(sourceCaptureId(continued)) + '"', memory().busy);
+    } else if (row.state !== "complete" || row.implementation_changed) {
+      result += button("resume-sources", row.implementation_changed ?
+        "Continue with current application" : "Continue acquisition",
+        'data-operation-id="' + h(id) + '"', memory().busy);
+    }
     return result;
   }
 
@@ -1708,6 +1763,9 @@ export function attachConservation({
       rows.map(row => '<tr><th scope="row">' + h(row.title || row.study_title || row.study_id || sourceCaptureId(row)) +
         '</th><td>' + h(human(row.state || "prepared")) + '</td><td>' +
         h(human(row.progress?.stage || "")) +
+        (row.continuation?.previous_operation_id ?
+          '<span class="cons-metric-note">Continues a saved acquisition</span>' :
+          row.implementation_changed ? '<span class="cons-metric-note">Application updated</span>' : "") +
         (finite(row.progress?.completed) ? '<span class="cons-metric-note">' + number(row.progress.completed) +
           (finite(row.progress?.total) ? " / " + number(row.progress.total) : "") + '</span>' : "") +
         '</td><td><div class="cons-actions">' + sourceCaptureButtons(row) + '</div></td></tr>').join("") +
@@ -1747,6 +1805,7 @@ export function attachConservation({
       button("close-form", "Close", "", ui.busy) + '</div>' +
       (error ? '<div class="cons-notice cons-error" role="alert">' +
         h(typeof error === "string" ? error : error.message || error.type || "") + '</div>' : "") +
+      sourceContinuationView(row) +
       sourceFamilyTable(row) +
       (row.coverage ? '<h3>Source coverage and interpretation</h3>' + sourceCoverageFacts(row.coverage) : "") +
       (row.counts ? '<h3>Retained source quantities</h3>' + sourceCoverageFacts(row.counts) : "") +

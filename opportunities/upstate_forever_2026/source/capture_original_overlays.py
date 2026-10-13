@@ -400,12 +400,15 @@ def source_where(spec):
     return value
 
 
-def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root=None):
+def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root=None, responses=None):
     where = source_where(spec)
     selected_parameters = {"where": where} if where != "1=1" else {}
     folder = root / identity
     folder.mkdir(parents=True, exist_ok=True)
-    responses = OriginalResponses(folder / "responses", retry_failed=retry_failed)
+    if responses is None:
+        responses = OriginalResponses(folder / "responses", retry_failed=retry_failed)
+    elif pathlib.Path(responses.root).resolve() != (folder / "responses").resolve():
+        raise ValueError("The original response client belongs to another capture folder")
     seed_metadata(responses, metadata_root / identity if metadata_root else None)
     metadata, _ = responses.response("metadata", spec["url"] + "?f=pjson")
     field = oid_field(metadata)
