@@ -18,7 +18,7 @@ import zipfile
 from . import gis_project as gis
 
 SCHEMA = "upstate.gis-edition-review/v1"
-VERSION = "received-gis-review/v1"
+VERSION = "received-gis-review/v2"
 WINDOW = 512
 
 
@@ -413,35 +413,9 @@ def _members(root, layer):
             or row["path"].startswith(path+"-") or row["path"].startswith(path+".")]
 
 
-def _report_html(report):
-    esc = lambda value: html.escape(str(value), quote=True)
-    rows = []
-    for row in report["layers"]:
-        details = row["comparison"]
-        counts = details.get("counts") or {}
-        summary = "; ".join(key.replace("_", " ") + ": " + str(value) for key, value in counts.items())
-        if details.get("comparison"):
-            summary = details["comparison"] + "; " + summary
-        difference = details.get("difference")
-        if difference is not None:
-            summary += "; received minus exported: minimum " + str(difference["minimum"]) + ", maximum " + str(difference["maximum"])
-            summary += ", mean " + str(difference["mean"]) + ", RMSE " + str(difference["rmse"])
-            summary += " " + str(difference["units"]) + "; representable difference cells: " + str(difference["valid_cells"])
-        if details.get("reason") or details.get("physical_comparison"):
-            summary += "; " + (details.get("reason") or details["physical_comparison"])
-        if row.get("metadata_changed"):
-            summary += "; metadata changed: " + ", ".join(row["metadata_changed"])
-        links = " ".join('<a href="'+esc(rec["path"])+'">'+esc(Path(rec["path"]).name)+'</a>'
-                         for rec in row["files"])
-        rows.append("<tr><th>"+esc(row["title"])+"</th><td>"+esc(row["kind"])+"</td><td>"+esc(row["units"])+"</td><td>"+
-                    esc(summary or details.get("comparison") or details.get("method"))+"</td><td>"+links+"</td></tr>")
-    return """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Received GIS edition review</title><style>body{font:16px system-ui,sans-serif;color:#222;background:#fff;max-width:1200px;margin:2rem auto;padding:0 1rem}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:.6rem;text-align:left;vertical-align:top}code{overflow-wrap:anywhere}a{color:#222;text-decoration:underline}td a{display:block}h1{font-size:1.6rem}</style>
-<h1>"""+esc(report["title"])+"""</h1><p>Received working edition compared with its explicitly selected retained original export. Vector changes retain full row records. Raster differences use the selected logical band on the exact same native grid; support changes are separate. Open review.json for complete headers, units, source identities, methods and ambiguity counts.</p>
-<p>Export <code>"""+esc(report["selection"]["export_id"])+"""</code><br>Receipt <code>"""+esc(report["selection"]["receipt_id"])+"""</code><br>Direction: received minus exported.</p>
-<p><a href="review.json">Complete review JSON</a> · <a href="layers.csv">Layer summary CSV</a> · <a href="exported-project.json">Original exported manifest</a> · <a href="received-project.json">Received manifest</a></p>
-<table><thead><tr><th>Layer</th><th>Kind</th><th>Received units</th><th>Actual changes</th><th>Complete change artifacts</th></tr></thead><tbody>"""+ "".join(rows)+"""</tbody></table>
-<p>Original table/document attachments remain in the complete received GIS project. This review adds context to optional source adoption; original source adoption remains available.</p></html>"""
+def _report_html(report, directory):
+    from .gis_review_raster import render
+    return render(report, directory)
 
 
 def _folder(workspace, receipt_id, review_id):
@@ -499,6 +473,10 @@ def review(workspace, selection, *, progress=None):
                     directory.mkdir(parents=True)
                     compare = _vector if before["data"]["kind"] == "vector" else _raster
                     comparison = compare(original[0], before, received[0], after, directory)
+                    view_path = None
+                    if before["data"]["kind"] == "raster":
+                        from .gis_review_raster import build as build_raster_view
+                        view_path = build_raster_view(directory, comparison)
                     # A layer checkpoint becomes reusable only after all actual native
                     # data and mask/sidecar members still match their input inventory.
                     for source_root, source_layer in ((original[0], before), (received[0], after)):
@@ -511,6 +489,8 @@ def review(workspace, selection, *, progress=None):
                         "received_working_files": _members(received[0], after),
                         "comparison": comparison,
                         "files": [gis.record(folder, p) for p in sorted(directory.iterdir()) if p.is_file()]}
+                    if view_path is not None:
+                        value["raster_view"] = gis.record(folder, view_path)
                     value["working_files_changed"] = value["exported_working_files"] != value["received_working_files"]
                     headers = comparison.get("headers", {})
                     old_header, new_header = headers.get("exported", {}), headers.get("received", {})
@@ -540,7 +520,7 @@ def review(workspace, selection, *, progress=None):
             gis.save(folder / "received-project.json", received[2])
             report = {**state, "state": "complete"}
             gis.save(folder / "review.json", report)
-            (folder / "REVIEW.html").write_text(_report_html(report), encoding="utf-8")
+            (folder / "REVIEW.html").write_text(_report_html(report, folder), encoding="utf-8")
             with (folder / "layers.csv").open("w", encoding="utf-8", newline="") as stream:
                 writer = csv.DictWriter(stream, fieldnames=["layer_id", "title", "kind", "units",
                     "working_files_changed", "comparison", "counts"])
