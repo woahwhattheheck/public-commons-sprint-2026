@@ -1,0 +1,56 @@
+{
+  "schema": "upstate.watershed-review-question-package/v1",
+  "source_edition": "4b2efdbd79bce5f9327f7c2a94e46d41bd6a975dcd10c2739b66f284c394365e",
+  "created_at": "2026-10-13T11:31:18Z",
+  "comparison_views": 8,
+  "comparison_rows": 148,
+  "weight_choices_per_view": 66,
+  "questions": 6,
+  "files": [
+    {
+      "path": "Upper_Savannah_Review_Project.json",
+      "bytes": 5625,
+      "sha256": "3f8f2292d2633cbd4230f5d4b2d871ee8793cf652fc6a8b28f40d9f1db0cdfc6"
+    },
+    {
+      "path": "utility-preference-comparison.csv",
+      "bytes": 46164,
+      "sha256": "c8d11323bdbe43f6d6c3ff5d4f411b589e09100a76f31f5d38b501f3ede678a6"
+    },
+    {
+      "path": "sources/watershed-profiles.csv",
+      "bytes": 115090,
+      "sha256": "9e999756fb01b84a4d88784dae5030e0658d5eef922e771825c5a40a6b925d62"
+    },
+    {
+      "path": "sources/scopes.json",
+      "bytes": 8117,
+      "sha256": "b14a294a17e352da7e2dec9a645f247aa801e0d0a2bba81f67d6c226617769e5"
+    },
+    {
+      "path": "sources/review_core.mjs",
+      "bytes": 7184,
+      "sha256": "f54a9b783e54c2a9f54e40325fde1e370ca4cf16b7428e27e802afa797076a5e"
+    },
+    {
+      "path": "sources/profiles_core.mjs",
+      "bytes": 14173,
+      "sha256": "f4579c9394c64d78a38d676f0a370eb6ac0fc08a3c6644a6ce36ca51f1e5fbbc"
+    },
+    {
+      "path": "replay.mjs",
+      "bytes": 2345,
+      "sha256": "dd63ee931797cdb195af3a263e467c14ed9875ec3084c418daa69b3916487bc1"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7501,
+      "sha256": "0728caa37f183c1cbde3179b4a32bcd93663de1b65e139ce46ac3ef5e16148bb"
+    },
+    {
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "bytes": 4889,
+      "sha256": "2454c14e18ad3257e10aed4c0dd321d0d1fbd6c21a7dc12a427cfccfd4e496d8"
+    }
+  ]
+}
