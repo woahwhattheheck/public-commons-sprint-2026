@@ -103,7 +103,7 @@ def _profile(ws, profile_id):
     return detail
 
 
-def render_html(spec):
+def _render_html_v1(spec):
     def display(value):
         if value is None or value == "":
             return "Not declared"
@@ -151,6 +151,127 @@ def render_html(spec):
         "<h2>Capture notes</h2><pre>" + e(spec["notes"]) + "</pre></main></html>", ""])
 
 
+def render_html(spec):
+    presentation = spec.get("presentation") or {}
+    version = presentation.get("version", 1)
+    if version == 1:
+        return _render_html_v1(spec)
+    if version != 2:
+        raise ValueError("Unsupported retained profile sheet presentation")
+    methods = presentation["methods"]
+    e = lambda value: html.escape(str(value), quote=True)
+    def label(value):
+        return str(value).replace("_", " ").replace("-", " ").capitalize()
+    def scalar(value):
+        if value is None or value == "":
+            return "<span class='muted'>Not declared</span>"
+        if isinstance(value, bool):
+            return "Yes" if value else "No"
+        text = str(value)
+        if text.startswith(("https://", "http://")) and not any(c.isspace() for c in text):
+            return "<a href='" + e(text) + "'>" + e(text) + "</a>"
+        return e(text)
+    def content(value):
+        if isinstance(value, dict):
+            if not value:
+                return "<span class='muted'>Not declared</span>"
+            return "<dl class='nested'>" + "".join(
+                "<dt>" + e(label(key)) + "</dt><dd>" + content(item) + "</dd>"
+                for key, item in value.items()) + "</dl>"
+        if isinstance(value, (list, tuple)):
+            if not value:
+                return "<span class='muted'>Not declared</span>"
+            return "<ul class='values'>" + "".join("<li>" + content(item) + "</li>" for item in value) + "</ul>"
+        return scalar(value)
+    def table(headings, rows, *, cells=content, css=""):
+        return ("<div class='table-scroll'><table class='" + css + "'><thead><tr>" +
+                "".join("<th scope='col'>" + e(x) + "</th>" for x in headings) +
+                "</tr></thead><tbody>" + "".join("<tr>" +
+                "".join("<td>" + cells(x) + "</td>" for x in row) +
+                "</tr>" for row in rows) + "</tbody></table></div>")
+    def notes(heading, values):
+        return "<h2>" + e(heading) + "</h2>" + content(values)
+    profile, coefficients, source = spec["profile"], spec["table"], spec["source"]
+    model_labels = {row["id"]: row["label"] for row in methods.get("models", [])}
+    parameters = []
+    for model in spec["selected_models"]:
+        rules = {row["name"]: row for row in methods.get("parameters", {}).get(model, [])}
+        declared = profile.get(model)
+        if not isinstance(declared, dict):
+            raise ValueError("Retain the exact selected model parameters in the profile sheet")
+        rows = []
+        for name, value in declared.items():
+            rule = rules.get(name, {})
+            rows.append([rule.get("label") or label(name), name, value,
+                         rule.get("units"), rule.get("description"), rule.get("reference")])
+        parameters.append("<h3>" + e(model_labels.get(model, str(model).upper())) + "</h3>" +
+            table(["Parameter", "Native field", "Saved value", "Units", "Interpretation", "Source"], rows))
+    source_labels = {
+        "title": "Source title", "uri": "Original source", "vintage": "Source edition",
+        "units": "Declared coefficient units", "coverage": "Geographic coverage",
+        "scope": "Source scope", "source_crs": "Source coordinate system",
+        "intended_use": "Intended use", "conversion": "Unit conversion",
+        "transformations": "Transformations", "derivation": "Derivation", "metadata": "Source metadata",
+    }
+    known_columns = {row["name"]: row for row in methods.get("table_fields", [])}
+    interpretation = [[name, known_columns[name].get("label"),
+                       known_columns[name].get("units"), known_columns[name].get("reference")]
+                      for name in coefficients["columns"] if name in known_columns]
+    model_source = spec["model"]["source"]
+    return "\n".join([
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>",
+        "<title>" + e(spec["title"]) + "</title>",
+        "<style>body{font:15px/1.5 system-ui,sans-serif;color:#222;background:#fff;margin:2rem auto;padding:0 1rem;max-width:1280px}"
+        "h1{font-size:1.75rem;line-height:1.25}h2{margin-top:2rem;padding-bottom:.35rem;border-bottom:1px solid #aaa}h3{margin-top:1.5rem}"
+        "table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #bbb;padding:.5rem;text-align:left;vertical-align:top;overflow-wrap:anywhere}"
+        "th{background:#eee;font-weight:600}.table-scroll{overflow:auto}.coefficients{font-size:.85rem;min-width:1000px}.coefficients td{font-variant-numeric:tabular-nums}"
+        "a{color:inherit;text-decoration:underline}p,li{overflow-wrap:anywhere}.muted,.caption{color:#555}.caption{font-size:.875rem}"
+        "dl.nested{margin:0;display:grid;grid-template-columns:minmax(100px,1fr) minmax(150px,3fr);gap:.25rem .75rem}dt{font-weight:600}dd{margin:0}"
+        "ul.values{padding-left:1.2rem;margin:.25rem 0}li{margin:.3rem 0}code{font:inherit;font-family:ui-monospace,monospace;font-size:.85em;overflow-wrap:anywhere}"
+        ".identity{background:#f4f4f4;border:1px solid #bbb;padding:.75rem 1rem}.identity p{margin:.25rem 0}.purpose{white-space:pre-wrap}"
+        "@media(max-width:650px){body{margin:1rem auto}dl.nested{display:block}dd{margin:.15rem 0 .6rem}}"
+        "@media print{body{font-size:9px;margin:0;max-width:none}.table-scroll{overflow:visible}.coefficients{min-width:0;font-size:7px}tr{break-inside:avoid}thead{display:table-header-group}a{text-decoration:none}}</style></head>",
+        "<body><main><h1>" + e(spec["title"]) + "</h1>",
+        "<p class='caption'>" + e(spec["project"]["title"]) + " · Captured " + e(spec["created_at"]) + "</p>",
+        "<h2>Scientific purpose</h2><p class='purpose'>" + e(spec["purpose"]) + "</p>",
+        "<section class='identity' aria-label='Exact saved profile'><p><strong>" + e(profile["title"]) + "</strong></p>",
+        "<p>Profile <code>" + e(profile["id"]) + "</code></p>",
+        "<p>Coefficient table <code>" + e(coefficients["sha256"]) + "</code></p></section>",
+        "<h2>Scientific configuration</h2>",
+        table(["Field", "Saved selection"], [
+            ("Selected models", [model_labels.get(model, str(model).upper()) for model in spec["selected_models"]]),
+            ("InVEST version", spec["model"]["version"]), ("Model period", profile.get("model_period")),
+            ("Source collection", profile["source_collection_id"]),
+            ("Coefficient source", profile["biophysical_source_id"])]),
+        "<p class='caption'>Parameter labels, units and source references below are retained from the original profile workbench methods at capture time. Saved values are the exact profile values.</p>",
+        "".join(parameters),
+        notes("Scientific references", profile.get("references")),
+        notes("Profile notes", profile.get("notes")),
+        "<h2>Original coefficient source</h2>",
+        table(["Field", "Original declaration"], [(source_labels[key], source.get(key)) for key in source_labels]),
+        "<h3>Coefficient meanings and units</h3>",
+        table(["Original column", "Meaning", "Units", "Source"], interpretation),
+        "<h3>Original coefficient table</h3>",
+        "<p>The " + str(len(coefficients["rows"])) + " rows below retain the original CSV text and column order. The complete CSV is included with the original source files.</p>",
+        table(coefficients["columns"], [[row[column] for column in coefficients["columns"]]
+              for row in coefficients["rows"]], cells=lambda value: e(value), css="coefficients"),
+        "<h2>Required scientific decisions</h2>",
+        table(["Requirement", "Review question"], [(row["title"], row["detail"]) for row in spec["requirements"]]),
+        "<p>Record each decision and any consolidated corrections in the accompanying customer-review response. "
+        "The operator can then explicitly apply that response to this saved profile's existing review history.</p>",
+        notes("Capture notes", spec["notes"]),
+        "<h2>Retained originals</h2><ul>" +
+        "".join("<li><a href='" + e(row["path"]) + "'>" + e(row["path"]) +
+                "</a><br><span class='caption'>SHA-256 <code>" + e(row["sha256"]) + "</code></span></li>"
+                for row in spec["retained_files"]) + "</ul>",
+        "<details><summary>Model implementation and retained presentation source</summary>" +
+        table(["Field", "Retained source"], [("Model implementation", model_source),
+              ("Parameter method catalog", presentation["catalog_source"]),
+              ("Profile workbench adapter", presentation["adapter_source"])]) + "</details>",
+        "<p><a href='specification.json'>Complete machine-readable scientific specification</a></p>",
+        "</main></body></html>", ""])
+
+
 def _capture(ws, selection, directory, created_at):
     current = _profile(ws, selection["profile_id"])
     profile, table = current["profile"], current["table"]
@@ -183,7 +304,20 @@ def _capture(ws, selection, directory, created_at):
             "table": {key: deepcopy(table[key]) for key in ("columns", "rows", "sha256", "bytes", "validation")},
             "source": source, "requirements": deepcopy(list(REQUIREMENTS)), "retained_files": files,
             "profile_file": profile_file, "table_file": table_files[0]}
-    atomic_json(directory / "specification.json", spec, immutable=True)
+    spec_path = directory / "specification.json"
+    if spec_path.exists():
+        # An interrupted capture keeps its original presentation and catalog.
+        # Rebuilding the scientific fields above still checks every retained value.
+        retained_spec = read_json(spec_path)
+        if "presentation" in retained_spec:
+            spec["presentation"] = retained_spec["presentation"]
+    else:
+        application = Path(profile_editions.__file__).resolve().parents[1]
+        spec["presentation"] = {
+            "version": 2, "methods": profile_editions.methods(),
+            "catalog_source": describe_file(application, Path(profile_editions.sourced.__file__)),
+            "adapter_source": describe_file(application, Path(profile_editions.__file__))}
+    atomic_json(spec_path, spec, immutable=True)
     atomic_bytes(directory / "index.html", render_html(spec).encode("utf-8"), immutable=True)
     # Each required primary has its own artifact decision. The readable sheet
     # also retains all original paths so links work in ordinary review packets.

@@ -77,7 +77,9 @@ review.review is the original immutable review; review.responses is its actual o
 
 files lists each generated source entry body and companion with source_id, part, path, bytes, sha256 and label. Part zero selects the primary. Paths are source view paths. Providers resolve each file through Workspace.source_file(source_collection_id, source_id) and the entry's body/companions descriptors; these paths are not Workspace-root-relative filenames.
 
-The human sheet preserves original declared units, coverage, model period, references and transformations. Undeclared source metadata is displayed as not declared. Original CSV cells and column order are retained.
+The human sheet presents each selected model's saved parameters in readable parameter, native field, value, units, interpretation and source columns. New captures snapshot the maintained profile workbench methods and their source hashes in presentation version 2, so labels, units and references remain tied to the actual captured catalog. References and notes appear as lists; nested source declarations use labeled fields. Original declared coverage, model period, transformations, CSV cells and column order are retained.
+
+Existing captured sheets retain their original bytes. An interrupted capture resumes the presentation and method catalog already retained in its specification; version 1 specifications use the unchanged original renderer. A newly captured review uses version 2. Reopening, exporting, applying a response and restoring a project continue to use the original retained artifacts and identities.
 
 ### preview(workspace, selection)
 
