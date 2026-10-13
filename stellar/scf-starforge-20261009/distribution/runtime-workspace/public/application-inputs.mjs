@@ -1,3 +1,4 @@
+import { createApplicationInputSetsView } from './application-input-sets.mjs';
 // MIT. Saved original files and separate application working copies.
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const button=(text,fn)=>{const n=node('button',text);n.type='button';n.addEventListener('click',fn);return n;};
@@ -31,14 +32,16 @@ export function createApplicationInputsView({root,api,getToken,getWorkspaceId,on
   const targetRow=node('div',undefined,'actions');targetRow.append(target,clearTarget);
   panel.append(intro,targetRow,fileLabel,nameLabel,controls,progress,status,searchLabel,
     button('Refresh saved files',()=>void refresh()),rows,paging,node('h3','Prepared working copies'),working,workingPaging);
-  root.replaceChildren(panel);
+  const setsRoot=node('div');root.replaceChildren(panel,setsRoot);
+  const sets=createApplicationInputSetsView({root:setsRoot,api,getToken,getWorkspaceId,onError,onMessage,readSaved,saveSaved,
+    getTarget:()=>chooser,clearTarget(value){if(chooser===value){chooser=null;renderTarget();}}});
   function scope(){return {epoch,workspace:getWorkspaceId()};}
   const current=s=>s.epoch===epoch&&s.workspace===workspace&&s.workspace===getWorkspaceId();
   function renderTarget() {
     const valid=chooser?.current();
     target.textContent=valid?'Choose a file for '+chooser.label+'. The existing application review checks whether this setting accepts the selected file.':
       'Open “Use saved file” beside the intended application file setting. Directory and executable settings retain their existing requirements.';
-    clearTarget.hidden=!chooser;
+    clearTarget.hidden=!chooser;sets.update();
   }
   function pending() {return readSaved('input-selection',workspace);}
   function remember(value){return saveSaved('input-selection',value,workspace);}
@@ -158,7 +161,7 @@ export function createApplicationInputsView({root,api,getToken,getWorkspaceId,on
     } catch(error){if(current(own)&&generation===listEpoch)onError(error);}
   }
   function reset() {
-    epoch++;listEpoch++;workspace=getWorkspaceId();chooser=null;selectedFile=null;busy=false;offset=workingOffset=0;
+    sets.reset();epoch++;listEpoch++;workspace=getWorkspaceId();chooser=null;selectedFile=null;busy=false;offset=workingOffset=0;
     file.value='';label.value='';search.value='';status.textContent='';rows.replaceChildren();working.replaceChildren();progress.hidden=true;file.disabled=label.disabled=recover.disabled=false;recover.hidden=true;upload.disabled=true;renderTarget();
   }
   file.addEventListener('change',()=>{
@@ -169,7 +172,7 @@ export function createApplicationInputsView({root,api,getToken,getWorkspaceId,on
   panel.addEventListener('toggle',()=>{if(panel.open)void refresh();});
   upload.disabled=true;recover.hidden=true;
   return {
-    choose(value){if(workspace!==getWorkspaceId())reset();chooser=value;panel.open=true;renderTarget();panel.scrollIntoView({block:'nearest'});void refresh();},
+    choose(value){if(workspace!==getWorkspaceId())reset();chooser=value;panel.open=true;sets.show();renderTarget();panel.scrollIntoView({block:'nearest'});void refresh();},
     update(){if(workspace!==getWorkspaceId())reset();},
     reset,
   };
