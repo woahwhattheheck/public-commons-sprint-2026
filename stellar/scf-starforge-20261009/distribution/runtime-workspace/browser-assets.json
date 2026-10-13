@@ -155,6 +155,41 @@
         "workspace-receiving.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/operating-procedures.mjs",
+      [
+        "operating-procedures.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-plan.mjs",
+      [
+        "../../discovery/operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-plan-return.mjs",
+      [
+        "../../discovery/operating-plan-return.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/catalog.mjs",
+      [
+        "../../discovery/catalog.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/runtime-procedures-guide",
+      [
+        "../RUNTIME_PROCEDURES.md",
+        "text/markdown; charset=utf-8"
+      ]
     ]
   ]
 }
