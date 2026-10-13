@@ -85,3 +85,12 @@ python -B STAGE/checks/measurement_returned_reviews_operator.py --application AP
 The original directory must contain `input-archives/baseline.zip`, `input-archives/returned.zip`, `input-archives/current.zip`, `comparison/plan.json` and `decisions.json`. It reuses their exact native plan identity, title, decisions and archive bytes. Use the existing producer's retained original case; no recreated population or capacity run is required. Output is outside the application, scientific Workspace and original case. Keep the same output for an interrupted course. The original decision HTML still requires actual permitted desktop/narrow operation and attachment viewing before client readiness.
 
 Whole-Workspace transfer captures the independent reviewed project's exact owned database path (`measurement-returned-reviews/results/<64-hex-id>/result/measurements/measurements.sqlite`) through the original SQLite online-backup mechanism. This includes committed WAL edits while preserving unrelated SQLite source files byte-exact.
+
+
+## Scientist-reviewed observation editions
+
+The complete Measurements application includes **Measured data → Observation editions**. A scientist selects retained source files and observations, compares original context across publishers, records explicit relationships and saves a named immutable edition. Same-observation groups retain a chosen representative; independent replicates, contextual matches, distinct observations and unresolved relationships preserve their separate meaning. The original source records and native eligibility remain available.
+
+The desk includes the complete report, CSV, calibration payload, original-source downloads and full portable workspace. Its draft preserves pending or retained save requests through export and reopening. Repeat a retained exact request to recover a lost response; later scientific edits remain in the draft. Outer Measurements navigation retains each workspace/person draft and warns before leaving unsaved work.
+
+See `measurement_workspace/OBSERVATION_EDITIONS.md` for the full operator journey and native receiving instructions. Inspect and save on the same owned receiving workspace so its revision remains the one bound to the request. The complete source package includes the engine, HTTP/CLI dispatch, scientist desk, operator mirrors, CSS, component registration and cumulative installation inventory.
