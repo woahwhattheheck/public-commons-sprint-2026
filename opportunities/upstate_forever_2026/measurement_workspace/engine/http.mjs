@@ -1,3 +1,5 @@
+import {observationEditionOperation,observationEditionCSV,observationCalibration} from './observation_editions.mjs';
+import {observationEditionHTML} from '../web/observation_editions.mjs';
 import {benchmarkOperation,readBenchmark,benchmarkCSV} from './benchmark_workspace.mjs';
 import {benchmarkHTML} from './benchmark_reports.mjs';
 import {flowStudyBundle,flowLoadBundle} from './flow_bundles.mjs';
@@ -46,6 +48,15 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
     }
     const parts=url.pathname.slice(base.length).split('/').filter(Boolean).map(decodeURIComponent),method=request.method,query=Object.fromEntries(url.searchParams);
       const s=get();
+      if(parts[0]==='observation-editions'){
+        if(method==='GET'&&parts[1]==='editions'&&parts.length===4&&['report.html','observations.csv','report.csv','calibration.json'].includes(parts[3])){
+          const edition=await observationEditionOperation(s,'GET',['editions',parts[2]],{},{}),format=parts[3];
+          const value=format==='report.html'?observationEditionHTML(edition):format==='calibration.json'?observationCalibration(edition):observationEditionCSV(edition);
+          const type=format==='report.html'?'text/html; charset=utf-8':format==='calibration.json'?'application/json; charset=utf-8':'text/csv; charset=utf-8';
+          send(response,200,value,type,'observation-edition-'+parts[2].slice(0,12)+'-'+format);return;
+        }
+        send(response,200,await observationEditionOperation(s,method,parts.slice(1),query,method==='POST'?await readBody(request):{}));return;
+      }
       if(parts[0]==='native-observations'){send(response,200,nativeSourceOperation(s,method,parts.slice(1),query));return;}
       if(parts[0]==='benchmarks'){
         if(method==='GET'&&parts[1]==='studies'&&parts.length===4&&['report.html','rows.csv','periods.csv'].includes(parts[3])){
