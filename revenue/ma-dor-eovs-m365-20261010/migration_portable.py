@@ -44,11 +44,16 @@ PROPERTY_APPLICATION_FILES = FINANCIAL_APPLICATION_FILES + (
     "property_domain.py", "property_workspace.py", "property_receiving.py", "PROPERTY_CONTINUITY.md",
     "public/property.html", "public/property.js", "public/property.css", "property_reference_example.py",
 )
-APPLICATION_PROFILE = "commons.migration-workbench-application/v4"
-APPLICATION_FILES = PROPERTY_APPLICATION_FILES + (
+REGISTER_APPLICATION_PROFILE = "commons.migration-workbench-application/v4"
+REGISTER_APPLICATION_FILES = PROPERTY_APPLICATION_FILES + (
     "migration_registers.py", "public/migration-registers.js", "REGISTER_MIGRATION.md",
     "REGISTER_OPERATOR.md", "register_receiving.py", "REGISTER_RECEIVING.md",
     "register_reference_example.py", "register_browser_receiving.py", "register_browser_receiving.mjs",
+)
+APPLICATION_PROFILE = "commons.migration-workbench-application/v5"
+APPLICATION_FILES = REGISTER_APPLICATION_FILES + (
+    "crf_domain.py", "crf_workspace.py", "crf_workbook.py", "crf_receiving.py", "CRF_REPORTING.md",
+    "public/crf.html", "public/crf.js", "public/crf.css",
 )
 APPLICATION_EDITIONS = (
     (None, LEGACY_APPLICATION_FILES),
@@ -56,6 +61,7 @@ APPLICATION_EDITIONS = (
     (GRANT_APPLICATION_PROFILE, GRANT_APPLICATION_FILES),
     (FINANCIAL_APPLICATION_PROFILE, FINANCIAL_APPLICATION_FILES),
     (PROPERTY_APPLICATION_PROFILE, PROPERTY_APPLICATION_FILES),
+    (REGISTER_APPLICATION_PROFILE, REGISTER_APPLICATION_FILES),
     (APPLICATION_PROFILE, APPLICATION_FILES),
 )
 BLOCK = 1024 * 1024
