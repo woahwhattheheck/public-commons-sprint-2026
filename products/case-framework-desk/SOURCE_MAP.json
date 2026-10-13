@@ -1,0 +1,20 @@
+{
+  "schema": "commons.case-source-map.v1",
+  "contract": "https://www.imsglobal.org/spec/case/v1p1/",
+  "packageSchema": "https://purl.imsglobal.org/spec/case/v1p1/schema/jsd/caseservicegroupv1p1-getcfpackage-200-responsepayload-schemav1p0p0.json",
+  "informationModel": "https://www.imsglobal.org/sites/default/files/spec/case/v1p1/information_model/caseservicev1p1_infomodelv1p0.html",
+  "parser": {
+    "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
+    "bytes": 50626,
+    "sha256": "03adcc06dcc7dfa5f361eebd49fb10446438aca69004b0abe053dae500b158ed",
+    "function": "losslessJson",
+    "retainedFunctionSha256": "5f36ee5a897c635d81633c50a867af7572a28a31f55bb65dbdc766e68e86a97c",
+    "source": "Original maintained Flowable source; exact parser body retained with original JSON grammar boundary."
+  },
+  "notes": [
+    "Original package schema requires only CFDocument; absent collections remain absent.",
+    "External references are retained without retrieval or claimed validation.",
+    "The implementation performs selected source/graph checks, not a full schema validator or certification.",
+    "All authored example source is independent of customer data."
+  ]
+}
