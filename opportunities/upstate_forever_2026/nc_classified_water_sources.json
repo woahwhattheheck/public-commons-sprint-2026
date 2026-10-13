@@ -178,7 +178,12 @@
           "path": "source/water_classifications/north_carolina/20261013/selection.json",
           "sha256": "c49f26c72625c6c2aab606e65de607056ef84a10e1e012233479731719affbb8"
         }
-      ]
+      ],
+      "source_schema": "upstate.classified-water-registry/v2",
+      "jurisdiction": "NC",
+      "classification_system": "NC-15A-NCAC-02B",
+      "designation_status": "source-published",
+      "data_status": "source-published"
     }
   ]
 }
