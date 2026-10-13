@@ -14,6 +14,7 @@ import time
 from model.common import (atomic_json, digest, file_digest, held, identifier,
                           now, read_json, verify_file)
 from model.native_worker import SCHEMA, identity_matches, process_identity, signal_owned
+from model.native_execution import storage_exhausted
 
 APPLICATION = Path(__file__).resolve().parents[1]
 
@@ -230,7 +231,11 @@ class NativeJobs:
                  "ended_at": now(), "returncode": returncode}
         if error:
             value["error"] = error
-        atomic_json(execution["directory"] / "supervision.json", value)
+        try:
+            atomic_json(execution["directory"] / "supervision.json", value)
+        finally:
+            with self.lock:
+                self.processes.pop(request["execution_id"], None)
 
     def _mark_interrupted(self, execution, message):
         """Only reconcile a dead worker; never edit a run held by another process."""
@@ -316,8 +321,6 @@ class NativeJobs:
                         process.wait(timeout=3)
                 returncode = process.poll() if process else None
                 self._record_exit(execution, "complete", returncode=returncode)
-                with self.lock:
-                    self.processes.pop(request["execution_id"], None)
                 return complete
             worker = _read(directory / "worker.json") or _read(directory / "launch.json") or {}
             if worker.get("identity"):
@@ -353,24 +356,50 @@ class NativeJobs:
                 message = ((failure or {}).get("message") or
                            "The native worker ended before producing a completed result"
                            + (" (process exit " + str(returncode) + ")" if returncode is not None else "") + ".")
-                self._mark_interrupted(execution, message)
-                self._record_exit(execution, "cancelled" if cancelled else "failed",
-                                  returncode=returncode, error={"message": message})
-                with self.lock:
-                    self.processes.pop(request["execution_id"], None)
-                if cancelled:
-                    raise NativeJobCancelled("NATIVE_STOPPED",
-                                             "Calculation stopped. Its retained completed stages remain available when you resume.")
-                error = NativeJobError("NATIVE_PROCESS_EXIT", message, 500)
-                native_failure = execution["workspace"].inspect_run(request["run_id"]).get("error")
-                if isinstance(native_failure, dict):
-                    error.native_failure = native_failure
+                error = (NativeJobCancelled(
+                    "NATIVE_STOPPED",
+                    "Calculation stopped. Its retained completed stages remain available when you resume.")
+                    if cancelled else NativeJobError("NATIVE_PROCESS_EXIT", message, 500))
+                recording_errors = []
+                try:
+                    # Keep the original cause before any same-filesystem writes.
+                    if not cancelled:
+                        try:
+                            native_failure = execution["workspace"].inspect_run(request["run_id"]).get("error")
+                            if isinstance(native_failure, dict):
+                                error.native_failure = native_failure
+                        except OSError as recording_error:
+                            recording_errors.append(recording_error)
+                    try:
+                        self._mark_interrupted(execution, message)
+                    except OSError as recording_error:
+                        recording_errors.append(recording_error)
+                    try:
+                        self._record_exit(execution, "cancelled" if cancelled else "failed",
+                                          returncode=returncode, error={"message": message})
+                    except OSError as recording_error:
+                        recording_errors.append(recording_error)
+                finally:
+                    with self.lock:
+                        self.processes.pop(request["execution_id"], None)
+                if recording_errors:
+                    error.supervision_errors = [
+                        {"type": type(item).__name__, "message": str(item), "errno": item.errno}
+                        for item in recording_errors]
+                    if not cancelled:
+                        error.native_failure = {
+                            **getattr(error, "native_failure", {
+                                "type": type(error).__name__, "message": str(error)}),
+                            "supervision_errors": error.supervision_errors}
+                    # Preserve capacity classification even when another receipt
+                    # failed first, and retain the original process error above it.
+                    cause = next((item for item in recording_errors if storage_exhausted(item)),
+                                 recording_errors[0])
+                    raise error from cause
                 raise error
             if self.operator.closing:
                 # Let Operator.close finish while the detached native worker continues.
                 self._record_exit(execution, "detached")
-                with self.lock:
-                    self.processes.pop(request["execution_id"], None)
                 raise NativeJobDetached("NATIVE_DETACHED",
                                         "The operator closed while its native calculation continued. Reopen this task to reconnect to the same worker.")
             time.sleep(0.4)
