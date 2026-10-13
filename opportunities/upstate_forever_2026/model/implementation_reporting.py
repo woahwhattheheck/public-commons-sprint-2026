@@ -194,6 +194,97 @@ def _field_forms(activities) -> str:
     return "".join(parts)
 
 
+def _economic_candidates(plan) -> str:
+    """Present the retained economic source without deriving new quantities or budgets."""
+    links = {row["id"]: row for row in plan["source_links"]}
+    parts = []
+    for candidate in plan["candidates"]:
+        source = candidate.get("source")
+        if not isinstance(source, dict):
+            continue
+        link = links.get(source.get("source_link_id"), {})
+        snapshot = link.get("snapshot")
+        if not isinstance(snapshot, dict) or snapshot.get("schema") != "upstate.implementation-economic-source/v1":
+            continue
+        row = source.get("row_snapshot")
+        binding = snapshot.get("binding")
+        if not isinstance(row, dict) or not isinstance(binding, dict) or row.get("run_id") != binding.get("run_id"):
+            continue
+        record = lambda value: value if isinstance(value, dict) else {}
+        native = record(snapshot.get("native_source"))
+        zone = record(native.get("zone"))
+        parts.append("<section><h3>" + html.escape(candidate["label"]) + "</h3>")
+        parts.append("<p>One complete modeled scenario, retained from its original economic edition. "
+                     "Positive avoided export means a reduction; negative values mean an increase. "
+                     "Each pollutant keeps its own units and spatial comparison support.</p>")
+        parts.append(_table(("Source field", "Retained value"), [
+            ("Economic edition", binding.get("edition_id")),
+            ("Native report", binding.get("report_id")),
+            ("Native report SHA-256", binding.get("report_sha256")),
+            ("Selected scenario run", row.get("run_id")),
+            ("Baseline run", row.get("baseline_run_id")),
+            ("Reporting zone", zone.get("title") or binding.get("zone_id")),
+            ("Reporting zone ID", binding.get("zone_id")),
+            ("Reporting area (ha)", row.get("reporting_area_ha")),
+        ]))
+        parts.append("<p>The reporting area describes the selected source zone. "
+                     "It does not assign an intervention footprint or allocate costs by area.</p>")
+        physical, support_rows = [], []
+        for benefit in candidate.get("modeled_benefits", []):
+            if not isinstance(benefit, dict) or benefit.get("quantity") != "avoided_export":
+                continue
+            output = record(benefit.get("output"))
+            support = record(output.get("support"))
+            label = benefit.get("label") or benefit.get("metric")
+            physical.append((label, benefit.get("units") or output.get("units"),
+                             output.get("baseline"), output.get("alternative"),
+                             output.get("reduction"), output.get("reduction_percent")))
+            support_rows.append((label, support.get("status"), support.get("area_ha"),
+                                 support.get("valid_cells"), support.get("detail")))
+        parts.append(_table(("Quantity", "Unit", "Baseline export", "Scenario export",
+                             "Avoided export", "Avoided export (%)"), physical))
+        parts.append("<p>A dash means the original quantity is unavailable; percentages "
+                     "with a zero baseline remain undefined. Support marked paired uses "
+                     "the original common finite cells. Other support states retain their source qualification.</p>")
+        parts.append(_table(("Quantity", "Support status", "Shared area (ha)",
+                             "Shared valid cells", "Source qualification"), support_rows))
+        original = row.get("original_cost")
+        summary = record(row.get("source_cost_summary"))
+        parts.append("<h4>Retained source estimate</h4>")
+        if not isinstance(original, dict):
+            parts.append("<p>No implementation estimate is retained for this scenario.</p>")
+        else:
+            currency = summary.get("currency") or original.get("currency")
+            rate = original.get("discount_rate")
+            rate_percent = rate * 100 if type(rate) in (int, float) else None
+            parts.append(_table(("Cost assumption", "Retained value", "Unit"), [
+                ("Capital", original.get("capital"), currency),
+                ("Annual operating", original.get("annual_operating"), _text(currency) + "/year"),
+                ("Analysis horizon", original.get("horizon_years"), "years"),
+                ("Real discount rate", rate_percent, "%"),
+                ("Present value", summary.get("present_value"), currency),
+                ("Annualized cost", summary.get("annualized"), _text(currency) + "/year"),
+            ]))
+            scope = record(original.get("scope"))
+            scope_labels = {"whole_scenario": "Whole scenario", "reporting_zone": "Specified reporting zone",
+                            "retained": "Retained source footprint; review original scope"}
+            origin = record(original.get("source"))
+            parts.append(_table(("Estimate provenance", "Retained value"), [
+                ("Footprint", scope_labels.get(scope.get("kind"), "Footprint not specified")),
+                ("Footprint zone", scope.get("zone_id")),
+                ("Footprint report", scope.get("producer_report_id")),
+                ("Source", origin.get("title")), ("Reference", origin.get("uri")),
+                ("As of", origin.get("as_of")), ("Note", original.get("note")),
+                ("Scope note", original.get("scope_note")),
+            ]))
+            parts.append(_details("Complete original estimate, footprint and review metadata", original))
+        parts.append("<p>This estimate is source context. The implementation budget, "
+                     "commitments and actual costs remain the separately entered ledger.</p></section>")
+    if not parts:
+        return ""
+    return "<section><h2>Selected economic scenarios</h2>" + "".join(parts) + "</section>"
+
+
 def render_report_html(document: dict, as_of: str | None = None) -> str:
     plan = validate_plan(document)
     summary = summarize_plan(plan, as_of)
@@ -291,7 +382,9 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
          for row in observation_rows),
     ))
     sections.append(_details("Observation provenance and original fields", plan["observations"]))
-    sections.append("</section><section><h2>Frozen source selections</h2>")
+    sections.append("</section>")
+    sections.append(_economic_candidates(plan))
+    sections.append("<section><h2>Frozen source selections</h2>")
     for candidate in plan["candidates"]:
         sections.append(_details(
             candidate["label"] + " [" + candidate["id"] + "]",

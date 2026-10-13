@@ -419,12 +419,69 @@ class ImplementationOperator:
             source_link=result["source_link"], file_ref=result["file_ref"],
         )
 
+    def _economic_import(self, task):
+        """Read the saved authored edition; the browser supplies identities only."""
+        import importlib.util
+        from model.implementation_economics import import_economic_selection
+        from model.implementation_sources import SourceImportError
+
+        value = task["payload"]
+        if any(value.get(key) is not None for key in
+               ("source_document", "upload_id", "field_mapping", "method_mapping")):
+            raise self.Fault("IMPLEMENTATION_ECONOMIC_SOURCE",
+                             "Select the retained economic edition and one original run.")
+        if value.get("workspace_key") != task["workspace"]:
+            raise self.Fault("IMPLEMENTATION_ECONOMIC_WORKSPACE",
+                             "Reopen this selection in its original workspace.")
+        run_id = value.get("run_id")
+        if value.get("selected_ids") != [run_id]:
+            raise self.Fault("IMPLEMENTATION_ECONOMIC_SELECTION",
+                             "Choose exactly one whole economic scenario.")
+        if value.get("source_id") != value.get("edition_id"):
+            raise self.Fault("IMPLEMENTATION_ECONOMIC_SOURCE",
+                             "The source ID must be the selected economic edition.")
+        # This optional extension is loaded from a fixed authored sibling path.
+        # Importing operator as a package would collide with Python's stdlib.
+        path = Path(__file__).with_name("economic_workbench.py")
+        if not path.is_file():
+            raise self.Fault("IMPLEMENTATION_ECONOMIC_UNAVAILABLE",
+                             "Install the economic desk companion before importing this edition.")
+        spec = importlib.util.spec_from_file_location(
+            "_upstate_implementation_economic_workbench", path)
+        if spec is None or spec.loader is None:
+            raise self.Fault("IMPLEMENTATION_ECONOMIC_UNAVAILABLE",
+                             "The installed economic desk module cannot be loaded.")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        try:
+            ws = self.operator.ws(task["workspace"])
+            root, edition, report = module.EconomicWorkbench(
+                self.operator, self.Fault)._edition(ws, value.get("edition_id"), full=True)
+
+            def original(descriptor):
+                source_path = module._checked(root, descriptor)
+                with source_path.open("rb") as stream:
+                    body = stream.read(MAX_JSON_BYTES + 1)
+                if (len(body) != descriptor["bytes"]
+                        or hashlib.sha256(body).hexdigest() != descriptor["sha256"]):
+                    raise ValueError("The retained source changed while importing it.")
+                return load_json(body)
+
+            manifest = original(edition["files"]["manifest"])
+            native = original(edition["files"]["original_native_report"])
+            return import_economic_selection(edition, report, manifest, native, value)
+        except (SourceImportError, OSError, ValueError, KeyError, TypeError) as error:
+            raise self.Fault("IMPLEMENTATION_ECONOMIC_SOURCE", str(error)) from error
+
     def _source_import(self, store, task, plan_id, expected, actor):
         from model.implementation_sources import SourceImportError, import_selection
         value = task["payload"]
         kind = value.get("kind", value.get("source_kind", "community_plan"))
         source_id = value.get("source_id")
-        if (kind in ("community_plan", "community_plans")
+        imported = None
+        if kind == "economic_scenario":
+            imported = self._economic_import(task)
+        elif (kind in ("community_plan", "community_plans")
                 and value.get("source_document") is None and value.get("upload_id") is None):
             if not isinstance(source_id, str):
                 raise self.Fault("IMPLEMENTATION_SOURCE_ID", "Choose a retained community plan.")
@@ -460,14 +517,15 @@ class ImplementationOperator:
             source_ref = value.get("source_ref")
             if "upload_id" in supplied:
                 source_ref = self.operator.upload(value["upload_id"])["path"]
-        try:
-            imported = import_selection(
-                document, source_id, kind, source_ref=source_ref,
-                selected_ids=value.get("selected_ids"), field_mapping=value.get("field_mapping"),
-                method_mapping=value.get("method_mapping"),
-            )
-        except SourceImportError as error:
-            raise self.Fault("IMPLEMENTATION_SOURCE_INVALID", str(error)) from error
+        if imported is None:
+            try:
+                imported = import_selection(
+                    document, source_id, kind, source_ref=source_ref,
+                    selected_ids=value.get("selected_ids"), field_mapping=value.get("field_mapping"),
+                    method_mapping=value.get("method_mapping"),
+                )
+            except SourceImportError as error:
+                raise self.Fault("IMPLEMENTATION_SOURCE_INVALID", str(error)) from error
         plan = store.get(plan_id)
         if plan["revision"] != expected:
             raise RevisionConflict(plan_id, expected, plan["revision"])

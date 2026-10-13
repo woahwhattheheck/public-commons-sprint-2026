@@ -16,10 +16,11 @@ FILES = (
     "operator/economic_workbench.py",
     "operator/web/economic_desk.mjs",
     "operator/web/economic_cost_worksheet.mjs",
+    "operator/web/economic_implementation.mjs",
     "operator/web/economic_desk.css",
     "operator/extensions/economic-desk.json",
 )
-OPTIONAL_FILES = ("operator/ECONOMIC_DESK.md", "operator/COST_WORKSHEETS.md")
+OPTIONAL_FILES = ("operator/ECONOMIC_DESK.md", "operator/COST_WORKSHEETS.md", "operator/ECONOMIC_IMPLEMENTATION.md")
 
 
 def sha(body):
