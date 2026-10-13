@@ -144,6 +144,9 @@ def _sections(payload, report_id, report_sha256):
                 ["Original report file", regional.get("report_file")],
                 ["Source fingerprint", regional.get("source_fingerprint")],
                 ["Selected HUC12s", regional.get("selected_huc12s")],
+                ["Queried target classes", regional.get("classification_coverage", {}).get("selected_classes")],
+                ["Classification jurisdiction", regional.get("classification_coverage", {}).get("source_jurisdiction")],
+                ["Original HUC assignment", {row.get("huc12"): row.get("classification_assignment") for row in hucs}],
             ]),
         ]])
     physical = payload.get("physical_context", [])
@@ -244,15 +247,15 @@ def prepare(workspace, report_id, *, report_sha256, delivery_id=None, import_sou
                   "source_links": [item["path"] for item in inputs], "figures": []}
         atomic_json(directory / RECIPE, recipe, immutable=True)
         source_id = "community-planning-report-" + operation_id[:20]
+        vintage = "Retained Community report format " + str(report["format_version"]) + "; selection " + report["selection_id"]
         manifest = {"schema": "upstate.sources/v1", "title": title,
-                    "captured_at": report.get("created_at"),
                     "scope": {"project_id": workspace.project["id"], "plan_id": report["plan_id"],
                               "community_report_id": report_id, "report_sha256": report_sha256},
                     "entries": [{
                         "id": source_id, "kind": "document", "title": title,
                         "role": "community-planning-report-context", "path": RECIPE,
                         "uri": "workspace://" + workspace.project["id"] + "/" + REPORT_KIND + "/" + report_id,
-                        "vintage": report.get("created_at"), "sha256": file_digest(directory / RECIPE),
+                        "vintage": vintage, "sha256": file_digest(directory / RECIPE),
                         "metadata": {"report_schema": observed_context.SCHEMA,
                                      "report_context_kind": "community_planning",
                                      "plan_id": report["plan_id"], "community_report_id": report_id},
