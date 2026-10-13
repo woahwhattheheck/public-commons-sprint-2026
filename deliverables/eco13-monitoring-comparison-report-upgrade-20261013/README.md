@@ -13,7 +13,7 @@ Use the receiving host's existing application and scientific Python environment.
 - The declared Implementation and Study transfer dependencies listed in the manifest. Their complete pinned bodies are carried for source custody; the Monitoring installer preserves these shared installed dependencies.
 - The original GIS/optimization/report libraries used by the application, including Fiona, Shapely, pyproj, SciPy and ReportLab.
 
-The two scientific figure renderers are installed through the same guarded file inventory. Exact original predecessors are admitted: all three historical vector-renderer editions, the original map renderer, its role-label successor, and the current edition. The installed map renderer supplies `ROLE_LABELS_VERSION = 1`. Unknown newer source remains protected by the original installer; send its exact differing path/body to the current source owner for composition.
+The two scientific figure renderers and the maintained observed-report renderer are installed through the same guarded file inventory. Exact original predecessors are admitted: all three historical vector-renderer editions, the original map renderer, its role-label successor, and the current edition. The installed map renderer supplies `ROLE_LABELS_VERSION = 1`. The observed-report renderer retains the current source-code binding and independent-capture inventory repair, with all four original historical bodies admitted by the same predecessor guard. Unknown newer source remains protected by the original installer; send its exact differing path/body to the current source owner for composition.
 
 The saved scientific course below names the actual retained project `b9d5d257-c6bb-4f07-b975-8e8c63705db3`: its 217-catchment network, original 87-station source family, completed six-site campaign, and completed three-budget frontier. The supplied selection files name those exact records. They are suitable for an independently received copy of that project; its operator workspace key is determined by its actual receiving path.
 
@@ -29,7 +29,7 @@ python STAGE/integrations/monitoring/install_monitoring.py APP --source-root STA
 python STAGE/integrations/monitoring/install_monitoring.py APP --source-root STAGE
 ```
 
-`stage.py` delegates decoding, safe source paths, byte/hash validation and immutable file publication to the original `source_tools.application_assembly`. It checks every part and member before writing the first staged source file. Repeating it with the same complete bank reuses identical staged files.
+`stage.py` first verifies the complete original `source_tools.application_assembly` body carried under `bootstrap/`, then delegates decoding, safe source paths, byte/hash validation and immutable file publication to that original module. The base application does not need to supply a matching staging API. It checks every part and member before writing the first staged source file. Repeating it with the same complete bank reuses identical staged files.
 
 The installer reads the maintained inventory beside its own script. Its `--check` output names every intended path and identity before the normal installation command. The installed inventory now includes the original installers and their five maintained source-custody documents, so a later upgrade sees the current predecessor history. Scientific report maps and the existing composer are integrated with the saved comparison feature.
 
@@ -45,7 +45,32 @@ The startup receipt supplies the private operator URL and actual workspace key. 
 
 This course consumes completed saved plans. Its budget comparison does not execute an optimizer or create another campaign.
 
-From `APP`, use the supplied native selection and a receiving-output directory outside the Workspace:
+Complete the whole native course with one command after the original installation:
+
+```sh
+python BANK/receive_native.py --application APP --workspace WORKSPACE \
+  --selection BANK/native-comparison-selection.json --output OUTPUT/native-report \
+  --report-title "Regional monitoring budget choices — scientific report" --transfer
+```
+
+The command reopens the completed frontier and source-bound comparison; retains its
+complete packet; prepares the original scientific source; renders the original
+HTML/PDF edition; exports its complete ZIP through the maintained operator provider;
+and copies every original report output into `OUTPUT/native-report/scientific-report/`.
+With `--transfer`, it also performs the original complete Workspace backup and
+independent restore, then reopens the exact comparison, report source and edition.
+`result.json` gives the actual IDs, file paths, byte counts and SHA256 values.
+
+The request, selected original source bytes and installed producer identities are
+recorded before native actions. Repeating the exact same invocation reopens its
+same records and files from the atomic journal. A changed selection, report title,
+contact or installed producer uses a new output directory. Optional `--contact
+CONTACT.json` supplies the existing scientific composer's contact object. Omitting
+`--transfer` completes all reports without another full archive; use the existing
+host's archive boundary when that broader receiving operation is already running.
+
+The equivalent original commands remain available individually. From `APP`, use
+the native selection and a receiving-output directory outside the Workspace:
 
 ```sh
 python -m model.monitoring_frontier_comparison --workspace WORKSPACE prepare \
@@ -117,3 +142,11 @@ The complete original Chemistry browser and both maintained progression files ar
 The original planning scenario uses USD 4,800 / 9,000 / 13,200 budgets, programme overhead 600, setup 250 and 150 per visit across three rounds. Those explicit engineering planning assumptions produced the retained six-, twelve- and eighteen-site choices. They remain separate from station observations and do not assert agency prices or available field crews. The report preserves cost in integer cents and the original source-weighted coverage units.
 
 Scientific raw data are already retained in the Workspace and remain editable through complete Workspace transfer. Broader observed-context inventories also reference their original microbial and nutrient source families; this scoped code upgrade retains those inventories without reimporting unrelated datasets. The source-bank manifest distinguishes installed component files, preserved base dependencies and receiving-driver source.
+
+The current complete native-report release contains 97 source members and 1,866,478 source bytes, including 66 installed component paths, 25 preserved base-dependency bodies and six receiving-driver paths. Its current shared renderer was read from `fa7a77aecef81f13765a0c1024aef68dd323cb15`; the frozen original release remains available at `39a1b704557493ed5b4dc495a7e5fa47362d18df`. The receiving command uses the native `portable.resume_restore` on applications that supply it, with the original full-member receiving check retained for earlier complete bases.
+
+## Rendered-product inspection before presentation
+
+The owner instruction in repository `AGENTS.md` version `2026-10-13.1` applies to the producing receiving worker. Open and render the exact outgoing operator and scientific reports, view their actual screens or real screenshots, and operate their important controls before describing them as client-ready. Inspect the populated scientific Workspace at the intended desktop/screenshare and narrow widths, relevant empty/loading/error states, downloads/exports and reopening. View the generated PDF, HTML and source pages themselves; repair unreadable, clipped, overflowing or broken output in the same operation. Source checks and screenshot capture alone do not establish rendered readiness.
+
+Keep the plain industrial presentation: readable tables, restrained controls, clear hierarchy, consistent spacing and useful labels. Preserve the existing native science and the current receiving owners. Carry this instruction into the receiver's application-level instructions and current handoff guides. Return the actual populated-workspace screenshots and report files so the original producing team can also inspect them. This continues the existing Ecosystem sprint; its cutoff remains **October 13, 2026, 14:00 UTC** (10:00 a.m. America/Kentucky/Louisville).

@@ -38,6 +38,34 @@
       "sha256": "79668fbafe90b88dbe25741232afe92196845f72495d78afc95fdb559fa1a481"
     },
     {
+      "path": "integration/component_fragments/monitoring-observed-station-scope.json",
+      "source": "integration/component_fragments/monitoring-observed-station-scope.json",
+      "source_role": "current_application_source",
+      "bytes": 507,
+      "sha256": "93df7b6ee47e9f3ad1d5d83b629bff6c0a0fd2b9c464e474bdba3fcdd5f70a88"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-study-transfer.json",
+      "source": "integration/component_fragments/monitoring-study-transfer.json",
+      "source_role": "current_application_source",
+      "bytes": 1980,
+      "sha256": "27a54cb4773c6e7f6a10691616dcf63200837b3bd114704c48ab3a576968e85b"
+    },
+    {
+      "source": "integrations/monitoring/install_monitoring.py",
+      "source_role": "current_application_source",
+      "path": "integrations/monitoring/install_monitoring.py",
+      "bytes": 12373,
+      "sha256": "62164e9fbe593e845c8b4d095914da82a817d53d7de86b997e2813bab8f32575"
+    },
+    {
+      "source": "integrations/monitoring/install_native_monitoring.py",
+      "source_role": "current_application_source",
+      "path": "integrations/monitoring/install_native_monitoring.py",
+      "bytes": 6256,
+      "sha256": "fba4efc487ba27aa9271273e1e8841b2f66641903887734523d40036d5e537b5"
+    },
+    {
       "source": "integrations/monitoring/install_observed_context.py",
       "source_role": "current_application_source",
       "path": "integrations/monitoring/install_observed_context.py",
@@ -419,11 +447,46 @@
       "sha256": "7b7562c9b5b079556520068407f87ac58e98bc625616de52ae84f4347487e6ee"
     },
     {
+      "source": "model/observed_report_render.py",
+      "source_role": "current_application_source",
+      "path": "model/observed_report_render.py",
+      "bytes": 17355,
+      "sha256": "8001ba6842dc3d5ed68e37ebdf2814323090e50d80fb7a068ec9ddadec57d695"
+    },
+    {
       "source": "model/requirements-monitoring.txt",
       "source_role": "current_application_source",
       "path": "model/requirements-monitoring.txt",
       "bytes": 181,
       "sha256": "01b1d14a98a0e180a062ccaa19ea6d45bb9f70fa84c991eafbdf534427e8764d"
+    },
+    {
+      "source": "model/scientific_figures.py",
+      "source_role": "current_application_source",
+      "path": "model/scientific_figures.py",
+      "bytes": 13833,
+      "sha256": "927331dade754525ae4f72b73385661fbfa8c14845ca2c54d0d0426480299465"
+    },
+    {
+      "source": "model/scientific_map_figures.py",
+      "source_role": "current_application_source",
+      "path": "model/scientific_map_figures.py",
+      "bytes": 15526,
+      "sha256": "d672b36181131605d8844f77508b58b37157a2c95b8f1cc99ff64366e1887302"
+    },
+    {
+      "source": "model/utility_monitoring_report.py",
+      "source_role": "current_application_source",
+      "path": "model/utility_monitoring_report.py",
+      "bytes": 31602,
+      "sha256": "37d63a3f80bf0486fd9c488c1db260ab49b2e159ba5ec6cfbed4055eb461cb15"
+    },
+    {
+      "source": "model/utility_monitoring.py",
+      "source_role": "current_application_source",
+      "path": "model/utility_monitoring.py",
+      "bytes": 24973,
+      "sha256": "39e91bf5e74340efc7254af53f75c4f0049fb98662da0a941cb00f7c33ea52bc"
     },
     {
       "source": "operator/extensions/monitoring-report.json",
@@ -752,62 +815,6 @@
       "path": "source_tools/return_monitoring_fieldwork.py",
       "bytes": 2717,
       "sha256": "e5d55b67011c1e9b28ce3e74f0a0ec6eb38d7c8bd512938869087081a242f0be"
-    },
-    {
-      "source": "integrations/monitoring/install_monitoring.py",
-      "source_role": "current_application_source",
-      "path": "integrations/monitoring/install_monitoring.py",
-      "bytes": 12373,
-      "sha256": "62164e9fbe593e845c8b4d095914da82a817d53d7de86b997e2813bab8f32575"
-    },
-    {
-      "source": "integrations/monitoring/install_native_monitoring.py",
-      "source_role": "current_application_source",
-      "path": "integrations/monitoring/install_native_monitoring.py",
-      "bytes": 6256,
-      "sha256": "fba4efc487ba27aa9271273e1e8841b2f66641903887734523d40036d5e537b5"
-    },
-    {
-      "source": "model/scientific_figures.py",
-      "source_role": "current_application_source",
-      "path": "model/scientific_figures.py",
-      "bytes": 13833,
-      "sha256": "927331dade754525ae4f72b73385661fbfa8c14845ca2c54d0d0426480299465"
-    },
-    {
-      "source": "model/scientific_map_figures.py",
-      "source_role": "current_application_source",
-      "path": "model/scientific_map_figures.py",
-      "bytes": 15526,
-      "sha256": "d672b36181131605d8844f77508b58b37157a2c95b8f1cc99ff64366e1887302"
-    },
-    {
-      "source": "model/utility_monitoring.py",
-      "source_role": "current_application_source",
-      "path": "model/utility_monitoring.py",
-      "bytes": 24973,
-      "sha256": "39e91bf5e74340efc7254af53f75c4f0049fb98662da0a941cb00f7c33ea52bc"
-    },
-    {
-      "source": "model/utility_monitoring_report.py",
-      "source_role": "current_application_source",
-      "path": "model/utility_monitoring_report.py",
-      "bytes": 31602,
-      "sha256": "37d63a3f80bf0486fd9c488c1db260ab49b2e159ba5ec6cfbed4055eb461cb15"
-    },
-    {
-      "path": "integration/component_fragments/monitoring-study-transfer.json",
-      "source": "integration/component_fragments/monitoring-study-transfer.json",
-      "source_role": "current_application_source",
-      "bytes": 1980,
-      "sha256": "27a54cb4773c6e7f6a10691616dcf63200837b3bd114704c48ab3a576968e85b"
-    },
-    {
-      "path": "integration/component_fragments/monitoring-observed-station-scope.json",
-      "source": "integration/component_fragments/monitoring-observed-station-scope.json",
-      "source_role": "current_application_source",
-      "bytes": 507,
-      "sha256": "93df7b6ee47e9f3ad1d5d83b629bff6c0a0fd2b9c464e474bdba3fcdd5f70a88"
     }
   ],
   "host": "operator/extension_registry.py",
@@ -1048,7 +1055,8 @@
     ],
     "shared_renderers": [
       "model/scientific_figures.py",
-      "model/scientific_map_figures.py"
+      "model/scientific_map_figures.py",
+      "model/observed_report_render.py"
     ],
     "utility_report_dependencies": [
       "model/utility_monitoring.py",
@@ -1064,6 +1072,8 @@
       "model/portable_parameter_studies.py",
       "model/receiving_water_monitoring.py",
       "model/receiving_waters.py",
+      "model/scientific_report.py",
+      "model/scientific_tables.py",
       "model/study_delivery_transfer.py",
       "model/study_transfer.py",
       "model/study_transfer_cli.py",
@@ -1086,7 +1096,12 @@
       "scientific_browser_merge": "3f132ec823503d8b105278fcc6e22b674dbc0250",
       "progression_merge": "9e3ecec8b74302ae82978bd9127b6f3f860e3355",
       "shared_renderer_adoption": "Exact complete original bodies through the unchanged Monitoring file inventory and predecessor guard.",
-      "current_utility_report": "e844c828a98530efae611182081ad59b10b4844e"
+      "current_utility_report": "e844c828a98530efae611182081ad59b10b4844e",
+      "observed_report_capture": {
+        "source_commit": "fa7a77aecef81f13765a0c1024aef68dd323cb15",
+        "producer_commit": "08cd869286c8cafd1ef217f20507a365a558ae15",
+        "sha256": "8001ba6842dc3d5ed68e37ebdf2814323090e50d80fb7a068ec9ddadec57d695"
+      }
     },
     "preserves": "Original optimizer, source editions, fieldwork return, microbial context, saved-record opening, editable comparison transfer, original utility context, current shared Study transfer and scientific report composer."
   }
