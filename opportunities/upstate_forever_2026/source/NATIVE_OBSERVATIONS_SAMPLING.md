@@ -109,3 +109,34 @@ Use actual returned paths and identifiers from this receiver when opening Monito
 The producing and receiving workers must open, see and operate the exact outgoing version. Follow the complete owner instruction in the carried **CURRENT_OWNER_DIRECTION.md** and **AGENTS.md**. Inspect the populated Monitoring intake, source mappings and qualifier controls, preview/save/reopen, station binding, Sampling handoff, native design/calendar, downloadable reports/CSV/source records, selected Study and contained application. Use the actual desktop/screenshare width and a narrow mobile width, and inspect the printed report pages.
 
 Read the recovered real source records through the product. A source with absent flow should show that availability clearly. An original missing unit should retain its original state and the selected unit-interpretation option. Different method/depth/value-type records should remain distinct. Read the actual exported files in their normal viewer and repair any clipping, overflow, unreadable tables or broken control before presenting the application.
+
+
+## Continue from a complete original source when a whole Workspace is unavailable
+
+The saved 208-row SV-833 observation can be received independently of the later full Workspace ZIP. Use the actual original observation already present in the selected Workspace whenever available. The normal course verifies the immutable observation record and its original 78,656-byte CSV before preparing any Sampling context.
+
+Two complete source inputs are supported by the SAME receiving program's optional `--native-observation-input`:
+
+- Original package `SV833_Original_File_Monitoring_Complete_20261013.zip`, 274,293 bytes. The maintained original is Library `libfile_1c161ead52788191aff28687a08a11b6`, file `file_00000000b998820cac14d43902a8419c`. Its original source members are `source/temporal-workspace-observations/original-workspace-record.json` (672,461 bytes, SHA256 `2d4dcc91223863b34a1616c70c0db3721e4aeac2d30b02fd2dc6e94c2b41b9b0`) and `original.csv` (78,656 bytes, SHA256 `f6cf205ce830b97d8208839460d788993a890ddd95890634e5bf88ebddaebf2e`). Resolve the existing original file through its authorized receiving route; no archive reconstruction is needed.
+- Complete extracted-source JSON, schema `upstate.sampling-extracted-native-observations/v1`. The authored public scientific input is Git blob `5a6f36b8a2a65f26a253772d6acffea3ef9ed9dd`, 4,290,838 bytes, SHA256 `8780eb2bde5c16e86fb732dd8d72776bf3378e33028e6cf4fa10734f97ae7bc1`. It contains all complete retained original cells and raw native records, exact upstream source packet text, explicit import metadata, original row correspondence, and the derived CSV text. Its new 78,866-byte CSV has SHA256 `98829cb3677c5f7b8fcda3e34d3dafb52faf907ac46bf753524130390327f12f`. It is explicitly a new serialization of the retained table; the different original CSV identity remains separate provenance. No observation value, blank, qualifier or scientific support is synthesized.
+
+Append the following flags to the **existing original45 recorded receiving command**, keeping its operation, selections, configuration, Workspace and output:
+
+```sh
+--native-observation-course "$APP/source_tools/selections/sampling_sv833_20261013.json" \
+--native-observation-input "$ORIGINAL_SOURCE_INPUT"
+```
+
+`ORIGINAL_SOURCE_INPUT` is the actual local original ZIP or complete extracted-source JSON. Obtain it through the existing source/data custody; a provider alias alone is not a local file. If the complete observation is already in the Workspace, the optional input is unnecessary.
+
+The receiver verifies the original package members or the exact original source-packet SHA, then compares the complete CSV column inventory and every cell against all208 retained rows before calling the maintained `Workspace.import_observations`. The original eight-column mapping, source URI, observation kind and time/measurement/quantity support are retained. All49 below-quantification rows keep the blank source units. The later context still applies only the originally authored reporting-limit-unit fallback and qualifier choices.
+
+A normal current import may produce a new immutable observation ID. Its actual returned record and row IDs are recorded; original and imported identities are never represented as the same by assumption. The derived course changes only the source binding and explicit original-to-imported row correspondence. Its four scientific targets, original source cohort dimensions, budgets, winter coverage goals and calendar choices remain unchanged. The full upstream raw rows and source descriptors travel inside the imported observation's retained provenance and therefore through the original context and selected editable Study.
+
+Before any normal import, recovery saves an immutable intent selecting original-record reuse or native import. A retry honors this decision even if an import restored the donor CSV and then stopped before its result receipt was written. Before discovering an existing donor record on retry, recovery reopens its own saved import receipt. Thus a donor record arriving later, or a CSV object becoming available after an interrupted import, cannot switch the selected observation ID. The same input, original authored course, actual imported record and original CSV are checked again; immutable receipts reject changed source inputs. Existing successful original courses retain their original records and outputs.
+
+The same `native-observations/` output contains `original-source-input.json`, `original-source-import-intent.json`, `original-source-import.json` and `source-bound-course.json` alongside the original context, proposal, calendar, reports and selected-Study receiving result. A received application reopens the actual imported observation and provenance, complete source bytes, network, context, exact cohorts and original saved choices. This is normal observation intake and Sampling execution; it does not start a landscape model or recompute a historical temporal analysis.
+
+Preserve the original network sources and exact SV-833 station assignment. An observation input never establishes a station geometry or missing network membership. The existing network builder verifies the retained domain/station sources and returns the actual network ID before the authored Sampling selection is compiled.
+
+The full owner direction above remains in force. Open and operate the actual populated desktop and390px product and every final report, CSV/JSON, original source and extracted editable Study, then reopen the contained application. Record the actual process/output and any failure in the same receiving operation. Source review is not rendered or native acceptance.
