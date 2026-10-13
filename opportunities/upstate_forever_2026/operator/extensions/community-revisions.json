@@ -1,0 +1,105 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "community-revisions",
+  "title": "Community plan revision comparisons",
+  "version": "1",
+  "order": 75,
+  "requires_actions": [
+    "community.plan.save",
+    "community.report.build"
+  ],
+  "assets": [
+    "community_revisions.mjs"
+  ],
+  "backend": {
+    "module": "community_revisions",
+    "factory": {
+      "handler": "CommunityRevisions",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "community.plan.compare"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/community-revisions/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/community-revisions/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/community-revisions/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "community_plan_comparisons",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "community_plan_comparisons",
+      "handler": "catalog",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  }
+}
