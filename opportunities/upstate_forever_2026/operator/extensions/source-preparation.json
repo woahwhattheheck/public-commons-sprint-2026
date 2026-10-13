@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-preparation",
   "title": "Prepare study inputs",
-  "version": "4",
+  "version": "5",
   "order": 20,
   "assets": [
     "source_workbench.mjs",
-    "source_workbench.css"
+    "source_workbench.css",
+    "soil_component_report.mjs"
   ],
   "backend": {
     "module": "source_preparation",
