@@ -1,0 +1,6628 @@
+{
+  "schema": "upstate.annual-landcover-transitions/v1",
+  "metadata": {
+    "domain_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
+    "domain_source_uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false",
+    "footprint": "whole upstream catchments; includes downstream local-catchment portion",
+    "coordinate_operation": {
+      "source_epsg": 4326,
+      "target_epsg": 5070,
+      "description": "Inverse of NAD83 to WGS 84 (1) + Conus Albers",
+      "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=aea lat_0=23 lon_0=-96 lat_1=29.5 lat_2=45.5 x_0=0 y_0=0 ellps=GRS80",
+      "datum_operation": "NAD83/WGS84 (1) null geographic shift, matching the original native domain operation",
+      "stated_accuracy_m": 4
+    },
+    "before": {
+      "year": 2023,
+      "epsg": 5070,
+      "sha256": "d7db3a30d6595aa8da28b5e81dc5b84e7e0bf198b860543ac32c702328871fc5",
+      "bytes": 8931261,
+      "nodata": 250
+    },
+    "after": {
+      "year": 2025,
+      "epsg": 5070,
+      "sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
+      "bytes": 9443751,
+      "nodata": 250
+    }
+  },
+  "grid": {
+    "width": 6443,
+    "height": 6319,
+    "affine": [
+      29.999999995403137,
+      0,
+      1114859.9994590343,
+      0,
+      -30.000000026127967,
+      1428209.9983569037
+    ]
+  },
+  "source_epsg": 4326,
+  "method": {
+    "pixel_rule": "centre inclusion; half-open scanline edges; even-odd ring parity",
+    "temporal_pairing": "same original native-grid pixel in both declared product years",
+    "cell_area_m2": 900.0000006459331,
+    "matrix_classes": [
+      11,
+      12,
+      21,
+      22,
+      23,
+      24,
+      31,
+      41,
+      42,
+      43,
+      52,
+      71,
+      81,
+      82,
+      90,
+      95
+    ],
+    "area_scope": "class margins and transition areas use cells valid in both years; unmatched valid cells are reported separately",
+    "interpretation": "Annual product class transitions. A changed classification alone does not identify cause, timing within the interval, or classification accuracy."
+  },
+  "raster": {
+    "selected_cells": 40713317,
+    "paired_valid_cells": 40713317,
+    "valid_before_only_cells": 0,
+    "valid_after_only_cells": 0,
+    "both_nodata_cells": 0,
+    "stable_class_cells": 38742618,
+    "changed_class_cells": 1970699,
+    "changed_percent_of_paired_valid": 4.840428501563752,
+    "paired_valid_area_ha": 3664198.532629808,
+    "classes": [
+      {
+        "class_code": 11,
+        "before_cells": 1104190,
+        "after_cells": 1105669,
+        "net_cells": 1479,
+        "before_area_ha": 99377.1000713233,
+        "after_area_ha": 99510.21007141883,
+        "net_area_ha": 133.1100000955335
+      },
+      {
+        "class_code": 12,
+        "before_cells": 0,
+        "after_cells": 0,
+        "net_cells": 0,
+        "before_area_ha": 0,
+        "after_area_ha": 0,
+        "net_area_ha": 0
+      },
+      {
+        "class_code": 21,
+        "before_cells": 3427440,
+        "after_cells": 3509200,
+        "net_cells": 81760,
+        "before_area_ha": 308469.60022138973,
+        "after_area_ha": 315828.0002266708,
+        "net_area_ha": 7358.400005281149
+      },
+      {
+        "class_code": 22,
+        "before_cells": 1779296,
+        "after_cells": 1822272,
+        "net_cells": 42976,
+        "before_area_ha": 160136.64011493063,
+        "after_area_ha": 164004.48011770658,
+        "net_area_ha": 3867.8400027759617
+      },
+      {
+        "class_code": 23,
+        "before_cells": 591696,
+        "after_cells": 605923,
+        "net_cells": 14227,
+        "before_area_ha": 53252.64003821961,
+        "after_area_ha": 54533.070039138576,
+        "net_area_ha": 1280.4300009189692
+      },
+      {
+        "class_code": 24,
+        "before_cells": 204492,
+        "after_cells": 212075,
+        "net_cells": 7583,
+        "before_area_ha": 18404.280013208816,
+        "after_area_ha": 19086.750013698627,
+        "net_area_ha": 682.4700004898111
+      },
+      {
+        "class_code": 31,
+        "before_cells": 80719,
+        "after_cells": 89408,
+        "net_cells": 8689,
+        "before_area_ha": 7264.710005213908,
+        "after_area_ha": 8046.72000577516,
+        "net_area_ha": 782.0100005612513
+      },
+      {
+        "class_code": 41,
+        "before_cells": 10091901,
+        "after_cells": 10025616,
+        "net_cells": -66285,
+        "before_area_ha": 908271.0906518694,
+        "after_area_ha": 902305.4406475878,
+        "net_area_ha": -5965.650004281568
+      },
+      {
+        "class_code": 42,
+        "before_cells": 8322519,
+        "after_cells": 8130872,
+        "net_cells": -191647,
+        "before_area_ha": 749026.710537579,
+        "after_area_ha": 731778.4805252,
+        "net_area_ha": -17248.230012379117
+      },
+      {
+        "class_code": 43,
+        "before_cells": 4328099,
+        "after_cells": 4204909,
+        "net_cells": -123190,
+        "before_area_ha": 389528.91027956625,
+        "after_area_ha": 378441.810271609,
+        "net_area_ha": -11087.10000795725
+      },
+      {
+        "class_code": 52,
+        "before_cells": 992027,
+        "after_cells": 1072801,
+        "net_cells": 80774,
+        "before_area_ha": 89282.4300640783,
+        "after_area_ha": 96552.09006929578,
+        "net_area_ha": 7269.66000521746
+      },
+      {
+        "class_code": 71,
+        "before_cells": 1364857,
+        "after_cells": 1551681,
+        "net_cells": 186824,
+        "before_area_ha": 122837.13008816063,
+        "after_area_ha": 139651.29010022822,
+        "net_area_ha": 16814.16001206758
+      },
+      {
+        "class_code": 81,
+        "before_cells": 7034471,
+        "after_cells": 7010479,
+        "net_cells": -23992,
+        "before_area_ha": 633102.3904543797,
+        "after_area_ha": 630943.11045283,
+        "net_area_ha": -2159.280001549723
+      },
+      {
+        "class_code": 82,
+        "before_cells": 263697,
+        "after_cells": 243722,
+        "net_cells": -19975,
+        "before_area_ha": 23732.730017033064,
+        "after_area_ha": 21934.98001574281,
+        "net_area_ha": -1797.7500012902512
+      },
+      {
+        "class_code": 90,
+        "before_cells": 1107789,
+        "after_cells": 1105091,
+        "net_cells": -2698,
+        "before_area_ha": 99701.01007155576,
+        "after_area_ha": 99458.19007138148,
+        "net_area_ha": -242.82000017427276
+      },
+      {
+        "class_code": 95,
+        "before_cells": 20124,
+        "after_cells": 23599,
+        "net_cells": 3475,
+        "before_area_ha": 1811.160001299876,
+        "after_area_ha": 2123.9100015243375,
+        "net_area_ha": 312.75000022446176
+      }
+    ],
+    "transitions": [
+      {
+        "before_class": 11,
+        "after_class": 11,
+        "cells": 1087795,
+        "area_ha": 97901.55007026427
+      },
+      {
+        "before_class": 11,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 21,
+        "cells": 180,
+        "area_ha": 16.2000000116268
+      },
+      {
+        "before_class": 11,
+        "after_class": 22,
+        "cells": 971,
+        "area_ha": 87.3900000627201
+      },
+      {
+        "before_class": 11,
+        "after_class": 23,
+        "cells": 115,
+        "area_ha": 10.350000007428232
+      },
+      {
+        "before_class": 11,
+        "after_class": 24,
+        "cells": 4,
+        "area_ha": 0.36000000025837325
+      },
+      {
+        "before_class": 11,
+        "after_class": 31,
+        "cells": 816,
+        "area_ha": 73.44000005270814
+      },
+      {
+        "before_class": 11,
+        "after_class": 41,
+        "cells": 2321,
+        "area_ha": 208.89000014992106
+      },
+      {
+        "before_class": 11,
+        "after_class": 42,
+        "cells": 2126,
+        "area_ha": 191.34000013732538
+      },
+      {
+        "before_class": 11,
+        "after_class": 43,
+        "cells": 505,
+        "area_ha": 45.45000003261963
+      },
+      {
+        "before_class": 11,
+        "after_class": 52,
+        "cells": 49,
+        "area_ha": 4.410000003165072
+      },
+      {
+        "before_class": 11,
+        "after_class": 71,
+        "cells": 5840,
+        "area_ha": 525.600000377225
+      },
+      {
+        "before_class": 11,
+        "after_class": 81,
+        "cells": 1652,
+        "area_ha": 148.68000010670815
+      },
+      {
+        "before_class": 11,
+        "after_class": 82,
+        "cells": 34,
+        "area_ha": 3.060000002196173
+      },
+      {
+        "before_class": 11,
+        "after_class": 90,
+        "cells": 718,
+        "area_ha": 64.620000046378
+      },
+      {
+        "before_class": 11,
+        "after_class": 95,
+        "cells": 1064,
+        "area_ha": 95.7600000687273
+      },
+      {
+        "before_class": 12,
+        "after_class": 11,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 21,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 22,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 23,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 41,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 71,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 81,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 21,
+        "after_class": 11,
+        "cells": 96,
+        "area_ha": 8.640000006200959
+      },
+      {
+        "before_class": 21,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 21,
+        "after_class": 21,
+        "cells": 3401580,
+        "area_ha": 306142.2002197193
+      },
+      {
+        "before_class": 21,
+        "after_class": 22,
+        "cells": 11390,
+        "area_ha": 1025.100000735718
+      },
+      {
+        "before_class": 21,
+        "after_class": 23,
+        "cells": 4959,
+        "area_ha": 446.31000032031824
+      },
+      {
+        "before_class": 21,
+        "after_class": 24,
+        "cells": 3110,
+        "area_ha": 279.9000002008852
+      },
+      {
+        "before_class": 21,
+        "after_class": 31,
+        "cells": 93,
+        "area_ha": 8.370000006007178
+      },
+      {
+        "before_class": 21,
+        "after_class": 41,
+        "cells": 183,
+        "area_ha": 16.470000011820577
+      },
+      {
+        "before_class": 21,
+        "after_class": 42,
+        "cells": 659,
+        "area_ha": 59.310000042567
+      },
+      {
+        "before_class": 21,
+        "after_class": 43,
+        "cells": 30,
+        "area_ha": 2.7000000019377994
+      },
+      {
+        "before_class": 21,
+        "after_class": 52,
+        "cells": 1931,
+        "area_ha": 173.7900001247297
+      },
+      {
+        "before_class": 21,
+        "after_class": 71,
+        "cells": 1960,
+        "area_ha": 176.4000001266029
+      },
+      {
+        "before_class": 21,
+        "after_class": 81,
+        "cells": 1394,
+        "area_ha": 125.46000009004308
+      },
+      {
+        "before_class": 21,
+        "after_class": 82,
+        "cells": 45,
+        "area_ha": 4.0500000029067
+      },
+      {
+        "before_class": 21,
+        "after_class": 90,
+        "cells": 9,
+        "area_ha": 0.8100000005813398
+      },
+      {
+        "before_class": 21,
+        "after_class": 95,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 22,
+        "after_class": 11,
+        "cells": 430,
+        "area_ha": 38.700000027775125
+      },
+      {
+        "before_class": 22,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 21,
+        "cells": 11,
+        "area_ha": 0.9900000007105264
+      },
+      {
+        "before_class": 22,
+        "after_class": 22,
+        "cells": 1771679,
+        "area_ha": 159451.11011443863
+      },
+      {
+        "before_class": 22,
+        "after_class": 23,
+        "cells": 5035,
+        "area_ha": 453.1500003252273
+      },
+      {
+        "before_class": 22,
+        "after_class": 24,
+        "cells": 290,
+        "area_ha": 26.10000001873206
+      },
+      {
+        "before_class": 22,
+        "after_class": 31,
+        "cells": 201,
+        "area_ha": 18.090000012983257
+      },
+      {
+        "before_class": 22,
+        "after_class": 41,
+        "cells": 21,
+        "area_ha": 1.8900000013564597
+      },
+      {
+        "before_class": 22,
+        "after_class": 42,
+        "cells": 194,
+        "area_ha": 17.460000012531104
+      },
+      {
+        "before_class": 22,
+        "after_class": 43,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 22,
+        "after_class": 52,
+        "cells": 164,
+        "area_ha": 14.760000010593302
+      },
+      {
+        "before_class": 22,
+        "after_class": 71,
+        "cells": 707,
+        "area_ha": 63.63000004566747
+      },
+      {
+        "before_class": 22,
+        "after_class": 81,
+        "cells": 542,
+        "area_ha": 48.78000003500957
+      },
+      {
+        "before_class": 22,
+        "after_class": 82,
+        "cells": 8,
+        "area_ha": 0.7200000005167465
+      },
+      {
+        "before_class": 22,
+        "after_class": 90,
+        "cells": 13,
+        "area_ha": 1.1700000008397131
+      },
+      {
+        "before_class": 22,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 11,
+        "cells": 72,
+        "area_ha": 6.4800000046507185
+      },
+      {
+        "before_class": 23,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 21,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 22,
+        "cells": 6,
+        "area_ha": 0.5400000003875599
+      },
+      {
+        "before_class": 23,
+        "after_class": 23,
+        "cells": 588824,
+        "area_ha": 52994.1600380341
+      },
+      {
+        "before_class": 23,
+        "after_class": 24,
+        "cells": 2212,
+        "area_ha": 199.0800001428804
+      },
+      {
+        "before_class": 23,
+        "after_class": 31,
+        "cells": 185,
+        "area_ha": 16.65000001194976
+      },
+      {
+        "before_class": 23,
+        "after_class": 41,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 23,
+        "after_class": 42,
+        "cells": 11,
+        "area_ha": 0.9900000007105264
+      },
+      {
+        "before_class": 23,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 52,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 23,
+        "after_class": 71,
+        "cells": 174,
+        "area_ha": 15.660000011239235
+      },
+      {
+        "before_class": 23,
+        "after_class": 81,
+        "cells": 198,
+        "area_ha": 17.820000012789478
+      },
+      {
+        "before_class": 23,
+        "after_class": 82,
+        "cells": 7,
+        "area_ha": 0.6300000004521532
+      },
+      {
+        "before_class": 23,
+        "after_class": 90,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 23,
+        "after_class": 95,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 24,
+        "after_class": 11,
+        "cells": 7,
+        "area_ha": 0.6300000004521532
+      },
+      {
+        "before_class": 24,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 21,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 22,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 23,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 24,
+        "cells": 204434,
+        "area_ha": 18399.060013205068
+      },
+      {
+        "before_class": 24,
+        "after_class": 31,
+        "cells": 28,
+        "area_ha": 2.520000001808613
+      },
+      {
+        "before_class": 24,
+        "after_class": 41,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 71,
+        "cells": 14,
+        "area_ha": 1.2600000009043064
+      },
+      {
+        "before_class": 24,
+        "after_class": 81,
+        "cells": 9,
+        "area_ha": 0.8100000005813398
+      },
+      {
+        "before_class": 24,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 11,
+        "cells": 1234,
+        "area_ha": 111.06000007970815
+      },
+      {
+        "before_class": 31,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 21,
+        "cells": 355,
+        "area_ha": 31.950000022930627
+      },
+      {
+        "before_class": 31,
+        "after_class": 22,
+        "cells": 1190,
+        "area_ha": 107.10000007686604
+      },
+      {
+        "before_class": 31,
+        "after_class": 23,
+        "cells": 401,
+        "area_ha": 36.09000002590192
+      },
+      {
+        "before_class": 31,
+        "after_class": 24,
+        "cells": 245,
+        "area_ha": 22.05000001582536
+      },
+      {
+        "before_class": 31,
+        "after_class": 31,
+        "cells": 75592,
+        "area_ha": 6803.280004882738
+      },
+      {
+        "before_class": 31,
+        "after_class": 41,
+        "cells": 8,
+        "area_ha": 0.7200000005167465
+      },
+      {
+        "before_class": 31,
+        "after_class": 42,
+        "cells": 49,
+        "area_ha": 4.410000003165072
+      },
+      {
+        "before_class": 31,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 52,
+        "cells": 15,
+        "area_ha": 1.3500000009688997
+      },
+      {
+        "before_class": 31,
+        "after_class": 71,
+        "cells": 1442,
+        "area_ha": 129.78000009314354
+      },
+      {
+        "before_class": 31,
+        "after_class": 81,
+        "cells": 155,
+        "area_ha": 13.950000010011966
+      },
+      {
+        "before_class": 31,
+        "after_class": 82,
+        "cells": 13,
+        "area_ha": 1.1700000008397131
+      },
+      {
+        "before_class": 31,
+        "after_class": 90,
+        "cells": 4,
+        "area_ha": 0.36000000025837325
+      },
+      {
+        "before_class": 31,
+        "after_class": 95,
+        "cells": 16,
+        "area_ha": 1.440000001033493
+      },
+      {
+        "before_class": 41,
+        "after_class": 11,
+        "cells": 2654,
+        "area_ha": 238.86000017143064
+      },
+      {
+        "before_class": 41,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 41,
+        "after_class": 21,
+        "cells": 16271,
+        "area_ha": 1464.3900010509979
+      },
+      {
+        "before_class": 41,
+        "after_class": 22,
+        "cells": 2227,
+        "area_ha": 200.43000014384933
+      },
+      {
+        "before_class": 41,
+        "after_class": 23,
+        "cells": 368,
+        "area_ha": 33.12000002377034
+      },
+      {
+        "before_class": 41,
+        "after_class": 24,
+        "cells": 176,
+        "area_ha": 15.840000011368423
+      },
+      {
+        "before_class": 41,
+        "after_class": 31,
+        "cells": 1205,
+        "area_ha": 108.45000007783493
+      },
+      {
+        "before_class": 41,
+        "after_class": 41,
+        "cells": 9912712,
+        "area_ha": 892144.0806402948
+      },
+      {
+        "before_class": 41,
+        "after_class": 42,
+        "cells": 13118,
+        "area_ha": 1180.6200008473352
+      },
+      {
+        "before_class": 41,
+        "after_class": 43,
+        "cells": 1784,
+        "area_ha": 160.5600001152345
+      },
+      {
+        "before_class": 41,
+        "after_class": 52,
+        "cells": 13325,
+        "area_ha": 1199.250000860706
+      },
+      {
+        "before_class": 41,
+        "after_class": 71,
+        "cells": 115098,
+        "area_ha": 10358.820007434562
+      },
+      {
+        "before_class": 41,
+        "after_class": 81,
+        "cells": 10561,
+        "area_ha": 950.4900006821699
+      },
+      {
+        "before_class": 41,
+        "after_class": 82,
+        "cells": 292,
+        "area_ha": 26.280000018861248
+      },
+      {
+        "before_class": 41,
+        "after_class": 90,
+        "cells": 2051,
+        "area_ha": 184.5900001324809
+      },
+      {
+        "before_class": 41,
+        "after_class": 95,
+        "cells": 59,
+        "area_ha": 5.310000003811005
+      },
+      {
+        "before_class": 42,
+        "after_class": 11,
+        "cells": 2494,
+        "area_ha": 224.4600001610957
+      },
+      {
+        "before_class": 42,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 42,
+        "after_class": 21,
+        "cells": 18831,
+        "area_ha": 1694.7900012163568
+      },
+      {
+        "before_class": 42,
+        "after_class": 22,
+        "cells": 2656,
+        "area_ha": 239.04000017155985
+      },
+      {
+        "before_class": 42,
+        "after_class": 23,
+        "cells": 431,
+        "area_ha": 38.79000002783972
+      },
+      {
+        "before_class": 42,
+        "after_class": 24,
+        "cells": 248,
+        "area_ha": 22.32000001601914
+      },
+      {
+        "before_class": 42,
+        "after_class": 31,
+        "cells": 2439,
+        "area_ha": 219.5100001575431
+      },
+      {
+        "before_class": 42,
+        "after_class": 41,
+        "cells": 15365,
+        "area_ha": 1382.8500009924762
+      },
+      {
+        "before_class": 42,
+        "after_class": 42,
+        "cells": 7779752,
+        "area_ha": 700177.68050252
+      },
+      {
+        "before_class": 42,
+        "after_class": 43,
+        "cells": 6245,
+        "area_ha": 562.0500004033852
+      },
+      {
+        "before_class": 42,
+        "after_class": 52,
+        "cells": 26329,
+        "area_ha": 2369.6100017006775
+      },
+      {
+        "before_class": 42,
+        "after_class": 71,
+        "cells": 458826,
+        "area_ha": 41294.34002963709
+      },
+      {
+        "before_class": 42,
+        "after_class": 81,
+        "cells": 7705,
+        "area_ha": 693.4500004976916
+      },
+      {
+        "before_class": 42,
+        "after_class": 82,
+        "cells": 537,
+        "area_ha": 48.330000034686606
+      },
+      {
+        "before_class": 42,
+        "after_class": 90,
+        "cells": 652,
+        "area_ha": 58.68000004211484
+      },
+      {
+        "before_class": 42,
+        "after_class": 95,
+        "cells": 9,
+        "area_ha": 0.8100000005813398
+      },
+      {
+        "before_class": 43,
+        "after_class": 11,
+        "cells": 537,
+        "area_ha": 48.330000034686606
+      },
+      {
+        "before_class": 43,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 43,
+        "after_class": 21,
+        "cells": 7659,
+        "area_ha": 689.3100004947203
+      },
+      {
+        "before_class": 43,
+        "after_class": 22,
+        "cells": 775,
+        "area_ha": 69.75000005005982
+      },
+      {
+        "before_class": 43,
+        "after_class": 23,
+        "cells": 177,
+        "area_ha": 15.930000011433018
+      },
+      {
+        "before_class": 43,
+        "after_class": 24,
+        "cells": 72,
+        "area_ha": 6.4800000046507185
+      },
+      {
+        "before_class": 43,
+        "after_class": 31,
+        "cells": 425,
+        "area_ha": 38.25000002745216
+      },
+      {
+        "before_class": 43,
+        "after_class": 41,
+        "cells": 27425,
+        "area_ha": 2468.2500017714715
+      },
+      {
+        "before_class": 43,
+        "after_class": 42,
+        "cells": 29490,
+        "area_ha": 2654.100001904857
+      },
+      {
+        "before_class": 43,
+        "after_class": 43,
+        "cells": 4194639,
+        "area_ha": 377517.51027094567
+      },
+      {
+        "before_class": 43,
+        "after_class": 52,
+        "cells": 4122,
+        "area_ha": 370.9800002662536
+      },
+      {
+        "before_class": 43,
+        "after_class": 71,
+        "cells": 57718,
+        "area_ha": 5194.620003728197
+      },
+      {
+        "before_class": 43,
+        "after_class": 81,
+        "cells": 4667,
+        "area_ha": 420.030000301457
+      },
+      {
+        "before_class": 43,
+        "after_class": 82,
+        "cells": 93,
+        "area_ha": 8.370000006007178
+      },
+      {
+        "before_class": 43,
+        "after_class": 90,
+        "cells": 296,
+        "area_ha": 26.640000019119622
+      },
+      {
+        "before_class": 43,
+        "after_class": 95,
+        "cells": 4,
+        "area_ha": 0.36000000025837325
+      },
+      {
+        "before_class": 52,
+        "after_class": 11,
+        "cells": 32,
+        "area_ha": 2.880000002066986
+      },
+      {
+        "before_class": 52,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 52,
+        "after_class": 21,
+        "cells": 2848,
+        "area_ha": 256.3200001839618
+      },
+      {
+        "before_class": 52,
+        "after_class": 22,
+        "cells": 373,
+        "area_ha": 33.570000024093304
+      },
+      {
+        "before_class": 52,
+        "after_class": 23,
+        "cells": 122,
+        "area_ha": 10.980000007880385
+      },
+      {
+        "before_class": 52,
+        "after_class": 24,
+        "cells": 32,
+        "area_ha": 2.880000002066986
+      },
+      {
+        "before_class": 52,
+        "after_class": 31,
+        "cells": 920,
+        "area_ha": 82.80000005942586
+      },
+      {
+        "before_class": 52,
+        "after_class": 41,
+        "cells": 49855,
+        "area_ha": 4486.9500032203
+      },
+      {
+        "before_class": 52,
+        "after_class": 42,
+        "cells": 275376,
+        "area_ha": 24783.840017787446
+      },
+      {
+        "before_class": 52,
+        "after_class": 43,
+        "cells": 733,
+        "area_ha": 65.9700000473469
+      },
+      {
+        "before_class": 52,
+        "after_class": 52,
+        "cells": 625283,
+        "area_ha": 56275.4700403891
+      },
+      {
+        "before_class": 52,
+        "after_class": 71,
+        "cells": 26458,
+        "area_ha": 2381.22000170901
+      },
+      {
+        "before_class": 52,
+        "after_class": 81,
+        "cells": 8796,
+        "area_ha": 791.6400005681628
+      },
+      {
+        "before_class": 52,
+        "after_class": 82,
+        "cells": 443,
+        "area_ha": 39.87000002861484
+      },
+      {
+        "before_class": 52,
+        "after_class": 90,
+        "cells": 754,
+        "area_ha": 67.86000004870337
+      },
+      {
+        "before_class": 52,
+        "after_class": 95,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 71,
+        "after_class": 11,
+        "cells": 6981,
+        "area_ha": 628.2900004509258
+      },
+      {
+        "before_class": 71,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 71,
+        "after_class": 21,
+        "cells": 15974,
+        "area_ha": 1437.6600010318136
+      },
+      {
+        "before_class": 71,
+        "after_class": 22,
+        "cells": 20962,
+        "area_ha": 1886.5800013540052
+      },
+      {
+        "before_class": 71,
+        "after_class": 23,
+        "cells": 3736,
+        "area_ha": 336.2400002413206
+      },
+      {
+        "before_class": 71,
+        "after_class": 24,
+        "cells": 827,
+        "area_ha": 74.43000005341867
+      },
+      {
+        "before_class": 71,
+        "after_class": 31,
+        "cells": 5725,
+        "area_ha": 515.2500003697967
+      },
+      {
+        "before_class": 71,
+        "after_class": 41,
+        "cells": 16167,
+        "area_ha": 1455.03000104428
+      },
+      {
+        "before_class": 71,
+        "after_class": 42,
+        "cells": 22058,
+        "area_ha": 1985.2200014247994
+      },
+      {
+        "before_class": 71,
+        "after_class": 43,
+        "cells": 623,
+        "area_ha": 56.07000004024163
+      },
+      {
+        "before_class": 71,
+        "after_class": 52,
+        "cells": 396474,
+        "area_ha": 35682.66002560957
+      },
+      {
+        "before_class": 71,
+        "after_class": 71,
+        "cells": 834140,
+        "area_ha": 75072.60005387987
+      },
+      {
+        "before_class": 71,
+        "after_class": 81,
+        "cells": 36910,
+        "area_ha": 3321.900002384139
+      },
+      {
+        "before_class": 71,
+        "after_class": 82,
+        "cells": 3346,
+        "area_ha": 301.14000021612924
+      },
+      {
+        "before_class": 71,
+        "after_class": 90,
+        "cells": 834,
+        "area_ha": 75.06000005387082
+      },
+      {
+        "before_class": 71,
+        "after_class": 95,
+        "cells": 100,
+        "area_ha": 9.000000006459333
+      },
+      {
+        "before_class": 81,
+        "after_class": 11,
+        "cells": 1602,
+        "area_ha": 144.18000010347848
+      },
+      {
+        "before_class": 81,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 81,
+        "after_class": 21,
+        "cells": 43767,
+        "area_ha": 3939.030002827056
+      },
+      {
+        "before_class": 81,
+        "after_class": 22,
+        "cells": 9679,
+        "area_ha": 871.1100006251987
+      },
+      {
+        "before_class": 81,
+        "after_class": 23,
+        "cells": 1685,
+        "area_ha": 151.65000010883975
+      },
+      {
+        "before_class": 81,
+        "after_class": 24,
+        "cells": 414,
+        "area_ha": 37.26000002674163
+      },
+      {
+        "before_class": 81,
+        "after_class": 31,
+        "cells": 1534,
+        "area_ha": 138.06000009908612
+      },
+      {
+        "before_class": 81,
+        "after_class": 41,
+        "cells": 1166,
+        "area_ha": 104.9400000753158
+      },
+      {
+        "before_class": 81,
+        "after_class": 42,
+        "cells": 6892,
+        "area_ha": 620.2800004451772
+      },
+      {
+        "before_class": 81,
+        "after_class": 43,
+        "cells": 263,
+        "area_ha": 23.67000001698804
+      },
+      {
+        "before_class": 81,
+        "after_class": 52,
+        "cells": 4479,
+        "area_ha": 403.11000028931346
+      },
+      {
+        "before_class": 81,
+        "after_class": 71,
+        "cells": 42333,
+        "area_ha": 3809.970002734429
+      },
+      {
+        "before_class": 81,
+        "after_class": 81,
+        "cells": 6915055,
+        "area_ha": 622354.9504466663
+      },
+      {
+        "before_class": 81,
+        "after_class": 82,
+        "cells": 5442,
+        "area_ha": 489.78000035151683
+      },
+      {
+        "before_class": 81,
+        "after_class": 90,
+        "cells": 107,
+        "area_ha": 9.630000006911484
+      },
+      {
+        "before_class": 81,
+        "after_class": 95,
+        "cells": 53,
+        "area_ha": 4.770000003423446
+      },
+      {
+        "before_class": 82,
+        "after_class": 11,
+        "cells": 33,
+        "area_ha": 2.9700000021315796
+      },
+      {
+        "before_class": 82,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 21,
+        "cells": 679,
+        "area_ha": 61.110000043858854
+      },
+      {
+        "before_class": 82,
+        "after_class": 22,
+        "cells": 251,
+        "area_ha": 22.590000016212922
+      },
+      {
+        "before_class": 82,
+        "after_class": 23,
+        "cells": 57,
+        "area_ha": 5.130000003681818
+      },
+      {
+        "before_class": 82,
+        "after_class": 24,
+        "cells": 8,
+        "area_ha": 0.7200000005167465
+      },
+      {
+        "before_class": 82,
+        "after_class": 31,
+        "cells": 136,
+        "area_ha": 12.240000008784692
+      },
+      {
+        "before_class": 82,
+        "after_class": 41,
+        "cells": 92,
+        "area_ha": 8.280000005942584
+      },
+      {
+        "before_class": 82,
+        "after_class": 42,
+        "cells": 424,
+        "area_ha": 38.16000002738757
+      },
+      {
+        "before_class": 82,
+        "after_class": 43,
+        "cells": 55,
+        "area_ha": 4.950000003552632
+      },
+      {
+        "before_class": 82,
+        "after_class": 52,
+        "cells": 524,
+        "area_ha": 47.1600000338469
+      },
+      {
+        "before_class": 82,
+        "after_class": 71,
+        "cells": 5598,
+        "area_ha": 503.8200003615934
+      },
+      {
+        "before_class": 82,
+        "after_class": 81,
+        "cells": 22396,
+        "area_ha": 2015.640001446632
+      },
+      {
+        "before_class": 82,
+        "after_class": 82,
+        "cells": 233407,
+        "area_ha": 21006.630015076535
+      },
+      {
+        "before_class": 82,
+        "after_class": 90,
+        "cells": 23,
+        "area_ha": 2.070000001485646
+      },
+      {
+        "before_class": 82,
+        "after_class": 95,
+        "cells": 14,
+        "area_ha": 1.2600000009043064
+      },
+      {
+        "before_class": 90,
+        "after_class": 11,
+        "cells": 820,
+        "area_ha": 73.80000005296651
+      },
+      {
+        "before_class": 90,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 21,
+        "cells": 1034,
+        "area_ha": 93.06000006678948
+      },
+      {
+        "before_class": 90,
+        "after_class": 22,
+        "cells": 93,
+        "area_ha": 8.370000006007178
+      },
+      {
+        "before_class": 90,
+        "after_class": 23,
+        "cells": 7,
+        "area_ha": 0.6300000004521532
+      },
+      {
+        "before_class": 90,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 31,
+        "cells": 85,
+        "area_ha": 7.650000005490432
+      },
+      {
+        "before_class": 90,
+        "after_class": 41,
+        "cells": 295,
+        "area_ha": 26.55000001905503
+      },
+      {
+        "before_class": 90,
+        "after_class": 42,
+        "cells": 723,
+        "area_ha": 65.07000004670095
+      },
+      {
+        "before_class": 90,
+        "after_class": 43,
+        "cells": 31,
+        "area_ha": 2.7900000020023925
+      },
+      {
+        "before_class": 90,
+        "after_class": 52,
+        "cells": 102,
+        "area_ha": 9.180000006588518
+      },
+      {
+        "before_class": 90,
+        "after_class": 71,
+        "cells": 1327,
+        "area_ha": 119.43000008571532
+      },
+      {
+        "before_class": 90,
+        "after_class": 81,
+        "cells": 409,
+        "area_ha": 36.81000002641866
+      },
+      {
+        "before_class": 90,
+        "after_class": 82,
+        "cells": 50,
+        "area_ha": 4.500000003229666
+      },
+      {
+        "before_class": 90,
+        "after_class": 90,
+        "cells": 1099132,
+        "area_ha": 98921.88007099659
+      },
+      {
+        "before_class": 90,
+        "after_class": 95,
+        "cells": 3681,
+        "area_ha": 331.290000237768
+      },
+      {
+        "before_class": 95,
+        "after_class": 11,
+        "cells": 882,
+        "area_ha": 79.38000005697131
+      },
+      {
+        "before_class": 95,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 21,
+        "cells": 11,
+        "area_ha": 0.9900000007105264
+      },
+      {
+        "before_class": 95,
+        "after_class": 22,
+        "cells": 20,
+        "area_ha": 1.8000000012918662
+      },
+      {
+        "before_class": 95,
+        "after_class": 23,
+        "cells": 6,
+        "area_ha": 0.5400000003875599
+      },
+      {
+        "before_class": 95,
+        "after_class": 24,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 95,
+        "after_class": 31,
+        "cells": 24,
+        "area_ha": 2.1600000015502396
+      },
+      {
+        "before_class": 95,
+        "after_class": 41,
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_class": 95,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 52,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 95,
+        "after_class": 71,
+        "cells": 46,
+        "area_ha": 4.140000002971292
+      },
+      {
+        "before_class": 95,
+        "after_class": 81,
+        "cells": 30,
+        "area_ha": 2.7000000019377994
+      },
+      {
+        "before_class": 95,
+        "after_class": 82,
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_class": 95,
+        "after_class": 90,
+        "cells": 495,
+        "area_ha": 44.55000003197369
+      },
+      {
+        "before_class": 95,
+        "after_class": 95,
+        "cells": 18594,
+        "area_ha": 1673.460001201048
+      }
+    ],
+    "grouped_transitions": [
+      {
+        "before_group": "water",
+        "after_group": "water",
+        "cells": 1087795,
+        "area_ha": 97901.55007026427
+      },
+      {
+        "before_group": "water",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "water",
+        "after_group": "developed",
+        "cells": 1270,
+        "area_ha": 114.3000000820335
+      },
+      {
+        "before_group": "water",
+        "after_group": "barren",
+        "cells": 816,
+        "area_ha": 73.44000005270814
+      },
+      {
+        "before_group": "water",
+        "after_group": "forest",
+        "cells": 4952,
+        "area_ha": 445.6800003198661
+      },
+      {
+        "before_group": "water",
+        "after_group": "shrub",
+        "cells": 49,
+        "area_ha": 4.410000003165072
+      },
+      {
+        "before_group": "water",
+        "after_group": "grass",
+        "cells": 5840,
+        "area_ha": 525.600000377225
+      },
+      {
+        "before_group": "water",
+        "after_group": "agriculture",
+        "cells": 1686,
+        "area_ha": 151.74000010890433
+      },
+      {
+        "before_group": "water",
+        "after_group": "wetland",
+        "cells": 1782,
+        "area_ha": 160.38000011510528
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "water",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "developed",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "barren",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "forest",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "shrub",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "grass",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "agriculture",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "wetland",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "developed",
+        "after_group": "water",
+        "cells": 605,
+        "area_ha": 54.45000003907896
+      },
+      {
+        "before_group": "developed",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "developed",
+        "after_group": "developed",
+        "cells": 5993530,
+        "area_ha": 539417.700387142
+      },
+      {
+        "before_group": "developed",
+        "after_group": "barren",
+        "cells": 507,
+        "area_ha": 45.63000003274881
+      },
+      {
+        "before_group": "developed",
+        "after_group": "forest",
+        "cells": 1100,
+        "area_ha": 99.00000007105265
+      },
+      {
+        "before_group": "developed",
+        "after_group": "shrub",
+        "cells": 2096,
+        "area_ha": 188.6400001353876
+      },
+      {
+        "before_group": "developed",
+        "after_group": "grass",
+        "cells": 2855,
+        "area_ha": 256.9500001844139
+      },
+      {
+        "before_group": "developed",
+        "after_group": "agriculture",
+        "cells": 2203,
+        "area_ha": 198.27000014229907
+      },
+      {
+        "before_group": "developed",
+        "after_group": "wetland",
+        "cells": 28,
+        "area_ha": 2.520000001808613
+      },
+      {
+        "before_group": "barren",
+        "after_group": "water",
+        "cells": 1234,
+        "area_ha": 111.06000007970815
+      },
+      {
+        "before_group": "barren",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "barren",
+        "after_group": "developed",
+        "cells": 2191,
+        "area_ha": 197.19000014152394
+      },
+      {
+        "before_group": "barren",
+        "after_group": "barren",
+        "cells": 75592,
+        "area_ha": 6803.280004882738
+      },
+      {
+        "before_group": "barren",
+        "after_group": "forest",
+        "cells": 57,
+        "area_ha": 5.130000003681818
+      },
+      {
+        "before_group": "barren",
+        "after_group": "shrub",
+        "cells": 15,
+        "area_ha": 1.3500000009688997
+      },
+      {
+        "before_group": "barren",
+        "after_group": "grass",
+        "cells": 1442,
+        "area_ha": 129.78000009314354
+      },
+      {
+        "before_group": "barren",
+        "after_group": "agriculture",
+        "cells": 168,
+        "area_ha": 15.120000010851678
+      },
+      {
+        "before_group": "barren",
+        "after_group": "wetland",
+        "cells": 20,
+        "area_ha": 1.8000000012918662
+      },
+      {
+        "before_group": "forest",
+        "after_group": "water",
+        "cells": 5685,
+        "area_ha": 511.65000036721295
+      },
+      {
+        "before_group": "forest",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "forest",
+        "after_group": "developed",
+        "cells": 49891,
+        "area_ha": 4490.190003222625
+      },
+      {
+        "before_group": "forest",
+        "after_group": "barren",
+        "cells": 4069,
+        "area_ha": 366.2100002628302
+      },
+      {
+        "before_group": "forest",
+        "after_group": "forest",
+        "cells": 21980530,
+        "area_ha": 1978247.7014197952
+      },
+      {
+        "before_group": "forest",
+        "after_group": "shrub",
+        "cells": 43776,
+        "area_ha": 3939.840002827637
+      },
+      {
+        "before_group": "forest",
+        "after_group": "grass",
+        "cells": 631642,
+        "area_ha": 56847.780040799844
+      },
+      {
+        "before_group": "forest",
+        "after_group": "agriculture",
+        "cells": 23855,
+        "area_ha": 2146.9500015408735
+      },
+      {
+        "before_group": "forest",
+        "after_group": "wetland",
+        "cells": 3071,
+        "area_ha": 276.39000019836607
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "water",
+        "cells": 32,
+        "area_ha": 2.880000002066986
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "developed",
+        "cells": 3375,
+        "area_ha": 303.75000021800247
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "barren",
+        "cells": 920,
+        "area_ha": 82.80000005942586
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "forest",
+        "cells": 325964,
+        "area_ha": 29336.760021055095
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "shrub",
+        "cells": 625283,
+        "area_ha": 56275.4700403891
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "grass",
+        "cells": 26458,
+        "area_ha": 2381.22000170901
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "agriculture",
+        "cells": 9239,
+        "area_ha": 831.5100005967777
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "wetland",
+        "cells": 756,
+        "area_ha": 68.04000004883255
+      },
+      {
+        "before_group": "grass",
+        "after_group": "water",
+        "cells": 6981,
+        "area_ha": 628.2900004509258
+      },
+      {
+        "before_group": "grass",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "grass",
+        "after_group": "developed",
+        "cells": 41499,
+        "area_ha": 3734.910002680558
+      },
+      {
+        "before_group": "grass",
+        "after_group": "barren",
+        "cells": 5725,
+        "area_ha": 515.2500003697967
+      },
+      {
+        "before_group": "grass",
+        "after_group": "forest",
+        "cells": 38848,
+        "area_ha": 3496.320002509321
+      },
+      {
+        "before_group": "grass",
+        "after_group": "shrub",
+        "cells": 396474,
+        "area_ha": 35682.66002560957
+      },
+      {
+        "before_group": "grass",
+        "after_group": "grass",
+        "cells": 834140,
+        "area_ha": 75072.60005387987
+      },
+      {
+        "before_group": "grass",
+        "after_group": "agriculture",
+        "cells": 40256,
+        "area_ha": 3623.040002600268
+      },
+      {
+        "before_group": "grass",
+        "after_group": "wetland",
+        "cells": 934,
+        "area_ha": 84.06000006033015
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "water",
+        "cells": 1635,
+        "area_ha": 147.15000010561008
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "developed",
+        "cells": 56540,
+        "area_ha": 5088.600003652106
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "barren",
+        "cells": 1670,
+        "area_ha": 150.30000010787083
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "forest",
+        "cells": 8892,
+        "area_ha": 800.2800005743637
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "shrub",
+        "cells": 5003,
+        "area_ha": 450.2700003231604
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "grass",
+        "cells": 47931,
+        "area_ha": 4313.790003096023
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "agriculture",
+        "cells": 7176300,
+        "area_ha": 645867.000463541
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "wetland",
+        "cells": 197,
+        "area_ha": 17.730000012724883
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "water",
+        "cells": 1702,
+        "area_ha": 153.18000010993782
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "developed",
+        "cells": 1174,
+        "area_ha": 105.66000007583254
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "barren",
+        "cells": 109,
+        "area_ha": 9.81000000704067
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "forest",
+        "cells": 1054,
+        "area_ha": 94.86000006808136
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "shrub",
+        "cells": 105,
+        "area_ha": 9.450000006782298
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "grass",
+        "cells": 1373,
+        "area_ha": 123.57000008868661
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "agriculture",
+        "cells": 494,
+        "area_ha": 44.4600000319091
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "wetland",
+        "cells": 1121902,
+        "area_ha": 100971.18007246737
+      }
+    ]
+  },
+  "domain": {
+    "selected_cells": 143520,
+    "paired_valid_cells": 143520,
+    "valid_before_only_cells": 0,
+    "valid_after_only_cells": 0,
+    "both_nodata_cells": 0,
+    "stable_class_cells": 138138,
+    "changed_class_cells": 5382,
+    "changed_percent_of_paired_valid": 3.75,
+    "paired_valid_area_ha": 12916.800009270433,
+    "classes": [
+      {
+        "class_code": 11,
+        "before_cells": 247,
+        "after_cells": 249,
+        "net_cells": 2,
+        "before_area_ha": 22.23000001595455,
+        "after_area_ha": 22.410000016083735,
+        "net_area_ha": 0.18000000012918663
+      },
+      {
+        "class_code": 12,
+        "before_cells": 0,
+        "after_cells": 0,
+        "net_cells": 0,
+        "before_area_ha": 0,
+        "after_area_ha": 0,
+        "net_area_ha": 0
+      },
+      {
+        "class_code": 21,
+        "before_cells": 24138,
+        "after_cells": 25013,
+        "net_cells": 875,
+        "before_area_ha": 2172.4200015591537,
+        "after_area_ha": 2251.1700016156724,
+        "net_area_ha": 78.75000005651916
+      },
+      {
+        "class_code": 22,
+        "before_cells": 16436,
+        "after_cells": 16922,
+        "net_cells": 486,
+        "before_area_ha": 1479.2400010616557,
+        "after_area_ha": 1522.980001093048,
+        "net_area_ha": 43.74000003139235
+      },
+      {
+        "class_code": 23,
+        "before_cells": 4546,
+        "after_cells": 4693,
+        "net_cells": 147,
+        "before_area_ha": 409.1400002936412,
+        "after_area_ha": 422.37000030313646,
+        "net_area_ha": 13.230000009495217
+      },
+      {
+        "class_code": 24,
+        "before_cells": 1046,
+        "after_cells": 1050,
+        "net_cells": 4,
+        "before_area_ha": 94.14000006756461,
+        "after_area_ha": 94.50000006782298,
+        "net_area_ha": 0.36000000025837325
+      },
+      {
+        "class_code": 31,
+        "before_cells": 75,
+        "after_cells": 78,
+        "net_cells": 3,
+        "before_area_ha": 6.750000004844498,
+        "after_area_ha": 7.020000005038279,
+        "net_area_ha": 0.27000000019377995
+      },
+      {
+        "class_code": 41,
+        "before_cells": 35732,
+        "after_cells": 35500,
+        "net_cells": -232,
+        "before_area_ha": 3215.8800023080485,
+        "after_area_ha": 3195.0000022930626,
+        "net_area_ha": -20.88000001498565
+      },
+      {
+        "class_code": 42,
+        "before_cells": 20001,
+        "after_cells": 19947,
+        "net_cells": -54,
+        "before_area_ha": 1800.090001291931,
+        "after_area_ha": 1795.2300012884427,
+        "net_area_ha": -4.860000003488039
+      },
+      {
+        "class_code": 43,
+        "before_cells": 8126,
+        "after_cells": 7843,
+        "net_cells": -283,
+        "before_area_ha": 731.3400005248853,
+        "after_area_ha": 705.8700005066054,
+        "net_area_ha": -25.470000018279908
+      },
+      {
+        "class_code": 52,
+        "before_cells": 1919,
+        "after_cells": 1868,
+        "net_cells": -51,
+        "before_area_ha": 172.71000012395456,
+        "after_area_ha": 168.1200001206603,
+        "net_area_ha": -4.590000003294259
+      },
+      {
+        "class_code": 71,
+        "before_cells": 3566,
+        "after_cells": 3042,
+        "net_cells": -524,
+        "before_area_ha": 320.94000023033976,
+        "after_area_ha": 273.78000019649284,
+        "net_area_ha": -47.1600000338469
+      },
+      {
+        "class_code": 81,
+        "before_cells": 24702,
+        "after_cells": 24406,
+        "net_cells": -296,
+        "before_area_ha": 2223.180001595584,
+        "after_area_ha": 2196.5400015764644,
+        "net_area_ha": -26.640000019119622
+      },
+      {
+        "class_code": 82,
+        "before_cells": 313,
+        "after_cells": 245,
+        "net_cells": -68,
+        "before_area_ha": 28.17000002021771,
+        "after_area_ha": 22.05000001582536,
+        "net_area_ha": -6.120000004392346
+      },
+      {
+        "class_code": 90,
+        "before_cells": 2658,
+        "after_cells": 2645,
+        "net_cells": -13,
+        "before_area_ha": 239.22000017168904,
+        "after_area_ha": 238.0500001708493,
+        "net_area_ha": -1.1700000008397131
+      },
+      {
+        "class_code": 95,
+        "before_cells": 15,
+        "after_cells": 19,
+        "net_cells": 4,
+        "before_area_ha": 1.3500000009688997,
+        "after_area_ha": 1.710000001227273,
+        "net_area_ha": 0.36000000025837325
+      }
+    ],
+    "transitions": [
+      {
+        "before_class": 11,
+        "after_class": 11,
+        "cells": 230,
+        "area_ha": 20.700000014856464
+      },
+      {
+        "before_class": 11,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 21,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 11,
+        "after_class": 22,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 11,
+        "after_class": 23,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 41,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 11,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 71,
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_class": 11,
+        "after_class": 81,
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_class": 11,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 11,
+        "after_class": 95,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 12,
+        "after_class": 11,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 21,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 22,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 23,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 41,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 71,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 81,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 12,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 21,
+        "after_class": 11,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 21,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 21,
+        "after_class": 21,
+        "cells": 24017,
+        "area_ha": 2161.5300015513376
+      },
+      {
+        "before_class": 21,
+        "after_class": 22,
+        "cells": 54,
+        "area_ha": 4.860000003488039
+      },
+      {
+        "before_class": 21,
+        "after_class": 23,
+        "cells": 32,
+        "area_ha": 2.880000002066986
+      },
+      {
+        "before_class": 21,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 21,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 21,
+        "after_class": 41,
+        "cells": 4,
+        "area_ha": 0.36000000025837325
+      },
+      {
+        "before_class": 21,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 21,
+        "after_class": 43,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 21,
+        "after_class": 52,
+        "cells": 10,
+        "area_ha": 0.9000000006459331
+      },
+      {
+        "before_class": 21,
+        "after_class": 71,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 21,
+        "after_class": 81,
+        "cells": 17,
+        "area_ha": 1.5300000010980865
+      },
+      {
+        "before_class": 21,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 21,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 21,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 11,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 21,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 22,
+        "cells": 16396,
+        "area_ha": 1475.640001059072
+      },
+      {
+        "before_class": 22,
+        "after_class": 23,
+        "cells": 34,
+        "area_ha": 3.060000002196173
+      },
+      {
+        "before_class": 22,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 41,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 71,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 22,
+        "after_class": 81,
+        "cells": 4,
+        "area_ha": 0.36000000025837325
+      },
+      {
+        "before_class": 22,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 22,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 11,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 21,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 22,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 23,
+        "cells": 4544,
+        "area_ha": 408.96000029351205
+      },
+      {
+        "before_class": 23,
+        "after_class": 24,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 23,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 41,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 71,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 81,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 23,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 11,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 21,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 22,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 23,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 24,
+        "cells": 1046,
+        "area_ha": 94.14000006756461
+      },
+      {
+        "before_class": 24,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 41,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 71,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 81,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 24,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 11,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 21,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 31,
+        "after_class": 22,
+        "cells": 6,
+        "area_ha": 0.5400000003875599
+      },
+      {
+        "before_class": 31,
+        "after_class": 23,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 31,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 31,
+        "cells": 67,
+        "area_ha": 6.030000004327752
+      },
+      {
+        "before_class": 31,
+        "after_class": 41,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 71,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 81,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 31,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 41,
+        "after_class": 11,
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_class": 41,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 41,
+        "after_class": 21,
+        "cells": 144,
+        "area_ha": 12.960000009301437
+      },
+      {
+        "before_class": 41,
+        "after_class": 22,
+        "cells": 16,
+        "area_ha": 1.440000001033493
+      },
+      {
+        "before_class": 41,
+        "after_class": 23,
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_class": 41,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 41,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 41,
+        "after_class": 41,
+        "cells": 35045,
+        "area_ha": 3154.0500022636725
+      },
+      {
+        "before_class": 41,
+        "after_class": 42,
+        "cells": 38,
+        "area_ha": 3.420000002454546
+      },
+      {
+        "before_class": 41,
+        "after_class": 43,
+        "cells": 4,
+        "area_ha": 0.36000000025837325
+      },
+      {
+        "before_class": 41,
+        "after_class": 52,
+        "cells": 54,
+        "area_ha": 4.860000003488039
+      },
+      {
+        "before_class": 41,
+        "after_class": 71,
+        "cells": 343,
+        "area_ha": 30.870000022155505
+      },
+      {
+        "before_class": 41,
+        "after_class": 81,
+        "cells": 62,
+        "area_ha": 5.580000004004785
+      },
+      {
+        "before_class": 41,
+        "after_class": 82,
+        "cells": 9,
+        "area_ha": 0.8100000005813398
+      },
+      {
+        "before_class": 41,
+        "after_class": 90,
+        "cells": 7,
+        "area_ha": 0.6300000004521532
+      },
+      {
+        "before_class": 41,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 42,
+        "after_class": 11,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 42,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 42,
+        "after_class": 21,
+        "cells": 182,
+        "area_ha": 16.380000011755982
+      },
+      {
+        "before_class": 42,
+        "after_class": 22,
+        "cells": 66,
+        "area_ha": 5.940000004263159
+      },
+      {
+        "before_class": 42,
+        "after_class": 23,
+        "cells": 12,
+        "area_ha": 1.0800000007751198
+      },
+      {
+        "before_class": 42,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 42,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 42,
+        "after_class": 41,
+        "cells": 75,
+        "area_ha": 6.750000004844498
+      },
+      {
+        "before_class": 42,
+        "after_class": 42,
+        "cells": 19202,
+        "area_ha": 1728.180001240321
+      },
+      {
+        "before_class": 42,
+        "after_class": 43,
+        "cells": 21,
+        "area_ha": 1.8900000013564597
+      },
+      {
+        "before_class": 42,
+        "after_class": 52,
+        "cells": 8,
+        "area_ha": 0.7200000005167465
+      },
+      {
+        "before_class": 42,
+        "after_class": 71,
+        "cells": 408,
+        "area_ha": 36.72000002635407
+      },
+      {
+        "before_class": 42,
+        "after_class": 81,
+        "cells": 19,
+        "area_ha": 1.710000001227273
+      },
+      {
+        "before_class": 42,
+        "after_class": 82,
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_class": 42,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 42,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 43,
+        "after_class": 11,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 43,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 43,
+        "after_class": 21,
+        "cells": 64,
+        "area_ha": 5.760000004133972
+      },
+      {
+        "before_class": 43,
+        "after_class": 22,
+        "cells": 11,
+        "area_ha": 0.9900000007105264
+      },
+      {
+        "before_class": 43,
+        "after_class": 23,
+        "cells": 6,
+        "area_ha": 0.5400000003875599
+      },
+      {
+        "before_class": 43,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 43,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 43,
+        "after_class": 41,
+        "cells": 81,
+        "area_ha": 7.290000005232058
+      },
+      {
+        "before_class": 43,
+        "after_class": 42,
+        "cells": 55,
+        "area_ha": 4.950000003552632
+      },
+      {
+        "before_class": 43,
+        "after_class": 43,
+        "cells": 7810,
+        "area_ha": 702.9000005044738
+      },
+      {
+        "before_class": 43,
+        "after_class": 52,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 43,
+        "after_class": 71,
+        "cells": 80,
+        "area_ha": 7.200000005167465
+      },
+      {
+        "before_class": 43,
+        "after_class": 81,
+        "cells": 16,
+        "area_ha": 1.440000001033493
+      },
+      {
+        "before_class": 43,
+        "after_class": 82,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 43,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 43,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 52,
+        "after_class": 11,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 52,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 52,
+        "after_class": 21,
+        "cells": 23,
+        "area_ha": 2.070000001485646
+      },
+      {
+        "before_class": 52,
+        "after_class": 22,
+        "cells": 7,
+        "area_ha": 0.6300000004521532
+      },
+      {
+        "before_class": 52,
+        "after_class": 23,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 52,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 52,
+        "after_class": 31,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 52,
+        "after_class": 41,
+        "cells": 165,
+        "area_ha": 14.850000010657896
+      },
+      {
+        "before_class": 52,
+        "after_class": 42,
+        "cells": 599,
+        "area_ha": 53.9100000386914
+      },
+      {
+        "before_class": 52,
+        "after_class": 43,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 52,
+        "after_class": 52,
+        "cells": 985,
+        "area_ha": 88.65000006362442
+      },
+      {
+        "before_class": 52,
+        "after_class": 71,
+        "cells": 101,
+        "area_ha": 9.090000006523924
+      },
+      {
+        "before_class": 52,
+        "after_class": 81,
+        "cells": 31,
+        "area_ha": 2.7900000020023925
+      },
+      {
+        "before_class": 52,
+        "after_class": 82,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 52,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 52,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 71,
+        "after_class": 11,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 71,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 71,
+        "after_class": 21,
+        "cells": 256,
+        "area_ha": 23.04000001653589
+      },
+      {
+        "before_class": 71,
+        "after_class": 22,
+        "cells": 317,
+        "area_ha": 28.53000002047608
+      },
+      {
+        "before_class": 71,
+        "after_class": 23,
+        "cells": 54,
+        "area_ha": 4.860000003488039
+      },
+      {
+        "before_class": 71,
+        "after_class": 24,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 71,
+        "after_class": 31,
+        "cells": 8,
+        "area_ha": 0.7200000005167465
+      },
+      {
+        "before_class": 71,
+        "after_class": 41,
+        "cells": 110,
+        "area_ha": 9.900000007105264
+      },
+      {
+        "before_class": 71,
+        "after_class": 42,
+        "cells": 38,
+        "area_ha": 3.420000002454546
+      },
+      {
+        "before_class": 71,
+        "after_class": 43,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 71,
+        "after_class": 52,
+        "cells": 786,
+        "area_ha": 70.74000005077033
+      },
+      {
+        "before_class": 71,
+        "after_class": 71,
+        "cells": 1866,
+        "area_ha": 167.94000012053112
+      },
+      {
+        "before_class": 71,
+        "after_class": 81,
+        "cells": 122,
+        "area_ha": 10.980000007880385
+      },
+      {
+        "before_class": 71,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 71,
+        "after_class": 90,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 71,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 81,
+        "after_class": 11,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 81,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 81,
+        "after_class": 21,
+        "cells": 321,
+        "area_ha": 28.890000020734455
+      },
+      {
+        "before_class": 81,
+        "after_class": 22,
+        "cells": 47,
+        "area_ha": 4.230000003035886
+      },
+      {
+        "before_class": 81,
+        "after_class": 23,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 81,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 81,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 81,
+        "after_class": 41,
+        "cells": 9,
+        "area_ha": 0.8100000005813398
+      },
+      {
+        "before_class": 81,
+        "after_class": 42,
+        "cells": 13,
+        "area_ha": 1.1700000008397131
+      },
+      {
+        "before_class": 81,
+        "after_class": 43,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 81,
+        "after_class": 52,
+        "cells": 23,
+        "area_ha": 2.070000001485646
+      },
+      {
+        "before_class": 81,
+        "after_class": 71,
+        "cells": 232,
+        "area_ha": 20.88000001498565
+      },
+      {
+        "before_class": 81,
+        "after_class": 81,
+        "cells": 24051,
+        "area_ha": 2164.590001553534
+      },
+      {
+        "before_class": 81,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 81,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 81,
+        "after_class": 95,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 11,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 21,
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_class": 82,
+        "after_class": 22,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 23,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 41,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 71,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 82,
+        "after_class": 81,
+        "cells": 78,
+        "area_ha": 7.020000005038279
+      },
+      {
+        "before_class": 82,
+        "after_class": 82,
+        "cells": 229,
+        "area_ha": 20.61000001479187
+      },
+      {
+        "before_class": 82,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 82,
+        "after_class": 95,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 90,
+        "after_class": 11,
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_class": 90,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 21,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 22,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 23,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 41,
+        "cells": 10,
+        "area_ha": 0.9000000006459331
+      },
+      {
+        "before_class": 90,
+        "after_class": 42,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 90,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 71,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 90,
+        "after_class": 81,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 90,
+        "after_class": 90,
+        "cells": 2637,
+        "area_ha": 237.33000017033257
+      },
+      {
+        "before_class": 90,
+        "after_class": 95,
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_class": 95,
+        "after_class": 11,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 95,
+        "after_class": 12,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 21,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 22,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 23,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 24,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 31,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 41,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 42,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 43,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 52,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 71,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 81,
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_class": 95,
+        "after_class": 82,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 90,
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_class": 95,
+        "after_class": 95,
+        "cells": 13,
+        "area_ha": 1.1700000008397131
+      }
+    ],
+    "grouped_transitions": [
+      {
+        "before_group": "water",
+        "after_group": "water",
+        "cells": 230,
+        "area_ha": 20.700000014856464
+      },
+      {
+        "before_group": "water",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "water",
+        "after_group": "developed",
+        "cells": 4,
+        "area_ha": 0.36000000025837325
+      },
+      {
+        "before_group": "water",
+        "after_group": "barren",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "water",
+        "after_group": "forest",
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_group": "water",
+        "after_group": "shrub",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "water",
+        "after_group": "grass",
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_group": "water",
+        "after_group": "agriculture",
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_group": "water",
+        "after_group": "wetland",
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "water",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "developed",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "barren",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "forest",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "shrub",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "grass",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "agriculture",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "snow_ice",
+        "after_group": "wetland",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "developed",
+        "after_group": "water",
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_group": "developed",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "developed",
+        "after_group": "developed",
+        "cells": 46125,
+        "area_ha": 4151.250002979366
+      },
+      {
+        "before_group": "developed",
+        "after_group": "barren",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "developed",
+        "after_group": "forest",
+        "cells": 5,
+        "area_ha": 0.45000000032296655
+      },
+      {
+        "before_group": "developed",
+        "after_group": "shrub",
+        "cells": 10,
+        "area_ha": 0.9000000006459331
+      },
+      {
+        "before_group": "developed",
+        "after_group": "grass",
+        "cells": 4,
+        "area_ha": 0.36000000025837325
+      },
+      {
+        "before_group": "developed",
+        "after_group": "agriculture",
+        "cells": 21,
+        "area_ha": 1.8900000013564597
+      },
+      {
+        "before_group": "developed",
+        "after_group": "wetland",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "barren",
+        "after_group": "water",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "barren",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "barren",
+        "after_group": "developed",
+        "cells": 8,
+        "area_ha": 0.7200000005167465
+      },
+      {
+        "before_group": "barren",
+        "after_group": "barren",
+        "cells": 67,
+        "area_ha": 6.030000004327752
+      },
+      {
+        "before_group": "barren",
+        "after_group": "forest",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "barren",
+        "after_group": "shrub",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "barren",
+        "after_group": "grass",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "barren",
+        "after_group": "agriculture",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "barren",
+        "after_group": "wetland",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "forest",
+        "after_group": "water",
+        "cells": 8,
+        "area_ha": 0.7200000005167465
+      },
+      {
+        "before_group": "forest",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "forest",
+        "after_group": "developed",
+        "cells": 506,
+        "area_ha": 45.54000003268422
+      },
+      {
+        "before_group": "forest",
+        "after_group": "barren",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "forest",
+        "after_group": "forest",
+        "cells": 62331,
+        "area_ha": 5609.790004026166
+      },
+      {
+        "before_group": "forest",
+        "after_group": "shrub",
+        "cells": 64,
+        "area_ha": 5.760000004133972
+      },
+      {
+        "before_group": "forest",
+        "after_group": "grass",
+        "cells": 831,
+        "area_ha": 74.79000005367705
+      },
+      {
+        "before_group": "forest",
+        "after_group": "agriculture",
+        "cells": 112,
+        "area_ha": 10.080000007234451
+      },
+      {
+        "before_group": "forest",
+        "after_group": "wetland",
+        "cells": 7,
+        "area_ha": 0.6300000004521532
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "water",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "developed",
+        "cells": 33,
+        "area_ha": 2.9700000021315796
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "barren",
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "forest",
+        "cells": 765,
+        "area_ha": 68.85000004941388
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "shrub",
+        "cells": 985,
+        "area_ha": 88.65000006362442
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "grass",
+        "cells": 101,
+        "area_ha": 9.090000006523924
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "agriculture",
+        "cells": 32,
+        "area_ha": 2.880000002066986
+      },
+      {
+        "before_group": "shrub",
+        "after_group": "wetland",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "grass",
+        "after_group": "water",
+        "cells": 3,
+        "area_ha": 0.27000000019377995
+      },
+      {
+        "before_group": "grass",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "grass",
+        "after_group": "developed",
+        "cells": 629,
+        "area_ha": 56.61000004062919
+      },
+      {
+        "before_group": "grass",
+        "after_group": "barren",
+        "cells": 8,
+        "area_ha": 0.7200000005167465
+      },
+      {
+        "before_group": "grass",
+        "after_group": "forest",
+        "cells": 151,
+        "area_ha": 13.59000000975359
+      },
+      {
+        "before_group": "grass",
+        "after_group": "shrub",
+        "cells": 786,
+        "area_ha": 70.74000005077033
+      },
+      {
+        "before_group": "grass",
+        "after_group": "grass",
+        "cells": 1866,
+        "area_ha": 167.94000012053112
+      },
+      {
+        "before_group": "grass",
+        "after_group": "agriculture",
+        "cells": 122,
+        "area_ha": 10.980000007880385
+      },
+      {
+        "before_group": "grass",
+        "after_group": "wetland",
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "water",
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "developed",
+        "cells": 373,
+        "area_ha": 33.570000024093304
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "barren",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "forest",
+        "cells": 25,
+        "area_ha": 2.250000001614833
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "shrub",
+        "cells": 23,
+        "area_ha": 2.070000001485646
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "grass",
+        "cells": 233,
+        "area_ha": 20.970000015050243
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "agriculture",
+        "cells": 24358,
+        "area_ha": 2192.2200015733642
+      },
+      {
+        "before_group": "agriculture",
+        "after_group": "wetland",
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "water",
+        "cells": 6,
+        "area_ha": 0.5400000003875599
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "snow_ice",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "developed",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "barren",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "forest",
+        "cells": 12,
+        "area_ha": 1.0800000007751198
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "shrub",
+        "cells": 0,
+        "area_ha": 0
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "grass",
+        "cells": 2,
+        "area_ha": 0.18000000012918663
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "agriculture",
+        "cells": 1,
+        "area_ha": 0.09000000006459331
+      },
+      {
+        "before_group": "wetland",
+        "after_group": "wetland",
+        "cells": 2652,
+        "area_ha": 238.68000017130146
+      }
+    ],
+    "overlap_cells": 0,
+    "outside_domain_cells": 40569797
+  },
+  "basins": [
+    {
+      "basin_id": "USGS-02186702",
+      "title": "USGS-02186702 whole upstream catchments",
+      "properties": {
+        "basin_id": "USGS-02186702",
+        "name": "USGS-02186702 whole upstream catchments",
+        "footprint": "Original NLDI simplified=false; splitCatchment=false"
+      },
+      "selected_cells": 143520,
+      "paired_valid_cells": 143520,
+      "valid_before_only_cells": 0,
+      "valid_after_only_cells": 0,
+      "both_nodata_cells": 0,
+      "stable_class_cells": 138138,
+      "changed_class_cells": 5382,
+      "changed_percent_of_paired_valid": 3.75,
+      "paired_valid_area_ha": 12916.800009270433,
+      "classes": [
+        {
+          "class_code": 11,
+          "before_cells": 247,
+          "after_cells": 249,
+          "net_cells": 2,
+          "before_area_ha": 22.23000001595455,
+          "after_area_ha": 22.410000016083735,
+          "net_area_ha": 0.18000000012918663
+        },
+        {
+          "class_code": 12,
+          "before_cells": 0,
+          "after_cells": 0,
+          "net_cells": 0,
+          "before_area_ha": 0,
+          "after_area_ha": 0,
+          "net_area_ha": 0
+        },
+        {
+          "class_code": 21,
+          "before_cells": 24138,
+          "after_cells": 25013,
+          "net_cells": 875,
+          "before_area_ha": 2172.4200015591537,
+          "after_area_ha": 2251.1700016156724,
+          "net_area_ha": 78.75000005651916
+        },
+        {
+          "class_code": 22,
+          "before_cells": 16436,
+          "after_cells": 16922,
+          "net_cells": 486,
+          "before_area_ha": 1479.2400010616557,
+          "after_area_ha": 1522.980001093048,
+          "net_area_ha": 43.74000003139235
+        },
+        {
+          "class_code": 23,
+          "before_cells": 4546,
+          "after_cells": 4693,
+          "net_cells": 147,
+          "before_area_ha": 409.1400002936412,
+          "after_area_ha": 422.37000030313646,
+          "net_area_ha": 13.230000009495217
+        },
+        {
+          "class_code": 24,
+          "before_cells": 1046,
+          "after_cells": 1050,
+          "net_cells": 4,
+          "before_area_ha": 94.14000006756461,
+          "after_area_ha": 94.50000006782298,
+          "net_area_ha": 0.36000000025837325
+        },
+        {
+          "class_code": 31,
+          "before_cells": 75,
+          "after_cells": 78,
+          "net_cells": 3,
+          "before_area_ha": 6.750000004844498,
+          "after_area_ha": 7.020000005038279,
+          "net_area_ha": 0.27000000019377995
+        },
+        {
+          "class_code": 41,
+          "before_cells": 35732,
+          "after_cells": 35500,
+          "net_cells": -232,
+          "before_area_ha": 3215.8800023080485,
+          "after_area_ha": 3195.0000022930626,
+          "net_area_ha": -20.88000001498565
+        },
+        {
+          "class_code": 42,
+          "before_cells": 20001,
+          "after_cells": 19947,
+          "net_cells": -54,
+          "before_area_ha": 1800.090001291931,
+          "after_area_ha": 1795.2300012884427,
+          "net_area_ha": -4.860000003488039
+        },
+        {
+          "class_code": 43,
+          "before_cells": 8126,
+          "after_cells": 7843,
+          "net_cells": -283,
+          "before_area_ha": 731.3400005248853,
+          "after_area_ha": 705.8700005066054,
+          "net_area_ha": -25.470000018279908
+        },
+        {
+          "class_code": 52,
+          "before_cells": 1919,
+          "after_cells": 1868,
+          "net_cells": -51,
+          "before_area_ha": 172.71000012395456,
+          "after_area_ha": 168.1200001206603,
+          "net_area_ha": -4.590000003294259
+        },
+        {
+          "class_code": 71,
+          "before_cells": 3566,
+          "after_cells": 3042,
+          "net_cells": -524,
+          "before_area_ha": 320.94000023033976,
+          "after_area_ha": 273.78000019649284,
+          "net_area_ha": -47.1600000338469
+        },
+        {
+          "class_code": 81,
+          "before_cells": 24702,
+          "after_cells": 24406,
+          "net_cells": -296,
+          "before_area_ha": 2223.180001595584,
+          "after_area_ha": 2196.5400015764644,
+          "net_area_ha": -26.640000019119622
+        },
+        {
+          "class_code": 82,
+          "before_cells": 313,
+          "after_cells": 245,
+          "net_cells": -68,
+          "before_area_ha": 28.17000002021771,
+          "after_area_ha": 22.05000001582536,
+          "net_area_ha": -6.120000004392346
+        },
+        {
+          "class_code": 90,
+          "before_cells": 2658,
+          "after_cells": 2645,
+          "net_cells": -13,
+          "before_area_ha": 239.22000017168904,
+          "after_area_ha": 238.0500001708493,
+          "net_area_ha": -1.1700000008397131
+        },
+        {
+          "class_code": 95,
+          "before_cells": 15,
+          "after_cells": 19,
+          "net_cells": 4,
+          "before_area_ha": 1.3500000009688997,
+          "after_area_ha": 1.710000001227273,
+          "net_area_ha": 0.36000000025837325
+        }
+      ],
+      "transitions": [
+        {
+          "before_class": 11,
+          "after_class": 11,
+          "cells": 230,
+          "area_ha": 20.700000014856464
+        },
+        {
+          "before_class": 11,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 11,
+          "after_class": 21,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 11,
+          "after_class": 22,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 11,
+          "after_class": 23,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 11,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 11,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 11,
+          "after_class": 41,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 11,
+          "after_class": 42,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 11,
+          "after_class": 43,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 11,
+          "after_class": 52,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 11,
+          "after_class": 71,
+          "cells": 5,
+          "area_ha": 0.45000000032296655
+        },
+        {
+          "before_class": 11,
+          "after_class": 81,
+          "cells": 5,
+          "area_ha": 0.45000000032296655
+        },
+        {
+          "before_class": 11,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 11,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 11,
+          "after_class": 95,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 12,
+          "after_class": 11,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 21,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 22,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 23,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 41,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 42,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 43,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 52,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 71,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 81,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 12,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 21,
+          "after_class": 11,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 21,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 21,
+          "after_class": 21,
+          "cells": 24017,
+          "area_ha": 2161.5300015513376
+        },
+        {
+          "before_class": 21,
+          "after_class": 22,
+          "cells": 54,
+          "area_ha": 4.860000003488039
+        },
+        {
+          "before_class": 21,
+          "after_class": 23,
+          "cells": 32,
+          "area_ha": 2.880000002066986
+        },
+        {
+          "before_class": 21,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 21,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 21,
+          "after_class": 41,
+          "cells": 4,
+          "area_ha": 0.36000000025837325
+        },
+        {
+          "before_class": 21,
+          "after_class": 42,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 21,
+          "after_class": 43,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 21,
+          "after_class": 52,
+          "cells": 10,
+          "area_ha": 0.9000000006459331
+        },
+        {
+          "before_class": 21,
+          "after_class": 71,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 21,
+          "after_class": 81,
+          "cells": 17,
+          "area_ha": 1.5300000010980865
+        },
+        {
+          "before_class": 21,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 21,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 21,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 11,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 21,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 22,
+          "cells": 16396,
+          "area_ha": 1475.640001059072
+        },
+        {
+          "before_class": 22,
+          "after_class": 23,
+          "cells": 34,
+          "area_ha": 3.060000002196173
+        },
+        {
+          "before_class": 22,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 41,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 42,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 43,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 52,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 71,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 22,
+          "after_class": 81,
+          "cells": 4,
+          "area_ha": 0.36000000025837325
+        },
+        {
+          "before_class": 22,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 22,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 11,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 21,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 22,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 23,
+          "cells": 4544,
+          "area_ha": 408.96000029351205
+        },
+        {
+          "before_class": 23,
+          "after_class": 24,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 23,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 41,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 42,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 43,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 52,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 71,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 81,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 23,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 11,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 21,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 22,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 23,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 24,
+          "cells": 1046,
+          "area_ha": 94.14000006756461
+        },
+        {
+          "before_class": 24,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 41,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 42,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 43,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 52,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 71,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 81,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 24,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 11,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 21,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 31,
+          "after_class": 22,
+          "cells": 6,
+          "area_ha": 0.5400000003875599
+        },
+        {
+          "before_class": 31,
+          "after_class": 23,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 31,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 31,
+          "cells": 67,
+          "area_ha": 6.030000004327752
+        },
+        {
+          "before_class": 31,
+          "after_class": 41,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 42,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 43,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 52,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 71,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 81,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 31,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 41,
+          "after_class": 11,
+          "cells": 5,
+          "area_ha": 0.45000000032296655
+        },
+        {
+          "before_class": 41,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 41,
+          "after_class": 21,
+          "cells": 144,
+          "area_ha": 12.960000009301437
+        },
+        {
+          "before_class": 41,
+          "after_class": 22,
+          "cells": 16,
+          "area_ha": 1.440000001033493
+        },
+        {
+          "before_class": 41,
+          "after_class": 23,
+          "cells": 5,
+          "area_ha": 0.45000000032296655
+        },
+        {
+          "before_class": 41,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 41,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 41,
+          "after_class": 41,
+          "cells": 35045,
+          "area_ha": 3154.0500022636725
+        },
+        {
+          "before_class": 41,
+          "after_class": 42,
+          "cells": 38,
+          "area_ha": 3.420000002454546
+        },
+        {
+          "before_class": 41,
+          "after_class": 43,
+          "cells": 4,
+          "area_ha": 0.36000000025837325
+        },
+        {
+          "before_class": 41,
+          "after_class": 52,
+          "cells": 54,
+          "area_ha": 4.860000003488039
+        },
+        {
+          "before_class": 41,
+          "after_class": 71,
+          "cells": 343,
+          "area_ha": 30.870000022155505
+        },
+        {
+          "before_class": 41,
+          "after_class": 81,
+          "cells": 62,
+          "area_ha": 5.580000004004785
+        },
+        {
+          "before_class": 41,
+          "after_class": 82,
+          "cells": 9,
+          "area_ha": 0.8100000005813398
+        },
+        {
+          "before_class": 41,
+          "after_class": 90,
+          "cells": 7,
+          "area_ha": 0.6300000004521532
+        },
+        {
+          "before_class": 41,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 42,
+          "after_class": 11,
+          "cells": 3,
+          "area_ha": 0.27000000019377995
+        },
+        {
+          "before_class": 42,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 42,
+          "after_class": 21,
+          "cells": 182,
+          "area_ha": 16.380000011755982
+        },
+        {
+          "before_class": 42,
+          "after_class": 22,
+          "cells": 66,
+          "area_ha": 5.940000004263159
+        },
+        {
+          "before_class": 42,
+          "after_class": 23,
+          "cells": 12,
+          "area_ha": 1.0800000007751198
+        },
+        {
+          "before_class": 42,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 42,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 42,
+          "after_class": 41,
+          "cells": 75,
+          "area_ha": 6.750000004844498
+        },
+        {
+          "before_class": 42,
+          "after_class": 42,
+          "cells": 19202,
+          "area_ha": 1728.180001240321
+        },
+        {
+          "before_class": 42,
+          "after_class": 43,
+          "cells": 21,
+          "area_ha": 1.8900000013564597
+        },
+        {
+          "before_class": 42,
+          "after_class": 52,
+          "cells": 8,
+          "area_ha": 0.7200000005167465
+        },
+        {
+          "before_class": 42,
+          "after_class": 71,
+          "cells": 408,
+          "area_ha": 36.72000002635407
+        },
+        {
+          "before_class": 42,
+          "after_class": 81,
+          "cells": 19,
+          "area_ha": 1.710000001227273
+        },
+        {
+          "before_class": 42,
+          "after_class": 82,
+          "cells": 5,
+          "area_ha": 0.45000000032296655
+        },
+        {
+          "before_class": 42,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 42,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 43,
+          "after_class": 11,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 43,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 43,
+          "after_class": 21,
+          "cells": 64,
+          "area_ha": 5.760000004133972
+        },
+        {
+          "before_class": 43,
+          "after_class": 22,
+          "cells": 11,
+          "area_ha": 0.9900000007105264
+        },
+        {
+          "before_class": 43,
+          "after_class": 23,
+          "cells": 6,
+          "area_ha": 0.5400000003875599
+        },
+        {
+          "before_class": 43,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 43,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 43,
+          "after_class": 41,
+          "cells": 81,
+          "area_ha": 7.290000005232058
+        },
+        {
+          "before_class": 43,
+          "after_class": 42,
+          "cells": 55,
+          "area_ha": 4.950000003552632
+        },
+        {
+          "before_class": 43,
+          "after_class": 43,
+          "cells": 7810,
+          "area_ha": 702.9000005044738
+        },
+        {
+          "before_class": 43,
+          "after_class": 52,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 43,
+          "after_class": 71,
+          "cells": 80,
+          "area_ha": 7.200000005167465
+        },
+        {
+          "before_class": 43,
+          "after_class": 81,
+          "cells": 16,
+          "area_ha": 1.440000001033493
+        },
+        {
+          "before_class": 43,
+          "after_class": 82,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 43,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 43,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 52,
+          "after_class": 11,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 52,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 52,
+          "after_class": 21,
+          "cells": 23,
+          "area_ha": 2.070000001485646
+        },
+        {
+          "before_class": 52,
+          "after_class": 22,
+          "cells": 7,
+          "area_ha": 0.6300000004521532
+        },
+        {
+          "before_class": 52,
+          "after_class": 23,
+          "cells": 3,
+          "area_ha": 0.27000000019377995
+        },
+        {
+          "before_class": 52,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 52,
+          "after_class": 31,
+          "cells": 3,
+          "area_ha": 0.27000000019377995
+        },
+        {
+          "before_class": 52,
+          "after_class": 41,
+          "cells": 165,
+          "area_ha": 14.850000010657896
+        },
+        {
+          "before_class": 52,
+          "after_class": 42,
+          "cells": 599,
+          "area_ha": 53.9100000386914
+        },
+        {
+          "before_class": 52,
+          "after_class": 43,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 52,
+          "after_class": 52,
+          "cells": 985,
+          "area_ha": 88.65000006362442
+        },
+        {
+          "before_class": 52,
+          "after_class": 71,
+          "cells": 101,
+          "area_ha": 9.090000006523924
+        },
+        {
+          "before_class": 52,
+          "after_class": 81,
+          "cells": 31,
+          "area_ha": 2.7900000020023925
+        },
+        {
+          "before_class": 52,
+          "after_class": 82,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 52,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 52,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 71,
+          "after_class": 11,
+          "cells": 3,
+          "area_ha": 0.27000000019377995
+        },
+        {
+          "before_class": 71,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 71,
+          "after_class": 21,
+          "cells": 256,
+          "area_ha": 23.04000001653589
+        },
+        {
+          "before_class": 71,
+          "after_class": 22,
+          "cells": 317,
+          "area_ha": 28.53000002047608
+        },
+        {
+          "before_class": 71,
+          "after_class": 23,
+          "cells": 54,
+          "area_ha": 4.860000003488039
+        },
+        {
+          "before_class": 71,
+          "after_class": 24,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 71,
+          "after_class": 31,
+          "cells": 8,
+          "area_ha": 0.7200000005167465
+        },
+        {
+          "before_class": 71,
+          "after_class": 41,
+          "cells": 110,
+          "area_ha": 9.900000007105264
+        },
+        {
+          "before_class": 71,
+          "after_class": 42,
+          "cells": 38,
+          "area_ha": 3.420000002454546
+        },
+        {
+          "before_class": 71,
+          "after_class": 43,
+          "cells": 3,
+          "area_ha": 0.27000000019377995
+        },
+        {
+          "before_class": 71,
+          "after_class": 52,
+          "cells": 786,
+          "area_ha": 70.74000005077033
+        },
+        {
+          "before_class": 71,
+          "after_class": 71,
+          "cells": 1866,
+          "area_ha": 167.94000012053112
+        },
+        {
+          "before_class": 71,
+          "after_class": 81,
+          "cells": 122,
+          "area_ha": 10.980000007880385
+        },
+        {
+          "before_class": 71,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 71,
+          "after_class": 90,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 71,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 81,
+          "after_class": 11,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 81,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 81,
+          "after_class": 21,
+          "cells": 321,
+          "area_ha": 28.890000020734455
+        },
+        {
+          "before_class": 81,
+          "after_class": 22,
+          "cells": 47,
+          "area_ha": 4.230000003035886
+        },
+        {
+          "before_class": 81,
+          "after_class": 23,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 81,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 81,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 81,
+          "after_class": 41,
+          "cells": 9,
+          "area_ha": 0.8100000005813398
+        },
+        {
+          "before_class": 81,
+          "after_class": 42,
+          "cells": 13,
+          "area_ha": 1.1700000008397131
+        },
+        {
+          "before_class": 81,
+          "after_class": 43,
+          "cells": 3,
+          "area_ha": 0.27000000019377995
+        },
+        {
+          "before_class": 81,
+          "after_class": 52,
+          "cells": 23,
+          "area_ha": 2.070000001485646
+        },
+        {
+          "before_class": 81,
+          "after_class": 71,
+          "cells": 232,
+          "area_ha": 20.88000001498565
+        },
+        {
+          "before_class": 81,
+          "after_class": 81,
+          "cells": 24051,
+          "area_ha": 2164.590001553534
+        },
+        {
+          "before_class": 81,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 81,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 81,
+          "after_class": 95,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 11,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 21,
+          "cells": 3,
+          "area_ha": 0.27000000019377995
+        },
+        {
+          "before_class": 82,
+          "after_class": 22,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 23,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 41,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 42,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 43,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 52,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 71,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 82,
+          "after_class": 81,
+          "cells": 78,
+          "area_ha": 7.020000005038279
+        },
+        {
+          "before_class": 82,
+          "after_class": 82,
+          "cells": 229,
+          "area_ha": 20.61000001479187
+        },
+        {
+          "before_class": 82,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 82,
+          "after_class": 95,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 90,
+          "after_class": 11,
+          "cells": 5,
+          "area_ha": 0.45000000032296655
+        },
+        {
+          "before_class": 90,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 21,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 22,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 23,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 41,
+          "cells": 10,
+          "area_ha": 0.9000000006459331
+        },
+        {
+          "before_class": 90,
+          "after_class": 42,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 90,
+          "after_class": 43,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 52,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 71,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 90,
+          "after_class": 81,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 90,
+          "after_class": 90,
+          "cells": 2637,
+          "area_ha": 237.33000017033257
+        },
+        {
+          "before_class": 90,
+          "after_class": 95,
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_class": 95,
+          "after_class": 11,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 95,
+          "after_class": 12,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 21,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 22,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 23,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 24,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 31,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 41,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 42,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 43,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 52,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 71,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 81,
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_class": 95,
+          "after_class": 82,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 90,
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_class": 95,
+          "after_class": 95,
+          "cells": 13,
+          "area_ha": 1.1700000008397131
+        }
+      ],
+      "grouped_transitions": [
+        {
+          "before_group": "water",
+          "after_group": "water",
+          "cells": 230,
+          "area_ha": 20.700000014856464
+        },
+        {
+          "before_group": "water",
+          "after_group": "snow_ice",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "water",
+          "after_group": "developed",
+          "cells": 4,
+          "area_ha": 0.36000000025837325
+        },
+        {
+          "before_group": "water",
+          "after_group": "barren",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "water",
+          "after_group": "forest",
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_group": "water",
+          "after_group": "shrub",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "water",
+          "after_group": "grass",
+          "cells": 5,
+          "area_ha": 0.45000000032296655
+        },
+        {
+          "before_group": "water",
+          "after_group": "agriculture",
+          "cells": 5,
+          "area_ha": 0.45000000032296655
+        },
+        {
+          "before_group": "water",
+          "after_group": "wetland",
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_group": "snow_ice",
+          "after_group": "water",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "snow_ice",
+          "after_group": "snow_ice",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "snow_ice",
+          "after_group": "developed",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "snow_ice",
+          "after_group": "barren",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "snow_ice",
+          "after_group": "forest",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "snow_ice",
+          "after_group": "shrub",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "snow_ice",
+          "after_group": "grass",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "snow_ice",
+          "after_group": "agriculture",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "snow_ice",
+          "after_group": "wetland",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "developed",
+          "after_group": "water",
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_group": "developed",
+          "after_group": "snow_ice",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "developed",
+          "after_group": "developed",
+          "cells": 46125,
+          "area_ha": 4151.250002979366
+        },
+        {
+          "before_group": "developed",
+          "after_group": "barren",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "developed",
+          "after_group": "forest",
+          "cells": 5,
+          "area_ha": 0.45000000032296655
+        },
+        {
+          "before_group": "developed",
+          "after_group": "shrub",
+          "cells": 10,
+          "area_ha": 0.9000000006459331
+        },
+        {
+          "before_group": "developed",
+          "after_group": "grass",
+          "cells": 4,
+          "area_ha": 0.36000000025837325
+        },
+        {
+          "before_group": "developed",
+          "after_group": "agriculture",
+          "cells": 21,
+          "area_ha": 1.8900000013564597
+        },
+        {
+          "before_group": "developed",
+          "after_group": "wetland",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "barren",
+          "after_group": "water",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "barren",
+          "after_group": "snow_ice",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "barren",
+          "after_group": "developed",
+          "cells": 8,
+          "area_ha": 0.7200000005167465
+        },
+        {
+          "before_group": "barren",
+          "after_group": "barren",
+          "cells": 67,
+          "area_ha": 6.030000004327752
+        },
+        {
+          "before_group": "barren",
+          "after_group": "forest",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "barren",
+          "after_group": "shrub",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "barren",
+          "after_group": "grass",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "barren",
+          "after_group": "agriculture",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "barren",
+          "after_group": "wetland",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "forest",
+          "after_group": "water",
+          "cells": 8,
+          "area_ha": 0.7200000005167465
+        },
+        {
+          "before_group": "forest",
+          "after_group": "snow_ice",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "forest",
+          "after_group": "developed",
+          "cells": 506,
+          "area_ha": 45.54000003268422
+        },
+        {
+          "before_group": "forest",
+          "after_group": "barren",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "forest",
+          "after_group": "forest",
+          "cells": 62331,
+          "area_ha": 5609.790004026166
+        },
+        {
+          "before_group": "forest",
+          "after_group": "shrub",
+          "cells": 64,
+          "area_ha": 5.760000004133972
+        },
+        {
+          "before_group": "forest",
+          "after_group": "grass",
+          "cells": 831,
+          "area_ha": 74.79000005367705
+        },
+        {
+          "before_group": "forest",
+          "after_group": "agriculture",
+          "cells": 112,
+          "area_ha": 10.080000007234451
+        },
+        {
+          "before_group": "forest",
+          "after_group": "wetland",
+          "cells": 7,
+          "area_ha": 0.6300000004521532
+        },
+        {
+          "before_group": "shrub",
+          "after_group": "water",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "shrub",
+          "after_group": "snow_ice",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "shrub",
+          "after_group": "developed",
+          "cells": 33,
+          "area_ha": 2.9700000021315796
+        },
+        {
+          "before_group": "shrub",
+          "after_group": "barren",
+          "cells": 3,
+          "area_ha": 0.27000000019377995
+        },
+        {
+          "before_group": "shrub",
+          "after_group": "forest",
+          "cells": 765,
+          "area_ha": 68.85000004941388
+        },
+        {
+          "before_group": "shrub",
+          "after_group": "shrub",
+          "cells": 985,
+          "area_ha": 88.65000006362442
+        },
+        {
+          "before_group": "shrub",
+          "after_group": "grass",
+          "cells": 101,
+          "area_ha": 9.090000006523924
+        },
+        {
+          "before_group": "shrub",
+          "after_group": "agriculture",
+          "cells": 32,
+          "area_ha": 2.880000002066986
+        },
+        {
+          "before_group": "shrub",
+          "after_group": "wetland",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "grass",
+          "after_group": "water",
+          "cells": 3,
+          "area_ha": 0.27000000019377995
+        },
+        {
+          "before_group": "grass",
+          "after_group": "snow_ice",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "grass",
+          "after_group": "developed",
+          "cells": 629,
+          "area_ha": 56.61000004062919
+        },
+        {
+          "before_group": "grass",
+          "after_group": "barren",
+          "cells": 8,
+          "area_ha": 0.7200000005167465
+        },
+        {
+          "before_group": "grass",
+          "after_group": "forest",
+          "cells": 151,
+          "area_ha": 13.59000000975359
+        },
+        {
+          "before_group": "grass",
+          "after_group": "shrub",
+          "cells": 786,
+          "area_ha": 70.74000005077033
+        },
+        {
+          "before_group": "grass",
+          "after_group": "grass",
+          "cells": 1866,
+          "area_ha": 167.94000012053112
+        },
+        {
+          "before_group": "grass",
+          "after_group": "agriculture",
+          "cells": 122,
+          "area_ha": 10.980000007880385
+        },
+        {
+          "before_group": "grass",
+          "after_group": "wetland",
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_group": "agriculture",
+          "after_group": "water",
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_group": "agriculture",
+          "after_group": "snow_ice",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "agriculture",
+          "after_group": "developed",
+          "cells": 373,
+          "area_ha": 33.570000024093304
+        },
+        {
+          "before_group": "agriculture",
+          "after_group": "barren",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "agriculture",
+          "after_group": "forest",
+          "cells": 25,
+          "area_ha": 2.250000001614833
+        },
+        {
+          "before_group": "agriculture",
+          "after_group": "shrub",
+          "cells": 23,
+          "area_ha": 2.070000001485646
+        },
+        {
+          "before_group": "agriculture",
+          "after_group": "grass",
+          "cells": 233,
+          "area_ha": 20.970000015050243
+        },
+        {
+          "before_group": "agriculture",
+          "after_group": "agriculture",
+          "cells": 24358,
+          "area_ha": 2192.2200015733642
+        },
+        {
+          "before_group": "agriculture",
+          "after_group": "wetland",
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_group": "wetland",
+          "after_group": "water",
+          "cells": 6,
+          "area_ha": 0.5400000003875599
+        },
+        {
+          "before_group": "wetland",
+          "after_group": "snow_ice",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "wetland",
+          "after_group": "developed",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "wetland",
+          "after_group": "barren",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "wetland",
+          "after_group": "forest",
+          "cells": 12,
+          "area_ha": 1.0800000007751198
+        },
+        {
+          "before_group": "wetland",
+          "after_group": "shrub",
+          "cells": 0,
+          "area_ha": 0
+        },
+        {
+          "before_group": "wetland",
+          "after_group": "grass",
+          "cells": 2,
+          "area_ha": 0.18000000012918663
+        },
+        {
+          "before_group": "wetland",
+          "after_group": "agriculture",
+          "cells": 1,
+          "area_ha": 0.09000000006459331
+        },
+        {
+          "before_group": "wetland",
+          "after_group": "wetland",
+          "cells": 2652,
+          "area_ha": 238.68000017130146
+        }
+      ]
+    }
+  ]
+}
