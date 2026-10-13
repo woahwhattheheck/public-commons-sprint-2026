@@ -13,3 +13,25 @@ Use the existing ES9960/A74F/S1/0730 scientific-context receiving operation to i
 ## Inspect the actual outgoing files
 
 The producing receiver must open the exact populated HTML and actual composed PDF/report pages, operate the source/basin/station filters and annual links, download and reopen the CSV/JSON, then reopen the retained archive/project contents in their normal application. Look at actual pixels at screenshare and narrow widths. Return the affected viewed pages/screenshots through the existing operation so the source owner can inspect and repair any concrete layout/control issue. Generated HTML/source checks do not establish a rendered visual pass. The full current owner instruction (AGENTS blob46be323017be913780d0d2850b7658861744508d) is retained in the receiving guide, including all-attachment inspection and the existing14:00UTC sprint cutoff.
+
+## Existing receiving route when binary Git reads are unavailable
+
+`native-assessment-microbial-delivery.zip.base64.json` is the same completed ZIP in the standard `commons.artifact-base64/v1` UTF-8 envelope. Retrieve this text with the current connected Git file/blob reader, then decode it into the exact existing archive. This avoids relying on a receiver's direct binary HTTP/DNS route. It does not create another source edition or controller.
+
+~~~python
+import base64, hashlib, json
+from pathlib import Path
+packet = json.loads(Path("native-assessment-microbial-delivery.zip.base64.json").read_text(encoding="utf-8-sig"))
+assert packet["schema"] == "commons.artifact-base64/v1"
+body = base64.b64decode(packet["content_base64"], validate=True)
+assert len(body) == packet["bytes"] == 2867503
+assert hashlib.sha256(body).hexdigest() == packet["sha256"] == "14041f85f6ec686137c4f06e745a460f875de4db8e012832f5aca3bb042f5058"
+out = Path("native-assessment-microbial-delivery.zip")
+if out.exists():
+    assert out.read_bytes() == body
+else:
+    out.write_bytes(body)
+print("ANNUAL_DELIVERY_READY", out, len(body), flush=True)
+~~~
+
+Continue the unchanged original source/archive intake and populated report inspection above. Preserve the same0730 annual7303/9808 operation and all original project/task identities.
