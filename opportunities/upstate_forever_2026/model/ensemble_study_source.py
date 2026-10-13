@@ -69,6 +69,9 @@ def _mask_agreement(row):
 
 
 def _case_tables(field, rows, *, reference_label="Baseline"):
+    parameter = field == "parameter_rows"
+    reference_label = "Reference" if parameter else reference_label
+    compared_label = "Varied" if parameter else "Alternative"
     identities = _table(
         ["Pair", "Parameter case", "Original profile", "Reference case / profile"],
         [[_case_key(field, index), row["member_label"], row["profile_id"],
@@ -78,7 +81,8 @@ def _case_tables(field, rows, *, reference_label="Baseline"):
          for index, row in rows])
     identities["caption"] = "Figure case key — original report rows and selected profiles"
     coverage = _table(
-        ["Pair", reference_label + " valid", "Alternative valid", "Common", reference_label + " only", "Alternative only"],
+        ["Pair", reference_label + " valid", compared_label + " valid", "Common",
+         reference_label + " only", compared_label + " only"],
         [[_case_key(field, index), row["baseline_valid_cells"], row["alternative_valid_cells"],
           row["common_cells"], row["baseline_only_cells"], row["alternative_only_cells"]]
          for index, row in rows])
@@ -353,8 +357,10 @@ def _figures(directory, content):
                         + (("; reference " + str(row.get("reference_member_label") or "Reference")
                             + " / " + str(row.get("reference_profile_id") or "Unspecified")[:12])
                            if kind == "parameter" else "")
-                        + "; " + reference_word + " valid/only " + str(row["baseline_valid_cells"]) + "/"
-                        + str(row["baseline_only_cells"]) + "; alternative valid/only "
+                        + "; " + ("reference" if kind == "parameter" else reference_word)
+                        + " valid/only " + str(row["baseline_valid_cells"]) + "/"
+                        + str(row["baseline_only_cells"])
+                        + ("; varied valid/only " if kind == "parameter" else "; alternative valid/only ")
                         + str(row["alternative_valid_cells"]) + "/" + str(row["alternative_only_cells"])
                         for index, row in subset
                     ] + ["Profile IDs are abbreviated here; complete case identities and original "
@@ -414,8 +420,9 @@ def _sections(plan, content, profiles, scenarios, scope=None):
             "cannot replace a paired common-support contrast.",
             "Nitrogen and phosphorus retain kg/year; sediment retains metric tonnes/year, displayed "
             "as t/year by the original paired report. No cross-constituent conversion or weighting is introduced.",
-            "Percentage change uses the common-valid baseline; a zero baseline leaves percentage "
-            "undefined. Matching cell counts alone do not establish matching geography. Every range "
+            "Percentage change divides the signed change by the common-valid baseline for land-cover "
+            "pairs, or by the reference-profile baseline for parameter contrasts. A zero reference "
+            "leaves percentage undefined. Matching cell counts alone do not establish matching geography. Every range "
             "and figure keeps the original exact common-support SHA256 and its cell count.",
         ]],
     ]
@@ -424,6 +431,9 @@ def _sections(plan, content, profiles, scenarios, scope=None):
     for field, heading in (("paired_rows", "Land-cover contrasts on common valid cells"),
                            ("parameter_rows", "Parameter sensitivity with land cover held fixed")):
         rows = list(enumerate(content[field]))
+        parameter = field == "parameter_rows"
+        reference_label = "Reference" if parameter else "Baseline"
+        compared_label = "Varied" if parameter else "Alternative"
         sections.append([heading, [
             "Pair keys identify unchanged rows of this original report edition: LC for land-cover "
             "pairs and PS for baseline parameter contrasts. The same key appears in the plots, "
@@ -432,27 +442,34 @@ def _sections(plan, content, profiles, scenarios, scope=None):
                    [[_case_key(field, index), row["member_label"], row["scenario_label"],
                      POLLUTANT_LABELS[row["pollutant"]] + " / " + row["total_units"]]
                     for index, row in rows]),
-            _table(["Pair", "Unit", "Baseline on common cells", "Alternative on common cells",
+            _table(["Pair", "Unit", reference_label + " on common cells", compared_label + " on common cells",
                     "Signed change", "Change %"],
                    [[_case_key(field, index), row["total_units"], row["baseline_common"],
-                     row["alternative_common"], row["delta_common"], _percentage(row)]
+                     row["alternative_common"], row["delta_common"],
+                     _percentage(row, reference_label=reference_label.lower())]
                     for index, row in rows]),
-            "The signed change and percentage above are the original alternative-minus-baseline "
-            "quantities on common-valid cells. A zero common baseline leaves percentage undefined "
-            "even when a mass change exists. A legacy pair with no common cells has no defined "
-            "paired mass or percentage result.",
+            ("The signed change is varied-profile baseline minus reference-profile baseline on "
+             "the same common-valid cells. Both runs retain the same land-cover scenario. A negative "
+             "change means lower modeled export under the varied parameters; it is not a land-cover "
+             "restoration benefit. Percentage change divides by the reference-profile baseline mass. "
+             if parameter else
+             "The signed change and percentage above are the original alternative-minus-baseline "
+             "quantities on common-valid cells. Percentage change divides by the same-profile baseline mass. ")
+            + "A zero common reference leaves percentage undefined even when a mass change exists. "
+            "A legacy pair with no common cells has no defined paired mass or percentage result.",
         ]])
         coverage = _case_tables(field, rows)
         coverage[0]["caption"] = "Original case and reference identities"
         sections.append([heading + " — coverage and full-valid totals", [
             *coverage,
-            _table(["Pair", "Unit", "Baseline own-valid total", "Alternative own-valid total",
+            _table(["Pair", "Unit", reference_label + " own-valid total", compared_label + " own-valid total",
                     "Pair masks identical"],
                    [[_case_key(field, index), row["total_units"], row["baseline_total"],
                      row["alternative_total"], _mask_agreement(row)] for index, row in rows]),
             "Full-valid totals each use their own run's finite, non-NoData cells inside the "
-            "retained reporting mask. Baseline-only and alternative-only cells are excluded from "
-            "the paired contrast. Those counts do not include cells invalid in both runs or cells "
+            "retained reporting mask. " + reference_label + "-only and " + compared_label.lower()
+            + "-only cells are excluded from the paired contrast. Those counts do not include "
+            "cells invalid in both runs or cells "
             "outside the reporting mask. Identical pair masks do not establish complete catchment "
             "or reporting-area coverage.",
             _table(["Pair", "Exact common-support SHA256", "Grouped figure"],
