@@ -22,6 +22,8 @@ APPLICATION_FILES = (
     "observed_hydrology_context.sources.json",
     "observed_flow_seasonality.report.json",
     "observed_flow_seasonality.sources.json",
+    "observed_seasonal_figures.report.json",
+    "observed_seasonal_figures.sources.json",
     "calibration_station_geography.sources.json",
     "eighteenmile_scientific_figures.sources.json",
     "eighteenmile_routine_nutrient_flow.sources.json",
