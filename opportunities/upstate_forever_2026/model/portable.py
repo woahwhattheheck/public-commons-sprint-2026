@@ -522,6 +522,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
     try:
         with contextlib.ExitStack() as stack:
             stack.enter_context(held(root / ".workspace.lock", blocking=False))
+            stack.enter_context(held(root / ".monitoring-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-monitoring.lock", blocking=False))
             for path in sorted((root / "experiments").glob("*/.experiment.lock")):
                 stack.enter_context(held(path, blocking=False))

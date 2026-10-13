@@ -12,10 +12,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/model/MONITORING.md",
       "path": "model/MONITORING.md",
-      "bytes": 17717,
-      "sha256": "2a31b106a2f13852d1644f2c3c42b0262195245ba39990586d7058afc00387e8",
+      "bytes": 19210,
+      "sha256": "666f2407ff9e3c668e6dc1bff9e1871db3abbf4e3438d402db1f0d612096e4d5",
       "original_bytes": 15870,
-      "original_sha256": "473986c5a439276ee406b1cf426693e486ca2447e84fbbebc28f47cb2a107e14"
+      "original_sha256": "473986c5a439276ee406b1cf426693e486ca2447e84fbbebc28f47cb2a107e14",
+      "previous_bytes": 17717,
+      "previous_sha256": "2a31b106a2f13852d1644f2c3c42b0262195245ba39990586d7058afc00387e8"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_actions.py",
@@ -160,12 +162,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs",
       "path": "operator/web/monitoring.mjs",
-      "bytes": 7237,
-      "sha256": "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a",
+      "bytes": 7810,
+      "sha256": "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919",
       "original_bytes": 4274,
       "original_sha256": "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
-      "previous_bytes": 7172,
-      "previous_sha256": "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be"
+      "previous_bytes": 7566,
+      "previous_sha256": "c65c0081e94a1500850fc8e8f5f798bc8b63ed7e3bc57deab91784e8a5054f44"
     },
     {
       "source": "model/monitoring_observed_context.py",
@@ -192,8 +194,8 @@
       "source": "integrations/monitoring/RECEIVING.md",
       "source_role": "current_application_source",
       "path": "integrations/monitoring/RECEIVING.md",
-      "bytes": 10969,
-      "sha256": "9c858d28db688f198fb9c0996cce947140fccde6b03138f9f14aed360fb72ce7"
+      "bytes": 12853,
+      "sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
     }
   ],
   "host": "operator/extension_registry.py",
@@ -238,6 +240,19 @@
       "source_publication": "86dacfbd47a3765059f63be5395fc0ec551e2279"
     },
     {
+      "operation_id": "ECO13-MONITORING-SCIENTIFIC-REPORT-20261013",
+      "guide": "model/MONITORING_REPORT_SOURCE.md",
+      "registration": "operator/extensions/monitoring-report.json",
+      "component": "monitoring-report",
+      "changes": [
+        "Retain a saved feasible plan or exact campaign revision as an original observed-report source",
+        "Reuse the original native field export, retained source companions and existing ordered scientific delivery form",
+        "Preserve original queued request identity and saved report-source reopening",
+        "Capture report preparation under its root lock during complete Workspace transfer"
+      ],
+      "preserved": "Original ASTRA-MONITOR12 solver, native campaign and field history; current water-study handoff; ES26 observed-context source and browser reads; ES-EXP campaign-to-Implementation fieldwork mounting, updates and detach"
+    },
+    {
       "operation_id": "ES26-MONITORING-OBSERVED-RECEIVING-20261013",
       "version": "1.3.1",
       "guide": "integrations/monitoring/RECEIVING.md",
@@ -263,5 +278,14 @@
       "Existing shared-registry browser controls with complete source exports"
     ],
     "predecessor": "Monitoring1.2.1 / PR3140"
+  },
+  "report_source": {
+    "schema": "upstate.observed-report/v1",
+    "guide": "model/MONITORING_REPORT_SOURCE.md",
+    "registration": "operator/extensions/monitoring-report.json",
+    "installer": "operator/install_receiving_waters.py",
+    "source_module": "model/monitoring_report_source.py",
+    "native_cli": "model/monitoring_report_cli.py",
+    "preparation_action": "monitoring.report.prepare"
   }
 }

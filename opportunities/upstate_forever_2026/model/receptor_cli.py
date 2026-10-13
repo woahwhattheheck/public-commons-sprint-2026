@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from .common import atomic_json, describe_file, digest, held, read_json, verify_file
 from .receptors import build_inventory
+from . import receptor_execution
 from .workspace import Workspace
 
 
@@ -18,13 +19,20 @@ def build(workspace, selection):
     if len({run["id"] for run in [baseline] + alternatives}) != len(alternatives) + 1:
         raise ValueError("Select distinct baseline and scenario runs")
     grid = workspace.get_grid(baseline["selection"]["grid_id"])
-    key = digest({"selection": source, "schema": "upstate.receptor-inventory/v1"})
+    execution = receptor_execution.bind([baseline, *alternatives], grid_id=grid["id"],
+                                         pollutants=source.get("comparison_pollutants"))
+    identity = {"selection": source, "schema": "upstate.receptor-inventory/v1",
+                "product_version": receptor_execution.PRODUCT_VERSION,
+                "execution_signature": receptor_execution.signature(execution)}
+    key = digest(identity)
     directory = workspace.root / "receptor-inventories" / key
     directory.mkdir(parents=True, exist_ok=True)
     state_path = directory / "result.json"
     with held(directory / ".inventory.lock", blocking=False):
         if state_path.exists():
             result = read_json(state_path)
+            if result.get("identity") != identity or result.get("native_execution") != execution:
+                raise ValueError("Retained source-water inventory differs from its producing native outputs")
             for item in result["files"].values():
                 verify_file(directory, item)
             return result
@@ -38,8 +46,8 @@ def build(workspace, selection):
                 raise ValueError("Priority map delivery must use the selected baseline run")
             priority_path = verify_file(delivery_root, delivery["files"]["combined_priority"])
         product = build_inventory(workspace, source["receptor_spec"], grid, baseline, alternatives,
-                                  directory, priority_path=priority_path)
-        result = {"id": key, **product["inventory"], "build_selection": source}
+                                  directory, priority_path=priority_path, execution_binding=execution)
+        result = {"id": key, **product["inventory"], "build_selection": source, "identity": identity}
         result["files"] = {**result["files"],
                            "inventory": describe_file(directory, directory / "inventory.json")}
         atomic_json(state_path, result)
