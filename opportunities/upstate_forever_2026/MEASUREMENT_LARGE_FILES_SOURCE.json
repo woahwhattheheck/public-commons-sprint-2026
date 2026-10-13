@@ -172,8 +172,8 @@
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
-      "bytes": 17940,
-      "sha256": "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54",
+      "bytes": 17979,
+      "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12",
       "role": "addition"
     },
     {
