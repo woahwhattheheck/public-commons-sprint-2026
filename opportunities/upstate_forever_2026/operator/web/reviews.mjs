@@ -309,7 +309,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
           if(draft.state==='ready'&&!item.owner.trim())throw Error('Assign an engineer or team to every request before marking the response ready.');
           if(draft.state==='ready'&&item.disposition==='planned')throw Error('Finish or explicitly defer every planned request before marking the response ready.');
         }
-        await submitAction('customer.review.handback.save',{handback:draft});handbackDrafts.delete(key);
+        await submitAction('customer.review.handback.save',{handback:draft});
       },()=>{
         const form=$('#operation-form'),revisionSelect=$('[name="handback_revision"]',form),state=$('#handback-edit-state',form);
         const remember=()=>{draft=handbackValues(draft);handbackDrafts.set(key,draft);state.textContent='Draft retained in this workspace. Save an edition to include it in the project.';};
