@@ -1,0 +1,73 @@
+{
+  "schema": "commons.stove-source-catalogue.v1",
+  "checkedAt": "2026-10-13",
+  "operators": [
+    {
+      "key": "stovecraft",
+      "name": "Stovecraft Installations",
+      "workflow": "A measured home survey precedes an itemised fixed quotation and installation, then commissioning and supplied paperwork.\nPublic enquiry intake accepts JPEG, PNG or HEIC photographs: at most eight files, each up to eight MB.\nServicing includes repairs and annual checks; sweeping starts from £80. The published recommendation is at least annual sweeping, adjusted for use.",
+      "sourceUrls": [
+        "https://www.stovecraft.co.uk/"
+      ],
+      "sourceNotes": "Retain the original photograph bytes, filename and purpose against the chosen site or visit.\nPublic file limits describe that website; disclose the worksheet's independent evidence budget.\nMeasurements, actual tests, document scheme and next visit are entered by the responsible operator.",
+      "terms": "Servicing includes repairs and annual checks; sweeping starts from £80. The published recommendation is at least annual sweeping, adjusted for use."
+    },
+    {
+      "key": "stoves-sweeps",
+      "name": "Stoves and Sweeps Ltd",
+      "workflow": "Survey, appliance supply, installation and annual sweep/service are published together.\nShowroom requests begin by phone or voicemail; current sweep availability is referred to the company's Facebook page.\nListed weekday opening is 09:30–14:30 with weekends closed; the same page separately offers arranged 30-minute Saturday discussions.",
+      "sourceUrls": [
+        "https://www.stovesandsweeps.co.uk/"
+      ],
+      "sourceNotes": "Keep requested and confirmed appointments distinct.\nA published opening range is not a staff availability calendar or a confirmed booking.\nLink later service to the retained appliance and prior documents without guessing a date.",
+      "terms": "Showroom requests begin by phone or voicemail; current sweep availability is referred to the company's Facebook page."
+    },
+    {
+      "key": "premier",
+      "name": "Premier Stoves and Fireplaces Ltd",
+      "workflow": "Survey and service have separate request forms; office coordination and engineers are distinct roles. Shopify accounts and orders already exist.\nInstallation quotations are posted, or emailed on request. Published terms use 30-day validity unless stated otherwise, and 50% deposit plus completion balance unless agreed differently in writing.\nAdditional work and revised prices require agreement before proceeding. Weather or staffing can require rescheduling.\nCurrent service menu: standard sweep £65; deluxe £85; appliance check £95; CCTV £120; nest removal from £100. The page says prices include VAT.",
+      "sourceUrls": [
+        "https://premierstovesandfireplacesltd.co.uk/pages/installation",
+        "https://premierstovesandfireplacesltd.co.uk/pages/servicing",
+        "https://premierstovesandfireplacesltd.co.uk/pages/terms-conditions",
+        "https://premierstovesandfireplacesltd.co.uk/pages/about-us",
+        "https://premierstovesandfireplacesltd.co.uk/policies/contact-information"
+      ],
+      "sourceNotes": "Retain quote issue/expiry, accepted version, written override and separate payment milestones.\nKeep original account/order references; no automatic Shopify integration is claimed.\nRecord separately accepted changes and reasoned cancellations. Do not calculate penalties from website prose.\nRecord actual handover documents and a separately selected maintenance date.",
+      "terms": "Survey and service have separate request forms; office coordination and engineers are distinct roles. Shopify accounts and orders already exist.\nInstallation quotations are posted, or emailed on request. Published terms use 30-day validity unless stated otherwise, and 50% deposit plus completion balance unless agreed differently in writing.\nAdditional work and revised prices require agreement before proceeding. Weather or staffing can require rescheduling.\nCurrent service menu: standard sweep £65; deluxe £85; appliance check £95; CCTV £120; nest removal from £100. The page says prices include VAT."
+    },
+    {
+      "key": "riley",
+      "name": "Riley Stoves & Sweeps",
+      "workflow": "Phone, WhatsApp photographs and a postcode enquiry form are available.\nA free installation survey leads to an itemised written quotation; a sweep instead receives an agreed date.\nProblems found during sweeping are photographed and quoted separately, with time for the customer to decide.\nSweeping recommendations vary with usage and fuel rather than establishing one mandatory interval for every appliance.",
+      "sourceUrls": [
+        "https://rileystovesandsweeps.co.uk/"
+      ],
+      "sourceNotes": "Preserve a finding independently of the quote for remedial work and its acceptance.\nA finished original visit can retain an unresolved issue and a separately scheduled follow-up.\nDo not replace actual test results or certificates with the site's general marketing claims.",
+      "terms": "Problems found during sweeping are photographed and quoted separately, with time for the customer to decide.\nSweeping recommendations vary with usage and fuel rather than establishing one mandatory interval for every appliance."
+    },
+    {
+      "key": "everwarm",
+      "name": "Everwarm Fires",
+      "workflow": "Published work covers installation, sweeping, flue lining and CCTV surveys.\nService prices distinguish a £70 standard sweep, £120 sweep with CCTV and £330 sweep with pressure/integrity test; other repair tasks and ranged prices remain separate.\nInstallation follows a free survey and fixed written quotation.\nThe contact page aims to reply within two hours during business hours.",
+      "sourceUrls": [
+        "https://everwarmfires.co.uk/services/",
+        "https://everwarmfires.co.uk/prices/",
+        "https://everwarmfires.co.uk/contact-us/"
+      ],
+      "sourceNotes": "Choose the actual service and agreed current amount; do not turn a selected sweep price into an installation price.\nThe response target concerns correspondence, not attendance or completion.\nMeasurements, technician checks and additional work remain independent recorded decisions.",
+      "terms": "Service prices distinguish a £70 standard sweep, £120 sweep with CCTV and £330 sweep with pressure/integrity test; other repair tasks and ranged prices remain separate."
+    },
+    {
+      "key": "country",
+      "name": "Country Stoves & Sweeps",
+      "workflow": "Office work covers appointments and installation coordination; field roles cover surveys, quotations, fitting and service.\nAn initial measured survey leads to a full written quotation; installation is arranged after the customer proceeds.\nThe business can supply the appliance or install a customer-supplied one.\nIts described handover includes an operating demonstration, maintenance explanation and actual paperwork, with ongoing annual service offered.",
+      "sourceUrls": [
+        "https://www.countrystovesandsweeps.co.uk/about-us/",
+        "https://www.countrystovesandsweeps.co.uk/wood-burning-stove-installation/"
+      ],
+      "sourceNotes": "Record who supplied the appliance and its exact model/serial/reference.\nUse the original completed paperwork and operator-entered scheme or authority; the source's mixed certification wording must not generate a certificate or compliance conclusion.\nThe later due date and assigned staff are actual operator choices, not inferred availability.",
+      "terms": ""
+    }
+  ]
+}
