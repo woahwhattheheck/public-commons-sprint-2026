@@ -33,10 +33,12 @@ The native public-water preparation runner writes this shape after its actual so
           "BUFFER_FT": 1500
         },
         "map_family": "critical_drinking_water",
-        "source_plan_id": "ACTUAL_PREPARED_PLAN_ID",
-        "receptor_ids": ["arjws-swpa-1500"],
-        "source_relation_method": "source_area",
-        "source_geometry_scope": "published_polygon"
+        "metadata": {
+          "source_plan_id": "ACTUAL_PREPARED_PLAN_ID",
+          "receptor_ids": ["arjws-swpa-1500"],
+          "source_relation_method": "source_area",
+          "source_geometry_scope": "published_polygon"
+        }
       }
     ]
   },
@@ -60,7 +62,7 @@ The four current published polygons are:
 | prwd-swpa-1500 | 131 | S37109 | 1500 |
 | prwd-swpa-200 | 132 | S37109 | 200 |
 
-The original runner supplies all four actual source selections, titles and utility/intake/protection metadata. The form preserves additional zone metadata, including source classification. No buffer or rank group is added by this handoff.
+The original runner supplies all four actual source selections, titles and utility/intake/protection metadata. The form preserves additional zone metadata, including the original utility, intake, protection-source and classification fields inside metadata. The shipped native producer keeps this provenance nested. Legacy handoffs with direct plan/receptor keys remain readable without rewriting their representation. No buffer or rank group is added by this handoff.
 
 The file input accepts a UTF-8 BOM and the original direct zones envelope as well as selection.zones. It appends each imported origin to selection.source_area_origins and retains each zone's original metadata. It checks the current workspace and original form after asynchronous file reading, so a stale read does not populate another workspace or a replacement form.
 
@@ -70,7 +72,7 @@ With the original filters and zero added buffer, these results describe each pub
 
 The 200-foot and 1,500-foot polygons overlap. Separate area totals are not additive. Use the original receiving-water engine's union output for a combined family total. The form leaves rank_group unset and explains this distinction beside the prepared source-plan identities. A map-family choice identifies its planning layer; it does not change the physical unit or create an upstream load estimate.
 
-If the operator edits a prepared zone's source edition, source, layer, filters or buffer, the saved zone includes original_source_selection and source_selection_changed:true. Its original plan and receptor IDs remain origin metadata. Restoring the original source binding clears that change flag. Display titles, map family and explicit rank-group choices retain their own selected values.
+If the operator edits a prepared zone's source edition, source, layer, filters or buffer, the saved zone's existing lineage container includes original_source_selection and source_selection_changed:true: nested metadata for the current producer, or direct keys for legacy direct-lineage handoffs. Its original plan and receptor IDs remain origin metadata. Restoring the original source binding clears that change flag. Display titles, map family and explicit rank-group choices retain their own selected values.
 
 ## Existing host capability
 
@@ -101,7 +103,7 @@ const zones = analysisZonesFromReceivingPlan({
 
 This adapter checks the original upstate.public-water-preparation/v1 outcome, imported collection ID, unique native receptor identities and source_area relation. It preserves the original receptor source choices and emits the existing V3 zone fields with plan/receptor metadata and any applicable map family. Requested receptor IDs must belong to that preparation outcome. Nonpolygon receiving relations use their existing native engine.
 
-The module also exports parseAnalysisFilters(entries) and validateAnalysisZones(zones, sourceCatalog?) for the existing form intake. They preserve typed scalar source predicates and reject nonfinite numeric values before serialization. The scientific engine still performs the actual source and geometry validation when executing.
+The adapter emits the same nested metadata shape as the native preparation runner and preserves the receptor's original metadata and classification. The module also exports parseAnalysisFilters(entries) and validateAnalysisZones(zones, sourceCatalog?) for the existing form intake. They preserve typed scalar source predicates and reject nonfinite numeric values before serialization. The scientific engine still performs the actual source and geometry validation when executing.
 
 ## Source and installation
 
@@ -121,3 +123,64 @@ The direct file workflow uses the current original form, so the generated native
 The actual updated V3 desk was exercised through its public source-area entry point, original form controls and scenario.analyze submission. The four original published selection definitions retained all twelve typed predicate values, area IDs, map family, plan/receptor metadata, and zero added buffer. An edited filter preserved its original source binding; reverting restored the original state.
 
 A second focused pass exercised the actual asynchronous file change handler with a BOM-prefixed handoff, the dynamic source rows and the original form submission. All four areas and the collective origin were retained; source_geometry_scope stayed published_polygon; the chosen native baseline was unchanged; an unavailable sediment output retained weight zero. Native identity values in these interface checks were mechanical fixtures. The production file is generated after the real native import and preparation and supplies those retained identities.
+
+
+## Reopen completed areas and inspect their source bindings
+
+The completed analysis now includes a Source areas tab. It shows every retained region, including the baseline reporting boundary, independently of the physical-table region filter. Each area displays its saved source edition and vector ID, layer, typed attribute predicates, actual added buffer, map family, optional rank group, geometry area inside the reporting boundary, selected grid-cell count and original source feature count.
+
+The source title, original URI, vintage and SHA-256 remain visible. Prepared plan and receptor IDs retain their original namespace. Utility and source classification are displayed where retained; the complete original metadata and collective preparation/import records remain available in expandable sections. If a prepared source binding was edited, the view shows both the original preparation binding and the selected binding used for the calculation.
+
+View physical results chooses that exact retained region in the original physical-results table and clears a prior run filter so all selected native runs are available. Open source edition uses the original openItem('sources', source_collection_id) capability. It does not reinterpret a receiving_waters.prepare plan ID as a receptor-network or receptor-inventory ID. An absent imported source edition is identified in the button's explanation while all saved analysis quantities and lineage remain readable.
+
+Area totals stay separate. Published source polygons can overlap; the original native receiving-water union remains the source for a combined family total. Map families do not create upstream contributing catchments. The displayed geometry area is the native polygon's clipped area; selected grid-cell count is its separate pixel-centre selection quantity.
+
+## Source exports and original settings
+
+Download source areas JSON emits upstate.scenario-source-areas/v1. selection.zones carries the complete original per-region source selections, including nested metadata, typed filters, edited-binding origins and extra fields. The implicit reporting_area is omitted from those zones: the new analysis supplies its own baseline reporting boundary. Existing selection.source_area_origins are retained. The outer origin adds the original analysis ID, source grid and native run IDs, source-plan IDs and original reporting-area selection.
+
+This export feeds directly into the existing Planning areas file input or createForSourceAreas(request). It carries source definitions, not a geometry union or a recomputed physical result. Reimport appends the explicit analysis origin to the original preparation origins.
+
+Download source inventory CSV emits one row per retained region, including the baseline reporting area. It includes region/analysis/grid/native identities, map family and rank group, source plan/receptors, geometry area and selected-cell count, source edition/vector/layer/buffer, original source URI/vintage/hash, typed predicates, edit status and complete retained selection. Structured fields stay JSON in escaped CSV cells, preserving number, text, boolean and null types. Source exports always cover the full retained source set rather than the current physical-table filter.
+
+The native file downloads remain in Download results. Download saved analysis settings additionally emits upstate.scenario-analysis-selection/v1 with the original source_analysis_id and selection payload, suitable for the existing scenario.analyze action.
+
+Use saved settings opens the original form with the actual selected native baseline and alternatives, base weights, original explicit-caps or percentile mode, every sensitivity weight set with its original ID and title, all source areas and preparation origins. Extra retained selection metadata survives submission. New sensitivity rows receive a unique ID without renumbering retained rows. A repeat still rechecks the selected original native runs in the current workspace before submitting the native action.
+
+## Receiving the actual South Carolina source-area analysis
+
+The four published ARJWS/PRWD areas require an Upper Savannah native baseline whose retained reporting-area geometry overlaps those South Carolina polygons. Every selected alternative must use that same original grid, reporting mask and compatible observed native version. The original model reprojects the source geometry to the baseline grid, intersects each zone with the reporting area and rejects a zone with no areal overlap.
+
+Complete source import and receiving_waters.prepare first, retaining the actual source_collection_id, source_plan_id and generated scenario-source-areas.json. Source preparation can finish in the regional workspace before model outputs are available. Join that file to the actual regional baseline_run_id and grid_id after the corresponding native NDR or SDR outputs complete, then submit the original scenario.analyze action. Keep the saved analysis ID, per-area selected cells and common coverage with that receiving result.
+
+Gura remains a separate native engine acceptance run on its own original geography. The four-area receiving operation uses the actual Upper Savannah input, grid and run pipeline and the unchanged published South Carolina source selections.
+
+## Observed native InVEST versions
+
+The current executor records the actual installed version in run.runtime.version. The original selection.invest_version remains the requested version. Every compatibility gate in the handoff, form and analysis model now uses the observed version when present. Already-complete legacy runs can lack runtime metadata; those retain the saved requested version as an explicitly labeled legacy fallback.
+
+The browser modules export scenarioNativeVersion(run):
+
+~~~json
+{
+  "requested": "3.20.0",
+  "observed": "3.21.0",
+  "comparison_version": "3.21.0",
+  "basis": "observed_runtime",
+  "differs_from_requested": true
+}
+~~~
+
+The example demonstrates the fields, not a claim about any production run. basis is observed_runtime, requested_legacy or unavailable. The form displays the observed version and a differing request together; legacy choices say that execution version was not retained.
+
+The native handoff includes baseline_native_version and each accepted/rejected case's native_version. Its readiness and compatible-cohort behavior otherwise remain unchanged.
+
+The analysis model stores native_version on every retained runs[] entry and input_binding[] entry. Observed-version provenance therefore participates in the immutable analysis identity alongside the source artifacts and original selections. The top-level native_version records the comparison version, policy observed_runtime_else_labeled_requested_legacy and requested_fallback_run_ids. Existing completed records retain their original data and remain readable. The model continues to use the original quantitative algorithm, common masks, units, baseline caps and selected native outputs.
+
+## Executed retained-result check
+
+One focused end-to-end interface check loaded a complete retained-analysis-shaped record through the actual current item-read path, rendered its Source areas tab, opened its original source edition, downloaded area JSON and inventory CSV, restored original form settings, submitted the native action, edited and reverted a nested prepared filter, and reimported the exported areas.
+
+The four original published selector definitions retained all twelve typed predicate values. The source inventory contained four planning areas plus the reporting boundary. Nested preparation metadata and original origins were preserved. The exact saved settings were restored, including explicit caps, sensitivity ID water_focus.v1 and an extra retained selection field. The saved source record was unchanged by the workflow.
+
+The same actual-module check exercised the observed-version join: differing requests with matching observations were compatible; matching requests with differing observations were rejected; missing observations retained the labeled requested_legacy fallback. Native identity and result-shape values were mechanical interface fixtures. This check exercised the original UI and handoff code through a focused HTML-control adapter; Python execution and the real retained-raster calculation are performed by the native receiving environment.

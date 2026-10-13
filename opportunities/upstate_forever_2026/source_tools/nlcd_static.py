@@ -618,7 +618,7 @@ def _window(dataset, geometry, maximum_clip_pixels):
     return Window(c0, r0, c1-c0, r1-r0)
 
 
-def _clip(dataset, window, directory, plan):
+def _clip(dataset, window, directory, plan, *, source_tags=None):
     import numpy as np
     import rasterio
     from rasterio.windows import Window
@@ -670,13 +670,22 @@ def _clip(dataset, window, directory, plan):
             valid += int((~mask).sum())
             masked_native += int(native_mask.sum())
             extra_nil += int((nil & ~native_mask).sum())
-        output.update_tags(
-            units="class", source=ARCHIVE_URL, source_year="2025",
-            preparation="Local native-grid window; original class values and native affine retained",
-            source_metadata_sha256=plan["source_contract"]["metadata_sha256"],
-            source_member_sha256=plan["native_member_sha256"],
-            model_domain_sha256=plan["domain_sha256"],
-            nil_policy="Original TIFF mask and published 250 NoData normalized to int32 NoData")
+        tags = {
+            "units": "class", "source": ARCHIVE_URL, "source_year": "2025",
+            "preparation": "Local native-grid window; original class values and native affine retained",
+            "source_metadata_sha256": plan["source_contract"]["metadata_sha256"],
+            "model_domain_sha256": plan["domain_sha256"],
+            "nil_policy": "Original TIFF mask and published 250 NoData normalized to int32 NoData",
+        }
+        if source_tags is None:
+            tags["source_member_sha256"] = plan["native_member_sha256"]
+        else:
+            allowed = {"source_entity_url", "source_entity_etag", "source_entity_bytes",
+                       "source_member_crc32", "source_member_compressed_bytes", "source_access"}
+            if not isinstance(source_tags, dict) or set(source_tags) - allowed:
+                raise ValueError("Use the original source-entity identity tags for this native window")
+            tags.update({key: str(value) for key, value in source_tags.items()})
+        output.update_tags(**tags)
     if not valid:
         raise ValueError("The retained national source has no valid land-cover cells in this domain")
     with pending.open("rb") as reader:

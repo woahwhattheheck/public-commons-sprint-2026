@@ -126,7 +126,7 @@ Progress and outputs:
 | Path | Contents |
 | --- | --- |
 | source/gura-workflow.json | Workflow phase, original and active programme IDs, runtime, current application inventory and command |
-| source/original-native-programme.log | Original baseline native process output |
+| source/programme-executions/&lt;programme-id&gt;/original-native-programme.log | Original baseline native process output |
 | source/gura-source-catalog.json | Actual original classes, cells, areas, tables and watershed features |
 | source/gura-comparison-plan.json | Saved source-class cohort |
 | source/gura-comparison-result.json | Final native reports, economic editions and archive |
@@ -170,3 +170,47 @@ application's `operator/server.py` against its returned Workspace path:
 The portable source includes the matched application and original source
 collection. Ordinary Workspace root files, including a retained operator
 session, preserve report selections and notes.
+
+## Preserving a running child and reopening the workflow
+
+The native launcher holds a programme-specific launch lock through an inherited
+file descriptor. If its caller ends while the native child continues, the next
+caller observes that issued process and its maintained programme/run state.
+It starts a continuation after the existing process has settled. Every issued
+attempt is retained under `programme-executions/<programme-id>/native-attempts`,
+with the actual log path in its command record. Earlier operation-wide command
+records remain available.
+
+Completed programmes and reports retain their original source identity.
+For an incomplete programme, the launcher checks the installed scientific
+inventory immediately before execution. Only the coordinator's exact
+scientific-source-change result triggers creation from the saved selection
+under the current inventory. Its active programme ID and command ledger are
+recorded separately, and canonical native run IDs remain bound to their
+original inputs. All other identity or grid errors remain explicit.
+
+The workflow saves original receiving and programme selections, the conversion
+cohort, selected watershed field and progress inside
+`workspace/gura-workflow` before the complete Workspace archive is built.
+After `portable.restore`, run the matched application's workflow with the
+returned Workspace and a new local source directory:
+
+```sh
+/compatible/python -B -m source_tools.gura_workflow run \
+  --workspace /returned/workspace \
+  --source-directory /returned/gura-source \
+  --backup /returned/gura-continued.zip
+```
+
+The restored scientific project and source/grid/profile/scenario identities
+are checked before local receipt and programme-selection paths are rebound.
+The original cohort and watershed-field selection are restored from the
+Workspace. The retained native runs and original source objects are available
+without another original archive download.
+
+To separate the operator's startup receipt from workflow JSON output, add
+`--operator-ready-file /absolute/new-operator-ready.json` to `serve` or a
+`run --serve` command. That receipt path must be new so an earlier server's
+connection information is preserved. Open the actual returned `operator_url`.
+A physical-only run defaults to a separate `-physical-complete.zip` backup
+filename, preserving the archive containing economic editions.

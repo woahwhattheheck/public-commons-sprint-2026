@@ -23,6 +23,10 @@ FILES = (
     "model/programme_experiments.py",
     "model/PAIR_COMPLETION.md",
     "source_tools/receive_gura.py",
+    "source_tools/gura_workflow.py",
+    "source_tools/gura_comparison.py",
+    "source_tools/GURA_COMPARISON.md",
+    "GURA_NATIVE_WORKFLOW.md",
     "source/gura-original-tables-3.20/NDR/biophysical_table_gura.csv",
     "source/gura-original-tables-3.20/SDR/biophysical_table_Gura.csv",
     "source/gura-original-tables-3.20/source.json",
@@ -76,7 +80,8 @@ PREVIOUS_EDITIONS = {
   "PROGRAMMES.md": [
     "b0a9c33c09f4dddba47db5a677ddc135b5c4242630c255ab4c232d4f365a206f",
     "59c5602aac0a6d476610cea86f7481087b808f9dec67522e5b8e0da11d2090be",
-    "8820d98e4c7b02ab587fae65cb9e36010ef2cc24b1ce7b1978d1de08a80a44f8"
+    "8820d98e4c7b02ab587fae65cb9e36010ef2cc24b1ce7b1978d1de08a80a44f8",
+    "4f21691ce7d25e64e6bfb76862d8ab8baa0a12474b37fbc56cef5c894f8e6793"
   ],
   "model/programme_experiments.py": [
     "f5ba6fc94f46102065aa084f5314a5ac660d31a3eff927549e99f71b831a17cc",
@@ -97,6 +102,25 @@ PREVIOUS_EDITIONS = {
   ],
   "model/PAIR_COMPLETION.md": [
     "95cbf57c338b0a83ff04bc2f353bf8ab323de6b080dfd2db128ee434de79237b"
+  ],
+  "source_tools/gura_workflow.py": [
+    "9b5eff5099256c301ae09419d7a8f1ef83c81a3b89256340630649f6b6c49af2",
+    "b96e4c9a66c1d32ba54bbb290a48cd7866f000bc3f12f23c007a45417f48b97f",
+    "26eaf937a2a54ebcf3bc2170ccdc18f14fc3867c180133487f0f64ee2cf3adc0"
+  ],
+  "source_tools/gura_comparison.py": [
+    "1df9249eb00e096d58cd7f63a24a7beaab4be0a00f8eb6aca000c275237feeb4",
+    "13f15c6c55eec76ccb3ccee918c4e4aa131ad8153b959e9dcbec558b99b04423",
+    "27b3c2a6e03459e67dafb2d8bba6555d5f433a18e3304bb40d74c38fe8dc0af4"
+  ],
+  "source_tools/GURA_COMPARISON.md": [
+    "096a9093940fbf14736421f167c875a3ed91d02c66d0b10d5330962dfdeb445c",
+    "29dea0a2c7634aa325337960a0fac7bd6ad663a54cb0cca65310b729d5927c68"
+  ],
+  "GURA_NATIVE_WORKFLOW.md": [
+    "3cc684db0f9ff7f4ef17e56826fece82947225709c3543c43e0136d2a1cc41a9",
+    "29e08e1ccd4c23d8d9df986ecfebdc7474bb4f76dc48f11f4958e0e74bf12637",
+    "36844187971332a94ef0858ead1305880710b3126b4d9afcf09dc3f0185c99e8"
   ]
 }
 
@@ -191,8 +215,12 @@ def patch_app(source):
                  "const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,openItem,"
                  "refreshState:refresh,navigate,closeDetail:()=>{detailDialog.close();detailContext=null;}});\n",
                  "programme browser instance", after=False)
-    source = replace(source, "if(view==='spatial'){community.detach();customerReviews.detach();",
-                     "if(view==='spatial'){programmes.detach();community.detach();customerReviews.detach();", "programme spatial lifecycle")
+    spatial = list(re.finditer(r"if\(view==='spatial'\)\{[^\n]*", source))
+    if len(spatial) != 1:
+        raise ValueError("Programme spatial lifecycle: expected one maintained spatial view")
+    if "programmes.detach();" not in spatial[0].group(0):
+        start = spatial[0].start() + len("if(view==='spatial'){")
+        source = source[:start] + "programmes.detach();" + source[start:]
     source = add(source, "  const d=state.data;let html='';\n",
                  "  if(view==='programmes'){community.detach();customerReviews.detach();programmes.mount($('#content'),state);return;}\n"
                  "  programmes.detach();\n", "programme view mount", after=False)

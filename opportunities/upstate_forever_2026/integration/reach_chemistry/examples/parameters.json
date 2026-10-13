@@ -1,0 +1,16 @@
+[
+  {
+    "id": "nitrification_rate",
+    "kind": "reaction_rate_day",
+    "target": "nitrification",
+    "lower": 0.01,
+    "upper": 0.5
+  },
+  {
+    "id": "point_load",
+    "kind": "load_kg_day",
+    "target": "point_n",
+    "lower": 2,
+    "upper": 20
+  }
+]

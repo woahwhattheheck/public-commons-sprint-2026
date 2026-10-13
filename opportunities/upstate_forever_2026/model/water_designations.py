@@ -615,12 +615,24 @@ def selections(workspace):
             for path in sorted(folder.glob("*/selection.json"))]
 
 def apply_to_delivery(workspace, selection_id, delivery_selection):
-    """Return the actual overlay choice for a new or revised original delivery."""
+    """Bind a saved selection to both map geometry and report source lineage."""
+    if not isinstance(delivery_selection, dict):
+        raise ValueError("Delivery selection must be a JSON object")
     result = get(workspace, selection_id)
     value = json.loads(json.dumps(delivery_selection))
     overlays = value.setdefault("overlays", {})
-    overlays[result["purpose"]] = result["delivery_overlay"]
+    source_roles = value.setdefault("source_roles", {})
+    if not isinstance(overlays, dict) or not isinstance(source_roles, dict):
+        raise ValueError("Delivery overlays and source_roles must be JSON objects")
+    role = {"high_quality_waters": "HIGH_QUALITY_WATERS",
+            "drinking_water": "SOURCE_WATER_PROTECTION_AREAS",
+            "protected_lands": "PROTECTED_LANDS_OVERLAY"}[result["purpose"]]
+    choice = result["delivery_overlay"]
+    overlays[result["purpose"]] = json.loads(json.dumps(choice))
+    source_roles[role] = json.loads(json.dumps(choice))
     notes = value.setdefault("notes", [])
+    if not isinstance(notes, list):
+        raise ValueError("Delivery notes must be a list")
     line = "Water designation: " + result["title"] + " · source " + str(result["source"]["vintage"])
     if line not in notes:
         notes.append(line)

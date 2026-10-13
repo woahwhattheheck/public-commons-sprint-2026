@@ -62,7 +62,7 @@ def _engine_sources(*, assembly=False):
     names = list(ENGINE_FILES)
     # These selected-model and reuse helpers participate in native execution.
     names.extend(name for name in ("model_selection.py", "reuse.py", "grid_reuse.py", "stage_cache.py",
-                                  "native_arguments.py", "raster_stats.py", "native_execution.py")
+                                  "native_arguments.py", "raster_stats.py", "native_execution.py", "native_equivalence.py")
                  if (root / name).is_file())
     if assembly:
         names.append("run_assembly.py")
@@ -913,7 +913,7 @@ class ComputeProgrammes:
         expected = scientific(record["identity"]["engine_sources"])
         actual = scientific(current)
         archived = {item["path"]: item for item in record["application_sources"]}
-        for name in ("native_arguments.py", "raster_stats.py"):
+        for name in ("native_arguments.py", "raster_stats.py", "native_execution.py", "native_equivalence.py"):
             if name in actual and name not in expected and "model/" + name in archived:
                 expected[name] = {**archived["model/" + name], "path": name}
         if actual != expected:

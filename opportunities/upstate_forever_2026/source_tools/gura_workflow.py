@@ -219,8 +219,105 @@ def check_receiving(path, workspace):
     return receipt
 
 
+
+def capsule_directory(workspace):
+    return workspace / "gura-workflow"
+
+
+def restore_workflow_paths(args):
+    """Bind a copied workflow to its restored scientific Workspace."""
+    from model.workspace import Workspace
+    capsule = capsule_directory(args.workspace)
+    metadata_path = capsule / "workflow-selection.json"
+    if not metadata_path.exists():
+        return False
+    metadata = read_json(metadata_path)
+    if metadata.get("schema") != "upstate.gura-workflow-selection/v1":
+        raise ValueError("The retained Gura workflow selection has an unsupported schema")
+    ws = Workspace(args.workspace)
+    if metadata["workspace_id"] != ws.project["id"]:
+        raise ValueError("The Gura workflow selection belongs to another scientific Workspace")
+    original_path = capsule / "original-receiving.json"
+    selection_path = capsule / "programme-selection.json"
+    if (sha256(original_path) != metadata["original_receiving_sha256"]
+            or sha256(selection_path) != metadata["programme_selection_sha256"]):
+        raise ValueError("The copied Gura workflow inputs differ from their retained source selection")
+    receipt = read_json(original_path)
+    collection = ws._get("sources", receipt["source_collection_id"])
+    if collection["original_manifest"]["sha256"] != receipt["source_manifest_sha256"]:
+        raise ValueError("The copied Workspace selects another Gura source collection")
+    for name in ("source_collection_id", "grid_id", "profile_id", "scenario_id", "programme_id"):
+        if receipt[name] != metadata[name]:
+            raise ValueError("The copied Gura workflow changed its original " + name)
+    stored_conversions = metadata["conversions"]
+    if args.convert is None and stored_conversions is not None:
+        args.convert = [str(left) + ":" + str(right) for left, right in stored_conversions]
+    elif args.convert is not None:
+        if [list(pair) for pair in conversions(args.convert)] != stored_conversions:
+            raise ValueError("Resume the original selected Gura cohort from this Workspace")
+    selected_zone = metadata["zone_id_field"]
+    if args.zone_id_field is None:
+        args.zone_id_field = selected_zone
+    elif args.zone_id_field != selected_zone:
+        raise ValueError("Resume the original watershed feature ID field " + selected_zone)
+    current_receiving = args.source_directory / "receiving.json"
+    if current_receiving.exists():
+        present = read_json(current_receiving)
+        if (Path(present["workspace"]).resolve() == args.workspace
+                and Path(present["selection_path"]).is_file()):
+            check_receiving(current_receiving, args.workspace)
+            # The capsule was verified above. A previous interrupted restore
+            # may already have rebound this receipt before saving progress.
+            return True
+    args.source_directory.mkdir(parents=True, exist_ok=True)
+    relocated_selection = args.source_directory / "programme-selection.json"
+    atomic_json(relocated_selection, read_json(selection_path))
+    receipt.update(workspace=str(args.workspace), source_directory=str(args.source_directory),
+                   selection_path=str(relocated_selection))
+    atomic_json(current_receiving, receipt)
+    check_receiving(current_receiving, args.workspace)
+    event("copied_workflow_reopened", workspace_id=ws.project["id"],
+          receiving=str(current_receiving), original_programme_id=receipt["programme_id"])
+    return True
+
+
+def retain_workflow(args, receipt, plan, state):
+    """Keep the source selection inside every complete Workspace archive."""
+    from model.workspace import Workspace
+    capsule = capsule_directory(args.workspace)
+    capsule.mkdir(parents=True, exist_ok=True)
+    original = capsule / "original-receiving.json"
+    selection = capsule / "programme-selection.json"
+    if not original.exists():
+        atomic_json(original, receipt)
+    if not selection.exists():
+        atomic_json(selection, read_json(Path(receipt["selection_path"])))
+    saved = read_json(original)
+    for name in ("source_collection_id", "grid_id", "profile_id", "scenario_id", "programme_id"):
+        if saved[name] != receipt[name]:
+            raise ValueError("The retained workflow selects another original " + name)
+    selected_conversions = conversions(args.convert)
+    metadata = {
+        "schema": "upstate.gura-workflow-selection/v1",
+        "operation_id": OPERATION_ID, "workspace_id": Workspace(args.workspace).project["id"],
+        "source_collection_id": receipt["source_collection_id"],
+        "source_manifest_sha256": receipt["source_manifest_sha256"],
+        "grid_id": receipt["grid_id"], "profile_id": receipt["profile_id"],
+        "scenario_id": receipt["scenario_id"], "programme_id": receipt["programme_id"],
+        "original_receiving_sha256": sha256(original),
+        "programme_selection_sha256": sha256(selection),
+        "conversions": [list(pair) for pair in selected_conversions] if selected_conversions is not None else None,
+        "zone_id_field": plan["inventory"]["watershed_source"]["id_field"],
+        "source_reference": plan["source_reference"],
+    }
+    atomic_json(capsule / "workflow-selection.json", metadata)
+    atomic_json(capsule / "comparison-plan.json", plan)
+    atomic_json(capsule / "workflow-progress.json", state)
+
+
 def prepare(args, identity):
     from source_tools import receive_gura
+    restore_workflow_paths(args)
     receiving_path = args.source_directory / "receiving.json"
     if receiving_path.exists():
         receipt = check_receiving(receiving_path, args.workspace)
@@ -301,51 +398,62 @@ def plan_and_catalog(args):
 def run_original_programme(args, receipt, state, state_path):
     from model.compute_programme import ComputeProgrammes
     from model.workspace import Workspace
-    selection = read_json(Path(receipt["selection_path"]))
-    programme = ComputeProgrammes(Workspace(args.workspace)).create(selection)
-    active_programme_id = programme["programme_id"]
-    state["active_original_programme_id"] = active_programme_id
-    command = [sys.executable, "-B", "-m", "model.compute_programme_cli",
-               "--workspace", str(args.workspace), "resume", active_programme_id]
-    process = {"argv": command, "cwd": str(APPLICATION_ROOT),
-               "programme_id": active_programme_id,
-               "original_programme_id": receipt["programme_id"],
-               "original_source_reference": selection.get("source_reference"),
-               "environment": {name: os.environ.get(name) for name in
-                               ("GDAL_CACHEMAX", "GDAL_NUM_THREADS")},
-               "hostname": socket.gethostname(),
-               "started_at": now(), "log": str(args.source_directory / "original-native-programme.log")}
-    state.update(phase="original native programme", original_native_process=process, updated_at=now())
-    atomic_json(state_path, state)
-    with Path(process["log"]).open("ab") as log:
-        child = subprocess.Popen(command, cwd=APPLICATION_ROOT, stdout=log, stderr=subprocess.STDOUT)
-        process["pid"] = child.pid
-        state.update(original_native_process=process, updated_at=now())
+    from source_tools.gura_comparison import run_retained_programme
+    manager = ComputeProgrammes(Workspace(args.workspace))
+    programme_id = state.get("active_original_programme_id", receipt["programme_id"])
+    if programme_id != receipt["programme_id"]:
+        original = manager._load(receipt["programme_id"])
+        active = manager._load(programme_id)
+        if active["selection"] != original["selection"]:
+            raise ValueError("The retained active programme differs from the original Gura selection")
+
+    def observe(process, observation):
+        state.update(phase="original native programme",
+                     active_original_programme_id=observation["programme_id"],
+                     original_native_observation=observation, updated_at=now())
+        if process is not None:
+            state["original_native_process"] = process
         atomic_json(state_path, state)
-        event("original_native_programme_started", **process)
-        returncode = child.wait()
-    process.update(returncode=returncode, finished_at=now())
-    state.update(original_native_process=process, updated_at=now())
-    atomic_json(state_path, state)
-    if returncode:
-        raise RuntimeError("Original native programme exited " + str(returncode)
-                           + ". Continue the retained programme after reading " + process["log"])
-    event("original_native_programme_complete", **process)
+        event("original_native_programme_status",
+              programme_id=receipt["programme_id"],
+              observation=observation,
+              process=state.get("original_native_process"))
+
+    result = run_retained_programme(
+        manager, programme_id, args.source_directory,
+        record_name="original-native-command.json",
+        log_name="original-native-programme.log",
+        previous_record=state.get("original_native_process"),
+        original_programme_id=receipt["programme_id"], notify=observe)
+    event("original_native_programme_complete",
+          programme_id=result["programme_id"], state=result["state"],
+          process=state.get("original_native_process"))
 
 
 def operator_command(args):
-    return [sys.executable, "-B", str(APPLICATION_ROOT / "operator" / "server.py"),
-            "--workspace", str(args.workspace),
-            "--operator-state", str(args.operator_state),
-            "--source-manifest", str(args.source_directory / "sources.json"),
-            "--source-root", str(args.source_directory),
-            "--port", str(args.port)]
+    command = [sys.executable, "-B", str(APPLICATION_ROOT / "operator" / "server.py"),
+               "--workspace", str(args.workspace),
+               "--operator-state", str(args.operator_state),
+               "--port", str(args.port)]
+    manifest = args.source_directory / "sources.json"
+    if manifest.is_file():
+        command.extend(["--source-manifest", str(manifest),
+                        "--source-root", str(args.source_directory)])
+    return command
 
 
 def serve(args):
     command = operator_command(args)
-    event("operator_starting", argv=command)
-    return subprocess.call(command, cwd=APPLICATION_ROOT)
+    event("operator_starting", argv=command,
+          ready_file=str(args.operator_ready_file) if args.operator_ready_file else None)
+    if args.operator_ready_file is None:
+        return subprocess.call(command, cwd=APPLICATION_ROOT)
+    ready_path = args.operator_ready_file.resolve()
+    ready_path.parent.mkdir(parents=True, exist_ok=True)
+    # Keep the single original server receipt separate from workflow JSONL.
+    # An existing receipt may belong to a server already serving this study.
+    with ready_path.open("x", encoding="utf-8") as ready:
+        return subprocess.call(command, cwd=APPLICATION_ROOT, stdout=ready)
 
 
 def status(args):
@@ -367,17 +475,23 @@ def workflow(args):
     needs_native = args.command == "run"
     state_path = args.source_directory / "gura-workflow.json"
     with operation_lock(args.source_directory):
+        rebound = restore_workflow_paths(args)
         state = read_json(state_path) if state_path.exists() else {
             "schema": SCHEMA, "operation_id": OPERATION_ID, "created_at": now(),
             "workspace": str(args.workspace), "source_directory": str(args.source_directory),
         }
         if state.get("workspace") != str(args.workspace):
-            raise ValueError("The retained workflow belongs to another Workspace")
+            if not rebound:
+                raise ValueError("The retained workflow belongs to another Workspace")
+            state.update(previous_workspace=state.get("workspace"),
+                         workspace=str(args.workspace),
+                         source_directory=str(args.source_directory))
         previous_application = state.get("application", {}).get("sha256")
         args._retained_source_reference = state.get("source_reference") or (
             "retained-application-sha256:" + previous_application if previous_application else None)
         try:
             state.update(state="running", phase="runtime", updated_at=now(),
+                         source_directory=str(args.source_directory),
                          hostname=socket.gethostname(), pid=os.getpid())
             state.pop("error", None)
             atomic_json(state_path, state)
@@ -405,6 +519,7 @@ def workflow(args):
             state.update(plan_id=plan["id"], alternative_count=len(plan["cases"]),
                          phase="inputs and scenarios prepared", updated_at=now())
             atomic_json(state_path, state)
+            retain_workflow(args, receipt, plan, state)
             if args.command == "prepare":
                 state.update(state="prepared", updated_at=now())
                 atomic_json(state_path, state)
@@ -413,6 +528,7 @@ def workflow(args):
             run_original_programme(args, receipt, state, state_path)
             state.update(phase="native comparisons and reports", updated_at=now())
             atomic_json(state_path, state)
+            retain_workflow(args, receipt, plan, state)
             result = gura_comparison.execute(
                 args.source_directory / "receiving.json", plan_path,
                 output=args.source_directory / "gura-comparison-result.json",
@@ -460,6 +576,8 @@ def main(argv=None):
     parser.add_argument("--physical-only", action="store_true",
                         help="Produce the native watershed report without the economic companion")
     parser.add_argument("--operator-state", type=Path)
+    parser.add_argument("--operator-ready-file", type=Path,
+                        help="Write only the original server startup receipt to a new local file")
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--serve", action="store_true",
                         help="Open the operator server after the native run and archive finish")
@@ -469,7 +587,8 @@ def main(argv=None):
     args.workspace = args.workspace.resolve()
     args.source_directory = args.source_directory.resolve()
     args.operator_state = (args.operator_state or args.workspace.with_name(args.workspace.name + "-operator")).resolve()
-    args.backup = (args.backup or args.workspace.with_name(args.workspace.name + "-complete.zip")).resolve()
+    args.backup = (args.backup or args.workspace.with_name(
+        args.workspace.name + ("-physical-complete.zip" if args.physical_only else "-complete.zip"))).resolve()
     if not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535")
     if args.backup.is_relative_to(args.workspace):
@@ -478,6 +597,7 @@ def main(argv=None):
         if args.command == "status":
             return status(args)
         if args.command == "serve":
+            restore_workflow_paths(args)
             check_receiving(args.source_directory / "receiving.json", args.workspace)
             return serve(args)
         return workflow(args)
