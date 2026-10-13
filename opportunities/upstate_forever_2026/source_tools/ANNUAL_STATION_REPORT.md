@@ -130,7 +130,7 @@ The original seventeen-file source bank supplies the assessment/annual/microbial
 
 First materialize the original17 `receive_annual_source_20261013.py` through its existing ordinary file and run it into an owned source intake. Compose its full source bodies into the current application, preserving newer operator, formatter and Study code. Materialize and extract the unchanged completed annual report ZIP using its existing README; its root `sources.json` is the optional report input below. Its original inputs and generated HTML/maps/CSV/GeoJSON remain inside that complete source package.
 
-When installing the updated driver into the receiving application, preserve any unknown local successor. The following focused command accepts the original seventeen-file driver's exact bytes or the already-installed current driver, verifies the full selected source body and installs only that one known path atomically. Run it after the original seventeen-source intake and ordinary composition of the remaining current source family:
+When installing the updated driver into the receiving application, preserve any unknown local successor. The following focused command accepts the original seventeen-file driver's exact bytes, its reviewed optional-report successor, C827's exact received catalogue-size correction, or the already-installed current driver, verifies the full selected source body and installs only that one known path atomically. Run it after the original seventeen-source intake and ordinary composition of the remaining current source family:
 
 ```sh
 PYTHON -B - APP CURRENT_TWENTY_FILE_BANK.json <<'PY'
@@ -145,7 +145,7 @@ if len(rows) != 1:
 row = rows[0]
 body = base64.b64decode(row["content_base64"], validate=True)
 sha = hashlib.sha256(body).hexdigest()
-if len(body) != row["bytes"] or sha != row["sha256"] or sha != "bdb25109c96d108183bcc3bc143f8cd619c722ac37d3614dd7bff4b973cb4672":
+if len(body) != row["bytes"] or sha != row["sha256"] or sha != "8af4cdcad390812f8f38e40e41df50147e5033a0ad3060b14e5db07ddaba8f12":
     raise ValueError("The selected annual driver differs from the reviewed successor")
 target = (app / path).resolve()
 target.relative_to(app)
@@ -153,6 +153,8 @@ existing = target.read_bytes()
 existing_sha = hashlib.sha256(existing).hexdigest()
 if existing_sha not in {
     "6970b516bf3dffe25f1e7f8f791b66a9519a2aa1b906c057a180d4c2b235912a",
+    "bdb25109c96d108183bcc3bc143f8cd619c722ac37d3614dd7bff4b973cb4672",
+    "3b1c2676323dbc838fa6f68b9cc2ea44e81fa2c2b3fd5a26cf32c7d4831c8908",
     sha,
 }:
     raise ValueError("Preserve this unknown receiving driver and send its source to the original owner")
@@ -202,3 +204,7 @@ Without a saved or newly selected optional annual report, the original command k
 Use the populated source/report project, rather than an empty demonstration. Open every one of the five saved map PDFs and all scientific report pages, including both annual basin/component maps. Open the standalone association HTML at desktop and 390 px, use the original map/table/dropdown selection, fit and excluded-component controls, and download/open the actual CSV, JSON, GeoJSON and SVG. Open the report ZIP's contents and the independently received project with its archived application, then reopen the same maps and scientific edition.
 
 Return the first actual source/queue/render exception immediately in the existing annual receiving operation. Preserve its original task, source selection and project writer while the relevant source owner repairs that boundary. Return viewed original screenshots/PDF pages and actual native IDs through that same operation. Source checks or captured-but-unviewed screenshots do not replace looking at the outgoing product. The complete owner direction above continues to apply, including the original 14:00 UTC cutoff and priority of the actual-geography native case.
+
+## Retain the actual spatial catalog's frame limits
+
+C827's original annual execution at Slack message1791897577.386119 exposed an original first-use size mismatch: the driver requested1200px while Spatial Review advertises a1024px cap. The maintained driver now calculates width=min(1200,catalog.limits.image_width) and height=min(800,catalog.limits.image_height), then uses those same actual dimensions in all three frame requests. Original vector coordinates, scientific selections, task IDs, map counts and annual quantities remain unchanged. Resume the same progress journal and completed tasks; adopt the repaired source only at the producing worker's idle boundary. The exact C827 preimage SHA3b1c2676… is included in the focused source guard above.
