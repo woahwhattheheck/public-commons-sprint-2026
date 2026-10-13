@@ -1,6 +1,9 @@
-import type { Server } from 'node:http';
+import type { Server, IncomingMessage, ServerResponse } from 'node:http';
+import type { VerifiedDownload } from '../resource-library/verified-downloads.mjs';
 import type { Library, Resource, Scan } from '../resource-library/library.mjs';
 import type { JobIntake, IntakeStatus, InputStorageLimits } from './intake/index.mjs';
+import type { JobPackageDescription, JobPackageIdentity, JobPackageJob, JobPackageFile } from '../../sf30-seller-sdk/jobs/outputs/index.mjs';
+export * from '../../sf30-seller-sdk/jobs/outputs/index.mjs';
 import type { JobResolutionController } from './resolution/index.mjs';
 export { openJobResolutionBuyer, openJobResolutionController, jobResolutionExtension,
   runJobBuyerResolutionCommand } from './resolution/index.mjs';
@@ -43,7 +46,15 @@ export interface JobEntry {
   id: string; directory: string; label: string; archived: boolean; revision: number;
   createdAt: string; updatedAt: string; observedAt: string; receipt: BuyerReceipt;
   lastError: string | null; task: CustomerTask | null; resourceId: string | null; resource: Resource | null;
+  outputPackage: boolean;
 }
+export type JobWorkspaceOutputs = {
+  package: JobPackageIdentity; manifestSha256: string; entryId: string;
+  files: Array<JobPackageFile & { path?: string; resourceId: string | null; resource: Resource | null }>;
+} & (
+  { received: false; manifest: JobPackageDescription['manifest'] } |
+  { received: true; job: JobPackageJob; policySha256: string; selectionSha256: string; directory: string }
+);
 export interface WorkspaceStatus {
   schema: 'stellar-forge.sf88.job-workspace.v1'; directory: string; revision: number;
   buyerRoots: string[]; fileRoots: string[]; entries: number;
@@ -64,6 +75,7 @@ export interface JobWorkspace {
   list(options?: WorkspaceList): {total: number; offset: number; limit: number; items: JobEntry[]};
   get(id: string): JobEntry;
   reconcile(id: string): Promise<JobEntry>;
+  outputs(id: string, options?: { signal?: AbortSignal }): Promise<JobWorkspaceOutputs>;
   update(id: string, options: {expectedRevision: number; label?: string; archived?: boolean}): Promise<JobEntry>;
   start(id: string, options?: {kind?: CustomerTask['kind']; deadlineMs?: number; pollMs?: number}): Promise<JobEntry>;
   cancel(id: string, options?: {taskId?: string}): Promise<JobEntry>;
@@ -82,7 +94,16 @@ export interface WorkspaceOptions {
 export function openJobWorkspace(options: WorkspaceOptions): Promise<JobWorkspace>;
 export type JobWorkspaceLanding = 'request' | 'checkout' | 'jobs' | 'library' | 'collections';
 export type JobApprovalMode = 'browser' | 'terminal';
-export function startJobCustomerWorkspace(options: {model: JobWorkspace; port?: number; browserApproval?: boolean; landing?: JobWorkspaceLanding}): Promise<{
+export interface JobWorkspaceExtension {
+  additionalAssets: Array<{route: string; bytes: Buffer; type: 'text/html' | 'text/javascript' | 'text/css' | 'text/plain'}>;
+  authenticatedRoute(context: {request: IncomingMessage; response: ServerResponse; url: URL;
+    send(value: unknown, status?: number): void; signal: AbortSignal; body(maximum?: number): Promise<Record<string, unknown>>;
+    registerDownload(produce: (signal: AbortSignal) => Promise<VerifiedDownload>): Promise<{url: string; bytes: number; sha256: string}>;
+  }): boolean | Promise<boolean>;
+  /** Runs after host admission closes and before original native controllers drain. */
+  close?(): void | Promise<void>;
+}
+export function startJobCustomerWorkspace(options: {model: JobWorkspace; port?: number; browserApproval?: boolean; landing?: JobWorkspaceLanding; extensions?: JobWorkspaceExtension[]}): Promise<{
   origin: string; url: string; libraryUrl: string; collectionsUrl: string; checkoutUrl: string; intakeUrl: string; resolutionUrl: string;
   approvalMode: JobApprovalMode; landing: JobWorkspaceLanding; entryUrl: string;
   token: string; server: Server; launch: JobWorkspaceLaunch; privateLaunch: string; close(): Promise<void>;
