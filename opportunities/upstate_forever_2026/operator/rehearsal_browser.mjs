@@ -76,7 +76,8 @@ async function rehearsalBrowserMain(argv) {
     settings=await readJSON(argv[0]);
     checkRunning();
     const fields=['schema','operation_id','connection_file','rehearsal_id','sender_workspace','receiver_workspace','output_directory','playwright_module','executable'];
-    if(!settings||!equal(Object.keys(settings).sort(),fields.sort())||settings.schema!=='upstate.rehearsal-browser-input/v1'||
+    const acceptedFields=settings?.customer_review?[...fields,'customer_review']:fields;
+    if(!settings||!equal(Object.keys(settings).sort(),acceptedFields.sort())||settings.schema!=='upstate.rehearsal-browser-input/v1'||
        !/^[A-Za-z0-9_-]{16,100}$/.test(settings.operation_id||'')) fail('INPUT_SCHEMA','Select the original browser receiving input.');
     for(const key of ['rehearsal_id','sender_workspace','receiver_workspace']) validId(settings[key]);
     if(settings.sender_workspace===settings.receiver_workspace) fail('DISTINCT_RECEIVER','Select the independently restored original workspace.');
@@ -116,7 +117,8 @@ async function rehearsalBrowserMain(argv) {
     }
     await lockHandle.writeFile(canonical(lockValue)+'\n'); await lockHandle.sync();
     const binding={schema:settings.schema,operation_id:settings.operation_id,rehearsal_id:settings.rehearsal_id,
-      sender_workspace:settings.sender_workspace,receiver_workspace:settings.receiver_workspace};
+      sender_workspace:settings.sender_workspace,receiver_workspace:settings.receiver_workspace,
+      ...(settings.customer_review?{customer_review:{manifest:settings.customer_review.manifest,selected:settings.customer_review.selected}}:{})};
     const progressPath=join(output,'results','browser-progress.json');
     progress=await exists(progressPath)?await readJSON(progressPath):{
       schema:'upstate.rehearsal-browser-progress/v1',binding,started_at:now(),actions:{},captures:{},controls:{},phases:{},uploads:{},recordings:[],status:'RUNNING'
@@ -512,6 +514,26 @@ async function rehearsalBrowserMain(argv) {
       }
       await openRehearsal();await step('calculation');await pause(1800);attempt.frames.push({view:'rehearsal',step_id:'calculation',displayed_at:now()});
       await tab('evidence');await pause(1800);attempt.frames.push({view:'rehearsal',tab:'evidence',displayed_at:now()});
+      if(settings.customer_review) {
+        const {runCustomerReviewChapter}=await import('../source_tools/simulated_customer_review_browser.mjs');
+        const captureCustomer=async(label,metadata)=>{
+          if(progress.captures[label]){await verifyArtifact(progress.captures[label]);return progress.captures[label];}
+          await page.evaluate(()=>document.fonts.ready);checkRunning();
+          const temporary=join(privateDirectory,label+'-'+randomUUID()+'.png');
+          await page.screenshot({path:temporary,fullPage:true,animations:'disabled'});
+          const member=await publicFile(temporary,label,'.png');await fs.unlink(temporary);
+          const metrics=await page.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight},document:{width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight},heading:document.querySelector('h1')?.textContent||''}));
+          progress.captures[label]={...member,...metrics,...metadata,captured_at:now(),workspace:settings.sender_workspace,rehearsal_id:settings.rehearsal_id};
+          await checkpoint();return progress.captures[label];
+        };
+        progress.phases.customer_review=await runCustomerReviewChapter({
+          page,choice:settings.customer_review,output,checkRunning,capture:captureCustomer,checkpoint,progress,pause});
+        await checkpoint();
+        await page.goto(connection.operator_url,{waitUntil:'domcontentloaded'});
+        await waitFor(async()=>await page.locator('#workspace-select option[value="'+settings.sender_workspace+'"]').count(),'OPERATOR_RETURN');
+        await openRehearsal();await tab('evidence');
+        attempt.frames.push({view:'customer_review_handback',customer_ids:settings.customer_review.selected,displayed_at:now()});
+      }
       await closeBrowser();const path=await video.path();const member=await publicFile(path,'operator-walkthrough','.webm');
       attempt.state='complete';attempt.ended_at=now();attempt.file=member;
       progress.phases.recording={state:'complete',...member,started_at:attempt.started_at,ended_at:attempt.ended_at,frames:copy(attempt.frames)};
@@ -634,7 +656,8 @@ async function rehearsalBrowserMain(argv) {
       {path:progress.phases.recording.path,bytes:progress.phases.recording.bytes,sha256:progress.phases.recording.sha256},progress.phases.download.file,
       ...Object.values(progress.actions).map(x=>x.receipt),...Object.values(progress.controls).filter(x=>x.original).map(x=>x.original),
       ...['saved_edits','changed_case','restored_case','receiver'].map(x=>progress.phases[x].record),
-      ...progress.recordings.filter(x=>x.file).map(x=>({path:x.file.path,bytes:x.file.bytes,sha256:x.file.sha256}))];
+      ...progress.recordings.filter(x=>x.file).map(x=>({path:x.file.path,bytes:x.file.bytes,sha256:x.file.sha256})),
+      ...(progress.customer_review?.downloads||[])];
     const unique=[...new Map(files.map(x=>[x.path,x])).values()];
     for(const member of unique)await verifyArtifact(member);
     await closeBrowser();
