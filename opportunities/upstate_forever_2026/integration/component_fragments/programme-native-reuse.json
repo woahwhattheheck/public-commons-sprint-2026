@@ -9,7 +9,9 @@
         "model/PROGRAMME_NATIVE_REUSE.md",
         "operator/programme_native_reuse_patch.json",
         "operator/install_programme_reuse.py",
-        "integration/component_fragments/programme-native-reuse.json"
+        "integration/component_fragments/programme-native-reuse.json",
+        "source_tools/continue_programme_source_reuse.py",
+        "source_tools/PROGRAMME_SOURCE_REUSE_COURSE.md"
       ],
       "requires": [
         "programme-source-updates",
@@ -17,7 +19,8 @@
       ],
       "source_reference": {
         "version": "1.0.2",
-        "purpose": "Retain completed original candidates and let the existing model-specific native matcher decide stage reuse"
+        "purpose": "Retain completed original candidates and let the existing model-specific native matcher decide stage reuse",
+        "course_version": "1.0.0"
       }
     }
   },
