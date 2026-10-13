@@ -131,3 +131,42 @@ to obtain that edition's link.
 Discussion text remains in the current explorer view and its downloaded review.
 Import that JSON in Regional watersheds to retain it with the original source
 files and the complete report packet.
+
+## Reopen a review and publish an amendment
+
+In the original source explorer, choose **Reopen saved review** and select the
+downloaded JSON. The current original edition restores the utility, view scope,
+state and text filters, focused watershed, report-selection rule and all eight
+discussion fields together. Its three original geographic source strings and
+recomputed selection must agree before the current view is replaced. Amend the
+fields or geography, then download the next review and save it in Regional
+watersheds.
+
+A review from another source edition opens in a separate **Retained original
+review** panel with its own original selected records and discussion. The panel
+names each differing original member and retains the original JSON download.
+**Use this discussion with current sources** carries only the discussion into
+the current view; the current utility, filters and geographic membership govern
+the new review. This keeps the original edition visible while allowing the next
+current-source review to proceed.
+
+In the native desk, open a saved watershed selection and choose **Reopen this
+saved review for amendment**. The provider reads and verifies its actual retained
+review bytes. Expand **Amend the discussion text** to edit the eight fields.
+**Show reviewed watersheds on the original map** highlights exactly the reviewed
+membership and fits that selection plus its original upstream contributors.
+The saved selection and its downloads remain available beside this preview.
+
+**Save reviewed selection and reports** publishes a new immutable export when
+the original review text has changed. A native amendment retains its predecessor
+export ID, original review hash and complete original review history. The new
+HTML/Markdown brief names that predecessor, and the offline packet contains
+`source-review-history/<export-id>/source-explorer-review.json` and its original
+`export.json`, including earlier retained review-history members. The existing
+source-context briefing and Monitoring continuation consume this new saved
+edition through their ordinary paths.
+
+The report labels changed text as **Edited review text** whether it was amended
+in the standalone explorer or the native desk. Prepared discussion prompts keep
+their original status until their actual text changes. Reopening an unchanged
+review retains its original content; it does not modify the historical export.

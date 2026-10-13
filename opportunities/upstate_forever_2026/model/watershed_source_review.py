@@ -9,7 +9,7 @@ import re
 from .common import atomic_bytes, atomic_json, describe_file
 
 SCHEMA = "upstate.watershed-source-review/v1"
-VERSION = "2026-10-13-original-source-review-1"
+VERSION = "2026-10-13-original-source-review-2"
 SOURCE_BANK_SHA256 = "24db44e3b3896bafadbba3f50eacd5a852913baf201fd828123626a9fc45655d"
 SOURCES = {
     "utility-focus-profile.json": {
@@ -193,9 +193,18 @@ def brief_lines(selection, table, number):
         ["Original review SHA-256", review["original_file_sha256"]],
         ["Native source-profile SHA-256", review["native_binding"]["profile_sha256"]],
     ]))
+    previous = review.get("previous_review")
+    if previous:
+        lines.extend(["", "### Previous retained review", ""])
+        lines.extend(table(["Original predecessor", "Retained value"], [
+            ["Saved export ID", previous["export_id"]],
+            ["Original review SHA-256", previous["source_review_sha256"]],
+            ["Edition relationship", previous["meaning"]],
+        ]))
+        lines.extend(["", "The complete packet retains this predecessor and its earlier review history under source-review-history.", ""])
     lines.extend(["", review["interpretation"], "", "### Source setup discussion", ""])
     origins = {"prepared_prompt": "Prepared discussion prompt",
-               "edited_in_explorer": "Edited in source explorer", "empty": "No text recorded"}
+               "edited_in_explorer": "Edited review text", "empty": "No text recorded"}
     lines.extend(table(["Topic", "Text status", "Retained text"], [
         [row["label"], origins[row["origin"]], row["text"]]
         for row in review["discussion"]
