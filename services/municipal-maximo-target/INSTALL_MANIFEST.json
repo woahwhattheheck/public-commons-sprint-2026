@@ -22,8 +22,8 @@
     },
     {
       "path": "workspace/maximo_load.py",
-      "bytes": 18403,
-      "sha256": "c2d6a7beb055702a9b08f98be7c743acb49b418efaa610a33154503dcbbff672",
+      "bytes": 18452,
+      "sha256": "8bcd9af3d144c97733c220269d50bb6717f3d47d15e84a80970859be6b341cf1",
       "preimage_sha256": null
     },
     {
@@ -40,8 +40,8 @@
     },
     {
       "path": "workspace/ui/app.js",
-      "bytes": 52885,
-      "sha256": "b07ce1ce12625efb4600b7e9bf49c11e5109880ef5f0509dcc37589bb0335b62",
+      "bytes": 54542,
+      "sha256": "6ad2c63eb62c8fff1e8a2bb5c92f3670df94a1481cb738d797f5af797d93538b",
       "preimage_sha256": "285469648dfd323ba194684161c1bedbe8bcadc810b9c7b202286408ce96895d"
     },
     {

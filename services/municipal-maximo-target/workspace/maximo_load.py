@@ -195,17 +195,17 @@ def receive(workspace, project_id, load_id, operation, actor, returned):
     if returned["http_status"] != 200: findings.append("Original HTTP status is "+str(returned["http_status"]))
     if not isinstance(parsed, list) or len(parsed) != len(saved["rows"]):
         findings.append("Original per-resource response population does not match the prepared request")
-    else:
-        for expected, response in zip(saved["rows"], parsed):
-            meta = response.get("_responsemeta", {}) if isinstance(response, dict) else {}
-            if not isinstance(meta, dict): meta = {}
-            supplied = meta.get("status")
-            status = int(supplied) if isinstance(supplied, (int, str)) and str(supplied).isdigit() else None
-            data = response.get("_responsedata") if isinstance(response, dict) else None
-            error = data.get("Error") if isinstance(data, dict) else None
-            outcome = "reported_success" if status is not None and 200 <= status < 300 and not error else "reported_rejection" if status is not None and status >= 400 else "unknown"
-            results.append({**expected, "reported_status": status, "outcome": outcome,
-                            "resource_location": meta.get("Location", meta.get("location")), "original_response": response})
+    for position, expected in enumerate(saved["rows"]):
+        response = parsed[position] if isinstance(parsed, list) and position < len(parsed) else None
+        meta = response.get("_responsemeta", {}) if isinstance(response, dict) else {}
+        if not isinstance(meta, dict): meta = {}
+        supplied = meta.get("status")
+        status = int(supplied) if isinstance(supplied, (int, str)) and str(supplied).isdigit() else None
+        data = response.get("_responsedata") if isinstance(response, dict) else None
+        error = data.get("Error") if isinstance(data, dict) else None
+        outcome = "reported_success" if status is not None and 200 <= status < 300 and not error else "reported_rejection" if status is not None and status >= 400 else "unknown"
+        results.append({**expected, "reported_status": status, "outcome": outcome,
+                        "resource_location": meta.get("Location", meta.get("location")), "original_response": response})
     all_or_nothing = saved["headers"]["allornothing"] == "1"
     if returned["http_status"] != 200 or findings:
         for row in results: row["outcome"] = "unknown"
