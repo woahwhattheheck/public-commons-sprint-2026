@@ -13,6 +13,21 @@ regional field population remains in its original collection. The new collection
 uses a unique reference-station prefix and the binding selects exactly its 36
 records.
 
+## Place in the Upper Savannah demonstration
+
+The primary RFP demonstration follows Bryce's 2026-10-13 owner brief: actual
+Upper Savannah geographic and source shapes; a 30 m native grid; the upstream
+contributing domain, South Carolina reporting mask and utility areas shown
+explicitly; and clearly labeled, realistic simulated inputs for native NDR/SDR
+baseline, restoration and matched-control comparisons. Preserve the annual
+nitrogen/phosphorus outputs in kg/year and sediment in tonnes/year reaching
+streams, editable sources and model settings, maps and exports, cold reopen,
+and actual elapsed operation history. Tim retains scientific direction, review
+and the client relationship. The selected 1,296 ha source-geometry scenario is
+explicitly simulated. This 36-record authored numerical-reference course
+complements that primary regional demonstration with source handling,
+calibration, reporting and independent receiving through the same product.
+
 ## Install and run the complete current source
 
 Use the complete native application with the merged Measurements binding,
