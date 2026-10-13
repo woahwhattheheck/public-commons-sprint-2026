@@ -15,6 +15,7 @@ import {prepareOutputPurchase,inspectOutputPurchase,runOutputPurchase,recoverOut
 import {fields,outputHash,OUTPUT_METADATA_BYTES}
   from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/model.mjs';
 import {normalizeReleaseRuntime} from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
+import {readPMTilesCommerceWorkbench} from './pmtiles-commerce-workbench.mjs';
 
 const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(value??{},key)).map(key=>[key,value[key]]));
 function separate(a,b){need(a!==b&&!a.startsWith(b+sep)&&!b.startsWith(a+sep),'PMTILES_COMMERCE_SEPARATE_PATHS_REQUIRED');}
@@ -76,13 +77,13 @@ function selectedConfiguration(base,catalog,objectId,requestId){
     expect:{...op.expect,maxAtomic:row.pricing.atomicPerRequest}}};
 }
 export class MerchantPMTilesCommerce{
-  #alias;#entry;#controller;#output;#directory;#packageSelection;#shutdown;
+  #alias;#entry;#controller;#output;#directory;#packageSelection;#packagesDirectory;#shutdown;
   constructor({alias,entry,controller,exportsDirectory,releaseStore,packageSelection,signal}){
     this.#alias=alias;this.#entry=clone(entry);this.#controller=controller;
     this.#directory=join(resolve(exportsDirectory),'pmtiles-output',identifier(alias));
     this.#output=new PMTilesOutputController({workspace:controller.workspace,directory:join(this.#directory,'merchant'),
       releaseStore,runtimes:entry.commerce?.runtimes??{}});
-    this.#packageSelection=packageSelection;this.#shutdown=signal;
+    this.#packageSelection=packageSelection;this.#packagesDirectory=join(resolve(exportsDirectory),'pmtiles',identifier(alias));this.#shutdown=signal;
   }
   requestClose(){this.#output.requestClose();}
   close(){return this.#output.close();}
@@ -123,6 +124,9 @@ export class MerchantPMTilesCommerce{
     args=clone(args);const scope={expectedWorkspaceId:this.#entry.expectedWorkspaceId};
     const output=(action,input)=>this.#output.execute(action,{...input,...scope},{signal:this.#shutdown});
     const suffix=name.replace(/^merchant_pmtiles_/,'');
+    if(suffix==='output_workbench')return readPMTilesCommerceWorkbench({alias:this.#alias,entry:this.#entry,
+      controller:this.#controller,output:this.#output,directory:this.#directory,packagesDirectory:this.#packagesDirectory,
+      packageSelection:this.#packageSelection,readBuyerConfiguration:privateConfig,input:args,signal:this.#shutdown});
     if(suffix==='output_prepare'){
       const input=pick(args,['requestId','releaseId','releaseManifestSha256','offerId','title','origin','payment','chunkBytes']);
       need(Array.isArray(args.objects),'PMTILES_COMMERCE_OBJECTS_REQUIRED');input.objects=[];

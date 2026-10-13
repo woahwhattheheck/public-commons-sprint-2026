@@ -208,3 +208,15 @@ The full source belongs in the complete selected merchant installation. The
 map operations ZIP retains its declared original map runtime/source/workspace
 closure; install the merchant selection when the receiver also needs paid
 seller or MCP operation.
+
+## Original browser workbench
+
+Open the existing alias with `merchant_pmtiles_open` and use its
+`merchant_pmtiles_console` URL to operate the complete paid map panel. Its
+[operating guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/BROWSER.md)
+covers saved offers, seller controls, customer receiving, original accounting and
+same-tab recovery. The added read-only `merchant_pmtiles_output_workbench` exposes
+`summary`, `sources`, `offers`, `purchases`, `operations`, `packages` and exact
+`request` sections over those existing records. Lists use bounded pages of at most
+50; original request IDs reopen older records directly. The browser uses the same
+alias queue and exact authoring-server lifetime as the original MCP tools.

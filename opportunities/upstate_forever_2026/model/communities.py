@@ -429,6 +429,162 @@ def _interventions(value, selected_groups, previous=None):
     return result
 
 
+
+INTERVENTION_FIELDS = (
+    "id", "title", "priority", "strategy", "status", "utility_id", "watershed_id",
+    "geoids", "reason", "owner", "next_step", "cost_estimate_usd", "notes",
+)
+INTERVENTION_DERIVED_COLUMNS = ("position", "population_context", "household_context")
+INTERVENTION_REQUIRED_COLUMNS = ("id", "title", "utility_id", "watershed_id", "reason")
+
+
+def _csv_original_text(value, previous):
+    """Undo a known derived-CSV text escape against this exact prior plan."""
+    if isinstance(previous, str):
+        escaped = previous
+        if (previous.lstrip().startswith(("=", "+", "@"))
+                or previous.lstrip().startswith("-")
+                and not re.fullmatch(r"-\d+(?:\.\d+)?", previous.strip())):
+            escaped = "'" + previous
+        if value == escaped:
+            return previous
+    return value
+
+
+def _intervention_changes(before, after):
+    fields = ("position",) + INTERVENTION_FIELDS
+    left = {row["id"]: row for row in before}
+    right = {row["id"]: row for row in after}
+    shared = set(left) & set(right)
+    changed = sorted(key for key in shared if any(
+        left[key].get(field) != right[key].get(field) for field in fields))
+    return {
+        "added_ids": sorted(set(right) - set(left)),
+        "removed_ids": sorted(set(left) - set(right)),
+        "changed_ids": changed,
+        "unchanged_ids": sorted(shared - set(changed)),
+    }
+
+
+def _intervention_import(value, table, previous):
+    """Read the received CSV and retain its complete original bytes in the plan."""
+    if not isinstance(value, dict) or value.get("schema") != "upstate.intervention-csv-import/v1":
+        raise ValueError("Select an upstate.intervention-csv-import/v1 source")
+    source = value.get("source")
+    if not isinstance(source, dict):
+        raise ValueError("Retain the original intervention CSV source")
+    filename = text(source.get("filename"), "Intervention CSV filename", required=True, maximum=255)
+    if "/" in filename or "\\" in filename or filename in {".", ".."}:
+        raise ValueError("Use the original intervention CSV filename without a directory")
+    raw = source.get("text")
+    if not isinstance(raw, str) or "\0" in raw:
+        raise ValueError("The original intervention CSV must contain UTF-8 text")
+    encoded = raw.encode("utf-8")
+    import hashlib
+    checksum = hashlib.sha256(encoded).hexdigest()
+    if source.get("bytes") != len(encoded) or source.get("sha256") != checksum:
+        raise ValueError("The intervention CSV differs from its received byte count or SHA-256")
+    if not encoded:
+        raise ValueError("The selected intervention CSV is empty")
+    import_selection, import_groups = select_groups(
+        table, value.get("selection", (previous or {}).get("selection", {})))
+    previous_rows = (previous or {}).get("interventions", [])
+    prior = {row["id"]: row for row in previous_rows}
+    available_watersheds = {member["watershed_id"] for group in table["groups"]
+                            for member in group["memberships"]}
+    available_geoids = {group["geoid"] for group in table["groups"]}
+    normalized_geographies, records, source_rows, errors, seen = [], [], [], [], set()
+
+    def geography(value, available, line, column):
+        original = value.strip()
+        resolved = original
+        if original not in available and re.fullmatch(r"\d{1,12}", original):
+            candidate = original.zfill(12)
+            if candidate in available:
+                resolved = candidate
+                normalized_geographies.append({"row": line, "column": column,
+                                                "original": original, "resolved": resolved})
+        return resolved
+
+    reader = csv.reader(io.StringIO(raw.removeprefix("\ufeff"), newline=""), strict=True)
+    try:
+        headers = next(reader)
+    except StopIteration as error:
+        raise ValueError("The intervention CSV has no column headings") from error
+    except csv.Error as error:
+        raise ValueError("Intervention CSV row 1: " + str(error)) from error
+    if not headers or any(not column for column in headers) or len(headers) != len(set(headers)):
+        raise ValueError("The intervention CSV needs distinct, nonempty column headings")
+    missing = set(INTERVENTION_REQUIRED_COLUMNS) - set(headers)
+    if missing:
+        raise ValueError("The intervention CSV lacks columns: " + ", ".join(sorted(missing)))
+    ignored = [column for column in headers if column not in INTERVENTION_FIELDS]
+    record_number = 0
+    while True:
+        line = reader.line_num + 1
+        try:
+            cells = next(reader)
+        except StopIteration:
+            break
+        except csv.Error as error:
+            errors.append("CSV row " + str(line) + ": " + str(error))
+            break
+        if not cells or all(not value.strip() for value in cells):
+            continue
+        record_number += 1
+        if len(cells) != len(headers):
+            errors.append("CSV row " + str(line) + ": expected " + str(len(headers))
+                          + " columns; received " + str(len(cells)))
+            continue
+        original = dict(zip(headers, cells))
+        key = original["id"].strip() or ("I-CSV-" + checksum[:16] + "-" + str(record_number))
+        if key in seen:
+            errors.append("CSV row " + str(line) + ": intervention identifier repeats: " + key)
+            continue
+        seen.add(key)
+        old = prior.get(key, {})
+        row = {field: _csv_original_text(original.get(field, ""), old.get(field))
+               for field in INTERVENTION_FIELDS if field != "geoids"}
+        row["id"] = key
+        row["watershed_id"] = geography(row["watershed_id"], available_watersheds, line, "watershed_id")
+        row["geoids"] = [
+            geography(item, available_geoids, line, "geoids")
+            for item in original.get("geoids", "").split(";") if item.strip()
+        ]
+        for field, default in (("priority", "medium"), ("strategy", "investigate"), ("status", "proposed")):
+            row[field] = row[field].strip() or default
+        row["cost_estimate_usd"] = row["cost_estimate_usd"].strip() or None
+        try:
+            normalized = _interventions([row], import_groups)[0]
+        except (ValueError, InvalidOperation) as error:
+            errors.append("CSV row " + str(line) + " [" + key + "]: " + str(error))
+            continue
+        normalized["position"] = len(records) + 1
+        records.append(normalized)
+        source_rows.append({"record": record_number, "source_line": line, "id": key})
+    if errors:
+        raise ValueError("The intervention CSV needs correction:\n" + "\n".join(errors))
+    if not records:
+        raise ValueError("The intervention CSV contains no intervention rows")
+    return {
+        "schema": "upstate.intervention-csv-import/v1",
+        "source": {"filename": filename, "media_type": "text/csv; charset=utf-8",
+                   "bytes": len(encoded), "sha256": checksum, "text": raw},
+        "table_id": table["id"], "previous_plan_id": previous["id"] if previous else None,
+        "selection": import_selection,
+        "rows": source_rows,
+        "summary": {"row_count": len(records),
+                    **_intervention_changes(previous_rows, records),
+                    "normalized_geographies": normalized_geographies,
+                    "derived_columns": [column for column in ignored
+                                        if column in INTERVENTION_DERIVED_COLUMNS],
+                    "additional_columns": [column for column in ignored
+                                           if column not in INTERVENTION_DERIVED_COLUMNS],
+                    "order_basis": "Received CSV row order; derived context is recalculated from the saved plan"},
+        "imported_interventions": records,
+    }
+
+
 def save_plan(workspace, selection):
     table = workspace._get(TABLE_KIND, identifier(selection.get("table_id")))
     filters, groups = select_groups(table, selection.get("selection", {}))
@@ -440,7 +596,11 @@ def save_plan(workspace, selection):
     else:
         previous = None
     context = _context(workspace, selection.get("context", {}))
-    interventions = _interventions(selection.get("interventions", []), groups, previous)
+    imported = (_intervention_import(selection["intervention_import"], table, previous)
+                if selection.get("intervention_import") is not None else None)
+    supplied_interventions = selection.get(
+        "interventions", imported["imported_interventions"] if imported is not None else [])
+    interventions = _interventions(supplied_interventions, groups, previous)
     costs = [Decimal(row["cost_estimate_usd"]) for row in interventions if row["cost_estimate_usd"] is not None]
     value = {
         "title": text(selection.get("title"), "Community plan title", required=True, maximum=300),
@@ -457,6 +617,9 @@ def save_plan(workspace, selection):
                   if isinstance(selection.get("notes"), list)
                   else [line for line in text(selection.get("notes"), "Plan notes").splitlines() if line.strip()]),
     }
+    if imported is not None:
+        imported["saved_changes"] = _intervention_changes(imported["imported_interventions"], interventions)
+        value["intervention_import"] = imported
     return workspace._save(PLAN_KIND, value)
 
 

@@ -149,6 +149,37 @@ def receive_bundle(archive, expected_sha256, operation_id):
         })
     if not seen or seen != set(bank_files):
         raise ValueError("Receive every original source/input file from the native source bank.")
+    source_files = sorted(source_inputs, key=lambda row: row["id"])
+    source_inputs = []
+    # Match the source-edition loader: program snapshots remain original native
+    # evidence; only exact model input bytes determine the operator source identity.
+    for option, canonical_name in (
+            ("--source-context", "full-domain-water-context.json"),
+            ("--classification-coverage", "scdes-domain217-source-coverage.json"),
+            ("--network", "native-network.json")):
+        if option not in argv:
+            if option == "--source-context":
+                raise ValueError("The native invocation must identify its original source context.")
+            continue
+        if argv.count(option) != 1:
+            raise ValueError("The native invocation repeats a model input: " + option)
+        try:
+            original_path = member_name(argv[argv.index(option) + 1])
+        except (IndexError, TypeError) as error:
+            raise ValueError("The native invocation has an incomplete model input: " + option) from error
+        if original_path not in bank_files:
+            raise ValueError("The original source bank must retain the executed model input: " + original_path)
+        body = bank_files[original_path]
+        if option == "--network" and body.startswith(b"\x1f\x8b"):
+            canonical_name += ".gz"
+        retained_path = "source/" + canonical_name
+        if retained_path in retained and retained[retained_path] != body:
+            raise ValueError("Canonical model input conflicts with an original source member: " + canonical_name)
+        retained[retained_path] = body
+        source_inputs.append({
+            "id": canonical_name, "member_path": canonical_name,
+            "bytes": len(body), "sha256": digest(body), "hash_basis": "exact source bytes",
+        })
     source_inputs.sort(key=lambda row: row["id"])
     fingerprint = digest(json.dumps(
         [{"id": row["id"], "sha256": row["sha256"]} for row in source_inputs],
@@ -161,7 +192,7 @@ def receive_bundle(archive, expected_sha256, operation_id):
         "id": key, "report": report, "run": run, "source": source,
         "archive_sha256": expected_sha256, "archive_bytes": len(archive_body),
         "source_bank_archive_sha256": digest(source_bank_body),
-        "source_inputs": source_inputs, "source_fingerprint": fingerprint,
+        "source_inputs": source_inputs, "source_files": source_files, "source_fingerprint": fingerprint,
         "files": retained,
     }
 
@@ -216,13 +247,14 @@ def adopt(application, workspace, archive, expected_sha256, *, operation_id=OPER
                 "summary": bundle["report"]["summary"],
                 "selection": bundle["report"]["selection"],
                 "source_inputs": bundle["source_inputs"],
+                "native_source_files": bundle["source_files"],
                 "source_fingerprint": bundle["source_fingerprint"],
                 "source_validation": {
                     "state": "complete", "method": "original native archive and exact source bank",
                     "operation_id": operation_id,
                     "source_bank_sha256": bundle["source"]["source_bank_sha256"],
                     "source_bank_archive_sha256": bundle["source_bank_archive_sha256"],
-                    "source_file_count": len(bundle["source_inputs"]),
+                    "source_file_count": len(bundle["source_files"]),
                     "native_output_count": len(OUTPUT_NAMES),
                 },
                 "native_receiving": {
@@ -246,7 +278,7 @@ def adopt(application, workspace, archive, expected_sha256, *, operation_id=OPER
         "schema": "upstate.received-watershed-result/v1",
         "id": key, "state": "received", "workspace": str(ws.root),
         "directory": str(destination), "archive_sha256": expected_sha256,
-        "source_file_count": len(bundle["source_inputs"]), "native_output_count": len(OUTPUT_NAMES),
+        "source_file_count": len(bundle["source_files"]), "native_output_count": len(OUTPUT_NAMES),
         "selected_huc12s": bundle["report"]["selection"]["huc12s"],
         "summary": bundle["report"]["summary"],
     }

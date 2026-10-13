@@ -350,36 +350,82 @@ def write_mask(destination, grid, geometry):
         out.update_tags(cell_selection="pixel centre within reporting polygon")
 
 def make_scenario(baseline, destination, grid, patches, *, source_loader, allowed_codes):
+    """Apply retained polygon or aligned binary-raster masks in declared order."""
+    from contextlib import ExitStack
     import numpy as np
     import rasterio
     from rasterio.features import rasterize
+    from pyproj import CRS
     from shapely.geometry import mapping
-    prepared = []
-    for patch in patches:
-        if patch["to_code"] not in allowed_codes:
-            raise ValueError("Scenario destination code lacks a biophysical table row")
-        source, entry = source_loader(patch["mask_source_id"])
-        rows, _ = vector_geometry(source, layer=patch.get("layer") or entry.get("layer"),
-                                  where=patch.get("where"), target_crs=grid["crs"])
-        geometry = polygon_union(rows)
-        prepared.append((patch, mapping(geometry), 0))
-    counts = [0] * len(prepared)
     profile = output_profile(grid, categorical=True)
-    with rasterio.open(baseline) as src, rasterio.open(destination, "w", **profile) as out:
+    expected_crs = CRS.from_user_input(grid["crs"])
+
+    def require_grid(dataset, label):
+        if (dataset.count != 1 or dataset.width != grid["width"]
+                or dataset.height != grid["height"]
+                or dataset.transform != profile["transform"]
+                or dataset.crs is None
+                or CRS.from_user_input(dataset.crs) != expected_crs):
+            raise ValueError(label + " must use the exact retained single-band model grid")
+
+    with ExitStack() as stack:
+        src = stack.enter_context(rasterio.open(baseline))
+        require_grid(src, "Baseline land cover")
+        prepared, opened_masks = [], {}
+        for patch in patches:
+            if patch["to_code"] not in allowed_codes:
+                raise ValueError("Scenario destination code lacks a biophysical table row")
+            source, entry = source_loader(patch["mask_source_id"])
+            kind = entry["kind"]
+            if kind == "vector":
+                rows, _ = vector_geometry(
+                    source, layer=patch.get("layer") or entry.get("layer"),
+                    where=patch.get("where"), target_crs=grid["crs"])
+                prepared.append((patch, kind, mapping(polygon_union(rows))))
+            elif kind == "raster":
+                if patch.get("layer") or patch.get("where"):
+                    raise ValueError("Raster scenario masks select band 1; layer and where apply to vectors")
+                key = str(source)
+                if key not in opened_masks:
+                    mask_source = stack.enter_context(rasterio.open(source))
+                    require_grid(mask_source, "Raster scenario mask")
+                    if np.dtype(mask_source.dtypes[0]).kind not in ("b", "u", "i", "f"):
+                        raise ValueError("Raster scenario masks require numeric zero and one values")
+                    opened_masks[key] = mask_source
+                prepared.append((patch, kind, key))
+            else:
+                raise ValueError("Scenario masks require retained vector or binary raster sources")
+        counts = [0] * len(prepared)
+        out = stack.enter_context(rasterio.open(destination, "w", **profile))
         for _, window in out.block_windows(1):
             data = src.read(1, window=window, masked=True)
             invalid = np.ma.getmaskarray(data)
             values = np.ma.getdata(data).copy()
-            for i, (patch, geometry, _) in enumerate(prepared):
-                mask = rasterize([(geometry, 1)], out_shape=values.shape,
-                                 transform=src.window_transform(window), fill=0, dtype="uint8").astype(bool)
+            window_masks = {}
+            for i, (patch, kind, selection) in enumerate(prepared):
+                if kind == "vector":
+                    mask = rasterize(
+                        [(selection, 1)], out_shape=values.shape,
+                        transform=src.window_transform(window),
+                        fill=0, dtype="uint8").astype(bool)
+                else:
+                    if selection not in window_masks:
+                        selected_mask = opened_masks[selection].read(1, window=window, masked=True)
+                        mask_values = np.ma.getdata(selected_mask)
+                        mask_valid = ~np.ma.getmaskarray(selected_mask)
+                        if np.any(mask_valid & ~np.isin(mask_values, (0, 1))):
+                            raise ValueError("Raster scenario mask contains valid values other than zero and one")
+                        window_masks[selection] = mask_valid & (mask_values == 1)
+                    mask = window_masks[selection]
                 selected = mask & ~invalid & np.isin(values, patch["from_codes"])
                 counts[i] += int(selected.sum())
                 values[selected] = patch["to_code"]
             values[invalid] = profile["nodata"]
             out.write(values.astype("int32"), 1, window=window)
-        out.update_tags(scenario_edit_order="declared patch order", nodata_policy="original nodata retained")
-    return [{"index": i, "changed_cells": count, "changed_hectares": count * grid["pixel_area_ha"],
+        out.update_tags(scenario_edit_order="declared patch order",
+                        nodata_policy="original nodata retained")
+    return [{"index": i, "changed_cells": count,
+             "changed_hectares": count * grid["pixel_area_ha"],
              "patch": prepared[i][0]} for i, count in enumerate(counts)]
 
 def check_same_grid(a, b):

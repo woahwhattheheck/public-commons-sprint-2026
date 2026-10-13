@@ -6,8 +6,9 @@ import json
 from pathlib import Path
 import sys
 from .common import atomic_bytes, atomic_json, digest, held, now, read_json, selected_models
-from .native_batch import _application_sources, _run_summary
-from .regional_job import CORE_RESULT, _document, _name, _progress, _sha
+from .native_batch import _application_sources
+from .regional_job import (CORE_RESULT, _document, _execute_native, _name, _progress,
+                           _reuse_source_ids, _run_outcome, _sha)
 from .workspace import Workspace
 from .scenario_summary import build_core_summary, write_summary
 
@@ -39,6 +40,8 @@ def execute(core_path, plan_path, *, output=None):
         if (not isinstance(definition, dict) or "source_collection_id" in definition
                 or definition.get("kind") != "landcover" or not definition.get("patches")):
             raise ValueError("Each scenario needs explicit original land-cover change masks")
+        if "reuse_source_run_ids" in definition:
+            definition["reuse_source_run_ids"] = _reuse_source_ids(definition["reuse_source_run_ids"])
         alias = definition.get("source_alias", "model")
         if not isinstance(alias, str) or alias not in {"model", *documents}:
             raise ValueError("Each scenario selects its named mask source edition")
@@ -86,6 +89,7 @@ def execute(core_path, plan_path, *, output=None):
             outcomes = {}
             for name, definition in definitions.items():
                 alias = definition.pop("source_alias", "model")
+                reuse_source_run_ids = definition.pop("reuse_source_run_ids", None)
                 scenario = workspace.save_scenario({**definition, "source_collection_id": collections[alias]})
                 if state["scenarios"].get(name) and state["scenarios"][name] != scenario["id"]:
                     raise ValueError("The retained named scenario changed: " + name)
@@ -98,10 +102,10 @@ def execute(core_path, plan_path, *, output=None):
                     raise ValueError("Two scenario names select the same native run")
                 state["runs"][name] = run["id"]
                 _progress(progress, state, phase="native:" + name, run_id=run["id"])
-                run = workspace.run(run["id"])
+                run = _execute_native(workspace, run["id"], reuse_source_run_ids)
                 if run["state"] != "complete":
                     raise RuntimeError("The regional scenario native run did not complete: " + name)
-                outcomes[name] = _run_summary(run)
+                outcomes[name] = _run_outcome(run)
                 _progress(progress, state, phase="completed:" + name)
             _progress(progress, state, phase="comparison")
             comparison = workspace.compare_runs([baseline["id"], *[state["runs"][name] for name in definitions]])

@@ -52,17 +52,6 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
             for artifact in state["artifacts"].values():
                 verify_file(directory, artifact)
             return {**state, "reused": True, "model_scope": run_scope(state)}
-        # Donor choices describe execution, not scientific selection. Retain
-        # them outside selection so a resumed run keeps its original item ID.
-        retained_sources = (state.get("reuse_source_run_ids", ())
-                            if reuse_source_run_ids is None else reuse_source_run_ids)
-        if not isinstance(retained_sources, (list, tuple)):
-            raise ValueError("Select original source run IDs as a list or tuple")
-        retained_sources = tuple(dict.fromkeys(identifier(value) for value in retained_sources))
-        if key in retained_sources:
-            raise ValueError("Reuse source runs must differ from the receiving run")
-        if reuse_source_run_ids is not None:
-            state.update(reuse_source_run_ids=list(retained_sources), updated_at=now())
         # Runtime loading, input reads and log creation belong to the same
         # recoverable attempt as the native calculation itself.
         with NativeExecution(directory, state) as execution:
@@ -70,6 +59,17 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
             previous_level = root_logger.level
             handler = None
             try:
+                execution.phase("reuse_selection")
+                retained_sources = (state.get("reuse_source_run_ids", ())
+                                    if reuse_source_run_ids is None else reuse_source_run_ids)
+                if not isinstance(retained_sources, (list, tuple)):
+                    raise ValueError("Select original source run IDs as a list or tuple")
+                retained_sources = tuple(dict.fromkeys(identifier(value) for value in retained_sources))
+                if key in retained_sources:
+                    raise ValueError("Reuse source runs must differ from the receiving run")
+                if reuse_source_run_ids is not None:
+                    state["reuse_source_run_ids"] = list(retained_sources)
+                    execution.save()
                 execution.phase("log")
                 handler = logging.FileHandler(directory / "native.log", encoding="utf-8")
                 handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s"))

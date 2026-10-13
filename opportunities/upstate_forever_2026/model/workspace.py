@@ -193,8 +193,8 @@ class Workspace:
         collection = identifier(value["source_collection_id"])
         for patch in value.get("patches", []):
             _, entry = self.source_file(collection, patch["mask_source_id"])
-            if entry["kind"] != "vector":
-                raise ValueError("Scenario masks must be retained polygon sources")
+            if entry["kind"] not in ("vector", "raster"):
+                raise ValueError("Scenario masks must be retained polygons or aligned binary rasters")
         return self._save("scenarios", value)
 
     def prepare_grid(self, spec):
@@ -221,8 +221,8 @@ class Workspace:
         reporting = geometry(spec["reporting_area"])
         model_core = geometry(spec["model_domain"])
         buffer_m = float(spec["upstream_buffer_m"])
-        if not 0 < buffer_m < 1000000:
-            raise ValueError("Specify the actual positive model-context buffer in metres")
+        if not 0 <= buffer_m < 1000000:
+            raise ValueError("Specify the actual nonnegative model-context buffer in metres")
         if not model_core.buffer(1e-5).covers(reporting):
             raise ValueError("Model-domain source must cover the full selected reporting basin")
         model_geometry = model_core.buffer(buffer_m)

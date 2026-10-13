@@ -16,6 +16,10 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "model/conservation_catalog.py",
+    "operator/conservation_catalog.py",
+    "operator/extensions/conservation-catalog.json",
+    "operator/CONSERVATION_CATALOG.md",
     "model/CONSERVATION.md",
     "model/CONSERVATION_CONSUMERS.md",
     "model/CONSERVATION_EXPERIMENTS.md",
@@ -99,6 +103,7 @@ PREVIOUS_SOURCES = {
         "d39ab0132a9c32639883943994ece1c7819ae23b73d13c5957af6211d904c277": 22899
     },
     "operator/install_conservation.py": {
+        "d8e9824780d84641a9ee47d180158adc18e340dff1912945fc75bce78237893f": 31581,
         "30492615ba6f862f7f676183ee293eb0252a59a159830e9976875aa2ab450bda": 20002,
         "76e556f53783d6379a53a775651415541306d9b23ba80d4eec1ff2dfb22a3644": 30753,
         "c9aaa958816139e151fd99cc194deac931186783563738119e7b4ae69a413696": 17382,
@@ -108,6 +113,7 @@ PREVIOUS_SOURCES = {
         "172c2cac2e9933bc5088993e55218597776010e1c6d5c31307e7c24d6c05849a": 21551
     },
     "operator/conservation_regional_receiving.py": {
+        "fc6bb0b216927c04c4cf1f665c237e397f997260de6f6457a192d987eb5d0276": 43910,
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7": 26367,
         "6db8fe4ab19613472c9e671669c66d4381d1f982b011d7bd6ce314cd0e069b5c": 20028,
         "a450c334ce4bded570acf1584d9623a00f60fa997049015256d0b4b7d830bae1": 29344
@@ -466,6 +472,8 @@ def read_packet(path):
         if expected.get("sha256") != sha(encoded) or expected.get("bytes") != len(encoded):
             raise ValueError("Source body differs from its retained identity: " + name)
     needed = {
+        "model/conservation_catalog.py", "operator/conservation_catalog.py",
+        "operator/extensions/conservation-catalog.json",
         "model/conservation.py", "model/conservation_cli.py", "model/conservation_scenarios.py",
         "model/conservation_bindings.py", "model/conservation_optimization.py",
         "model/keowee_priority.py", "source/keowee-priority-methods-20261013.json",

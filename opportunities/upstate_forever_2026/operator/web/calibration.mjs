@@ -27,6 +27,7 @@ export function createCalibrationDesk(host){return attachCalibration(host);}
 export function attachCalibration({getState,api,endpoint,openForm,submitAction,detail,fileList,openItem,showTask,toast}){
   let mounted=null,lastMarkup=null,generation=0,activeReport=null,activeTab='ranking',page=0,query='',sortKey='rank',sortDirection=1;
   let activeDraft=null,previewResult=null,previewIdentity=null,formToken=null,formRequest=0;
+  let activeUncertainty=null,resultRequest=0;
   const current = () => getState()?.workspace_key;
   const sourceData = () => getState()?.data ?? {};
   const calibrationData = () => sourceData().calibration ?? sourceData();
@@ -51,7 +52,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return '<header class="page-header"><div><p class="eyebrow">ORIGINAL OBSERVATIONS · NATIVE MODELS</p><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></div><div class="page-actions">'+actions+'</div></header>';
   }
   function render(){
-    if(activeReport?.workspace_key!==current())activeReport=null;
+    if(activeReport?.workspace_key!==current()){activeReport=null;activeUncertainty=null;}
+    if(activeUncertainty)return renderUncertainty();
     if(activeReport)return renderReport();
     const all=plans();
     return header('Calibration and validation','Compare completed baseline parameter profiles against the original annual loads. Keep independent catchment groups outside parameter selection and inspect the chosen profile on those groups.',button('new','New calibration','',true))+
@@ -72,7 +74,18 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     repaint();
   }
   function update(){
-    if(!mounted||activeReport)return;
+    if(!mounted)return;
+    if(activeReport){
+      if(activeReport.workspace_key!==current()){activeReport=null;activeUncertainty=null;}
+      else{
+        const latest=calibrationData().calibration_uncertainties;
+        if(!Array.isArray(latest)||activeUncertainty)return;
+        const rows=latest.filter(row=>row.calibration_id===activeReport.report.id);
+        if(JSON.stringify(rows)===JSON.stringify(activeReport.uncertainties??[]))return;
+        activeReport.uncertainties=rows;
+        repaint();return;
+      }
+    }
     const markup=render();
     if(markup!==lastMarkup){mounted.innerHTML=markup;lastMarkup=markup;}
   }
@@ -502,8 +515,10 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     detail(plan.selection.title,body,{kind:'calibration-plan',id});
   }
   async function openReport(id){
+    const request=++resultRequest;
     const packet=await read('report',{id});
-    activeReport=packet;activeTab='ranking';page=0;query='';sortKey='rank';sortDirection=1;
+    if(request!==resultRequest)return;
+    activeUncertainty=null;activeReport=packet;activeTab='ranking';page=0;query='';sortKey='rank';sortDirection=1;
     $('#detail-dialog')?.close();
     if(!mounted){
       location.hash='calibration';
@@ -512,8 +527,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     repaint();
   }
   function currentRows(){
-    const view=activeReport.view;
-    let rows=view[activeTab]??[];
+    const view=activeUncertainty?.analysis??activeReport.view;
+    let rows=activeUncertainty?uncertaintyRows(view,activeTab):view[activeTab]??[];
     rows=rows.filter(row=>!query||Object.values(row).map(value=>typeof value==='object'?pretty(value):String(value??'')).join(' ').toLowerCase().includes(query.toLowerCase()));
     rows=[...rows].sort((a,b)=>{
       const av=a[sortKey],bv=b[sortKey];
@@ -532,13 +547,14 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     stability:[['group_id','Omitted calibration group'],['state','Fold outcome'],['selected_run_id','Selected without group'],['selected_profile_id','Selected profile'],['same_as_full_selection','Run unchanged'],['same_profile_as_full_selection','Profile unchanged'],['objective_score','Calibration loss']],
     exclusions:[['run_id','Candidate run'],['observation_id','Observation'],['catchment_id','Catchment'],['parameter','Pollutant'],['reason','Reason']],
   };
-  const tabTitles={ranking:'Profile ranking',metrics:'Physical fit',validation:'Independent validation',observations:'Observed and modeled',groups:'Catchment groups',envelope:'Candidate envelope',stability:'Group stability',exclusions:'Exclusions'};
+  const tabTitles={ranking:'Profile ranking',metrics:'Physical fit',validation:'Held-out validation',observations:'Observed and modeled',groups:'Catchment groups',envelope:'Candidate envelope',stability:'Group stability',exclusions:'Exclusions'};
   function rowCell(row,key){
     const value=row[key];
     if(key==='run_id'&&value)return nativeButton('runs',value,short(value));
     if(key==='selected_run_id'&&value)return nativeButton('runs',value,short(value));
     if(key==='profile_id'||key==='selected_profile_id')return value?nativeButton('profiles',value,short(value)):'—';
     if(key==='same_as_full_selection'||key==='same_profile_as_full_selection')return value===true?'Yes':value===false?'No':'—';
+    if(activeUncertainty&&(key==='state'||key==='first_tie_state'))return esc(sensitivityLabel(value));
     if(key==='selected_models'&&Array.isArray(value))return esc(value.map(name=>String(name).toUpperCase()).join(' + '));
     if(Array.isArray(value))return esc(value.map(item=>typeof item==='object'?pretty(item):item).join(', '));
     if(value&&typeof value==='object')return '<details><summary>Details</summary><pre class="json-view">'+esc(pretty(value))+'</pre></details>';
@@ -548,11 +564,11 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   function resultTable(){
     const rows=currentRows(),size=40;
     page=Math.min(page,Math.max(0,Math.ceil(rows.length/size)-1));
-    const selected=rows.slice(page*size,(page+1)*size),fields=columns[activeTab];
+    const selected=rows.slice(page*size,(page+1)*size),fields=(activeUncertainty?uncertaintyColumns:columns)[activeTab];
     const head='<thead><tr>'+fields.map(([key,label])=>'<th scope="col"><button type="button" data-action="calibration-sort" data-key="'+key+'" class="calibration-sort">'+esc(label)+(sortKey===key?(sortDirection===1?' ↑':' ↓'):'')+'</button></th>').join('')+'</tr></thead>';
     const body=selected.map(row=>'<tr>'+fields.map(([key])=>'<td>'+rowCell(row,key)+'</td>').join('')+'</tr>').join('');
     return '<div class="table-scroll"><table>'+head+'<tbody>'+body+'</tbody></table></div>'+
-      (!rows.length?'<p class="calibration-empty">This selected result has no rows in '+esc(tabTitles[activeTab].toLowerCase())+'.</p>':'')+
+      (!rows.length?'<p class="calibration-empty">This selected result has no rows in '+esc((activeUncertainty?uncertaintyTitles:tabTitles)[activeTab].toLowerCase())+'.</p>':'')+
       '<div class="calibration-pagination"><span>'+rows.length+' rows'+(rows.length?' · '+(page*size+1)+'–'+Math.min((page+1)*size,rows.length):'')+'</span><div>'+button('page-previous','Previous','',false,page===0?'disabled':'')+button('page-next','Next','',false,(page+1)*size>=rows.length?'disabled':'')+'</div></div>';
   }
   function scatter(points,parameter){
@@ -589,6 +605,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       ].map(([title,value,note])=>'<div class="card"><h3>'+esc(title)+'</h3><strong class="calibration-card-value">'+esc(value)+'</strong><p>'+esc(note)+'</p></div>').join('')+'</div>'+
       (view.observations.length?section('Observed and modeled annual loads','The dashed diagonal marks equal observed and modeled load. Circles show calibration catchments; outlined squares show validation catchments.',
         '<div class="calibration-plots">'+pollutants.map(name=>scatter(view.observations,name)).join('')+'</div>'):'')+
+      uncertaintyList()+
       section('Results','Search and sort the retained rows; downloaded files contain the complete selection and results.',
         '<div class="calibration-tabs" role="tablist" aria-label="Calibration results">'+Object.entries(tabTitles).map(([key,title])=>'<button type="button" role="tab" aria-selected="'+(key===activeTab)+'" data-action="calibration-tab" data-tab="'+key+'">'+esc(title)+' <small>'+number((view[key]??[]).length)+'</small></button>').join('')+'</div>'+
         '<div class="calibration-table-controls">'+field('Find a result',input('calibration_result_search',query,'search','id="calibration-result-search" placeholder="Profile, catchment or pollutant"'))+'</div><div id="calibration-result-table">'+resultTable()+'</div>')+
@@ -599,11 +616,155 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const search=$('#calibration-result-search',mounted);
     if(search)search.addEventListener('input',()=>{query=search.value;page=0;$('#calibration-result-table',mounted).innerHTML=resultTable();});
   }
+
+  const uncertaintyTitles={
+    pairwise:'Ranking sensitivity',reference_units:'Annual reference ranges',
+    source_records:'Published standard errors',source_attribution:'Source contributions',selected_validation:'Selected validation',candidate_scores:'Nominal reproduction'
+  };
+  const uncertaintyColumns={
+    pairwise:[['title','Challenger profile'],['selected_models','Native models'],['nominal_gap','Nominal loss gap'],
+      ['minimum_gap','Minimum gap'],['maximum_gap','Maximum gap'],['numerical_tolerance','Numerical tolerance'],['state','Sensitivity outcome'],
+      ['first_tie_standard_errors','First tie (standard errors)'],['first_tie_state','Tie threshold'],
+      ['missing_record_ids','Missing source errors'],['run_id','Native run']],
+    reference_units:[['partition','Partition'],['catchment_id','Catchment'],['group_id','Group'],
+      ['parameter','Pollutant'],['units','Units'],['observed_annual_mass','Original annual load'],
+      ['lower_reference','Lower reference'],['upper_reference','Upper reference'],['state','Coverage'],
+      ['objective_weight','Fixed objective weight'],['missing_record_ids','Missing source errors']],
+    source_records:[['record_id','Original record'],['station_id','Station'],['parameter','Pollutant'],
+      ['original_value','Published value'],['unit','Published unit'],['source_standard_error','Published standard error'],
+      ['source_standard_error_unit','Standard-error unit'],['annual_mass','Annual comparison load'],
+      ['standard_error','Annual standard error'],['comparison_units','Comparison units'],
+      ['lower_reference','Lower reference'],['upper_reference','Upper reference'],['state','Coverage'],['issues','Source issues']],
+    selected_validation:[['catchment_id','Validation catchment'],['group_id','Reserved group'],['parameter','Pollutant'],
+      ['units','Units'],['observed_annual_mass','Original annual load'],['predicted_annual_mass','Selected modeled load'],
+      ['lower_reference','Lower reference'],['upper_reference','Upper reference'],
+      ['minimum_residual','Minimum selected residual'],['maximum_residual','Maximum selected residual'],
+      ['state','Coverage'],['missing_record_ids','Missing source errors']],
+    source_attribution:[['run_id','Challenger run'],['record_id','Original record'],['station_id','Station'],
+      ['parameter','Pollutant'],['comparison_units','Source units'],['gap_coefficient','Gap coefficient'],
+      ['standard_error','Standard error'],['minimum_gap_change','Minimum gap change'],['maximum_gap_change','Maximum gap change'],
+      ['minimum_endpoint','Source at minimum gap'],['maximum_endpoint','Source at maximum gap']],
+    candidate_scores:[['rank','Nominal rank'],['title','Profile'],['selected_models','Native models'],
+      ['original_objective_score','Original calibration loss'],['reproduced_objective_score','Reproduced loss'],
+      ['absolute_difference','Absolute difference'],['numerical_tolerance','Numerical tolerance'],['state','Reproduction'],['run_id','Native run']]
+  };
+  const sensitivityText={
+    strictly_stable:'Selection remains strictly preferred',
+    selected_strictly_preferred:'Original selection strictly preferred',
+    rank_reversal_possible:'A challenger can outperform the original selection',
+    tie_possible:'A tie is possible within the source ranges',
+    nominal_tie:'Original scores are tied',
+    equivalent_predictions:'Identical predictions over the objective',
+    incomplete_uncertainty:'Published source errors are incomplete',
+    single_candidate:'One eligible candidate',
+    complete:'Complete published-error coverage',
+    partial_uncertainty:'Partial published-error coverage',
+    available:'Finite first-tie threshold',
+    beyond_finite_multiplier:'Tie threshold exceeds finite numerical range',
+    never_within_nonnegative_source_box:'No tie within any finite source multiplier'
+  };
+  function sensitivityLabel(value){return sensitivityText[value]||human(value);}
+  function uncertaintyRows(analysis,key){
+    if(key==='source_attribution')return (analysis.pairwise??[]).flatMap(row=>(row.source_attribution??[]).map(item=>({...item,run_id:row.run_id,profile_id:row.profile_id})));
+    return analysis[key]??[];
+  }
+  function uncertaintyList(){
+    const rows=activeReport?.uncertainties??[];
+    const start=activeReport?.report?.selected_run_id?
+      button('uncertainty-new','Analyze published observation errors',activeReport.report.id,true):'';
+    return section('Published observation uncertainty',
+      'Use the standard errors retained with the original annual loads to examine the selected profile’s ranking. Native predictions, pollutant weights and calibration scales remain fixed.',
+      '<div class="section-body"><div class="page-actions">'+start+'</div></div>'+
+      (rows.length?table(['Retained analysis','Published-error multiplier','Selection sensitivity','Source coverage',''],
+        rows.map(row=>'<tr><td>'+esc(when(row.created_at))+'<small class="mono">'+esc(short(row.id))+'</small></td><td>'+number(row.standard_errors)+'</td><td>'+esc(sensitivityLabel(row.selection_sensitivity?.state||row.state))+'</td><td>'+number(row.coverage?.records_with_standard_error)+' / '+number(row.coverage?.source_record_count)+' original records</td><td>'+button('uncertainty','Open sensitivity',row.id)+button('uncertainty-export','Export',row.id)+'</td></tr>')):
+        '<p class="calibration-empty">A completed sensitivity analysis will appear here beside this unchanged nominal calibration.</p>'));
+  }
+  function uncertaintyForm(reportId){
+    if(!reportId)throw Error('Open a completed calibration before analyzing its observation errors.');
+    const workspace=current(),request=++formRequest;
+    const retained=activeUncertainty?.analysis;
+    openForm('Observation uncertainty sensitivity',
+      'Compare the original selected profile with every eligible challenger using the standard errors published with the retained observation records.',
+      '<div class="calibration-form"><div class="form-grid">'+
+      field('Published standard-error multiplier',input('calibration_uncertainty_multiplier',
+        retained?.calibration_id===reportId?retained.standard_errors:1,'number','min="0" step="any" required'),
+        '1 uses one published standard error. 0 reproduces the nominal ranking. Nonnegative source bounds are retained; absent errors remain visible.',true)+
+      '<div class="full calibration-source"><p>The signed gap is challenger loss minus selected loss. Positive values favor the original selection. The first-tie multiplier records the earliest possible tie under the same fixed objective.</p><p>The analysis uses the original marginal error ranges and their shared source-record identities. It does not assign a probability to a reversal or replace the saved nominal selection. Validation ranges remain descriptive.</p></div></div></div>',
+      'Analyze source uncertainty',async()=>{
+        if(current()!==workspace||request!==formRequest)throw Error('The selected study or calibration form changed. Reopen this analysis.');
+        const text=val('calibration_uncertainty_multiplier').trim(),standard_errors=Number(text);
+        if(!text||!Number.isFinite(standard_errors)||standard_errors<0)throw Error('Enter a finite nonnegative standard-error multiplier.');
+        return submitAction('calibration.uncertainty',{report_id:reportId,standard_errors});
+      });
+  }
+  async function openUncertainty(id){
+    const workspace=current(),request=++resultRequest;
+    const packet=await read('uncertainty',{id});
+    if(request!==resultRequest||current()!==workspace)return;
+    const nominal=activeReport?.report?.id===packet.analysis.calibration_id?
+      activeReport:await read('report',{id:packet.analysis.calibration_id});
+    if(request!==resultRequest||current()!==workspace)return;
+    activeReport=nominal;activeUncertainty=packet;activeTab='pairwise';page=0;query='';sortKey='nominal_gap';sortDirection=1;
+    $('#detail-dialog')?.close();
+    if(!mounted){location.hash='calibration';return;}
+    repaint();
+  }
+  function gapPlot(rows){
+    const usable=rows.filter(row=>Number.isFinite(row.minimum_gap)&&Number.isFinite(row.maximum_gap)).slice(0,24);
+    if(!usable.length)return '';
+    const low=Math.min(0,...usable.map(row=>row.minimum_gap)),high=Math.max(0,...usable.map(row=>row.maximum_gap));
+    const span=high-low||1,min=low-span*.04,max=high+span*.04;
+    const width=960,left=260,right=30,rowHeight=34,top=40,height=top+usable.length*rowHeight+48;
+    const x=value=>left+(width-left-right)*(value-min)/(max-min);
+    const ticks=[min,0,max].filter((value,index,all)=>all.indexOf(value)===index).map(value=>
+      '<line x1="'+x(value)+'" y1="'+top+'" x2="'+x(value)+'" y2="'+(height-42)+'" class="'+(value===0?'calibration-gap-zero':'calibration-grid')+'"/><text x="'+x(value)+'" y="'+(height-20)+'" text-anchor="middle">'+esc(number(value))+'</text>').join('');
+    const marks=usable.map((row,index)=>{
+      const y=top+index*rowHeight+16;
+      const title=(row.title||short(row.run_id))+': '+number(row.minimum_gap)+' to '+number(row.maximum_gap)+
+        '; nominal '+number(row.nominal_gap)+'. '+sensitivityLabel(row.state);
+      return '<g><title>'+esc(title)+'</title><text x="'+(left-12)+'" y="'+(y+4)+'" text-anchor="end">'+esc((row.title||short(row.run_id)).slice(0,33))+'</text>'+
+        '<line x1="'+x(row.minimum_gap)+'" y1="'+y+'" x2="'+x(row.maximum_gap)+'" y2="'+y+'" class="calibration-gap-range"/>'+
+        '<path d="M '+x(row.minimum_gap)+' '+(y-5)+' v 10 M '+x(row.maximum_gap)+' '+(y-5)+' v 10" class="calibration-gap-range"/>'+
+        (Number.isFinite(row.nominal_gap)?'<circle cx="'+x(row.nominal_gap)+'" cy="'+y+'" r="3.5" class="calibration-fit-mark"/>':'')+'</g>';
+    }).join('');
+    return '<figure class="calibration-gap-plot"><figcaption>Challenger loss minus the original selected loss</figcaption>'+
+      '<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Ranges for challenger objective loss minus the original selected loss. Values to the right of zero favor the original selected profile.">'+ticks+marks+'</svg><p>Bars show the retained source-error range; dots show the nominal gap. '+(rows.length>24?'The plot shows the first 24 finite ranges; the table and downloads retain every comparison.':'Every finite comparison is shown; missing ranges remain in the table.')+'</p></figure>';
+  }
+  function renderUncertainty(){
+    const {analysis,title}=activeUncertainty,coverage=analysis.coverage??{},sensitivity=analysis.selection_sensitivity??{};
+    const notes=Array.isArray(analysis.interpretation)?analysis.interpretation:
+      analysis.interpretation?[analysis.interpretation]:[];
+    return header(title||'Observation uncertainty sensitivity',
+      'Published observation errors applied to the original completed calibration. The nominal selected profile and all native model outputs remain retained.',
+      button('uncertainty-nominal','Nominal calibration',analysis.calibration_id)+
+      button('uncertainty-new','Change source-error multiplier',analysis.calibration_id)+
+      button('uncertainty-export','Export sensitivity package',analysis.id,true)+button('uncertainty','Refresh retained files',analysis.id))+
+      '<div class="cards">'+[
+        ['Selection sensitivity',sensitivityLabel(sensitivity.state||analysis.state),'Signed gaps compare each challenger against the original selected run.'],
+        ['Source-error multiplier',number(analysis.standard_errors),'Multiples of each original published standard error, with nonnegative load bounds.'],
+        ['Published source errors',number(coverage.records_with_standard_error)+' / '+number(coverage.source_record_count),'Missing errors remain explicit in each affected comparison.'],
+        ['Calibration reference coverage',number(coverage.covered_calibration_units)+' / '+number(coverage.calibration_units),'Catchment/pollutant references with retained source uncertainty.'],
+        ['Compared challengers',number(sensitivity.compared_candidate_count),number(sensitivity.distinct_profile_count)+' distinct parameter profiles.'],
+      ].map(([label,value,note])=>'<div class="card"><h3>'+esc(label)+'</h3><strong class="calibration-card-value">'+esc(value)+'</strong><p>'+esc(note)+'</p></div>').join('')+'</div>'+
+      section('Ranking under published observation errors',
+        'A positive challenger-minus-selected gap favors the original selection. An interval crossing zero admits a tie or reversal within the declared marginal source ranges. Shared original records retain one perturbation across all references.',
+        '<div class="section-body"><p><strong>'+esc(sensitivityLabel(sensitivity.state||analysis.state))+'</strong></p>'+
+        '<p>The first-tie multiplier is calculated with the same fixed pollutant weights and calibration scales. Numerical comparison tolerances remain visible with each gap. The calculation is a deterministic sensitivity range; a possible reversal is not a probability or a new profile selection.</p>'+
+        gapPlot(analysis.pairwise??[])+'</div>')+
+      section('Retained sensitivity results','Search and sort complete candidate comparisons, source records and reference ranges. Held-out validation units appear only as descriptive reference bands.',
+        '<div class="calibration-tabs" role="tablist" aria-label="Observation uncertainty results">'+Object.entries(uncertaintyTitles).map(([key,label])=>'<button type="button" role="tab" aria-selected="'+(key===activeTab)+'" data-action="calibration-tab" data-tab="'+key+'">'+esc(label)+' <small>'+number(uncertaintyRows(analysis,key).length)+'</small></button>').join('')+'</div>'+
+        '<div class="calibration-table-controls">'+field('Find a source or comparison',input('calibration_result_search',query,'search','id="calibration-result-search" placeholder="Profile, station, source record or pollutant"'))+'</div><div id="calibration-result-table">'+resultTable()+'</div>')+
+      section('Source methods and retained files','The complete records preserve the published errors, nominal objective reproduction, fixed normalization and exact original record identities.',
+        fileList(activeUncertainty._downloads||[])+notesList(notes)+
+        '<details class="technical"><summary>Coverage, fixed objective and original source identity</summary><pre class="json-view">'+esc(pretty({coverage,objective:analysis.objective,normalization:analysis.normalization,temporal_method:analysis.temporal_method,selected_validation:analysis.selected_validation,nominal_reproduction:analysis.nominal_reproduction,source_stamp:analysis.source_stamp,references:analysis.references}))+'</pre></details>');
+  }
+
   function taskActions(task){
     if(!task.action?.startsWith('calibration.')||task.state!=='complete')return '';
     const value=task.result??{};
     return '<div class="page-actions">'+(value.plan_id?button('plan','Open calibration selection',value.plan_id):'')+
-      (value.report_id?button('report','Open calibration results',value.report_id):'')+'</div>';
+      (value.report_id?button('report','Open calibration results',value.report_id):'')+
+      (value.uncertainty_id?button('uncertainty','Open observation sensitivity',value.uncertainty_id):'')+'</div>';
   }
   async function dispatch(node){
     const action=node.dataset.action?.replace(/^calibration-/,''),id=node.dataset.id;
@@ -611,7 +772,11 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(action==='revise')return newForm(id);
     if(action==='plan')return openPlan(id);
     if(action==='report')return openReport(id);
-    if(action==='back'){activeReport=null;return repaint();}
+    if(action==='back'){activeReport=null;activeUncertainty=null;resultRequest++;return repaint();}
+    if(action==='uncertainty-new')return uncertaintyForm(id);
+    if(action==='uncertainty')return openUncertainty(id);
+    if(action==='uncertainty-nominal')return openReport(id);
+    if(action==='uncertainty-export')return submitAction('calibration.uncertainty.export',{uncertainty_id:id});
     if(action==='inspect-source')return inspectSource();
     if(action==='inspect-observation'){
       const observation=val('calibration_observation');
@@ -624,7 +789,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(action==='filter-remove'){node.closest('.calibration-filter-row').remove();invalidatePreview();return;}
     if(action==='analyze')return submitAction('calibration.analyze',{plan_id:id});
     if(action==='export')return submitAction('calibration.export',{report_id:id});
-    if(action==='tab'){activeTab=node.dataset.tab;page=0;sortKey=columns[activeTab][0][0];query='';return repaint();}
+    if(action==='tab'){activeTab=node.dataset.tab;page=0;sortKey=(activeUncertainty?uncertaintyColumns:columns)[activeTab][0][0];query='';return repaint();}
     if(action==='sort'){sortDirection=sortKey===node.dataset.key?-sortDirection:1;sortKey=node.dataset.key;return repaint();}
     if(action==='page-previous'||action==='page-next'){
       page=Math.max(0,page+(action==='page-next'?1:-1));
