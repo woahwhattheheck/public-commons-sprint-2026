@@ -72,7 +72,7 @@ async function publishFile(directory,filename,bytes,mode=0o600,temporaryDirector
  let handle;
  try{
   handle=await fs.open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,mode);
-  await handle.writeFile(bytes);await handle.sync();await handle.close();handle=null;
+  await handle.writeFile(bytes);await handle.chmod(mode);await handle.sync();await handle.close();handle=null;
   try{await fs.link(temporary,target);}catch(error){if(error.code!=='EEXIST')throw error;await exactFile(target,bytes);}
   await syncDirectory(directory);
  }finally{
@@ -100,6 +100,7 @@ async function validateTree(root,receipt){
    if(stat.isDirectory()){need(directories.has(relative),'Received tree contains an unlisted directory');await walk(filename,relative);}
    else{
     const item=expected.get(relative);need(item&&stat.isFile(),'Received tree contains an unlisted file');
+    need(Boolean(stat.mode&0o111)===Boolean(item.mode&0o111),'Received executable mode differs: '+relative);
     const bytes=await readOriginal(filename,item.bytes);need(bytes.length===item.bytes&&sha(bytes)===item.sha256,'Received member differs: '+relative);seen.add(relative);
    }
   }
@@ -220,7 +221,8 @@ async function main(argv){
  }
  process.stdout.write(JSON.stringify(result,null,2)+'\n');
 }
-module.exports={describeArchive,receiveZipArchive,verifyZipReceiving,main};
+module.exports={describeArchive,receiveZipArchive,verifyZipReceiving,main,
+ receivingIO:Object.freeze({readOriginal,privateDirectory,syncDirectory,publishFile})};
 if(require.main===module)main(process.argv.slice(2)).catch(error=>{
  process.stderr.write(JSON.stringify({code:error.code??'ZIP_SOURCE_RECEIVING_FAILED',message:String(error.message??error)})+'\n');process.exitCode=1;
 });
