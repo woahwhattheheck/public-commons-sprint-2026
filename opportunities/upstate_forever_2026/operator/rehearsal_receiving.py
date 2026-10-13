@@ -223,7 +223,7 @@ def validate(value):
         raise ValueError("Select the complete original rehearsal receiving input")
     expected = {"schema", "operation_id", "workspace_directory", "output_directory",
                 "rehearsal", "fresh_run_ids", "step_notes", "task_timeout_seconds", "browser",
-                "programme_receiving"}
+                "programme_receiving", "customer_review"}
     if set(value) - expected:
         raise ValueError("Unexpected receiving input fields: " + ", ".join(sorted(set(value) - expected)))
     if not re.fullmatch(r"[A-Za-z0-9_-]{16,100}", value.get("operation_id", "")):
@@ -269,6 +269,9 @@ def validate(value):
                 or isinstance(choice["bytes"], bool) or not isinstance(choice["bytes"], int)
                 or choice["bytes"] <= 0 or not re.fullmatch(r"[0-9a-f]{64}", str(choice["sha256"]))):
             raise ValueError("Use the original Workspace-relative Programme adoption path and digest")
+    if "customer_review" in value:
+        from source_tools.simulated_customer_review_recording import validate_choice
+        validate_choice(value["customer_review"])
     return value
 
 
@@ -794,6 +797,12 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
     with (output / ".journey.lock").open("a+b") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         retain(output / "input.json", value)
+        customer_choice = None
+        if value.get("customer_review") is not None:
+            from model.workspace import Workspace
+            from source_tools.simulated_customer_review_recording import verify_choice
+            customer_choice = verify_choice(Workspace(value["workspace_directory"]), output,
+                                            value["customer_review"])
         complete_path = output / "results" / "complete.json"
         native_path = output / "results" / "native.json"
         saved_complete = read_json(complete_path) if complete_path.exists() else None
@@ -842,6 +851,8 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
                           "receiver_workspace": original["receiver_workspace"],
                           "output_directory": str(output / "browser"),
                           "playwright_module": browser["playwright_module"], "executable": browser["executable"]}
+                if customer_choice is not None:
+                    config["customer_review"] = customer_choice
                 browser_input = output / "private" / "browser-input.json"
                 publish(browser_input, canonical(config) + b"\n", immutable=False)
                 child = run_browser_child([browser["node"], str(APP / "operator" / "rehearsal_browser.mjs"),

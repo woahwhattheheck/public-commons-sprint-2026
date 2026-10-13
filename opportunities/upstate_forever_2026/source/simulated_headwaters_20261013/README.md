@@ -41,7 +41,7 @@ The single driver carries the case through:
 
 `--prepare-only` imports the real sources and prepares the grid, scenarios, footprints and saved parameter-study design. Continue the identical command without that option to execute the prepared case. `--field-only` prepares the same selections, completes the field/laboratory chapter and its customer review/handback packages using the installed GIS/application stack, then returns before checking or running InVEST. Continue the original normal command to reuse those completed chapters with the model runs.
 
-`demo-receiving.json` records actual saved identities and elapsed stage times after each stage. A retry uses the same output directory and original project. Completed model and field operations retain their original results. A failed stage records its actual exception so the source can be repaired and that operation continued.
+The first stdout event, `demo_process_started`, names the actual host, PID, interpreter, application, driver hash, selected paths and operating mode before application/GIS imports. Return that event with the first output or traceback so other workers can join the actual execution. `demo-receiving.json` retains that process context alongside the saved scientific identities and elapsed stage times after each stage. A retry uses the same output directory and original project. Completed model and field operations retain their original results. A failed stage records its actual exception so the source can be repaired and that operation continued.
 
 ## Read the results
 
