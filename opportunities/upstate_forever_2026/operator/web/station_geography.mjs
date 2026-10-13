@@ -421,7 +421,9 @@ export function attachStationGeography(host) {
     const observationCount=all.reduce((n,r)=>n+Number(r.observation_count||0),0);
     target.innerHTML='<header class="sg-result-heading"><div><h2>'+esc(edition.title||edition.result?.title||'Station geography')+'</h2>'+
       '<p>Retained edition <code>'+esc(short(edition.id))+'</code> · '+esc(edition.result?.selection?.title||'Exact study selection')+'</p></div>'+
-      button('edit-edition','Use this selection')+'</header><div class="sg-metrics">'+
+      button('edit-edition','Use this selection')+
+      (typeof host.openDesk==='function'&&list(edition.selection?.site_tables||edition.result?.selection?.site_tables).length?
+        button('assessment-context','Use saved study in assessment context'):'')+'</header><div class="sg-metrics">'+
       [[all.length,'Study stations'],[resolved.length,'Located'],[unresolved.length,'Locations to resolve'],[all.reduce((n,row)=>n+inventoryReferences(row).length,0),'Original inventory rows'],[observationCount,'Linked observation rows']].map(([value,label])=>
         '<div><strong>'+esc(value.toLocaleString())+'</strong><span>'+esc(label)+'</span></div>').join('')+'</div>';
   }
@@ -651,6 +653,17 @@ export function attachStationGeography(host) {
     save();
   }
 
+
+  async function openAssessmentContext() {
+    if(!edition||typeof host.openDesk!=='function')throw Error('Open a saved station geography study first.');
+    const current=host.getWorkspace()||host.getState()?.workspace_key;
+    if(current!==workspace)throw Error('Open the saved study in its original Workspace.');
+    if(!list(edition.selection?.site_tables||edition.result?.selection?.site_tables).length)
+      throw Error('This study needs a retained assessment inventory.');
+    save();
+    await host.openDesk('assessment-context','openForGeography',{workspace_key:workspace,geography_id:edition.id});
+  }
+
   async function openObservationStudies(single = false) {
     if (!edition || typeof host.openDesk !== 'function')
       throw Error('Open a saved station geography edition in the current application.');
@@ -690,6 +703,7 @@ export function attachStationGeography(host) {
         await host.refresh({force:true});
       }
       else if(act==='go-sources')host.navigate('sources');
+      else if(act==='assessment-context')await openAssessmentContext();
       else if(act==='published-cohort')await openObservationStudies();
       else if(act==='published-station')await openObservationStudies(true);
       else if(act==='build-microbial'){
