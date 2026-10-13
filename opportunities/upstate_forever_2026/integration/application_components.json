@@ -85,7 +85,8 @@
     "observed-regional-source-edition",
     "observed-original-report-edition",
     "sampling-flow-coverage",
-    "annual-nlcd-native-source"
+    "annual-nlcd-native-source",
+    "community-report-context"
   ],
   "components": {
     "core": {
@@ -5385,6 +5386,21 @@
       ],
       "source_manifests": [
         "source/annual-nlcd-native-20261013/source/source-manifest.json"
+      ]
+    },
+    "community-report-context": {
+      "title": "Saved Community planning report in scientific reporting",
+      "paths": [
+        "model/community_report_context.py",
+        "operator/community_report_context.py",
+        "operator/extensions/community-report-context.json",
+        "operator/web/community.mjs",
+        "operator/web/app.mjs",
+        "model/COMMUNITY_REPORT_CONTEXT.md"
+      ],
+      "requires": [
+        "core",
+        "observed-context"
       ]
     }
   }
