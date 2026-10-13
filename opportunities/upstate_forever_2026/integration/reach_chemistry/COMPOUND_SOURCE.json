@@ -143,13 +143,13 @@
     },
     {
       "path": "operator/web/chemistry.mjs",
-      "bytes": 30779,
-      "sha256": "b89bfd259b7546e429be1ac68d3c790ec3913f6d2eec258ee8cf64c93f207ab3"
+      "bytes": 35351,
+      "sha256": "3a80140d808eb0d419641f02b6a25fea1111baf0fe93fd8cdb422b06e4c20065"
     },
     {
       "path": "operator/web/chemistry-native.mjs",
-      "bytes": 4213,
-      "sha256": "941e43e906fbc4d725abe9ac7aa70808eb821fe8e4943123ff94862e73b5be4a"
+      "bytes": 4558,
+      "sha256": "4166b96a2e031926a49faf49f5063dc2a63546dbc0c74d76ebaa9ec95db82da0"
     },
     {
       "path": "operator/web/chemistry.css",
@@ -158,8 +158,8 @@
     },
     {
       "path": "operator/CHEMISTRY_OPERATOR.md",
-      "bytes": 19277,
-      "sha256": "6dca4cb3728149f889db4301eddbd48e2755f8cda5c96dab97a663acf5574f5c"
+      "bytes": 24586,
+      "sha256": "d51bde3936251066372f31f9d2434b6cdd8807285ceb8d14b45867d7e17cf30a"
     },
     {
       "path": "CHEMISTRY.md",
@@ -178,8 +178,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 24097,
-      "sha256": "d41c4cedb3622b7d6740ff9ac691172262c14a6ac1f93e386ed24ec323ed1fa5"
+      "bytes": 24710,
+      "sha256": "7c41a00527032a004988b1db9902e63b73f8f11103a7baaf90d294eeed2ecdaf"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -232,5 +232,6 @@
       "native-chemistry-scientific-source-v2"
     ]
   },
-  "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard."
+  "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard.",
+  "editor_lifetime": "pinned-workspace-and-native-activation"
 }

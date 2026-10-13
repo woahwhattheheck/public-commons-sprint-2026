@@ -1,0 +1,44 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "economic-comparison",
+  "components": {
+    "economic-comparison": {
+      "title": "Saved original Economic edition comparison",
+      "paths": [
+        "model/economic_comparison.py",
+        "model/economic_comparison_render.py",
+        "operator/economic_comparison.py",
+        "operator/extensions/economic-comparison.json",
+        "operator/web/economic_comparison.mjs",
+        "operator/ECONOMIC_COMPARISON.md"
+      ],
+      "requires": [
+        "economic-desk"
+      ]
+    }
+  },
+  "extend_components": {
+    "economic-desk": {
+      "paths": [
+        "install_economic_desk.py",
+        "model/common.py",
+        "model/decision_analysis.py",
+        "model/decision_desk.html",
+        "model/native_versions.py",
+        "operator/economic_workbench.py",
+        "operator/economic_receive.py",
+        "operator/web/economic_desk.mjs",
+        "operator/web/economic_desk.css",
+        "operator/web/economic_request_store.mjs",
+        "operator/web/economic_cost_worksheet.mjs",
+        "operator/web/economic_implementation.mjs",
+        "operator/ECONOMIC_DESK.md",
+        "operator/COST_WORKSHEETS.md",
+        "operator/ECONOMIC_IMPLEMENTATION.md"
+      ]
+    }
+  },
+  "required_components": [
+    "economic-comparison"
+  ]
+}

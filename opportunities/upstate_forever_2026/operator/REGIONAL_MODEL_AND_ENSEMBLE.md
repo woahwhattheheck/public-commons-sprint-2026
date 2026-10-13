@@ -27,6 +27,15 @@ capture, source review, HTTP success and unit checks do not replace looking at
 the rendered result. Use plain industrial layouts with readable tables, clear
 hierarchy, consistent spacing and useful controls.
 
+This includes every outgoing attachment: open downloaded HTML and relevant
+PDF/report pages, maps, images, spreadsheets, archives and projects in the normal
+recipient-facing viewer, and exercise their usable contents. Play and inspect
+outgoing audiovisual media. For video narration, use the available high-quality
+generative voice/TTS with natural delivery; listen to the final export for
+pronunciation, pacing and alignment. Use the existing authorized services and
+preserve attribution and license controls. Focus this inspection on the actual
+delivered result and repair what it reveals.
+
 Include this requirement in delegated receiving work and the active instructions
 that those workers read. Preserve existing owner controls and third-party or
 historical policies. Focus inspection on the actual outgoing workflows and repair

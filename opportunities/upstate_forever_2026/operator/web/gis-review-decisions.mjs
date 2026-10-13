@@ -136,7 +136,11 @@ export function attachGISReviewDecisions({getState,api,refreshState,showTask,toa
         data.revisions=value.revisions.filter(r=>r.review_id===data.review.id);render();
       }else{
         const saved=read(w+":selection"),first=saved&&value.reviews.some(r=>r.id===saved.review_id)?saved:{review_id:value.reviews[0]?.id,snapshot_id:""};
-        if(first.review_id)await open(first.review_id,first.snapshot_id);else render();
+        if(first.review_id){
+          const operation=read(w+":operation:"+first.review_id);
+          const snapshot=operation?.workspace===w&&operation?.reopen_pending&&operation?.completed_snapshot?operation.completed_snapshot:first.snapshot_id;
+          await open(first.review_id,snapshot);
+        }else render();
       }
     }catch(e){if(e.name!=="AbortError"&&current(w)&&token===viewVersion){status(e.message,true);render();}}
   }
@@ -160,6 +164,7 @@ export function attachGISReviewDecisions({getState,api,refreshState,showTask,toa
       if(!valid.has(selected))selected=data.rows[0]?.key||"";
       pending=read(w+":operation:"+reviewId);
       if(pending&&pending.workspace!==w)pending=null;
+      if(pending?.completed_snapshot===snapshotId&&pending.reopen_pending){pending.reopen_pending=false;rememberOperation(pending);}
       retain();message="Original source comparison opened.";loadError="";render();
       if(selected)void featureLoad();
       if(pending&&!pending.completed_snapshot)void reconcile().catch(e=>status(e.message,true));
@@ -234,6 +239,7 @@ export function attachGISReviewDecisions({getState,api,refreshState,showTask,toa
     op.task_id=task.id;op.state=task.state;op.failed=["failed","cancelled","interrupted"].includes(task.state);
     if(task.state==="complete"){
       if(task.result?.review_id!==op.payload.review_id||!task.result.id)throw Error("The saved result belongs to another original review.");
+      if(op.completed_snapshot!==task.result.id)op.reopen_pending=true;
       op.completed_snapshot=task.result.id;
     }
     return task;

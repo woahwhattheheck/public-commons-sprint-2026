@@ -2,6 +2,8 @@
 // Pure JavaScript source transport for runtimes without Node, filesystem or browser APIs.
 // encodeApplicationCarrier returns the complete numbered carrier accepted by the existing Python receiver.
 
+const SOURCE_LIMIT_BYTES = 512 * 1024 * 1024;
+
 function fromBase64(s) {
   s=s.replace(/\s+/g,""); if(!/^[A-Za-z0-9+/]*={0,2}$/.test(s)||s.length%4)throw Error("bad base64");
   const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -25,9 +27,9 @@ function inflateGzip(data) {
  function tree(lengths){let count=new Array(16).fill(0),next=new Array(16).fill(0),maps=Array.from({length:16},()=>new Map()),max=0,c=0;lengths.forEach(n=>{if(n){count[n]++;max=Math.max(max,n);}});for(let n=1;n<=15;n++){c=(c+count[n-1])<<1;next[n]=c;}lengths.forEach((n,s)=>{if(!n)return;let x=next[n]++,r=0;for(let i=0;i<n;i++){r=(r<<1)|(x&1);x>>>=1;}maps[n].set(r,s);});return{maps,max};}
  function sym(t){let c=0;for(let n=1;n<=t.max;n++){c|=bits(1)<<(n-1);if(t.maps[n].has(c))return t.maps[n].get(c);}throw Error("invalid huffman");}
  const lb=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258],le=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0],db=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],de=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
- // The existing 64 MiB source limit also bounds the output allocation.
+ // Bound the output allocation to the complete Python receiver's capacity.
  const size=(data[data.length-4]|data[data.length-3]<<8|data[data.length-2]<<16|data[data.length-1]<<24)>>>0;
- if(size>64*1024*1024)throw Error("inflation limit");
+ if(size>SOURCE_LIMIT_BYTES)throw Error("inflation limit");
  const out=new Uint8Array(size);let written=0,last=0;
  while(!last){last=bits(1);let type=bits(2);if(type===0){bi=(bi+7)&~7;let n=bits(16),nn=bits(16);if((n^nn)!==65535)throw Error("bad stored length");if(written+n>size)throw Error("size mismatch");for(let i=0;i<n;i++)out[written++]=bits(8);continue;}if(type===3)throw Error("reserved deflate");
  let lit,dist;
@@ -393,4 +395,4 @@ function encodeNativeSourceDocuments(source, options = {}) {
     sourceFileCount: retained.sourceFileCount, sourceBytes: retained.sourceBytes, documents};
 }
 
-export {fromBase64, toBase64, utf8Encode, utf8Decode, sha256Bytes, inflateGzip, gzipBytes, encodeApplicationCarrier, decodeNativeSourceDocuments, encodeNativeSourceDocuments};
+export {SOURCE_LIMIT_BYTES, fromBase64, toBase64, utf8Encode, utf8Decode, sha256Bytes, inflateGzip, gzipBytes, encodeApplicationCarrier, decodeNativeSourceDocuments, encodeNativeSourceDocuments};

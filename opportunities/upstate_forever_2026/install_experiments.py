@@ -167,18 +167,40 @@ def server_join(text):
         '            if url.path == "/api/experiments/preview":\n'
         '                return self.send_json(200, self.app.experiments.preview(value))\n',
         'url.path == "/api/experiments/preview"')
-    matches = list(re.finditer(r"if selected not in (\(?)(\{[^}\n]+\})([^:\n]*):", text))
-    if len(matches) != 1:
+    tree = ast.parse(text)
+    handlers = [node for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == "Handler"]
+    readers = [node for handler in handlers for node in handler.body
+               if isinstance(node, ast.FunctionDef) and node.name == "do_GET"]
+    matches = [node for reader in readers for node in ast.walk(reader)
+               if isinstance(node, ast.Compare) and len(node.ops) == 1
+               and isinstance(node.ops[0], ast.NotIn)
+               and isinstance(node.left, ast.Name) and node.left.id == "selected"]
+    if len(handlers) != 1 or len(readers) != 1 or len(matches) != 1:
         raise ValueError("Current operator needs one compatible static asset registry.")
-    match = matches[0]
-    assets = ast.literal_eval(match.group(2))
+    # The current native Handler preserves several nested union operands.
+    # Change only its original leftmost literal, not parentheses or extension
+    # asset sets. Unknown computed registries remain an explicit composition.
+    literal_node = matches[0].comparators[0]
+    while isinstance(literal_node, ast.BinOp) and isinstance(literal_node.op, ast.BitOr):
+        literal_node = literal_node.left
+    if not isinstance(literal_node, ast.Set):
+        raise ValueError("Current operator static assets must be literal file names.")
+    assets = ast.literal_eval(literal_node)
     if not isinstance(assets, set) or not all(isinstance(item, str) for item in assets):
         raise ValueError("Current operator static assets must be literal file names.")
+    if {"experiments.mjs", "experiments.css"}.issubset(assets):
+        return text
     assets.update(("experiments.mjs", "experiments.css"))
     literal = "{" + ", ".join(json.dumps(item) for item in sorted(assets)) + "}"
-    text = (text[:match.start()] + "if selected not in " + match.group(1) +
-            literal + match.group(3) + ":" + text[match.end():])
-    return text
+    lines = text.splitlines(keepends=True)
+    def offset(line, column):
+        # AST columns count UTF-8 bytes; source slicing counts characters.
+        prefix = lines[line - 1].encode("utf-8")[:column].decode("utf-8")
+        return sum(map(len, lines[:line - 1])) + len(prefix)
+    first = offset(literal_node.lineno, literal_node.col_offset)
+    last = offset(literal_node.end_lineno, literal_node.end_col_offset)
+    return text[:first] + literal + text[last:]
 
 
 def app_join(text):

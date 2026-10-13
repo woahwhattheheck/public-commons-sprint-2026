@@ -1,0 +1,77 @@
+{
+  "schema": "upstate.ga-designation-relationship-inputs/v1",
+  "files": [
+    {
+      "path": "original-legal/ga.selected-reaches.json",
+      "bytes": 348663,
+      "sha256": "ef666990e3caa9947d8bcf2390e29668eac91737271caf321f375cb31237d347"
+    },
+    {
+      "path": "original-legal/rule-indexed-source.json",
+      "bytes": 59280,
+      "sha256": "a94f7bbbeed1d925fe3ce35298d8ff3329dc13489896b7cd7ce5c5b80c8a150a"
+    },
+    {
+      "path": "original-legal/rule-selection.json",
+      "bytes": 52201,
+      "sha256": "bfe207f4a9cbe60593b1237757cc3c96a916490f40171414c12050e1664515d1"
+    },
+    {
+      "path": "original-assessment/georgia-2024-savannah-stream-attributes-001-original.json",
+      "bytes": 69093,
+      "sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9"
+    },
+    {
+      "path": "original-assessment/georgia-2024-savannah-stream-attributes-002-original.json",
+      "bytes": 67382,
+      "sha256": "0b655ecca0c5cb18cf778448ebe2af4f75615411a97f3236caaef8634e7b89fb"
+    },
+    {
+      "path": "original-assessment/georgia-2024-official-stream-layers-original.json",
+      "bytes": 11402,
+      "sha256": "fe34dc1d3dbfb72395cd9453ef3eb9f3c68f4d108a5f5fe1947e469f06ee430a"
+    },
+    {
+      "path": "original-assessment/georgia-2024-savannah-stream-ids-original.json",
+      "bytes": 1415,
+      "sha256": "d9fad4b699e6261cdead9ccb3912054262c0e98b15c8e8cdb54c74d7ef04703f"
+    },
+    {
+      "path": "original-assessment/georgia-2024-savannah-lake-attributes-original.json",
+      "bytes": 10265,
+      "sha256": "14d18f1536bdad18ae96fa365f0588ef644939a2e7363793ff3d11758731c8b8"
+    },
+    {
+      "path": "original-assessment/georgia-2024-savannah-lake-ids-original.json",
+      "bytes": 85,
+      "sha256": "7c3182081b9e2f9326c91659ecb677b61171b368345af9de1363c09c6d1eed70"
+    },
+    {
+      "path": "original-assessment/acquisition.public.json",
+      "bytes": 8206,
+      "sha256": "6dc8ada4876d62ec59fcf3223b3ae7532a626b2fdfdde47dc775db3cd15b54d6"
+    },
+    {
+      "path": "original-assessment/selection.json",
+      "bytes": 8977,
+      "sha256": "87ba87322e3fecd298ef0a2db31a9b7bb0441c84dd26f8dbc0386b2cebdc1503"
+    },
+    {
+      "path": "original-assessment/published-document-context.json",
+      "bytes": 4607,
+      "sha256": "3037b203bc8cd4c185f4599347c23094670eeeddf1a97d42392047d5d4400dc0"
+    },
+    {
+      "path": "review-definitions.json",
+      "bytes": 20573,
+      "sha256": "f40aecef76776f4db0d22172f27d653950b25929e14dd1ada2667c668ac04025"
+    },
+    {
+      "path": "original-assessment/geometry-source-index.json",
+      "bytes": 15064,
+      "sha256": "08cada17a41563c7fef7cfe541bab170de612eae7493fe24b48f6037cbc43fae"
+    }
+  ],
+  "legal_source_commit": "82d0cbcbef03aff2681ccf0ef689a78289518d82",
+  "assessment_source_merge": "dc560ddc9f44a307b9d402d158fe0b336ae6d338"
+}

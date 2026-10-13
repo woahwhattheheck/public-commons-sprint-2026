@@ -578,6 +578,8 @@ export function createWatershedContextDesk(host) {
     const review = sourceReview?.document;
     const selected = review?.selection;
     return '<section class="wc-coverage"><h2>Continue a source explorer review</h2>' +
+      (catalog?.source_explorer?.url ? '<p><a href="' + esc(catalog.source_explorer.url) +
+        '" target="_blank" rel="noopener">Open the original utility source explorer</a></p>' : '') +
       '<p class="wc-note">Download the JSON selection from the original utility source explorer, then choose it here. ' +
       'The native report checks its original profile, 217-watershed domain, downstream links and selected HUC12s before saving.</p>' +
       '<button type="button" data-wc-review-choose' + (busy ? ' disabled' : '') + '>Choose source review JSON</button>' +

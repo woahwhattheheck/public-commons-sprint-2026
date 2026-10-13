@@ -195,20 +195,35 @@ def install(application, source_root, *, check=False):
             for relative, selected in sorted(changes.items()):
                 if body(target, relative, optional=True) != before[relative]:
                     raise RuntimeError("Concurrent measured source change: " + relative)
-                replace(target / relative, selected)
                 committed.append(relative)
+                replace(target / relative, selected)
             result["state"] = "installed"
             replace(saved / "installation.json", (json.dumps(result, indent=2) + "\n").encode("utf-8"))
             return result
-        except BaseException:
+        except BaseException as failure:
+            conflicts = []
             for relative in reversed(committed):
                 destination = target / relative
-                if body(target, relative, optional=True) != prepared[relative]:
+                try:
+                    current = body(target, relative, optional=True)
+                except (OSError, ValueError):
+                    conflicts.append(relative)
                     continue
-                if before[relative] is None:
-                    destination.unlink()
-                else:
-                    replace(destination, before[relative])
+                if current == before[relative]:
+                    continue
+                if current != prepared[relative]:
+                    conflicts.append(relative)
+                    continue
+                try:
+                    if before[relative] is None:
+                        destination.unlink()
+                    else:
+                        replace(destination, before[relative])
+                except OSError:
+                    conflicts.append(relative)
+            if conflicts:
+                raise RuntimeError("Preserved independently changed files during rollback: "
+                                   + ", ".join(conflicts)) from failure
             raise
 
 

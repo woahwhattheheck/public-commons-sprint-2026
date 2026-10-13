@@ -1,6 +1,8 @@
 import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';
+import {retainedStudyControl,openRetainedStudyRecord,receivedReviewHTML} from './study_report_navigation.mjs';
 import {receivedGaugeHTML,openReceivedGauge} from './gauge_received_studies.mjs';
 import {receivedNativeEnsembleHTML,openReceivedNativeEnsemble} from './ensemble_received_studies.mjs';
+import {receivedComparabilityHTML,openReceivedComparability} from './comparability_received_studies.mjs';
 /** Original selected-study receiving, reports and editable Implementation lineage. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=v=>Array.isArray(v)?v:[];
@@ -40,13 +42,13 @@ export function attachReceivedStudies(host) {
     if(!root)return;
     const disabled=busy?'disabled':'';
     root.innerHTML='<div class="st-panel-heading"><div><h3>Received studies and original sources</h3>'+
-      '<p>Open a saved study, its scientific reports, original editable plans, Gauge geography and selected watershed comparisons.</p></div>'+
+      '<p>Open a saved study, its scientific reports, original editable plans, customer feedback, Gauge geography and selected watershed comparisons.</p></div>'+
       button('refresh','Refresh received studies')+'</div>'+
       (error?'<p class="st-row-error" role="alert">'+esc(error)+'</p>':'')+
-      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Editable plans</th><th>Gauge studies</th><th>Model studies</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
+      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Editable plans</th><th>Gauge studies</th><th>Model studies</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
       page.items.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.captured_at||'')+'</small>'+
         (row.error?'<p class="st-row-error">'+esc(row.error)+'</p>':'')+'</td><td>'+esc(row.report_count??'')+
-        '</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
+        '</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
         (row.state==='unreadable'?'Saved record needs repair':button('open',row.id===selected?'Reopen study':'Open study','data-id="'+esc(row.id)+'"'))+
         '</td></tr>').join('')+'</tbody></table></div>'+
       (!page.items.length?'<p class="st-empty">'+(loading?'Reading retained Study transfers…':'Receive a Study archive, switch to its restored Workspace, and open its saved study here.')+'</p>':'')+
@@ -60,10 +62,10 @@ export function attachReceivedStudies(host) {
     let html='<section class="st-received-detail" aria-label="Original received study"><h4>'+esc(value.title)+'</h4>'+
       '<p>'+esc(value.project.title||value.project.id)+' · '+esc(value.captured_at||'')+'</p>';
     for(const report of list(value.reports)){
-      const primary=new Set(['report.html','scientific-report.html','report-files.zip']);
+      const primary=new Set(['report.pdf','report.html','scientific-report.html','report-files.zip']);
       html+='<article class="st-export"><div><h4>'+esc(report.title)+'</h4><p>'+esc(report.section_count)+' sections · '+
         esc(report.figure_count)+' figures · '+esc(report.source_count)+' original sources</p>'+
-        files(report._downloads,primary)+allFiles(report._downloads)+'</div></article>';
+        '<div class="st-actions">'+retainedStudyControl(host,{kind:'scientific-report-editions',id:report.id},{prefix:'received',disabled:!!disabled})+'</div>'+files(report._downloads,primary)+allFiles(report._downloads)+'</div></article>';
     }
     if(!value.field_sources.length)html+='<p>This retained study records '+value.reports.length+' scientific reports. Its saved selection contains no linked editable Implementation plans.</p>';
     for(let index=0;index<value.field_sources.length;index++){
@@ -92,8 +94,10 @@ export function attachReceivedStudies(host) {
       }
       html+='</article>';
     }
+    html+=receivedReviewHTML(host,value,!!disabled);
     html+=receivedGaugeHTML(value,!!disabled);
     html+=receivedNativeEnsembleHTML(value,!!disabled);
+    html+=receivedComparabilityHTML(value,!!disabled);
     html+=receivedObservedLandcoverHTML(value,!!disabled);
     return html+'</section>';
   }
@@ -126,6 +130,28 @@ export function attachReceivedStudies(host) {
       if(!value||value.id!==selected||value.workspace_key!==ws)
         throw Error('Reopen the original received Study.');
       return await openReceivedObservedLandcover(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
+    if(action?.startsWith('cohort-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      return await openReceivedComparability(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
+    if(action==='open-retained-report-review'){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      const kind=target.dataset.recordKind,id=target.dataset.recordId;
+      const available=kind==='reviews'?list(value.customer_reviews).some(row=>row.id===id):
+        kind==='scientific-report-editions'&&(list(value.reports).some(row=>row.id===id)||
+          list(value.customer_reviews).some(row=>list(row.scientific_reports).some(source=>
+            !source.external&&source.scientific_report_edition_id===id)));
+      if(!available)throw Error('Choose a report or review retained with this Study.');
+      return openRetainedStudyRecord(host,{kind,id,tab:target.dataset.recordTab},{
         workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
       });
     }

@@ -295,5 +295,22 @@ export function attachSourceReports(host) {
     if(!active||!panel||currentWorkspace!==host.getWorkspace())await mount(content);
     return scientific.openForSources(value);
   }
-  return {mount,detach,reset,focus,openForSources};
+  async function openForStudy(value,content){
+    if(!value||value.workspace_key!==host.getWorkspace())
+      throw Error('Open the saved scientific report in its receiving Workspace.');
+    const navigationCurrent=()=>typeof value.isCurrent!=='function'||value.isCurrent();
+    if(!navigationCurrent())return;
+    const workspace=host.getWorkspace();
+    if(currentWorkspace!==workspace){reset();currentWorkspace=workspace;}
+    const ticket=generation;
+    active=true;ensurePanel(content);renderRegional();renderCatalog();
+    const current=()=>active&&valid(workspace,ticket)&&navigationCurrent();
+    try{
+      // A known edition opens independently of source discovery or a catalogue outage.
+      await scientific.mount(panel.querySelector('[data-scientific-reports]'),{loadCatalog:false});
+      if(!current())return;
+      return await scientific.openForStudy({...value,isCurrent:current});
+    }catch(error){if(!current())return;throw error;}
+  }
+  return {mount,detach,reset,focus,openForSources,openForStudy};
 }
