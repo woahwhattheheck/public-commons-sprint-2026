@@ -21,7 +21,7 @@ const outcome = records => {
   return records.find(x=>!predecessors.has(x.id)) ?? null;
 };
 
-export function attachCustomerReviews({getState,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm,openStudyTransfer}){
+export function attachCustomerReviews({getState,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm,openStudyTransfer,openSavedScientificReport}){
   let mounted=null,query='',filter='all',activePacket=null,activeTab='files',generation=0,transferRequest=null;
   const current = () => getState()?.workspace_key;
   const rows = () => getState()?.data.customer_reviews ?? [];
@@ -242,6 +242,81 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     return ['accepted','changes-requested','question','not-applicable','unreviewed'].map(key=>({key,count:items.filter(x=>x.decision===key).length}));
   }
   function currentResponse(packet){return packet.responses.at(-1)?.response??null;}
+  function retainedScientificReports(packet){
+    const project=packet.review?.project?.id,found=new Map();
+    for(const selection of packet.review?.selections??[]){
+      if(selection.kind!=='sources')continue;
+      for(const entry of selection.source?.entries??[]){
+        const metadata=entry.metadata??{},identity=metadata.scientific_report_identity;
+        if(entry.role!=='SCIENTIFIC_REPORT_REVIEW'||
+            metadata.report_schema!=='upstate.scientific-report-edition/v1'||
+            identity?.schema!=='upstate.scientific-report-review/v1'||
+            identity.project_id!==project||project!==getState()?.project?.id||
+            !/^[0-9a-f]{64}$/.test(identity.scientific_report_edition_id??'')||
+            metadata.scientific_report_edition_id!==identity.scientific_report_edition_id)continue;
+        found.set(identity.scientific_report_edition_id,{
+          id:identity.scientific_report_edition_id,title:entry.title||'Original scientific report'
+        });
+      }
+    }
+    return [...found.values()];
+  }
+  function originalScientificReports(packet){
+    if(typeof openSavedScientificReport!=='function')return '';
+    const reports=retainedScientificReports(packet);
+    if(!reports.length)return '';
+    return '<section class="review-intro"><h3>Original scientific reports</h3>'+
+      '<p>Open the exact saved edition and its original PDF, source order and report files.</p>'+
+      reports.map(row=>'<div class="page-actions"><span>'+esc(row.title)+'</span>'+
+        button('open-scientific-report','Open original report',packet.review.id,
+          'data-edition-id="'+esc(row.id)+'"')+'</div>').join('')+'</section>';
+  }
+  async function openOriginalScientificReport(node){
+    const packet=activePacket,ws=current(),serial=generation;
+    if(!packet||packet.review.id!==node.dataset.id||
+        !retainedScientificReports(packet).some(row=>row.id===node.dataset.editionId))
+      throw Error('Reopen the original customer review before opening its scientific report.');
+    if(typeof openSavedScientificReport!=='function')
+      throw Error('The original saved-report view is unavailable in this application.');
+    try{return await openSavedScientificReport({workspace_key:ws,id:node.dataset.editionId});}
+    catch(error){
+      if(current()!==ws||generation!==serial||activePacket!==packet||!mounted)return null;
+      throw error;
+    }
+  }
+  async function openForStudy(selection){
+    const ws=current(),id=selection?.id,tab=selection?.tab??'files';
+    if(selection?.workspace_key!==ws||!/^[0-9a-f]{64}$/.test(id??''))
+      throw Error('Open the retained customer review in its original workspace.');
+    if(!['files','requirements','corrections','history','handbacks','exports','received'].includes(tab))
+      throw Error('Choose an original customer review section.');
+    if(typeof selection.isCurrent==='function'&&!selection.isCurrent())return null;
+    const serial=++generation,container=mounted;
+    const valid=()=>!!mounted&&mounted===container&&current()===ws&&generation===serial&&
+      (typeof selection.isCurrent!=='function'||selection.isCurrent());
+    if(!valid())return null;
+    let packet;
+    try{
+      packet=await read('review',{review_id:id});
+      if(!valid())return null;
+      if(packet.review?.id!==id||packet.review?.project?.id!==getState()?.project?.id)
+        throw Error('The retained review reply identifies another original review or project.');
+      if(tab==='handbacks'&&!Array.isArray(packet._handbacks)){
+        const value=await read('handbacks',{review_id:id});
+        if(!valid())return null;
+        packet._handbacks=value.handbacks;
+      }
+      if(tab==='received'){
+        const value=await read('packets',{review_id:id});
+        if(!valid())return null;
+        packet._receipts=value.receipts;
+      }
+    }catch(error){if(!valid())return null;throw error;}
+    if(!valid())return null;
+    drawPacket(packet,tab);
+    return {workspace_key:ws,id,tab,view:'customer-reviews'};
+  }
+
   function reviewToolbar(packet){
     const id=packet.review.id;
     return '<div class="page-actions">'+button('export','Export current review',id,'',true)+button('import','Receive response',id)+
@@ -838,7 +913,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     activePacket=packet;activeTab=tab;
     const tabs=[['files','Files'],['requirements','Requirements'],['corrections','Corrections'],['history','Response history'],['handbacks','Engineering handbacks'],['exports','Exported desks'],['received','Received packages']];
     const body=tab==='received'?receivedPackagesBody(packet._receipts??[],packet.review.id):tab==='handbacks'?handbacksTab(packet):tab==='requirements'?requirementsTab(packet):tab==='corrections'?correctionsTab(packet):tab==='history'?historyTab(packet):tab==='exports'?exportsTab(packet):fileTab(packet);
-    detail(packet.review.title,'<div class="customer-review-detail">'+summary(packet)+reviewToolbar(packet)+
+    detail(packet.review.title,'<div class="customer-review-detail">'+summary(packet)+reviewToolbar(packet)+originalScientificReports(packet)+
       '<nav class="review-tabs" aria-label="Review sections">'+tabs.map(([key,title])=>button('tab',title,packet.review.id,'data-tab="'+key+'" aria-pressed="'+(tab===key)+'"')).join('')+'</nav><section>'+body+'</section>'+
       '<details class="technical"><summary>Complete review document</summary>'+fileList([packet._packet_download])+'<dl class="definition"><dt>Review</dt><dd class="mono">'+esc(packet.review.id)+'</dd><dt>Project</dt><dd class="mono">'+esc(packet.review.project.id)+'</dd></dl></details></div>',{kind:'customer-review',id:packet.review.id});
     if(tab==='received')mountReceivedSearch(packet._receipts??[]);
@@ -989,6 +1064,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
   async function dispatch(node){
     const action=node.dataset.action.slice(7),id=node.dataset.id;
     if(action==='study-transfer')return transferReview(id,node);
+    if(action==='open-scientific-report')return openOriginalScientificReport(node);
     if(action==='worklist'||action.startsWith('worklist-'))return worklistAction(action,id);
     if(action==='packet-receive')return receivePackage(id||'');
     if(action==='packets')return openReceivedPackages(id||'');
@@ -1018,5 +1094,5 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(action==='compare')return compareForm();
     if(action==='template')return template(id);
   }
-  return {render,mount,detach,dispatch,taskActions,openReview,mapActions,prepareScientificReportReview};
+  return {render,mount,detach,dispatch,taskActions,openReview,openForStudy,mapActions,prepareScientificReportReview};
 }
