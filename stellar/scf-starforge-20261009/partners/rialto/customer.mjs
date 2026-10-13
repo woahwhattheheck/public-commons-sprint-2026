@@ -82,10 +82,11 @@ async function captureChallenge(o){
   return{directory:s.root,status:value.status,challengeFile:base,capturedAt:value.retrievedAt,paymentRequiredPresent:Boolean(value.headers?.['payment-required']),error:value.error??null};
  });
 }
-async function native(argv,cwd,logPath){
+async function native(argv,cwd,logPath,lockFd){
  const startedAt=new Date().toISOString();
  return new Promise((resolve,reject)=>{
-  const child=spawn(argv[0],argv.slice(1),{cwd,stdio:['ignore','pipe','pipe']});let stdout='',stderr='',size=0;
+  need(Number.isInteger(lockFd),'Original native writer lock required');
+  const child=spawn(argv[0],argv.slice(1),{cwd,stdio:['ignore','pipe','pipe',lockFd]});let stdout='',stderr='',size=0;
   const collect=kind=>chunk=>{size+=chunk.length;if(size>16*1024*1024){child.kill('SIGTERM');return;}if(kind==='out')stdout+=chunk;else stderr+=chunk;};
   child.stdout.on('data',collect('out'));child.stderr.on('data',collect('err'));
   child.on('error',reject);child.on('close',async(code,signal)=>{try{const record={argv,startedAt,finishedAt:new Date().toISOString(),code,signal,stdout,stderr};await writeNew(logPath,json(record));need(code===0,'Original native command failed; see '+logPath);resolve(record);}catch(e){reject(e);}});
@@ -106,7 +107,7 @@ function checkNativeConfig(config,s,actual,envelope,body,headers,nativeRoot){
 async function prepare(o){
  const s=await selected(required(o,'directory')),checkout=path.resolve(required(o,'checkout')),cli=path.join(checkout,NATIVE),node=o.node??process.execPath;
  need(await exists(cli),'Original complete installed SF88 checkout required');
- return lock(s.root,async()=>{
+ return lock(s.root,async lockFd=>{
   const challengeFile=path.join(s.root,challengeName(o)),response=verifyHttp(await readJson(challengeFile));
   need(response.url===s.value.url&&response.method===s.value.method,'Challenge belongs to another request');
   if(s.body!==undefined)need(response.requestBodySha256===sha(s.body)&&response.requestBodyBytes===s.body.length,'Challenge request body changed');
@@ -122,7 +123,7 @@ async function prepare(o){
   const configFile=path.join(nroot,'review.json'),handoff=path.join(nroot,'buyer-operation.json');
   const argv=[node,cli,'--prepare','--discovery',path.join(nroot,'offers.json'),'--row','0','--accept',String(matched.acceptIndex),'--intent-id',s.value.intentId,'--url',s.value.url,'--method',s.value.method,'--headers-file',path.join(nroot,'request.headers.json'),'--response-out',path.join(nroot,'customer-result'),'--out',configFile,...(s.body!==undefined?['--body-file',path.join(nroot,'request.body')]:[])];
   const logs=await fs.readdir(nroot),suffix=String(logs.filter(x=>x.startsWith('native-command-')).length).padStart(4,'0');let seq=Number(suffix);
-  const run=async args=>native(args,checkout,path.join(nroot,'native-command-'+String(seq++).padStart(4,'0')+'.json'));
+  const run=async args=>native(args,checkout,path.join(nroot,'native-command-'+String(seq++).padStart(4,'0')+'.json'),lockFd);
   if(!await exists(configFile))await run(argv);
   const config=await readJson(configFile);checkNativeConfig(config,s.value,matched.actualTerms,matched.envelope,s.body,s.headers,nroot);
   need(config.preparedFrom.acceptIndex===matched.acceptIndex,'Previously selected challenge option differs; preserve this original preparation');

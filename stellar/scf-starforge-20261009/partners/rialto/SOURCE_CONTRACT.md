@@ -98,3 +98,7 @@ This source adds a concrete discovery-to-customer receiving workflow. Its live m
 The new receiving modules are MIT, Copyright 2026 TokenJunkieLabs. The ordinary-header restrictions follow the existing MIT-licensed SF88 request-headers source and remain subject to the original buyer's authoritative validation.
 
 Rialto's source is Apache-2.0. The adapter calls its public interfaces and links the exact reviewed source; it does not distribute Rialto's implementation. The existing Stellar Forge source remains in its original repository and license.
+
+## Native writer lifetime
+
+The Linux [flock(2) contract](https://www.man7.org/linux/man-pages/man2/flock.2.html) binds the lock to the shared open-file description. The receiving process retains the descriptor after acquisition and passes it to each original native writer. A surviving native writer therefore retains its lock after a parent interruption; pack and receiving can acquire that directory after its original write finishes.
