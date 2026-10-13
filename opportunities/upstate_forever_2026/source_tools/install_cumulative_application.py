@@ -696,6 +696,77 @@ def check_sources(root):
     return {"python_modules": python, "javascript": javascript}
 
 
+def archive_destination(destination, roots):
+    """Keep the completed ZIP outside every retained application tree."""
+    destination = Path(destination).expanduser().resolve(strict=False)
+    for root in roots:
+        root = Path(root).resolve(strict=False)
+        if destination == root or destination.is_relative_to(root):
+            raise ValueError("Put the application ZIP outside the source and receiving directories: "
+                             + str(destination))
+    if destination.exists() and not destination.is_file():
+        raise ValueError("The application ZIP destination is not a file: " + str(destination))
+    return destination
+
+
+def receiving_paths(source, output, archive, scientific_source):
+    """Resolve parent aliases before inventory, staging or source transformations."""
+    source = Path(source).expanduser().resolve(strict=True)
+    output = Path(output).expanduser().resolve(strict=False)
+    scientific_root = (Path(scientific_source).expanduser().resolve(strict=True)
+                       if scientific_source is not None else source)
+    for retained in (source, scientific_root):
+        if (output == retained or output.is_relative_to(retained)
+                or retained.is_relative_to(output)):
+            raise ValueError("Choose a receiving directory independent of the retained source: "
+                             + str(retained))
+    archive = archive_destination(archive, (source, output, scientific_root)) if archive else None
+    return source, output, archive, scientific_root
+
+
+def application_archive_files(root):
+    """Retain the same ordered source members used by the published ZIP."""
+    return [
+        path for path in sorted(root.rglob("*"))
+        if path.is_file() and not path.is_symlink() and not any(
+            part.startswith(".") or part == "__pycache__"
+            for part in path.relative_to(root).parts)
+    ]
+
+
+def archive_matches_application(archive, root, files):
+    """Reopen an existing ZIP by streaming its members against installed files."""
+    names = ["upper-savannah-application/" + path.relative_to(root).as_posix()
+             for path in files]
+    if archive.namelist() != names:
+        return False
+    fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+    for name, path in zip(names, files):
+        retained = archive.getinfo(name)
+        selected = zipfile.ZipInfo.from_file(path, name, strict_timestamps=False)
+        if (retained.file_size != selected.file_size
+                or retained.create_system != selected.create_system
+                or (retained.external_attr >> 16) != (selected.external_attr >> 16)):
+            return False
+        with archive.open(name) as left, path.open("rb") as right:
+            before = os.fstat(right.fileno())
+            while True:
+                first, second = left.read(1024 * 1024), right.read(1024 * 1024)
+                if first != second:
+                    return False
+                if not first:
+                    break
+            after = os.fstat(right.fileno())
+        current = path.stat()
+        if (any(getattr(before, field) != getattr(after, field) for field in fields)
+                or any(getattr(after, field) != getattr(current, field) for field in fields)):
+            raise ValueError("Application source changed while its archive was checked: "
+                             + str(path.relative_to(root)))
+    if application_archive_files(root) != files:
+        raise ValueError("Application members changed while its archive was checked")
+    return True
+
+
 def archive_record(path):
     """Describe a completed ZIP without loading the compressed payload in RAM."""
     digest = hashlib.sha256()
@@ -735,8 +806,25 @@ def same_archive_members(current, proposed):
 
 
 def archive_application(root, destination):
+    root = Path(root).resolve(strict=True)
+    destination = archive_destination(destination, (root,))
     component_inventory(root)
-    destination = Path(destination).absolute()
+    files = application_archive_files(root)
+    if destination.exists():
+        # Reuse the completed transport directly. A second full compressed copy
+        # is unnecessary, including when this receiver uses another zlib version.
+        with destination.open("rb") as stream:
+            before = os.fstat(stream.fileno())
+            with zipfile.ZipFile(stream) as current:
+                if not archive_matches_application(current, root, files):
+                    raise ValueError("Another complete application owns " + str(destination))
+            after = os.fstat(stream.fileno())
+        fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        current = destination.stat()
+        if (any(getattr(before, field) != getattr(after, field) for field in fields)
+                or any(getattr(after, field) != getattr(current, field) for field in fields)):
+            raise ValueError("Application archive changed while its members were checked")
+        return archive_record(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
     try:
@@ -744,18 +832,8 @@ def archive_application(root, destination):
             temporary = Path(stream.name)
         with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED,
                              compresslevel=6, strict_timestamps=False) as archive:
-            for path in sorted(root.rglob("*")):
-                if path.is_file() and not path.is_symlink() and not any(
-                        part.startswith(".") or part == "__pycache__"
-                        for part in path.relative_to(root).parts):
-                    archive.write(path, "upper-savannah-application/" + path.relative_to(root).as_posix())
-        if destination.exists():
-            # Compressed transport can differ across zlib versions. Existing
-            # output is compared by its complete retained uncompressed members.
-            with zipfile.ZipFile(destination) as current, zipfile.ZipFile(temporary) as proposed:
-                if not same_archive_members(current, proposed):
-                    raise ValueError("Another complete application owns " + str(destination))
-            return archive_record(destination)
+            for path in files:
+                archive.write(path, "upper-savannah-application/" + path.relative_to(root).as_posix())
         record = archive_record(temporary)
         with temporary.open("rb") as stream:
             os.fsync(stream.fileno())
@@ -767,16 +845,13 @@ def archive_application(root, destination):
 
 
 def install(source, output, archive, *, scientific_source=None):
-    source, output = Path(source).resolve(strict=True), Path(output).absolute()
+    source, output, archive, scientific_root = receiving_paths(
+        source, output, archive, scientific_source)
     if not (source / "model/workspace.py").is_file() or not (source / "operator/server.py").is_file():
         raise ValueError("Receive the complete source root before cumulative installation")
-    if output == source or output.is_relative_to(source) or source.is_relative_to(output):
-        raise ValueError("Choose an independent receiving directory")
     original = owned_inventory(source)
     source_components = component_inventory(source, allow_embedded=True)
     source_identity = identity(original)
-    scientific_root = (Path(scientific_source).resolve(strict=True)
-                       if scientific_source is not None else source)
     scientific_installers = (
         "source_tools/install_keowee_watershed_join.py",
         "source_tools/install_review_reconciliation.py",
@@ -785,9 +860,6 @@ def install(source, output, archive, *, scientific_source=None):
     scientific_original = None
     scientific_identity = None
     if needs_scientific_source:
-        if (output == scientific_root or output.is_relative_to(scientific_root)
-                or scientific_root.is_relative_to(output)):
-            raise ValueError("Keep the canonical scientific source independent of the receiving directory.")
         scientific_original = (original if scientific_root == source
                                else owned_inventory(scientific_root))
         scientific_identity = identity(scientific_original)
@@ -896,8 +968,10 @@ def install(source, output, archive, *, scientific_source=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=Path)
-    parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--archive", type=Path)
+    parser.add_argument("--output", required=True, type=Path,
+                        help="Independent receiving directory, including after resolving parent aliases")
+    parser.add_argument("--archive", type=Path,
+                        help="ZIP outside all source and receiving directories; an identical archive is reused")
     parser.add_argument("--scientific-source", type=Path,
                         help="Independent canonical Keowee/review family source; defaults to --source")
     args = parser.parse_args(argv)
