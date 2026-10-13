@@ -128,8 +128,80 @@ def load_observations(files, parser):
                   for row in selected}
     if len(activities) != index.get("activity_count"):
         raise ValueError("Original observation activity count changed.")
+    if RESULT_SELECTION_INDEX in files:
+        if SELECTION_INDEX in files:
+            raise ValueError("Choose one original result or microbial selection per study.")
+        return _result_selection_records(files, selected)
     return _selection_records(files, selected)
 
+
+
+RESULT_SELECTION_INDEX = "result-selection.json"
+RESULT_SELECTION_SCHEMA = "upstate.original-result-selection/v1"
+
+
+def _result_selection_records(files, complete):
+    """Select exact original results after verifying every retained source row."""
+    selector = json.loads(files[RESULT_SELECTION_INDEX].decode("utf-8-sig"))
+    if (not isinstance(selector, dict) or selector.get("schema") != RESULT_SELECTION_SCHEMA
+            or selector.get("observation_index_sha256") != hashlib.sha256(files[INDEX]).hexdigest()):
+        raise ValueError("The result selection must bind its complete original observation index.")
+    for key in ("original_record_count", "record_count", "activity_count"):
+        value = selector.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError("Result selection counts must be positive integers.")
+    if selector["original_record_count"] != len(complete):
+        raise ValueError("The result selection changes the complete original cohort count.")
+    from datetime import date
+    bounds = []
+    for key in ("date_start", "date_end"):
+        value = selector.get(key)
+        if not isinstance(value, str):
+            raise ValueError("The result selection must declare its original sampling interval.")
+        try:
+            parsed = date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError("Result selection dates must be YYYY-MM-DD.") from exc
+        if parsed.isoformat() != value:
+            raise ValueError("Result selection dates must be YYYY-MM-DD.")
+        bounds.append(value)
+    first, last = bounds
+    if first > last:
+        raise ValueError("The result selection sampling interval is reversed.")
+    available, source_rows = {}, set()
+    for row in complete:
+        identifier = row.get("original_result_identifier")
+        key = (row["original_source_path"], row["source_csv_row"])
+        if (not isinstance(identifier, str) or not identifier
+                or identifier in available or key in source_rows):
+            raise ValueError("Result selection requires distinct original result and source-row identities.")
+        available[identifier] = row
+        source_rows.add(key)
+    declared = selector.get("records")
+    if not isinstance(declared, list) or not declared:
+        raise ValueError("Choose at least one original result.")
+    identity_fields = ("original_source_path", "original_source_sha256", "source_csv_row",
+                       "monitoring_location_id", "activity_id", "original_result_identifier")
+    chosen = set()
+    for reference in declared:
+        if not isinstance(reference, dict):
+            raise ValueError("Retain exact original result selectors.")
+        identifier = reference.get("original_result_identifier")
+        row = available.get(identifier) if isinstance(identifier, str) else None
+        number = reference.get("source_csv_row")
+        if (row is None or identifier in chosen or isinstance(number, bool)
+                or not isinstance(number, int) or number < 2
+                or any(reference.get(key) != row.get(key) for key in identity_fields)):
+            raise ValueError("The selected result differs from its original source row.")
+        if not first <= row["date"] <= last:
+            raise ValueError("A selected original result lies outside the sampling interval.")
+        chosen.add(identifier)
+    result = [row for row in complete if row["original_result_identifier"] in chosen]
+    activities = {(row["monitoring_location_id"], row.get("project_id", ""), row["activity_id"])
+                  for row in result}
+    if len(result) != selector["record_count"] or len(activities) != selector["activity_count"]:
+        raise ValueError("Selected original result or activity counts differ.")
+    return result
 
 SELECTION_INDEX = "observation-selection.json"
 SELECTION_SCHEMA = "upstate.original-observation-selection/v1"
@@ -293,6 +365,8 @@ def observation_files(original, available):
     for entry in index["sources"]:
         paths.update(_path(item["path"]) for item in metadata_entries(entry))
     result = {INDEX: body, **{path: original(path) for path in sorted(paths)}}
+    if RESULT_SELECTION_INDEX in available:
+        result[RESULT_SELECTION_INDEX] = original(RESULT_SELECTION_INDEX)
     if SELECTION_INDEX in available:
         selection_body = original(SELECTION_INDEX)
         selector = json.loads(selection_body.decode("utf-8-sig"))
