@@ -1,0 +1,60 @@
+{
+  "schema": "commons.supplier-originals-catalogue.v1",
+  "files": [
+    {
+      "filename": "CharityEngine_Integration_API_v3_WSDL.xml",
+      "bytes": 765422,
+      "source_url": "https://api.charityengine.net/v/3/Soap?Singlewsdl"
+    },
+    {
+      "filename": "CharityEngine_Integration_API_v3_Traditional_WSDL.xml",
+      "bytes": 170624,
+      "source_url": "https://api.charityengine.net/v/3/Soap?wsdl"
+    },
+    {
+      "filename": "CharityEngine_People_Import_Original.html",
+      "bytes": 132587,
+      "source_url": "https://help.charityengine.net/Import-Contact-Data1/"
+    },
+    {
+      "filename": "CharityEngine_Postman_Original.html",
+      "bytes": 101727,
+      "source_url": "https://www.postman.com/charityengine/workspace/public-documentation/collection/32430778-eadf369e-dada-4243-8d18-6f3dc25f0c55"
+    },
+    {
+      "filename": "CharityEngine_Integration_API_v3_Types.xml",
+      "bytes": 529570,
+      "source_url": "https://api.charityengine.net/v/3/Soap.svc?xsd=xsd0"
+    },
+    {
+      "filename": "CharityEngine_Integration_API_v3_Binding.xml",
+      "bytes": 66778,
+      "source_url": "https://api.charityengine.net/v/3/Soap.svc?wsdl=wsdl0"
+    },
+    {
+      "filename": "CharityEngine_People_External_ID_Original_Template.xlsx",
+      "bytes": 10027,
+      "source_url": "https://media3.charityengine.net/WF/_transactionServerFiles/1/2023/2/14/Contacts-BasicPeopleImport-WITHExternalIDFeb2023.xlsx"
+    },
+    {
+      "filename": "CharityEngine_Transactions_Import_Original.html",
+      "bytes": 115963,
+      "source_url": "https://help.charityengine.net/Importing-Transactions1/"
+    },
+    {
+      "filename": "CharityEngine_Transaction_ContactId_Template.xlsx",
+      "bytes": 8896,
+      "source_url": "https://media3.charityengine.net/WF/_transactionServerFiles/1/2023/2/14/Transactions-Basic1XImport-WITHCharityEngineIDFeb2023.xlsx"
+    },
+    {
+      "filename": "CharityEngine_Transaction_Name_Template.xlsx",
+      "bytes": 8917,
+      "source_url": "https://media3.charityengine.net/WF/_transactionServerFiles/1/2023/2/14/Transactions-Basic1XImport-WITHFirstLastNameFeb2023.xlsx"
+    },
+    {
+      "filename": "CharityEngine_Transaction_ExternalId_Template.xlsx",
+      "bytes": 8968,
+      "source_url": "https://media3.charityengine.net/WF/_transactionServerFiles/1/Transactions-Basic1XImport-WITHExternalSyncIDNov2023.xlsx"
+    }
+  ]
+}
