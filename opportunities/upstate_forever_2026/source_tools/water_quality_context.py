@@ -28,7 +28,7 @@ from typing import Any
 
 SCHEMA = "upstate.water-quality-context/v1"
 CATALOG_SCHEMA = "upstate.water-quality-catalog/v1"
-METHOD_VERSION = "water-quality-context-native-identity-causes-20261013"
+METHOD_VERSION = "water-quality-context-native-identity-causes-class-labels-20261013"
 FOCUS = {
     "030601010703": {"name": "Upper Six and Twenty Creek", "utility": "ARJWS"},
     "030601010704": {"name": "Lower Six and Twenty Creek", "utility": "ARJWS"},
@@ -46,6 +46,18 @@ CLASS_GROUPS = {
     "SB": "saltwater_sb",
     "SFH": "shellfish_harvesting",
 }
+CLASS_LABELS = {
+    "ONRW": "Outstanding National Resource Waters",
+    "ORW": "Outstanding Resource Waters",
+    "TN": "Trout Natural",
+    "TPGT": "Trout Put, Grow, and Take",
+    "TPT": "Trout Put and Take",
+    "FW": "Freshwaters",
+    "SA": "Saltwaters SA",
+    "SB": "Saltwaters SB",
+    "SFH": "Shellfish Harvesting Waters"
+}
+CLASS_LABEL_SOURCE = "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf"
 HIGH_QUALITY = {"ONRW", "ORW", "TN", "TPGT", "TPT"}
 CAUSES = {
     "ECOLI": ("bacteria", "E. coli"),
@@ -163,6 +175,7 @@ def class_info(value: Any) -> dict:
         "classification_raw": raw,
         "classification_codes": codes,
         "classification_groups": [CLASS_GROUPS[c] for c in codes],
+        "classification_labels": [CLASS_LABELS[c] for c in codes],
         "high_quality_designation": bool(HIGH_QUALITY.intersection(codes)),
         "unrecognized_classification": bool(raw and not codes),
     }
@@ -920,6 +933,8 @@ def build_context(
             "assessment_ids": sorted(r["id"] for r in local),
             "classified_feature_ids": sorted({r["source_feature_id"] for r in class_links.get(hid, [])}),
         }
+        row["direct_classification_labels"] = [CLASS_LABELS[code] for code in row["direct_classification_codes"]]
+        row["upstream_of_high_quality_labels"] = [CLASS_LABELS[code] for code in row["upstream_of_high_quality_codes"]]
         rows.append(row)
         watershed_features.append({
             "type": "Feature", "id": hid,
@@ -941,6 +956,10 @@ def build_context(
             "classification_boundary_rule": "Positive length for source lines or positive area for source polygons; boundary-only touches excluded.",
             "upstream_context": "Selected source ToHUC graph; context at HUC resolution.",
             "high_quality_codes": sorted(HIGH_QUALITY), "draft_editions_included": include_draft,
+            "classification_labels": CLASS_LABELS,
+            "classification_label_source_uri": CLASS_LABEL_SOURCE,
+            "classification_label_source_section": "R.61-68, Section G; publisher copy with May 23, 2025 amendment",
+            "code_meaning": "Classification TN means Trout Natural; assessment-cause TN means Total nitrogen.",
             "absence_meaning": "No record in the selected sources; use support remains unspecified.",
             "model_use": "Geographic context; model N/P/sediment mass remains in its original run.",
         },
@@ -1008,8 +1027,8 @@ def _write_report(path: Path, context: dict) -> None:
         rows.append("<tr>" + "".join("<td>" + e(v) + "</td>" for v in [
             row["huc12"], row["name"], row["focus_utility"], row["assessment_site_count"],
             row["nonattaining_site_count"], row["tmdl_nonattaining_site_count"],
-            ", ".join(row["direct_classification_codes"]),
-            ", ".join(row["upstream_of_high_quality_codes"]),
+            "; ".join(CLASS_LABELS.get(code, code) + " (" + code + ")" for code in row["direct_classification_codes"]),
+            "; ".join(CLASS_LABELS.get(code, code) + " (" + code + ")" for code in row["upstream_of_high_quality_codes"]),
         ]) + "</tr>")
     sources = [context["domain_source"]] + context["assessment_sources"] + ([context["classification_source"]] if context["classification_source"] else [])
     source_rows = "".join("<li><a href='" + e(s["source_uri"]) + "'>" + e(s["source_id"]) + "</a> · " +
@@ -1035,6 +1054,10 @@ def _write_report(path: Path, context: dict) -> None:
         "<th>HUC12</th><th>Watershed</th><th>Focus utility</th><th>Assessment sites</th><th>Nonattaining sites</th>"
         "<th>TMDL nonattaining sites</th><th>Intersecting classes</th><th>Downstream high-quality context</th>"
         "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>"
+        "<h2>Reading classification and assessment codes</h2><p>Classification TN means Trout Natural; "
+        "assessment-cause TN means Total nitrogen. Display names follow "
+        "<a href='" + CLASS_LABEL_SOURCE + "'>SCDES R.61-68, Section G</a>. "
+        "Raw classification codes, original reach identities and the selected source editions remain in the exports.</p>"
         "<h2>Source editions</h2><ul>" + source_rows + "</ul>"
         "<h2>Method</h2><p>Original classified-reach geometry is intersected with selected HUC boundaries. "
         "Area and length use EPSG:5070; portable geographic layers use EPSG:4326. Upstream relationships use the selected "
