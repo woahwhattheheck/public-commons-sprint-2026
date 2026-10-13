@@ -1,0 +1,58 @@
+{
+  "schema": "stellar-forge.flowable-history-xes-source-contract.v1",
+  "sourceContract": "history-source-contract.json",
+  "format": {
+    "namespace": "http://www.xes-standard.org/",
+    "version": "2.0",
+    "lifecycleModel": "flowable-history-observations-v1",
+    "transition": [
+      "observed-start",
+      "observed-end"
+    ],
+    "classifier": [
+      "flowable:definitionId",
+      "flowable:elementKey",
+      "lifecycle:transition"
+    ],
+    "ordering": [
+      "extensions",
+      "trace/event global attributes",
+      "classifiers",
+      "log attributes",
+      "traces with attributes followed by events"
+    ],
+    "xmlVersion": "1.0"
+  },
+  "primarySources": [
+    {
+      "url": "https://standards.ieee.org/ieee/1849/10907/",
+      "title": "IEEE 1849-2023 active standard"
+    },
+    {
+      "url": "https://www.tf-pm.org/upload/1581077299780.pdf",
+      "title": "IEEE Task Force public XES definition and serialization example"
+    },
+    {
+      "url": "https://www.tf-pm.org/resources/xes-standard/about-xes/standard-extensions/concept",
+      "title": "Concept extension"
+    },
+    {
+      "url": "https://www.tf-pm.org/resources/xes-standard/about-xes/standard-extensions/time",
+      "title": "UTC timestamp extension"
+    },
+    {
+      "url": "https://www.tf-pm.org/resources/xes-standard/about-xes/standard-extensions/lifecycle",
+      "title": "Standard and custom lifecycle models"
+    },
+    {
+      "url": "https://www.tf-pm.org/resources/xes-standard/about-xes/sample-log",
+      "title": "Public XES 2.0 sample serialization"
+    }
+  ],
+  "interpretation": {
+    "endedActivity": "Completion unknown in captured REST DTO; original end timestamp remains observed-end.",
+    "timestamps": "No creation/claim/assignment timestamp substitution; no fabricated boundary.",
+    "source": "Complete inspected history source bundle remains the original authority.",
+    "schemaCaveat": "Older public definition's legacy appendix schema and namespaced serialization example differ. No certification claim."
+  }
+}

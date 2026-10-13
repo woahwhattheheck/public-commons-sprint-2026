@@ -92,3 +92,7 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
+
+## Process-mining export
+
+The same History panel now prepares an XES file and complete mapping inventory from a selected activity or task view. It preserves observed endpoints and unknown outcomes. See [HISTORY_XES.md](HISTORY_XES.md) for the exact mapping, original CLI, independent receiving and recipient opening.
