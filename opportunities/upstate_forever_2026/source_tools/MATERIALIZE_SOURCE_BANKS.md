@@ -52,3 +52,11 @@ The manifest is Git blob `44998071fca54ed36850e0d4847580e8a2be3d19` in `woahwhat
 This is a retained source snapshot: its basis is commit `5f7a049133c2629733e1465965154cf3defaf6cb`, with the complete PR3550 source-review additions in the family bank. Preserve the native receiver's subsequent scientific-table/PDF and scientific-content changes, the PR3560 evidence/server/installer additions, and later maintained receiving entrypoints when composing its current application.
 
 The existing WQP case remains project `dc92b8b9-6eda-4362-b12d-3cf2ef6c9007`. Source transfer reuses its already completed original 88-result import. The original 178D project remains a separately retained project. Outcomes, laboratory, evidence and report receiving continue through their existing operation and actual returned IDs.
+
+## Prepare a new transfer
+
+Use [SOURCE_BANK_TRANSFER.md](SOURCE_BANK_TRANSFER.md) and the dependency-free `source_bank_transfer.cjs` encoder to prepare new complete banks in JavaScript or Node. It validates every original member and measures the full Git connector request, including nested JSON/base64 overhead, before splitting. Keep the existing receiver and publish a reachable transfer directory.
+
+The maintained receiving branch also retains the 22-file current-successor package and 29-file source-tools closure under `source/receiving/20261013/`. Compose those separate source editions with the original 660-file package while preserving later working changes. The resulting retained source inventory contains 703 unique application files.
+
+Carry the current application instruction copies with the handoff. Owner instruction `2026-10-13.1` requires opening and inspecting the exact outgoing client-facing product, operating its important populated controls, downloads and reopening, and checking screenshare and narrow/mobile layouts where relevant. View actual rendered output and repair clipping or unreadable presentation. Keep the plain industrial design and existing native source/computation owners.
