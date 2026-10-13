@@ -18,6 +18,7 @@ APPLICATION_FILES = (
     "observed_hydrology_context.report.json",
     "observed_hydrology_context.sources.json",
     "eighteenmile_scientific_figures.sources.json",
+    "eighteenmile_routine_nutrient_flow.sources.json",
     "README.md",
     "PACKAGING_LIMITS.md",
     "audit.py",
