@@ -44,7 +44,7 @@ Choose an original scenario to review:
 
 Signed decimal deltas come directly from the native comparison. They are displayed without browser subtraction or rounding. Unknown or noncomparable values stay unavailable with their stated reason; they do not become zero. Negative modeled reductions remain negative.
 
-**First original cost and source** and **Second original cost and source** show their complete retained definitions. Scope compatibility matters separately from matching currency: the original whole-scenario footprint and a reporting-zone estimate are not silently treated as the same basis.
+**First original cost and source** and **Second original cost and source** show their complete retained definitions. Scope compatibility matters separately from matching currency: the original whole-scenario footprint and a reporting-zone estimate are not silently treated as the same basis. A legacy retained or unstated footprint remains original source context; it does not establish a comparable cost basis and receives no numeric delta.
 
 **Download complete original scenario comparison** includes the full first and second records, original changes and source identities for the selected run.
 
@@ -98,3 +98,16 @@ The helper uses operator/web/economic_request_store.mjs with owner economic-comp
 Follow the current repository’s product receiving instructions on the existing native host. Open actual completed editions and operate this exact dialog at desktop and narrow widths. View the rendered source checks, original criteria, scenario details and report; exercise applicable empty/loading/error states, save through the original queue, download the full actual package, reopen it, and inspect the resulting screenshots and report pages.
 
 Source-runtime checks alone do not establish that this outgoing product was opened and viewed. Preserve the actual original edition, comparison and task IDs with the same receiving course, and repair concrete visible faults before calling that delivered product ready.
+
+
+## Continue the original native receiving course
+
+The maintained operator/economic_receive.py adds an optional **--compare-editions** stage to the existing **--cost-review** course. Keep the original operator URL file, Workspace key, completed source/report/zone and explicit cost review. For an existing field plan, retain --cost-plan-id and any required --cost-candidate-id.
+
+Add --compare-editions to that same original command. The first comparison side is the actual candidate-bound original Economic edition, including its historical edition when the field plan was imported earlier. The second side is the complete reviewed-cost successor actually produced by that course. The receiver does not invent ledger rows, forecasts, candidates or scientific outputs.
+
+The stage operates the actual saved-edition buttons, first/second selectors and native preview. It checks an invalid repeated-edition choice and an empty search result, inspects the selected original scenario, downloads the full matching set, saves through the original queue, and replays that identical request to confirm its original task identity. It downloads the complete comparison through its visible link and verifies every manifest member, both full nested Economic packages, and the complete original reports and inputs.
+
+The receiver opens the downloaded static report and the maintained typed report URL, captures desktop/narrow screens and PDF, preserves the Economic input draft, reloads the application and reopens the exact saved comparison. Its existing operator-journey.json includes economic_comparison with the actual comparison, source edition, native task and package identities. The original full receiving ZIP retains the comparison files and captured views together with the preceding Economic and field-cost course.
+
+A successful native receiving result establishes the executed controls and retained artifacts. The producing worker must still open and **view** the captured outgoing desktop/narrow images and report pages, repair visible faults, and preserve those actual image references before treating the product as ready. The receiver labels its new visual output captured_for_producer_review; it does not claim that a person or agent has viewed those pixels merely because a file was written.
