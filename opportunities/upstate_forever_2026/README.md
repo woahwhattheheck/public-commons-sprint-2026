@@ -14,6 +14,12 @@ The [complete Gura operation guide](source_tools/GURA_COMPLETE_OPERATION.md) run
 
 [Portable parameter-study exports](model/PARAMETER_EXPORTS.md) explains the complete study manifests, adaptive suite layout and exact file-length savings. Map-heavy studies can carry one copy of each scientific file in the suite; compact studies retain their compressed bundle when that is smaller.
 
+## Explore joint native parameter ranges
+
+The **Joint parameter studies** desk freezes sourced uniform or log-uniform ranges, explicit seeds and complete Latin-hypercube coordinates before saving any native profile. It uses the original experiment engine and retains the matching sampled-profile baseline for every land-cover alternative. Coupled native parameters can share one axis; routing alternatives remain separate selections.
+
+The [complete operating guide](docs/JOINT_PARAMETER_STUDIES.md) covers preview, original execution, resumption, selected-study export, independent receiving and actual desktop/narrow opening. The [receiving guide](docs/JOINT_PARAMETER_RECEIVING.md) explains captured bytes, interrupted preparation and continued historical receipts. The [analysis guide](docs/JOINT_PARAMETER_ANALYSIS.md) explains descriptive relationships and held-out response-surface diagnostics. Results stay separate by replicate, scenario, native producing-version evidence, units and exact paired spatial support. Missing cases remain visible; these diagnostics do not assert Sobol indices or calibrated environmental uncertainty.
+
 ## Work with retained model results
 
 The Scenario decisions desk opens original completed runs, native paired comparisons and retained common-mask watershed reports. Nitrogen and phosphorus remain in kg/year; sediment remains in metric tonnes/year. Direction, priority weights, selected cases and reporting geography are explicit. Saving keeps the full physical comparison, original source snapshot, methods and revision parent.
