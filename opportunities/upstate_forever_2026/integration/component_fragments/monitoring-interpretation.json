@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-interpretation",
+  "source_reference": "ECO-WO30-MONITORING-INTERPRETATION-3FC8-20261013",
+  "extend_components": {
+    "published-studies": {
+      "paths": [
+        "measurement_workspace/monitoring_interpretation.py",
+        "measurement_workspace/MONITORING_INTERPRETATION.md",
+        "source_tools/receive_monitoring_interpretation.py",
+        "operator/web/published_interpretation.mjs",
+        "operator/web/published_interpretation.css",
+        "source/monitoring_interpretation_20261013/profiles.json",
+        "source/monitoring_interpretation_20261013/source-index.json",
+        "source/monitoring_interpretation_20261013/SOURCE_GUIDE.md",
+        "source/monitoring_interpretation_20261013/parameter-contract.json",
+        "source/monitoring_interpretation_20261013/jurisdiction-reaches.json",
+        "source/monitoring_interpretation_20261013/profile-index.csv",
+        "operator/MONITORING_INTERPRETATION.md"
+      ],
+      "source_manifests": []
+    }
+  },
+  "required_components": []
+}

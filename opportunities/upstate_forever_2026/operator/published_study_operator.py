@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 from model.common import describe_file, held, verify_file
 from measurement_workspace.study_reviews import PublishedStudyReviews
+from measurement_workspace.monitoring_interpretation import MonitoringInterpretations
 from measurement_workspace.source_observations import builtin_companion
 from measurement_workspace import utility_microbiology as microbial
 from measurement_workspace import sv833_observations as sv833
@@ -20,7 +21,9 @@ from measurement_workspace.published_studies import PublishedStudyStore, TABLE_T
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report",
            "published-study.review.save", "published-study.review.export", "published-study.review.import",
-           "published-study.review.prepare-source", "published-study.microbial-selection.prepare")
+           "published-study.review.prepare-source", "published-study.microbial-selection.prepare",
+           "published-study.interpretation.save", "published-study.interpretation.export",
+           "published-study.interpretation.import")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
 BUILTIN_DIRECTORIES = {
     BUILTIN_ID: "eighteenmile_2023",
@@ -285,6 +288,13 @@ class PublishedStudyProvider:
             self._fail("STUDY_REQUEST", "Study request must be an object.")
         ws, store = self._store(workspace_key)
         try:
+            if operation in ("interpretation-catalog", "interpretation-preview", "interpretation-get"):
+                interpretations = MonitoringInterpretations(store, self.builtin.parent.parent)
+                if operation == "interpretation-catalog":
+                    return interpretations.catalog(payload.get("study_id"), payload.get("version_id"))
+                if operation == "interpretation-preview":
+                    return interpretations.preview(payload)
+                return interpretations.get(payload.get("interpretation_id"))
             if operation in ("microbial-selection-catalog", "microbial-selection-preview"):
                 from measurement_workspace import microbial_selection
                 return (microbial_selection.catalog(ws) if operation == "microbial-selection-catalog"
@@ -372,6 +382,26 @@ class PublishedStudyProvider:
         if not isinstance(payload, dict):
             self._fail("STUDY_REQUEST", "Study task payload must be an object.")
         try:
+            if action.startswith("published-study.interpretation."):
+                interpretations = MonitoringInterpretations(store, self.builtin.parent.parent)
+                if action == "published-study.interpretation.save":
+                    result = interpretations.save(payload)
+                    artifacts = [self._artifact(ws, interpretations._path(result["interpretation"]["id"]), "Saved monitoring interpretation")]
+                elif action == "published-study.interpretation.import":
+                    result = interpretations.receive(self._source_path(ws, payload.get("source")), task["operation_id"])
+                    artifacts = [self._artifact(ws, interpretations._path(result["interpretation"]["id"]), "Reopened monitoring interpretation")]
+                elif action == "published-study.interpretation.export":
+                    task_id = task["id"]
+                    if not isinstance(task_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,120}", task_id):
+                        self._fail("STUDY_TASK", "The queued task has an invalid identifier.", 500)
+                    result = interpretations.export(payload.get("interpretation_id"), ws.root / "published_study_exports" / task_id)
+                    artifacts = [self._artifact(ws, path, "Complete monitoring interpretation and original sources" if path.suffix == ".zip" else "Monitoring comparison " + path.name)
+                                 for path in result.pop("files")]
+                else:
+                    self._fail("STUDY_ACTION", "Unknown monitoring interpretation action.", 404)
+                body = result["interpretation"]["content"]
+                return {**result, **{key: body["binding"][key] for key in ("study_id", "version_id")},
+                        "selection": body["request"]["selection"], "view": "published-studies", "artifacts": artifacts}
             if action == "published-study.microbial-selection.prepare":
                 from measurement_workspace import microbial_selection
                 return microbial_selection.prepare(ws, store, payload, operation_id=task["operation_id"])

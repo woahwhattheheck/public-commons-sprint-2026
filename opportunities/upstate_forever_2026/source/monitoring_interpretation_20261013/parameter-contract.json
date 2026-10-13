@@ -1,0 +1,107 @@
+{
+  "schema": "tjl.monitoring-parameter-contract.v1",
+  "version": "2026-10-13.1",
+  "originalSource": {
+    "path": "results-with-provenance.csv",
+    "gitBlob": "0333099ba74752683c8f661ada5f80a13ccd44a9",
+    "rows": 730,
+    "stations": 36,
+    "sourceCsvFiles": 6,
+    "columns": 66,
+    "verification": "Original source parsed by maintained integration owner using original parseCSV; receipt13October2026. This catalog does not rewrite those rows."
+  },
+  "observed": {
+    "parameter": [
+      "Escherichia coli"
+    ],
+    "resultUnits": [
+      "",
+      "MPN/100 ml",
+      "MPN/100mL"
+    ],
+    "boundUnits": [
+      "",
+      "MPN/100 ml",
+      "MPN/100mL"
+    ],
+    "methods": [
+      "9221-F",
+      "9223-B",
+      "BAC94"
+    ],
+    "methodAuthorities": [
+      "APHA",
+      "USGS"
+    ],
+    "sampleFractions": [
+      ""
+    ],
+    "resultTypes": [
+      "",
+      "Actual"
+    ],
+    "activities": [
+      {
+        "type": "Sample-Routine",
+        "rows": 729
+      },
+      {
+        "type": "Quality Control Sample-Field Replicate",
+        "rows": 1
+      }
+    ],
+    "timeZoneLabels": [
+      "EDT",
+      "EST"
+    ],
+    "qualifiers": [
+      ""
+    ],
+    "detectionConditions": [
+      "",
+      "NotDetected",
+      "NotReported",
+      "Present Above Quantification Limit",
+      "Present Below Quantification Limit"
+    ]
+  },
+  "sourceKeys": [
+    "source_value_token",
+    "original parameter/unit/method and method-authority cells",
+    "original detection-condition/limit/bound cells",
+    "original source path/row/activity identity"
+  ],
+  "matching": {
+    "exactParameter": "Escherichia coli",
+    "caseFoldAllowed": true,
+    "substringAllowed": false,
+    "blankUnitAllowed": false,
+    "methodApprovalInferredFromName": false,
+    "cfuMpnConversion": false,
+    "mpnSpellingFactor": "1"
+  },
+  "boundsAndCensoring": {
+    "provenance": "Conservative application rules, not a replacement agency assessment methodology.",
+    "source": "Preserve source_value_token, bound value/unit/type, result detection condition, result status, qualifier, reporting limit and raw row.",
+    "noSubstitution": [
+      "zero",
+      "one-half detection limit",
+      "detection limit",
+      "arbitrary small positive number"
+    ],
+    "exact": "Use the original positive exact numeric result for geometric means only when no source qualifier contradicts exactness.",
+    "bounds": "For strict threshold exceedance x>T, classify as certain above only if every possible value allowed by the original interval exceeds T; certain not above only if every allowed value is <=T; otherwise indeterminate. Preserve open/closed bounds.",
+    "gm": "Do not silently discard censored, zero, negative or missing selected samples. The exact geometric-mean comparison is unsupported if any included sample is not a strictly positive exact value; a separately labelled descriptive eligible subset may be shown with its exclusions.",
+    "fraction": "Retain every otherwise eligible sampled result in the denominator. Report [certain_exceedances/N,(certain_exceedances+indeterminate)/N]; compare to the allowed fraction only when this interval establishes a conclusion. Zero denominator is unsupported.",
+    "unqualifiedDetection": "NotDetected needs an actual bound before quantitative use; NotReported is missing; Present Below/Above Quantification Limit is not an exact result merely because a numeric cell exists."
+  },
+  "unobservedParameters": {
+    "items": [
+      "Chlorophyll a",
+      "Total microcystins",
+      "Cylindrospermopsin"
+    ],
+    "status": "Profiles available for appropriate actual measured source records; no such records are asserted to exist in the730 E.coli source."
+  },
+  "inputPolicy": "Retain original cells, qualify interpretations and log explicit operator corrections; never mutate the source to force a profile match."
+}
