@@ -157,6 +157,7 @@ The activity file declares EST; its saved collection times retain that fixed UTC
 <a class="action" href="source-receiving/original-event-groups.json" download>Inspect all original event groupings</a></div>
 <details><summary>Open the three unchanged original source files</summary>{source_links}</details></section>
 <section><h2>Continue the complete working project</h2>
+<div class="actions"><a class="action primary" href="Eighteenmile_Complete_Workspace.zip" download>Download complete editable project</a></div>
 <p><code>Eighteenmile_Complete_Workspace.zip</code> contains the full application and original workspace, both retained plans,
 all saved revisions, both report editions, original attachments and completed import history. Extract its <code>application/</code>
 folder first to access the maintained receiving command, then restore into a new directory:</p>
@@ -182,7 +183,8 @@ The evidence ZIPs also carry the unchanged plan and original files for the maint
 
 
 def deliver(workspace: Path, onboarding_result: Path, evidence_directory: Path,
-            output: Path, laboratory_report: str | None = None) -> dict:
+            output: Path, laboratory_report: str | None = None,
+            station_visit_report: str | None = None) -> dict:
     workspace = workspace.resolve(strict=True)
     evidence_directory = evidence_directory.resolve(strict=True)
     output = output.resolve()
@@ -233,6 +235,13 @@ def deliver(workspace: Path, onboarding_result: Path, evidence_directory: Path,
     visit_report = report_edition(store, relative_file(workspace, onboarding["report"]["directory"] + "/manifest.json").parent)
     if visit_report != {**onboarding["report"], "directory": str(workspace / onboarding["report"]["directory"])}:
         raise ValueError("The original onboarding report selection differs.")
+    if station_visit_report is not None:
+        current_reports = [row for row in store.list_reports(onboarding["plan_id"])
+                           if row["id"] == station_visit_report
+                           and row["document_digest"] == document_digest(visit_plan)]
+        if len(current_reports) != 1:
+            raise ValueError("Select one retained station/visit report for the original plan edition.")
+        visit_report = current_reports[0]
     binding = {"project_id": PROJECT_ID, "application_sha256": portable.application_digest(),
                "onboarding_operation_id": operation_id, "onboarding_result_sha256": file_digest(retained_result),
                "evidence_result_sha256": file_digest(evidence_path),
@@ -313,10 +322,12 @@ def main() -> None:
     parser.add_argument("--onboarding-result", type=Path, required=True)
     parser.add_argument("--evidence-directory", type=Path, required=True)
     parser.add_argument("--laboratory-report")
+    parser.add_argument("--station-visit-report",
+                        help="Retained report edition for the unchanged original station/visit plan")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     manifest = deliver(args.workspace, args.onboarding_result, args.evidence_directory,
-                       args.output, args.laboratory_report)
+                       args.output, args.laboratory_report, args.station_visit_report)
     print(json.dumps({"id": manifest["id"], "entry": str(args.output / "START_HERE.html"),
                       "files": len(manifest["files"]), "binding": manifest["binding"],
                       "workspace_archive": manifest["workspace_archive"]}, indent=2))

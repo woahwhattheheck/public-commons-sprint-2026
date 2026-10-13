@@ -168,15 +168,16 @@ def _table(headers, rows) -> str:
                               for item in headers) + "</tr>"
     rows = list(rows)
     if not rows:
-        body = "<tr><td colspan=\"" + str(len(headers)) + "\">No records entered.</td></tr>"
+        return '<p class="empty-table">No records entered.</p>'
     else:
         body = "".join("<tr>" + "".join(
             "<td>" + html.escape(_text(value)) + "</td>" for value in row
         ) + "</tr>" for row in rows)
-    width_class = " wide" if len(headers) > 3 else ""
-    return ("<div class=\"table-scroll" + width_class + "\" tabindex=\"0\" role=\"region\" aria-label=\"" +
-            html.escape(str(headers[0]) + " table", quote=True) +
-            "\"><table><thead>" + header + "</thead><tbody>" + body + "</tbody></table></div>")
+    label = "Report table: " + str(headers[0]) if headers else "Report table"
+    return ('<div class="table-scroll" tabindex="0" role="region" aria-label="' +
+            html.escape(label, quote=True) + '" style="--report-columns:' +
+            str(max(1, len(headers))) + '"><table><thead>' + header +
+            "</thead><tbody>" + body + "</tbody></table></div>")
 
 
 def _details(label, value) -> str:
@@ -646,24 +647,30 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
         "body{font:14px/1.5 system-ui,sans-serif;color:#202020;background:#fff;"
         "max-width:1500px;margin:0 auto;padding:32px}"
         "h1{font-size:28px;margin:0 0 8px}h2{font-size:20px;margin-top:28px}"
-        ".table-scroll.wide table{min-width:900px}.scientific-context table{min-width:720px}"
+        ".scientific-context table{min-width:720px}"
         ".scientific-context h3{font-size:16px;margin-bottom:6px}"
         "header{border-bottom:2px solid #333;padding-bottom:20px}"
-        ".meta,footer{color:#555}.table-scroll{overflow-x:auto;margin:12px 0}"
-        "table{width:100%;border-collapse:collapse;font-size:12px}"
+        ".meta,footer,.table-help{color:#555}.table-help,.empty-table{font-size:12px}"
+        ".table-scroll{overflow:auto;max-height:36rem;margin:12px 0;overscroll-behavior:contain}"
+        ".table-scroll:focus-visible{outline:2px solid #333;outline-offset:3px}"
+        "table{width:100%;min-width:calc(var(--report-columns,2)*8rem);border-collapse:collapse;font-size:12px}"
         "th,td{padding:8px;border:1px solid #ccc;text-align:left;vertical-align:top;"
-        "white-space:pre-wrap;overflow-wrap:anywhere}th{background:#eee}"
+        "white-space:pre-wrap;overflow-wrap:anywhere}th{background:#eee;position:sticky;top:0;overflow-wrap:normal}"
         "details{border:1px solid #ccc;padding:10px;margin:10px 0}"
         "summary{font-weight:600;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}"
         "section{break-inside:auto}footer{border-top:1px solid #aaa;margin-top:28px;padding-top:12px}"
-        "@media print{body{padding:0;font-size:10px}table{font-size:10px;table-layout:fixed}"
-        ".table-scroll{overflow:visible}.table-scroll.wide table,.scientific-context table{min-width:0}"
+        "@media(max-width:600px){body{padding:20px}h1{font-size:25px}}"
+        "@media print{body{padding:0;font-size:10px}table{font-size:10px;table-layout:fixed;min-width:0}"
+        ".table-scroll{overflow:visible;max-height:none}.scientific-context table{min-width:0}"
+        ".table-help{display:none}th{position:static}"
         "details{break-inside:avoid}summary{display:block}"
         "thead{display:table-header-group}tr{break-inside:avoid}h2{break-after:avoid}@page{margin:12mm}}"
         "</style></head><body><header><h1>" + title + "</h1><p class=\"meta\">" +
         meta + "</p><p>" + escape(plan["description"]) +
         "</p><p>Start: " + escape(plan["start_date"]) + " · Target: " + target +
-        " · Scheduled finish boundary: " + finish + "</p></header>" +
+        " · Scheduled finish boundary: " + finish + "</p><p class=\"table-help\">"
+        "Scroll within each table to read every field and record. The accompanying "
+        "plan and data files retain the complete records.</p></header>" +
         "".join(sections) +
         "<footer>Implementation planning and field monitoring record. "
         "Dates use the selected project calendar; actual field records and costs "
