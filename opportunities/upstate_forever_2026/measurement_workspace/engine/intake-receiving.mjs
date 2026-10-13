@@ -44,7 +44,7 @@ try{
   assert.equal(copyIntake(w,{id:copied.id,project}).revision,2,'Lost copy response must not adopt a later edit.');
   assert.throws(()=>saveIntake(w,{id:copied.id,expectedRevision:2,value:{...copied.value,note:'An unseen stale overwrite must conflict.'}}),/changed/);
   await keep('native-preparation.json',project);
-  let portable=w.portable();try{const prior=JSON.parse(await fs.readFile(path.join(root,'native-complete-workspace.json'),'utf8'));assert.deepEqual({...prior,createdAt:''},{...portable,createdAt:''});portable=prior;}catch(e){if(e.code!=='ENOENT')throw e;}await keep('native-complete-workspace.json',portable);
+  let portable=w.portable();try{const prior=JSON.parse(await fs.readFile(path.join(root,'native-complete-workspace.json'),'utf8'));assert.deepEqual({...prior,createdAt:''},{...JSON.parse(JSON.stringify(portable)),createdAt:''});portable=prior;}catch(e){if(e.code!=='ENOENT')throw e;}await keep('native-complete-workspace.json',portable);
   const restored=new MeasurementWorkspace(path.join(root,'native-received'));
   try{
     if(!restored.summary().imports.length)restored.receive(portable);
