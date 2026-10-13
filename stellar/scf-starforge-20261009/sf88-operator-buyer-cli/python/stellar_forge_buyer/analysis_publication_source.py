@@ -67,7 +67,7 @@ _ACTION = {
     "download-export": ({"requestId", "expected_source_hash"}, set()),
 }
 _NO_PACKAGE = {"open", "status", "input", "current", "publisher-status", "publisher-target"}
-_ONCE = {"publisher-review", "publisher-publish"}
+_ONCE = {"open", "publisher-review", "publisher-publish"}
 
 
 def _plain(value, maximum):
