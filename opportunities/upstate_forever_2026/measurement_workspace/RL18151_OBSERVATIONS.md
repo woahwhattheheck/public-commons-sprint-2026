@@ -101,3 +101,92 @@ A source inspection, successful command, screenshot file or generated report doe
 The source-owned report embeds its original study as `encoding: "column-row-tables"`: `record_columns` defines the columns and `records` contains 498 arrays. An offline handover adapter must expand that declared schema before accessing named fields. It must retain each original record identity and resolve its `source_file`/`source_row` against the retained source table, checking the original ResultIdentifier and ActivityIdentifier.
 
 For comparison labels, use the original interval or reporting-limit unit when the raw result unit is blank. Keep that resolved support unit separate from the unchanged original result field. Include `MethodSpecificationName` in comparable-series identity, along with the existing method, fraction and sampling-support dimensions. The original source-owned analytical calculations and cohort selections remain the authority for the report.
+
+## Continue through the scientific report and editable Study
+
+Use the same receiving Workspace and the imported RL-18151 edition. The normal
+product route is already registered in the maintained application:
+
+1. In Published studies, choose the original RL-18151 edition and the intended
+   parameter, year and comparable-series selection. Inspect the selected original
+   rows, then save the current review with a useful name.
+2. Reopen that saved review and use its prepared-report source action. Review the
+   source preview, prepare the source through the existing task queue, and open
+   the returned source in the scientific report composer. The prepared source
+   keeps the exact saved review, original study/version, selected rows, source
+   selectors and retained original-study archive.
+3. In the composer, confirm the actual prepared source and render the scientific
+   edition. Open that exact saved output, operate its original-source and download
+   controls, and inspect its rendered pages. The original complete report and
+   sampling-support report also remain independently available as retained source
+   documents in the study.
+4. Export the saved scientific report through the existing editable Study
+   transfer. For a review produced in the same project, its closure includes the
+   original published-study record, retained source bodies, saved review and
+   report capture. Independently restore the Study archive and reopen its saved
+   report, review and original observation in the receiving application. Keep
+   the original study/version and source identities when continuing work.
+
+The maintained integration is
+`operator/web/published_review_reports.mjs` →
+`model/published_review_report_source.py` →
+`model/scientific_report_study_transfer.py` and
+`model/published_review_study_transfer.py`. It uses the existing composer,
+dispatcher and portable project model. The command
+`source_tools/continue_study_report.py --scientific-report` additionally exercises
+the separate original-plus-hydrology SV-833 course; its hydrology edition is not
+an input requirement for this RL-18151 workflow.
+
+Keep actual rendering, controls, exports and independent reopening attached to
+the same receiving operation. The source route above identifies the installed
+workflow; the native receiving result records its execution.
+
+## Owner instruction: inspect the actual outgoing product
+
+Before calling a client/prospect-facing app, website, dashboard, demo, report,
+presentation or export ready, the producing peer must actually open, run or
+render the exact outgoing version, LOOK at the rendered screen or its real
+screenshots, and operate the important user controls. Check the actual
+screenshare width and narrow/mobile width where relevant, populated, empty,
+loading and error states, downloads/exports and reopening. Capturing screenshots
+without viewing them is insufficient. Fix ugly, broken, unstyled, cramped,
+clipped, overflowing or unreadable output within the authorized work before
+presenting it. Code review, DOM counts, HTTP 200, unit checks or another peer's
+approval do not replace seeing the actual product.
+
+ALL ATTACHMENTS count. Literally open, view, play and use the final delivered
+HTML, PDF, report, slides, spreadsheet, map, image, video, audio, archive and
+project as its recipient would. For archives, extract and open the actual
+contained deliverables and working project. Tests, checklists and screenshots
+merely captured are not substitutes. Use available high-quality generative media
+models and natural voice generation/TTS for videos; avoid robotic default
+voices. Watch and listen to the final export for pronunciation, pacing, timing
+and audio alignment. Keep building and fixing; inspection is not review/test
+performance theatre.
+
+For the Ecosystem product use plain industrial design: readable tables, clear
+hierarchy, consistent typography and spacing, restrained controls, useful labels
+and responsive layouts. No decorative template slop. Keep the real workflows,
+data and computation. Reviews must lead directly to repairs and must not replace
+hard implementation/integration or become endless rechecking. The existing
+focused-validation policy remains; do not run broad suites or build a separate
+verification product. Prior empty-Workspace screenshots are not acceptance of a
+completed scientific Workspace.
+
+PERSISTENT PROPAGATION REQUIRED: copy this rule into every active owner-controlled
+policy/instruction surface the provider and workers actually read: global and
+project AGENTS, CLAUDE, GEMINI and rules files, provider-specific boot instructions,
+Commons source mirrors, cloud repository instruction copies, and current build
+and receiving guides. Every delegating peer includes this complete rule in child
+assignments, including its all-attachments and final-media clarification. Return
+exact changed paths, source/version and readback. A Slack ACK alone is not
+propagation. Preserve all existing owner controls and do not alter historical
+evidence or third-party/vendor policies. No forced restarts, new watchers or
+revival of owner-stopped work.
+
+Continue the same Ecosystem Sprint Integration assembled product and its original
+scientific, run, browser and receiver owners. Continue native source, runtime and
+archive joins rather than diverting everyone to cosmetic review. Preserve the
+October 13, 2026 fleet cutoff at 10:00 a.m. Eastern (EDT), 14:00 UTC. This project
+cutoff does not expire the standing inspection rule or change other projects'
+owner-directed schedules.
