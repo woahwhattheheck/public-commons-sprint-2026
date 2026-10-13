@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
-import {uuid,hash,bytes,clone,need,object,keys,canonical,identity,text,address,sha,decode64} from './value.mjs';
+import {uuid,hash,bytes,clone,need,object,keys,canonical,identity,text,address,sha,decode64,jsonInput} from './value.mjs';
 import {directory,lease,writeExact,fileDescriptor,confined,syncDirectory} from './files.mjs';
 import {catalogue,makeCatalogue,API,API_SHA256,action,parameters,invocation} from './catalogue.mjs';
 import {parseSourceJSON} from './source-json.mjs';
@@ -99,7 +99,7 @@ class Workspace{
      let value=null,numberTokens={},parseError=null;if(stdout)try{const parsed=parseSourceJSON(stdout.data,{maxBytes:MAX_OBJECT});value=parsed.value;numberTokens=parsed.numberTokens;}catch(error){parseError=publicFailure(error);}
      const observation={id:'observation-'+request.id,actionId:plan.actionId,contractId:plan.selection.contract.id,createdAt:stamp(),mode:e.method==='plan.execute'?'invocation':'simulation',planId:plan.id,parameters:plan.parameters,configuration:plan.config,binding:{network:clone(plan.config.network),contractId:plan.selection.contract.id,contractKey:plan.selection.action.contract},apiSha256:API_SHA256,
       status:native.result.invocation.returncode===0?'CLI_EXIT_0':native.result.invocation.started?(native.result.invocation.returncode===null?'UNKNOWN':'CLI_NONZERO'):'NOT_INVOKED',
-      value,numberTokens,parseError,sourceFileIds:sources.map(f=>f.id),stdoutFileId:stdout?sources.find(s=>s.sha256===stdout.sha256)?.id:null,stderrFileId:stderr?sources.find(s=>s.sha256===stderr.sha256)?.id:null,native:parseSourceJSON(bytes(native.result),{maxBytes:MAX_OBJECT}).value};
+      value,numberTokens,parseError,sourceFiles:native.files.map((f,i)=>({path:f.path,id:sources[i].id,bytes:f.bytes,sha256:f.sha256})),sourceFileIds:sources.map(f=>f.id),stdoutFileId:stdout?sources.find(s=>s.sha256===stdout.sha256)?.id:null,stderrFileId:stderr?sources.find(s=>s.sha256===stderr.sha256)?.id:null,native:parseSourceJSON(bytes(native.result),{maxBytes:MAX_OBJECT}).value};
      state.observations.push(observation);result=observation;
     }else if(e.method==='config.save'){keys(e.args,['config']);state.config=normalizeConfig(e.args.config);result={config:state.config};}
     else if(e.method==='source.import'){
@@ -141,6 +141,28 @@ export function checkPlan(plan,request,api=API){
  need(identity(plan.selection)===identity(selected)&&identity(plan.executeArgv)===identity(send.argv)&&plan.contractId===selected.contract.id&&plan.status==='PREPARED'&&plan.sourceSha256===identity({config:plan.config,selected,executeArgv:send.argv}),'PLAN_BINDING_CHANGED');
 }
 
+export function checkObservation(result,request,selected,objects,api=API){
+ const method=request.envelope.method,mode=method==='plan.execute'?'execute':'simulate';
+ need(result.mode===(mode==='execute'?'invocation':'simulation')&&(method!=='observation.capture'||result.planId==='plan-'+request.id),'OBSERVATION_MODE_CHANGED');
+ need(Array.isArray(result.sourceFiles)&&new Set(result.sourceFiles.map(f=>f.path)).size===result.sourceFiles.length,'OBSERVATION_SOURCE_ROSTER');
+ const files=new Map();for(const f of result.sourceFiles){const row=objects.find(o=>o.descriptor.id===f.id);need(row&&row.descriptor.sha256===f.sha256&&row.descriptor.bytes===f.bytes&&typeof f.path==='string'&&!f.path.includes('/')&&!f.path.includes('\\'),'OBSERVATION_SOURCE_CHANGED');files.set(f.path,{...f,data:decode64(row.contentBase64)});}
+ need(identity(result.sourceFileIds)===identity(result.sourceFiles.map(f=>f.id)),'OBSERVATION_SOURCE_SELECTION');
+ const original=name=>{const f=files.get(name);need(f,'OBSERVATION_SOURCE_MISSING',{name});return f;};
+ const terminal=original('result.json'),input=original('input.json'),native=parseSourceJSON(terminal.data,{maxBytes:MAX_OBJECT}).value,spec=jsonInput(new TextDecoder('utf8',{fatal:true}).decode(input.data));
+ const originalTerminal=JSON.parse(terminal.data.toString('utf8'));need(typeof originalTerminal.invocation.started==='boolean'&&(originalTerminal.invocation.returncode===null||Number.isSafeInteger(originalTerminal.invocation.returncode)),'OBSERVATION_PROCESS_STATUS_CHANGED');
+ need(identity(native)===identity(result.native)&&native.schema==='principal.native-result.v1'&&native.requestId===request.id&&native.planId===result.planId&&native.mode===mode&&native.lifetimes==='CLOSED'&&native.inputSha256===hash(input.data),'OBSERVATION_TERMINAL_CHANGED');
+ need(spec.schema==='principal.native-attempt.v1'&&spec.requestId===request.id&&spec.planId===result.planId&&spec.mode===mode&&identity(spec.argv)===identity(selected.argv)&&identity(spec.network)===identity(result.configuration.network)&&identity(spec.contract)===identity(selected.contract)&&identity(spec.sourceAccount)===identity(result.configuration.sourceAccount)&&spec.configDirectory===result.configuration.stellar.configDirectory&&spec.executable===result.configuration.stellar.executable&&spec.executableSha256===result.configuration.stellar.sha256&&spec.expectedVersion===result.configuration.stellar.version,'OBSERVATION_INPUT_CHANGED');
+ for(const [name,descriptor]of [['owner-source.py',spec.owner],['attempt-source.py',spec.script]]){const f=original(name);need(f.bytes===descriptor.bytes&&f.sha256===descriptor.sha256,'OBSERVATION_EXECUTING_SOURCE_CHANGED');}
+ need(Array.isArray(native.files)&&new Set(native.files.map(f=>f.path)).size===native.files.length,'OBSERVATION_NATIVE_ROSTER');
+ for(const f of native.files){const actual=original(f.path);need(actual.bytes===Number(f.bytes)&&actual.sha256===f.sha256,'OBSERVATION_NATIVE_FILE_CHANGED');}
+ const allowed=new Set([...native.files.map(f=>f.path),'input.json','result.json','owner-source.py','attempt-source.py','controller-stderr.bin']);need([...files.keys()].every(p=>allowed.has(p)),'OBSERVATION_UNBOUND_FILE');
+ need(identity(native.invocation.argv)===identity(selected.argv),'OBSERVATION_ARGV_CHANGED');
+ const stdout=native.invocation.stdout?original(native.invocation.stdout):null,stderr=native.invocation.stderr?original(native.invocation.stderr):null;
+ let value=null,numberTokens={},parseError=null;if(stdout)try{const parsed=parseSourceJSON(stdout.data,{maxBytes:MAX_OBJECT});value=parsed.value;numberTokens=parsed.numberTokens;}catch(error){parseError=publicFailure(error);}
+ const status=native.invocation.returncode==='0'?'CLI_EXIT_0':native.invocation.started?(native.invocation.returncode===null?'UNKNOWN':'CLI_NONZERO'):'NOT_INVOKED';
+ need(result.status===status&&identity(result.value)===identity(value)&&identity(result.numberTokens)===identity(numberTokens)&&identity(result.parseError)===identity(parseError)&&result.stdoutFileId===(stdout?.id??null)&&result.stderrFileId===(stderr?.id??null),'OBSERVATION_PROJECTION_CHANGED');
+}
+
 export function inspectPacket(packet){
  keys(packet,['schema','sha256','body']);need(packet.schema===PORTABLE_SCHEMA&&identity(packet.body)===packet.sha256,'PORTABLE_IDENTITY');const p=packet.body;keys(p,['workspace','requests','objects','application','api','createdAt']);
  need(object(p.workspace)&&object(p.workspace.workspace)&&Number.isSafeInteger(p.workspace.workspace.revision)&&p.workspace.workspace.revision>=0,'WORKSPACE_SHAPE');
@@ -151,19 +173,22 @@ export function inspectPacket(packet){
  const ids=new Set();for(const r of p.requests){validateEnvelope(r.envelope);need(r.id===r.envelope.requestId&&r.intentSha256===identity(r.envelope)&&!ids.has(r.id),'REQUEST_IDENTITY');ids.add(r.id);need(['RUNNING','UNCERTAIN','FAILED','COMPLETE'].includes(r.status),'REQUEST_STATE');if(r.status==='COMPLETE')need(r.response?.workspaceId===p.workspace.workspace.id&&r.response.requestId===r.id&&Number.isSafeInteger(r.response.revision),'REQUEST_RESPONSE_IDENTITY');}
  let previous=null;for(let i=0;i<p.workspace.history.length;i++){const row=p.workspace.history[i],{sha256,...selected}=row;const request=p.requests.find(r=>r.id===row.requestId);need(row.revision===i+1&&row.previous===previous&&identity(selected)===sha256&&request?.status==='COMPLETE'&&request.response.revision===row.revision&&identity(request.response.result)===row.resultSha256&&request.envelope.method===row.method&&request.intentSha256===row.intentSha256,'HISTORY_IDENTITY');previous=sha256;}need(p.workspace.history.length===p.workspace.workspace.revision,'HISTORY_REVISION');
 
+ const historyConfig=(configuration,selected)=>{need(selected,'CONFIGURATION_HISTORY_REQUIRED');const received=clone(selected);received.executionEnabled=false;need(identity(configuration)===identity(selected)||(p.workspace.receivedFrom&&identity(configuration)===identity(received)),'CONFIGURATION_HISTORY_CHANGED');};
  const expected={plans:[],observations:[],notes:[],files:[]};let selectedConfig=null;
  const addFile=id=>{const f=objects.get(id);need(f,'OBSERVATION_FILE_MISSING');if(!expected.files.some(old=>old.id===id))expected.files.push(f);};
  for(const event of p.workspace.history){
   const request=p.requests.find(r=>r.id===event.requestId),result=request.response.result,method=request.envelope.method;
-  if(method==='plan.prepare'){checkPlan(result,request,p.api);expected.plans.push(result);}
+  if(method==='plan.prepare'){historyConfig(result.config,selectedConfig);checkPlan(result,request,p.api);expected.plans.push(result);}
   else if(['plan.simulate','plan.execute','observation.capture'].includes(method)){
    need(result.id==='observation-'+request.id&&Array.isArray(result.sourceFileIds)&&result.apiSha256===p.workspace.apiSha256&&result.native?.requestId===request.id&&result.native?.planId===result.planId,'OBSERVATION_BINDING_CHANGED');
    const selected=invocation(result.configuration,result.actionId,result.parameters,method==='plan.execute',p.api);
    need(result.contractId===selected.contract.id&&identity(result.binding)===identity({network:result.configuration.network,contractId:selected.contract.id,contractKey:selected.action.contract})&&identity(result.native?.invocation?.argv)===identity(selected.argv),'OBSERVATION_BINDING_CHANGED');
-   if(method==='observation.capture')need(selected.action.readOnly&&request.envelope.args.actionId===result.actionId&&identity(request.envelope.args.parameters)===identity(result.parameters),'OBSERVATION_REQUEST_CHANGED');
+   if(method==='observation.capture'){historyConfig(result.configuration,selectedConfig);need(selected.action.readOnly&&request.envelope.args.actionId===result.actionId&&identity(request.envelope.args.parameters)===identity(result.parameters),'OBSERVATION_REQUEST_CHANGED');}
    else{const plan=expected.plans.find(q=>q.id===request.envelope.args.planId);need(plan&&plan.id===result.planId&&plan.actionId===result.actionId&&identity(plan.parameters)===identity(result.parameters)&&identity(plan.config)===identity(result.configuration),'OBSERVATION_PLAN_CHANGED');}
    for(const id of result.sourceFileIds)addFile(id);
    for(const f of result.native.files){const actual=objects.get('file-'+f.sha256);need(actual&&actual.bytes===Number(f.bytes)&&result.sourceFileIds.includes(actual.id),'OBSERVATION_FILE_CHANGED');}
+   if(method==='plan.execute')need(selectedConfig?.executionEnabled===true&&identity(result.configuration)===identity(selectedConfig),'INVOCATION_CONFIGURATION_HISTORY_CHANGED');
+   checkObservation(result,request,selected,p.objects,p.api);
    expected.observations.push(result);
   }else if(method==='source.import'){
    need(hash(decode64(request.envelope.args.contentBase64))===request.envelope.args.sha256&&result.id==='file-'+request.envelope.args.sha256&&result.bytes===request.envelope.args.bytes&&result.sha256===request.envelope.args.sha256,'SOURCE_REQUEST_CHANGED');addFile(result.id);

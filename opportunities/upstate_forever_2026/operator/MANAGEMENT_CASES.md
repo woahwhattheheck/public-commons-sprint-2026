@@ -120,6 +120,16 @@ Open the actual resulting project, report screens and every outgoing attachment 
 specified below; the cold process does not replace product inspection.
 
 
+## Export a selected editable Study
+
+Open a saved management design and choose **Export editable Study**. The existing Study delivery preview includes the saved design, original baseline and derived profiles, exact coefficient tables, source-lineage files and sourced-profile materialization. With related results selected, it also includes original experiments explicitly linked to the design, including the three fertilizer comparisons whose baselines are derived treatment profiles.
+
+The receipt preserves the selected experiment plans and profile-directory membership. Later experiments remain separate from an older delivered edition. Capturing the source profile set uses its original profile lock and the existing Workspace/native ownership locks. Completed outputs and native stage-donor dependencies travel through the established Study visitors.
+
+In the received Study details, choose **Open saved management design**. The existing Profile workbench checks the original record, reference profile, exact coefficient table and profile-set identity before opening. Your previous working design remains recoverable through **Return to previous working design**. A rejected source binding stays visible in the active destination, and the prior draft remains intact.
+
+The received display separates named cases, distinct native configurations and retained profiles, including the baseline. Named unchanged or equivalent cases stay available even when they share one scientific configuration. Exercise export, receive, saved-design opening, previous-draft recovery and re-export on the actual native application, and inspect every outgoing file as described below.
+
 ## Integration and receiving
 
 Apply the complete guarded source bank to the current application, preserving ROOT9125's coefficient authoring and every existing native source/version binding. install_profile_workbench.py retains the new profile components, primary source packet, routes and original full-Workspace restore checks. The experiment metrics/report changes accompany this source bank in their original modules.

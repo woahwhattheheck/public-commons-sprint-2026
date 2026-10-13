@@ -50,7 +50,10 @@ FILES = ("model/calibration_execution.py", "model/calibration.py", "model/CALIBR
          "integration/component_fragments/calibration-reference-followup.json",
          "model/calibration_history.py", "model/calibration_history_export.py",
          "operator/web/calibration_history.mjs", "model/CALIBRATION_HISTORY.md",
-         "integration/component_fragments/calibration-profile-history.json")
+         "integration/component_fragments/calibration-profile-history.json",
+         "model/calibration_catchments.py", "operator/web/calibration_catchments.mjs",
+         "model/CALIBRATION_CATCHMENTS.md", "source_tools/sparrow_candidate_course.py",
+         "integration/component_fragments/calibration-native-catchments.json")
 SHARED = ("operator/server.py", "operator/web/app.mjs", "operator/web/index.html",
           "model/scientific_figures.py")
 DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.mjs",
@@ -66,6 +69,12 @@ DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.m
                 "operator/extensions/source-reports.json")
 VERSION = "upstate.calibration-registration/v3"
 PREDECESSORS = {
+    "source_tools/sparrow_candidate_course.py": {
+        "3b2f34ed4fcf82ea8c2ae232097c1dbb73d828eade877704fcb0c10daf65e133",
+    },
+    "model/calibration_history.py": {
+        "4248a359894976ee62ffa1ba2495121767f13fc21a2830cdd89205cf689f090c",
+    },
     "model/calibration_review.py": {
         "81fbbea2e3aed049336164703f51900db0418cfb94c8eb96c8929da7c8243926",
     },
@@ -99,6 +108,7 @@ PREDECESSORS = {
         "ea20e443b4152012cac68c9ef0f322ddb1529f3ce45c7995e4bc3c47a0c9bfd1",
     },
     "operator/calibration.py": {
+        "18e918a06ce76ec2821ad862ca53cf5ba6885708115e978b191d6266141ab815",
         "6c8c8d2e7501f6a1a16492a02f80090aa3cfc4e3c6b9b55dae6225dbda69b435",
         "bd61bd3aacf606d3ef2f7075585640b67c7021d3bd45cae8d62bcb16ef780a47",
         "f6bbc4b21204860ca7c4df93aa8de06db424c306d4f965b2e5051705a074de2c",
@@ -111,6 +121,7 @@ PREDECESSORS = {
         "c93bc426673d7489ce14b11921c2093e867aa09b4aaa73f33aff322c7d88e776",
     },
     "operator/web/calibration.mjs": {
+        "43defa17069288c474bb355242e22def3269543d224d662b766492fe4201a279",
         "9b874fed0bfd7f5a2f6f2a27d29cded1f47094f77dc6f28aef2e47faee8cac65",
         "358559970a76544956a4988a18eab052f1cbef6f5f24ad55a90ec67b6f15f780",
         "572ce68d4682b68d4597956647b6c153887761e9e4d83afeb572f0977c34021f",
@@ -133,6 +144,7 @@ PREDECESSORS = {
         "6d523b2bf1b10f94b70e9c2a270eea08137e8edf0345160efee497108228386e",
     },
     "operator/extensions/calibration.json": {
+        "2b8ab4ed97e6bd505d95c95fb450a4c1d720bcc4687035c32d255ef3d328f93b",
         "61cc40009df717c47f0d1f4d954febd2552a8ad87b9a0722e2e15f86e347843c",
         "0eb78308aa339b690f43750eeba71694b5332593465c6be9cde2d1ca812ea2bb",
         "482005956a6d3ec9347f2cc16700c644055f7c44259e81bc97ac3baf329bd547",
@@ -157,6 +169,7 @@ PREDECESSORS = {
         "4b475c00a806812548da18d54fe3885e7e73a01daaad49e5709212718b9624ad",
     },
     "operator/install_calibration.py": {
+        "719dd7017435c8a1828981301ed74f5fa4cc62fcfdd4b3bb93fbb45e4926214f",
         "35fcea9ce6f171550662efbf729ffe67e1b16a522abc060745b22c7ae8d64077",
         "dd27fc657abc78015b482b00e1d00a37e7614361a600d03b231393fa12e47ceb",
         "d471c637ad921ed51f0be2bde91610edd37d978070ff228aa174c132addb3563",

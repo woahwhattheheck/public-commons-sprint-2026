@@ -229,7 +229,18 @@ try{
  await page.waitForFunction(()=>document.querySelector('#workspace-select')?.options.length>0);
  assert.equal(new URL(page.url()).hash,'#overview');
  await inspectViews();
+ if(c.scientific_synthesis){
+  const {receiveScientificSynthesis}=await import('./scientific_synthesis_receiving.mjs');
+  saved.scientific_synthesis=await receiveScientificSynthesis(page,{control:c.scientific_synthesis,workspace,api,showTask,
+   ownerCheck:async()=>{const current=await getState();assert.equal(current.data.project.id,c.model.workspace_id);assert.equal(current.workspace_key??workspace,workspace);},
+   outputDirectory:path.join(output,'scientific-synthesis'),mode:c.mode,taskTimeoutSeconds:c.task_timeout_seconds});
+  await checkpoint();
+ }
  if(c.mode==='operate'){
+  if(c.prior_delivery_archive){
+   assert.deepEqual(await fileRecord(c.prior_delivery_archive.path),c.prior_delivery_archive);
+   saved.delivery_archive=c.prior_delivery_archive;await checkpoint();
+  }else{
   const delivery=await retainedStage('delivery','delivery.build',fillDelivery);
   await closeDialogs();await page.locator('[data-action="refresh"]').click();await navigate('deliveries');await openItem('deliveries',delivery.result.id);
   const item=await api(endpoint('/api/item',{kind:'deliveries',id:delivery.result.id}));
@@ -240,6 +251,7 @@ try{
    ||item._downloads.find(x=>/\.zip$/i.test(x.filename)&&!/working|workspace/i.test(x.filename));
   assert.ok(carrier,'Original complete delivery ZIP is available in the operator.');
   saved.delivery_archive=await download(carrier,'upper-savannah-map-delivery.zip');await checkpoint();
+  }
   const backup=await retainedStage('backup','workspace.backup',async()=>{
    await page.locator('[data-action="backup"]').first().click();
    await page.locator('[name="include_intermediates"]').setChecked(c.include_intermediates);
