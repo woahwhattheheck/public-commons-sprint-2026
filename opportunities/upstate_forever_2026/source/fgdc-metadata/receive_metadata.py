@@ -6,6 +6,7 @@ import argparse
 import ast
 import hashlib
 import importlib.util
+import io
 import json
 import math
 from pathlib import Path
@@ -15,6 +16,8 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 SCHEMA_URL = "https://www.fgdc.gov/schemas/metadata/"
+DTD_PATH = "source/fgdc/fgdc-std-001-1998.dtd"
+DTD_SHA256 = "778584c89cf0f61a382900cfab7fb7171ae99894b9b54702540ca28cb4267598"
 SCHEMAS = ["fgdc-std-001-1998.xsd"] + [
     "fgdc-std-001-1998-sect%02d.xsd" % value for value in range(1, 11)]
 
@@ -95,14 +98,18 @@ def writer_examples(application, output, validator):
     native = {"path": "native-execution.json", "sha256": "e" * 64, "bytes": 1}
     rows = []
     for epsg, bounds in ((26917, [400000, 3800000, 400600, 3800600]),
-                         (5070, [1200000, 1500000, 1200600, 1500600])):
+                         (5070, [1200000, 1500000, 1200600, 1500600]),
+                         (32717, [400000, 8000000, 400600, 8000600]),
+                         (3857, [-9100000, 4100000, -9099400, 4100600])):
         grid = {"id": "f" * 64, "grid": {"crs": "EPSG:" + str(epsg),
                 "transform": [30, 0, bounds[0], 0, -30, bounds[3]],
                 "bounds": bounds, "width": 20, "height": 20}}
         for kind in ("baseline", "scenario_difference", "priority"):
             name = str(epsg) + "-" + kind
             path = output / (name + ".xml")
-            item = {"path": name + ".tif", "sha256": "1" * 64, "bytes": 1}
+            item = {"path": name + ".tif", "sha256": "1" * 64, "bytes": 1,
+                    "native_units": "kg/ha/year", "units": "kg/year", "pixel_area_ha": 0.09,
+                    "valid_cells": 400, "sum": 12.0, "sum_units": "kg/year"}
             unit = "dimensionless (0-1)" if kind == "priority" else "kg/year"
             dataset = None if kind == "baseline" else {
                 "id": name, "kind": kind, "source_raster": "retained/" + name + ".tif",
@@ -136,12 +143,19 @@ def writer_examples(application, output, validator):
                 assert [node.findtext("procdate") for node in steps] == ["Unknown", "20261013"]
                 assert "Per-hectare rates converted" not in steps[0].findtext("procdesc")
                 assert value("distinfo/stdorder/digform/digtopt/onlinopt/computer/networka/networkr") == "../../" + dataset["file"]["path"]
+            if epsg in (26917, 32717):
+                assert value("spref/horizsys/planar/gridsys/utm/utmzone") == ("-17" if epsg == 32717 else "17")
+            elif epsg == 5070:
+                assert [x.tag for x in tree.find("spref/horizsys/planar/mapproj/albers")] == [
+                    "stdparll", "stdparll", "longcm", "latprjo", "feast", "fnorth"]
+            else:
+                assert value("spref/horizsys/planar/localp/localpd")
             if kind == "scenario_difference":
                 assert value("metainfo/metc/cntinfo/cntperp/cntper") == complete_contact["name"]
                 assert value("distinfo/distrib/cntinfo/cntaddr/postal") == "00000"
             else:
                 assert value("metainfo/metc/cntinfo/cntorgp/cntorg") == contact["organization"]
-                assert value("metainfo/metc/cntinfo/cntvoice") == "None"
+                assert value("metainfo/metc/cntinfo/cntvoice") == "Unknown"
             rows.append({"path": str(path), "sha256": sha(path.read_bytes()), "bytes": path.stat().st_size,
                          "kind": kind, "crs": grid["grid"]["crs"]})
     assert json.dumps(sources, sort_keys=True) == original_sources
@@ -168,13 +182,20 @@ def main():
         receive_schema(args.schema_directory)
     from lxml import etree
     schema_path = args.schema_directory / SCHEMAS[0]
-    schema = etree.XMLSchema(etree.parse(str(schema_path)))
+    parser = etree.XMLParser(no_network=True, load_dtd=False, resolve_entities=False)
+    schema = etree.XMLSchema(etree.parse(str(schema_path), parser))
+    dtd_body = (args.application / DTD_PATH).read_bytes()
+    if sha(dtd_body) != DTD_SHA256:
+        raise ValueError("Use the exact original federal FGDC DTD")
+    dtd = etree.DTD(io.BytesIO(dtd_body))
     def validate(path):
-        tree = etree.parse(str(path))
+        tree = etree.parse(str(path), parser)
         schema.assertValid(tree)
+        dtd.assertValid(tree)
         return ET.fromstring(path.read_bytes())
     receipt = {"schema": "upstate.fgdc-metadata-receiving/v1", "state": "passed",
                "official_schema_url": SCHEMA_URL,
+               "official_dtd": {"path": DTD_PATH, "bytes": len(dtd_body), "sha256": sha(dtd_body)},
                "schemas": [{"path": name, "sha256": sha((args.schema_directory / name).read_bytes())}
                            for name in SCHEMAS]}
     if args.exercise_output:
