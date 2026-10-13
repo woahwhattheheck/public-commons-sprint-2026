@@ -29,7 +29,7 @@ NOTES = [
     "Each RFP utility upstream union uses the Boolean OR of its original anchor contribution masks. Overlapping selected pixels count once; its display geometry is the union of the original contribution shapes clipped to the quantity scope.",
     "Native support diagnostics intersect the primary categorical support with finite original annual-output cells in all three runs, separately for each quantity and scope.",
     "The accompanying native quantities are the original Receiving baseline-versus-each-alternative pairwise results. Their supports can differ; subtracting their totals does not establish a three-way matched-control effect.",
-    "Land-cover hectares are not pollutant reductions. Annual native nitrogen and phosphorus retain kg/year and sediment retains metric tonnes/year delivered to streams.",
+    "Land-cover hectares are not pollutant reductions. Annual native nitrogen and phosphorus retain kg/year and sediment retains metric tonnes/year, originating from source pixels in the named support and delivered to streams; a mask total is not a load crossing its boundary.",
 ]
 
 def _csv(path, fields, rows):

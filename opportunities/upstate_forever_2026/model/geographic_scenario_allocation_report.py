@@ -216,8 +216,9 @@ def _sections(report):
         "displayed totals need not exactly reproduce the stored signed change. These values are copied unchanged; no "
         "difference of R and C pairwise totals or benefit per changed hectare is calculated.",
         "Nitrogen and phosphorus retain annual kg/year; sediment retains metric tonnes/year. "
-        "The modeled quantities represent land export delivered to streams within the named "
-        "support. They are not intake concentrations, reservoir delivery, treatment removal or "
+        "The modeled quantities represent exports originating from source pixels in the named "
+        "support and delivered to streams. A mask total is not a load crossing its boundary. "
+        "They are not intake concentrations, reservoir delivery, treatment removal or "
         "measured loads. HUC-local areas, upstream HUC associations and published protection "
         "areas are distinct spatial relationships.",
     ]])

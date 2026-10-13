@@ -22,8 +22,9 @@ FOLDER = "geographic-receiving-contexts"
 PUBLIC_SPEC = "source/water_context/20261012/public-water/receiving-waters.public-spec.json"
 SCOPES = ("model_domain", "reporting")
 INTERPRETATION = (
-    "Annual modeled land export reaching streams within the selected original "
-    "source support. Published protection areas and potential HUC12 upstream "
+    "Annual modeled export originating from land pixels in the selected original "
+    "source support and delivered to streams; not a load crossing that support boundary. "
+    "Published protection areas and potential HUC12 upstream "
     "catchments are distinct relationships. Reservoir transport, delivery to an "
     "intake, concentration and treatment removal are not calculated."
 )
