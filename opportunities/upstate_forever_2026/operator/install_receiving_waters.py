@@ -19,7 +19,7 @@ import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-plan-comparison-12"
+PREFIX = "waterlink-receiving-waters-quantity-support-13"
 REQUIRED = (
     "model/receiving_waters.py",
     "model/receiving_water_accounting.py",
@@ -35,6 +35,7 @@ REQUIRED = (
     "operator/web/receiving_water_editing.mjs",
     "operator/web/receiving_water_sources.mjs",
     "operator/web/receiving_water_plan_compare.mjs",
+    "operator/web/receiving_water_scope_compare.mjs",
     "operator/web/receiving_water_spatial.mjs",
     "operator/web/receiving_water_monitoring.mjs",
     "operator/web/receiving_waters.css",
@@ -121,8 +122,9 @@ MONITORING_ACTIONS = {
     "monitoring.campaign.create", "monitoring.campaign.revise",
     "monitoring.campaign.event", "monitoring.export",
 }
-# Exact retained version 4–10 descriptors before saved-plan comparison.
-DESCRIPTOR_PREDECESSORS = {"461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c",
+# Exact retained version 4–11 descriptors before quantity-support comparison.
+DESCRIPTOR_PREDECESSORS = {"091d12fa8dab4098ec89bd2eb9e247ee1fa6dd8a637dcc30aa06751085a3e7a2",
+                           "461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c",
                            "8cea5b0259c4d8c2656bad8153c20e5b50aadfb162ff223e07656cb2d056777c",
                            "7c04dc9f70efad4793888df765afc526b04d0dcea4aabdc71e08308e5eb91813",
                            "b76e245f56122f0bed0ed6053ed8bbeac7dee1db30caa4b45779a6fc3ccce6ca",
@@ -248,7 +250,7 @@ def allow_browser_assets(text):
     additions = {"receiving_waters.mjs", "receiving_waters.css", "receiving_water_spatial.mjs",
                  "receiving_water_monitoring.mjs", "receiving_water_report.mjs",
                  "receiving_water_editing.mjs", "receiving_water_sources.mjs",
-                 "receiving_water_plan_compare.mjs"}
+                 "receiving_water_plan_compare.mjs", "receiving_water_scope_compare.mjs"}
     if additions <= names:
         return text
     replacement = "{" + ", ".join(repr(name) for name in sorted(names | additions)) + "}"
@@ -819,6 +821,11 @@ def install(root, *, check=False):
     if ("from './receiving_water_plan_compare.mjs'" not in water_browser
             or "export function comparePlanEditions(" not in water_compare):
         raise ValueError("Receive the maintained original saved-plan comparison and Receiving form handoff")
+    water_scope = (root / "operator/web/receiving_water_scope_compare.mjs").read_text(encoding="utf-8")
+    if ("from './receiving_water_scope_compare.mjs'" not in water_browser
+            or "export function compareQuantityScopes(" not in water_scope
+            or "export function scopeComparisonCSV(" not in water_scope):
+        raise ValueError("Receive the maintained original quantity-support comparison and full physical export")
     migration = runpy.run_path(str(root / "integrations/monitoring/install_native_monitoring.py"),
                               run_name="_original_monitoring_migration")
     removers = {"operator/server.py": migration["remove_server"],
@@ -865,7 +872,7 @@ def install(root, *, check=False):
                                   if name not in {"receiving_water_spatial.mjs", "receiving_water_monitoring.mjs",
                                                   "receiving_water_report.mjs", "receiving_water_editing.mjs",
                                                   "receiving_water_sources.mjs",
-                                                  "receiving_water_plan_compare.mjs"}]
+                                                  "receiving_water_plan_compare.mjs", "receiving_water_scope_compare.mjs"}]
             previous["client"]["requires"] = [name for name in previous["client"]["requires"]
                                                if name not in {"openScientificReport", "openExtension"}]
             previous["backend"]["actions"] = [name for name in previous["backend"]["actions"]
