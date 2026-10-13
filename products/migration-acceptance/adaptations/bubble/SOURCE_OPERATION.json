@@ -1,0 +1,59 @@
+{
+  "schema": "tjlabs.bubble-source-operation.v1",
+  "source": "Complete actual provider-input and maintained project code operated in V8",
+  "externalProviderRequests": 0,
+  "example": "Authored fictional record roster",
+  "captureTypesPerSide": 4,
+  "tables": [
+    {
+      "name": "organizations",
+      "sourceRows": 2,
+      "expectedRows": 2
+    },
+    {
+      "name": "people",
+      "sourceRows": 2,
+      "expectedRows": 2
+    },
+    {
+      "name": "cases",
+      "sourceRows": 2,
+      "expectedRows": 2
+    },
+    {
+      "name": "documents",
+      "sourceRows": 2,
+      "expectedRows": 2
+    },
+    {
+      "name": "person_organizations",
+      "sourceRows": 3,
+      "expectedRows": 3
+    }
+  ],
+  "orphanFindings": 0,
+  "mappingRevision": 1,
+  "sameRequestReplayChanged": false,
+  "completeProjectReopenExact": true,
+  "intentionalDifference": {
+    "table": "cases",
+    "key": "CASE-001",
+    "column": "amount",
+    "source": "1234.50",
+    "expected": "1234.49"
+  },
+  "nullableMappedEnum": {
+    "value": null,
+    "cell": {
+      "type": "null"
+    }
+  },
+  "collectorSourceOperation": {
+    "selectedRows": 205,
+    "originalReads": 4,
+    "repeatAdditionalReads": 0,
+    "responseLossUsesRetainedOriginal": true,
+    "independentCoreAccepted": true
+  },
+  "nativeRuntimeReceiving": "Original maintained dlt/runtime owner receives the complete actual command and source; this record concerns the above source operations."
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "tjlabs.bubble-native-dependencies.v1",
+  "productRoot": "products/migration-acceptance",
+  "browser": [
+    {
+      "path": "workbench/web/sha256.mjs",
+      "sha256": "a6c62003f40d52c7401838cbf2473539fbb8414647d3aeec51159789b93241ff"
+    },
+    {
+      "path": "workbench/vendor/dlt/vendor/sling/vendor/stellar-expert/exact-json.mjs",
+      "sha256": "bb5ab738808440267bf2a086f9a0e3f1fb2ed4b531b27fbafdfe1ae3372d1b26"
+    }
+  ],
+  "native": "Complete unchanged workbench/SOURCE_MANIFEST.json is consumed by original receiving; its full declared code is retained in native handoffs.",
+  "collectorNode": "24",
+  "authorization": "Actual configured GET credential only; no provider write method"
+}
