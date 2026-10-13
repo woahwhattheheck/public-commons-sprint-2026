@@ -86,7 +86,9 @@ try{
  await page.setViewportSize({width:390,height:844});await fit(page,"opening narrow");await snapshot(page,"09-opening-narrow.png");
  // Extract the actual ZIP with Python's independent standard ZIP reader.
  const received=path.join(output,"received");
- await execute(args.python||"python3",["-c","import pathlib,sys,zipfile\np=pathlib.Path(sys.argv[2]);p.mkdir()\nwith zipfile.ZipFile(sys.argv[1]) as z:\n for n in z.namelist():\n  q=pathlib.PurePosixPath(n)\n  if q.is_absolute() or '..' in q.parts or '\\\\' in n: raise ValueError('unsafe archive path')\n z.extractall(p)\n",path.join(root,"rainfall-handover.zip"),received]);
+ const zipBytes=await fs.readFile(path.join(root,"rainfall-handover.zip")),build=JSON.parse(await fs.readFile(path.join(root,"BUILD.json"),"utf8"));
+ assert(zipBytes.length===build.zip.bytes&&sha(zipBytes)===build.zip.sha256,"The full original ZIP differs from its build receipt.");
+ await execute(args.python||"python3",["-c","import pathlib,sys,zipfile\np=pathlib.Path(sys.argv[2]);p.mkdir()\nwith zipfile.ZipFile(sys.argv[1]) as z:\n import json\n expected=set(json.loads(sys.argv[3]))\n if set(z.namelist())!=expected or len(z.namelist())!=len(expected): raise ValueError(\u0027archive roster differs\u0027)\n for n in z.namelist():\n  q=pathlib.PurePosixPath(n)\n  if q.is_absolute() or '..' in q.parts or '\\\\' in n: raise ValueError('unsafe archive path')\n z.extractall(p)\n",path.join(root,"rainfall-handover.zip"),received,JSON.stringify([...manifest.files.map(x=>x.path),"manifest.json"])]);
  const receivedManifest=await fs.readFile(path.join(received,"manifest.json"),"utf8");assert(receivedManifest===manifestText,"ZIP manifest differs.");
  for(const item of manifest.files){const data=await fs.readFile(path.join(received,item.path));assert(data.length===item.bytes&&sha(data)===item.sha256,"Received member differs: "+item.path);}
  record("independent_zip_receive",{members:manifest.files.length+1});
