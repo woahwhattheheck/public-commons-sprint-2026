@@ -29,6 +29,8 @@
 #otf-workbench .choices label{font-weight:400;overflow-wrap:anywhere}
 #otf-workbench details{border:1px solid #bbb;padding:14px;margin:14px 0}#otf-workbench summary{cursor:pointer;font-weight:650}
 #otf-workbench [hidden]{display:none!important}#otf-workbench .visually-hidden{position:absolute;opacity:0;width:1px;height:1px;overflow:hidden}
+#otf-workbench pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;background:#f7f7f7;color:#202020;border:1px solid #ccc;padding:14px;font:13px/1.5 ui-monospace,monospace}
+#otf-workbench .repeat-row>button{margin-right:8px;margin-top:8px}
 #otf-workbench footer{margin-top:40px;padding-top:20px;border-top:1px solid #ccc;color:#555;font-size:13px}
 @media(max-width:700px){#otf-workbench{padding:16px}#otf-workbench .grid{grid-template-columns:1fr}#otf-workbench header{display:block}#otf-workbench .toolbar{margin-top:14px}#otf-workbench h1{font-size:23px}#otf-workbench nav{gap:6px}#otf-workbench nav button{padding:7px 9px;font-size:13px}#otf-workbench td,#otf-workbench th{padding:7px}#otf-workbench fieldset{padding:10px}}
 </style></head><body><main id="otf-workbench">
@@ -36,7 +38,7 @@
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 <nav aria-label="Workbench"><button data-tab="overview" type="button">Overview</button><button data-tab="vendor" type="button">Vendor proposal</button><button data-tab="record" type="button">Record work</button><button data-tab="cases" type="button">Case records</button><button data-tab="invoices" type="button">Invoices</button><button data-tab="sources" type="button">Original sources</button><button data-tab="provisions" type="button">Contract provisions</button><button data-tab="history" type="button">History</button></nav>
 <section data-pane="overview"><div id="overview"></div><details><summary>Create a new local workbook</summary><form id="new-form"><div class="grid"><div class="field"><label for="new-id">Workbook ID</label><input id="new-id" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" required placeholder="otf-contract-workspace"></div><div class="field"><label for="new-title">Workbook title</label><input id="new-title" required placeholder="Approved case operations"></div></div><button type="submit">Create workbook</button></form></details><div class="toolbar"><button id="example" type="button">Open authored example</button><button id="report" type="button">Download overview HTML</button></div><p class="muted">The complete JSON is your editable original. Download it after changes and retain it in your approved private working directory. The desk makes no network requests and does not automatically save case data to this browser.</p></section>
-<section data-pane="vendor" hidden><h2>Original vendor proposal</h2><p class="muted">Open the same complete vendor input used by the maintained submission compiler. Proposed prices, staffing and requested ceilings remain in this review; actual award terms have their own source-backed operation.</p><label class="file-button">Open vendor input JSON<input id="vendor-input" type="file" class="visually-hidden" accept=".json,application/json"></label><div id="vendor-review"></div></section><section data-pane="record" hidden><h2>Record an original operation</h2><p class="muted">Attach source files first. Select the actual documents that establish the approval, work or observation. Original request IDs make retries return the same retained operation.</p><form id="operation-form"><div class="grid"><div class="field"><label for="action-type">Action</label><select id="action-type"></select></div><div class="field"><label for="operation-id">Original operation ID</label><input id="operation-id" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" required></div></div><div id="action-fields"></div><button type="submit">Retain operation</button></form><details><summary>Receive an existing complete operation request</summary><p>Use an original request JSON produced by this application or its ordinary CLI.</p><label class="file-button">Open request JSON<input id="request-input" type="file" class="visually-hidden" accept=".json,application/json"></label></details></section>
+<section data-pane="vendor" hidden><h2>Vendor proposal</h2><p class="muted">Edit all nine proposal sections and prepare the original issuer budget workbook. Proposed prices, staffing and requested ceilings remain proposal content; actual award terms are recorded separately in the case workbook.</p><div class="toolbar"><label class="file-button">Open vendor input JSON<input id="vendor-input" type="file" class="visually-hidden" accept=".json,application/json"></label><button id="vendor-new" type="button">New proposal</button><button id="vendor-save" type="button">Save editable proposal</button><button id="vendor-prepare" type="button">Prepare review and issuer workbook</button></div><p id="vendor-state" class="muted">Unsaved local proposal draft</p><div id="vendor-review"></div><div id="vendor-fields"></div><div id="vendor-results"></div></section><section data-pane="record" hidden><h2>Record an original operation</h2><p class="muted">Attach source files first. Select the actual documents that establish the approval, work or observation. Original request IDs make retries return the same retained operation.</p><form id="operation-form"><div class="grid"><div class="field"><label for="action-type">Action</label><select id="action-type"></select></div><div class="field"><label for="operation-id">Original operation ID</label><input id="operation-id" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" required></div></div><div id="action-fields"></div><button type="submit">Retain operation</button></form><details><summary>Receive an existing complete operation request</summary><p>Use an original request JSON produced by this application or its ordinary CLI.</p><label class="file-button">Open request JSON<input id="request-input" type="file" class="visually-hidden" accept=".json,application/json"></label></details></section>
 <section data-pane="cases" hidden><div id="case-detail"></div></section>
 <section data-pane="invoices" hidden><div id="invoice-list"></div><p class="muted">Prepared invoice files preserve exact selected entries and original approval references. Submission and payment are separate source-backed records. Full handover includes working relative links to original files.</p></section>
 <section data-pane="sources" hidden><h2>Attach originals</h2><label class="file-button">Select original documents<input id="source-input" type="file" class="visually-hidden" multiple></label><p id="pending-count" class="muted"></p><p class="muted">Up to 24 MiB per original. Use beneficiary and worker aliases in ordinary views and retain sensitive documents only in the authorized working directory.</p><div id="source-list"></div></section>
@@ -208,6 +210,684 @@ function render(doc,quality,{audience='internal'}={}){
 }
 
 return {check,render};})();
+modules["issuer-budget-core"]=(()=>{/* MIT. Shared original-workbook ZIP/XML transformation. Runtime effects are injected; no network or writes. */
+
+const ISSUER_TEMPLATE = Object.freeze({
+  file: 'Budget_Template-RFP-2026.original.xlsx',
+  sha256: '1994a0b3ad589193c6ff8dd29bf8a9d08dfa4c6e85eebdb4a6aa5c9d994ce55d',
+  bytes: 5983,
+  source: 'https://docs.google.com/spreadsheets/d/16aSRmyc9-s6T8ob3fkEiOFl9_MYGoihs/edit?gid=1909710743#gid=1909710743',
+  sheet: 'RRF RFP Budget Template 2026 (',
+  worksheet: 'xl/worksheets/sheet1.xml',
+  ceilingCents: 15000000
+});
+const encode = s => new TextEncoder().encode(s);
+const decode = b => new TextDecoder('utf-8', {fatal:true}).decode(b);
+function* digest(b){return yield {type:'sha256',bytes:b};}
+const bytes = b => b instanceof Uint8Array ? b : new Uint8Array(b);
+const view = b => new DataView(b.buffer, b.byteOffset, b.byteLength);
+const join = parts => {
+  const result = new Uint8Array(parts.reduce((n,p)=>n+p.length,0));
+  let i=0; for(const p of parts){result.set(p,i);i+=p.length;} return result;
+};
+const fail = message => { throw new Error(message); };
+let table;
+function crc32(b) {
+  if(!table) table=Uint32Array.from({length:256},(_,i)=>{let c=i;for(let j=0;j<8;j++)c=(c&1)?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
+  let c=0xffffffff;for(const n of b)c=table[(c^n)&255]^(c>>>8);return(c^0xffffffff)>>>0;
+}
+function* readWorkbookZip(input) {
+  const raw=bytes(input);
+  if(raw.length>10000000||raw.length<22)fail('Workbook ZIP size outside supported range');
+  const v=view(raw);let end=raw.length-22;
+  while(end>=Math.max(0,raw.length-65557)&&v.getUint32(end,true)!==0x06054b50)end--;
+  if(end<0||v.getUint16(end+4,true)||v.getUint16(end+6,true))fail('Single-volume ZIP required');
+  if(end+22+v.getUint16(end+20,true)!==raw.length)fail('Invalid ZIP end');
+  const count=v.getUint16(end+10,true),offset=v.getUint32(end+16,true),length=v.getUint32(end+12,true);
+  if(count!==v.getUint16(end+8,true)||count>200||offset+length!==end)fail('Invalid ZIP catalogue');
+  let p=offset,total=0;const names=new Set(),members=[];
+  for(let i=0;i<count;i++){
+    if(p+46>end||v.getUint32(p,true)!==0x02014b50)fail('Invalid ZIP member');
+    const flags=v.getUint16(p+8,true),method=v.getUint16(p+10,true),crc=v.getUint32(p+16,true);
+    const packed=v.getUint32(p+20,true),size=v.getUint32(p+24,true);
+    const nl=v.getUint16(p+28,true),el=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),local=v.getUint32(p+42,true);
+    const finish=p+46+nl+el+cl;if(finish>end||flags&1||![0,8].includes(method))fail('Unsupported ZIP member');
+    const name=decode(raw.slice(p+46,p+46+nl));
+    if(!name||names.has(name)||name.startsWith('/')||name.split('/').some(x=>x==='..')||name.includes('\\'))fail('Invalid or duplicate ZIP path');
+    names.add(name);total+=size;if(total>20000000)fail('Workbook expanded size too large');
+    if(local+30>offset||v.getUint32(local,true)!==0x04034b50)fail('Invalid local ZIP header');
+    const lnl=v.getUint16(local+26,true),lel=v.getUint16(local+28,true),start=local+30+lnl+lel;
+    if(decode(raw.slice(local+30,local+30+lnl))!==name||start+packed>offset)fail('ZIP member binding mismatch');
+    const compressed=raw.slice(start,start+packed);
+    const content=method===0?compressed:bytes(yield {type:'inflateRaw',bytes:compressed,expectedBytes:size});
+    if(content.length!==size||crc32(content)!==crc)fail('ZIP content checksum mismatch: '+name);
+    members.push({name,content,compressed,method,flags,local:raw.slice(local,start),central:raw.slice(p,finish)});
+    p=finish;
+  }
+  if(p!==end)fail('ZIP catalogue boundary mismatch');
+  return {members,comment:raw.slice(end+22)};
+}
+function writeWorkbookZip(archive, replacements) {
+  const chunks=[],centrals=[];let offset=0;
+  for(const member of archive.members){
+    const changed=Object.prototype.hasOwnProperty.call(replacements,member.name);
+    const content=changed?bytes(replacements[member.name]):member.content;
+    const method=changed?0:member.method,packed=changed?content:member.compressed;
+    const local=member.local.slice(),central=member.central.slice(),lv=view(local),cv=view(central),crc=crc32(content);
+    // The emitted archive has explicit lengths, including when an input used a data descriptor.
+    lv.setUint16(8,method,true);cv.setUint16(10,method,true);
+    lv.setUint16(6,member.flags&~8,true);lv.setUint32(14,crc,true);lv.setUint32(18,packed.length,true);lv.setUint32(22,content.length,true);
+    cv.setUint16(8,member.flags&~8,true);cv.setUint32(16,crc,true);cv.setUint32(20,packed.length,true);cv.setUint32(24,content.length,true);cv.setUint32(42,offset,true);
+    chunks.push(local,packed);centrals.push(central);offset+=local.length+packed.length;
+  }
+  for(const name of Object.keys(replacements))if(!archive.members.some(x=>x.name===name))fail('Replacement member missing: '+name);
+  const central=join(centrals),end=new Uint8Array(22),e=view(end);
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,centrals.length,true);e.setUint16(10,centrals.length,true);e.setUint32(12,central.length,true);e.setUint32(16,offset,true);e.setUint16(20,archive.comment.length,true);
+  return join([...chunks,central,end,archive.comment]);
+}
+const clean = (value,label,max=8000) => {
+  if(typeof value!=='string')fail(label+' must be text');
+  if(value.length>max||/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(value))fail(label+' contains unsupported characters or is too long');
+  return value.trim();
+};
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+const validCents = (v,label,max=Number.MAX_SAFE_INTEGER) => {
+  if(!Number.isSafeInteger(v)||v<0||v>max)fail(label+' must be nonnegative integer USD cents at or below '+max);
+  return v;
+};
+function cell(xml,ref,value) {
+  const re=new RegExp('<c\\b([^>]*\\br="'+ref+'"[^>]*?)(?:\\/>|>[\\s\\S]*?<\\/c>)');
+  const match=xml.match(re);if(!match)fail('Original template cell missing: '+ref);
+  const attrs=match[1].replace(/\s+t="[^"]*"/g,'');
+  const body=value===null?'<c'+attrs+'/>':typeof value==='number'?'<c'+attrs+'><v>'+value+'</v></c>':'<c'+attrs+' t="inlineStr"><is><t xml:space="preserve">'+esc(value)+'</t></is></c>';
+  return xml.replace(re,body);
+}
+function* buildIssuerBudget(template,doc) {
+  const original=bytes(template);
+  if(original.length!==ISSUER_TEMPLATE.bytes||(yield* digest(original))!==ISSUER_TEMPLATE.sha256)fail('Expected exact original 2026 OTF budget workbook');
+  if(!doc||typeof doc!=='object'||Array.isArray(doc))fail('Vendor input must be an object');
+  const archive=yield* readWorkbookZip(original),sheet=archive.members.find(x=>x.name===ISSUER_TEMPLATE.worksheet);
+  if(!sheet)fail('Original worksheet not found');
+  const input=doc.budget||{},rates=doc.laborRates||[],missing=[],changes=[];
+  if(!Array.isArray(rates)||rates.length>5)fail('Issuer budget permits at most five labor categories');
+  const applicant=clean(doc.applicant?.name||'','applicant.name',500);
+  if(!applicant)missing.push('applicant.name');
+  let xml=decode(sheet.content);
+  const put=(ref,value,key)=>{xml=cell(xml,ref,value);changes.push({cell:ref,key,value});};
+  put('A4',applicant||null,'applicant.name');
+  const seen=new Set(),normalized=[];
+  for(let i=0;i<5;i++){
+    const ref=i+8,r= rates[i];
+    if(!r){put('A'+ref,null,'laborRates['+i+'].title');put('B'+ref,null,'laborRates['+i+'].loadedHourlyCents');continue;}
+    const title=clean(r.title||'','laborRates['+i+'].title',500);
+    if(!title)missing.push('laborRates['+i+'].title');
+    if(title&&seen.has(title.toLowerCase()))fail('Duplicate labor category: '+title);
+    seen.add(title.toLowerCase());
+    let cents=null;
+    if(r.loadedHourlyCents===null||r.loadedHourlyCents===undefined)missing.push('laborRates['+i+'].loadedHourlyCents');
+    else{cents=validCents(r.loadedHourlyCents,'laborRates['+i+'].loadedHourlyCents',100000000);if(!cents)fail('Loaded hourly rates must be positive');}
+    put('A'+ref,title||null,'laborRates['+i+'].title');put('B'+ref,cents===null?null:cents/100,'laborRates['+i+'].loadedHourlyCents');
+    normalized.push({title,loadedHourlyCents:cents});
+  }
+  if(!rates.length)missing.push('laborRates');
+  const direct=clean(input.otherDirectCostsCategory||'','budget.otherDirectCostsCategory',120);
+  if(!direct)missing.push('budget.otherDirectCostsCategory');
+  put('A16',direct||null,'budget.otherDirectCostsCategory');
+  let directCents=null;
+  if(input.otherDirectCostsCents===null||input.otherDirectCostsCents===undefined)missing.push('budget.otherDirectCostsCents');
+  else directCents=validCents(input.otherDirectCostsCents,'budget.otherDirectCostsCents',ISSUER_TEMPLATE.ceilingCents);
+  put('B16',directCents===null?null:directCents/100,'budget.otherDirectCostsCents');
+  let ceiling=null;
+  if(input.requestedContractCeilingCents===null||input.requestedContractCeilingCents===undefined)missing.push('budget.requestedContractCeilingCents');
+  else{ceiling=validCents(input.requestedContractCeilingCents,'budget.requestedContractCeilingCents',ISSUER_TEMPLATE.ceilingCents);if(!ceiling)fail('Requested total contract value must be positive');}
+  if(ceiling!==null&&directCents!==null&&directCents>ceiling)fail('Evaluation direct costs exceed requested contract ceiling');
+  put('B17',ceiling===null?null:ceiling/100,'budget.requestedContractCeilingCents');
+  const originalStyles=archive.members.find(x=>x.name==='xl/styles.xml');
+  let styles=decode(originalStyles.content);
+  const match=styles.match(/<cellXfs count="13">([\s\S]*?)<\/cellXfs>/);
+  if(!match)fail('Original workbook styles do not match the retained template');
+  const originalXfs=match[1].match(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g);
+  if(!originalXfs||originalXfs.length!==13)fail('Original style catalogue changed');
+  const wrapStyle=originalXfs[10].replace(/<alignment[^>]*\/>/,'<alignment vertical="top" wrapText="1"/>');
+  const moneyStyle=originalXfs[11].replace('numFmtId="0"','numFmtId="164"').replace('/>',' applyNumberFormat="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>');
+  const nameStyle=originalXfs[3].replace('/>',' applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>');
+  styles=styles.replace(match[0],'<cellXfs count="16">'+match[1]+wrapStyle+moneyStyle+nameStyle+'</cellXfs>');
+  const setStyle=(ref,index)=>{const re=new RegExp('(<c\\b[^>]*\\br="'+ref+'"[^>]*\\bs=")\\d+(")');if(!re.test(xml))fail('Missing original cell style '+ref);xml=xml.replace(re,(_m,a,b)=>a+index+b);};
+  setStyle('A4',15);
+  for(let i=8;i<=12;i++){
+    setStyle('A'+i,13);setStyle('B'+i,14);
+    const title=normalized[i-8]?.title||'';
+    const height=Math.max(15,Math.ceil(title.length/43)*15);
+    xml=xml.replace(new RegExp('<row r="'+i+'"[^>]*>'),'<row r="'+i+'" ht="'+height+'" customHeight="1">');
+  }
+  setStyle('A16',13);setStyle('B16',14);
+  xml=xml.replace(/<row r="16"[^>]*>/,'<row r="16" ht="'+Math.max(15,Math.ceil(direct.length/43)*15)+'" customHeight="1">');
+  const output=writeWorkbookZip(archive,{[ISSUER_TEMPLATE.worksheet]:encode(xml),'xl/styles.xml':encode(styles)});
+  const reopened=yield* readWorkbookZip(output);
+  const unchanged=archive.members.filter(x=>x.name!==ISSUER_TEMPLATE.worksheet&&x.name!=='xl/styles.xml');
+  for(const before of unchanged){const after=reopened.members.find(x=>x.name===before.name);if(!after||(yield* digest(before.content))!==(yield* digest(after.content)))fail('Unrelated template member changed: '+before.name);}
+  const unchangedMembers=[];for(const x of unchanged)unchangedMembers.push({name:x.name,bytes:x.content.length,sha256:yield* digest(x.content)});
+  return {
+    bytes:output,
+    mapping:{
+      schema:'otf-rrf-issuer-budget/v1',currency:'USD',
+      original:{...ISSUER_TEMPLATE},output:{file:'Budget_Template-RFP-2026.completed.xlsx',bytes:output.length,sha256:yield* digest(output)},
+      applicant, laborRates:normalized, otherDirectCostsCategory:direct, otherDirectCostsCents:directCents, requestedContractCeilingCents:ceiling,
+      changes,missing,
+      worksheet:ISSUER_TEMPLATE.sheet,layout:{originalStylesPreserved:13,addedStyles:['wrapped category','USD amount','wrapped vendor'],modifiedMembers:[ISSUER_TEMPLATE.worksheet,'xl/styles.xml']},unchangedMembers,
+      interpretation:'Requested contract ceiling for evaluation; no assumed case utilization. At-cost direct expenses remain separate from loaded hourly rates.'
+    }
+  };
+}
+
+function effect(platform,item){
+  if(item.type==='sha256')return platform.sha256(item.bytes);
+  if(item.type==='inflateRaw')return platform.inflateRaw(item.bytes,item.expectedBytes);
+  throw new Error('Unknown workbook runtime effect');
+}
+function run(iterator,platform){
+  let step=iterator.next();
+  while(!step.done){const value=effect(platform,step.value);if(value&&typeof value.then==='function')throw new Error('Synchronous workbook runtime received an asynchronous effect');step=iterator.next(value);}
+  return step.value;
+}
+async function runAsync(iterator,platform){
+  let step=iterator.next();
+  while(!step.done)step=iterator.next(await effect(platform,step.value));
+  return step.value;
+}
+function platformCheck(platform){
+  if(!platform||typeof platform.sha256!=='function'||typeof platform.inflateRaw!=='function')throw new Error('Workbook runtime requires SHA-256 and raw DEFLATE');
+}
+function createIssuerBudget(platform){
+  platformCheck(platform);
+  return {readWorkbookZip:input=>run(readWorkbookZip(input),platform),writeWorkbookZip,buildIssuerBudget:(template,doc)=>run(buildIssuerBudget(template,doc),platform)};
+}
+function createAsyncIssuerBudget(platform){
+  platformCheck(platform);
+  return {readWorkbookZip:input=>runAsync(readWorkbookZip(input),platform),writeWorkbookZip,buildIssuerBudget:(template,doc)=>runAsync(buildIssuerBudget(template,doc),platform)};
+}
+
+return {ISSUER_TEMPLATE,createIssuerBudget,createAsyncIssuerBudget};})();
+modules["issuer-template"]=(()=>{/* Exact public issuer workbook; source identity is enforced by issuer-budget-core.mjs. */
+const ORIGINAL_TEMPLATE_BASE64 = "UEsDBBQACAgIAMEKOV0AAAAAAAAAAAAAAAAYAAAAeGwvZHJhd2luZ3MvZHJhd2luZzEueG1sndBdbsIwDAfwE+wOVd5pWhgTQxRe0E4wDuAlbhuRj8oOo9x+0Uo2aXsBHm3LP/nvzW50tvhEYhN8I+qyEgV6FbTxXSMO72+zlSg4gtdgg8dGXJDFbvu0GTWtz7ynIu17XqeyEX2Mw1pKVj064DIM6NO0DeQgppI6qQnOSXZWzqvqRfJACJp7xLifJuLqwQOaA+Pz/k3XhLY1CvdBnRz6OCGEFmL6Bfdm4KypB65RPVD8AcZ/gjOKAoc2liq46ynZSEL9PAk4/hr13chSvsrVX8jdFMcBHU/DLLlDesiHsSZevpNlRnfugbdoAx2By8i4OPjj3bEqyTa1KCtssV7ercyzIrdfUEsHCAdiaYMFAQAABwMAAFBLAwQUAAgICADBCjldAAAAAAAAAAAAAAAAGAAAAHhsL3dvcmtzaGVldHMvc2hlZXQxLnhtbJ2WzW6jMBSFn2DeAbEvYP4CiFBNWlXTXVVNZ9YuOIlVjCPbhPTtxxhiKC5SNIsEuJzz+dhcI/L7C6mtM2Ic02ZrA8ezLdSUtMLNYWu//X66S2yLC9hUsKYN2tqfiNv3xY+8o+yDHxESlgQ0fGsfhThlrsvLIyKQO/SEGnlnTxmBQl6yg8tPDMFKmUjt+p4XuwTixh4IGbuFQfd7XKJHWrYENWKAMFRDIePzIz7xK41cDBzBJaOc7oVTUjKSZILSRZcSqUDJl0CkvCURgeyjPd1J5EmmeMc1Fp8ql8act3bLmmxk3OkYvSeT42dnUl/FFxDelttYzNRNv6S/gOj/SMBzAVigQmiuxe2xYKlJ5DaMfiJjixS5Qr6wIqetqHGDXpjFWyIX/3OHatptbdm4Y+EVH46iL7hF7mqfOvmDUcdn51bfxu+UfvQXz9UX01z7pB64HLNsuaDkFxqGALZVoT1sa/FA67+4EkdZ85040PVX2mlx5Ch6SWuu/kfY1WdbBDfDEV7UsRvuhLGTJKPze48/enzt8SMHBGouw3BqFo9QwCJntLNY75XA/uSnpHDFkiG5rJ4LL3fPvVX+pFpbAm0JlMWfWYC2KMXuqnAXjFAzQqVQIQfLUAgNS6QtkVJEk2UoxIZFbj615I4ULB/ZFRYr72aCDYXEgG20ZaMU6Wza/mLapiL4fi0TDU2G5fdmnnBBHSXAiJZqSmpSogUlXaNIl+4Fz+TEC85V8w1o1lTABG2WILAK8ieQb4KSJchfBU09C4KZaPQFq76pT0Fo+sJV39SsIDJ6IV3mjlZ2CYgnTGwOH68OP/Uq2Jh71FuOP2jALIA7e1MQxA7oAdU1t0raNqKnzaoWQ/t+oGyngizrYbYbNuaEKfKKwU5+Wlgsw/Jty56rYQ76a6L4B1BLBwgFbCvzrAIAAJEIAABQSwMEFAAICAgAwQo5XQAAAAAAAAAAAAAAACMAAAB4bC93b3Jrc2hlZXRzL19yZWxzL3NoZWV0MS54bWwucmVsc43PSwrCMBAG4BN4hzB7k9aFiDTtRoRupR5gSKYPbB4k8dHbm42i4MLlzM98w181DzOzG4U4OSuh5AUwssrpyQ4Szt1xvQMWE1qNs7MkYaEITb2qTjRjyjdxnHxkGbFRwpiS3wsR1UgGI3eebE56FwymPIZBeFQXHEhsimIrwqcB9ZfJWi0htLoE1i2e/rFd30+KDk5dDdn044XQAe+5WCYxDJQkcP7avcOSZxZEXYmvivUTUEsHCK2o602zAAAAKgEAAFBLAwQUAAgICADBCjldAAAAAAAAAAAAAAAAEwAAAHhsL3RoZW1lL3RoZW1lMS54bWzNV9tu3CAQ/YL+A+K9wde9KbtRsptVH1pV6rbqM7HxpcHYAjZp/r4Ye218S6JmI2VfAuMzhzMzwJDLq78ZBQ+EizRna2hfWBAQFuRhyuI1/PVz/3kBgZCYhZjmjKzhExHwavPpEq9kQjIClDsTK7yGiZTFCiERKDMWF3lBmPoW5TzDUk15jEKOHxVtRpFjWTOU4ZTB2p+/xj+PojQguzw4ZoTJioQTiqWSLpK0EBAwnCmNh4QQKeDmJPKWktJDlIaA8kOglQ+w4b1d/hE8vttSDh4wXUNL/yDaXKIGQOUQt9e/GlcDwnvnJT6n4hvienwagINARTFc23MW/t6rsQaoGg65b6891/U7eIPfHWq5udlaXX63xXsDvOtdL3y3g/davD8S62xn2R283+Jnw3hnN7vtrIPXoISm7H6Atm3f325rdAOJcvrlZXiLQsbOqfyZnNpHGf6T870C6OKq7cmAfCpIhAOFu+YppiU9XhE8bg/EmB31iLOUvdMqLTEyA9VhZ92ov+sjqaOOUkoP8omSr0JLEjlNw70y6ol2apJcJGpYL9fBxRzrMeC5/J3K5JDgQi1j6xViUVPHAhS5UIcJTnLrpByzb3l4Kuvp3CkHLFu75Td2lUJZWWfz9pA29HoWC1OAr0lfL8JYrCvCHRExd18nwrbOpWI5omJhP6cCGVVRBwXgsmv4XqUIiABTEpZ1qvxP1T17paeS2Q3bGQlv6Z2t0h0RxnbrijC2YYJD0jefudbL5XipnVEZ88V71BoN7wbKujPwqM6c6yuaABdrGKnrTA2zQvEJFkOAaaweJ4GsE/0/N0vBhdxhkVQw/amKP0sl4YCmmdrrZhkoa7XZztz6uOKW1sfLHOoXmUQRCeSEpZ2qbxXJ6Nc3gstJflSiD0n4CO7okf/AKlH+3C4TGKZCNtkMU25s7jaLveuqPoojLzz9gKFFguuOYl7mFVyPGzlGHFppPyo0lsK7eH+OrvuyU+/SnGgg88lb7P2avKHKHVflj951y4X1fJd4e0MwpC3Gpbnj0qZ6xxkfBMZys4m8OZPVfGM36O9aZLwr9az3T9vJsvkHUEsHCGWjgWEoAwAArQ4AAFBLAwQUAAgICADBCjldAAAAAAAAAAAAAAAAFAAAAHhsL3NoYXJlZFN0cmluZ3MueG1sjZLPjtQwDMafgHewckCzEkxnlj9C0OkeOhpxAHY1W/bubT1tRGqXxB22b48rBEJFIyHlkOTz77NjJ7956gOcKSYvvHPb9cYBcS2N53bnvlaHl+8cJEVuMAjTzk2U3E3xLE9JwVBOO9epDu+zLNUd9ZjWMhCbcpLYo9oxtlkaImGTOiLtQ3a92bzNevTsoJaR1dJuHYzsv49U/rko8uSLXIuq8wlsISj1Q0AlMGsYE8HjBBgC4DAEXyNbMviM38hCSxlM4wb28oODYAMqcPAhrPNMizybrX/ZPxA3ZvcFe1pKn/DRlNIythKnpfpRxhgmOM4FrQ5jsP2ciJqrZeRvB9jCai6dntAeQi/gLkobsbeiGVvqifUye71g9771igHuqR6j18k28exrSpctXi0s7jlCRXXH1jwzUjydLsOvF/B/g28W4BEH38CR0iBsMyxFon02VIn/eFQRzxTguZEf4FY7ivbsSLUalTTB6nZfXqWLE6pkblAprBGNecAw/jXjzH5w8RNQSwcImBpl2YUBAAD/AgAAUEsDBBQACAgIAMEKOV0AAAAAAAAAAAAAAAANAAAAeGwvc3R5bGVzLnhtbL1X23LaMBD9gv6DRun0qUHmUkpS25k0U3f6kj6EzvRV2DLWRBdXFink66sLxhAgcQjUD1ha7Z49u5J2TXg15ww8EFVRKSLY7QQQEJHKjIppBH+Nk/MRBJXGIsNMChLBBangVfwurPSCkbuCEA0MgqgiWGhdXiJUpQXhuOrIkgizkkvFsTZTNUVVqQjOKmvEGeoFwRBxTAX0CJfz7gCnWzicpkpWMtedVHIk85ymZBvpAl0gnNZIfBtmBx2O1f2sPDewJdZ0QhnVC8cKxqGY8YTrCqRyJrTJy0oE/OtHZoTDAQQe8EZmJjcf/syk/vLev84+np0FnSCAKA7REi4Ocyka1AH0gjisHsEDZgbSWFiDVDKpgJpOIpgkgXusWGBOvOK1ophZkYtvKeRUSOX8eVT/S5/iDa5Hw2+jPXgbpt5MWw82By9a1DMbKGVsFWgfekEcmkxrokRiJmA5Hi9Kgy7M6fJoTu8FbUanhf6u8KK9SSUZzSyP6c16Mi7cY2Em+xbQGubKm3uZOCdSZeb21JGOYC1C9SAOGck1cBcmgrowB37vBiOrGofKhtfSwunGoZZlSwOjaalpLXlLC6/sBj6ggwN7Jcsth6dPzNtjPAbpt7M4zgYfQP1tjpcDc7FSwtidBfmdb5TheQ68ji3BplvZe1gPTelZDpsqbSa4LNni2tQMwYmH8aJE+pllsu7OO1/32z/M8TxvySAOcb0IbGcz3fendeWMq0JRcT+WCdVubrq1pqmtwT59EPxVuByTuVu2wczzVnS7z9Jdy84GVrfB6jVYvWexvkofzSpuA7BzHzY89XayfqWnPdj9ndj9o2APToj96YTYwxNifz4h9iEncsdlbHdIn7uqO+9e94BT3Ibd/+RzxJ1wX81H2gs/u53xCVGJ+xB/mpFCKvpotG21tI1xlRK0LPFrjWajzaykDVf77RvBW+uHQTCZUaap8GsbHcRgZvOmefjV5v9S/A9QSwcI9NpTbOACAAB0DQAAUEsDBBQACAgIAMEKOV0AAAAAAAAAAAAAAAAPAAAAeGwvd29ya2Jvb2sueG1snZPRbtowFIafYO9g+WrSBCaUVhARKq0dg2lDhdH12jiH4BL7RLYD6dvvECBayw3aTWzn+Hz+/efP8L4yOduB8xptwqN2hzOwClNts4Q/L8etPmc+SJvKHC0k/A08vx99Gu7RbVeIW0b91id8E0IRC+HVBoz0bSzAUmWNzshAS5cJXziQqd8ABJOLbqdzJ4zUlh8JsbuGgeu1VvCIqjRgwxHiIJeB1PuNLvyZZqoLnNHKocd1aCs0JxIpUAIqBbWg/jtBRl2jyEi3LYsWIQtSsdK5Dm+1rgazS3jpbHxitBoZh56Yzo93Jj9vrqLedbovzByIwTv1VXT7f6SoI6LoA6onL724XpZUDclch2m+yCkioyZuT06MhjXfn8ZDOgMFc6e9XuXAmZWGlovFmC3GT+xrmWa0aQmmoJgA63a6d+wzZfrQO00p8py5WNPETdMeJ7o441NYawvpjHie3iuZq/p4qMJPH+qRlU4n/DtilsPvuu2h9AHNowzyz/Gn6pL6DGP/oXpyJMPGEVXXEKlwNierwbUz/6i8pTmWNg1OFwfUwwbU1pfkrf5xY/dV8WU/n0/6y/GLhtfp63z6DGBmv/qTibnBFzcry9XgW1Jfla5wfNYXEmeXR38BUEsHCPqkPqLaAQAAFwQAAFBLAwQUAAgICADBCjldAAAAAAAAAAAAAAAAGgAAAHhsL19yZWxzL3dvcmtib29rLnhtbC5yZWxzrZJNTsMwEIVPwB0s7xsn5UcI1ekGIXUL5QDGnjhRYk9kT4HcHkNFmqIoYtGV9Z41733yeLP9dB17hxAb9JIXWc4ZeI2m8Vby1/3T6p6zSMob1aEHyQeIfFtebZ6hU5RmYt30kaUQHyWvifoHIaKuwamYYQ8+3VQYnKIkgxW90q2yINZ5fifCNIOXZ5lsZyQPO1Nwth96+E82VlWj4RH1wYGnmQpBaRZSoAoWSPIfeTSLLIVxMc+wviRDpKFLbzhCHPVS/fVF62sVwLxQSAueUkztJZibS8J8YGhjDUAnkNH6Rk3H4mJu/8DoQyR0v0gW0XaQaXQztW+IrQNSRpE6tY9OKhRnX7z8AlBLBwj/RL24CQEAACoDAABQSwMEFAAICAgAwQo5XQAAAAAAAAAAAAAAAAsAAABfcmVscy8ucmVsc43PQQ6CMBAF0BN4h2b2UnBhjKGwMSZsDR6gtkMhQKdpq8Lt7VKNC5eT+fN+pqyXeWIP9GEgK6DIcmBoFenBGgHX9rw9AAtRWi0nsihgxQB1tSkvOMmYbkI/uMASYoOAPkZ35DyoHmcZMnJo06YjP8uYRm+4k2qUBvkuz/fcvxtQfZis0QJ8owtg7erwH5u6blB4InWf0cYfFV+JJEtvMApYJv4kP96IxiyhwKuSfzxYvQBQSwcIpG+hILIAAAAoAQAAUEsDBBQACAgIAMEKOV0AAAAAAAAAAAAAAAALAAAAeGwvbWV0YWRhdGHjYjbUM5AS4WI0FOIytDSwNDc0MDcxVnjOriGpxGVoYGFiaWpgYGAGZJtYGpkZGRkamQPZpmbGZmYG5oYmQDZIgYWZpaWxEqeJhaWZsbm5kYFXIRdral58aLCQsGNualFmcqK+T35xvGNeempOarECk4OIR0qQLxcLB4MEoxCLn7+fqxSbk39IiL+vEod/mGuQm49/uBarY1FmYo4BlwWDA4MHQwBDBEMSBweDALMEgwJzFjsHk8D////Zq1iADIYZjAwAUEsHCN7+RrnEAAAAyQAAAFBLAwQUAAgICADBCjldAAAAAAAAAAAAAAAAEwAAAFtDb250ZW50X1R5cGVzXS54bWy1VEtuwjAQPUHvEHlbEUMXVVURWLRl2VYqPcAQT4hF/JFn+OT2dQJUAqUC2rKJ7byZ93HsDMcbUyUrDKSdzcQg7YsEbe6UtvNMfE4nvQeREINVUDmLmaiRxHh0M5zWHimJzZYyUTL7RykpL9EApc6jjUjhggGOyzCXHvIFzFHe9fv3MneW0XKPGw4xGj5jAcuKk6ft+4Y6E+B9pXPg6EtGMpG8bCK4tdms5Rl9K6uOzPRcUegclcuXJrakblYsKVajmkSSAxGnmIvfyuzypgGrtoZK7en2OEdEqVF4ix8gaIV/SUI+ICgqEdlU6dqFRTvfar5D4FcwkVRuKvkNkmyHQbrb0NM+ZtpCqI8JDTIoYLhOFiohoPrgEM8kdeU5KDg/y2kfKsA6cnZp7iDaTy7Yw4vzc11hd/AW+U9ljjcYu6RaYPu8ZtRmTA1o+9O5nTm32OvL9ic0+gJQSwcIFgezPFkBAADEBAAAUEsBAhQAFAAICAgAwQo5XQdiaYMFAQAABwMAABgAAAAAAAAAAAAAAAAAAAAAAHhsL2RyYXdpbmdzL2RyYXdpbmcxLnhtbFBLAQIUABQACAgIAMEKOV0FbCvzrAIAAJEIAAAYAAAAAAAAAAAAAAAAAEsBAAB4bC93b3Jrc2hlZXRzL3NoZWV0MS54bWxQSwECFAAUAAgICADBCjldrajrTbMAAAAqAQAAIwAAAAAAAAAAAAAAAAA9BAAAeGwvd29ya3NoZWV0cy9fcmVscy9zaGVldDEueG1sLnJlbHNQSwECFAAUAAgICADBCjldZaOBYSgDAACtDgAAEwAAAAAAAAAAAAAAAABBBQAAeGwvdGhlbWUvdGhlbWUxLnhtbFBLAQIUABQACAgIAMEKOV2YGmXZhQEAAP8CAAAUAAAAAAAAAAAAAAAAAKoIAAB4bC9zaGFyZWRTdHJpbmdzLnhtbFBLAQIUABQACAgIAMEKOV302lNs4AIAAHQNAAANAAAAAAAAAAAAAAAAAHEKAAB4bC9zdHlsZXMueG1sUEsBAhQAFAAICAgAwQo5XfqkPqLaAQAAFwQAAA8AAAAAAAAAAAAAAAAAjA0AAHhsL3dvcmtib29rLnhtbFBLAQIUABQACAgIAMEKOV3/RL24CQEAACoDAAAaAAAAAAAAAAAAAAAAAKMPAAB4bC9fcmVscy93b3JrYm9vay54bWwucmVsc1BLAQIUABQACAgIAMEKOV2kb6EgsgAAACgBAAALAAAAAAAAAAAAAAAAAPQQAABfcmVscy8ucmVsc1BLAQIUABQACAgIAMEKOV3e/ka5xAAAAMkAAAALAAAAAAAAAAAAAAAAAN8RAAB4bC9tZXRhZGF0YVBLAQIUABQACAgIAMEKOV0WB7M8WQEAAMQEAAATAAAAAAAAAAAAAAAAANwSAABbQ29udGVudF9UeXBlc10ueG1sUEsFBgAAAAALAAsA0wIAAHYUAAAAAA==";
+
+return {ORIGINAL_TEMPLATE_BASE64};})();
+modules["issuer-budget-browser"]=(()=>{/* MIT. Browser runtime for the single maintained issuer workbook transformation. */
+const {createAsyncIssuerBudget}=modules["issuer-budget-core"];
+const {ORIGINAL_TEMPLATE_BASE64}=modules["issuer-template"];
+function originalBytes(){const text=atob(ORIGINAL_TEMPLATE_BASE64);return Uint8Array.from(text,c=>c.charCodeAt(0));}
+async function sha256(bytes){if(!globalThis.crypto?.subtle)throw new Error("This browser does not expose SHA-256 here. Open the standalone desk in a trusted browser context.");const digest=await globalThis.crypto.subtle.digest("SHA-256",bytes);return Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,"0")).join("");}
+async function inflateRaw(bytes,expectedBytes){
+ let stream;try{stream=new DecompressionStream("deflate-raw");}catch{throw new Error("This browser does not support raw DEFLATE for the original XLSX. Use a current Chromium browser or the same vendor compiler's Node command.");}
+ const reader=new Blob([bytes]).stream().pipeThrough(stream).getReader(),chunks=[];let size=0;
+ try{while(true){const item=await reader.read();if(item.done)break;size+=item.value.length;if(size>expectedBytes){await reader.cancel();throw new Error("Workbook expansion exceeds its original member length");}chunks.push(item.value);}}finally{reader.releaseLock();}
+ if(size!==expectedBytes)throw new Error("Workbook expansion differs from its original member length");
+ const result=new Uint8Array(size);let offset=0;for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.length;}return result;
+}
+async function buildVendorBudget(draft){return createAsyncIssuerBudget({sha256,inflateRaw}).buildIssuerBudget(originalBytes(),draft);}
+
+return {buildVendorBudget};})();
+modules["vendor-authoring-forms"]=(()=>{/* MIT. Complete nine-section forms for the maintained OTF vendor schema. */
+const VENDOR_SECTIONS = [
+  {
+    "id": "applicant",
+    "title": "1. Applicant, expertise and personnel",
+    "description": "Identify the applicant and actual assigned people. Keep original biography evidence alongside any outward evidence link.",
+    "fields": [
+      {
+        "name": "applicant",
+        "label": "Applicant",
+        "type": "object",
+        "fields": [
+          {
+            "name": "name",
+            "label": "Legal / trading name",
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "label": "Background and technical expertise",
+            "type": "textarea"
+          },
+          {
+            "name": "policyContact",
+            "label": "Policy and contracting contact",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "name": "contact",
+        "label": "Proposal contact",
+        "type": "object",
+        "fields": [
+          {
+            "name": "replyOwner",
+            "label": "Reply owner",
+            "type": "text"
+          },
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "text"
+          },
+          {
+            "name": "phone",
+            "label": "Phone",
+            "type": "text",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "name": "team",
+        "label": "Assigned personnel",
+        "type": "array",
+        "fields": [
+          {
+            "name": "name",
+            "label": "Name",
+            "type": "text"
+          },
+          {
+            "name": "role",
+            "label": "Assigned role",
+            "type": "text"
+          },
+          {
+            "name": "bio",
+            "label": "Relevant biography",
+            "type": "textarea"
+          },
+          {
+            "name": "cvEvidence",
+            "label": "Original CV / biography evidence",
+            "type": "text"
+          },
+          {
+            "name": "cvPublicEvidence",
+            "label": "Outward CV / biography link (optional)",
+            "type": "text",
+            "optional": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "services",
+    "title": "2. Requested services and budget",
+    "description": "Choose offered services and up to five fully loaded labor categories. Amounts are USD. Leave unknown amounts blank; enter zero only for a real zero direct-cost amount.",
+    "fields": [
+      {
+        "name": "services",
+        "label": "Primary services",
+        "type": "array",
+        "fields": [
+          {
+            "name": "category",
+            "label": "Service",
+            "type": "select",
+            "options": [
+              "organizational-security",
+              "digital-attacks",
+              "web-hosting",
+              "censorship-response",
+              "localization"
+            ]
+          },
+          {
+            "name": "offering",
+            "label": "Offering and scope",
+            "type": "textarea"
+          },
+          {
+            "name": "method",
+            "label": "Delivery method",
+            "type": "textarea"
+          }
+        ]
+      },
+      {
+        "name": "laborRates",
+        "label": "Loaded labor categories",
+        "type": "array",
+        "maxItems": 5,
+        "fields": [
+          {
+            "name": "id",
+            "label": "Stable role ID (optional)",
+            "type": "text",
+            "optional": true
+          },
+          {
+            "name": "title",
+            "label": "Labor category",
+            "type": "text"
+          },
+          {
+            "name": "loadedHourlyCents",
+            "label": "Loaded USD / hour",
+            "type": "money",
+            "nullable": true
+          },
+          {
+            "name": "commercialHourlyCents",
+            "label": "Standard commercial USD / hour (optional)",
+            "type": "money",
+            "optional": true
+          }
+        ]
+      },
+      {
+        "name": "budget",
+        "label": "Original issuer budget",
+        "type": "object",
+        "fields": [
+          {
+            "name": "requestedContractCeilingCents",
+            "label": "Requested contract ceiling USD (maximum 150,000)",
+            "type": "money",
+            "nullable": true
+          },
+          {
+            "name": "otherDirectCostsCategory",
+            "label": "Other direct-cost category",
+            "type": "text"
+          },
+          {
+            "name": "otherDirectCostsCents",
+            "label": "Other direct costs USD",
+            "type": "money",
+            "nullable": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "support",
+    "title": "3. Required support services",
+    "description": "Describe all four support services, including how written case approval and completed-case reporting work.",
+    "fields": [
+      {
+        "name": "supportServices",
+        "label": "Support methods",
+        "type": "object",
+        "fields": [
+          {
+            "name": "assessment",
+            "label": "Assessment and case work-order request",
+            "type": "textarea"
+          },
+          {
+            "name": "coordination",
+            "label": "Client, OTF and partner coordination",
+            "type": "textarea"
+          },
+          {
+            "name": "outreach",
+            "label": "Community outreach",
+            "type": "textarea"
+          },
+          {
+            "name": "reporting",
+            "label": "Completion reports and invoicing",
+            "type": "textarea"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "qualifications",
+    "title": "4. Relevant qualifications",
+    "description": "Use actual experience, staffing capacity, response arrangements and sensitive-data practices.",
+    "fields": [
+      {
+        "name": "qualifications",
+        "label": "Qualifications",
+        "type": "object",
+        "fields": [
+          {
+            "name": "community",
+            "label": "Community, prior work and geographies",
+            "type": "textarea"
+          },
+          {
+            "name": "outreach",
+            "label": "Promotion and outreach strategy",
+            "type": "textarea"
+          },
+          {
+            "name": "capacity",
+            "label": "Cases / hours per month and assigned staffing",
+            "type": "textarea"
+          },
+          {
+            "name": "response",
+            "label": "Methodology, availability, channels and triage",
+            "type": "textarea"
+          },
+          {
+            "name": "governance",
+            "label": "Governance, privacy and sensitive data",
+            "type": "textarea"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "work",
+    "title": "5. Prior technical work",
+    "description": "Describe completed work accurately. Preserve its original evidence and choose an outward link for the proposal edition.",
+    "fields": [
+      {
+        "name": "workExamples",
+        "label": "Technical examples",
+        "type": "array",
+        "fields": [
+          {
+            "name": "title",
+            "label": "Example title",
+            "type": "text"
+          },
+          {
+            "name": "work",
+            "label": "Actual work and result",
+            "type": "textarea"
+          },
+          {
+            "name": "evidence",
+            "label": "Original evidence / custody",
+            "type": "text"
+          },
+          {
+            "name": "publicEvidence",
+            "label": "Outward evidence link (optional)",
+            "type": "text",
+            "optional": true
+          },
+          {
+            "name": "disclosureApproved",
+            "label": "Disclosure permission confirmed",
+            "type": "boolean"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "languages",
+    "title": "6. Languages other than English",
+    "description": "Give the actual languages and level, or enter none when accurate.",
+    "fields": [
+      {
+        "name": "languagesOtherThanEnglish",
+        "label": "Languages",
+        "type": "textarea"
+      }
+    ]
+  },
+  {
+    "id": "other",
+    "title": "7. Other relevant services",
+    "description": "Describe additional services, or enter none when accurate.",
+    "fields": [
+      {
+        "name": "otherServices",
+        "label": "Other services",
+        "type": "textarea"
+      }
+    ]
+  },
+  {
+    "id": "restrictions",
+    "title": "8. Proposal data restrictions",
+    "description": "State restrictions on the issuer's use of this proposal, or enter none when accurate.",
+    "fields": [
+      {
+        "name": "proposalDataRestrictions",
+        "label": "Data restrictions",
+        "type": "textarea"
+      }
+    ]
+  },
+  {
+    "id": "appendix",
+    "title": "9. Appendix A and eligibility",
+    "description": "Record the authorized signatory's actual determinations against the original 2026 Appendix A.",
+    "fields": [
+      {
+        "name": "attestations",
+        "label": "Eligibility and Appendix A",
+        "type": "object",
+        "fields": [
+          {
+            "name": "authorizedSignatory",
+            "label": "Authorized signatory",
+            "type": "text"
+          },
+          {
+            "name": "appendixAReviewedFrom",
+            "label": "Original Appendix A source reviewed",
+            "type": "text"
+          },
+          {
+            "name": "noSurveillanceBusiness",
+            "label": "Applicant and affiliates are not engaged in surveillance-technology trade",
+            "type": "boolean"
+          },
+          {
+            "name": "noExclusion",
+            "label": "Applicant and affiliates are not sanctioned, debarred or excluded",
+            "type": "boolean"
+          },
+          {
+            "name": "remitFits",
+            "label": "Proposed work fits OTF remit 2(b)",
+            "type": "boolean"
+          },
+          {
+            "name": "independentAudits",
+            "label": "No relationship compromises independent impartial audits",
+            "type": "boolean"
+          },
+          {
+            "name": "acceptsAppendixA",
+            "label": "Authorized signatory accepts the original Appendix A provisions",
+            "type": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+];
+
+return {VENDOR_SECTIONS};})();
+modules["vendor-authoring"]=(()=>{/* MIT. Original-preserving authoring for the maintained OTF vendor schema. */
+const {check,render}=modules["vendor-core"];
+const {VENDOR_SECTIONS}=modules["vendor-authoring-forms"];
+const {buildVendorBudget}=modules["issuer-budget-browser"];
+const fields=VENDOR_SECTIONS.flatMap(section=>section.fields);
+const has=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
+function object(value,label){if(!value||typeof value!=="object"||Array.isArray(value))throw new Error(label+" must be an object");return value;}
+function copy(value){return JSON.parse(JSON.stringify(value));}
+function defaultValue(field){if(field.type==="object")return Object.fromEntries(field.fields.filter(f=>!f.optional).map(f=>[f.name,defaultValue(f)]));if(field.type==="array")return [];if(field.type==="boolean")return false;if(field.type==="money")return null;return "";}
+function completeField(value,field,path){
+ if(value===undefined)return defaultValue(field);
+ if(field.type==="object"){object(value,path);const result={...value};for(const f of field.fields){if(!has(result,f.name)&&f.optional)continue;result[f.name]=completeField(result[f.name],f,path+"."+f.name);}return result;}
+ if(field.type==="array"){if(!Array.isArray(value))throw new Error(path+" must be an array");return value.map((row,i)=>completeField(row,{type:"object",fields:field.fields},path+"["+i+"]"));}
+ return value;
+}
+function createVendorDraft(original={}){
+ const result=copy(object(original,"Vendor input"));
+ for(const field of fields)result[field.name]=completeField(result[field.name],field,field.name);
+ return result;
+}
+function formatVendorUSD(cents){
+ if(cents===null||cents===undefined)return "";
+ if(!Number.isSafeInteger(cents)||cents<0)throw new Error("Imported amount must be nonnegative integer USD cents");
+ return Math.floor(cents/100)+"."+String(cents%100).padStart(2,"0");
+}
+function parseVendorUSD(value,{label="USD amount",optional=false,positive=false,max=Number.MAX_SAFE_INTEGER}={}){
+ if(value===undefined||value===null||value==="")return optional?undefined:null;
+ if(typeof value!=="string")throw new Error(label+" must be entered as USD text");
+ const text=value.trim();if(!text)return optional?undefined:null;
+ if(!/^(0|[1-9]\d*)(\.\d{1,2})?$/.test(text))throw new Error(label+" must use plain USD digits with at most two decimal places");
+ const [whole,fraction=""]=text.split("."),cents=Number(whole)*100+Number(fraction.padEnd(2,"0"));
+ if(!Number.isSafeInteger(cents)||cents<0||cents>max||(positive&&cents===0))throw new Error(label+" is outside its permitted USD range");
+ return cents;
+}
+function editValues(value,field){
+ if(field.type==="money")return formatVendorUSD(value);
+ if(field.type==="object"){const result={...value};for(const f of field.fields){if(has(result,f.name))result[f.name]=editValues(result[f.name],f);}return result;}
+ if(field.type==="array")return value.map(row=>editValues(row,{type:"object",fields:field.fields}));
+ return value;
+}
+function readVendorFields(draft){
+ const result=createVendorDraft(draft);
+ for(const field of fields)result[field.name]=editValues(result[field.name],field);
+ return result;
+}
+function applyField(base,value,field,path){
+ if(field.type==="object"){object(value,path);const result={...object(base??{},path),...value};for(const f of field.fields){if(!has(value,f.name))continue;const next=applyField(base?.[f.name],value[f.name],f,path+"."+f.name);if(next===undefined)delete result[f.name];else result[f.name]=next;}return result;}
+ if(field.type==="array"){if(!Array.isArray(value))throw new Error(path+" must be an array");if(field.maxItems&&value.length>field.maxItems)throw new Error(field.label+" permits at most "+field.maxItems+" rows");return value.map((row,i)=>{object(row,path+"["+i+"]");for(const f of field.fields)if(!f.optional&&!has(row,f.name))throw new Error(path+"["+i+"]: repeated rows are complete replacements; missing "+f.name);return applyField({},row,{type:"object",fields:field.fields},path+"["+i+"]");});}
+ if(field.type==="money")return parseVendorUSD(value,{label:field.label,optional:field.optional,positive:field.name!=="otherDirectCostsCents",max:field.name.endsWith("HourlyCents")?100000000:15000000});
+ if(value===undefined&&field.optional)return undefined;
+ if(field.type==="boolean"){if(typeof value!=="boolean")throw new Error(path+" must be a recorded true / false value");return value;}
+ if(typeof value!=="string")throw new Error(path+" must be text");
+ if(field.optional&&!value.trim())return undefined;
+ if(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(value))throw new Error(path+" contains unsupported control characters");
+ if(field.type==="select"&&value&&!field.options.includes(value))throw new Error(path+" has an unsupported selection");
+ return value;
+}
+function applyVendorFields(draft,values){
+ object(values,"Edited fields");const result=createVendorDraft(draft);
+ for(const field of fields)if(has(values,field.name))result[field.name]=applyField(result[field.name],values[field.name],field,field.name);
+ return copy(result);
+}
+function exportVendorDraft(draft){return JSON.stringify(object(draft,"Vendor draft"),null,2)+"\n";}
+async function reviewVendorDraft(draft){
+ const input=copy(object(draft,"Vendor draft")),base=check(input);let budget=null,budgetError=null;
+ try{budget=await buildVendorBudget(input);}catch(error){budgetError=error.message;}
+ const quality={needs:[...new Set([...base.needs,...(budget?.mapping.missing??[])])],warnings:[...base.warnings,...(budgetError?["Original issuer workbook: "+budgetError]:[])]};
+ const internalMarkdown=render(input,quality,{audience:"internal"}),submissionIssues=[];let submissionMarkdown=null;
+ if(quality.needs.length||quality.warnings.length)submissionIssues.push(...quality.needs,...quality.warnings);
+ else{try{submissionMarkdown=render(input,quality,{audience:"submission"});}catch(error){submissionIssues.push(error.message);}}
+ return {quality,internalMarkdown,submissionMarkdown,submissionIssues,budget,budgetError,contentComplete:quality.needs.length===0&&quality.warnings.length===0,submissionComplete:submissionMarkdown!==null};
+}
+async function prepareVendorDraft(draft){
+ const input=copy(object(draft,"Vendor draft")),review=await reviewVendorDraft(input),encoder=new TextEncoder();
+ const textFile=(name,type,text)=>({name,media_type:type,bytes:encoder.encode(text)});
+ const files=[textFile("vendor-input.json","application/json",exportVendorDraft(input)),textFile("proposal-review.md","text/markdown",review.internalMarkdown),textFile("readiness.json","application/json",JSON.stringify({schema:"commons.otf-vendor-authoring-readiness.v1",quality:review.quality,contentComplete:review.contentComplete,submissionComplete:review.submissionComplete,submissionIssues:review.submissionIssues},null,2)+"\n")];
+ if(review.budget){files.push({name:review.budget.mapping.output.file,media_type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",bytes:review.budget.bytes},textFile("budget-mapping.json","application/json",JSON.stringify(review.budget.mapping,null,2)+"\n"));}
+ if(review.submissionMarkdown)files.push(textFile("proposal-submission.md","text/markdown",review.submissionMarkdown));
+ return {draft:input,review,files};
+}
+
+return {createVendorDraft,formatVendorUSD,parseVendorUSD,readVendorFields,applyVendorFields,exportVendorDraft,reviewVendorDraft,prepareVendorDraft};})();
 modules["model"]=(()=>{/* MIT. OTF case workbench: source-preserving, portable application model. */
 const SCHEMA = "commons.otf-case-workbench.v1";
 const SERVICES = ["organizational-security","digital-attacks","web-hosting","censorship-response","localization"];
@@ -466,7 +1146,7 @@ const FORM_SPECS=[
 return {FORM_SPECS};})();
 modules["vendor-review"]=(()=>{/* MIT. Original proposal receiving through the maintained vendor compiler. */
 const {check,render}=modules["vendor-core"];
-const {documentFromBytes,decodeJSON,LIMITS,readLedger,applyOperation,canonical}=modules["model"];
+const {documentFromBytes,decodeJSON,LIMITS,readLedger,applyOperation,canonical,sourceBytes}=modules["model"];
 async function reviewVendorOriginal(name,bytes){
  if(bytes.length>LIMITS.document_bytes)throw new Error("Vendor original exceeds 24 MiB");
  const original=decodeJSON(bytes);if(!original||typeof original!=="object"||Array.isArray(original))throw new Error("Vendor input must be an object");
@@ -483,18 +1163,40 @@ async function retainVendorOriginal(input,review,at){
  return applyOperation(opened.ledger,request);
 }
 
-return {reviewVendorOriginal,retainVendorOriginal};})();
+/** Retain the complete exact prepared edition through the original source operation. */
+async function retainVendorPrepared(input,prepared,originalReview,at){
+ const opened=await readLedger(input),selected=new Map(),members=[],names=new Set();
+ if(!prepared||!Array.isArray(prepared.files)||prepared.files.length<3||prepared.files.length>12)throw new Error("Complete prepared proposal files are required");
+ async function retain(name,media_type,bytes){
+  const supplied=await documentFromBytes(name,media_type,bytes),existing=opened.ledger.documents.find(d=>d.id===supplied.id)??selected.get(supplied.id);
+  const document=existing??supplied;selected.set(document.id,document);
+  return {name,media_type,bytes:supplied.bytes,sha256:supplied.sha256,document_id:document.id,retained_name:document.name,retained_media_type:document.media_type};
+ }
+ for(const file of prepared.files){if(names.has(file.name))throw new Error("Prepared proposal repeats a file name");names.add(file.name);members.push(await retain(file.name,file.media_type,file.bytes));}
+ for(const name of ["vendor-input.json","proposal-review.md","readiness.json"])if(!names.has(name))throw new Error("Prepared proposal omits "+name);
+ let original=null;if(originalReview){const supplied=originalReview.source;if(!supplied)throw new Error("Imported original is missing");const bytes=sourceBytes(supplied),validated=await documentFromBytes(supplied.name,supplied.media_type,bytes);if(canonical(validated)!==canonical(supplied))throw new Error("Imported original differs from its complete source");original=await retain(supplied.name,supplied.media_type,bytes);}
+ const manifest={schema:"commons.otf-vendor-edition.v1",files:members,imported_original:original},manifestDocument=await documentFromBytes("vendor-edition-manifest.json","application/json",new TextEncoder().encode(JSON.stringify(manifest,null,2)+"\n")),existing=opened.ledger.documents.find(d=>d.id===manifestDocument.id);
+ selected.set(manifestDocument.id,existing??manifestDocument);
+ const id="proposal-edition-"+manifestDocument.sha256,sourceInput={source_ids:[...selected.keys()],note:"Complete prepared vendor proposal edition. Original file names and each retained source binding are in vendor-edition-manifest.json; actual awarded terms are recorded separately."},prior=opened.ledger.operations.find(event=>event.id===id);
+ if(prior&&(prior.type!=="source.record"||canonical(prior.input)!==canonical(sourceInput)))throw new Error("Proposal edition ID belongs to a different original operation");
+ const result=await applyOperation(opened.ledger,{id,at:prior?prior.at:at,type:"source.record",input:sourceInput,documents:[...selected.values()]});
+ return {...result,edition:manifest,manifest_id:manifestDocument.id};
+}
+
+return {reviewVendorOriginal,retainVendorOriginal,retainVendorPrepared};})();
 modules["browser"]=(()=>{/* MIT. Local, portable operator desk. No external requests or automatic persistence. */
 const {createLedger,readLedger,applyOperation,receiveLedger,ledgerText,documentFromBytes,sourceBytes,decodeJSON,operationRequest,canonical,LIMITS,APPENDIX,money,dollars}=modules["model"];
-const {handoverZIP,invoiceHTML,invoiceCSV,caseHTML,workspaceHTML}=modules["reports"];
-const {reviewVendorOriginal,retainVendorOriginal}=modules["vendor-review"];
+const {handoverZIP,zipStore,invoiceHTML,invoiceCSV,caseHTML,workspaceHTML}=modules["reports"];
+const {reviewVendorOriginal,retainVendorOriginal,retainVendorPrepared}=modules["vendor-review"];
 const {FORM_SPECS}=modules["forms"];
+const {createVendorDraft,readVendorFields,applyVendorFields,exportVendorDraft,prepareVendorDraft}=modules["vendor-authoring"];
+const {VENDOR_SECTIONS}=modules["vendor-authoring-forms"];
 function startDesk(example=null){
- const root=document.getElementById("otf-workbench"),$=s=>root.querySelector(s);let current=null,opened=null,pending=[],dirty=false,busy=false,drafts={},vendorReview=null;
+ const root=document.getElementById("otf-workbench"),$=s=>root.querySelector(s);let current=null,opened=null,pending=[],dirty=false,busy=false,drafts={},vendorReview=null,vendorDraft=createVendorDraft(),vendorDirty=false,vendorControls=[],vendorPrepared=null;
  const e=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
  function note(message,error=false){const el=$("#notice");el.textContent=message;el.className=error?"notice error":"notice";el.hidden=false;}
  function fail(err){note((err.code?err.code+": ":"")+err.message,true);}
- async function work(task){if(busy)return;busy=true;root.inert=true;root.setAttribute("aria-busy","true");const buttons=[...root.querySelectorAll("button")];buttons.forEach(b=>b.disabled=true);try{await task();}catch(err){fail(err);}finally{busy=false;root.inert=false;root.removeAttribute("aria-busy");buttons.forEach(b=>b.disabled=false);}}
+ async function work(task){if(busy)return;busy=true;root.inert=true;root.setAttribute("aria-busy","true");const buttons=[...root.querySelectorAll("button")].map(b=>({button:b,disabled:b.disabled}));buttons.forEach(x=>x.button.disabled=true);try{await task();}catch(err){fail(err);}finally{busy=false;root.inert=false;root.removeAttribute("aria-busy");buttons.forEach(x=>{if(x.button.isConnected)x.button.disabled=x.disabled;});}}
  function download(name,data,type="application/octet-stream"){const url=URL.createObjectURL(new Blob([data],{type})),a=e("a");a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
  function table(headers,rows){const wrapper=e("div",undefined,"table-scroll"),t=e("table"),head=e("thead"),tr=e("tr");headers.forEach(h=>tr.append(e("th",h)));head.append(tr);t.append(head);const body=e("tbody");rows.forEach(r=>{const row=e("tr");r.forEach(cell=>{const td=e("td");td.append(cell instanceof Node?cell:document.createTextNode(String(cell??"")));row.append(td);});body.append(row);});t.append(body);wrapper.append(t);return wrapper;}
  function button(label,fn){const b=e("button",label);b.type="button";b.addEventListener("click",()=>work(fn));return b;}
@@ -503,16 +1205,30 @@ function startDesk(example=null){
  function section(id,title){const node=$(id);node.replaceChildren(e("h2",title));return node;}
  function show(tab){for(const pane of root.querySelectorAll("[data-pane]"))pane.hidden=pane.dataset.pane!==tab;for(const b of root.querySelectorAll("[data-tab]"))b.setAttribute("aria-current",b.dataset.tab===tab?"page":"false");}
  function optionsFor(field){if(field.options)return field.options.map(x=>[x,x]);if(field.type==="case")return (opened?.state.cases??[]).map(c=>[c.id,c.id+" · "+c.label]);if(field.type==="role")return (opened?.state.award?.roles??[]).map(r=>[r.id,r.id+" · "+r.label+" · USD "+r.rate+"/h"]);if(field.type==="service")return (opened?.state.award?.services??[]).map(x=>[x,x]);if(field.type==="sources")return listDocs().map(d=>[d.id,d.name+" · "+d.bytes+" bytes"]);return [];}
- function fieldControl(spec,path,initial){
+ function fieldControl(spec,path,initial,{preserveInitial=false}={}){
   const box=e(spec.type==="object"||spec.type==="array"?"fieldset":"div",undefined,"field"),label=e(spec.type==="object"||spec.type==="array"?"legend":"label",spec.label),uid="field-"+path.replace(/[^a-zA-Z0-9]/g,"-");box.append(label);
-  if(spec.type==="object"){const entries=spec.fields.map(f=>fieldControl(f,path+"-"+f.name,initial?.[f.name]));entries.forEach(x=>box.append(x.node));return {node:box,value:()=>Object.fromEntries(entries.map((x,n)=>[spec.fields[n].name,x.value()]).filter(([,v])=>v!==undefined))};}
-  if(spec.type==="array"){const items=e("div"),add=e("button","Add "+spec.label.toLowerCase()+" row"),records=[];add.type="button";box.append(items,add);function addRow(value){const row=e("fieldset",undefined,"repeat-row"),legend=e("legend","Row "+(records.length+1)),controls=spec.fields.map(f=>fieldControl(f,path+"-"+records.length+"-"+f.name,value?.[f.name])),remove=e("button","Remove row");remove.type="button";row.append(legend,...controls.map(x=>x.node),remove);const record={row,controls,active:true};records.push(record);items.append(row);remove.addEventListener("click",()=>{record.active=false;row.remove();});}add.addEventListener("click",()=>addRow());for(const value of initial??[])addRow(value);return {node:box,value:()=>records.filter(x=>x.active).map(r=>Object.fromEntries(r.controls.map((x,n)=>[spec.fields[n].name,x.value()])))};}
+  if(spec.type==="object"){const original=preserveInitial&&initial?JSON.parse(JSON.stringify(initial)):{},entries=spec.fields.map(f=>fieldControl(f,path+"-"+f.name,initial?.[f.name],{preserveInitial}));entries.forEach(x=>box.append(x.node));return {node:box,value:()=>({...original,...Object.fromEntries(entries.map((x,n)=>[spec.fields[n].name,x.value()]).filter(([,v])=>preserveInitial||v!==undefined))})};}
+  if(spec.type==="array"){
+   const items=e("div"),add=e("button","Add "+spec.label.toLowerCase()+" row"),records=[];let serial=0;add.type="button";box.append(items,add);
+   const changed=()=>box.dispatchEvent(new Event("input",{bubbles:true}));
+   function update(){const active=records.filter(x=>x.active);for(const [index,r] of active.entries()){r.legend.textContent="Row "+(index+1);items.append(r.row);if(r.up){r.up.disabled=index===0;r.down.disabled=index===active.length-1;}}add.disabled=!!spec.maxItems&&active.length>=spec.maxItems;}
+   function move(record,delta){const active=records.filter(x=>x.active),other=active[active.indexOf(record)+delta];if(!other)return;const a=records.indexOf(record),b=records.indexOf(other);[records[a],records[b]]=[records[b],records[a]];update();changed();}
+   function addRow(value,existing=false){
+    if(!existing&&spec.maxItems&&records.filter(x=>x.active).length>=spec.maxItems)throw new Error(spec.label+" permits at most "+spec.maxItems+" rows");
+    const row=e("fieldset",undefined,"repeat-row"),legend=e("legend"),original=preserveInitial&&value?JSON.parse(JSON.stringify(value)):{},controls=spec.fields.map(f=>fieldControl(f,path+"-"+serial+"-"+f.name,value?.[f.name],{preserveInitial})),remove=e("button","Remove row");serial++;remove.type="button";row.append(legend,...controls.map(x=>x.node),remove);
+    const record={row,legend,original,controls,active:true};records.push(record);items.append(row);
+    if(preserveInitial){record.up=e("button","Move up");record.down=e("button","Move down");record.up.type=record.down.type="button";record.up.addEventListener("click",()=>move(record,-1));record.down.addEventListener("click",()=>move(record,1));row.append(record.up,record.down);}
+    remove.addEventListener("click",()=>{record.active=false;row.remove();update();changed();});update();
+   }
+   add.addEventListener("click",()=>{try{addRow();changed();}catch(error){fail(error);}});for(const value of initial??[])addRow(value,true);
+   return {node:box,value:()=>records.filter(x=>x.active).map(r=>({...r.original,...Object.fromEntries(r.controls.map((x,n)=>[spec.fields[n].name,x.value()]))}))};
+  }
   if(["sources","multi"].includes(spec.type)){const choices=optionsFor(spec),group=e("div",undefined,"choices");if(!choices.length)group.append(e("p","Attach original files in Sources first.","muted"));const controls=choices.map(([value,labelText])=>{const l=e("label"),input=e("input");input.type="checkbox";input.value=value;input.checked=Array.isArray(initial)&&initial.includes(value);l.append(input,document.createTextNode(" "+labelText));group.append(l);return input;});box.append(group);return{node:box,value:()=>controls.filter(x=>x.checked).map(x=>x.value)};}
   let input;if(["select","case","role","service"].includes(spec.type)){input=e("select");input.append(new Option("Choose…",""));for(const [value,title] of optionsFor(spec))input.append(new Option(title,value));}
   else if(spec.type==="textarea"||spec.type==="lines"){input=e("textarea");input.rows=spec.type==="textarea"?4:3;}
   else{input=e("input");input.type=spec.type==="boolean"?"checkbox":spec.type==="integer"?"number":"text";if(spec.type==="integer"){input.min="0";input.step="1";}if(spec.type==="money"){input.inputMode="decimal";input.placeholder="0.00";}if(spec.type==="utc")input.placeholder="2027-03-01T09:00:00Z";}
   if(initial!==undefined&&initial!==null){if(spec.type==="boolean")input.checked=initial;else input.value=spec.type==="lines"?initial.join("\n"):String(initial);}input.id=uid;label.htmlFor=uid;if(spec.type!=="boolean"&&spec.type!=="lines"&&!spec.nullable&&!spec.optional)input.required=true;box.append(input);
-  return{node:box,value:()=>{if(spec.type==="boolean")return input.checked;const v=input.value.trim();if(!v&&spec.optional)return undefined;if(!v&&spec.nullable)return null;if(spec.type==="integer")return Number(v);if(spec.type==="lines")return v?v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean):[];return v;}};
+  return{node:box,value:()=>{if(spec.type==="boolean")return input.checked;const v=preserveInitial?input.value:input.value.trim();if(!v.trim()&&spec.optional)return undefined;if(!v.trim()&&spec.nullable)return null;if(spec.type==="integer")return Number(v);if(spec.type==="lines")return v?v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean):[];return v;}};
  }
  let controls=[],spec=FORM_SPECS[0];
  function actionForm(){if(controls.length&&spec){try{drafts[spec.type]=Object.fromEntries(controls.map((x,n)=>[spec.fields[n].name,x.value()]));}catch{}}spec=FORM_SPECS.find(x=>x.type===$("#action-type").value)||FORM_SPECS[0];const body=$("#action-fields");body.replaceChildren();controls=spec.fields.map(f=>fieldControl(f,"action-"+f.name,drafts[spec.type]?.[f.name]));controls.forEach(x=>body.append(x.node));}
@@ -539,10 +1255,35 @@ function startDesk(example=null){
  $("#example").addEventListener("click",()=>work(async()=>{if(!example)throw new Error("This build has no authored example");if(current&&!confirm("Open the authored example? Download current originals first."))return;await accept((await readLedger(example)).ledger,false);note("Authored example loaded. Every source explicitly identifies itself as an authored example.");show("overview");}));
  $("#request-input").addEventListener("change",event=>work(async()=>{if(!current)throw new Error("Create or open a workbook first");const file=event.target.files[0];if(!file)return;const request=decodeJSON(new Uint8Array(await file.arrayBuffer()));const value=await applyOperation(current,request);await accept(value.ledger,!value.already_present||dirty,{preserveSelections:true});note(value.already_present?"Original request replay matched.":"Complete original request retained.");event.target.value="";}));
  
- $("#vendor-input").addEventListener("change",event=>work(async()=>{const file=event.target.files[0];if(!file)return;if(file.size>LIMITS.document_bytes)throw new Error("Vendor original exceeds 24 MiB");vendorReview=await reviewVendorOriginal(file.name,new Uint8Array(await file.arrayBuffer()));const p=vendorReview.proposal,node=section("#vendor-review","Original vendor proposal");node.append(e("h3",p.provider||"Provider unfilled"),table(["Proposed role ID","Title","Proposed loaded USD / hour"],p.roles.map(r=>[r.id,r.title,r.proposed_loaded_hourly_cents===null?"Unfilled":dollars(r.proposed_loaded_hourly_cents)])),table(["Requested ceiling USD","Requested direct costs USD","Category"],[[p.budget.requested_contract_ceiling_cents===null?"Unfilled":dollars(p.budget.requested_contract_ceiling_cents),p.budget.other_direct_costs_cents===null?"Unfilled":dollars(p.budget.other_direct_costs_cents),p.budget.other_direct_costs_category]]),table(["Service","Offering","Method"],p.services.map(s=>[s.category,s.offering,s.method])),e("p",p.declared_capacity),e("p",p.declared_response));const missing=e("ul");for(const item of [...p.quality.needs,...p.quality.warnings])missing.append(e("li",item));node.append(e("h3","Maintained compiler completeness"),missing);node.append(button("Download full internal proposal",()=>download("vendor-proposal-review.md",vendorReview.markdown,"text/markdown")),button("Retain original proposal in current workbook",async()=>{if(!current)throw new Error("Create or open a workbook first");const value=await retainVendorOriginal(current,vendorReview,new Date().toISOString());await accept(value.ledger,!value.already_present||dirty,{preserveSelections:true});note(value.already_present?"Original proposal already retained; the exact original operation was reused.":"Original proposal retained. Other selected originals remain available for their next operation.");}));event.target.value="";note("Original proposal read through the maintained vendor compiler.");}));
 
- window.addEventListener("beforeunload",event=>{if(dirty||pending.length){event.preventDefault();event.returnValue="";}});
- $("#operation-id").value="op-"+Date.now();render();show("overview");if(!globalThis.crypto?.subtle)note("This browser does not expose SHA-256 on this origin. Open the same standalone desk as a local file or through a trusted localhost HTTPS context.",true);
+ function captureVendor(){const values=Object.fromEntries(vendorControls.map(x=>[x.spec.name,x.control.value()]));vendorDraft=applyVendorFields(vendorDraft,values);return vendorDraft;}
+ function markVendorChanged(){vendorDirty=true;vendorPrepared=null;$("#vendor-results").replaceChildren(e("p","Draft changed. Prepare it again to update the review and original issuer workbook.","muted"));$("#vendor-state").textContent="Unsaved proposal edits";}
+ function renderVendorFields(values=readVendorFields(vendorDraft)){
+  const node=$("#vendor-fields");node.replaceChildren();vendorControls=[];
+  for(const section of VENDOR_SECTIONS){const details=e("details"),summary=e("summary",section.title);details.open=section.id==="applicant";details.append(summary,e("p",section.description,"muted"));for(const field of section.fields){const control=fieldControl(field,"vendor-"+field.name,values[field.name],{preserveInitial:true});vendorControls.push({spec:field,control});details.append(control.node);}node.append(details);}
+ }
+ function renderVendorOriginal(){
+  const node=section("#vendor-review","Imported original");if(!vendorReview){node.append(e("p","Start a proposal here or open its complete vendor input JSON. The imported original stays available while you edit a separate draft.","muted"));return;}
+  const review=vendorReview,p=review.proposal;node.append(e("p",review.source.name+" · "+review.source.bytes+" bytes · SHA-256 "+review.source.sha256,"small"),table(["Original provider","Proposed roles","Offered services"],[[p.provider||"Unfilled",p.roles.length,p.services.map(s=>s.category).join(", ")]]),button("Download imported original",()=>download(review.source.name,sourceBytes(review.source),"application/json")),button("Retain imported original in case workbook",async()=>{if(!current)throw new Error("Create or open a case workbook first");const value=await retainVendorOriginal(current,review,new Date().toISOString());await accept(value.ledger,!value.already_present||dirty,{preserveSelections:true});note(value.already_present?"Imported original already retained; its exact operation was reused.":"Imported original retained; unrelated selected files remain available.");}));
+ }
+ function renderVendorPrepared(prepared){
+  const node=section("#vendor-results","Prepared proposal edition"),review=prepared.review;node.append(e("p",review.submissionComplete?"All required proposal content is complete. Inspect the actual outgoing documents before presenting this edition.":"Continue the incomplete fields below. The editable proposal and internal review remain downloadable.","muted"));
+  if(review.quality.needs.length||review.quality.warnings.length){const list=e("ul");for(const item of [...review.quality.needs,...review.quality.warnings])list.append(e("li",item));node.append(list);}
+  if(review.submissionIssues.length&&review.quality.needs.length===0&&review.quality.warnings.length===0){const list=e("ul");for(const item of review.submissionIssues)list.append(e("li",item));node.append(list);}
+  node.append(table(["Complete file","Bytes","Download"],prepared.files.map(file=>[file.name,file.bytes.length,button(file.name,()=>download(file.name,file.bytes,file.media_type))])));
+  const preview=e("details"),summary=e("summary","Read the complete internal proposal"),pre=e("pre",review.internalMarkdown);preview.append(summary,pre);node.append(preview);
+  const original=vendorReview;
+  node.append(button("Download complete proposal package ZIP",()=>{const entries=prepared.files.map(f=>({name:f.name,data:f.bytes}));if(original)entries.push({name:"originals/imported-vendor-input.json",data:sourceBytes(original.source)},{name:"originals/source.json",data:JSON.stringify({name:original.source.name,bytes:original.source.bytes,sha256:original.source.sha256},null,2)+"\n"});download("otf-vendor-proposal.zip",zipStore(entries),"application/zip");}),button("Retain this prepared proposal in case workbook",async()=>{if(!current)throw new Error("Create or open a case workbook first");const value=await retainVendorPrepared(current,prepared,original,new Date().toISOString());await accept(value.ledger,!value.already_present||dirty,{preserveSelections:true});note(value.already_present?"This exact proposal edition is already retained.":"Complete proposal edition and imported original retained. Download the case workbook or handover ZIP to save every document.");}));
+ }
+ $("#vendor-fields").addEventListener("input",markVendorChanged);
+ $("#vendor-fields").addEventListener("change",markVendorChanged);
+ $("#vendor-new").addEventListener("click",()=>work(async()=>{if(vendorDirty&&!confirm("Start a new proposal? Download the current editable proposal first."))return;vendorDraft=createVendorDraft();vendorReview=null;vendorPrepared=null;vendorDirty=true;renderVendorFields();renderVendorOriginal();markVendorChanged();}));
+ $("#vendor-input").addEventListener("change",event=>work(async()=>{const file=event.target.files[0];if(!file)return;if(vendorDirty&&!confirm("Open a different proposal? Download current proposal edits first.")){event.target.value="";return;}if(file.size>LIMITS.document_bytes)throw new Error("Vendor original exceeds 24 MiB");const bytes=new Uint8Array(await file.arrayBuffer()),review=await reviewVendorOriginal(file.name,bytes),draft=createVendorDraft(decodeJSON(bytes)),values=readVendorFields(draft);vendorReview=review;vendorDraft=draft;vendorPrepared=null;vendorDirty=false;renderVendorFields(values);renderVendorOriginal();$("#vendor-results").replaceChildren();$("#vendor-state").textContent="Imported original retained separately from editable draft";event.target.value="";note("Complete original proposal opened. All nine sections are available for editing.");}));
+ $("#vendor-save").addEventListener("click",()=>work(async()=>{const draft=captureVendor();download("vendor-input.json",exportVendorDraft(draft),"application/json");vendorDirty=false;$("#vendor-state").textContent="Editable proposal downloaded";note("Complete editable proposal downloaded, including retained unknown source fields.");}));
+ $("#vendor-prepare").addEventListener("click",()=>work(async()=>{vendorPrepared=await prepareVendorDraft(captureVendor());renderVendorPrepared(vendorPrepared);$("#vendor-state").textContent=vendorDirty?"Prepared current edits · download editable proposal to save":"Prepared imported proposal edition";note(vendorPrepared.review.budget?"Proposal review and exact original issuer workbook prepared.":"Proposal review prepared; the displayed workbook message identifies the remaining runtime capability.");}));
+
+ window.addEventListener("beforeunload",event=>{if(dirty||pending.length||vendorDirty){event.preventDefault();event.returnValue="";}});
+ $("#operation-id").value="op-"+Date.now();render();renderVendorFields();renderVendorOriginal();show("overview");if(!globalThis.crypto?.subtle)note("This browser does not expose SHA-256 on this origin. Open the same standalone desk as a local file or through a trusted localhost HTTPS context.",true);
 }
 
 return {startDesk};})();

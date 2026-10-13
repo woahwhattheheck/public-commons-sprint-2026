@@ -8,7 +8,7 @@ Import `VENDOR_SECTIONS` from `vendor-authoring-forms.mjs` and the functions fro
 
 1. Read the original JSON using the existing original-document path. Keep those exact source bytes and its review separately.
 2. Call `createVendorDraft(original)`, then `readVendorFields(draft)` for field values. Amounts are plain USD text for editing.
-3. Pass the complete returned field values to `applyVendorFields(draft, values)`. The function returns a new draft and leaves the prior object intact. Repeatable rows must include the original unknown fields retained by the form renderer. Optional declared fields returned as undefined or blank are cleared.
+3. Pass the complete returned field values to `applyVendorFields(draft, values)`. The function returns a new draft and leaves the prior object intact. Every supplied array is a complete replacement, not a partial row patch. A row missing any declared required field is rejected. Repeatable rows must include the original unknown fields retained by the form renderer; correspondence is carried by the actual row object rather than guessed from its array index. Optional declared fields returned as undefined or blank are cleared.
 4. Await `reviewVendorDraft(draft)` for internal Markdown, readiness, outward-edition eligibility and the actual budget result. Await `prepareVendorDraft(draft)` for complete downloadable files. `exportVendorDraft(draft)` always supplies editable JSON.
 5. Retain an authored draft through the existing `reviewVendorOriginal` / `retainVendorOriginal` operation when requested; this creates a new source document without changing the original imported source. The existing case ledger remains the only retained workspace.
 

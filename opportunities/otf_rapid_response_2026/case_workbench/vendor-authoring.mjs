@@ -45,7 +45,7 @@ export function readVendorFields(draft){
 }
 function applyField(base,value,field,path){
  if(field.type==="object"){object(value,path);const result={...object(base??{},path),...value};for(const f of field.fields){if(!has(value,f.name))continue;const next=applyField(base?.[f.name],value[f.name],f,path+"."+f.name);if(next===undefined)delete result[f.name];else result[f.name]=next;}return result;}
- if(field.type==="array"){if(!Array.isArray(value))throw new Error(path+" must be an array");if(field.maxItems&&value.length>field.maxItems)throw new Error(field.label+" permits at most "+field.maxItems+" rows");return value.map((row,i)=>applyField({},row,{type:"object",fields:field.fields},path+"["+i+"]"));}
+ if(field.type==="array"){if(!Array.isArray(value))throw new Error(path+" must be an array");if(field.maxItems&&value.length>field.maxItems)throw new Error(field.label+" permits at most "+field.maxItems+" rows");return value.map((row,i)=>{object(row,path+"["+i+"]");for(const f of field.fields)if(!f.optional&&!has(row,f.name))throw new Error(path+"["+i+"]: repeated rows are complete replacements; missing "+f.name);return applyField({},row,{type:"object",fields:field.fields},path+"["+i+"]");});}
  if(field.type==="money")return parseVendorUSD(value,{label:field.label,optional:field.optional,positive:field.name!=="otherDirectCostsCents",max:field.name.endsWith("HourlyCents")?100000000:15000000});
  if(value===undefined&&field.optional)return undefined;
  if(field.type==="boolean"){if(typeof value!=="boolean")throw new Error(path+" must be a recorded true / false value");return value;}
