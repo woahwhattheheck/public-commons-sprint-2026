@@ -215,24 +215,20 @@ def _log(workspace, run_id, attempt, stream, offset, expected_attempt):
             "available_streams": list(streams)}
 
 
-def read(workspace, study_id, run_id, *, attempt_id=None, stream="native",
-         log_offset=None, expected_attempt_id=None, history_offset=0, limit=25):
-    """Read one exact saved case; no native calculation or state mutation occurs."""
-    study_id, run_id = identifier(study_id), identifier(run_id)
-    context = native_case_context(workspace, study_id, run_id)
-    study = _read(workspace, study_id)
-    cases = [{name: case.get(name) for name in ("id", "label", "run_id", "profile_id", "overrides")}
-             for case in study["cases"] if case["run_id"] == run_id]
+def read_run(workspace, run_id, *, attempt_id=None, stream="native",
+             log_offset=None, expected_attempt_id=None, history_offset=0, limit=25):
+    """Read the common original native receipts after the caller binds its case."""
+    run_id = identifier(run_id)
     native = inspect_execution(workspace, run_id, log_bytes=0)
     run = workspace.inspect_run(run_id)
     records = _attempts(workspace, run)
-    selected = (next((record for record in records if record["id"] == attempt_id), None)
-                if attempt_id else next((record for record in records
-                                         if record["state"] != "unavailable"), None))
-    if attempt_id and selected is None:
+    chosen = (next((record for record in records if record["id"] == attempt_id), None)
+              if attempt_id else next((record for record in records
+                                       if record["state"] != "unavailable"), None))
+    if attempt_id and chosen is None:
         raise ValueError("Choose an attempt retained for this original native case")
-    if selected and selected["state"] == "unavailable":
-        raise ValueError(selected["error"]["message"])
+    if chosen and chosen["state"] == "unavailable":
+        raise ValueError(chosen["error"]["message"])
     offset = _page_number(history_offset, "Attempt offset", 0)
     size = _page_number(limit, "Attempt page size", 25, maximum=100)
     if size == 0:
@@ -242,15 +238,26 @@ def read(workspace, study_id, run_id, *, attempt_id=None, stream="native",
                "execution_id", "return_code", "request_sha256", "error")
     history = [{name: row.get(name) for name in columns}
                for row in records[offset:offset + size]]
-    return {"schema": SCHEMA, "workspace_id": workspace.project["id"],
-            "study_id": study_id, "title": study["selection"]["title"], "study_state": study["state"],
-            "coordinator_active": _coordinator_active(workspace),
-            "case_bindings": cases, "context": context, "native": native,
-            "attempt": selected, "history": {"offset": offset, "limit": size,
-                                             "total": len(records), "rows": history},
-            "log": _log(workspace, run_id, selected, stream, log_offset, expected_attempt_id),
-            "continuation": {"action": "parameter-study.run", "payload": {"experiment_id": study_id},
-                             "scope": "The original saved study and its remaining cases",
-                             "native_run_argv": native["continue_argv"]},
+    return {"schema": "upstate.native-case-attempts/v1", "workspace_id": workspace.project["id"],
+            "coordinator_active": _coordinator_active(workspace), "native": native,
+            "attempt": chosen, "history": {"offset": offset, "limit": size,
+                                           "total": len(records), "rows": history},
+            "log": _log(workspace, run_id, chosen, stream, log_offset, expected_attempt_id),
             "resource_basis": "Saved observations retain their original observing process. "
                               "Cgroup counters include other processes; a group event does not identify its victim."}
+
+
+def read(workspace, study_id, run_id, **options):
+    """Read one exact saved study case without changing its original state."""
+    study_id, run_id = identifier(study_id), identifier(run_id)
+    context = native_case_context(workspace, study_id, run_id)
+    study = _read(workspace, study_id)
+    cases = [{name: case.get(name) for name in ("id", "label", "run_id", "profile_id", "overrides")}
+             for case in study["cases"] if case["run_id"] == run_id]
+    value = read_run(workspace, run_id, **options)
+    return {**value, "schema": SCHEMA, "study_id": study_id,
+            "title": study["selection"]["title"], "study_state": study["state"],
+            "case_bindings": cases, "context": context,
+            "continuation": {"action": "parameter-study.run", "payload": {"experiment_id": study_id},
+                             "scope": "The original saved study and its remaining cases",
+                             "native_run_argv": value["native"]["continue_argv"]}}
