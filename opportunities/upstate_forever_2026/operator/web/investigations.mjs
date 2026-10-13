@@ -16,7 +16,7 @@ const actionNames = {
 export function createInvestigationClient(options) {
  const {api,getWorkspace,onChange=()=>{},onNotice=()=>{}}=options;
  const storage=options.storage || globalThis.sessionStorage;
- const contexts=new Map(),refreshes=new Map();
+ const contexts=new Map(),refreshes=new Map(),diagnosticFlights=new Map();
  const key=w=>'upstate-intelligence:'+w;
  const makeId=()=> 'intelligence_'+(options.randomUUID?.() || globalThis.crypto?.randomUUID?.() ||
    Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_'+Math.random().toString(36).slice(2)).replaceAll('-','');
@@ -29,15 +29,16 @@ export function createInvestigationClient(options) {
     sourceSelection:Array.isArray(saved.sourceSelection)?saved.sourceSelection:[],
     experiment:null,experimentId:saved.experimentId||null,experimentOffset:saved.experimentOffset||0,experimentRead:0,
     nativeTask:null,nativeTaskRead:0,experimentSubmission:saved.experimentSubmission||null,
+    diagnosticReport:null,diagnosticIntake:saved.diagnosticIntake||null,diagnosticRead:0,
     lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,loading:false,error:null,readErrors:{}});
   }return contexts.get(w);
  };
- const persist=c=>{try{storage?.setItem(key(c.workspace),json({sessionId:c.sessionId,pending:c.pending,lastResult:c.lastResult,draft:c.draft,collectionId:c.collectionId,sourceSelection:c.sourceSelection,experimentId:c.experimentId,experimentOffset:c.experimentOffset,experimentSubmission:c.experimentSubmission}));}
+ const persist=c=>{try{storage?.setItem(key(c.workspace),json({sessionId:c.sessionId,pending:c.pending,lastResult:c.lastResult,draft:c.draft,diagnosticIntake:c.diagnosticIntake,collectionId:c.collectionId,sourceSelection:c.sourceSelection,experimentId:c.experimentId,experimentOffset:c.experimentOffset,experimentSubmission:c.experimentSubmission}));}
   catch{onNotice('Browser recovery storage is unavailable. Keep the original operation ID shown here.');}};
  const changed=c=>{persist(c);if(c.workspace===getWorkspace())onChange(snapshot());};
  const path=(name,w,values={})=>'/api/intelligence/'+name+'?'+new URLSearchParams({workspace:w,...values});
  const read=async(name,w,values={})=>api(path(name,w,values));
- const snapshot=()=>clone(context(getWorkspace()));
+ const snapshot=(w=getWorkspace())=>clone(context(w));
  async function catalog(w=getWorkspace()){
   const c=context(w),value=await read('catalog',w);c.catalog=value;changed(c);return value;
  }
@@ -191,6 +192,7 @@ export function createInvestigationClient(options) {
      ['collection','Retained file collection',()=>c.collectionId&&c.sessionId?collection(c.collectionId,w,c.sessionId):null],
      ['programme','Original programme results',()=>c.experimentId?experiment(c.experimentId,c.experimentOffset,w):null]
     ]);
+    if(c.diagnosticIntake)await reconcileReads(c,[['diagnostic','Saved scientific interpretation',()=>resumeDiagnostic(w)]]);
    }finally{c.loading=false;refreshes.delete(w);changed(c);}
    return clone(c);
   })();
@@ -212,6 +214,20 @@ export function createInvestigationClient(options) {
   c.lastTask=task;p.taskId=task.id;p.taskState=task.state;p.error=null;
   if(task.state==='complete'){
    const r=task.result||{};c.lastResult=clone(r);c.pending=null;
+   const intake=c.diagnosticIntake;
+   if(p.body.action==='intelligence.diagnostic.open' && intake?.operation_id===p.body.operation_id){
+    if(r.diagnostic_id!==intake.diagnostic_id || r.dataset_id!==intake.dataset_id ||
+       !r.session_id || !r.evidence_id || !originalId(r.source_sha256) ||
+       (r.report_dataset_id && r.report_dataset_id!=='es26:'+intake.diagnostic_id+':report_revision_'+r.source_sha256)){
+     intake.phase='error';intake.error='The original diagnostic operation returned a different saved report.';changed(c);throw Error(intake.error);
+    }
+    Object.assign(intake,{session_id:r.session_id,evidence_id:r.evidence_id,report_dataset_id:r.report_dataset_id||r.dataset_id,completed_operation_id:p.body.operation_id,
+     operation_id:null,phase:'received',error:null});
+    if(intake.source_sha256 && intake.source_sha256!==r.source_sha256){
+     intake.phase='error';intake.error='The saved diagnostic changed while its original operation was running.';changed(c);throw Error(intake.error);
+    }
+    intake.source_sha256=r.source_sha256;
+   }
    if(r.session_id && ((['intelligence.session.create','intelligence.diagnostic.open'].includes(p.body.action) &&
        (p.selectedSessionId===undefined||c.sessionId===p.selectedSessionId))||!c.sessionId||c.sessionId===r.session_id)){
     if(c.sessionId!==r.session_id){c.sessionId=r.session_id;c.session=null;c.evidence=null;c.exported=null;c.collection=null;c.collectionId=null;++c.sessionRead;++c.collectionRead;}
@@ -243,12 +259,16 @@ export function createInvestigationClient(options) {
    throw error;
   }
  }
- async function queue(action,payload={}){
+ async function queue(action,payload={},w=getWorkspace()){
   if(!Object.hasOwn(actionNames,action))throw Error('Choose a registered investigation operation.');
-  const w=getWorkspace(),c=context(w);
+  const c=context(w);
   if(c.pending)throw Error('Reopen or finish the existing investigation operation first.');
   const p={body:{workspace:w,action,payload:clone(payload),operation_id:makeId()},selectedSessionId:c.sessionId,taskId:null,taskState:null,error:null};
-  c.pending=p;changed(c);return send(c,p);
+  c.pending=p;
+  if(action==='intelligence.diagnostic.open' && c.diagnosticIntake?.diagnostic_id===payload.diagnostic_id){
+   c.diagnosticIntake.operation_id=p.body.operation_id;c.diagnosticIntake.phase='submitted';
+  }
+  changed(c);return send(c,p);
  }
  async function retry(){
   const c=context(getWorkspace()),p=c.pending;if(!p)return null;
@@ -261,18 +281,106 @@ export function createInvestigationClient(options) {
   if(c.pending===p)return accept(task,c,p,hydrate);
   return task;
  }
+
+ function diagnosticSelection(value){
+  const w=value?.workspace_key,id=value?.diagnostic_id;
+  if(typeof w!=='string'||!w||!originalId(id)||value.dataset_id!=='es26:'+id+':report_json'||
+     (value.report_sha256!=null&&!originalId(value.report_sha256)))
+   throw Error('Open an original saved scientific diagnostic from its current workspace.');
+  return {workspace_key:w,diagnostic_id:id,dataset_id:value.dataset_id,
+   ...(value.report_sha256?{report_sha256:value.report_sha256}:{}),title:typeof value.title==='string'&&value.title.trim()?value.title.trim():'Scientific interpretation'};
+ }
+ async function diagnostic(id,w=getWorkspace(),reportSha=null){
+  if(!originalId(id)||(reportSha!=null&&!originalId(reportSha)))throw Error('Choose an original saved diagnostic and report revision.');
+  const c=context(w),revision=++c.diagnosticRead,value=await read('diagnostic',w,{diagnostic_id:id,...(reportSha?{report_sha256:reportSha}:{})}),m=value?._investigation;
+  if(m?.workspace_key!==w||m.diagnostic_id!==id||m.dataset_id!=='es26:'+id+':report_json'||!originalId(m.source_sha256)||
+     (reportSha&&m.source_sha256!==reportSha)||
+     (m.report_dataset_id && m.report_dataset_id!=='es26:'+id+':report_revision_'+m.source_sha256))
+   throw Error('The saved report does not match this diagnostic and workspace.');
+  if(revision===c.diagnosticRead && c.diagnosticIntake?.diagnostic_id===id){c.diagnosticReport=value;changed(c);}
+  return value;
+ }
+ function matchesDiagnosticEvidence(value,intake){
+  return value?.id===intake.evidence_id && (value.sources||[]).some(source=>
+   source.sha256===intake.source_sha256 && stable(source.ref)===stable({kind:'dataset',id:intake.report_dataset_id||intake.dataset_id}));
+ }
+ async function resumeDiagnostic(w=getWorkspace()){
+  const c=context(w),intake=c.diagnosticIntake;if(!intake)return snapshot(w);
+  const selection=diagnosticSelection(intake);
+  if(selection.workspace_key!==w)throw Error('This diagnostic belongs to its original workspace.');
+  const existing=diagnosticFlights.get(w);if(existing?.intake===intake)return existing.promise;
+  const run=async()=>{
+   try{
+    intake.error=null;
+    if(c.pending){
+     if(c.pending.body.operation_id!==intake.operation_id){intake.phase='waiting';changed(c);return snapshot(w);}
+     if(['failed','interrupted','canceled','cancelled'].includes(c.pending.taskState)){
+      intake.phase='waiting';changed(c);return snapshot(w);
+     }
+     intake.phase='submitted';changed(c);
+     if(c.pending.taskId)await poll(w);else await send(c,c.pending);
+     if(c.pending || c.diagnosticIntake!==intake)return snapshot(w);
+    }
+    if(intake.operation_id && !c.pending){
+     intake.phase='error';intake.error='Reopen the retained original task to resolve its returned diagnostic result.';changed(c);return snapshot(w);
+    }
+    intake.phase='receiving';changed(c);
+    const pinned=intake.session_id&&intake.evidence_id&&intake.report_dataset_id&&intake.report_dataset_id!==intake.dataset_id?intake.source_sha256:null;
+    const report=await diagnostic(intake.diagnostic_id,w,pinned);
+    if(c.diagnosticIntake!==intake)return snapshot(w);
+    const source=report._investigation.source_sha256;
+    if((intake.report_sha256 && source!==intake.report_sha256)||(intake.source_sha256 && source!==intake.source_sha256))
+     throw Error('The saved report has a different source edition from this investigation request.');
+    intake.source_sha256=source;
+    if(!intake.session_id || !intake.evidence_id){
+     await queue('intelligence.diagnostic.open',{diagnostic_id:intake.diagnostic_id,dataset_id:intake.dataset_id,title:intake.title,report_sha256:source},w);
+     if(c.pending || c.diagnosticIntake!==intake)return snapshot(w);
+     if(!intake.session_id || !intake.evidence_id)throw Error('The original task has not returned its saved investigation and evidence.');
+    }
+    const currentSelection=c.sessionId;
+    if(currentSelection && currentSelection!==intake.origin_session_id && currentSelection!==intake.session_id){
+     intake.phase='ready';changed(c);return snapshot(w);
+    }
+    if(c.sessionId!==intake.session_id || !c.session)await session(intake.session_id,w);
+    if(c.diagnosticIntake!==intake)return snapshot(w);
+    const item=c.evidence?.id===intake.evidence_id?c.evidence:await evidence(intake.evidence_id,w,intake.session_id);
+    if(!matchesDiagnosticEvidence(item,intake))throw Error('The retained evidence does not match this complete saved report.');
+    intake.phase='ready';changed(c);return snapshot(w);
+   }catch(error){
+    if(c.diagnosticIntake===intake){intake.phase='error';intake.error=error.message;changed(c);}
+    throw error;
+   }
+  };
+  const row={intake,promise:null};row.promise=run().finally(()=>{if(diagnosticFlights.get(w)===row)diagnosticFlights.delete(w);});
+  diagnosticFlights.set(w,row);return row.promise;
+ }
+ async function openForDiagnostic(value){
+  const selection=diagnosticSelection(value),w=selection.workspace_key;
+  if(w!==getWorkspace())throw Error('Reopen this diagnostic in its original selected workspace.');
+  const c=context(w),prior=c.diagnosticIntake;
+  const same=prior?.diagnostic_id===selection.diagnostic_id && prior.dataset_id===selection.dataset_id &&
+   (!selection.report_sha256 || selection.report_sha256===(prior.report_sha256||prior.source_sha256));
+  if(!same && prior?.operation_id && c.pending?.body.operation_id===prior.operation_id)
+   throw Error('The earlier saved diagnostic is still opening. Its original operation is retained below.');
+  c.diagnosticIntake=same?Object.assign(prior,selection,{origin_session_id:c.sessionId,error:null}):
+   {...selection,origin_session_id:c.sessionId,phase:'staged',error:null};
+  changed(c);return resumeDiagnostic(w);
+ }
+
  function clearFinished(){
   const c=context(getWorkspace()),p=c.pending;
   if(!p || !['failed','interrupted','canceled','cancelled'].includes(p.taskState))
    throw Error('Keep the current original operation until its status is known.');
+  if(c.diagnosticIntake?.operation_id===p.body.operation_id){Object.assign(c.diagnosticIntake,{operation_id:null,phase:'staged',error:null});}
   c.pending=null;changed(c);
  }
- return {snapshot,catalog,session,evidence,exported,collectionSources,collection,experiment,nativeTask,trackExperimentSubmission,pollExperimentSubmission,selectSubmittedExperiment,clearExperimentSubmission,selectSources,clearSourceSelection,exportCollection,refresh,queue,retry,poll,clearFinished,
+ return {snapshot,catalog,session,evidence,exported,collectionSources,collection,experiment,nativeTask,trackExperimentSubmission,pollExperimentSubmission,selectSubmittedExperiment,clearExperimentSubmission,selectSources,clearSourceSelection,exportCollection,refresh,queue,retry,poll,clearFinished,openForDiagnostic,resumeDiagnostic,diagnostic,
   saveDraft(draft,w=getWorkspace()){const c=context(w);c.draft=clone(draft);persist(c);},
   async acceptState(state){
    const c=context(workspaceId(state));
    if(c.pending?.taskId){const t=state.tasks?.find(x=>x.id===c.pending.taskId);
     if(t && t.state!==c.pending.taskState)await poll(c.workspace);}
+   if(c.diagnosticIntake && !c.pending && ['staged','waiting','submitted','received','receiving'].includes(c.diagnosticIntake.phase))await resumeDiagnostic(c.workspace);
    const submission=c.experimentSubmission;
    if(submission){const task=state.tasks?.find(x=>x.id===submission.taskId);
     if(task&&task.state!==submission.taskState)await pollExperimentSubmission(c.workspace);}
@@ -282,11 +390,12 @@ export function createInvestigationClient(options) {
 }
 
 
+const resourceLabel=row=>row?.label||row?.title||row?.name||row?.id||'Original resource';
 const displayNumber=value=>value==null?'—':typeof value==='number'?new Intl.NumberFormat('en-US',{maximumSignificantDigits:8}).format(value):String(value);
 const displayTime=value=>{if(!value)return '—';const d=new Date(value);return Number.isNaN(d.valueOf())?String(value):d.toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'});};
 export function attachInvestigations(host) {
  const doc=host.document||globalThis.document;
- let root=null,epoch=0,workspace=null,panel='analyze',selected=null,files=[],latest=null,draft={fields:{}},lastSession='',lastCatalog='',lastPending='',lastEvidence='',lastFiles='',lastSources='',lastProgramme='',lastNativeTask='',lastSubmission='',refreshInFlight=null;
+ let root=null,epoch=0,workspace=null,panel='analyze',selected=null,files=[],latest=null,draft={fields:{}},lastSession='',lastCatalog='',lastPending='',lastEvidence='',lastFiles='',lastSources='',lastDiagnostic='',lastProgramme='',lastNativeTask='',lastSubmission='',refreshInFlight=null;
  const nodes={};
  const el=(tag,text,cls)=>{const n=doc.createElement(tag);if(text!=null)n.textContent=String(text);if(cls)n.className=cls;return n;};
  const clear=n=>n.replaceChildren();
@@ -335,9 +444,9 @@ export function attachInvestigations(host) {
  function fileRef(value){try{return JSON.parse(value);}catch{throw Error('Choose an original registered file.');}}
  function rebuildFiles(state){
   const m=new Map();for(const source of state.sourceCatalog?.sources||[])m.set(json(source.ref),{ref:source.ref,label:source.label});
-  for(const d of state.catalog?.inventory?.datasets||[])m.set(json({kind:'dataset',id:d.id}),{ref:{kind:'dataset',id:d.id},label:d.label||d.id});
+  for(const d of state.catalog?.inventory?.datasets||[])m.set(json({kind:'dataset',id:d.id}),{ref:{kind:'dataset',id:d.id},label:resourceLabel(d)});
   for(const evidence of state.session?.evidence||[]){const result=evidence.result||{};
-   if(result.job)for(const f of result.files||[]){const ref={kind:'artifact',id:f.id||result.job.id,member:f.member};m.set(json(ref),{ref,label:(result.job.label||result.job.id)+' / '+f.member});}}
+   if(result.job)for(const f of result.files||[]){const ref={kind:'artifact',id:f.id||result.job.id,member:f.member};m.set(json(ref),{ref,label:resourceLabel(result.job)+' / '+f.member});}}
   files=[...m.values()];
   const stamp=stable(files);if(stamp!==lastFiles){
    lastFiles=stamp;const checked=new Set(draft.collection||[]);clear(nodes.collection);
@@ -354,15 +463,15 @@ export function attachInvestigations(host) {
    nodes.resources.append(el('h3',kind==='dataset'?'Original data':kind==='job'?'Native model runs':'Saved ensembles'));
    const rows=inventory[name]||[];let count=0;
    for(const row of rows){if(term&&!json(row).toLowerCase().includes(term))continue;count++;
-    const b=button('',()=>{selected={kind,id:row.id};nodes.selection.textContent=row.label||row.title||row.id;remember();renderResources(state);});
+    const b=button('',()=>{selected={kind,id:row.id};nodes.selection.textContent=resourceLabel(row);remember();renderResources(state);});
     b.className='intelligence-resource';b.setAttribute('aria-pressed',String(selected?.kind===kind&&selected?.id===row.id));
-    b.append(el('strong',row.label||row.title||row.id),el('small',[row.model||row.kind, row.status||row.state].filter(Boolean).join(' · ')||row.id));
+    b.append(el('strong',resourceLabel(row)),el('small',[row.model||row.kind, row.status||row.state].filter(Boolean).join(' · ')||row.id));
     nodes.resources.append(b);
    }
    if(!count)nodes.resources.append(el('p',term?'No matching resources.':'No registered '+name+'.','intelligence-muted'));
   }
   if(selected){const name={dataset:'datasets',job:'jobs',ensemble:'ensembles'}[selected.kind],row=(inventory[name]||[]).find(x=>x.id===selected.id);
-   if(row)nodes.selection.textContent=row.label||row.title||row.id;
+   if(row)nodes.selection.textContent=resourceLabel(row);
    else if(state.catalog){selected=null;nodes.selection.textContent='Choose a registered resource';remember();}
   }
  }
@@ -420,42 +529,19 @@ export function attachInvestigations(host) {
  }
  async function openForDiagnostic(selection){
   const owner=workspaceId(host.getState());
-  if(!owner || (selection?.workspace_key && selection.workspace_key!==owner))
-   throw Error('Open this saved analysis in its selected workspace.');
-  if(!originalId(selection?.diagnostic_id))
-   throw Error('Choose an existing saved scientific analysis.');
-  const dataset='es26:'+selection.diagnostic_id+':report_json';
-  if(selection.dataset_id!==dataset || (selection.report_sha256!=null&&!originalId(selection.report_sha256)))
-   throw Error('The selected analysis source is invalid.');
-  if(typeof host.navigate!=='function')throw Error('The original investigations navigation is unavailable.');
-  const pending=client.snapshot().pending;
-  const samePending=pending?.body.action==='intelligence.diagnostic.open' &&
-   pending.body.payload.dataset_id===dataset &&
-   (pending.body.payload.report_sha256||null)===(selection.report_sha256||null);
-  if(pending&&!samePending){
-   await host.navigate('investigations');
-   throw Error('The current investigation operation is retained in this workspace. Reopen its status before opening another analysis.');
-  }
-  if(root&&workspace===owner)remember();
-  const next=clone(client.snapshot().draft||{fields:{}});
-  next.fields||={};next.panel='assistant';next.selected={kind:'dataset',id:dataset};
-  next.diagnostic={workspace_key:owner,diagnostic_id:selection.diagnostic_id,dataset_id:dataset,
-   title:String(selection.title||'Scientific analysis').slice(0,240)};
-  if(selection.report_sha256)next.diagnostic.report_sha256=selection.report_sha256;
-  next.fields.title=next.diagnostic.title;
-  client.saveDraft(next,owner);
-  if(root&&workspace===owner){
-   draft=next;selected=clone(next.selected);panel='assistant';
-   if(nodes.title)nodes.title.value=next.fields.title;
-   show('assistant');renderDiagnosticContext(client.snapshot());
-  }
+  if(!owner||selection?.workspace_key!==owner)throw Error('Open this diagnostic in its original selected workspace.');
+  if(typeof host.navigate!=='function')throw Error('The registered original workbench navigation is required.');
   await host.navigate('investigations');
-  if(workspaceId(host.getState())!==owner)throw Error('The workspace changed. Reopen the saved analysis in its workspace.');
-  if(samePending)return pending.taskId?client.poll(owner):client.retry();
-  const payload={diagnostic_id:selection.diagnostic_id,dataset_id:dataset,title:next.diagnostic.title};
-  if(selection.report_sha256)payload.report_sha256=selection.report_sha256;
-  return client.queue('intelligence.diagnostic.open',payload);
+  if(workspaceId(host.getState())!==owner)throw Error('The selected workspace changed while opening the diagnostic.');
+  const opening=client.openForDiagnostic(selection);
+  if(root&&workspace===owner){
+   selected={kind:'dataset',id:selection.dataset_id};draft.selected=clone(selected);show('analyze');remember();
+  }
+  const result=await opening;
+  if(root&&workspace===owner){renderData(client.snapshot(owner));show('analyze');}
+  return result;
  }
+
  async function inspect(request){
   const sid=client.requireSession();show('analyze');
   await client.queue('intelligence.inspect',{session_id:sid,request});
@@ -479,7 +565,7 @@ export function attachInvestigations(host) {
   selectOptions(nodes.nativeProgramme,[{value:'',label:'Choose a saved native programme'},
    ...programmes.map(row=>({value:row.id,label:(row.title||row.label||row.id)+' · '+(row.status||'retained')+' · '+displayNumber(row.counts?.cases??row.metadata?.resolved_native_plan?.counts?.cases)+' cases'}))]);
   nodes.method.textContent=kind==='analyze_collection'?'Each selected registered file is analyzed in full.':methods[kind]||'Uses the connected original service.';
-  selectOptions(nodes.job,[{value:'',label:'Choose a retained native job'},...(state.catalog?.inventory?.jobs||[]).map(j=>({value:j.id,label:(j.label||j.id)+' · '+(j.status||j.state)}))]);
+  selectOptions(nodes.job,[{value:'',label:'Choose a retained native job'},...(state.catalog?.inventory?.jobs||[]).map(j=>({value:j.id,label:resourceLabel(j)+' · '+(j.status||j.state)}))]);
  }
  async function designNativeProgramme(){
   const owner=workspaceId(host.getState()),sid=client.requireSession(),state=client.snapshot();
@@ -607,7 +693,7 @@ export function attachInvestigations(host) {
   const value=state.nativeTask,task=value.task||{};
   target.append(el('h3','Original native task'),el('p',(task.action||'Native operation')+' · '+(task.state||'Retained'),'intelligence-status'),
    metrics([['Created',displayTime(task.created_at)],['Started',displayTime(task.started_at)],['Completed',displayTime(task.completed_at)]]));
-  if(value.origin)target.append(el('p','This task was retained with the original project and reopened from its saved receipt.','intelligence-muted'));
+  if(value.origin==='retained_snapshot')target.append(el('p','This task was retained with the original project and reopened from its saved receipt.','intelligence-muted'));
   else if(originalId(task.id))target.append(button('Open live operator task',()=>host.showTask(task.id)));
   if(originalId(value.run_id))target.append(button('Open native outputs',()=>host.openItem('runs',value.run_id)));
   if(originalId(value.experiment_id))target.append(button('Open saved programme',()=>client.experiment(value.experiment_id)));
@@ -706,6 +792,37 @@ export function attachInvestigations(host) {
   else nodes.pending.append(button('Retry this original request',()=>client.retry()));
   if(['failed','interrupted','canceled','cancelled'].includes(p.taskState))nodes.pending.append(button('Keep result and start another operation',()=>client.clearFinished()));
  }
+ function renderDiagnostic(state){
+  clear(nodes.diagnostic);const intake=state.diagnosticIntake;nodes.diagnostic.hidden=!intake;if(!intake)return;
+  const phases={staged:'Ready to open saved diagnostic',receiving:'Reading saved scientific interpretation',
+   submitted:'Opening through the original investigation queue',waiting:'The current investigation operation is retained below',
+   received:'Opening retained evidence',ready:'Saved diagnostic linked to its investigation',error:'Saved diagnostic needs attention'};
+  nodes.diagnostic.append(el('h2',intake.title||'Saved scientific interpretation'),
+   el('p',phases[intake.phase]||'Saved scientific interpretation','intelligence-status'));
+  if(intake.error)nodes.diagnostic.append(el('p',intake.error,'intelligence-error'));
+  const actions=el('div',null,'intelligence-inline');
+  if(intake.session_id&&intake.evidence_id)actions.append(button('Open saved investigation',()=>openForDiagnostic(intake)));
+  else actions.append(button('Continue opening this diagnostic',()=>client.resumeDiagnostic(intake.workspace_key)));
+  nodes.diagnostic.append(actions);
+  const report=state.diagnosticReport;
+  if(report){
+   nodes.diagnostic.append(details('Complete saved scientific report',report));
+   const downloads=el('div',null,'intelligence-export');
+   for(const file of report._downloads||[]){
+    if(!/^\/api\/file\/[0-9a-f]{64}(?:\?.*)?$/.test(file.url||''))continue;
+    const link=el('a',file.label||file.filename||file.artifact_key||'Original report');
+    link.href=file.url+(file.url.includes('?')?'&':'?')+'download=1';link.setAttribute('download','');
+    downloads.append(link,el('small',displayNumber(file.bytes)+' bytes · SHA-256 '+file.sha256));
+   }
+   nodes.diagnostic.append(downloads);
+  }
+  nodes.diagnostic.append(details('Original report and investigation identity',{
+   workspace_key:intake.workspace_key,diagnostic_id:intake.diagnostic_id,dataset_id:intake.dataset_id,
+   source_sha256:intake.source_sha256,report_dataset_id:intake.report_dataset_id,session_id:intake.session_id,evidence_id:intake.evidence_id,
+   original_operation_id:intake.operation_id||intake.completed_operation_id
+  }));
+ }
+
  function renderData(state){
   if(!root)return;
   nodes.notice.textContent=state.error||'';
@@ -715,6 +832,8 @@ export function attachInvestigations(host) {
   if(cstamp!==lastCatalog){lastCatalog=cstamp;renderResources(state);rebuildFiles(state);renderActionFields(state);}
   selectOptions(nodes.sessions,[{value:'',label:'Choose a saved investigation'},...(state.catalog?.sessions||[]).map(s=>({value:s.id,label:s.title+' · '+displayTime(s.created)}))],state.sessionId);
   renderDiagnosticContext(state);
+  const diagnosticStamp=stable({intake:state.diagnosticIntake,report:state.diagnosticReport});
+  if(diagnosticStamp!==lastDiagnostic){lastDiagnostic=diagnosticStamp;renderDiagnostic(state);}
   nodes.provider.textContent=state.catalog?.provider_configured?'Configured model: '+state.catalog.provider_model:'Local analysis ready; configure an assistant model on the server to ask questions.';
   if(sstamp!==lastSession){lastSession=sstamp;renderSession(state);renderCollections(state);rebuildFiles(state);}
   const sourceStamp=stable({catalog:state.sourceCatalog,selection:state.sourceSelection});if(sourceStamp!==lastSources){lastSources=sourceStamp;renderSourceChoices(state);}
@@ -746,6 +865,7 @@ export function attachInvestigations(host) {
   const create=button('Create investigation',()=>client.queue('intelligence.session.create',{title:nodes.title.value.trim()||'Watershed investigation'}));create.dataset.submit='true';controls.append(create);desk.append(controls);
   nodes.notice=el('p',null,'intelligence-notice');nodes.notice.setAttribute('role','status');nodes.notice.setAttribute('aria-live','polite');desk.append(nodes.notice);
   nodes.pending=el('section',null,'intelligence-pending');nodes.pending.setAttribute('aria-label','Current original operation');desk.append(nodes.pending);
+  nodes.diagnostic=el('section',null,'intelligence-panel');nodes.diagnostic.setAttribute('aria-label','Saved scientific interpretation');desk.append(nodes.diagnostic);
   const layout=el('div',null,'intelligence-layout'),aside=el('aside'),main=el('div',null,'intelligence-main');
   aside.append(el('h2','Registered resources'),field('Find a resource','filter'));
   nodes.filter.addEventListener('input',()=>latest&&renderResources(latest));nodes.resources=el('div',null,'intelligence-resources');aside.append(nodes.resources,el('h2','Saved analyses'));nodes.evidence=el('div');aside.append(nodes.evidence);
@@ -821,7 +941,7 @@ export function attachInvestigations(host) {
   main.append(analyze,assistant,actions,sources,history);layout.append(aside,main);desk.append(layout);root.replaceChildren(desk);show(panel);
  }
  async function mount(node,state=host.getState()){
-  detach();root=node;workspace=workspaceId(state);epoch++;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastProgramme=lastNativeTask=lastSubmission='';
+  detach();root=node;workspace=workspaceId(state);epoch++;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastDiagnostic=lastProgramme=lastNativeTask=lastSubmission='';
   latest=client.snapshot();draft=clone(latest.draft||{fields:{}});panel=draft.panel||'analyze';selected=clone(draft.selected||null);
   build();renderData(latest);await client.refresh(workspace);
  }
@@ -829,6 +949,6 @@ export function attachInvestigations(host) {
   if(!root || workspace!==workspaceId(state))return;
   if(!refreshInFlight){refreshInFlight=client.acceptState(state).catch(failure).finally(()=>refreshInFlight=null);}
  }
- function detach(){if(root&&workspace)remember();epoch++;root=null;workspace=null;selected=null;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastProgramme=lastNativeTask=lastSubmission='';for(const key of Object.keys(nodes))delete nodes[key];}
+ function detach(){if(root&&workspace)remember();epoch++;root=null;workspace=null;selected=null;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastDiagnostic=lastProgramme=lastNativeTask=lastSubmission='';for(const key of Object.keys(nodes))delete nodes[key];}
  return {mount,update,detach,client,openForDiagnostic};
 }
