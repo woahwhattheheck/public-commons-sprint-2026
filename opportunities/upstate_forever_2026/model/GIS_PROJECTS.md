@@ -10,6 +10,60 @@ extrema are both retained. The provider behavior is documented in its source:
 https://api.qgis.org/api/3.44/qgsrasterdataprovider_8cpp_source.html Every vector working copy
 is a GeoPackage containing the full selected geometry and attributes.
 
+
+## Continue a completed map delivery in Editable GIS
+
+Open the completed delivery in **Maps and delivery**, then choose **Prepare editable GIS project**. The existing Editable GIS desk opens with that exact delivery selected, the original study coordinate system, and its actual retained GIS datasets. The same delivery can be selected directly in the desk's **Completed map delivery** field.
+
+The completed-delivery selection includes baseline physical exports, every retained signed scenario difference, and the actual generic, receptor or receiving-water priorities used in the atlas. The model-domain and reporting-area polygons become separate editable context layers. Dataset source identities, units, original masks and numerical values remain attached to the existing scientific result.
+
+Starting from a delivery deliberately starts with its own datasets. Other source editions, prepared grids, runs or comparisons can be added explicitly in the existing form. The delivery ID is saved with that Workspace's form; catalogue refresh preserves both the selected delivery and edits made while the request is in flight. The original source-only intake remains available.
+
+Click **Build complete GIS project**. This submits the normal gis.project.export task. Open its original task result and download the complete editable ZIP. The existing OPEN_GIS.html and project.qgz entry points, independent receive operation and seal/pack workflow apply to this project.
+
+### Original atlas relationships and working layers
+
+Each retained delivery dataset becomes one logical GIS layer. A priority raster serving multiple map families stays one layer with every original map relationship. Distinct comparison artifacts retain their distinct original dataset and scenario identities even when the numerical TIFF bytes match.
+
+Physical exports and signed differences retain the engine's original metric/units/purpose style grouping. Signed differences retain alternative-minus-baseline direction and common valid support. Dimensionless priorities carry their own normalization and geographic-support identity, so unrelated priority methods do not acquire a shared scientific metric merely because they have the same units.
+
+The existing GIS engine derives its grayscale legends from complete finite native-cell ranges. Those GIS display ranges are distinct from the original atlas percentile limits; the original map display_scale remains in each layer's retained source metadata.
+
+Every layer.source retains the complete original dataset record: grid and profile IDs, baseline and alternative run/scenario records, producing-model provenance, source editions, original comparison identity, physical header, support method, derivation and atlas map relationships.
+
+### Metadata, maps and report context
+
+One context attachment preserves the original delivery-relative directory hierarchy. It contains the existing atlas PDF, JSON/CSV index, source context, individual map PDFs, dataset GeoTIFFs and actual companions, FGDC XML, native/grid provenance, display-scale metadata and self-contained scientific PDF reports. The FGDC links from gis/metadata to the actual original dataset paths continue to resolve after independent receiving.
+
+Open the attachment from OPEN_GIS.html. Its files retain their original bytes and names. The separate working layers are independent copies intended for desktop editing; the attached originals remain the immutable source context for the edited edition.
+
+The source binding also records the original delivery-state descriptor and its scientific/complete archive descriptors as lineage. The map-and-dataset attachment contains the explicit GIS/report members described above. Use the original completed delivery's archive controls when the full scientific Workspace is needed.
+
+A completed delivery must have the current upstate.atlas-datasets/v1 catalogue. Older delivery editions remain visible with their reason; build the current edition from their retained scientific selections to provide the exact dataset relationships. The queued export verifies the complete record, atlas/dataset agreement and every selected member before invoking the maintained GIS builder.
+
+### Command-line selection
+
+The original command remains:
+
+~~~sh
+python model/gis_project_cli.py workspace-export "$WORKSPACE" delivery-gis-selection.json
+~~~
+
+The selection JSON includes the actual delivery_id, a project title and optional display CRS:
+
+~~~json
+{
+  "title": "Selected completed watershed delivery",
+  "delivery_id": "ACTUAL_64_CHARACTER_DELIVERY_ID",
+  "sources": [],
+  "notes": ["Editable GIS handover of the retained map delivery."]
+}
+~~~
+
+Omitting project_crs selects the original delivery grid CRS. An explicitly supplied project_crs changes the project's display coordinates through the existing builder while preserving each working dataset's native coordinates.
+
+The same request/result identities, complete GIS inventory, QGS/QGZ references, original file transport, desktop edit sealing and received-source adoption govern this continuation. Its operation is ES-20261013-DELIVERY-GIS-PROJECT; source is contained in the existing gis_workspace, GIS desk and delivery inspector paths.
+
 ## Open and continue a delivery
 
 Extract the complete archive into a new directory. Open **OPEN_GIS.html** for the
