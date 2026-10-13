@@ -17,6 +17,16 @@ FILES = ('source_tools/paired_spatial_review.py', 'source_tools/paired_spatial_r
 def sha(body):return hashlib.sha256(body).hexdigest()
 
 
+# Admit only the published, reviewed 1.0.0 -> receiving-race template upgrade.
+# Every other source mismatch remains protected by the original installer.
+UPGRADES = {
+    'source_tools/paired_spatial_review.html': (
+        'e9f13ed71ef17b295dbc573ca5e7b4e4624ee891676faa76c8431b8647ead7ff',
+        '7af6853aa0f99a97823c6d75fa86006a72ca665a7c56f522131483ab9acc3037',
+    ),
+}
+
+
 def write(path, body, expected=None):
     path.parent.mkdir(parents=True,exist_ok=True)
     if path.is_symlink():raise ValueError('Preserving symbolic link: '+str(path))
@@ -44,12 +54,18 @@ def install(application,source):
     leaves=[]
     for name in FILES:
         body=(source/name).read_bytes();target=app/name
-        if target.exists() and target.read_bytes()!=body:
-            raise ValueError('Preserving a divergent existing contribution: '+name)
-        leaves.append((name,body))
+        previous=target.read_bytes() if target.exists() else None
+        if previous is not None and previous!=body:
+            admitted=UPGRADES.get(name)==(sha(previous),sha(body))
+            if name=='source_tools/install_paired_spatial_review.py':
+                admitted=(sha(previous)=='699d8af00558759453551595a85a8eb69a4a65c2791f2ff1c594641c3b1e9ac6'
+                          and body==Path(__file__).resolve(strict=True).read_bytes())
+            if not admitted:
+                raise ValueError('Preserving a divergent existing contribution: '+name)
+        leaves.append((name,body,previous))
     operations=[]
-    for name,body in leaves:
-        operations.append({'path':name,'sha256':sha(body),'status':write(app/name,body)})
+    for name,body,previous in leaves:
+        operations.append({'path':name,'sha256':sha(body),'status':write(app/name,body,expected=previous)})
     return {'schema':'upstate.paired-spatial-installation/v1','application':str(app),'files':operations}
 
 
