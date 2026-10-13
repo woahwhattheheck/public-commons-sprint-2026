@@ -91,7 +91,7 @@ async function dispatch(client,request) {
   if(request.method==='identity')return client.identity();
   if(request.method==='state')return client.state();
   if(request.method==='record') {
-    need(['tasks','purchases','contracts','funders','funding','settlements','observations'].includes(input.kind),'MPP_CHANNEL_RECORD_KIND');
+    need(['tasks','purchases','contracts','funders','funding','settlements','observations','openings'].includes(input.kind),'MPP_CHANNEL_RECORD_KIND');
     return client.record(input.kind,input.id);
   }
   if(request.method==='job')return client.job(input.id);

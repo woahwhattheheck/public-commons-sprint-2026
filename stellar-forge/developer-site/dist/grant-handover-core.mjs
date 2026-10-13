@@ -1,6 +1,7 @@
 // MIT. Original submission-draft extension; no separate store or issuer action.
 export const HANDOVER_SCHEMA = 'stellar-forge.grant-submission-handover.v1';
 export const BUNDLE_SCHEMA = 'stellar-forge.grant-reviewer-source-bundle.v1';
+export const SOURCE_PACKAGE_SCHEMA = 'stellar-forge.grant-reviewer-source-package.v1';
 export const EDITION_SCHEMA = 'stellar-forge.grant-prepared-submission.v1';
 export const RETURN_SCHEMA = 'stellar-forge.grant-submission-return.v1';
 export const SOURCE_ROLES = ['application','source-index','budget','product-and-finance'];

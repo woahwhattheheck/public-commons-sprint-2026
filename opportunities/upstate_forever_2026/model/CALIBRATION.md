@@ -1,6 +1,6 @@
 # Annual-load calibration and spatial holdout
 
-The calibration workflow selects a working parameter profile from original completed NDR/SDR baseline runs. It retains the source annual-load observations, compares every candidate on the same declared catchments, separates calibration groups from a spatial holdout, and records the actual profile choice, physical errors and alternative candidate range.
+The calibration workflow selects a working parameter profile from original completed baseline runs of the selected native models: NDR, SDR or both. It retains the source annual-load observations, compares every candidate on the same declared catchments, separates calibration groups from a spatial holdout, and records the actual profile choice, native model scope, physical errors and alternative candidate range.
 
 The native model and experiment runners continue to own simulation. Calibration consumes their original run IDs and reuses matching `model.observations` comparison records. The operator exposes the same saved plan and result through its calibration workspace.
 
@@ -14,7 +14,7 @@ This implementation makes the statistical choices below explicit. The grouped ob
 
 Observation intake continues through `Workspace.import_observations`. Each selected record must already be an admitted annual mass rate with its original period, qualifier, annualization method and catchment identity. Nitrogen and phosphorus use kg/year; sediment uses metric_tonnes/year.
 
-The existing [USGS annual-load preparer](../source_tools/USGS_LOADS.md) produces `annual-loads.csv`, `observation-metadata.json` and an original catchment source manifest from the retained [USGS seasonal nutrient release](https://doi.org/10.5066/P13YSTHM). Its original estimator methods and uncertainty remain attached to every annual record. A reference derived with Fluxmaster or WRTDS retains that estimation method in the calibration result. Nitrogen and phosphorus reference data select those corresponding objectives; sediment enters only when an actual sediment annual-load source has been imported.
+The existing [USGS annual-load preparation workflow](../source_tools/USGS_CONTRACT.md) produces `annual-loads.csv`, `observation-metadata.json` and an original catchment source manifest from the retained [USGS seasonal nutrient release](https://doi.org/10.5066/P13YSTHM). Its original estimator methods and uncertainty remain attached to every annual record. A reference derived with Fluxmaster or WRTDS retains that estimation method in the calibration result. Nitrogen and phosphorus reference data select those corresponding objectives; sediment enters only when an actual sediment annual-load source has been imported.
 
 A native prediction remains the original full-catchment annual export. The existing observation comparison distinguishes source-supported stream omissions from unexpected missing nonstream data. A candidate needs complete support for every declared calibration unit. Missing or partial candidate results are listed with their exact catchment and source issues.
 
@@ -50,7 +50,7 @@ For every candidate, it then computes:
 4. Division by the pollutant's squared calibration normalization scale.
 5. The weighted mean across the selected pollutants.
 
-A lower objective is better. This dimensionless score can combine nitrogen, phosphorus and sediment while their physical measurements remain separate. Larger absolute catchment errors have greater influence within each pollutant. The weights are explicit and default to equal values for the admitted source pollutants.
+A lower objective is better. This dimensionless score can combine nitrogen, phosphorus and sediment while their physical measurements remain separate. Larger absolute catchment errors have greater influence within each pollutant. The weights are explicit. When the selection omits `objective`, equal positive weights apply to admitted source pollutants for which every chosen native run has an actual completed output. A supplied zero weight excludes that pollutant. A supplied positive weight requires its original output in every candidate before a plan can be saved.
 
 An optional positive `normalization_scale` replaces the derived scale for a pollutant. Its `scale_reference` must record the source or rationale. This is also the supported way to evaluate a source whose calibration reference values are all zero.
 
@@ -75,9 +75,9 @@ python -B -m model.calibration \
   --workspace "$UPSTATE_MODEL_WORKSPACE" catalog
 ~~~
 
-The catalogue groups completed baseline runs by original grid and scenario. A candidate set uses one group with distinct parameter profiles. Future land-cover runs stay with their scenario comparisons.
+The catalogue groups completed baseline runs by original grid and scenario. Each run exposes its actual selected native models, available pollutants and original completion scope. A candidate set uses distinct original run IDs within one group. An NDR-only and a combined run may share the same parameter profile; their run identities and the count of distinct profiles remain separate. Future land-cover runs stay with their scenario comparisons.
 
-The following integration example binds the original native-model receiving document and the actual prepared USGS source. The environment variables identify the existing files; all collection, observation, catchment and run IDs are obtained from those sources.
+The following integration example binds the actual native workspace and prepared USGS source. `UPSTATE_BASELINE_RUN_ID` identifies the original completed nutrient baseline from the native receiver or the catalogue above. The example reads every additional candidate ID from the same original grid/scenario group and includes runs that have completed both nutrient outputs. It works as soon as the original NDR baseline is complete.
 
 ~~~python
 import os
@@ -86,9 +86,8 @@ from model.common import atomic_json, read_json
 from model.workspace import Workspace
 from model import calibration
 
-handoff = read_json(os.environ["UPSTATE_MODEL_HANDOFF"])
 prepared = Path(os.environ["UPSTATE_USGS_PREPARED"])
-workspace = Workspace(handoff["workspace_path"])
+workspace = Workspace(os.environ["UPSTATE_MODEL_WORKSPACE"])
 
 collection = workspace.import_sources(prepared / "source-manifest.json")
 observed = workspace.import_observations(
@@ -103,14 +102,18 @@ if len(catchment_entries) != 1:
     raise ValueError("Select the original prepared observation catchment entry")
 catchment_entry = catchment_entries[0]
 
-baseline_id = handoff["delivery_selection"]["baseline_run_id"]
-baseline = workspace.inspect_run(baseline_id)
+baseline_id = os.environ["UPSTATE_BASELINE_RUN_ID"]
+catalogue = calibration.catalog(workspace)
+group = next(
+    group for group in catalogue["candidate_groups"]
+    if any(run["id"] == baseline_id for run in group["runs"])
+)
 candidate_ids = [
-    outcome["id"]
-    for outcome in handoff["model_outcomes"].values()
-    if outcome["selection"]["grid_id"] == baseline["selection"]["grid_id"]
-    and outcome["selection"]["scenario_id"] == baseline["selection"]["scenario_id"]
+    run["id"] for run in group["runs"]
+    if {"nitrogen", "phosphorus"} <= set(run["available_parameters"])
 ]
+if baseline_id not in candidate_ids:
+    raise ValueError("Select the original completed nutrient baseline from the catalogue")
 selection = {
     "schema": calibration.SELECTION_SCHEMA,
     "title": "Upper Savannah annual nutrient reference evaluation",
@@ -159,20 +162,23 @@ The prepared document's `id` is the plan ID for the second command. `--output` c
 | Report field | Meaning |
 | --- | --- |
 | `selected_run_id`, `selected_profile_id` | Working native candidate selected by calibration groups |
+| `selected_models`, `selected_model_scope` | Actual selected native models and their original completed stage/output scope |
+| `candidate_count`, `distinct_profile_count` | Original candidate runs and unique saved parameter profiles |
+| `predicted_parameters`, `common_parameters` | Positive-weight pollutants and the pollutants available in every candidate |
 | `ranked_candidates` | Eligible original candidates, objective values and per-pollutant physical metrics |
 | `candidate_failures` | Original source/comparison failures or incomplete declared calibration support |
 | `selected_validation` | Held-out evaluation of the selected working candidate; its values do not alter ranking |
-| `pareto_run_ids` | Candidates for which no other eligible profile is no worse on every pollutant and better on at least one |
-| `candidate_envelope` | Minimum, median and maximum annual prediction among those Pareto candidates for each reference unit |
+| `pareto_run_ids` | Candidate runs for which no other eligible run is no worse on every selected pollutant and better on at least one |
+| `candidate_envelope` | Minimum, median and maximum annual prediction among those Pareto candidate runs for each reference unit, with separate run/profile counts |
 | `group_stability` | Leave-one-calibration-group-out selection, with normalization recomputed for each training fold |
 | `prediction_rows` | Native mass, explicit external contribution, prediction, residual and support for each original candidate/unit |
 | `reference_units` | Original catchment means, source periods, source methods and uncertainty |
 | `normalization` | Per-pollutant score scale and the actual calibration groups used |
 | `source_vintages`, `observations` | Original model input editions and annual-reference source identity |
 
-The candidate envelope describes the selected original profiles. Its range does not estimate a statistical confidence interval.
+The candidate envelope summarizes the actual completed Pareto candidate runs. `candidate_count` and `expected_candidates` count runs; `distinct_profile_count` and `expected_profiles` identify how many saved parameter profiles they represent. The median gives each included candidate run one entry, including different native execution scopes of one profile. `summary_unit` names that unit explicitly. Interpret this descriptive range alongside the actual profile membership.
 
-Leave-group-out analysis reuses the same completed candidate totals. Each fold removes one calibration group, derives scales from the remaining calibration groups, selects a working profile, and evaluates it on the removed group. Separately declared validation groups stay outside all these folds. The frequency with which profiles are selected shows sensitivity to the spatial calibration sample.
+Leave-group-out analysis reuses the same completed candidate totals. Each fold removes one calibration group, derives scales from the remaining calibration groups, selects a working profile, and evaluates it on the removed group. Separately declared validation groups stay outside all these folds. `winner_frequencies` counts selected original run IDs, while `profile_winner_frequencies` combines those selections by the original profile ID. These frequencies show sensitivity to the spatial calibration sample and retain the distinction between parameter profiles and their native execution scopes.
 
 The selected working profile remains the actual saved profile identified in the report. Applying it to future land-cover alternatives uses the existing experiment/native runner. Those scenario runs retain their new original run IDs and quantitative scenario differences. Calibration does not rewrite existing runs or silently substitute the selected profile into an accepted delivery.
 
@@ -180,11 +186,43 @@ The selected working profile remains the actual saved profile identified in the 
 
 Plans are immutable Workspace items under `calibration-plans`. Results are immutable items under `calibrations`. Original comparison IDs and per-candidate progress live under `calibration-analysis/<plan-id>/progress.json`.
 
-A matching original observation comparison is reused when its run, observation edition, catchment selection, source hash and current comparison version match. Otherwise the existing observation comparison aggregates the original native outputs. An interruption resumes the same plan and its completed comparisons. A complete accepted analysis is returned directly on reopening.
+A matching original observation comparison is reused when its run, observation edition, catchment selection, source hash and current comparison version match. A partially selected native run also requires the comparison's recorded `model_scope.selected_models` to match its original scope. Historical combined-model comparisons remain reusable. Otherwise the maintained observation comparison aggregates the selected original native outputs. An interruption resumes the same plan and its completed comparisons. A complete saved analysis is returned directly on reopening.
+
+Earlier version-1 calibration plans remain immutable and keep their IDs. When analysis resumes an earlier plan, it checks the retained original native selection and enriches an in-memory copy of each candidate with the current model/output scope. The saved selection, original reference units, normalization and holdout partition stay attached to that same plan.
 
 A result with no eligible candidate retains the actual failures and exits the CLI with status 2. Reinvoking the same plan can recover a source-access failure. A scientific change to observations, grouping, period interpretation, candidate membership, objective or source selection creates a different immutable plan.
 
 The operator's calibration workspace provides the same catalogue, preview, saved plan, analysis and original downloads. Its export carries the full plan and report, CSV tables and reading guide. Source code and the original Workspace archive remain the complete receiving path.
+
+## Selected native model compatibility
+
+This module uses the maintained selected-model core's `model.model_selection.validate_completed_run` and `model.common.output_models`. Its companion [selected-model operations guide](SELECTED_MODEL_OPERATIONS.md) describes the original native run selection and stage reuse. Partial model selections stay explicit; the historical combined-model run identity continues to omit the optional `models` field.
+
+The unchanged `Workspace.compare_observations(run_id, observation_id, catchments)` API reads only the models selected for that run. Its version-3 comparison retains the entire original observation edition, including rows whose pollutant model is omitted, and gives those rows their original exclusions. An NDR-only analysis therefore uses the admitted nitrogen/phosphorus rows of a mixed edition through the same native comparison. Calibration narrows the declared objective and retains source exclusions in its own plan.
+
+| Native candidate selection | Available calibration parameters |
+| --- | --- |
+| NDR | Nitrogen and phosphorus |
+| SDR | Sediment |
+| NDR and SDR | Nitrogen, phosphorus and sediment |
+
+For a chosen set containing NDR-only and combined runs, the common output parameters are nitrogen and phosphorus. For a set containing SDR-only and combined runs, the common parameter is sediment. Choosing an NDR-only run together with an SDR-only run produces no common pollutant objective; the caller selects a group subset with the required shared native output.
+
+The catalogue's group-level intersection describes all runs currently in that group. An operator selecting a smaller subset recomputes the intersection from the chosen runs' `available_parameters`. The intersection then meets the admitted original source parameters when determining default positive weights. An explicitly supplied objective remains the declared scientific choice.
+
+The following fields are additive to the existing version-1 interfaces:
+
+| Interface | Added fields |
+| --- | --- |
+| Catalogue candidate run | `selected_models`, `available_parameters`, `model_scope`, `profile_variant_count` |
+| Catalogue group | `common_parameters`, `available_parameters`, `candidate_count`, `distinct_profile_count` |
+| Preview or saved plan | `common_parameters`, `predicted_parameters`, `candidate_count`, `distinct_profile_count`; scope on every candidate |
+| Ranked candidate | The original candidate's selected models, available parameters and completion scope |
+| Report | Selected model scope, common/objective parameters and separate run/profile counts |
+| Envelope row | `distinct_profile_count`, `expected_profiles`, `summary_unit` |
+| Completed leave-group-out analysis | `profile_winner_frequencies` in addition to original run frequencies |
+
+When all candidate runs use one saved profile, `candidate_comparison` reports `execution_scope_reference_evaluation` for multiple native run variants or `single_candidate_reference_evaluation` for one run. A set of different saved profiles reports `parameter_selection`. Existing completed reports retain their original content and identities.
 
 ## Integration API
 

@@ -3,6 +3,8 @@ import path from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {Store} from './store.mjs';
+import {OSFTransition} from './osf_transition.mjs';
+import {exportTransition,isTransitionArchive,receiveTransitionArchive} from './osf_transfer.mjs';
 import {NativeBridge,extractObjects,validateProfile,cleanError} from './bridge.mjs';
 import {clone,digest,json,fail,requireText,applyPatch,fieldChanges,checkChanges,inverseOperations,simpleMetadata,metadataContains,at} from './patch.mjs';
 
@@ -20,7 +22,7 @@ function base64(value){if(typeof value!=='string'||!/^[A-Za-z0-9+/]*={0,2}$/.tes
 export class RepositoryWorkspace{
  constructor({directory,upstreamRoot}){
   this.store=new Store(directory);this.directory=this.store.directory;this.upstreamRoot=upstreamRoot;
-  this.bridges=new Map();this.tail=Promise.resolve();
+  this.bridges=new Map();this.tail=Promise.resolve();this.osf=new OSFTransition(this);
   this.upstream={repository:'4Science/dspace-mcp',commit:'ee503ba97910f592867c897c1fa938f9e029d03c',tree:'6386328dd49282b98840b4dd41340b9c8a110b78',license:'AGPL-3.0'};
  }
  put(kind,value){
@@ -33,10 +35,11 @@ export class RepositoryWorkspace{
   this.store.put(kind,value.id,value,summary);return value;
  }
  save(kind,value){return this.store.tx(()=>this.put(kind,value));}
- state(){return {schema:'dspace-repository-workspace/v1',revision:this.store.revision(),upstream:this.upstream,selected_profile_id:this.store.meta('selected_profile_id'),profiles:this.store.list('profiles'),captures:this.store.list('captures'),selections:this.store.list('selections'),plans:this.store.list('plans'),executions:this.store.list('executions'),assets:this.store.list('assets'),tools:this.store.meta('tools')??[],limits:LIMITS};}
+ state(){return {schema:'dspace-repository-workspace/v1',workspace:{id:this.store.meta('osf_workspace_id'),directory:this.directory},revision:this.store.revision(),upstream:this.upstream,selected_profile_id:this.store.meta('selected_profile_id'),profiles:this.store.list('profiles'),captures:this.store.list('captures'),selections:this.store.list('selections'),plans:this.store.list('plans'),executions:this.store.list('executions'),assets:this.store.list('assets'),tools:this.store.meta('tools')??[],limits:LIMITS,osf:this.osf.state()};}
  profile(profileId){return this.store.get('profiles',profileId||this.store.meta('selected_profile_id')||'');}
  requests(ids){return ids.map(v=>this.store.get('requests',typeof v==='string'?v:v.id));}
  read(kind,recordId,{offset=0,limit=50}={}){
+  if(kind.startsWith('osf_'))return this.osf.read(kind,recordId,{offset,limit});
   const doc=this.store.get(kind,recordId);
   if(kind==='captures'){
    doc.requests=this.requests(doc.requests);const rows=doc.objects;
@@ -90,6 +93,7 @@ export class RepositoryWorkspace{
   if(reservation.existing){
    const op=reservation.existing;
    if(op.status==='COMPLETE')return {...op.result,revision:this.store.revision(),replayed:true};
+   if(action.startsWith('osf-')){const result=await this.osf.resume(action,input,op);this.store.finish(input.operationId,result);return {...result,revision:this.store.revision(),replayed:true};}
    if(op.status==='FAILED')fail(op.error.code,op.error.message,op.error.status);
    if(action==='restore'&&op.receiving_result){this.store.finish(input.operationId,op.receiving_result);return {...op.receiving_result,revision:this.store.revision(),replayed:true};}
    if(action==='execute-plan'&&this.store.maybe('executions',input.operationId))return {execution_id:input.operationId,status:this.store.get('executions',input.operationId).status,revision:this.store.revision(),replayed:true};
@@ -97,7 +101,8 @@ export class RepositoryWorkspace{
   }
   try{
    let result;
-   if(action==='save-profile')result=this.saveProfile(input);
+   if(action.startsWith('osf-'))result=await this.osf.perform(action,input);
+   else if(action==='save-profile')result=this.saveProfile(input);
    else if(action==='select-profile'){this.profile(input.profile_id);this.store.tx(()=>this.store.meta('selected_profile_id',input.profile_id));result={profile_id:input.profile_id};}
    else if(action==='connect'){const p=this.profile(input.profile_id);const old=this.bridges.get(p.id);if(old){await old.close();this.bridges.delete(p.id);}result={profile_id:p.id,...await this.status(p),tools:this.store.meta('tools')};}
    else if(action==='capture')result=await this.capture(input);
@@ -243,7 +248,7 @@ export class RepositoryWorkspace{
    steps.push(step);
   }
   if(input.previous_plan_id)this.store.get('plans',input.previous_plan_id);
-  const plan={id:id('plan'),name:input.name,profile_id:p.id,created_at:now(),previous_plan_id:input.previous_plan_id??null,steps,step_count:steps.length,status:'PREPARED',review:null,latest_execution_id:null,expected_principal:p.connection?.authenticated?p.connection.principal:null};
+  const plan={id:id('plan'),name:input.name,profile_id:p.id,created_at:now(),previous_plan_id:input.previous_plan_id??null,steps,step_count:steps.length,status:'PREPARED',review:null,latest_execution_id:null,expected_principal:p.connection?.authenticated?p.connection.principal:null,origin:clone(input.origin??null)};
   this.save('plans',plan);return {plan_id:plan.id};
  }
  review(input){
@@ -408,6 +413,7 @@ export class RepositoryWorkspace{
   return this.prepare({...input,profile_id:p.id,steps});
  }
  file(kind,recordId){
+  if(kind.startsWith('osf_'))return this.osf.file(kind,recordId);
   if(['handoff','backup'].includes(kind))return {bytes:this.store.snapshot(),filename:'DSpace_Repository_Workspace.'+kind+'.json.gz',contentType:'application/gzip'};
   if(kind==='assets'){const a=this.store.get('assets',recordId);return {bytes:this.store.bytes(a.sha256),filename:a.name,contentType:a.media_type};}
   if(kind==='responses'){const r=this.store.get('requests',recordId);if(!r.body_sha256)fail('NO_BODY','This source request has no saved response body.',404);return {bytes:this.store.bytes(r.body_sha256),filename:'DSpace_Response_'+recordId+'.'+(/json/.test(r.content_type)?'json':'bin'),contentType:r.content_type};}
@@ -415,13 +421,17 @@ export class RepositoryWorkspace{
   const record=this.read(kind,recordId,{offset:0,limit:100});return {bytes:Buffer.from(JSON.stringify(record,null,2)+'\n'),filename:'DSpace_'+kind+'_'+recordId+'.json',contentType:'application/json'};
  }
  exportFile(kind,recordId){
+  if(kind==='osf_archive'){const task=this.tail.then(()=>exportTransition(this,recordId));this.tail=task.catch(()=>{});return task;}
   if(!['handoff','backup'].includes(kind))return Promise.resolve(this.file(kind,recordId));
   const task=this.tail.then(()=>this.store.nativeFile());this.tail=task.catch(()=>{});return task;
  }
  async previewFile(receivedPath){
   const absolute=path.resolve(receivedPath),fd=fs.openSync(absolute,'r'),signature=Buffer.alloc(16);try{fs.readSync(fd,signature,0,16,0);}finally{fs.closeSync(fd);}
   const hash=createHash('sha256');let bytes=0;for await(const chunk of fs.createReadStream(absolute)){hash.update(chunk);bytes+=chunk.length;}
-  const report=signature.equals(Buffer.from('SQLite format 3\0'))?this.store.inspectNative(absolute):this.store.previewLegacy(fs.readFileSync(absolute));
+  let report;
+  if(signature.equals(Buffer.from('SQLite format 3\0')))report=this.store.inspectNative(absolute);
+  else if(await isTransitionArchive(absolute)){const received=await receiveTransitionArchive(absolute,path.join(this.directory,'receiving'));try{report={...this.store.inspectNative(received.sqlite),format:'osf-transition-tar',delivery_id:received.manifest.delivery_id,delivery_sha256:received.manifest.delivery_sha256,archive_manifest_sha256:received.manifest.manifest_sha256};}finally{received.cleanup();}}
+  else report=this.store.previewLegacy(fs.readFileSync(absolute));
   return {...report,sha256:hash.digest('hex'),bytes};
  }
  restoreFile(input,receivedPath){
@@ -434,12 +444,13 @@ export class RepositoryWorkspace{
    if(!sha256){const hash=createHash('sha256');for await(const chunk of fs.createReadStream(absolute))hash.update(chunk);sha256=hash.digest('hex');}
    const payload={actor:input.actor,operationId:input.operationId,revision:input.revision,filename:path.basename(input.filename||absolute),source_sha256:sha256};
    const reservation=this.store.begin('restore-file',payload);
-   if(reservation.existing){const old=reservation.existing;if(old.status==='COMPLETE')return {...old.result,revision:this.store.revision(),replayed:true};if(old.status==='FAILED')fail(old.error.code,old.error.message,old.error.status);if(old.receiving_result){this.store.finish(input.operationId,old.receiving_result);return {...old.receiving_result,revision:this.store.revision(),replayed:true};}fail('OPERATION_RUNNING','Inspect the original receiving operation before repeating it.',409);}
+   if(reservation.existing){const old=reservation.existing;if(old.status==='COMPLETE')return {...old.result,revision:this.store.revision(),replayed:true};if(old.receiving_result){this.store.finish(input.operationId,old.receiving_result);return {...old.receiving_result,revision:this.store.revision(),replayed:true};}if(!['RUNNING','FAILED'].includes(old.status))fail('OPERATION_RUNNING','Inspect the original receiving operation.',409);if(this.store.db.prepare("SELECT count(*) AS n FROM records WHERE kind<>'operations'").get().n>0)fail('WORKSPACE_NOT_EMPTY','The destination contains other work; preserve it and reopen the original receiving workspace.',409);}
    try{
     const hash=createHash('sha256');let bytes=0;for await(const chunk of fs.createReadStream(absolute)){hash.update(chunk);bytes+=chunk.length;}if(hash.digest('hex')!==sha256)fail('SOURCE_DIGEST_MISMATCH','The received archive differs from its original preview receipt.',409);
     const original={...this.store.get('operations',input.operationId),archive:{sha256,bytes}},fd=fs.openSync(absolute,'r'),signature=Buffer.alloc(16);try{fs.readSync(fd,signature,0,16,0);}finally{fs.closeSync(fd);}
     let result;
     if(signature.equals(Buffer.from('SQLite format 3\0')))result=this.store.restoreNative(absolute,original);
+    else if(await isTransitionArchive(absolute)){const received=await receiveTransitionArchive(absolute,path.join(this.directory,'receiving'));try{original.archive={...original.archive,format:'osf-transition-tar',delivery_id:received.manifest.delivery_id,delivery_sha256:received.manifest.delivery_sha256,archive_manifest_sha256:received.manifest.manifest_sha256};result=this.store.restoreNative(received.sqlite,original);}finally{received.cleanup();}}
     else result=this.store.restore(fs.readFileSync(absolute),original);
     result={...result,sha256,bytes};this.store.finish(input.operationId,result);return {...result,revision:this.store.revision()};
    }catch(error){const safe=Object.assign(new Error(cleanError(error)),{code:error.code||'RECEIVING_FAILED',status:error.status||500});this.store.finish(input.operationId,null,safe);throw safe;}

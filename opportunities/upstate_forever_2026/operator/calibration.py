@@ -16,7 +16,8 @@ ACTIONS = frozenset({"calibration.prepare", "calibration.analyze", "calibration.
 READS = frozenset({"catalog", "plan", "report"})
 UNITS = {"nitrogen": "kg/year", "phosphorus": "kg/year", "sediment": "metric_tonnes/year"}
 COLUMNS = {
-    "ranking": ("rank", "run_id", "profile_id", "title", "objective_score", "status", "reason"),
+    "ranking": ("rank", "run_id", "profile_id", "title", "selected_models", "available_parameters",
+                "objective_score", "status", "reason"),
     "metrics": ("partition", "run_id", "profile_id", "profile_title", "parameter", "units",
                 "groups", "n", "rmse", "mean_bias", "nash_sutcliffe_efficiency"),
     "validation": ("partition", "run_id", "profile_id", "parameter", "units",
@@ -25,8 +26,10 @@ COLUMNS = {
                      "observed", "modeled", "native_modeled", "delivered_external_annual_mass", "residual",
                      "periods", "covered_days", "records", "included_in_metrics", "coverage_status", "method"),
     "groups": ("id", "partition", "catchment_ids", "station_ids", "observation_count", "parameters"),
-    "envelope": ("parameter", "units", "group_id", "catchment_id", "minimum", "maximum", "candidate_count"),
-    "stability": ("group_id", "selected_run_id", "same_as_full_selection", "objective_score"),
+    "envelope": ("parameter", "units", "group_id", "catchment_id", "minimum", "median", "maximum",
+                 "candidate_count", "distinct_profile_count", "expected_profiles"),
+    "stability": ("group_id", "selected_run_id", "selected_profile_id", "same_as_full_selection",
+                  "same_profile_as_full_selection", "objective_score"),
     "exclusions": ("run_id", "observation_id", "catchment_id", "parameter", "reason"),
 }
 TABLE_TITLES = {"ranking": "Candidate ranking", "metrics": "Calibration fit",
@@ -123,6 +126,9 @@ def _presentation(workspace, plan, report):
         selected_run = row.get("selected_run_id")
         stability.append({**row, "group_id": row["held_group_id"], "selected_run_id": selected_run,
                           "same_as_full_selection": selected_run == report["selected_run_id"] if selected_run else None,
+                          "same_profile_as_full_selection":
+                              row.get("selected_profile_id") == report["selected_profile_id"]
+                              if row.get("selected_profile_id") else None,
                           "objective_score": row.get("training_objective_score")})
     notes = [
         "The selected candidate minimizes the retained calibration objective. Validation groups remain outside that selection.",
@@ -132,14 +138,23 @@ def _presentation(workspace, plan, report):
         report["envelope_meaning"],
         report["reference_interpretation"],
     ]
+    candidate_count = report.get("candidate_count", len(plan["candidates"]))
+    profile_count = report.get("distinct_profile_count",
+                               len({row["profile_id"] for row in plan["candidates"]}))
+    selected_models = report.get("selected_models", [])
+    notes.append(str(candidate_count) + " original candidate runs represent " + str(profile_count) +
+                 " distinct parameter profiles. Run variants retain their own modeled outputs and original IDs.")
     notes.extend(selection["notes"])
-    return {"title": report["title"], "ranking": ranking, "metrics": metrics,
+    return {"title": report["title"], "candidate_count": candidate_count,
+            "distinct_profile_count": profile_count, "selected_models": selected_models,
+            "predicted_parameters": report.get("predicted_parameters", []), "ranking": ranking, "metrics": metrics,
             "validation": validation_metrics, "validation_state": validation["state"],
             "validation_missing_units": validation.get("missing_units", []),
             "validation_parameters_without_reference": validation.get("parameters_without_reference", []),
             "observations": observations, "groups": groups, "envelope": report["candidate_envelope"],
             "stability": stability, "stability_state": report["group_stability"]["state"],
             "winner_frequencies": report["group_stability"].get("winner_frequencies", []),
+            "profile_winner_frequencies": report["group_stability"].get("profile_winner_frequencies", []),
             "exclusions": exclusions, "pareto_run_ids": report["pareto_run_ids"], "notes": notes,
             "normalization": plan["normalization"], "source_vintages": plan["source_vintages"]}
 
@@ -235,6 +250,9 @@ class CalibrationOperations:
             plans.append({"id": plan["id"], "title": selection["title"], "state": state["state"],
                           "created_at": plan.get("created_at"), "result_id": state.get("result_id"),
                           "candidate_count": len(selection["candidate_run_ids"]),
+                          "distinct_profile_count": plan.get("distinct_profile_count",
+                              len({row["profile_id"] for row in plan.get("candidates", [])})),
+                          "predicted_parameters": plan.get("predicted_parameters", []),
                           "calibration_groups": len(selection.get("calibration_group_ids", [])),
                           "validation_groups": len(selection.get("validation_group_ids", [])),
                           "selection": selection})
@@ -247,6 +265,11 @@ class CalibrationOperations:
     def read(self, workspace, operation, value=None):
         value = value or {}
         ws = self.operator.ws(workspace)
+        if operation == "preview":
+            selection = value.get("selection")
+            if not isinstance(selection, dict):
+                raise self.Fault("CALIBRATION_SELECTION", "Supply the original calibration selection.")
+            return self.preview(workspace, selection)
         if operation == "catalog":
             return {"workspace_key": workspace, **science.catalog(ws)}
         if operation == "plan":

@@ -4,19 +4,58 @@ This extension adds a complete observation-based parameter selection workflow to
 
 The native scientific implementation lives in `model/calibration.py`. Its complete methods, selection schema and command-line reference are in `model/CALIBRATION.md`. The operator presents those records and scores directly. It uses the application's existing task queue, source inspection, original-file downloads, workspace selector, and backup/restore operations.
 
-## Install into the retained application
+## Receive one complete application
 
-Use the complete current Upper Savannah application that already contains `model/workspace.py`, `model/observations.py`, the native InVEST engine, and `operator/server.py`. Put this extension cohort in a separate source directory with the following relative paths:
+The calibration cohort contains nine paths:
 
 - `model/calibration.py`
 - `model/CALIBRATION.md`
 - `operator/calibration.py`
 - `operator/web/calibration.mjs`
 - `operator/web/calibration.css`
+- `operator/extensions/calibration.json`
 - `operator/CALIBRATION.md`
 - `operator/install_calibration.py`
+- `source_tools/calibration_assembly.py`
 
-Use the application's existing Python environment. Substitute the actual retained application and source directories for the paths below.
+The original model and scientific guide are the model carrier; the other seven files form the operator carrier. Retain the complete current application, including its native InVEST environment, original observations and source readers. The maintained extension package supplies `operator/extension_registry.py`, `operator/web/extension_host.mjs`, and `install_extensions.py`. Its source-preparation, native-run and other descriptors remain alongside calibration.
+
+### Assemble the complete receiving edition
+
+Use `source_tools/calibration_assembly.py` with the retained current `source_tools/application_assembly.py`. The driver delegates carrier decoding, file identities, ordered composition, directory receiving and ZIP creation to that existing assembler. It normalizes the explicit source file envelopes used by the calibration, terrain, transfer and original-USGS components, then registers the maintained extension host before the final source map and application receipt are written.
+
+First decode the complete operator carrier into a source directory. Run that received driver's actual local path. The model, operator and other `--overlay` arguments select complete retained source-carrier files; these may be original JSON, a saved complete Markdown carrier, or a format handled by the selected current assembler.
+
+Substitute the actual retained paths:
+
+```bash
+python -B /path/to/calibration-source/source_tools/calibration_assembly.py \
+  /path/to/complete-application-source-map.json \
+  --assembler /path/to/current/application/source_tools/application_assembly.py \
+  --current /path/to/current/application \
+  --extension-installer /path/to/current/application/install_extensions.py \
+  --overlay /path/to/terrain-source-carrier.md \
+  --overlay /path/to/terrain-transfer-carrier.md \
+  --overlay /path/to/original-usgs-contract-carrier.md \
+  --model /path/to/calibration-model-carrier.md \
+  --operator /path/to/calibration-operator-carrier.md \
+  --edition upper-savannah-calibration \
+  --output /path/to/new/complete-calibration-application \
+  --source-map /path/to/output/complete-calibration-source.json.gz \
+  --zip /path/to/output/complete-calibration-application.zip
+```
+
+The selected input order is: complete source-map base; current local application source when `--current` is supplied; explicitly selected overlays in their command-line order; model calibration; operator calibration; and the in-memory registration result. A selected overlay is a full-file source edition. Unmentioned current modules remain in the application, including map, programme, scenario, community and customer-review work. These additive terrain/transfer/USGS/calibration carriers leave the current `model/rasters.py` source in place.
+
+The `--current` path uses the maintained assembler's `snapshot_application(root)` API, available in its installed-directory receiving edition. This retains root source files such as `install_extensions.py` and additional application modules in `model/`, `operator/`, `source_tools/`, and `source/`. Binary source members keep the assembler's original external-file records. It validates the selected current file inventory and bytes again immediately before publishing. The original assembler continues to enforce declared predecessor hashes, duplicate-path rules, file identities and immutable receiving behavior. A changed current application causes preparation to return the specific path; rerun with the newly retained complete source.
+
+The receiving directory is a fresh application edition. Use its existing launch command to reopen the same scientific workspace. A repeat receive reuses an identical directory or output file. The final map, directory receipt and ZIP all describe the already registered source. The driver does not modify an earlier immutable source receipt after publication.
+
+Use `--inspect` to prepare that exact composition and display its source inventory, registration and local dependency diagnostics. The `--expect INDEX:SHA256` option pins an original decoded carrier payload: the base is index 0, then overlays in order, then the model and operator carriers. `--source-map` accepts an uncompressed JSON path or a `.gz` path. The assembly result records the actual selected assembler hash and maintained registry dependency hashes.
+
+### Register into an existing editable application
+
+For a retained application whose source is still being edited, use the standalone calibration installer. Install the maintained extension package sources first, then supply this complete calibration cohort:
 
 ```bash
 python -B /path/to/calibration-source/operator/install_calibration.py \
@@ -24,17 +63,18 @@ python -B /path/to/calibration-source/operator/install_calibration.py \
   --source /path/to/calibration-source
 ```
 
-The installer copies the seven extension files and adds calibration registrations to the current `operator/server.py`, `operator/web/app.mjs`, and `operator/web/index.html`. It composes the current source in memory, checks the Python syntax, retains original shared files, and checks their bytes again before replacing them. The current source remains the basis for the registration; map, community, customer review and other operator additions keep their existing code.
+The installer copies the nine extension paths and calls the current application's exact `install_extensions.patch_server` and `patch_app` functions. The descriptor owns calibration's backend, queued actions, authenticated reads, workspace state, downloads, browser navigation, styles and lifecycle. Existing authored navigation and styles remain compatible with the host. No additional calibration-specific shared-file dispatcher is installed.
 
-A repeat installation reuses identical files. Extension updates use the hashes recorded in `operator/calibration-install.json`; an independently modified extension must be composed with its current source before replacing it. The installer's `--preview` option returns the same path and hash plan without applying changes.
+An application that received the earlier direct calibration edition is migrated by removing only that edition's known calibration registrations before applying the maintained generic hooks. Source and task labels already authored in the original browser remain available. Exact published predecessor hashes also allow the earlier model and registry source cohorts to advance before a local install manifest exists. An independently modified calibration source or join is identified for composition in the actual current source.
 
-If another capability has changed a registration location, the installer names that location and returns a failure. Compose that named join in the actual current source and rerun the installer. Original preimages are retained with the installation history. The installer prepares every change before writing; an interrupted write can be resumed by applying the same cohort again.
+The installer prepares the source in memory, checks Python syntax, retains original preimages, and checks current bytes again before replacement. A repeat installation reuses identical files. Extension updates accept the previous installed hashes or the exact published calibration source predecessors. An independently edited extension remains available until its exact source is composed with the selected successor. The `--preview` option displays the same prepared paths and hashes.
 
-Restart the existing operator server using its retained launch command and open its current authenticated browser URL. **Calibration and validation** appears in the navigation. The extension uses the existing native environment and browser modules.
+Restart the retained operator and open its authenticated browser URL. `GET /api/extensions` includes calibration; **Calibration and validation** appears in the existing navigation. The browser host preserves the selected form through task-only state updates and routes calibration actions through the original application worker.
+
 
 ## Prepare the original scientific inputs
 
-The workspace needs completed native baseline runs and an admitted annual-load observation edition. Each candidate group contains runs from the same original grid and unchanged land-cover baseline, with different retained parameter profiles. Select the original catchment polygon source and ID field used by the observations.
+The workspace needs completed native baseline runs and an admitted annual-load observation edition. Each candidate group contains runs from the same original grid and unchanged land-cover baseline. The candidate table shows each run's actual NDR/SDR models and available pollutants alongside its retained parameter profile. A profile may have separately completed partial and combined runs; each retains its original native run identity. Select the original catchment polygon source and ID field used by the observations.
 
 The native catalog exposes compatible runs and the retained observations. A useful selection needs comparable observed annual loads for at least one of nitrogen, phosphorus or sediment. Native nitrogen and phosphorus loads retain kilograms per year; sediment retains metric tonnes per year. The original observation pipeline retains accepted rows, contextual rows, qualifiers, source references and units.
 
@@ -42,8 +82,10 @@ The source edition and catchments must belong to the same scientific workspace. 
 
 ## Select profiles and annual observations
 
+The objective controls follow the original annual observations and the pollutants shared by the selected completed runs. Unsupported pollutants have zero weight. An NDR-only comparison can therefore calibrate nitrogen and phosphorus while an original mixed observation edition keeps its sediment rows and native exclusions. When an output becomes available again, the form restores the weight entered for it. The saved objective remains explicit.
+
 1. Open **Calibration and validation** and choose **New calibration**.
-2. Give the selection a study title. Choose the retained grid and baseline, then check the completed candidate parameter profiles.
+2. Give the selection a study title. Choose the retained grid and baseline, then check the completed candidate runs. Inspect the actual model outputs beside each profile; NDR-only, SDR-only and combined runs stay distinguishable.
 3. Choose the original annual-load observation edition. **Inspect original observations** opens its original records and downloads.
 4. Choose the catchment source edition and polygon source. Use **Inspect native source fields** to see the actual layer names, field types, feature count and first original features. Select the catchment ID field that matches the observations.
 5. If needed, add exact field filters with their real data types. The optional observation record list selects actual retained record IDs, one per line.
@@ -66,13 +108,13 @@ Open **Results** from the completed task or saved selection. The interface inclu
 
 | View | What it shows |
 | --- | --- |
-| Profile ranking | Calibration objective, selected candidate, completed native run links and retained candidate outcomes. |
+| Profile ranking | Calibration objective, selected candidate, actual NDR/SDR outputs, completed native run links and retained candidate outcomes. |
 | Physical fit | Per-pollutant calibration errors, physical units, catchment/group counts and normalized mean squared error. |
 | Independent validation | Selected-profile performance on the reserved spatial groups. |
 | Observed and modeled | Each selected-profile catchment/pollutant prediction beside its original annual reference, period and source record IDs. |
 | Catchment groups | The retained calibration/validation assignments, original catchments, stations and admitted record counts. |
-| Candidate envelope | Annual-load ranges across the calibration Pareto candidates, with actual candidate coverage. |
-| Group stability | Selection after leaving out each calibration group, using the same retained native predictions and recomputing normalization from the remaining calibration groups. |
+| Candidate envelope | Annual-load ranges across the calibration Pareto candidates, with original candidate-run counts, distinct-profile counts and expected profiles. |
+| Group stability | Selection after leaving out each calibration group, including whether the chosen run and profile remain unchanged, using retained native predictions and normalization from the remaining calibration groups. |
 | Exclusions | Original reference exclusions, incomplete native support and candidate-specific errors retained by the scientific analysis. |
 
 The observed-versus-modeled charts keep pollutants separate and use their physical units. Filled circles show calibration catchments; outlined squares show validation catchments. The dashed line marks equality. Every chart point comes from the selected candidate's retained, included prediction rows.
@@ -87,7 +129,7 @@ A lower normalized calibration objective identifies the selected retained profil
 
 A reserved spatial split separates parameter selection from the selected-profile validation report. It does not create a new observed time series or add independent years to an annual model. The original period assumptions remain attached to the records.
 
-The candidate envelope describes the calibration Pareto set: candidates whose pollutant scores are not jointly dominated by another candidate. Its range reflects retained profile differences and coverage. The full report explains that interpretation and keeps the actual envelope candidate count for each catchment/pollutant.
+The candidate envelope describes the calibration Pareto set: candidates whose pollutant scores are not jointly dominated by another candidate. Its range reflects the retained candidate runs and their coverage. A single profile can have separate NDR, SDR or combined run variants, so the result shows both run counts and distinct-profile counts. The median and range retain the original candidate-run weighting recorded in the scientific report. Original run IDs remain available for every comparison.
 
 Leaving one calibration group out evaluates the stability of the selection among the original completed candidates. It uses their retained predictions, with the held calibration group removed from that fold's normalization and selection. Separately reserved validation groups stay outside those folds.
 
@@ -120,7 +162,7 @@ Use the existing **Create complete backup** and restore workflow. The original w
 
 ## Operator API
 
-The routes share the existing authenticated local operator and selected workspace.
+The descriptor registers these routes with the existing authenticated local operator and selected workspace. Its state contribution is `state.data.calibration`, containing `calibration_plans` and `calibrations`. The original `/api/item` route also accepts the registered kinds `calibration-plans` and `calibrations`.
 
 | Method | Route | Selection |
 | --- | --- | --- |
@@ -136,6 +178,6 @@ The original-source preview takes the workspace's existing native-operation gate
 
 ## Source layout
 
-`operator/calibration.py` adapts the scientific records and writes comparison exports. `operator/web/calibration.mjs` provides the existing operator's calibration view and forms. `operator/web/calibration.css` supplies scoped monochrome styling. `operator/install_calibration.py` registers them in the retained application.
+`operator/calibration.py` adapts the scientific records and writes comparison exports. `operator/web/calibration.mjs` provides the existing operator's calibration view and forms. `operator/web/calibration.css` supplies scoped monochrome styling. `operator/extensions/calibration.json` binds them to the maintained extension host. `operator/install_calibration.py` performs current-source registration and migration; `source_tools/calibration_assembly.py` composes the complete receiving edition before its final source identities are recorded.
 
 The scientific model API remains `catalog(workspace)`, `preview(workspace, selection)`, `prepare(workspace, selection)`, `inspect(workspace, plan_id)`, and `analyze(workspace, plan_id)`. See the companion model guide for the complete scientific input schema and source-native command-line workflow.

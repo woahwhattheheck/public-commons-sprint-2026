@@ -1,8 +1,8 @@
-"""Install calibration into the retained Upper Savannah operator without replacing its source.
+"""Install calibration through the retained operator's maintained extension registry.
 
-The extension files are copied from this source cohort. Existing shared modules
-receive only named registration additions; original native engines and sibling
-operator capabilities remain intact.
+The current generic extension installer owns shared application hooks. Calibration
+supplies one descriptor, its complete backend/browser sources and a portable
+assembly driver. Earlier direct calibration registrations migrate in memory.
 """
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import argparse
 import ast
 import fcntl
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,9 +20,47 @@ import tempfile
 
 FILES = ("model/calibration.py", "model/CALIBRATION.md", "operator/calibration.py",
          "operator/web/calibration.mjs", "operator/web/calibration.css",
-         "operator/CALIBRATION.md", "operator/install_calibration.py")
+         "operator/extensions/calibration.json", "operator/CALIBRATION.md",
+         "operator/install_calibration.py", "source_tools/calibration_assembly.py")
 SHARED = ("operator/server.py", "operator/web/app.mjs", "operator/web/index.html")
-VERSION = "upstate.calibration-registration/v1"
+DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.mjs",
+                "install_extensions.py")
+VERSION = "upstate.calibration-registration/v2"
+PREDECESSORS = {
+    "model/calibration.py": {
+        "212435ab972a19027222042870a9c0914701271ce9f8760d785460d53e553e26",
+    },
+    "model/CALIBRATION.md": {
+        "ea20e443b4152012cac68c9ef0f322ddb1529f3ce45c7995e4bc3c47a0c9bfd1",
+    },
+    "operator/calibration.py": {
+        "d09b6154d3eb889d6d18db6b70a6989ea08455373abe4d5a78d7d63cb545203a",
+        "c93bc426673d7489ce14b11921c2093e867aa09b4aaa73f33aff322c7d88e776",
+    },
+    "operator/web/calibration.mjs": {
+        "f11f84b5bc537783bf9d6c05a4698ecc67c9960044236f6f4bf09cd84eb7c6b3",
+        "d671b93682092db969d7ca5819fa9c77aacb90f7a12f835655dbb84675ef6476",
+    },
+    "operator/web/calibration.css": {
+        "6d523b2bf1b10f94b70e9c2a270eea08137e8edf0345160efee497108228386e",
+    },
+    "operator/extensions/calibration.json": {
+        "a2865a0fd8429f5e684e5111e61e5edac7be4dbd8a03956654cba79595e6b8b9",
+    },
+    "operator/CALIBRATION.md": {
+        "ffc4ee920f1a94481e991818ccdcd9e66bcefa468989b75025d97fab046b333c",
+        "8b149d2747c3b2fe975640fc700da54fd7aa68acfb0b9d50c0490050e4ca6aa9",
+        "4b475c00a806812548da18d54fe3885e7e73a01daaad49e5709212718b9624ad",
+    },
+    "operator/install_calibration.py": {
+        "c4778244f62b9ee214034bd64fadc74cd2cc4d545b7e5292c4395575e88ac261",
+        "50360ee8e59a0c318d298fa449498be43f6d47abfbae87e5a88969d3f26aa32a",
+    },
+    "source_tools/calibration_assembly.py": {
+        "d2ce1db8c60f83b34856fe6adeb99912c59593404495dff4cb62ae991020ed57",
+        "5ea2734cc4bac957d99b8f8ef7d63c10ae687fd6d02ae208342b5219804bddb1",
+    },
+}
 
 
 def _hash(data):
@@ -44,125 +83,98 @@ def _atomic(path, data):
             pending.unlink(missing_ok=True)
 
 
-def _replace(text, before, after, label):
-    if after in text:
-        return text
-    if text.count(before) != 1:
-        raise ValueError(label + ": expected one existing registration location; compose this current source before installing")
-    return text.replace(before, after, 1)
+def _replace_owned(source, old, new, label):
+    if old not in source:
+        return source
+    if source.count(old) != 1:
+        raise ValueError(label + ": compose the repeated current calibration registration")
+    return source.replace(old, new, 1)
 
 
-def _insert_line(text, expression, addition, label):
-    if addition.strip() in text:
-        return text
-    matches = list(re.finditer(expression, text, re.MULTILINE))
-    if len(matches) != 1:
-        raise ValueError(label + ": expected one original registration line")
-    match = matches[0]
-    return text[:match.end()] + "\n" + addition + text[match.end():]
+def _legacy_server(source):
+    removals = (
+        "from calibration import CalibrationOperations, ACTIONS as CALIBRATION_ACTIONS, READS as CALIBRATION_READS\n",
+        "ACTIONS.update(CALIBRATION_ACTIONS)\n",
+        "        self.calibration = CalibrationOperations(self, Fault)\n",
+        "        if action in CALIBRATION_ACTIONS:\n            return self.calibration.invoke(task)\n",
+        "        state.update(self.calibration.state(workspace))\n",
+        '                calibration_reads = {"/api/calibration/" + name: name for name in CALIBRATION_READS}\n'
+        '                if url.path in calibration_reads:\n'
+        '                    return self.send_json(200, self.app.calibration.read(\n'
+        '                        workspace, calibration_reads[url.path], {"id": one("id")}))\n',
+        '            if url.path == "/api/calibration/preview":\n'
+        '                return self.send_json(200, self.app.calibration.preview(\n'
+        '                    value.get("workspace", self.app.primary), required(value, "selection")))\n',
+    )
+    for value in removals:
+        source = _replace_owned(source, value, "", "Earlier calibration backend")
+    source = _replace_owned(source,
+        "self.customer_reviews.decorate_task(self.calibration.decorate_task(task))",
+        "self.customer_reviews.decorate_task(task)", "Earlier calibration task decoration")
+    if re.search(r"\bCALIBRATION_(?:ACTIONS|READS)\b|\bself(?:\.app)?\.calibration\b", source):
+        raise ValueError("Current direct calibration backend has independent registration changes; compose those exact joins")
+    return source
 
 
-def _server(text):
-    text = _replace(text, "from model.spatial_exports import SpatialExports",
-                    "from model.spatial_exports import SpatialExports\n"
-                    "from calibration import CalibrationOperations, ACTIONS as CALIBRATION_ACTIONS, READS as CALIBRATION_READS",
-                    "Calibration backend import")
-    text = _replace(text, "ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)",
-                    "ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)\nACTIONS.update(CALIBRATION_ACTIONS)",
-                    "Calibration action registration")
-    text = _replace(text, "        self.customer_reviews = CustomerReviews(self, Fault)",
-                    "        self.customer_reviews = CustomerReviews(self, Fault)\n"
-                    "        self.calibration = CalibrationOperations(self, Fault)",
-                    "Calibration operator instance")
-    text = _replace(text, "        if action in CUSTOMER_REVIEW_ACTIONS:",
-                    "        if action in CALIBRATION_ACTIONS:\n"
-                    "            return self.calibration.invoke(task)\n"
-                    "        if action in CUSTOMER_REVIEW_ACTIONS:", "Calibration queued operations")
-    state_anchor = "    def state(self, workspace):\n        ws = self.ws(workspace)\n        state = ws.overview()"
-    text = _replace(text, state_anchor, state_anchor + "\n        state.update(self.calibration.state(workspace))",
-                    "Calibration workspace state")
-    text = _replace(text, "self.customer_reviews.decorate_task(task)",
-                    "self.customer_reviews.decorate_task(self.calibration.decorate_task(task))",
-                    "Calibration task downloads")
-    get_anchor = '                if url.path == "/api/state":\n                    return self.send_json(200, self.app.state(workspace))'
-    text = _replace(text, get_anchor, get_anchor + '\n'
-                    '                calibration_reads = {"/api/calibration/" + name: name for name in CALIBRATION_READS}\n'
-                    '                if url.path in calibration_reads:\n'
-                    '                    return self.send_json(200, self.app.calibration.read(\n'
-                    '                        workspace, calibration_reads[url.path], {"id": one("id")}))',
-                    "Calibration read routes")
-    post_anchor = '            if url.path == "/api/actions":'
-    text = _replace(text, post_anchor,
-                    '            if url.path == "/api/calibration/preview":\n'
-                    '                return self.send_json(200, self.app.calibration.preview(\n'
-                    '                    value.get("workspace", self.app.primary), required(value, "selection")))\n'
-                    + post_anchor, "Calibration original-source preview")
-    if '"calibration.mjs"' not in text or '"calibration.css"' not in text:
-        matches = list(re.finditer(r"(?m)^(\s*if selected not in )(\{[^\n]*\})(:)$", text))
-        if len(matches) != 1:
-            raise ValueError("Static module registration: expected the original selected-file set")
-        match = matches[0]
-        original = match.group(2)
-        names = ast.literal_eval(original)
-        if not isinstance(names, set) or any(not isinstance(name, str) for name in names):
-            raise ValueError("Static module registration differs from the original string set")
-        additions = [name for name in ("calibration.mjs", "calibration.css") if name not in names]
-        updated = original[:-1].rstrip().rstrip(",") + ", " + ", ".join(json.dumps(name) for name in additions) + "}"
-        text = text[:match.start(2)] + updated + text[match.end(2):]
-    return text
+def _legacy_app(source):
+    removals = (
+        "import {attachCalibration} from './calibration.mjs';\n",
+        "const calibration=attachCalibration({getState:()=>state,api,endpoint,openForm,submitAction,"
+        "detail,fileList,openItem,showTask,toast});\n",
+        "  if(view==='calibration')html=calibration.render();\n",
+        "  if(view==='calibration')calibration.mount($('#content'));else calibration.detach();\n",
+        " if(action?.startsWith('calibration-'))return calibration.dispatch(button);\n",
+    )
+    for value in removals:
+        source = _replace_owned(source, value, "", "Earlier calibration browser")
+    source = _replace_owned(source, "if(view==='spatial'){calibration.detach();",
+                            "if(view==='spatial'){", "Earlier spatial view lifecycle")
+    source = _replace_owned(source, "calibration.detach();workspace=id;state=null;",
+                            "workspace=id;state=null;", "Earlier calibration workspace lifecycle")
+    source = _replace_owned(source, "customerReviews.taskActions(row)+calibration.taskActions(row)",
+                            "customerReviews.taskActions(row)", "Earlier calibration task links")
+    if "attachCalibration" in source or re.search(r"\bcalibration\.(?:render|mount|detach|dispatch|taskActions)\(", source):
+        raise ValueError("Current direct calibration browser has independent registration changes; compose those exact joins")
+    return source
 
 
-def _app(text):
-    text = _replace(text, "import {attachCustomerReviews} from './reviews.mjs';",
-                    "import {attachCustomerReviews} from './reviews.mjs';\n"
-                    "import {attachCalibration} from './calibration.mjs';", "Calibration browser import")
-    if "calibration:'Calibration and validation'" not in text:
-        text = _replace(text, "const viewLabels={",
-                        "const viewLabels={calibration:'Calibration and validation',", "Calibration view title")
-    if "'calibration.prepare':'Save calibration selection'" not in text:
-        text = _replace(text, "const actionLabels={",
-                        "const actionLabels={'calibration.prepare':'Save calibration selection',"
-                        "'calibration.analyze':'Analyze original annual loads',"
-                        "'calibration.export':'Export calibration results',", "Calibration task labels")
-    text = _insert_line(text, r"^const customerReviews=attachCustomerReviews\([^\n]*\);$",
-                        "const calibration=attachCalibration({getState:()=>state,api,endpoint,openForm,submitAction,"
-                        "detail,fileList,openItem,showTask,toast});", "Calibration browser attachment")
-    text = _replace(text, "if(view==='spatial'){",
-                    "if(view==='spatial'){calibration.detach();", "Spatial view lifecycle")
-    text = _replace(text, "  if(view==='customer-reviews')html=customerReviews.render();",
-                    "  if(view==='customer-reviews')html=customerReviews.render();\n"
-                    "  if(view==='calibration')html=calibration.render();", "Calibration view rendering")
-    text = _replace(text, "  if(view==='customer-reviews')customerReviews.mount($('#content'));else customerReviews.detach();",
-                    "  if(view==='customer-reviews')customerReviews.mount($('#content'));else customerReviews.detach();\n"
-                    "  if(view==='calibration')calibration.mount($('#content'));else calibration.detach();",
-                    "Calibration view lifecycle")
-    text = _replace(text, "customerReviews.taskActions(row)",
-                    "customerReviews.taskActions(row)+calibration.taskActions(row)", "Calibration task links")
-    text = _replace(text, "workspace=id;state=null;",
-                    "calibration.detach();workspace=id;state=null;", "Calibration workspace change")
-    text = _replace(text, " if(action?.startsWith('review-'))return customerReviews.dispatch(button);",
-                    " if(action?.startsWith('review-'))return customerReviews.dispatch(button);\n"
-                    " if(action?.startsWith('calibration-'))return calibration.dispatch(button);",
-                    "Calibration browser actions")
-    return text
+def load_extension_installer(path):
+    path = Path(path).resolve(strict=True)
+    spec = importlib.util.spec_from_file_location("_upstate_maintained_extension_installer", path)
+    if spec is None or spec.loader is None:
+        raise ValueError("Select the retained install_extensions.py")
+    tool = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = tool
+    spec.loader.exec_module(tool)
+    if not callable(getattr(tool, "patch_server", None)) or not callable(getattr(tool, "patch_app", None)):
+        raise ValueError("The retained extension installer needs patch_server and patch_app")
+    return tool
 
 
-def _html(text):
-    text = _replace(text, '<link rel="stylesheet" href="/web/reviews.css">',
-                    '<link rel="stylesheet" href="/web/reviews.css">\n'
-                    '<link rel="stylesheet" href="/web/calibration.css">', "Calibration stylesheet")
-    text = _replace(text, '    <button data-view="observations">Observed water quality</button>',
-                    '    <button data-view="observations">Observed water quality</button>\n'
-                    '    <button data-view="calibration">Calibration and validation</button>',
-                    "Calibration navigation")
-    return text
+def register_sources(sources, extension_installer):
+    """Compose the current maintained host and migrate only our earlier joins."""
+    for name in (*SHARED, *DEPENDENCIES):
+        if name not in sources:
+            raise ValueError("Receive the current complete application and extension host; missing " + name)
+    result = {
+        "operator/server.py": extension_installer.patch_server(_legacy_server(sources["operator/server.py"])),
+        "operator/web/app.mjs": extension_installer.patch_app(_legacy_app(sources["operator/web/app.mjs"])),
+        "operator/web/index.html": sources["operator/web/index.html"],
+    }
+    ast.parse(result["operator/server.py"], filename="operator/server.py")
+    return result
 
 
-def install(application, source, *, preview=False):
+def install(application, source, *, preview=False, extension_installer=None):
     application, source = Path(application).resolve(strict=True), Path(source).resolve(strict=True)
-    for path in ("model/workspace.py", "model/observations.py", *SHARED):
+    for path in ("model/workspace.py", "model/observations.py", *SHARED, *DEPENDENCIES):
         if not (application / path).is_file():
-            raise ValueError("Select the complete retained scientific application; missing " + path)
+            raise ValueError("Select the complete retained scientific application and extension host; missing " + path)
+    tool_path = Path(extension_installer or application / "install_extensions.py").resolve(strict=True)
+    tool_bytes = tool_path.read_bytes()
+    if tool_bytes != (application / "install_extensions.py").read_bytes():
+        raise ValueError("Select the current application's exact maintained install_extensions.py")
+    tool = load_extension_installer(tool_path)
     lock_path = application / "operator" / ".calibration-registration.lock"
     fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
@@ -179,27 +191,36 @@ def install(application, source, *, preview=False):
             before = target.read_bytes() if target.exists() else None
             if before is not None and before != data:
                 expected = previous.get("installed", {}).get(name)
-                if expected != _hash(before):
+                if expected != _hash(before) and _hash(before) not in PREDECESSORS.get(name, set()):
                     raise ValueError("Existing extension has independent changes: " + name
                                      + " (current " + _hash(before) + ", incoming " + _hash(data) + ")")
             originals[name], changes[name], kinds[name] = before, data, "extension"
-        for name, patcher in zip(SHARED, (_server, _app, _html)):
-            path = application / name
-            before = path.read_bytes()
-            after = patcher(before.decode("utf-8")).encode("utf-8")
-            originals[name], changes[name], kinds[name] = before, after, "registration"
+        source_snapshot = {name: (application / name).read_bytes() for name in (*SHARED, *DEPENDENCIES)}
+        composed = register_sources({name: data.decode("utf-8") for name, data in source_snapshot.items()}, tool)
+        for name, after in composed.items():
+            originals[name], changes[name], kinds[name] = source_snapshot[name], after.encode("utf-8"), "registration"
         for name, data in changes.items():
             if name.endswith(".py"):
                 ast.parse(data.decode("utf-8"), filename=name)
-        plan = [{"path": name, "kind": kinds[name], "before_sha256": _hash(originals[name]) if originals[name] is not None else None,
+            if name == "operator/extensions/calibration.json":
+                descriptor = json.loads(data)
+                if descriptor.get("schema") != "upstate.operator-extension/v1" or descriptor.get("id") != "calibration":
+                    raise ValueError("Select the complete calibration extension descriptor")
+        plan = [{"path": name, "kind": kinds[name],
+                 "before_sha256": _hash(originals[name]) if originals[name] is not None else None,
                  "after_sha256": _hash(data), "changed": data != originals[name]}
                 for name, data in changes.items()]
+        dependency_hashes = {name: _hash(source_snapshot[name]) for name in DEPENDENCIES}
         receipt = {"schema": VERSION, "application": str(application), "files": plan,
+                   "dependencies": dependency_hashes, "catalogue": "/api/extensions",
                    "changed_files": sum(row["changed"] for row in plan)}
         if preview:
             return {**receipt, "state": "prepared"}
         operation_id = _hash(json.dumps(plan, sort_keys=True, separators=(",", ":")).encode("utf-8"))
         history = application / ".calibration-install-history" / operation_id
+        for name, before in source_snapshot.items():
+            if (application / name).read_bytes() != before:
+                raise ValueError("Current shared source changed during calibration preparation: " + name)
         for name, before in originals.items():
             path = application / name
             current = path.read_bytes() if path.exists() else None
@@ -218,7 +239,8 @@ def install(application, source, *, preview=False):
             _atomic(path, data)
         installed = {name: _hash(data) for name, data in changes.items()}
         _atomic(manifest_path, (json.dumps({"schema": VERSION, "operation_id": operation_id,
-                                           "installed": installed}, sort_keys=True, indent=2) + "\n").encode("utf-8"))
+                                           "installed": installed, "dependencies": dependency_hashes},
+                                          sort_keys=True, indent=2) + "\n").encode("utf-8"))
         return {**receipt, "state": "installed", "operation_id": operation_id}
     finally:
         os.close(fd)
@@ -227,13 +249,16 @@ def install(application, source, *, preview=False):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--application", type=Path, required=True,
-                        help="The existing complete Upper Savannah scientific application")
+                        help="Existing complete Upper Savannah scientific application and extension host")
     parser.add_argument("--source", type=Path, default=Path(__file__).resolve().parents[1],
-                        help="This calibration source cohort, with model/ and operator/")
+                        help="This complete calibration cohort with model/, operator/ and source_tools/")
+    parser.add_argument("--extension-installer", type=Path,
+                        help="Exact current maintained install_extensions.py; defaults to the application copy")
     parser.add_argument("--preview", action="store_true", help="Show exact composed paths before applying")
     args = parser.parse_args(argv)
     try:
-        result = install(args.application, args.source, preview=args.preview)
+        result = install(args.application, args.source, preview=args.preview,
+                         extension_installer=args.extension_installer)
         print(json.dumps(result, sort_keys=True, indent=2))
         return 0
     except (ValueError, OSError, SyntaxError) as error:

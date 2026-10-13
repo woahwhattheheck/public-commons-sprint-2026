@@ -117,7 +117,7 @@ export class MppProductClient {
     return this.#request('/api/channel/'+name,input);
   }
   channelRecord(kind,key) {
-    need(['tasks','purchases','contracts','funders','funding','settlements','observations'].includes(kind),'MPP_CHANNEL_RECORD_KIND');
+    need(['tasks','purchases','contracts','funders','funding','settlements','observations','openings'].includes(kind),'MPP_CHANNEL_RECORD_KIND');
     return this.#request('/api/channel/'+kind+'/'+encodeURIComponent(id(key)));
   }
   channelResponse(purchaseId) {

@@ -90,8 +90,43 @@ def _selection(value):
     return value
 
 
+def _run_models(run):
+    """Read the maintained native model/output scope without changing run IDs."""
+    from .common import output_models
+    from .model_selection import validate_completed_run
+    if run.get("state") != "complete":
+        raise ValueError("Complete the original selected native models before evaluating run " + run["id"])
+    scope = validate_completed_run(run)
+    present = set(scope["available_artifacts"])
+    registry = {tuple(pair) for name, pair in output_models(run["selection"]).items()
+                if name in present}
+    available = [parameter for parameter, (model, output, _) in NATIVE.items()
+                 if (model, output) in registry]
+    return {
+        "selected_models": scope["selected_models"],
+        "available_parameters": available,
+        "model_scope": scope,
+    }
+
+
+def _candidate_group(key, runs):
+    parameters = [set(run["available_parameters"]) for run in runs]
+    common = set.intersection(*parameters) if parameters else set()
+    union = set.union(*parameters) if parameters else set()
+    counts = defaultdict(int)
+    for run in runs:
+        counts[run["profile_id"]] += 1
+    return {
+        "grid_id": key[0], "scenario_id": key[1], "runs": [
+            {**run, "profile_variant_count": counts[run["profile_id"]]} for run in runs],
+        "common_parameters": [parameter for parameter in PARAMETERS if parameter in common],
+        "available_parameters": [parameter for parameter in PARAMETERS if parameter in union],
+        "candidate_count": len(runs), "distinct_profile_count": len(counts),
+    }
+
+
 def _candidates(workspace, selection):
-    candidates, profile_ids = [], set()
+    candidates = []
     for run_id in selection["candidate_run_ids"]:
         run = workspace.inspect_run(run_id)
         if run.get("state") != "complete":
@@ -102,10 +137,8 @@ def _candidates(workspace, selection):
         scenario = workspace._get("scenarios", chosen["scenario_id"])
         if scenario.get("kind") != "baseline" or scenario.get("patches"):
             raise ValueError("Annual-load parameter evaluation requires original baseline land cover")
-        if chosen["profile_id"] in profile_ids:
-            raise ValueError("Candidate profiles must be distinct")
-        profile_ids.add(chosen["profile_id"])
         profile = workspace._get("profiles", chosen["profile_id"])
+        scope = _run_models(run)
         candidates.append({
             "run_id": run_id, "profile_id": profile["id"], "title": profile["title"],
             "grid_id": chosen["grid_id"], "scenario_id": chosen["scenario_id"],
@@ -113,7 +146,8 @@ def _candidates(workspace, selection):
             "model_period": profile.get("model_period"),
             "profile_references": profile.get("references"),
             "table_summary": profile.get("table_summary"),
-            "parameters": {"ndr": profile["ndr"], "sdr": profile["sdr"]},
+            "parameters": {model: profile.get(model) for model in scope["selected_models"]},
+            **scope,
         })
     if len({(c["grid_id"], c["scenario_id"]) for c in candidates}) != 1:
         raise ValueError("Every candidate must use the same original grid and baseline scenario")
@@ -134,13 +168,11 @@ def catalog(workspace):
         profile = workspace._get("profiles", selection["profile_id"])
         groups[(selection["grid_id"], selection["scenario_id"])].append({
             "id": run["id"], "run_id": run["id"], "profile_id": profile["id"], "title": profile["title"],
-            "model_period": profile.get("model_period"),
+            "model_period": profile.get("model_period"), **_run_models(run),
         })
     return {
         "schema": "upstate.calibration-catalog/v1", "workspace_id": workspace.project["id"],
-        "candidate_groups": [
-            {"grid_id": key[0], "scenario_id": key[1], "runs": values}
-            for key, values in sorted(groups.items())],
+        "candidate_groups": [_candidate_group(key, values) for key, values in sorted(groups.items())],
         "observations": [
             {"id": item["id"], "observation_id": item["id"], "title": item["metadata"]["title"],
              "admitted_count": item["admitted_count"], "context_count": item["context_count"],
@@ -257,11 +289,14 @@ def _source_groups(workspace, selection, rows, grid):
     }
 
 
-def _objective(selection, rows):
+def _objective(selection, rows, common_parameters=None):
     supplied = selection.get("objective")
     available = {r["parameter"] for r in rows}
     if supplied is None:
-        supplied = {p: {"weight": 1.0} for p in PARAMETERS if p in available}
+        default_parameters = available if common_parameters is None else available & set(common_parameters)
+        if not default_parameters:
+            raise ValueError("Choose completed candidate runs with a common native output matching the original annual references")
+        supplied = {p: {"weight": 1.0} for p in PARAMETERS if p in default_parameters}
     if not isinstance(supplied, dict) or not supplied or set(supplied) - set(PARAMETERS):
         raise ValueError("Select nitrogen, phosphorus or sediment objective definitions")
     result = {}
@@ -393,13 +428,28 @@ def _basis(workspace, selection):
             exclusions.append({"observation_record_id": key, "issues": row.get("issues", [])})
     if not eligible:
         raise ValueError("The selected source has no admitted annual N/P/sediment reference loads")
-    objective = _objective(selection, eligible)
+    common_parameters = set.intersection(*(set(candidate["available_parameters"]) for candidate in candidates))
+    objective = _objective(selection, eligible, common_parameters)
+    missing = [
+        {"run_id": candidate["run_id"],
+         "parameters": sorted(set(objective) - set(candidate["available_parameters"])),
+         "selected_models": candidate["selected_models"]}
+        for candidate in candidates
+        if set(objective) - set(candidate["available_parameters"])
+    ]
+    if missing:
+        descriptions = [item["run_id"] + " lacks " + ", ".join(item["parameters"])
+                        + " in its selected " + "/".join(item["selected_models"]).upper() + " outputs"
+                        for item in missing]
+        raise ValueError("Positive-weight objectives require an actual native output for every candidate: "
+                         + "; ".join(descriptions))
     rows = []
     for row in eligible:
         if row["parameter"] in objective:
             rows.append(row)
         else:
-            exclusions.append({"observation_record_id": row["id"],
+            exclusions.append({"observation_record_id": row["id"], "parameter": row["parameter"],
+                               "available_for_all_candidates": row["parameter"] in common_parameters,
                                "issues": ["Pollutant is outside the selected positive-weight objectives"]})
     grid = workspace.get_grid(candidates[0]["grid_id"])
     spatial = _source_groups(workspace, selection, rows, grid)
@@ -421,6 +471,10 @@ def _basis(workspace, selection):
         group["partition"] = "calibration" if group["id"] in calibration else "validation"
     return {
         "selection": selection, "candidates": candidates, "units": units,
+        "candidate_count": len(candidates),
+        "distinct_profile_count": len({candidate["profile_id"] for candidate in candidates}),
+        "common_parameters": [parameter for parameter in PARAMETERS if parameter in common_parameters],
+        "predicted_parameters": [parameter for parameter in PARAMETERS if parameter in objective],
         "spatial_groups": spatial, "normalization": scales,
         "observations": {"id": observed["id"], "metadata": observed["metadata"], "original": observed["original"]},
         "source_vintages": grid["inputs"], "exclusions": exclusions,
@@ -450,6 +504,11 @@ def prepare(workspace, selection):
 
 
 def _matching_comparison(item, plan, run_id):
+    candidate = next((value for value in plan["candidates"] if value["run_id"] == run_id), None)
+    selected = candidate.get("selected_models") if candidate else None
+    if selected and selected != ["ndr", "sdr"]:
+        if item.get("model_scope", {}).get("selected_models") != selected:
+            return False
     return (item.get("run_id") == run_id
             and item.get("observation_id") == plan["selection"]["observation_id"]
             and item.get("comparison_version") == 3
@@ -599,9 +658,10 @@ def _pareto(ranked, parameters):
 
 def _envelope(plan, predictions, run_ids):
     result = []
+    profiles = {candidate["run_id"]: candidate["profile_id"] for candidate in plan["candidates"]}
     for unit in plan["units"]:
-        values = sorted(predictions[run_id][unit["id"]]["predicted_annual_mass"]
-                        for run_id in run_ids if predictions[run_id][unit["id"]]["included"])
+        included = [run_id for run_id in run_ids if predictions[run_id][unit["id"]]["included"]]
+        values = sorted(predictions[run_id][unit["id"]]["predicted_annual_mass"] for run_id in included)
         n = len(values)
         median = (values[n // 2] if n % 2 else (values[n // 2 - 1] + values[n // 2]) / 2) if n else None
         result.append({
@@ -610,6 +670,9 @@ def _envelope(plan, predictions, run_ids):
             "observed_annual_mass": unit["observed_annual_mass"],
             "minimum": values[0] if n else None, "median": median, "maximum": values[-1] if n else None,
             "candidate_count": n, "expected_candidates": len(run_ids),
+            "distinct_profile_count": len({profiles[run_id] for run_id in included}),
+            "expected_profiles": len({profiles[run_id] for run_id in run_ids}),
+            "summary_unit": "completed native candidate run",
         })
     return result
 
@@ -620,7 +683,7 @@ def _stability(plan, predictions, ranked):
         return {"state": "not_selected", "folds": [], "winner_frequencies": []}
     if len(groups) < 2:
         return {"state": "one_calibration_group", "folds": [], "winner_frequencies": []}
-    folds, wins = [], defaultdict(int)
+    folds, wins, profile_wins = [], defaultdict(int), defaultdict(int)
     for held_group in groups:
         training = [group_id for group_id in groups if group_id != held_group]
         try:
@@ -636,6 +699,7 @@ def _stability(plan, predictions, ranked):
             continue
         winner = choices[0]
         wins[winner["run_id"]] += 1
+        profile_wins[winner["profile_id"]] += 1
         folds.append({
             "held_group_id": held_group, "training_group_ids": training, "state": "complete",
             "selected_run_id": winner["run_id"], "selected_profile_id": winner["profile_id"],
@@ -645,6 +709,8 @@ def _stability(plan, predictions, ranked):
     return {
         "state": "complete", "folds": folds,
         "winner_frequencies": [{"run_id": key, "folds_selected": count} for key, count in sorted(wins.items())],
+        "profile_winner_frequencies": [{"profile_id": key, "folds_selected": count}
+                                       for key, count in sorted(profile_wins.items())],
         "completed_folds": sum(fold["state"] == "complete" for fold in folds),
         "method": "Leave one calibration spatial group out, recompute normalization using the remaining "
                   "calibration groups, and reselect from the same eligible original candidates. "
@@ -688,6 +754,9 @@ def analyze(workspace, plan_id):
                 if previous.get("state") == "complete":
                     return previous
                 state.pop("result_id", None)
+            # Enrich an in-memory copy from retained native runs. Saved version-1
+            # plans and their content-addressed identities remain unchanged.
+            plan = {**plan, "candidates": [dict(candidate) for candidate in plan["candidates"]]}
             state.setdefault("created_at", now())
             state.setdefault("comparison_ids", {})
             _progress(progress_path, state, state="running", phase="original_comparisons")
@@ -697,6 +766,14 @@ def analyze(workspace, plan_id):
                 run_id = candidate["run_id"]
                 try:
                     _progress(progress_path, state, phase="original_comparisons", current_run_id=run_id)
+                    run = workspace.inspect_run(run_id)
+                    if digest(run["selection"]) != digest(candidate["selection"]):
+                        raise ValueError("The original candidate selection differs from its saved calibration plan")
+                    candidate.update(_run_models(run))
+                    missing = set(plan["selection"]["objective"]) - set(candidate["available_parameters"])
+                    if missing:
+                        raise ValueError("The saved objective requires absent selected-model outputs: "
+                                         + ", ".join(sorted(missing)))
                     if state["comparison_ids"].get(run_id):
                         comparison = workspace._get("observation-comparisons", state["comparison_ids"][run_id])
                         if not _matching_comparison(comparison, plan, run_id):
@@ -745,8 +822,19 @@ def analyze(workspace, plan_id):
                             "catchment_id": unit["catchment_id"], "group_id": unit["group_id"],
                             "parameter": unit["parameter"], "partition": unit["partition"], "units": unit["units"],
                             "observed_annual_mass": unit["observed_annual_mass"], **prediction})
+            profile_count = len({candidate["profile_id"] for candidate in plan["candidates"]})
+            known_outputs = [set(candidate["available_parameters"]) for candidate in plan["candidates"]
+                             if "available_parameters" in candidate]
+            common_outputs = (set.intersection(*known_outputs)
+                              if len(known_outputs) == len(plan["candidates"]) else None)
             result = workspace._save(RESULT_KIND, {
                 "version": VERSION, "plan_id": plan_id, "workspace_id": workspace.project["id"],
+                "candidate_count": len(plan["candidates"]), "distinct_profile_count": profile_count,
+                "predicted_parameters": [parameter for parameter in PARAMETERS if parameter in plan["selection"]["objective"]],
+                "common_parameters": ([parameter for parameter in PARAMETERS if parameter in common_outputs]
+                                      if common_outputs is not None else plan.get("common_parameters")),
+                "selected_models": winner.get("selected_models") if winner else None,
+                "selected_model_scope": winner.get("model_scope") if winner else None,
                 "title": plan["selection"]["title"], "state": "complete" if winner else "no_eligible_candidates",
                 "selected_run_id": winner["run_id"] if winner else None,
                 "selected_profile_id": winner["profile_id"] if winner else None,
@@ -761,10 +849,13 @@ def analyze(workspace, plan_id):
                 "objective": plan["selection"]["objective"], "temporal_method": plan["temporal_method"],
                 "selection_method": plan["score_method"],
                 "evaluation_design": "spatial_holdout" if validation_groups else "calibration_only",
-                "candidate_comparison": "parameter_selection" if len(plan["candidates"]) > 1 else "single_candidate_reference_evaluation",
+                "candidate_comparison": ("parameter_selection" if profile_count > 1 else
+                                         "execution_scope_reference_evaluation" if len(plan["candidates"]) > 1
+                                         else "single_candidate_reference_evaluation"),
                 "working_profile_status": "Selected by the declared annual-reference objective" if winner else "No candidate has the complete declared calibration support",
-                "envelope_meaning": "Range across calibration-Pareto native profiles; these bounds describe "
-                                    "the selected candidates rather than a statistical confidence interval.",
+                "envelope_meaning": "Range and median across completed calibration-Pareto candidate runs. "
+                                    "Distinct profile counts identify repeated execution scopes of one profile; "
+                                    "the summaries describe the actual selected native candidates.",
                 "reference_interpretation": "Original annual-load methods, estimator identity, qualifiers, periods "
                                             "and uncertainty retain their source meanings. Held-out evaluation "
                                             "uses only the selected working candidate; it never changes its rank. "

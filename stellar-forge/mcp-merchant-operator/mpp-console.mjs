@@ -281,7 +281,7 @@ export class MerchantMppConsole {
     const context=await this.#context(args.console);
     if(name==='merchant_mpp_channel_status')return this.#request(context,'/api/channel/state');
     if(name==='merchant_mpp_channel_record') {
-      need(['tasks','purchases','contracts','funders','funding','settlements','observations'].includes(args.kind),'INVALID_PARAMS','Choose a channel record.');
+      need(['tasks','purchases','contracts','funders','funding','settlements','observations','openings'].includes(args.kind),'INVALID_PARAMS','Choose a channel record.');
       return this.#request(context,'/api/channel/'+args.kind+'/'+encodeURIComponent(nativeId(args.id)));
     }
     if(name==='merchant_mpp_channel_operate') {
@@ -289,6 +289,7 @@ export class MerchantMppConsole {
         'purchase-prepare','purchase-execute','purchase-resume','purchase-refresh','purchase-cancel',
         'merchant-save','merchant-start','merchant-stop','delivery-recover','close-prepare','close-execute',
         'close-resume','close-reconcile','close-cancel','funder-template','funder-save','channel-observe','funding-prepare','funding-execute','funding-resume','funding-reconcile','funding-cancel','collection-prepare','collection-execute','collection-resume','collection-reconcile','collection-cancel',
+  'opening-template','opening-prepare','opening-execute','opening-resume','opening-reconcile','opening-cancel',
   'contract-fetch','export','receive'];
       need(allowed.includes(args.operation) && args.input && typeof args.input==='object' && !Array.isArray(args.input),
         'INVALID_PARAMS','Select the original channel operation and complete input.');
