@@ -55,10 +55,14 @@ Capture the complete application/Workspace and open the contained application's 
 
 ```sh
 python -B "$STUDY/capture_editable_workspace.py" --application "$APP" --workspace "$WS" --reports "$REPORTS_JSON" --comparison "$OUT/budget-study/comparison.json" --archive "$OUT/editable-workspace.zip" --receive-into "$OUT/received" --output "$OUT/receiving.json"
-python -B "$STUDY/open_completed_study.py" --application "$OUT/received/application" --workspace "$OUT/received/workspace" --reports "$REPORTS_JSON" --comparison "$OUT/budget-study/comparison.json" --output "$OUT/archived-application-reopen.json"
+python -B "$STUDY/open_completed_study.py" --application "$OUT/received/application" --workspace "$OUT/received/workspace" --reports "$REPORTS_JSON" --comparison "$OUT/budget-study/comparison.json" --output "$OUT/archived-application-reopen.json" --expected-selection "$OUT/receiving.json.selection.json"
 ```
 
-Preserve the actual receiving paths, archive and journal when continuing an accepted operation. The current native receiver and archived-application opener carry the original project, plans, comparison, analyses, reports and scientific sources through the handover.
+The maintained capture writes its original intent before capturing anything and freezes the selected native records, every selected scientific file, and the imported producer editions. It verifies the complete ZIP member inventory and archive SHA256 before accepting a saved archive. If capture published the archive before its progress write was interrupted, continuation adopts that archive only when the original project, complete selection and frozen scientific members match. A different or partial archive is an actionable error.
+
+The existing destination is reopened through native `portable.resume_restore` with the saved archive hash; an absent destination uses native `restore`. The native resume protocol preserves later work in the receiving copy. Capture then starts an isolated Python process and imports the received application's own modules, checking their exact source identities and every selected case, run, report, source, plan and comparison against the frozen selection. This does not recalculate an analysis or create another campaign.
+
+Preserve the actual application edition, input files, archive, receiving paths, progress JSON and its sibling selection file when continuing an accepted operation. Rerun the same capture command after interruption. A missing completed archive or receiving directory must be recovered at its original path instead of replaced by a new operation. The original opener command remains usable without `--expected-selection`; supplying the frozen selection, as above, additionally compares the complete original records and bytes. The progress JSON and sibling cold-opening record retain the actual archive and native identities.
 
 ## Original numerical course
 
