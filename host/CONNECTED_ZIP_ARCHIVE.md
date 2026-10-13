@@ -65,7 +65,7 @@ Files are written to private temporary files, synced and published with an exclu
 
 Repeat the same `receive` command with the same destination, archive identity and limits. The original intent binds those values. Completed files are verified and reused; missing files are completed. A different archive or changed existing member is rejected without replacing the retained original.
 
-An explicitly selected empty private directory can finish a crash between directory creation and intent publication. An intent temporary is accepted only if its complete bytes match the original intent. Other unbound contents require investigation rather than guessed adoption.
+An explicitly selected empty private directory can finish a crash between directory creation and intent publication. An intent temporary is accepted only if its complete bytes match the original intent or its bytes are an exact prefix of that same intent left by an interrupted write. The original residue is retained. Other unbound contents require investigation rather than guessed adoption.
 
 A crash between hard-link publication and temporary cleanup can leave a temporary with two links. Reopening matches its inode and complete content to an explicitly permitted original archive/intent/receipt/member target, removes only that redundant owned link, and syncs its directory. Unlinked incomplete temporary work is retained. Member temporary files live under `.incoming/`, separate from original archive members; they are not reported as delivered source.
 
