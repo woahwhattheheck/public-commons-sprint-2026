@@ -53,7 +53,7 @@ The restoration case is an experiment under the declared assumptions. Explain th
 1. “Here is the simulated catchment and the source edition used by this saved study.”
 2. “These are the terrain, land cover, rainfall and soil inputs, and this table defines the selected model assumptions.”
 3. “This is the baseline. In the alternative, the selected pasture and cropland inside this raster mask becomes forest.”
-4. “Both cases use this same grid and profile. These logs and stage times show the calculations that produced their outputs.”
+4. “These runs use the same original grid. Here are their actual profiles and any selected parameter changes. These logs and stage times show the calculations that produced their outputs.”
 5. “The comparison displays the actual annual quantities and the common area used to calculate their change.”
 6. “This map shows the selected physical quantity and its unit. The report retains the inputs and interpretation alongside it.”
 7. “I am downloading the working archive, receiving it into a separate directory and reopening the same project and saved results.”
@@ -71,6 +71,18 @@ Inspect a normal desktop width and a narrow layout. Fix obscured controls, unrea
 ## Timing
 
 Report three actual intervals separately: input generation/preparation; native baseline/alternative calculation; export/transfer/reopen. The existing task and native stage records supply their starts, ends and states. Browser interaction time is the walkthrough time, not a model benchmark. A repeated request that reuses a completed native stage remains a reused result.
+
+## Read the actual frozen selection
+
+The rehearsal binder first opens the maintained native teaching capture. It checks the original source and grid, baseline scenario, selected profiles, complete model artifacts, and the comparison and delivery's exact ordered run IDs before freezing `input.json`. A same-grid parameter sensitivity run retains its own profile; it is described explicitly alongside the land-cover alternatives.
+
+Open `uploads/simulated-headwaters/selected-case.md` for the actual selected-case table. It lists each saved scenario and profile, original run ID, and the net changed cells and hectares from that run's selected footprint edition. The original baseline, riparian restoration and matched-area control recipes above remain the definitions of those particular scenarios. Additional selected scenarios use their own retained patches, transitions and footprint values.
+
+The same page lists each native pollutant change with its original unit and common valid-cell count. It reads the actual alternative-minus-baseline artifact directly. It does not subtract full-run totals that may cover different valid areas. The companion `selected-case.json` preserves the exact scenario patches, coefficient-profile identities, native artifact descriptors and comparison rows used by the explanation.
+
+When the receipt includes the retained parameter course, the binder reads that existing ensemble and its original course result. Its grid, baseline, base profile and ordered alternatives must match the teaching scenarios. The page displays the original native-run completion and course state. Each parameter member retains its own baseline and alternative runs. Paired ensemble products retain their **baseline-minus-alternative** convention and per-metric support; their members remain in the existing parameter course. The ordinary native run list and its **alternative-minus-baseline** comparison keep their original identities.
+
+The binder performs no scientific calculation. Existing task, browser, transfer and archive operations continue through the same rehearsal receiver. Both selected-case companions travel in its existing teaching uploads and final package.
 
 ## Bind the actual result to the teaching programme
 

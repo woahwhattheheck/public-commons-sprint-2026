@@ -327,8 +327,8 @@
       "source": "model/MONITORING_STUDY_TRANSFER.md",
       "source_role": "current_application_source",
       "path": "model/MONITORING_STUDY_TRANSFER.md",
-      "bytes": 9796,
-      "sha256": "7065cd1f35b2536f4b7157a9da37504a7c9a7e3cdb4c1490ae64f1da845e38ce",
+      "bytes": 12999,
+      "sha256": "4b163903f3e69610cc53150e1064af3bbd375fe7b5dcad8797071310305ff8c7",
       "previous_bytes": 8459,
       "previous_sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224",
       "retained_installed_editions": [
@@ -340,16 +340,22 @@
           "bytes": 8459,
           "sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224"
         }
+      ],
+      "predecessor_sha256": [
+        "7065cd1f35b2536f4b7157a9da37504a7c9a7e3cdb4c1490ae64f1da845e38ce"
       ]
     },
     {
       "source": "model/monitoring_study_transfer.py",
       "source_role": "current_application_source",
       "path": "model/monitoring_study_transfer.py",
-      "bytes": 27108,
-      "sha256": "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9",
+      "bytes": 30930,
+      "sha256": "f3a9da48bbb9865c60b8aacf846ab20f1da0a664002227a3ea7e484a67bbee51",
       "previous_bytes": 25411,
-      "previous_sha256": "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3"
+      "previous_sha256": "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3",
+      "predecessor_sha256": [
+        "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9"
+      ]
     },
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_workspace.py",
@@ -612,8 +618,11 @@
       "source": "operator/web/monitoring-frontiers.mjs",
       "source_role": "current_application_source",
       "path": "operator/web/monitoring-frontiers.mjs",
-      "bytes": 24139,
-      "sha256": "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0"
+      "bytes": 25764,
+      "sha256": "44907cdc2646358490a6d24130f13864b9c674120c41485fb1d6e430c393f466",
+      "predecessor_sha256": [
+        "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0"
+      ]
     },
     {
       "source": "operator/web/monitoring-observed.mjs",
@@ -876,7 +885,8 @@
       "monitoring_plans",
       "monitoring_frontiers",
       "monitoring_heads",
-      "monitoring_observed_contexts"
+      "monitoring_observed_contexts",
+      "monitoring_frontier_comparisons"
     ],
     "action": "study.export",
     "receiving_option": {
@@ -891,6 +901,16 @@
         "monitoring_field_returns/<request_id>/field-plan.json"
       ],
       "reviewed_campaign_revision": true
+    },
+    "saved_budget_comparison": {
+      "operation": "ES26-MONITORING-BUDGET-TRANSFER-20261013",
+      "native_inspector": "model.monitoring_frontier_comparison.inspect",
+      "baseline": "Original baseline_plan_id",
+      "observations": "Exact ordered selection.context_ids",
+      "report_context_kind": "monitoring-budget-comparison",
+      "record_inventory": "comparison-records.json",
+      "action": "study.export",
+      "ui_action": "Transfer editable comparison"
     }
   },
   "saved_budget_comparison": {

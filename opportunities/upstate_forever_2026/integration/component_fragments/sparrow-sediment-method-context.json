@@ -1,0 +1,26 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "sparrow-sediment-method-context",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3675",
+  "components": {
+    "sparrow-sediment-method-context": {
+      "title": "Original regional sediment method sensitivity for scientific reports",
+      "paths": [
+        "integration/component_fragments/sparrow-sediment-method-context.json",
+        "source_tools/sparrow_sediment_sensitivity.py",
+        "source_tools/SPARROW_SEDIMENT_SENSITIVITY.md",
+        "source_tools/sparrow_reference.py",
+        "source_tools/usgs_annual.py",
+        "model/reuse.py"
+      ],
+      "requires": [
+        "core",
+        "observed-context",
+        "scientific-report-editions"
+      ]
+    }
+  },
+  "required_components": [
+    "sparrow-sediment-method-context"
+  ]
+}

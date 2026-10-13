@@ -424,22 +424,22 @@ export function attachAssessmentContext(host){
    if(!active())return false;
    const saved=list(freshCatalog.geographies).find(row=>row.id===target);
    if(!saved||available.geography_id!==target)throw Error('The selected saved station study is absent from this Workspace.');
-   if(!list(available.tables).some(row=>Number(row.row_count)>0))
-    throw Error('This saved study has no retained assessment inventory to prepare.');
-   if(!list(available.watershed_sources).length)
+   const assessmentTables=list(available.tables).filter(row=>Number(row.row_count)>0);
+   if(assessmentTables.length&&!list(available.watershed_sources).length)
     throw Error('Build this station study with its retained watershed geometry before preparing assessment context.');
    catalog=freshCatalog;options=available;
    draft={...empty(),title:(available.title||saved.title||'Saved station study')+' — assessment context',
-    station_geography_id:target,inventories:list(available.tables).filter(row=>Number(row.row_count)>0).map(inventory),
-    watershed_source:ref(available.watershed_sources[0].reference)};
+    station_geography_id:target,inventories:assessmentTables.map(inventory),
+    watershed_source:available.watershed_sources[0]?ref(available.watershed_sources[0].reference):null};
    edition=null;selectedEdition=null;selectedPolygon='';query='';page=0;
    parcelEdition=null;selectedParcelEdition=null;parcelQuery='';parcelPage=0;
    reportReady=null;reportDelivery='';pendingEdition=null;
    node.querySelector('[data-ac-editions]').innerHTML=opts(catalog.editions,'',row=>row.title+' · '+row.summary.assessment_row_count+' rows');
    optionsLoading=false;geographyOpening=false;persist();renderForm();renderResult();renderParcels();renderParcelResult();
    const count=draft.inventories.reduce((total,item)=>total+Number(table(item.table)?.row_count||0),0);
-   message='Prepared '+draft.inventories.length+' original inventories and '+count+
-    ' assessment records from '+(available.title||saved.title)+'. Choose the relationship basis and build the context.';
+   message=assessmentTables.length?'Prepared '+draft.inventories.length+' original inventories and '+count+
+    ' assessment records from '+(available.title||saved.title)+'. Choose the relationship basis and build the context.':
+    'Opened '+(available.title||saved.title)+' with its retained geographic sources. Choose a saved assessment study to prepare cause and use context.';
    notice();node.querySelector('[data-ac-field="title"]')?.focus();
    return {geography_id:target,inventory_count:draft.inventories.length,assessment_record_count:count};
   }catch(problem){if(active()){fail(problem);throw problem;}return false;}
