@@ -83,7 +83,14 @@ def resolver_body(body):
     functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
     for name, expected in RESOLVER_API.items():
         node = functions.get(name)
-        if node is None or tuple(arg.arg for arg in node.args.args) != expected:
+        if node is None:
+            raise ValueError("Receive the maintained native-version resolver API: " + name)
+        positional = node.args.posonlyargs + node.args.args
+        required = len(positional) - len(node.args.defaults)
+        accepted_required = 1 if name == "model_versions" else len(expected)
+        if (tuple(arg.arg for arg in positional[:len(expected)]) != expected
+                or required > accepted_required
+                or any(value is None for value in node.args.kw_defaults)):
             raise ValueError("Receive the maintained native-version resolver API: " + name)
     return body
 
