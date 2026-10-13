@@ -103,8 +103,8 @@
     },
     {
       "path": "measurement_workspace/observation_support.py",
-      "bytes": 16043,
-      "sha256": "26142ceff02a639f5ffe7285fd3c9dc0d3b2e26a06129de9c408520992ee0ea5"
+      "bytes": 16120,
+      "sha256": "3a8105384d63f0a2f4ca20ab8e3a9eb8825d8b25fe40ddbfd8aa32ad13a25f99"
     },
     {
       "path": "measurement_workspace/published_studies.py",
@@ -1218,8 +1218,8 @@
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 77418,
-      "sha256": "919d7906f1915fb1bd9999f3403fdf69d6866725c3c0d5a923ae32e2a25cdebf"
+      "bytes": 77865,
+      "sha256": "68242c89f98101d5d5390f862415929a67547dbba3cc7f3121649261b68c8102"
     },
     {
       "path": "operator/web/received_published_reviews.css",
