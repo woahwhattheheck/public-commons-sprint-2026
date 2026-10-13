@@ -66,9 +66,9 @@ export class ImplementationCostReview{
  restore(value){
   if(!value)return;
   if(value.workspace_key!==this.workspace||value.plan_id!==this.planId)throw Error('The retained cost review belongs to another original plan.');
-  this.drafts=value.drafts||{};this.candidateId=value.candidate_id||'';this.receipt=value.receipt||null;
   if(value.pending&&!validPending(value.pending,this.planId))throw Error('The retained cost request is incomplete. Open the exact original recovery file.');
-  this.pending=value.pending||null;
+  this.context=null;this.draft=null;this.preview=null;this.previewStamp=null;this.selectedRow=null;this.page=0;
+  this.drafts=value.drafts||{};this.candidateId=value.candidate_id||'';this.receipt=value.receipt||null;this.pending=value.pending||null;
  }
  async persist({required=false}={}){
   if(this.closed||this.restoreBlocked){if(required)throw Error('Recover the original retained cost state first.');return false;}
@@ -95,7 +95,7 @@ export class ImplementationCostReview{
    if(catalog.workspace_key!==this.workspace||catalog.plan?.id!==this.planId||catalog.plan?.revision!==this.savedPlan.revision||(catalog.plan.sha256||catalog.plan.document_digest)!==this.digest||!Array.isArray(catalog.candidates))throw Error('The cost catalogue differs from the original saved plan.');
    this.catalog=catalog;
    if(this.pending?.id)await this.poll();
-   if(this.candidateId&&catalog.candidates.some(row=>row.id===this.candidateId)&&!this.pending)await this.loadContext(this.candidateId);
+   if(!this.context&&this.candidateId&&catalog.candidates.some(row=>row.id===this.candidateId)&&!this.pending)await this.loadContext(this.candidateId);
    if(this.receipt&&!this.pending)await this.refreshReceipt();
   }finally{if(this.alive()){this.busy=false;this.render();}}
  }
@@ -119,7 +119,7 @@ export class ImplementationCostReview{
  async change(target){
   if(target.dataset.cr==='recovery-file'){
    const file=target.files?.[0];target.value='';if(!file)return;if(this.busy)throw Error('Wait for the original request before opening a recovery file.');if(file.size>128*1024*1024)throw Error('Choose a recovery file within 128 MiB.');const value=JSON.parse(await file.text());this.current();const state=await this.recoveryStore.importFile(value,this.pending);this.current();this.restore(state);this.restoreBlocked=false;this.storageIssue=this.recoveryStore.warning;this.preview=null;this.previewStamp=null;this.error='';
-   if(!this.digest||!this.catalog)await this.startNative();else if(this.pending?.id)await this.poll();else if(!this.pending&&this.candidateId&&this.catalog?.candidates.some(x=>x.id===this.candidateId))await this.loadContext(this.candidateId);this.render();return;
+   if(!this.digest||!this.catalog)await this.startNative();else{if(this.pending?.id)await this.poll();if(!this.pending&&!this.context&&this.candidateId&&this.catalog.candidates.some(x=>x.id===this.candidateId))await this.loadContext(this.candidateId);}this.render();return;
   }
   if(target.dataset.cr==='candidate'){if(this.locked())throw Error('Recover the original request first.');await this.loadContext(target.value);return;}
   if(target.dataset.cr==='filter'){this.filter=target.value;this.page=0;this.renderRows();return;}
@@ -164,7 +164,7 @@ export class ImplementationCostReview{
   if(task.state==='complete'){
    this.checkReceipt(task.result,p.payload);this.receipt={...clone(task.result),task_id:task.id,request:clone(p),_downloads:clone(task._downloads||task.result._downloads||[])};
    this.pending=null;this.preview=null;this.previewStamp=null;this.notice='Reviewed inputs and the complete Economic edition are saved. The original plan revision, ledger, physical outputs and open browser draft remain unchanged.';this.persist();
-   await(this.host.refresh?.({force:true})||this.host.refreshState?.({force:true}));if(this.alive())this.render();return;
+   await(this.host.refresh?.({force:true})||this.host.refreshState?.({force:true}));if(this.alive()&&!this.context&&this.candidateId&&this.catalog?.candidates.some(row=>row.id===this.candidateId))await this.loadContext(this.candidateId);if(this.alive())this.render();return;
   }
   if(['failed','cancelled','interrupted'].includes(task.state)){this.error=task.error?.message||'The original cost task '+task.state+'.';this.render();return;}
   this.render();this.timer=setTimeout(()=>this.poll().catch(error=>this.fail(error)),2000);
