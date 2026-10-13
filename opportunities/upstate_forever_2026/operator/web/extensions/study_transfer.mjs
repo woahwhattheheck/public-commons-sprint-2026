@@ -188,11 +188,14 @@ export function attachStudyTransfer(host) {
     const available=[...visiblePage().items,...(plan?.nodes||[])].find(row=>row.kind===kind&&row.id===id);
     if(!available||available.state==='unreadable')throw Error('Refresh this saved source-water study before opening it.');
     const captured=stamp(),serial=++sourceWaterRequest,recordKind=sourceWaterKinds[kind];
-    const row=await request(endpoint('/api/receptors/'+recordKind,{id,workspace:captured.workspace}));
+    let row;
+    try{row=await request(endpoint('/api/receptors/'+recordKind,{id,workspace:captured.workspace}));}
+    catch(error){if(!current(captured)||serial!==sourceWaterRequest)return null;throw error;}
     if(!current(captured)||serial!==sourceWaterRequest)return null;
     if(row?.id!==id||row?._kind!==recordKind||row?.workspace_key!==captured.workspace)
       throw Error('The source-water reply identifies another original study or workspace.');
-    return host.openDesk('receptors','openStudy',{workspace_key:captured.workspace,kind,id});
+    try{return await host.openDesk('receptors','openStudy',{workspace_key:captured.workspace,kind,id});}
+    catch(error){if(workspaceNow()!==captured.workspace||serial!==sourceWaterRequest)return null;throw error;}
   }
   function receivingControl(row){
     if(!['receiving-water-plans','receiving-water-analyses'].includes(row?.kind)||
