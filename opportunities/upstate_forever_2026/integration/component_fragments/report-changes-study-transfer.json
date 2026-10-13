@@ -22,12 +22,13 @@
         "operator/web/report_changes.css",
         "docs/SCIENTIFIC_REPORT_CHANGES.md",
         "install_report_changes.py",
-        "integration/component_fragments/scientific-report-changes.json"
+        "integration/component_fragments/scientific-report-changes.json",
+        "model/scientific_report_editions.py",
+        "model/scientific_report_study_transfer.py"
       ],
-      "requires": [
-        "observed-original-report-edition"
-      ]
+      "requires": []
     }
   },
-  "required_components": []
+  "required_components": [],
+  "source_reference": "Original saved-report comparison transfer retains its native readers directly. The original observed report-edition feature includes higher-level Receiving water and Monitoring views that already depend on Study transfer."
 }

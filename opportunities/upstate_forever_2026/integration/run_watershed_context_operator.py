@@ -196,6 +196,7 @@ def receive(args):
               "state": "running", "application": str(application), "source_directory": str(edition),
               "source_manifest_path": str(source_manifest),
               "include_observed_evidence": bool(getattr(args, "include_observed_evidence", False)),
+              "include_original_map": bool(getattr(args, "include_original_map", False)),
               "workspace_directory": str(workspace_directory),
               "workspace_mode": "existing" if existing_workspace else "new"}
     server = thread = journey = None
@@ -323,6 +324,21 @@ def receive(args):
                     "Install the complete retained observed-evidence source before this selected course.")
             export_payload.update(include_evidence=True,
                                   evidence_profile_sha256=evidence_choice["sha256"])
+        map_choice, original_geometry = None, None
+        if getattr(args, "include_original_map", False):
+            map_choice = imported_report.get("_map_source")
+            require(isinstance(map_choice, dict)
+                    and map_choice.get("schema") == "upstate.watershed-map-choice/v1",
+                    "Install the complete original watershed map source before this selected course.")
+            map_preview = journey.regional(workspace, "map", report_id=report_id,
+                                            map_source_sha256=map_choice["sha256"])
+            geometry_file = journey.download(map_preview["geometry"], "original-map")
+            original_geometry = json.loads(geometry_file.read_bytes())
+            require(map_preview["source"] == map_choice
+                    and map_preview["source_crs"] == "EPSG:3857"
+                    and len(original_geometry["features"]) == map_choice["feature_count"],
+                    "The map route changed the original source edition.")
+            export_payload.update(include_map=True, map_source_sha256=map_choice["sha256"])
         export_task = journey.task(workspace, "watershed.context.export", export_payload)
         export_id = export_task["result"]["id"]
         selection = journey.regional(workspace, "export", export_id=export_id)
@@ -353,6 +369,28 @@ def receive(args):
                 "saved_context": evidence,
                 "retained_export_files": selection.get("files", {}),
             }
+        if map_choice is not None:
+            mapped = selection.get("watershed_map_context")
+            require(isinstance(mapped, dict) and mapped == selected.get("watershed_map_context")
+                    and mapped["source"] == map_choice
+                    and mapped["selected_huc12s"] == priorities,
+                    "The selected export changed the original map source or HUC12 membership.")
+            original_features = {feature["properties"]["huc12"]: feature
+                                 for feature in original_geometry["features"]}
+            scopes = {"selected-watersheds.geojson": priorities}
+            if mapped["contributing_huc12s"] is not None:
+                require(mapped["contributing_huc12s"]
+                        == selected["contributing_context"]["member_huc12s"],
+                        "The map changed the retained distinct upstream membership.")
+                scopes["contributing-watersheds.geojson"] = mapped["contributing_huc12s"]
+            for name, members in scopes.items():
+                geometry = json.loads(export_files[name].read_bytes())
+                actual = {feature["properties"]["huc12"]: feature for feature in geometry["features"]}
+                require(geometry["crs"] == original_geometry["crs"]
+                        and len(actual) == len(geometry["features"])
+                        and actual == {key: original_features[key] for key in members},
+                        "The selection map changed an original polygon or profile property: " + name)
+            result["original_map"] = {"choice": map_choice, "saved_context": mapped}
         for brief_name in ("watershed-selection-brief.md", "watershed-selection-brief.html"):
             require(brief_name in export_files, "The selected watershed planning brief is missing.")
         native_origin = original.get("source_validation", {}).get(
@@ -432,6 +470,18 @@ def receive(args):
             require(set(reopened_files) == set(export_files),
                     "Received selection lost original evidence downloads.")
             retained_names = tuple(export_files)
+        if map_choice is not None:
+            require(reopened_export.get("watershed_map_context") == selection["watershed_map_context"]
+                    and reopened_export.get("files") == selection.get("files")
+                    and set(reopened_files) == set(export_files),
+                    "Received selection changed its original map or retained source inventory.")
+            received_map = journey.regional(restored_key, "map", report_id=report_id,
+                                            export_id=export_id, map_source_sha256=map_choice["sha256"])
+            received_geometry = journey.download(received_map["geometry"], "received-original-map")
+            require(received_map["saved_selection"] == selection["watershed_map_context"]
+                    and received_geometry.read_bytes() == geometry_file.read_bytes(),
+                    "The reopened saved map differs from its retained original geometry.")
+            retained_names = tuple(export_files)
         for name in retained_names:
             require(reopened_files[name].read_bytes() == export_files[name].read_bytes(),
                     "Received selection download changed: " + name)
@@ -479,6 +529,8 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--include-observed-evidence", action="store_true",
                         help="Include the retained land-cover/station evidence in the selected export and full archive receiving")
+    parser.add_argument("--include-original-map", action="store_true",
+                        help="Operate and retain the original polygon map and reopen it after Workspace transfer")
     parser.add_argument("--timeout", type=float, default=300)
     parser.add_argument("--completed-archive")
     parser.add_argument("--completed-archive-sha256")
