@@ -152,7 +152,7 @@ function latestReceipt(w,deliveryId){return w.receipts.filter(x=>x.deliveryId===
 function nativeFor(w,recordId,targetSystem){
  const record=get(w,'records',recordId);let selected=null;
  for(const receipt of w.receipts){const delivery=get(w,'deliveries',receipt.deliveryId);if(delivery.programmeId!==record.programmeId||delivery.targetSystem!==targetSystem)continue;const row=receipt.rows.find(x=>x.recordId===recordId);
-  if(row&&(!selected||receipt.createdRevision>selected.createdRevision))selected={...row,receiptId:receipt.id,deliveryId:delivery.id,observedAt:receipt.observedAt,createdRevision:receipt.createdRevision};
+  if(row?.supplied&&(!selected||receipt.createdRevision>selected.createdRevision))selected={...row,receiptId:receipt.id,deliveryId:delivery.id,observedAt:receipt.observedAt,createdRevision:receipt.createdRevision};
  }return selected;
 }
 function reviewDelivery(w,input){
@@ -187,9 +187,12 @@ function reviewReceipt(w,input){
  });
  const nativeIds=new Map();
  for(const r of w.records.filter(r=>r.programmeId===delivery.programmeId&&r.entity===delivery.entity)){
-  const state=nativeFor(w,r.id,delivery.targetSystem);if(state?.status==='accepted'&&!rows.some(row=>row.recordId===r.id))nativeIds.set(state.nativeId,r.id);
+  const state=rows.find(row=>row.recordId===r.id&&row.supplied)??nativeFor(w,r.id,delivery.targetSystem);
+  if(state?.status!=='accepted'||!state.nativeId)continue;
+  const previous=nativeIds.get(state.nativeId);
+  if(previous&&previous!==r.id)issues.push(issue('NATIVE_ID_COLLISION','This native ID is already assigned to another staged record.',state.rowId));
+  else nativeIds.set(state.nativeId,r.id);
  }
- for(const row of rows.filter(x=>x.status==='accepted'&&x.nativeId)){const previous=nativeIds.get(row.nativeId);if(previous&&previous!==row.recordId)issues.push(issue('NATIVE_ID_COLLISION','This native ID is already assigned to another staged record.',row.rowId));else nativeIds.set(row.nativeId,row.recordId);}
  const counts={rows:rows.length,accepted:rows.filter(x=>x.status==='accepted').length,rejected:rows.filter(x=>x.status==='rejected').length,unknown:rows.filter(x=>x.status==='unknown').length,issues:issues.length};
  return finishReview({schema:'commons.mep-migration.receipt-review.v1',revision:w.revision,programmeId:delivery.programmeId,entity:delivery.entity,deliveryId:delivery.id,deliverySha256:hash(delivery),evidenceFileId:evidence.id,evidenceSha256:evidence.sha256,observedAt,reference,notes,priorReceiptId:prior?.id??'',rows,issues,counts});
 }
