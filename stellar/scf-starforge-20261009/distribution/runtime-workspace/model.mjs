@@ -636,12 +636,15 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
     },
     async applicationsSave(input) {
       const saved = await saveApplication(root, input);
+      if (saved.saveSuperseded) return { applicationId: saved.id, revision: saved.revision, saved: true,
+        replayed: true, superseded: true, currentRevision: saved.currentRevision, connection: null, connectionError: null };
       let connection = null, connectionError = null;
       try {
         const request = await applicationBindingOperation(root, saved.id);
         if (request) connection = await model.begin(request);
       } catch (error) { connectionError = asError(error); }
-      return { applicationId: saved.id, revision: saved.revision, saved: true, connection, connectionError };
+      return { applicationId: saved.id, revision: saved.revision, saved: true,
+        ...(saved.saveReplayed ? { replayed: true, superseded: false } : {}), connection, connectionError };
     },
     async applicationsConnect({ applicationId }) {
       await requireCurrentApplication(root, applicationId);
