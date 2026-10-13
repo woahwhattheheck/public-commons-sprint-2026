@@ -22,7 +22,7 @@ from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-treatment-response-16"
+REPORT_EDITION = "2026-10-13-client-report-treatment-response-17-briefing-controls"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
