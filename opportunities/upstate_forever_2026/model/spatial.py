@@ -392,10 +392,20 @@ class SpatialReview:
                 if any(actual[:4] != expected[:4]
                        for (_, expected), (_, actual) in zip(signatures, observed)):
                     raise ValueError("Original spatial source changed during this read")
-                # Another retained source may create a link to a shared original
-                # companion during this read. Re-enter byte verification rather
-                # than treating link metadata as a scientific source revision.
-                self._path(record)
+                # A new hardlink changes ctime without changing source bytes.
+                # Verify the files actually read, without rematerializing a
+                # copied view that may have changed during this read.
+                if record["source"] is None:
+                    self._verify_file(record["scope"], record["file"])
+                else:
+                    collection, source_id, entry = record["source"]
+                    view_root = self.workspace.root / "source-views" / collection / digest(source_id)
+                    for body in [entry["body"]] + entry.get("companions", []):
+                        self._verify_file(self.workspace.root, {
+                            "path": body["object"], "sha256": body["sha256"], "bytes": body["bytes"]})
+                        self._verify_file(view_root, {
+                            "path": body.get("view_path", body["filename"]),
+                            "sha256": body["sha256"], "bytes": body["bytes"]})
 
     @staticmethod
     def _units(source, record, band):
