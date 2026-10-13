@@ -1,0 +1,4360 @@
+{
+  "schema": "upstate.scientific-figure-spec/v1",
+  "edition": "20261013-original-temporal-calendar-flow",
+  "source_basis": "Exact retained original-data calculations; all values and memberships remain in companion CSVs.",
+  "figures": [
+    {
+      "id": "sampling-coverage",
+      "title": "Changing sampling coverage, 2021–2025",
+      "caption": "729 routine observations at 36 stations; one field replicate is kept separately. Eleven stations recur in all five years and contribute 450 routine observations. First appearance is within this retained source edition. The five Georgia repeat-panel stations have only Information Only comments in 2025; excluding those comments leaves six SC stations represented in all years.",
+      "alt": "Two panels compare original routine-record counts and station counts by year, including the repeated panel and stations first appearing in this source.",
+      "panels": [
+        {
+          "id": "annual-records",
+          "title": "Routine sampling",
+          "x": {
+            "label": "Year",
+            "unit": "",
+            "domain": [
+              2020.7,
+              2025.3
+            ],
+            "ticks": [
+              {
+                "value": 2021,
+                "label": "2021"
+              },
+              {
+                "value": 2022,
+                "label": "2022"
+              },
+              {
+                "value": 2023,
+                "label": "2023"
+              },
+              {
+                "value": 2024,
+                "label": "2024"
+              },
+              {
+                "value": 2025,
+                "label": "2025"
+              }
+            ]
+          },
+          "y": {
+            "label": "Records",
+            "unit": "count",
+            "domain": [
+              0,
+              205
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 50,
+                "label": "50"
+              },
+              {
+                "value": 100,
+                "label": "100"
+              },
+              {
+                "value": 150,
+                "label": "150"
+              },
+              {
+                "value": 200,
+                "label": "200"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "All routine",
+              "geometry": "line",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 2021,
+                  "y": 174,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 2
+                },
+                {
+                  "x": 2022,
+                  "y": 105,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 3
+                },
+                {
+                  "x": 2023,
+                  "y": 119,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 4
+                },
+                {
+                  "x": 2024,
+                  "y": 144,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 5
+                },
+                {
+                  "x": 2025,
+                  "y": 187,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 6
+                }
+              ]
+            },
+            {
+              "label": "11-station panel",
+              "geometry": "line",
+              "marker": "square-open",
+              "points": [
+                {
+                  "x": 2021,
+                  "y": 103,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 2
+                },
+                {
+                  "x": 2022,
+                  "y": 80,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 3
+                },
+                {
+                  "x": 2023,
+                  "y": 93,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 4
+                },
+                {
+                  "x": 2024,
+                  "y": 92,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 5
+                },
+                {
+                  "x": 2025,
+                  "y": 82,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 6
+                }
+              ]
+            }
+          ],
+          "annotations": [
+            {
+              "x": 2021,
+              "y": 174,
+              "text": "174"
+            },
+            {
+              "x": 2022,
+              "y": 105,
+              "text": "105"
+            },
+            {
+              "x": 2023,
+              "y": 119,
+              "text": "119"
+            },
+            {
+              "x": 2024,
+              "y": 144,
+              "text": "144"
+            },
+            {
+              "x": 2025,
+              "y": 187,
+              "text": "187"
+            }
+          ]
+        },
+        {
+          "id": "annual-stations",
+          "title": "Station coverage",
+          "x": {
+            "label": "Year",
+            "unit": "",
+            "domain": [
+              2020.7,
+              2025.3
+            ],
+            "ticks": [
+              {
+                "value": 2021,
+                "label": "2021"
+              },
+              {
+                "value": 2022,
+                "label": "2022"
+              },
+              {
+                "value": 2023,
+                "label": "2023"
+              },
+              {
+                "value": 2024,
+                "label": "2024"
+              },
+              {
+                "value": 2025,
+                "label": "2025"
+              }
+            ]
+          },
+          "y": {
+            "label": "Stations",
+            "unit": "count",
+            "domain": [
+              0,
+              23
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 5,
+                "label": "5"
+              },
+              {
+                "value": 10,
+                "label": "10"
+              },
+              {
+                "value": 15,
+                "label": "15"
+              },
+              {
+                "value": 20,
+                "label": "20"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Observed",
+              "geometry": "line",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 2021,
+                  "y": 18,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 2
+                },
+                {
+                  "x": 2022,
+                  "y": 15,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 3
+                },
+                {
+                  "x": 2023,
+                  "y": 14,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 4
+                },
+                {
+                  "x": 2024,
+                  "y": 16,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 5
+                },
+                {
+                  "x": 2025,
+                  "y": 21,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 6
+                }
+              ]
+            },
+            {
+              "label": "First appearing",
+              "geometry": "scatter",
+              "marker": "square-open",
+              "points": [
+                {
+                  "x": 2021,
+                  "y": 18,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 2
+                },
+                {
+                  "x": 2022,
+                  "y": 1,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 3
+                },
+                {
+                  "x": 2023,
+                  "y": 2,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 4
+                },
+                {
+                  "x": 2024,
+                  "y": 5,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 5
+                },
+                {
+                  "x": 2025,
+                  "y": 10,
+                  "source_path": "annual-sampling-coverage.csv",
+                  "source_csv_row": 6
+                }
+              ]
+            }
+          ],
+          "reference_lines": [
+            {
+              "axis": "y",
+              "value": 11,
+              "label": "11 recur each year"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sv833-calendar-support",
+      "title": "SV-833: the sampled calendar changes the comparison",
+      "caption": "The original all-date medians are 419.6→387.3 MPN/100 mL (9 and 11 records). Restricting both years to January, February, April, May, July, August, November and December gives 298.9→666.8 (8 records in each year). Lines connect endpoint summaries only. These selected medians have exact original interval bounds; no inferential confidence intervals or management effects are implied. Matching months does not match exact dates, weather or flow.",
+      "alt": "Two median series reverse direction: all dates decrease slightly, whereas equal common-month support increases.",
+      "panels": [
+        {
+          "id": "sv833-medians",
+          "title": "2021 and 2025 sample medians",
+          "x": {
+            "label": "Year",
+            "unit": "",
+            "domain": [
+              2020.4,
+              2025.6
+            ],
+            "ticks": [
+              {
+                "value": 2021,
+                "label": "2021"
+              },
+              {
+                "value": 2025,
+                "label": "2025"
+              }
+            ]
+          },
+          "y": {
+            "label": "E. coli",
+            "unit": "MPN/100 mL",
+            "domain": [
+              0,
+              800
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 200,
+                "label": "200"
+              },
+              {
+                "value": 400,
+                "label": "400"
+              },
+              {
+                "value": 600,
+                "label": "600"
+              },
+              {
+                "value": 800,
+                "label": "800"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "All dates",
+              "geometry": "line",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 2021,
+                  "y": 419.6,
+                  "n": 9,
+                  "source_path": "calendar-support-comparisons.csv",
+                  "source_csv_row": 6,
+                  "comparison_id": "ARJWS|21SC60WQ_WQX-SV-833|APHA|9223-B|MPN per 100 mL|2021|2025|all_original|all_dates",
+                  "calendar_months": [
+                    1,
+                    2,
+                    4,
+                    5,
+                    7,
+                    8,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "x": 2025,
+                  "y": 387.3,
+                  "n": 11,
+                  "source_path": "calendar-support-comparisons.csv",
+                  "source_csv_row": 6,
+                  "comparison_id": "ARJWS|21SC60WQ_WQX-SV-833|APHA|9223-B|MPN per 100 mL|2021|2025|all_original|all_dates",
+                  "calendar_months": [
+                    1,
+                    2,
+                    4,
+                    5,
+                    7,
+                    8,
+                    11,
+                    12
+                  ]
+                }
+              ]
+            },
+            {
+              "label": "Common months",
+              "geometry": "line",
+              "marker": "square-open",
+              "points": [
+                {
+                  "x": 2021,
+                  "y": 298.9,
+                  "n": 8,
+                  "source_path": "calendar-support-comparisons.csv",
+                  "source_csv_row": 7,
+                  "comparison_id": "ARJWS|21SC60WQ_WQX-SV-833|APHA|9223-B|MPN per 100 mL|2021|2025|all_original|common_calendar_months",
+                  "calendar_months": [
+                    1,
+                    2,
+                    4,
+                    5,
+                    7,
+                    8,
+                    11,
+                    12
+                  ]
+                },
+                {
+                  "x": 2025,
+                  "y": 666.8,
+                  "n": 8,
+                  "source_path": "calendar-support-comparisons.csv",
+                  "source_csv_row": 7,
+                  "comparison_id": "ARJWS|21SC60WQ_WQX-SV-833|APHA|9223-B|MPN per 100 mL|2021|2025|all_original|common_calendar_months",
+                  "calendar_months": [
+                    1,
+                    2,
+                    4,
+                    5,
+                    7,
+                    8,
+                    11,
+                    12
+                  ]
+                }
+              ]
+            }
+          ],
+          "annotations": [
+            {
+              "x": 2021,
+              "y": 419.6,
+              "text": "419.6; n=9"
+            },
+            {
+              "x": 2025,
+              "y": 387.3,
+              "text": "387.3; n=11"
+            },
+            {
+              "x": 2021,
+              "y": 298.9,
+              "text": "298.9; n=8"
+            },
+            {
+              "x": 2025,
+              "y": 666.8,
+              "text": "666.8; n=8"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "same-station-flow",
+      "title": "USGS-02177000: original discharge and microbial sampling",
+      "caption": "365 original 2022 daily means and all 16 microbial sample dates at the same station. All sample-date flow qualifiers are A; the seven-day window before 8 March contains four original A;e values. No microbial sample date reaches the annual 95th-percentile daily discharge (1,284 ft3/s). Filled markers are 14 numeric observations; open triangles mark the original limit for two non-detects, with vertical 0–20 censoring bounds. The prior window contains seven complete days and excludes the sample date. Source censoring bounds are distinct from confidence intervals; daily mean flow is context for these concentration observations.",
+      "alt": "An annual daily-flow curve with sample dates, followed by two concentration-versus-flow panels preserving both non-detect bounds and original flow qualifiers.",
+      "panels": [
+        {
+          "id": "annual-flow",
+          "title": "Daily discharge and sample dates",
+          "x": {
+            "label": "2022 date",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              18993,
+              19357
+            ],
+            "ticks": [
+              {
+                "value": 18993,
+                "label": "Jan"
+              },
+              {
+                "value": 19083,
+                "label": "Apr"
+              },
+              {
+                "value": 19174,
+                "label": "Jul"
+              },
+              {
+                "value": 19266,
+                "label": "Oct"
+              },
+              {
+                "value": 19357,
+                "label": "Dec 31"
+              }
+            ]
+          },
+          "y": {
+            "label": "Discharge",
+            "unit": "ft3/s",
+            "domain": [
+              0,
+              7500
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 1500,
+                "label": "1500"
+              },
+              {
+                "value": 3000,
+                "label": "3000"
+              },
+              {
+                "value": 4500,
+                "label": "4500"
+              },
+              {
+                "value": 6000,
+                "label": "6000"
+              },
+              {
+                "value": 7500,
+                "label": "7500"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Daily mean",
+              "geometry": "line",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 18993,
+                  "y": 390,
+                  "date": "2022-01-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 2
+                },
+                {
+                  "x": 18994,
+                  "y": 845,
+                  "date": "2022-01-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 3
+                },
+                {
+                  "x": 18995,
+                  "y": 1640,
+                  "date": "2022-01-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 4
+                },
+                {
+                  "x": 18996,
+                  "y": 1120,
+                  "date": "2022-01-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 5
+                },
+                {
+                  "x": 18997,
+                  "y": 817,
+                  "date": "2022-01-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 6
+                },
+                {
+                  "x": 18998,
+                  "y": 697,
+                  "date": "2022-01-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 7
+                },
+                {
+                  "x": 18999,
+                  "y": 632,
+                  "date": "2022-01-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 8
+                },
+                {
+                  "x": 19000,
+                  "y": 563,
+                  "date": "2022-01-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 9
+                },
+                {
+                  "x": 19001,
+                  "y": 555,
+                  "date": "2022-01-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 10
+                },
+                {
+                  "x": 19002,
+                  "y": 811,
+                  "date": "2022-01-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 11
+                },
+                {
+                  "x": 19003,
+                  "y": 652,
+                  "date": "2022-01-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 12
+                },
+                {
+                  "x": 19004,
+                  "y": 584,
+                  "date": "2022-01-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 13
+                },
+                {
+                  "x": 19005,
+                  "y": 554,
+                  "date": "2022-01-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 14
+                },
+                {
+                  "x": 19006,
+                  "y": 519,
+                  "date": "2022-01-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 15
+                },
+                {
+                  "x": 19007,
+                  "y": 485,
+                  "date": "2022-01-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 16
+                },
+                {
+                  "x": 19008,
+                  "y": 559,
+                  "date": "2022-01-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 17
+                },
+                {
+                  "x": 19009,
+                  "y": 604,
+                  "date": "2022-01-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 18
+                },
+                {
+                  "x": 19010,
+                  "y": 503,
+                  "date": "2022-01-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 19
+                },
+                {
+                  "x": 19011,
+                  "y": 489,
+                  "date": "2022-01-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 20
+                },
+                {
+                  "x": 19012,
+                  "y": 543,
+                  "date": "2022-01-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 21
+                },
+                {
+                  "x": 19013,
+                  "y": 622,
+                  "date": "2022-01-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 22
+                },
+                {
+                  "x": 19014,
+                  "y": 576,
+                  "date": "2022-01-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 23
+                },
+                {
+                  "x": 19015,
+                  "y": 536,
+                  "date": "2022-01-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 24
+                },
+                {
+                  "x": 19016,
+                  "y": 511,
+                  "date": "2022-01-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 25
+                },
+                {
+                  "x": 19017,
+                  "y": 487,
+                  "date": "2022-01-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 26
+                },
+                {
+                  "x": 19018,
+                  "y": 481,
+                  "date": "2022-01-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 27
+                },
+                {
+                  "x": 19019,
+                  "y": 468,
+                  "date": "2022-01-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 28
+                },
+                {
+                  "x": 19020,
+                  "y": 454,
+                  "date": "2022-01-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 29
+                },
+                {
+                  "x": 19021,
+                  "y": 440,
+                  "date": "2022-01-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 30
+                },
+                {
+                  "x": 19022,
+                  "y": 422,
+                  "date": "2022-01-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 31
+                },
+                {
+                  "x": 19023,
+                  "y": 416,
+                  "date": "2022-01-31",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 32
+                },
+                {
+                  "x": 19024,
+                  "y": 403,
+                  "date": "2022-02-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 33
+                },
+                {
+                  "x": 19025,
+                  "y": 396,
+                  "date": "2022-02-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 34
+                },
+                {
+                  "x": 19026,
+                  "y": 1560,
+                  "date": "2022-02-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 35
+                },
+                {
+                  "x": 19027,
+                  "y": 6990,
+                  "date": "2022-02-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 36
+                },
+                {
+                  "x": 19028,
+                  "y": 2460,
+                  "date": "2022-02-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 37
+                },
+                {
+                  "x": 19029,
+                  "y": 1590,
+                  "date": "2022-02-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 38
+                },
+                {
+                  "x": 19030,
+                  "y": 1290,
+                  "date": "2022-02-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 39
+                },
+                {
+                  "x": 19031,
+                  "y": 1160,
+                  "date": "2022-02-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 40
+                },
+                {
+                  "x": 19032,
+                  "y": 1080,
+                  "date": "2022-02-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 41
+                },
+                {
+                  "x": 19033,
+                  "y": 1010,
+                  "date": "2022-02-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 42
+                },
+                {
+                  "x": 19034,
+                  "y": 947,
+                  "date": "2022-02-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 43
+                },
+                {
+                  "x": 19035,
+                  "y": 890,
+                  "date": "2022-02-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 44
+                },
+                {
+                  "x": 19036,
+                  "y": 842,
+                  "date": "2022-02-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 45
+                },
+                {
+                  "x": 19037,
+                  "y": 802,
+                  "date": "2022-02-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 46
+                },
+                {
+                  "x": 19038,
+                  "y": 769,
+                  "date": "2022-02-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 47
+                },
+                {
+                  "x": 19039,
+                  "y": 744,
+                  "date": "2022-02-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 48
+                },
+                {
+                  "x": 19040,
+                  "y": 737,
+                  "date": "2022-02-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 49
+                },
+                {
+                  "x": 19041,
+                  "y": 1350,
+                  "date": "2022-02-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 50
+                },
+                {
+                  "x": 19042,
+                  "y": 1040,
+                  "date": "2022-02-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 51
+                },
+                {
+                  "x": 19043,
+                  "y": 866,
+                  "date": "2022-02-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 52
+                },
+                {
+                  "x": 19044,
+                  "y": 798,
+                  "date": "2022-02-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 53
+                },
+                {
+                  "x": 19045,
+                  "y": 781,
+                  "date": "2022-02-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 54
+                },
+                {
+                  "x": 19046,
+                  "y": 873,
+                  "date": "2022-02-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 55
+                },
+                {
+                  "x": 19047,
+                  "y": 900,
+                  "date": "2022-02-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 56
+                },
+                {
+                  "x": 19048,
+                  "y": 839,
+                  "date": "2022-02-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 57
+                },
+                {
+                  "x": 19049,
+                  "y": 783,
+                  "date": "2022-02-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 58
+                },
+                {
+                  "x": 19050,
+                  "y": 826,
+                  "date": "2022-02-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 59
+                },
+                {
+                  "x": 19051,
+                  "y": 842,
+                  "date": "2022-02-28",
+                  "qualifiers": "A;e",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 60
+                },
+                {
+                  "x": 19052,
+                  "y": 696,
+                  "date": "2022-03-01",
+                  "qualifiers": "A;e",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 61
+                },
+                {
+                  "x": 19053,
+                  "y": 647,
+                  "date": "2022-03-02",
+                  "qualifiers": "A;e",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 62
+                },
+                {
+                  "x": 19054,
+                  "y": 614,
+                  "date": "2022-03-03",
+                  "qualifiers": "A;e",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 63
+                },
+                {
+                  "x": 19055,
+                  "y": 582,
+                  "date": "2022-03-04",
+                  "qualifiers": "A;e",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 64
+                },
+                {
+                  "x": 19056,
+                  "y": 564,
+                  "date": "2022-03-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 65
+                },
+                {
+                  "x": 19057,
+                  "y": 550,
+                  "date": "2022-03-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 66
+                },
+                {
+                  "x": 19058,
+                  "y": 542,
+                  "date": "2022-03-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 67
+                },
+                {
+                  "x": 19059,
+                  "y": 588,
+                  "date": "2022-03-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 68
+                },
+                {
+                  "x": 19060,
+                  "y": 1340,
+                  "date": "2022-03-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 69
+                },
+                {
+                  "x": 19061,
+                  "y": 1110,
+                  "date": "2022-03-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 70
+                },
+                {
+                  "x": 19062,
+                  "y": 854,
+                  "date": "2022-03-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 71
+                },
+                {
+                  "x": 19063,
+                  "y": 808,
+                  "date": "2022-03-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 72
+                },
+                {
+                  "x": 19064,
+                  "y": 722,
+                  "date": "2022-03-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 73
+                },
+                {
+                  "x": 19065,
+                  "y": 682,
+                  "date": "2022-03-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 74
+                },
+                {
+                  "x": 19066,
+                  "y": 649,
+                  "date": "2022-03-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 75
+                },
+                {
+                  "x": 19067,
+                  "y": 816,
+                  "date": "2022-03-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 76
+                },
+                {
+                  "x": 19068,
+                  "y": 839,
+                  "date": "2022-03-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 77
+                },
+                {
+                  "x": 19069,
+                  "y": 772,
+                  "date": "2022-03-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 78
+                },
+                {
+                  "x": 19070,
+                  "y": 827,
+                  "date": "2022-03-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 79
+                },
+                {
+                  "x": 19071,
+                  "y": 741,
+                  "date": "2022-03-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 80
+                },
+                {
+                  "x": 19072,
+                  "y": 694,
+                  "date": "2022-03-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 81
+                },
+                {
+                  "x": 19073,
+                  "y": 662,
+                  "date": "2022-03-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 82
+                },
+                {
+                  "x": 19074,
+                  "y": 2310,
+                  "date": "2022-03-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 83
+                },
+                {
+                  "x": 19075,
+                  "y": 2380,
+                  "date": "2022-03-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 84
+                },
+                {
+                  "x": 19076,
+                  "y": 1480,
+                  "date": "2022-03-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 85
+                },
+                {
+                  "x": 19077,
+                  "y": 1240,
+                  "date": "2022-03-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 86
+                },
+                {
+                  "x": 19078,
+                  "y": 1120,
+                  "date": "2022-03-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 87
+                },
+                {
+                  "x": 19079,
+                  "y": 1040,
+                  "date": "2022-03-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 88
+                },
+                {
+                  "x": 19080,
+                  "y": 946,
+                  "date": "2022-03-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 89
+                },
+                {
+                  "x": 19081,
+                  "y": 896,
+                  "date": "2022-03-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 90
+                },
+                {
+                  "x": 19082,
+                  "y": 1260,
+                  "date": "2022-03-31",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 91
+                },
+                {
+                  "x": 19083,
+                  "y": 1200,
+                  "date": "2022-04-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 92
+                },
+                {
+                  "x": 19084,
+                  "y": 1000,
+                  "date": "2022-04-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 93
+                },
+                {
+                  "x": 19085,
+                  "y": 935,
+                  "date": "2022-04-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 94
+                },
+                {
+                  "x": 19086,
+                  "y": 877,
+                  "date": "2022-04-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 95
+                },
+                {
+                  "x": 19087,
+                  "y": 954,
+                  "date": "2022-04-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 96
+                },
+                {
+                  "x": 19088,
+                  "y": 1140,
+                  "date": "2022-04-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 97
+                },
+                {
+                  "x": 19089,
+                  "y": 1090,
+                  "date": "2022-04-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 98
+                },
+                {
+                  "x": 19090,
+                  "y": 940,
+                  "date": "2022-04-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 99
+                },
+                {
+                  "x": 19091,
+                  "y": 876,
+                  "date": "2022-04-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 100
+                },
+                {
+                  "x": 19092,
+                  "y": 828,
+                  "date": "2022-04-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 101
+                },
+                {
+                  "x": 19093,
+                  "y": 791,
+                  "date": "2022-04-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 102
+                },
+                {
+                  "x": 19094,
+                  "y": 767,
+                  "date": "2022-04-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 103
+                },
+                {
+                  "x": 19095,
+                  "y": 746,
+                  "date": "2022-04-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 104
+                },
+                {
+                  "x": 19096,
+                  "y": 727,
+                  "date": "2022-04-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 105
+                },
+                {
+                  "x": 19097,
+                  "y": 692,
+                  "date": "2022-04-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 106
+                },
+                {
+                  "x": 19098,
+                  "y": 732,
+                  "date": "2022-04-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 107
+                },
+                {
+                  "x": 19099,
+                  "y": 700,
+                  "date": "2022-04-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 108
+                },
+                {
+                  "x": 19100,
+                  "y": 799,
+                  "date": "2022-04-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 109
+                },
+                {
+                  "x": 19101,
+                  "y": 754,
+                  "date": "2022-04-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 110
+                },
+                {
+                  "x": 19102,
+                  "y": 681,
+                  "date": "2022-04-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 111
+                },
+                {
+                  "x": 19103,
+                  "y": 656,
+                  "date": "2022-04-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 112
+                },
+                {
+                  "x": 19104,
+                  "y": 634,
+                  "date": "2022-04-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 113
+                },
+                {
+                  "x": 19105,
+                  "y": 612,
+                  "date": "2022-04-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 114
+                },
+                {
+                  "x": 19106,
+                  "y": 592,
+                  "date": "2022-04-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 115
+                },
+                {
+                  "x": 19107,
+                  "y": 573,
+                  "date": "2022-04-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 116
+                },
+                {
+                  "x": 19108,
+                  "y": 557,
+                  "date": "2022-04-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 117
+                },
+                {
+                  "x": 19109,
+                  "y": 539,
+                  "date": "2022-04-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 118
+                },
+                {
+                  "x": 19110,
+                  "y": 516,
+                  "date": "2022-04-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 119
+                },
+                {
+                  "x": 19111,
+                  "y": 502,
+                  "date": "2022-04-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 120
+                },
+                {
+                  "x": 19112,
+                  "y": 494,
+                  "date": "2022-04-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 121
+                },
+                {
+                  "x": 19113,
+                  "y": 490,
+                  "date": "2022-05-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 122
+                },
+                {
+                  "x": 19114,
+                  "y": 478,
+                  "date": "2022-05-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 123
+                },
+                {
+                  "x": 19115,
+                  "y": 466,
+                  "date": "2022-05-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 124
+                },
+                {
+                  "x": 19116,
+                  "y": 476,
+                  "date": "2022-05-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 125
+                },
+                {
+                  "x": 19117,
+                  "y": 455,
+                  "date": "2022-05-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 126
+                },
+                {
+                  "x": 19118,
+                  "y": 509,
+                  "date": "2022-05-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 127
+                },
+                {
+                  "x": 19119,
+                  "y": 521,
+                  "date": "2022-05-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 128
+                },
+                {
+                  "x": 19120,
+                  "y": 449,
+                  "date": "2022-05-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 129
+                },
+                {
+                  "x": 19121,
+                  "y": 429,
+                  "date": "2022-05-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 130
+                },
+                {
+                  "x": 19122,
+                  "y": 414,
+                  "date": "2022-05-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 131
+                },
+                {
+                  "x": 19123,
+                  "y": 396,
+                  "date": "2022-05-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 132
+                },
+                {
+                  "x": 19124,
+                  "y": 384,
+                  "date": "2022-05-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 133
+                },
+                {
+                  "x": 19125,
+                  "y": 375,
+                  "date": "2022-05-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 134
+                },
+                {
+                  "x": 19126,
+                  "y": 398,
+                  "date": "2022-05-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 135
+                },
+                {
+                  "x": 19127,
+                  "y": 427,
+                  "date": "2022-05-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 136
+                },
+                {
+                  "x": 19128,
+                  "y": 389,
+                  "date": "2022-05-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 137
+                },
+                {
+                  "x": 19129,
+                  "y": 356,
+                  "date": "2022-05-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 138
+                },
+                {
+                  "x": 19130,
+                  "y": 331,
+                  "date": "2022-05-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 139
+                },
+                {
+                  "x": 19131,
+                  "y": 322,
+                  "date": "2022-05-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 140
+                },
+                {
+                  "x": 19132,
+                  "y": 314,
+                  "date": "2022-05-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 141
+                },
+                {
+                  "x": 19133,
+                  "y": 303,
+                  "date": "2022-05-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 142
+                },
+                {
+                  "x": 19134,
+                  "y": 296,
+                  "date": "2022-05-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 143
+                },
+                {
+                  "x": 19135,
+                  "y": 625,
+                  "date": "2022-05-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 144
+                },
+                {
+                  "x": 19136,
+                  "y": 1110,
+                  "date": "2022-05-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 145
+                },
+                {
+                  "x": 19137,
+                  "y": 888,
+                  "date": "2022-05-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 146
+                },
+                {
+                  "x": 19138,
+                  "y": 2910,
+                  "date": "2022-05-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 147
+                },
+                {
+                  "x": 19139,
+                  "y": 5140,
+                  "date": "2022-05-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 148
+                },
+                {
+                  "x": 19140,
+                  "y": 1880,
+                  "date": "2022-05-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 149
+                },
+                {
+                  "x": 19141,
+                  "y": 1260,
+                  "date": "2022-05-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 150
+                },
+                {
+                  "x": 19142,
+                  "y": 1050,
+                  "date": "2022-05-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 151
+                },
+                {
+                  "x": 19143,
+                  "y": 917,
+                  "date": "2022-05-31",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 152
+                },
+                {
+                  "x": 19144,
+                  "y": 812,
+                  "date": "2022-06-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 153
+                },
+                {
+                  "x": 19145,
+                  "y": 765,
+                  "date": "2022-06-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 154
+                },
+                {
+                  "x": 19146,
+                  "y": 745,
+                  "date": "2022-06-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 155
+                },
+                {
+                  "x": 19147,
+                  "y": 710,
+                  "date": "2022-06-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 156
+                },
+                {
+                  "x": 19148,
+                  "y": 636,
+                  "date": "2022-06-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 157
+                },
+                {
+                  "x": 19149,
+                  "y": 607,
+                  "date": "2022-06-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 158
+                },
+                {
+                  "x": 19150,
+                  "y": 591,
+                  "date": "2022-06-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 159
+                },
+                {
+                  "x": 19151,
+                  "y": 617,
+                  "date": "2022-06-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 160
+                },
+                {
+                  "x": 19152,
+                  "y": 610,
+                  "date": "2022-06-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 161
+                },
+                {
+                  "x": 19153,
+                  "y": 547,
+                  "date": "2022-06-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 162
+                },
+                {
+                  "x": 19154,
+                  "y": 503,
+                  "date": "2022-06-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 163
+                },
+                {
+                  "x": 19155,
+                  "y": 483,
+                  "date": "2022-06-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 164
+                },
+                {
+                  "x": 19156,
+                  "y": 467,
+                  "date": "2022-06-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 165
+                },
+                {
+                  "x": 19157,
+                  "y": 487,
+                  "date": "2022-06-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 166
+                },
+                {
+                  "x": 19158,
+                  "y": 459,
+                  "date": "2022-06-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 167
+                },
+                {
+                  "x": 19159,
+                  "y": 472,
+                  "date": "2022-06-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 168
+                },
+                {
+                  "x": 19160,
+                  "y": 488,
+                  "date": "2022-06-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 169
+                },
+                {
+                  "x": 19161,
+                  "y": 428,
+                  "date": "2022-06-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 170
+                },
+                {
+                  "x": 19162,
+                  "y": 366,
+                  "date": "2022-06-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 171
+                },
+                {
+                  "x": 19163,
+                  "y": 347,
+                  "date": "2022-06-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 172
+                },
+                {
+                  "x": 19164,
+                  "y": 342,
+                  "date": "2022-06-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 173
+                },
+                {
+                  "x": 19165,
+                  "y": 332,
+                  "date": "2022-06-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 174
+                },
+                {
+                  "x": 19166,
+                  "y": 325,
+                  "date": "2022-06-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 175
+                },
+                {
+                  "x": 19167,
+                  "y": 320,
+                  "date": "2022-06-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 176
+                },
+                {
+                  "x": 19168,
+                  "y": 458,
+                  "date": "2022-06-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 177
+                },
+                {
+                  "x": 19169,
+                  "y": 378,
+                  "date": "2022-06-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 178
+                },
+                {
+                  "x": 19170,
+                  "y": 352,
+                  "date": "2022-06-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 179
+                },
+                {
+                  "x": 19171,
+                  "y": 432,
+                  "date": "2022-06-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 180
+                },
+                {
+                  "x": 19172,
+                  "y": 478,
+                  "date": "2022-06-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 181
+                },
+                {
+                  "x": 19173,
+                  "y": 449,
+                  "date": "2022-06-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 182
+                },
+                {
+                  "x": 19174,
+                  "y": 396,
+                  "date": "2022-07-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 183
+                },
+                {
+                  "x": 19175,
+                  "y": 569,
+                  "date": "2022-07-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 184
+                },
+                {
+                  "x": 19176,
+                  "y": 605,
+                  "date": "2022-07-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 185
+                },
+                {
+                  "x": 19177,
+                  "y": 491,
+                  "date": "2022-07-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 186
+                },
+                {
+                  "x": 19178,
+                  "y": 427,
+                  "date": "2022-07-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 187
+                },
+                {
+                  "x": 19179,
+                  "y": 455,
+                  "date": "2022-07-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 188
+                },
+                {
+                  "x": 19180,
+                  "y": 781,
+                  "date": "2022-07-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 189
+                },
+                {
+                  "x": 19181,
+                  "y": 508,
+                  "date": "2022-07-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 190
+                },
+                {
+                  "x": 19182,
+                  "y": 799,
+                  "date": "2022-07-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 191
+                },
+                {
+                  "x": 19183,
+                  "y": 536,
+                  "date": "2022-07-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 192
+                },
+                {
+                  "x": 19184,
+                  "y": 514,
+                  "date": "2022-07-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 193
+                },
+                {
+                  "x": 19185,
+                  "y": 458,
+                  "date": "2022-07-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 194
+                },
+                {
+                  "x": 19186,
+                  "y": 409,
+                  "date": "2022-07-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 195
+                },
+                {
+                  "x": 19187,
+                  "y": 408,
+                  "date": "2022-07-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 196
+                },
+                {
+                  "x": 19188,
+                  "y": 373,
+                  "date": "2022-07-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 197
+                },
+                {
+                  "x": 19189,
+                  "y": 375,
+                  "date": "2022-07-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 198
+                },
+                {
+                  "x": 19190,
+                  "y": 426,
+                  "date": "2022-07-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 199
+                },
+                {
+                  "x": 19191,
+                  "y": 480,
+                  "date": "2022-07-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 200
+                },
+                {
+                  "x": 19192,
+                  "y": 403,
+                  "date": "2022-07-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 201
+                },
+                {
+                  "x": 19193,
+                  "y": 404,
+                  "date": "2022-07-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 202
+                },
+                {
+                  "x": 19194,
+                  "y": 369,
+                  "date": "2022-07-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 203
+                },
+                {
+                  "x": 19195,
+                  "y": 322,
+                  "date": "2022-07-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 204
+                },
+                {
+                  "x": 19196,
+                  "y": 312,
+                  "date": "2022-07-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 205
+                },
+                {
+                  "x": 19197,
+                  "y": 304,
+                  "date": "2022-07-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 206
+                },
+                {
+                  "x": 19198,
+                  "y": 295,
+                  "date": "2022-07-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 207
+                },
+                {
+                  "x": 19199,
+                  "y": 300,
+                  "date": "2022-07-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 208
+                },
+                {
+                  "x": 19200,
+                  "y": 335,
+                  "date": "2022-07-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 209
+                },
+                {
+                  "x": 19201,
+                  "y": 292,
+                  "date": "2022-07-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 210
+                },
+                {
+                  "x": 19202,
+                  "y": 309,
+                  "date": "2022-07-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 211
+                },
+                {
+                  "x": 19203,
+                  "y": 283,
+                  "date": "2022-07-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 212
+                },
+                {
+                  "x": 19204,
+                  "y": 361,
+                  "date": "2022-07-31",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 213
+                },
+                {
+                  "x": 19205,
+                  "y": 449,
+                  "date": "2022-08-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 214
+                },
+                {
+                  "x": 19206,
+                  "y": 672,
+                  "date": "2022-08-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 215
+                },
+                {
+                  "x": 19207,
+                  "y": 372,
+                  "date": "2022-08-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 216
+                },
+                {
+                  "x": 19208,
+                  "y": 323,
+                  "date": "2022-08-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 217
+                },
+                {
+                  "x": 19209,
+                  "y": 300,
+                  "date": "2022-08-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 218
+                },
+                {
+                  "x": 19210,
+                  "y": 461,
+                  "date": "2022-08-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 219
+                },
+                {
+                  "x": 19211,
+                  "y": 438,
+                  "date": "2022-08-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 220
+                },
+                {
+                  "x": 19212,
+                  "y": 402,
+                  "date": "2022-08-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 221
+                },
+                {
+                  "x": 19213,
+                  "y": 446,
+                  "date": "2022-08-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 222
+                },
+                {
+                  "x": 19214,
+                  "y": 577,
+                  "date": "2022-08-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 223
+                },
+                {
+                  "x": 19215,
+                  "y": 407,
+                  "date": "2022-08-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 224
+                },
+                {
+                  "x": 19216,
+                  "y": 447,
+                  "date": "2022-08-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 225
+                },
+                {
+                  "x": 19217,
+                  "y": 384,
+                  "date": "2022-08-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 226
+                },
+                {
+                  "x": 19218,
+                  "y": 321,
+                  "date": "2022-08-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 227
+                },
+                {
+                  "x": 19219,
+                  "y": 298,
+                  "date": "2022-08-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 228
+                },
+                {
+                  "x": 19220,
+                  "y": 284,
+                  "date": "2022-08-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 229
+                },
+                {
+                  "x": 19221,
+                  "y": 301,
+                  "date": "2022-08-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 230
+                },
+                {
+                  "x": 19222,
+                  "y": 323,
+                  "date": "2022-08-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 231
+                },
+                {
+                  "x": 19223,
+                  "y": 292,
+                  "date": "2022-08-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 232
+                },
+                {
+                  "x": 19224,
+                  "y": 280,
+                  "date": "2022-08-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 233
+                },
+                {
+                  "x": 19225,
+                  "y": 453,
+                  "date": "2022-08-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 234
+                },
+                {
+                  "x": 19226,
+                  "y": 500,
+                  "date": "2022-08-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 235
+                },
+                {
+                  "x": 19227,
+                  "y": 380,
+                  "date": "2022-08-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 236
+                },
+                {
+                  "x": 19228,
+                  "y": 332,
+                  "date": "2022-08-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 237
+                },
+                {
+                  "x": 19229,
+                  "y": 345,
+                  "date": "2022-08-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 238
+                },
+                {
+                  "x": 19230,
+                  "y": 507,
+                  "date": "2022-08-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 239
+                },
+                {
+                  "x": 19231,
+                  "y": 385,
+                  "date": "2022-08-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 240
+                },
+                {
+                  "x": 19232,
+                  "y": 337,
+                  "date": "2022-08-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 241
+                },
+                {
+                  "x": 19233,
+                  "y": 350,
+                  "date": "2022-08-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 242
+                },
+                {
+                  "x": 19234,
+                  "y": 319,
+                  "date": "2022-08-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 243
+                },
+                {
+                  "x": 19235,
+                  "y": 313,
+                  "date": "2022-08-31",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 244
+                },
+                {
+                  "x": 19236,
+                  "y": 284,
+                  "date": "2022-09-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 245
+                },
+                {
+                  "x": 19237,
+                  "y": 272,
+                  "date": "2022-09-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 246
+                },
+                {
+                  "x": 19238,
+                  "y": 1370,
+                  "date": "2022-09-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 247
+                },
+                {
+                  "x": 19239,
+                  "y": 1040,
+                  "date": "2022-09-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 248
+                },
+                {
+                  "x": 19240,
+                  "y": 3330,
+                  "date": "2022-09-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 249
+                },
+                {
+                  "x": 19241,
+                  "y": 2040,
+                  "date": "2022-09-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 250
+                },
+                {
+                  "x": 19242,
+                  "y": 1170,
+                  "date": "2022-09-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 251
+                },
+                {
+                  "x": 19243,
+                  "y": 1040,
+                  "date": "2022-09-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 252
+                },
+                {
+                  "x": 19244,
+                  "y": 870,
+                  "date": "2022-09-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 253
+                },
+                {
+                  "x": 19245,
+                  "y": 761,
+                  "date": "2022-09-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 254
+                },
+                {
+                  "x": 19246,
+                  "y": 756,
+                  "date": "2022-09-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 255
+                },
+                {
+                  "x": 19247,
+                  "y": 724,
+                  "date": "2022-09-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 256
+                },
+                {
+                  "x": 19248,
+                  "y": 654,
+                  "date": "2022-09-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 257
+                },
+                {
+                  "x": 19249,
+                  "y": 566,
+                  "date": "2022-09-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 258
+                },
+                {
+                  "x": 19250,
+                  "y": 524,
+                  "date": "2022-09-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 259
+                },
+                {
+                  "x": 19251,
+                  "y": 495,
+                  "date": "2022-09-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 260
+                },
+                {
+                  "x": 19252,
+                  "y": 477,
+                  "date": "2022-09-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 261
+                },
+                {
+                  "x": 19253,
+                  "y": 444,
+                  "date": "2022-09-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 262
+                },
+                {
+                  "x": 19254,
+                  "y": 414,
+                  "date": "2022-09-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 263
+                },
+                {
+                  "x": 19255,
+                  "y": 390,
+                  "date": "2022-09-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 264
+                },
+                {
+                  "x": 19256,
+                  "y": 371,
+                  "date": "2022-09-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 265
+                },
+                {
+                  "x": 19257,
+                  "y": 353,
+                  "date": "2022-09-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 266
+                },
+                {
+                  "x": 19258,
+                  "y": 332,
+                  "date": "2022-09-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 267
+                },
+                {
+                  "x": 19259,
+                  "y": 317,
+                  "date": "2022-09-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 268
+                },
+                {
+                  "x": 19260,
+                  "y": 316,
+                  "date": "2022-09-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 269
+                },
+                {
+                  "x": 19261,
+                  "y": 309,
+                  "date": "2022-09-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 270
+                },
+                {
+                  "x": 19262,
+                  "y": 294,
+                  "date": "2022-09-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 271
+                },
+                {
+                  "x": 19263,
+                  "y": 282,
+                  "date": "2022-09-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 272
+                },
+                {
+                  "x": 19264,
+                  "y": 271,
+                  "date": "2022-09-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 273
+                },
+                {
+                  "x": 19265,
+                  "y": 266,
+                  "date": "2022-09-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 274
+                },
+                {
+                  "x": 19266,
+                  "y": 270,
+                  "date": "2022-10-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 275
+                },
+                {
+                  "x": 19267,
+                  "y": 268,
+                  "date": "2022-10-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 276
+                },
+                {
+                  "x": 19268,
+                  "y": 257,
+                  "date": "2022-10-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 277
+                },
+                {
+                  "x": 19269,
+                  "y": 253,
+                  "date": "2022-10-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 278
+                },
+                {
+                  "x": 19270,
+                  "y": 244,
+                  "date": "2022-10-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 279
+                },
+                {
+                  "x": 19271,
+                  "y": 234,
+                  "date": "2022-10-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 280
+                },
+                {
+                  "x": 19272,
+                  "y": 230,
+                  "date": "2022-10-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 281
+                },
+                {
+                  "x": 19273,
+                  "y": 224,
+                  "date": "2022-10-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 282
+                },
+                {
+                  "x": 19274,
+                  "y": 220,
+                  "date": "2022-10-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 283
+                },
+                {
+                  "x": 19275,
+                  "y": 218,
+                  "date": "2022-10-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 284
+                },
+                {
+                  "x": 19276,
+                  "y": 218,
+                  "date": "2022-10-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 285
+                },
+                {
+                  "x": 19277,
+                  "y": 218,
+                  "date": "2022-10-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 286
+                },
+                {
+                  "x": 19278,
+                  "y": 226,
+                  "date": "2022-10-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 287
+                },
+                {
+                  "x": 19279,
+                  "y": 212,
+                  "date": "2022-10-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 288
+                },
+                {
+                  "x": 19280,
+                  "y": 206,
+                  "date": "2022-10-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 289
+                },
+                {
+                  "x": 19281,
+                  "y": 204,
+                  "date": "2022-10-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 290
+                },
+                {
+                  "x": 19282,
+                  "y": 204,
+                  "date": "2022-10-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 291
+                },
+                {
+                  "x": 19283,
+                  "y": 200,
+                  "date": "2022-10-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 292
+                },
+                {
+                  "x": 19284,
+                  "y": 196,
+                  "date": "2022-10-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 293
+                },
+                {
+                  "x": 19285,
+                  "y": 196,
+                  "date": "2022-10-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 294
+                },
+                {
+                  "x": 19286,
+                  "y": 196,
+                  "date": "2022-10-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 295
+                },
+                {
+                  "x": 19287,
+                  "y": 196,
+                  "date": "2022-10-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 296
+                },
+                {
+                  "x": 19288,
+                  "y": 196,
+                  "date": "2022-10-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 297
+                },
+                {
+                  "x": 19289,
+                  "y": 195,
+                  "date": "2022-10-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 298
+                },
+                {
+                  "x": 19290,
+                  "y": 192,
+                  "date": "2022-10-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 299
+                },
+                {
+                  "x": 19291,
+                  "y": 215,
+                  "date": "2022-10-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 300
+                },
+                {
+                  "x": 19292,
+                  "y": 212,
+                  "date": "2022-10-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 301
+                },
+                {
+                  "x": 19293,
+                  "y": 193,
+                  "date": "2022-10-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 302
+                },
+                {
+                  "x": 19294,
+                  "y": 192,
+                  "date": "2022-10-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 303
+                },
+                {
+                  "x": 19295,
+                  "y": 194,
+                  "date": "2022-10-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 304
+                },
+                {
+                  "x": 19296,
+                  "y": 284,
+                  "date": "2022-10-31",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 305
+                },
+                {
+                  "x": 19297,
+                  "y": 314,
+                  "date": "2022-11-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 306
+                },
+                {
+                  "x": 19298,
+                  "y": 222,
+                  "date": "2022-11-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 307
+                },
+                {
+                  "x": 19299,
+                  "y": 206,
+                  "date": "2022-11-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 308
+                },
+                {
+                  "x": 19300,
+                  "y": 201,
+                  "date": "2022-11-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 309
+                },
+                {
+                  "x": 19301,
+                  "y": 209,
+                  "date": "2022-11-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 310
+                },
+                {
+                  "x": 19302,
+                  "y": 275,
+                  "date": "2022-11-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 311
+                },
+                {
+                  "x": 19303,
+                  "y": 253,
+                  "date": "2022-11-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 312
+                },
+                {
+                  "x": 19304,
+                  "y": 227,
+                  "date": "2022-11-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 313
+                },
+                {
+                  "x": 19305,
+                  "y": 209,
+                  "date": "2022-11-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 314
+                },
+                {
+                  "x": 19306,
+                  "y": 205,
+                  "date": "2022-11-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 315
+                },
+                {
+                  "x": 19307,
+                  "y": 1090,
+                  "date": "2022-11-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 316
+                },
+                {
+                  "x": 19308,
+                  "y": 1190,
+                  "date": "2022-11-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 317
+                },
+                {
+                  "x": 19309,
+                  "y": 544,
+                  "date": "2022-11-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 318
+                },
+                {
+                  "x": 19310,
+                  "y": 381,
+                  "date": "2022-11-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 319
+                },
+                {
+                  "x": 19311,
+                  "y": 380,
+                  "date": "2022-11-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 320
+                },
+                {
+                  "x": 19312,
+                  "y": 596,
+                  "date": "2022-11-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 321
+                },
+                {
+                  "x": 19313,
+                  "y": 410,
+                  "date": "2022-11-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 322
+                },
+                {
+                  "x": 19314,
+                  "y": 342,
+                  "date": "2022-11-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 323
+                },
+                {
+                  "x": 19315,
+                  "y": 312,
+                  "date": "2022-11-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 324
+                },
+                {
+                  "x": 19316,
+                  "y": 292,
+                  "date": "2022-11-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 325
+                },
+                {
+                  "x": 19317,
+                  "y": 273,
+                  "date": "2022-11-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 326
+                },
+                {
+                  "x": 19318,
+                  "y": 262,
+                  "date": "2022-11-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 327
+                },
+                {
+                  "x": 19319,
+                  "y": 255,
+                  "date": "2022-11-23",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 328
+                },
+                {
+                  "x": 19320,
+                  "y": 248,
+                  "date": "2022-11-24",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 329
+                },
+                {
+                  "x": 19321,
+                  "y": 244,
+                  "date": "2022-11-25",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 330
+                },
+                {
+                  "x": 19322,
+                  "y": 241,
+                  "date": "2022-11-26",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 331
+                },
+                {
+                  "x": 19323,
+                  "y": 291,
+                  "date": "2022-11-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 332
+                },
+                {
+                  "x": 19324,
+                  "y": 338,
+                  "date": "2022-11-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 333
+                },
+                {
+                  "x": 19325,
+                  "y": 266,
+                  "date": "2022-11-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 334
+                },
+                {
+                  "x": 19326,
+                  "y": 1050,
+                  "date": "2022-11-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 335
+                },
+                {
+                  "x": 19327,
+                  "y": 820,
+                  "date": "2022-12-01",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 336
+                },
+                {
+                  "x": 19328,
+                  "y": 533,
+                  "date": "2022-12-02",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 337
+                },
+                {
+                  "x": 19329,
+                  "y": 471,
+                  "date": "2022-12-03",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 338
+                },
+                {
+                  "x": 19330,
+                  "y": 423,
+                  "date": "2022-12-04",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 339
+                },
+                {
+                  "x": 19331,
+                  "y": 395,
+                  "date": "2022-12-05",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 340
+                },
+                {
+                  "x": 19332,
+                  "y": 1090,
+                  "date": "2022-12-06",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 341
+                },
+                {
+                  "x": 19333,
+                  "y": 1050,
+                  "date": "2022-12-07",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 342
+                },
+                {
+                  "x": 19334,
+                  "y": 977,
+                  "date": "2022-12-08",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 343
+                },
+                {
+                  "x": 19335,
+                  "y": 802,
+                  "date": "2022-12-09",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 344
+                },
+                {
+                  "x": 19336,
+                  "y": 747,
+                  "date": "2022-12-10",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 345
+                },
+                {
+                  "x": 19337,
+                  "y": 659,
+                  "date": "2022-12-11",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 346
+                },
+                {
+                  "x": 19338,
+                  "y": 589,
+                  "date": "2022-12-12",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 347
+                },
+                {
+                  "x": 19339,
+                  "y": 533,
+                  "date": "2022-12-13",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 348
+                },
+                {
+                  "x": 19340,
+                  "y": 521,
+                  "date": "2022-12-14",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 349
+                },
+                {
+                  "x": 19341,
+                  "y": 2620,
+                  "date": "2022-12-15",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 350
+                },
+                {
+                  "x": 19342,
+                  "y": 1680,
+                  "date": "2022-12-16",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 351
+                },
+                {
+                  "x": 19343,
+                  "y": 1150,
+                  "date": "2022-12-17",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 352
+                },
+                {
+                  "x": 19344,
+                  "y": 921,
+                  "date": "2022-12-18",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 353
+                },
+                {
+                  "x": 19345,
+                  "y": 801,
+                  "date": "2022-12-19",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 354
+                },
+                {
+                  "x": 19346,
+                  "y": 732,
+                  "date": "2022-12-20",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 355
+                },
+                {
+                  "x": 19347,
+                  "y": 673,
+                  "date": "2022-12-21",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 356
+                },
+                {
+                  "x": 19348,
+                  "y": 671,
+                  "date": "2022-12-22",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 357
+                },
+                {
+                  "x": 19349,
+                  "y": 647,
+                  "date": "2022-12-23",
+                  "qualifiers": "A;e",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 358
+                },
+                {
+                  "x": 19350,
+                  "y": 584,
+                  "date": "2022-12-24",
+                  "qualifiers": "A;e",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 359
+                },
+                {
+                  "x": 19351,
+                  "y": 529,
+                  "date": "2022-12-25",
+                  "qualifiers": "A;e",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 360
+                },
+                {
+                  "x": 19352,
+                  "y": 504,
+                  "date": "2022-12-26",
+                  "qualifiers": "A;e",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 361
+                },
+                {
+                  "x": 19353,
+                  "y": 495,
+                  "date": "2022-12-27",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 362
+                },
+                {
+                  "x": 19354,
+                  "y": 482,
+                  "date": "2022-12-28",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 363
+                },
+                {
+                  "x": 19355,
+                  "y": 466,
+                  "date": "2022-12-29",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 364
+                },
+                {
+                  "x": 19356,
+                  "y": 456,
+                  "date": "2022-12-30",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 365
+                },
+                {
+                  "x": 19357,
+                  "y": 472,
+                  "date": "2022-12-31",
+                  "qualifiers": "A",
+                  "source_path": "flow-daily-2022.csv",
+                  "source_csv_row": 366
+                }
+              ]
+            },
+            {
+              "label": "Sample date",
+              "geometry": "scatter",
+              "marker": "square-open",
+              "points": [
+                {
+                  "x": 19059,
+                  "y": 588,
+                  "activity_id": "nwisga.01.02200618",
+                  "date": "2022-03-08",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 16,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 2,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19066,
+                  "y": 649,
+                  "activity_id": "nwisga.01.02200670",
+                  "date": "2022-03-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 10,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 3,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19073,
+                  "y": 662,
+                  "activity_id": "nwisga.01.02200739",
+                  "date": "2022-03-22",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 3,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 4,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19080,
+                  "y": 946,
+                  "activity_id": "nwisga.01.02200767",
+                  "date": "2022-03-29",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 14,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 5,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19129,
+                  "y": 356,
+                  "activity_id": "nwisga.01.02201156",
+                  "date": "2022-05-17",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 17,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 6,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19136,
+                  "y": 1110,
+                  "activity_id": "nwisga.01.02201199",
+                  "date": "2022-05-24",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 2,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 7,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19144,
+                  "y": 812,
+                  "activity_id": "nwisga.01.02201214",
+                  "date": "2022-06-01",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 9,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 8,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19150,
+                  "y": 591,
+                  "activity_id": "nwisga.01.02201250",
+                  "date": "2022-06-07",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 13,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 9,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19192,
+                  "y": 403,
+                  "activity_id": "nwisga.01.02201578",
+                  "date": "2022-07-19",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 4,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 10,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19199,
+                  "y": 300,
+                  "activity_id": "nwisga.01.02201610",
+                  "date": "2022-07-26",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 6,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 11,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19206,
+                  "y": 672,
+                  "activity_id": "nwisga.01.02201646",
+                  "date": "2022-08-02",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 12,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 12,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19220,
+                  "y": 284,
+                  "activity_id": "nwisga.01.02201707",
+                  "date": "2022-08-16",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 7,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 13,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19297,
+                  "y": 314,
+                  "activity_id": "nwisga.01.02300151",
+                  "date": "2022-11-01",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 15,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 14,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19303,
+                  "y": 253,
+                  "activity_id": "nwisga.01.02300304",
+                  "date": "2022-11-07",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 8,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 15,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19311,
+                  "y": 380,
+                  "activity_id": "nwisga.01.02300391",
+                  "date": "2022-11-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 11,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 16,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 19317,
+                  "y": 273,
+                  "activity_id": "nwisga.01.02300406",
+                  "date": "2022-11-21",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 5,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 17,
+                  "flow_qualifiers": "A"
+                }
+              ]
+            }
+          ],
+          "reference_lines": [
+            {
+              "axis": "y",
+              "value": 1284,
+              "label": "Annual P95 = 1,284"
+            }
+          ]
+        },
+        {
+          "id": "same-day-flow",
+          "title": "Same-date flow context",
+          "x": {
+            "label": "Same-date mean",
+            "unit": "ft3/s",
+            "domain": [
+              0,
+              1200
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 200,
+                "label": "200"
+              },
+              {
+                "value": 400,
+                "label": "400"
+              },
+              {
+                "value": 600,
+                "label": "600"
+              },
+              {
+                "value": 800,
+                "label": "800"
+              },
+              {
+                "value": 1000,
+                "label": "1000"
+              },
+              {
+                "value": 1200,
+                "label": "1200"
+              }
+            ]
+          },
+          "y": {
+            "label": "E. coli",
+            "unit": "MPN/100 mL",
+            "domain": [
+              0,
+              800
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 200,
+                "label": "200"
+              },
+              {
+                "value": 400,
+                "label": "400"
+              },
+              {
+                "value": 600,
+                "label": "600"
+              },
+              {
+                "value": 800,
+                "label": "800"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Measured",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 588,
+                  "y": 20,
+                  "activity_id": "nwisga.01.02200618",
+                  "date": "2022-03-08",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 16,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 2,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 662,
+                  "y": 20,
+                  "activity_id": "nwisga.01.02200739",
+                  "date": "2022-03-22",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 3,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 4,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 356,
+                  "y": 7,
+                  "activity_id": "nwisga.01.02201156",
+                  "date": "2022-05-17",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 17,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 6,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 1110,
+                  "y": 690,
+                  "activity_id": "nwisga.01.02201199",
+                  "date": "2022-05-24",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 2,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 7,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 812,
+                  "y": 32,
+                  "activity_id": "nwisga.01.02201214",
+                  "date": "2022-06-01",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 9,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 8,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 591,
+                  "y": 12,
+                  "activity_id": "nwisga.01.02201250",
+                  "date": "2022-06-07",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 13,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 9,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 403,
+                  "y": 30,
+                  "activity_id": "nwisga.01.02201578",
+                  "date": "2022-07-19",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 4,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 10,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 300,
+                  "y": 8,
+                  "activity_id": "nwisga.01.02201610",
+                  "date": "2022-07-26",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 6,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 11,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 672,
+                  "y": 580,
+                  "activity_id": "nwisga.01.02201646",
+                  "date": "2022-08-02",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 12,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 12,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 284,
+                  "y": 6,
+                  "activity_id": "nwisga.01.02201707",
+                  "date": "2022-08-16",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 7,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 13,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 314,
+                  "y": 110,
+                  "activity_id": "nwisga.01.02300151",
+                  "date": "2022-11-01",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 15,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 14,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 253,
+                  "y": 28,
+                  "activity_id": "nwisga.01.02300304",
+                  "date": "2022-11-07",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 8,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 15,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 380,
+                  "y": 29,
+                  "activity_id": "nwisga.01.02300391",
+                  "date": "2022-11-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 11,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 16,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 273,
+                  "y": 7,
+                  "activity_id": "nwisga.01.02300406",
+                  "date": "2022-11-21",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 5,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 17,
+                  "flow_qualifiers": "A"
+                }
+              ]
+            },
+            {
+              "label": "ND limit",
+              "geometry": "scatter",
+              "marker": "triangle-open",
+              "points": [
+                {
+                  "x": 649,
+                  "y": 20,
+                  "censored": true,
+                  "lower": 0,
+                  "upper": 20,
+                  "activity_id": "nwisga.01.02200670",
+                  "date": "2022-03-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 10,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 3,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 946,
+                  "y": 20,
+                  "censored": true,
+                  "lower": 0,
+                  "upper": 20,
+                  "activity_id": "nwisga.01.02200767",
+                  "date": "2022-03-29",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 14,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 5,
+                  "flow_qualifiers": "A"
+                }
+              ]
+            },
+            {
+              "label": "",
+              "geometry": "line",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 649,
+                  "y": 0,
+                  "censored": true,
+                  "activity_id": "nwisga.01.02200670",
+                  "date": "2022-03-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 10,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 3,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 649,
+                  "y": 20,
+                  "censored": true,
+                  "activity_id": "nwisga.01.02200670",
+                  "date": "2022-03-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 10,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 3,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 649,
+                  "y": null
+                },
+                {
+                  "x": 946,
+                  "y": 0,
+                  "censored": true,
+                  "activity_id": "nwisga.01.02200767",
+                  "date": "2022-03-29",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 14,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 5,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 946,
+                  "y": 20,
+                  "censored": true,
+                  "activity_id": "nwisga.01.02200767",
+                  "date": "2022-03-29",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 14,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 5,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 946,
+                  "y": null
+                }
+              ]
+            }
+          ],
+          "annotations": []
+        },
+        {
+          "id": "antecedent-flow",
+          "title": "Antecedent flow context",
+          "x": {
+            "label": "Seven prior days",
+            "unit": "ft3/s",
+            "domain": [
+              0,
+              2200
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 500,
+                "label": "500"
+              },
+              {
+                "value": 1000,
+                "label": "1000"
+              },
+              {
+                "value": 1500,
+                "label": "1500"
+              },
+              {
+                "value": 2000,
+                "label": "2000"
+              }
+            ]
+          },
+          "y": {
+            "label": "E. coli",
+            "unit": "MPN/100 mL",
+            "domain": [
+              0,
+              800
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 200,
+                "label": "200"
+              },
+              {
+                "value": 400,
+                "label": "400"
+              },
+              {
+                "value": 600,
+                "label": "600"
+              },
+              {
+                "value": 800,
+                "label": "800"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Measured",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 599.2857142857143,
+                  "y": 20,
+                  "activity_id": "nwisga.01.02200618",
+                  "date": "2022-03-08",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 16,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 2,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 762.5714285714286,
+                  "y": 20,
+                  "activity_id": "nwisga.01.02200739",
+                  "date": "2022-03-22",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 3,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 4,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 397.57142857142856,
+                  "y": 7,
+                  "activity_id": "nwisga.01.02201156",
+                  "date": "2022-05-17",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 17,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 6,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 363.85714285714283,
+                  "y": 690,
+                  "activity_id": "nwisga.01.02201199",
+                  "date": "2022-05-24",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 2,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 7,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 2006.4285714285713,
+                  "y": 32,
+                  "activity_id": "nwisga.01.02201214",
+                  "date": "2022-06-01",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 9,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 8,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 741.7142857142857,
+                  "y": 12,
+                  "activity_id": "nwisga.01.02201250",
+                  "date": "2022-06-07",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 13,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 9,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 418.42857142857144,
+                  "y": 30,
+                  "activity_id": "nwisga.01.02201578",
+                  "date": "2022-07-19",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 4,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 10,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 344.14285714285717,
+                  "y": 8,
+                  "activity_id": "nwisga.01.02201610",
+                  "date": "2022-07-26",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 6,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 11,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 332.7142857142857,
+                  "y": 580,
+                  "activity_id": "nwisga.01.02201646",
+                  "date": "2022-08-02",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 12,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 12,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 411.42857142857144,
+                  "y": 6,
+                  "activity_id": "nwisga.01.02201707",
+                  "date": "2022-08-16",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 7,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 13,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 211.71428571428572,
+                  "y": 110,
+                  "activity_id": "nwisga.01.02300151",
+                  "date": "2022-11-01",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 15,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 14,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 244.42857142857142,
+                  "y": 28,
+                  "activity_id": "nwisga.01.02300304",
+                  "date": "2022-11-07",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 8,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 15,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 549.4285714285714,
+                  "y": 29,
+                  "activity_id": "nwisga.01.02300391",
+                  "date": "2022-11-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 11,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 16,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 387.57142857142856,
+                  "y": 7,
+                  "activity_id": "nwisga.01.02300406",
+                  "date": "2022-11-21",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 5,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 17,
+                  "flow_qualifiers": "A"
+                }
+              ]
+            },
+            {
+              "label": "ND limit",
+              "geometry": "scatter",
+              "marker": "triangle-open",
+              "points": [
+                {
+                  "x": 872,
+                  "y": 20,
+                  "censored": true,
+                  "lower": 0,
+                  "upper": 20,
+                  "activity_id": "nwisga.01.02200670",
+                  "date": "2022-03-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 10,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 3,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 1461.7142857142858,
+                  "y": 20,
+                  "censored": true,
+                  "lower": 0,
+                  "upper": 20,
+                  "activity_id": "nwisga.01.02200767",
+                  "date": "2022-03-29",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 14,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 5,
+                  "flow_qualifiers": "A"
+                }
+              ]
+            },
+            {
+              "label": "",
+              "geometry": "line",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 872,
+                  "y": 0,
+                  "censored": true,
+                  "activity_id": "nwisga.01.02200670",
+                  "date": "2022-03-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 10,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 3,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 872,
+                  "y": 20,
+                  "censored": true,
+                  "activity_id": "nwisga.01.02200670",
+                  "date": "2022-03-15",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 10,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 3,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 872,
+                  "y": null
+                },
+                {
+                  "x": 1461.7142857142858,
+                  "y": 0,
+                  "censored": true,
+                  "activity_id": "nwisga.01.02200767",
+                  "date": "2022-03-29",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 14,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 5,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 1461.7142857142858,
+                  "y": 20,
+                  "censored": true,
+                  "activity_id": "nwisga.01.02200767",
+                  "date": "2022-03-29",
+                  "original_source_file": "raw/prwd-results-2022-original.csv",
+                  "original_source_row": 14,
+                  "source_path": "flow-sample-join.csv",
+                  "source_csv_row": 5,
+                  "flow_qualifiers": "A"
+                },
+                {
+                  "x": 1461.7142857142858,
+                  "y": null
+                }
+              ]
+            }
+          ],
+          "annotations": [
+            {
+              "x": 599.2857142857143,
+              "y": 20,
+              "text": "8 Mar: four prior days A;e"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

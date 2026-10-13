@@ -196,6 +196,28 @@ def build_files(application=None):
             "source_csv_sha256": station_capture["sha256"], "source_csv_row": station_number},
     }]})
     application_root = Path(application) if application is not None else Path(__file__).resolve().parents[1]
+    context_manifests = []
+    for name in study_context.manifest_names(BUILTIN_ID):
+        if name == MANIFEST or not (application_root / name).is_file():
+            continue
+        for path, raw in study_context.retained_files(application_root, application_root / name).items():
+            if path in files and files[path] != raw:
+                raise ValueError("An original SV-833 context conflicts at " + path)
+            files[path] = raw
+        context_manifests.append(name)
+    if context_manifests:
+        study["related_context_manifests"] = context_manifests
+        if "sv833_hydrologic_context.sources.json" in context_manifests:
+            selection_notes.append(
+                "The original SV-833 hydrologic context retains separate station representations, "
+                "45 whole upstream reaches and the unsimplified whole-catchment basin. "
+                "The 100 km original navigation responses contain zero upstream NWIS sites "
+                "and 14 downstream indexed sites. Those downstream sites describe network context; "
+                "their measurements are separate from the 610 original SV-833 results.")
+        study["observation_selection_notes"] = selection_notes
+        files["study.json"] = _json(study)
+        files["source_notes.json"] = _json([{"code": "ORIGINAL_PROFILE_JOIN", "context": item}
+                                            for item in selection_notes])
     if (application_root / temporal_context.SOURCE_MANIFEST).is_file():
         related = temporal_context.load_companion(application_root)
         for name, raw in related["files"].items():

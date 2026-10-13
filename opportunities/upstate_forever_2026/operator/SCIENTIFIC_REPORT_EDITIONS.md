@@ -48,3 +48,7 @@ The existing SourceReports provider delegates the new operations to `operator/so
 ## Native receiving continuation
 
 Use the existing ASTRA13 ordered-report receiving operation and real retained original manifests. Run the unchanged CLI preview and render commands against the same original single report and then an ordered pair. Confirm completed-file reuse, original archive receiving, restored source bindings and reopened HTML/PDF/data. On the operator, prepare those same source choices through the original queue, reopen the saved edition, download the report ZIP and restore a complete Workspace into an independent destination. The application source is shared with the existing Monitoring, calibration and diagnostic producers.
+
+## Continue from a prepared study
+
+The registered extension host exposes `openScientificReport({workspace_key, sources, title?})`. The receiving Sources controller verifies the current Workspace, reopens the typed source catalogue, validates all incoming original source choices, and appends missing choices after the user's existing draft order. It preserves the current contact and nonempty title. Duplicate source choices are included once. A completed producer can therefore open the same standalone report composer directly, including single-model diagnostics, while retaining its separate original modeled-delivery action.

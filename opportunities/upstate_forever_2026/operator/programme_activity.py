@@ -75,8 +75,12 @@ class ProgrammeActivity:
                         task["payload"].get("programme_id") != key):
                     raise ValueError("The paired execution task belongs to another selection")
                 from programme_jobs import programme_id
+                from native_jobs import NativeJobError
                 parent = key
-                key = programme_id(task, workspace)
+                try:
+                    key = programme_id(task, workspace)
+                except NativeJobError as error:
+                    raise self.fault(error.code, str(error), error.status) from error
             manager = ComputeProgrammes(workspace)
             # These are the maintained manager's identity and workspace checks.
             # _load verifies both immutable selection and original run bindings.

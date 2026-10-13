@@ -196,6 +196,23 @@ export function attachScientificReportEditions(host) {
     if(workspace!==ws){reset();workspace=ws;restoreDraft();}
     active=true;ensure(container);render();await refresh();
   }
+  async function openForSources(value){
+    if(!value||value.workspace_key!==host.getWorkspace()||value.workspace_key!==workspace)
+      throw Error('Open the prepared report sources in their original Workspace.');
+    if(!Array.isArray(value.sources)||!value.sources.length)
+      throw Error('Choose one or more original prepared report sources.');
+    const ws=workspace,turn=generation;
+    await refresh();
+    if(!valid(ws,turn))throw Error('The Workspace changed before its report sources opened.');
+    const incoming=orderedReportSources(sources,value.sources).map(choice);
+    const seen=new Set(selected.map(key));
+    for(const row of incoming){if(!seen.has(key(row))){selected.push(row);seen.add(key(row));}}
+    if(!title.trim()&&typeof value.title==='string')title=value.title;
+    changed();error='';render();
+    panel.scrollIntoView({block:'start'});
+    panel.querySelector('[data-scientific-report-action="preview"]').focus?.();
+    return {workspace_key:ws,sources:selected.map(choice)};
+  }
   function detach(){active=false;if(panel)panel.hidden=true;}
   function reset(){
     generation++;revision++;detailGeneration++;if(panel)panel.remove();
@@ -203,5 +220,5 @@ export function attachScientificReportEditions(host) {
     contact={name:'Upper Savannah project team',organization:'Internal scientific review',email:''};
     preview=null;opened=null;busy=false;pending=null;error='';active=false;
   }
-  return {mount,detach,reset,refresh};
+  return {mount,detach,reset,refresh,openForSources};
 }
