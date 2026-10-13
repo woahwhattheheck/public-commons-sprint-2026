@@ -13,7 +13,8 @@
     "measured_large_files.mjs",
     "measured_results.mjs",
     "flow_editions.mjs",
-    "flow_editions.css"
+    "flow_editions.css",
+    "measured_intake.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",
