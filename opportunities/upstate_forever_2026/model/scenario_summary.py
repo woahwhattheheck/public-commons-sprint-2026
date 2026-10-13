@@ -333,6 +333,41 @@ def build_core_summary(workspace, core_result, scenarios_result=None, *, title=N
     return _build(workspace, metadata, ids, aliases, comparison, tuple(output_models(models)))
 
 
+
+def build_delivery_summary(workspace, selection, comparison, *, baseline=None,
+                           alternatives=None, grid=None):
+    """Summarize a delivery on the current regional quantity and support path."""
+    retained, ids = _comparison(workspace, comparison["id"])
+    selected = [identifier(selection["baseline_run_id"])] + [
+        identifier(value) for value in selection.get("scenario_run_ids", [])]
+    if ids != selected:
+        raise ValueError("Delivery summary must use its exact retained comparison")
+    baseline = baseline or workspace.inspect_run(ids[0])
+    alternatives = alternatives if alternatives is not None else [
+        workspace.inspect_run(value) for value in ids[1:]]
+    runs = [baseline, *alternatives]
+    if [run["id"] for run in runs] != ids:
+        raise ValueError("Delivery summary runs differ from the selected order")
+    grid = grid or workspace.get_grid(baseline["selection"]["grid_id"])
+    collection = workspace._get("sources", grid["spec"]["source_collection_id"])
+    pollutants = tuple(name for name in POLLUTANTS if name in baseline["artifacts"])
+    if not pollutants:
+        raise ValueError("Delivery summary has no selected native export quantities")
+    aliases = {value: ["baseline" if index == 0 else "alternative-" + str(index)]
+               for index, value in enumerate(ids)}
+    metadata = {
+        "grid_id": grid["id"], "source_collection_id": collection["id"],
+        "source_manifest_sha256": collection["original_manifest"]["sha256"],
+        "native_selection_id": None,
+        "source_reference": selection.get("source_reference") or
+            "Retained application source accompanies this delivery",
+        "completed_at": max(run["completed_at"] for run in runs),
+        "title": selection.get("title", workspace.project["title"]),
+        "context": {"delivery_selection": dict(selection)},
+    }
+    return _build(workspace, metadata, ids, aliases, retained, pollutants)
+
+
 def _text(value):
     return str(value).replace("\\", "\\\\").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
 
