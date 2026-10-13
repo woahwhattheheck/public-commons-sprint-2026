@@ -163,6 +163,30 @@ The browser modules include focused checks for workspace-switch lifecycle and re
 
 The receiving application exercises the original Python operator with its actual source imports, completed native results, saved assessments and portable restore. Verification notes in each guide distinguish the executed component checks from the receiving operation.
 
+## Eighteenmile reported discharge and history
+
+The complete [EPA source guide](source/echo_dmr/20261013/README.md), [historical explorer](source/point_source_history/20261013/README.md), [reported load and volume analysis](source/point_source_drivers/20261013/README.md), and [scientific report guide](source/point_source_scientific/20261013/README.md) ship with this checkout. Original EPA ECHO reporting-period and annual responses, DES outfall records and USGS NLDI routing remain available beside the analyses.
+
+Open the historical and load/volume `report.html` files in their source directories for the complete offline explorers. The historical edition compares complete calendar years and shared 2025–2026 reporting months with explicit facility, outfall, pollutant and estimation identities. The second edition separates reported load changes into matched-month volume and load-per-volume components while preserving the original concentration records and measurement methods.
+
+From this application directory, import the original cohort and the typed scientific report into the existing scientific Workspace:
+
+    python -B source_tools/import_point_source_cohort.py --project-root . --workspace /path/to/scientific-workspace
+    python -B source_tools/import_point_source_report.py --project-root . --workspace /path/to/scientific-workspace
+
+The first command returns the four actual source bindings used by the Point-source context desk. The second returns the retained report source collection and source identifier. **Sources → Review retained reports** opens both complete HTML companions; the ordered observed-source picker can carry the same seven-section report and original scientific figures into a delivery.
+
+For a standalone native PDF/HTML report, use the maintained source-only renderer:
+
+    python -B source/observed-report-20261013/render.py --app-root . \
+      --workspace /path/to/scientific-workspace \
+      --manifest point_source_scientific.sources.json \
+      --output /path/to/point-source-report
+
+The renderer also accepts `--archive` and `--receive-directory` for original Workspace export and independent reopening. The guides include the reproducible Node commands, pinned input hashes, full source selection and coverage rules.
+
+Scientific interpretation — **Needs expert review**: the arithmetic describes the reported quantities and their coverage. Preserve the distinct original EPA annual estimation modes and the separate calendar-weighted 2023 analysis when interpreting change. Authored code follows the repository MIT license; original EPA, DES and USGS material retains its publisher terms and attribution.
+
 ## Original sources and scientific references
 
 - [USGS 3DEP elevation service](https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer)
