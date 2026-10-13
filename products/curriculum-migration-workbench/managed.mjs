@@ -13,20 +13,34 @@ import {absolute,need,canonical,UUID,realDirectory,bytes,jsonFile,CONNECTION_SCH
 function options(argv){const o={};for(let i=0;i<argv.length;i+=2){const k=argv[i],v=argv[i+1];need(/^--[a-z][a-z-]*$/.test(k??'')&&typeof v==='string'&&!Object.hasOwn(o,k),'ARGUMENTS');o[k]=v;}return o;}
 function allowed(o,names){need(Object.keys(o).every(k=>names.includes(k)),'ARGUMENTS');}
 function snapshot(value){return value;}
+function finishOwnedCleanup(primary, cleanup, message) {
+ if(primary){if(cleanup.length)primary.cleanupErrors=[...(Array.isArray(primary.cleanupErrors)?primary.cleanupErrors:[]),...cleanup];throw primary;}
+ if(cleanup.length===1)throw cleanup[0];
+ if(cleanup.length>1)throw new AggregateError(cleanup,message);
+}
 async function outputBytes(data,path){
  path=absolute(path);await realDirectory(dirname(path),{privateOnly:true});const body=Buffer.from(data);
  async function existing(){try{const prior=await bytes(path,160*1024*1024,{privateOnly:true});need(prior.equals(body),'OUTPUT_CHANGED','Existing original output differs.');return true;}catch(e){if(e.code==='ENOENT')return false;throw e;}}
  if(await existing())return;
  const {open,link,unlink}=await import('node:fs/promises'),{constants}=await import('node:fs');
- const temporary=path+'.pending-'+randomUUID();let handle=null;
+ const temporary=path+'.pending-'+randomUUID();let handle=null,made=false,primary=null;const cleanup=[];
  try{
-  handle=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
+  handle=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);made=true;
   await handle.writeFile(body);await handle.sync();await handle.close();handle=null;
   try{await link(temporary,path);}catch(e){if(e.code!=='EEXIST'||!await existing())throw e;}
- }finally{
-  if(handle)await handle.close();await unlink(temporary).catch(e=>{if(e.code!=='ENOENT')throw e;});
-  const parent=await open(dirname(path),constants.O_RDONLY|constants.O_DIRECTORY);try{await parent.sync();}finally{await parent.close();}
+ }catch(error){primary=error;}
+ finally{
+  if(handle)try{await handle.close();}catch(error){cleanup.push(error);}
+  // Only remove the temporary inode this invocation actually created.
+  if(made){
+   try{await unlink(temporary);}catch(error){if(error.code!=='ENOENT')cleanup.push(error);}
+   let parent=null;
+   try{parent=await open(dirname(path),constants.O_RDONLY|constants.O_DIRECTORY);await parent.sync();}
+   catch(error){cleanup.push(error);}
+   finally{if(parent)try{await parent.close();}catch(error){cleanup.push(error);}}
+  }
  }
+ finishOwnedCleanup(primary,cleanup,'Curriculum retained-output cleanup failed.');
 }
 async function output(value,path){const data=JSON.stringify(value,null,2)+'\n';if(path)await outputBytes(data,path);else console.log(data);}
 async function serve(selected,{requestId,port}){
