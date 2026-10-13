@@ -1,0 +1,81 @@
+{
+  "schema": "bim.wallet-moneygram-integration.v1",
+  "files": [
+    "lib/moneygram-core.mjs",
+    "lib/moneygram.mjs",
+    "web/bim-wallets.mjs",
+    "web/privy-stellar.jsx",
+    "web/stellar-submission.mjs",
+    "web/moneygram-widget.mjs",
+    "web/wallet-entry.mjs",
+    "lib/socket.mjs"
+  ],
+  "factory": "createMoneyGramAdapter",
+  "actions": [
+    {
+      "id": "moneygram.session.create",
+      "mode": "external-write"
+    },
+    {
+      "id": "moneygram.status.get",
+      "mode": "read"
+    },
+    {
+      "id": "moneygram.webhook.verify",
+      "mode": "read"
+    },
+    {
+      "id": "socket.chains",
+      "mode": "read"
+    },
+    {
+      "id": "socket.providers",
+      "mode": "read"
+    },
+    {
+      "id": "socket.tokens.list",
+      "mode": "read"
+    },
+    {
+      "id": "socket.tokens.search",
+      "mode": "read"
+    },
+    {
+      "id": "socket.quote",
+      "mode": "read"
+    },
+    {
+      "id": "socket.status",
+      "mode": "read"
+    },
+    {
+      "id": "socket.quote.activate",
+      "mode": "external-write"
+    }
+  ],
+  "walletCommands": [
+    "wallet.reserve",
+    "wallet.signed",
+    "wallet.submitting",
+    "wallet.observed"
+  ],
+  "walletReads": [
+    "GET /api/wallet/:id"
+  ],
+  "sessionReads": [
+    "GET /api/session/:id"
+  ],
+  "sessionCommand": "session.event",
+  "replayHeader": "X-BIM-Replayed",
+  "firstSendHeaderValue": "false",
+  "sourcePackets": [
+    "F0C8Y1YTWBC",
+    "F0C90853RGR",
+    "F0C908C6EBT"
+  ],
+  "providerInvoked": false,
+  "nativeRun": false,
+  "walletHTTP": "journal.retainHTTP via original source.import",
+  "runtime": "createWalletRuntime",
+  "network": "{id,kind:'stellar',chainId?,passphrase,horizonUrl,rpcUrl}"
+}

@@ -1,0 +1,134 @@
+{
+  "schema": "bim.backend-api.v1",
+  "edition": "bim-stellar-operations-20261013",
+  "runtime": {
+    "platform": "linux",
+    "node": ">=22.16",
+    "store": "node:sqlite / SQLite WAL synchronous FULL",
+    "ownership": "One retained workspace lease, serialized original commands, no automatic provider retries."
+  },
+  "authentication": {
+    "header": "Authorization: Bearer <operatorToken>",
+    "workspaceHeader": "X-BIM-Workspace-ID",
+    "nextPrefix": "/api/bim",
+    "standalonePrefix": "/api",
+    "tokenPortable": false
+  },
+  "command": {
+    "requestId": "original stable ID",
+    "expectedRevision": "safe nonnegative integer",
+    "method": "exact method",
+    "args": "complete original object"
+  },
+  "receipt": {
+    "workspaceId": "original ID",
+    "requestId": "original ID",
+    "revision": "accepted local revision",
+    "result": "whole original result"
+  },
+  "replayHeader": {
+    "name": "X-BIM-Replayed",
+    "new": "false",
+    "existing": "true",
+    "missing": "No first-send permission"
+  },
+  "routes": [
+    "GET /bootstrap",
+    "GET /state",
+    "GET /request/:id",
+    "GET /files/:id",
+    "GET /export",
+    "GET /session/:id",
+    "GET /wallet/:id",
+    "POST /command"
+  ],
+  "commands": {
+    "config.save": {
+      "config": "whole public config"
+    },
+    "source.import": {
+      "name": "original filename",
+      "type": "MIME",
+      "contentBase64": "complete original bytes",
+      "bytes": "exact length",
+      "sha256": "full SHA256"
+    },
+    "query.run": {
+      "actionId": "read/local action",
+      "input": "whole provider input",
+      "evidenceIds": "optional exact selected IDs"
+    },
+    "plan.prepare": {
+      "actionId": "prepare/external-write action",
+      "input": "whole provider input",
+      "evidenceIds": "optional exact selected IDs"
+    },
+    "operation.execute": {
+      "planId": "original fully prepared external-write plan"
+    },
+    "submission.record": {
+      "planId": "original wallet plan",
+      "submission": "whole original reported transactionHash and evidence"
+    },
+    "submission.refresh": {
+      "submissionId": "original ID",
+      "actionId": "read action",
+      "input": "whole original input",
+      "evidenceIds": "optional"
+    },
+    "note.save": {
+      "subjectId": "selected original ID",
+      "title": "text",
+      "body": "complete text"
+    },
+    "request.retire": {
+      "originalRequestId": "RUNNING/UNCERTAIN original",
+      "reason": "required explanation; unknown outcome preserved"
+    },
+    "workspace.inspect": {
+      "packet": "complete portable packet"
+    },
+    "workspace.receive": {
+      "packet": "complete portable packet; explicit new child workspace"
+    },
+    "session.event": {
+      "sessionId": "original session",
+      "event": "original CLIENT_WIDGET_OBSERVATION",
+      "sourceEventId": "optional prior actual-created event; IDs derived"
+    },
+    "wallet.reserve": {
+      "id": "stable operation",
+      "networkPassphrase": "original",
+      "address": "original",
+      "unsignedXdr": "whole original",
+      "unsignedHash": "transaction hash",
+      "intent": "original planId or sessionId/transactionId"
+    },
+    "wallet.signed": {
+      "id": "original",
+      "signedXdr": "whole signed envelope",
+      "hash": "original transaction hash",
+      "signatureReceipt": "whole client result"
+    },
+    "wallet.submitting": {
+      "id": "original SIGNED operation"
+    },
+    "wallet.observed": {
+      "id": "original",
+      "originalHTTP": "whole retained browser HTTP observation",
+      "projection": "CLIENT_BROWSER_OBSERVATION with original kind/hash/status"
+    }
+  },
+  "providers": {
+    "context": "now, request, config/configuration, evidence[], getResult(selectedId), getSession, exposeSession, http, fork(label), signal",
+    "lanes": "Stable hierarchical label + contiguous local ordinal; complete original request owns/drains all HTTP before receipt; ids sorted.",
+    "http": "Exact byte request and complete/partial byte response; read errors remain INCOMPLETE, external incomplete attempts cannot complete; no repeat after reservation.",
+    "private": "Original credentials, response bodies and session tokens remain with original server only; exports retain identities and unavailable status.",
+    "sourceStatus": "sourceStatus binds every actual current-request HTTP attempt. selectedSourceStatus may be COMPLETE for an exact selectedSourceLane subtree whose selectedExchangeIds equal its whole roster, retaining failed read-only alternatives as INCOMPLETE; any incomplete write prevents completion. Only a fully proven selected lane can retain PREPARED."
+  },
+  "sessions": {
+    "transactionIds": "Original Ramps event.transactionId only",
+    "mgiTransactionIds": "Separate MoneyGram event.mgiTransactionId references",
+    "capability": "Private sessionToken is returned only by explicit authenticated no-store session read and is never portable."
+  }
+}

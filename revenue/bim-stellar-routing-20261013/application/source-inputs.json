@@ -1,0 +1,302 @@
+{
+  "schema": "bim.authored-source.v1",
+  "edition": "bim-stellar-operations-20261013",
+  "operationId": "BIM-STELLAR-INTEGRATION-2769-20261013",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 8613,
+      "sha256": "25fe0fa9e908ecdc3e4ddcaaf25c11ee52afc1c611f74443dda5ab37b65f5a5c"
+    },
+    {
+      "path": "BACKEND.md",
+      "bytes": 14767,
+      "sha256": "3d2f136b30af4b2d83f03dddf3653811f419a5d2819bf60f18af66950e876125"
+    },
+    {
+      "path": "BACKEND_API.json",
+      "bytes": 4942,
+      "sha256": "481665098ad01745788ba0d432ded83875e7398676af676cd1d2baa0824a3c66"
+    },
+    {
+      "path": "BIM_OPS.md",
+      "bytes": 25852,
+      "sha256": "dd6445bd76bd46b4328cfd6f146c42abd66a4487fa87437fc2d989037bb6f415"
+    },
+    {
+      "path": "BIM_SETTLEMENT_CONTRACT.json",
+      "bytes": 9005,
+      "sha256": "c7a2278486ea527bcff928e80e30212ddc9bbdddc210d15c3e8aba91e436c31c"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1091,
+      "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8"
+    },
+    {
+      "path": "NEXT_INTEGRATION.md",
+      "bytes": 5789,
+      "sha256": "8acb9beb1b2622e355c1b7843a751eb116a726d4395b6fbcae6b8adea9569247"
+    },
+    {
+      "path": "PROVIDER_SOURCES.json",
+      "bytes": 60878,
+      "sha256": "4f92de6c1839a7234125d0a8aa065efa8963002e59a7373f2257d5811737f1ea"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6018,
+      "sha256": "024aa848fcdbb200bc9f2427b2d99a6815dbff3072954dfe4ddc636bf6c3d1d2"
+    },
+    {
+      "path": "SETTLEMENT.md",
+      "bytes": 12713,
+      "sha256": "8efac3a94154e382ddc014f961feaa86ba2de66554739e92dea39521fe08be82"
+    },
+    {
+      "path": "SOCKET.md",
+      "bytes": 9398,
+      "sha256": "29ad981a3cf3265a551c049a2791f6eb7a29af0f36824f43a4d48da6078e64c4"
+    },
+    {
+      "path": "SOROSWAP_DEFINDEX.md",
+      "bytes": 14190,
+      "sha256": "6e25b1352638e93c83e410d25c69a1c12d843c7ec70158f198d134ef14c30019"
+    },
+    {
+      "path": "WALLETS_MONEYGRAM.md",
+      "bytes": 18561,
+      "sha256": "a10a3cd1577bfec3787445ab4fe3fdc0223a53246aeb06b785a804d8802212f4"
+    },
+    {
+      "path": "WALLETS_MONEYGRAM_API.json",
+      "bytes": 1691,
+      "sha256": "4e5288670558ec32afa59e3b6be87a1e44b3d0cae3f934afc77828e2a5885572"
+    },
+    {
+      "path": "cli.mjs",
+      "bytes": 6038,
+      "sha256": "af11be11f8c72f4787c62eac40d26979137bca2953ad81eb83053a8742403055"
+    },
+    {
+      "path": "examples/next/bim-server.mjs",
+      "bytes": 2156,
+      "sha256": "d63d038bb831bd78798f5a57fb95a6c76495d6040953937c57bc57ec72cdb31d"
+    },
+    {
+      "path": "examples/next/route.mjs",
+      "bytes": 378,
+      "sha256": "790f21d1ca2e69c81b2ad82c72791a505abd27fc617d8b325e441db9c1553a30"
+    },
+    {
+      "path": "lib/defindex.mjs",
+      "bytes": 16037,
+      "sha256": "2a6bf548b280f95721295cde45dda4a1d3e1c712be11d74ef54459c862aef0a4"
+    },
+    {
+      "path": "lib/exchange-domain.mjs",
+      "bytes": 8681,
+      "sha256": "ed0aa655ddcc9945304af96f1db551f8e382937eee83f1e3c982d1ed3c345926"
+    },
+    {
+      "path": "lib/exchange.mjs",
+      "bytes": 22850,
+      "sha256": "906d307efd27ee4048760151e0155fbac3db2b47d7f7c65a3263ff48fe40c185"
+    },
+    {
+      "path": "lib/files.mjs",
+      "bytes": 14291,
+      "sha256": "0cd9fd7e5186cddc8b4aa9ac361a2f52a77e3d54baf822080898dfa7f1fc26de"
+    },
+    {
+      "path": "lib/http.mjs",
+      "bytes": 6959,
+      "sha256": "e394048fecba0d8f0c4150e8b26ae8b107302f67f5571c1872b3c06c9210f5d2"
+    },
+    {
+      "path": "lib/moneygram-core.mjs",
+      "bytes": 9477,
+      "sha256": "0f2bc68120abeb233d76fd2f45bde618aaee72f09a184bad26c6c29b0f9e329f"
+    },
+    {
+      "path": "lib/moneygram.mjs",
+      "bytes": 9796,
+      "sha256": "40cf00963aa0a1bcd23f6dd5348fc5f3b1104ea8e89352906920d327d68eb200"
+    },
+    {
+      "path": "lib/protocol.mjs",
+      "bytes": 4215,
+      "sha256": "8cf69c22dc3ed306a049087b400a890601017936ff317e17eca6a201d39311bc"
+    },
+    {
+      "path": "lib/routes.mjs",
+      "bytes": 5739,
+      "sha256": "137d91d2bff6cfcaf286f1c5ee5fc1c4ab582fd226b5437f1d038276219f3723"
+    },
+    {
+      "path": "lib/routing.mjs",
+      "bytes": 5385,
+      "sha256": "aec1e1436db1a488eadd6cc6d90f24de9a9cdf972330d0d448666f7f1f498d01"
+    },
+    {
+      "path": "lib/settlement-analytics.mjs",
+      "bytes": 22398,
+      "sha256": "bd3f0dd34bae804b24b7f3d3e228e5be1debac26a465268615be36f127ebe6ab"
+    },
+    {
+      "path": "lib/settlement-exact.mjs",
+      "bytes": 10535,
+      "sha256": "f7f44d878d040f54e490a7e844eed0478dac74d15397ffc1e02ea42c5908a77b"
+    },
+    {
+      "path": "lib/settlement-service.mjs",
+      "bytes": 8038,
+      "sha256": "9449833a98664e5f252a6eaff199474d482c58a1082473f08534dc15723cfef0"
+    },
+    {
+      "path": "lib/settlement-source.mjs",
+      "bytes": 13708,
+      "sha256": "be3657575bef189e1769f22a8ccc7f5951a5875eafbce6e1bfb5ccefd98d0f19"
+    },
+    {
+      "path": "lib/settlement-stellar.mjs",
+      "bytes": 30334,
+      "sha256": "b274533c9c60eadb32004868f99b3e236a78388d84f95ac78b30ee172fab5009"
+    },
+    {
+      "path": "lib/socket.mjs",
+      "bytes": 18153,
+      "sha256": "bdfdebc63a9b528c1dcfd706b846db7f8e58029a49890c594e521907fa7ac719"
+    },
+    {
+      "path": "lib/soroswap.mjs",
+      "bytes": 17356,
+      "sha256": "f0323a834a361ef45027bd9bf00f0e90916ebb529d00f53fa24339cfbc7ec183"
+    },
+    {
+      "path": "lib/source-json.mjs",
+      "bytes": 3754,
+      "sha256": "5db7e5bfd6671f4502653e456114f9212cceb6db6319432a41d977474197b232"
+    },
+    {
+      "path": "lib/stellar-provider.mjs",
+      "bytes": 17620,
+      "sha256": "9d5387d632d41f63dc5d2448e6d85d126beab01b40acaa833a4553107bd46363"
+    },
+    {
+      "path": "lib/value.mjs",
+      "bytes": 2399,
+      "sha256": "b5f024ee1594d40a4f103ef094f1d6f8f4b0434a0476be9e40eb9abf89be9dcd"
+    },
+    {
+      "path": "lib/workspace.mjs",
+      "bytes": 51701,
+      "sha256": "27868c18c4436961e5ca975eba24e25be9ef82889ebab1d45967930b78c06773"
+    },
+    {
+      "path": "native/INSTALLING.md",
+      "bytes": 7538,
+      "sha256": "ed23b59338ff27a0aa58273515bddd8ae4e62e3d00ca21a6744068658cd04db7"
+    },
+    {
+      "path": "native/install.py",
+      "bytes": 28908,
+      "sha256": "a08aeca19ed77fd3785f36e1e0fb549a85b2907c1650098c21cad1a1910df8d9"
+    },
+    {
+      "path": "native/watershed_process.py",
+      "bytes": 29581,
+      "sha256": "506634371a87cbdc005b65d4e9c75a480bef18e0f0a762c3de463c859018903c"
+    },
+    {
+      "path": "next-handler.mjs",
+      "bytes": 582,
+      "sha256": "95b5e2dd5fd33d8f1d33e06bda690b43a24029b70cf89817b3ae39996199361b"
+    },
+    {
+      "path": "package.json",
+      "bytes": 911,
+      "sha256": "40227acbfc30ef0ca6a7643095c27836f012e30987f241ed2266c13a7625abaa"
+    },
+    {
+      "path": "providers/index.mjs",
+      "bytes": 1986,
+      "sha256": "74340c15778784d4a66e3397c6d2945a265b46188874011d1208a96f6e7bbff9"
+    },
+    {
+      "path": "server.mjs",
+      "bytes": 4094,
+      "sha256": "288c2995b519b54a94e1a8e0abd40aa7e630e216f44c0585821f9a7a0ec6eebe"
+    },
+    {
+      "path": "settlement-native-receiving.mjs",
+      "bytes": 13982,
+      "sha256": "eb853567fc157b10b2cd0640862eca9e64724d368fb52351ccd934a5eb585512"
+    },
+    {
+      "path": "tools/build.mjs",
+      "bytes": 9096,
+      "sha256": "227c510f17625ffcdcab91b315e84892218e78855578996bc9e9b7f12cd0bee2"
+    },
+    {
+      "path": "tools/export-next-assets.mjs",
+      "bytes": 3499,
+      "sha256": "cd385ce6f206cba9ed3ad8de060ad3490acdb14a802c14572914f8d0e553aca2"
+    },
+    {
+      "path": "web/app.mjs",
+      "bytes": 59101,
+      "sha256": "b64af98ee7a3e4a079258315b351b4007ec226efc24ead009269de076cde8077"
+    },
+    {
+      "path": "web/bim-wallets.mjs",
+      "bytes": 9522,
+      "sha256": "5cf0f78a9c1a52d3647053465a96d92457812e3335e08887be5a25e1fb9ca6fe"
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 592,
+      "sha256": "76f281297dc4ab6d2dca9db053683759d12824b02cf411d96d91e2a749b9591e"
+    },
+    {
+      "path": "web/moneygram-widget.mjs",
+      "bytes": 8496,
+      "sha256": "b602f548496829edf8d0b9d6671f2deb64d3a29e75afcc6fb5d50558e57182de"
+    },
+    {
+      "path": "web/privy-stellar.jsx",
+      "bytes": 1773,
+      "sha256": "a1427c4d1b880d12d4b248be8a73c609b011099678c3d176a5ba6ffa210edb22"
+    },
+    {
+      "path": "web/settlement-controller.mjs",
+      "bytes": 2060,
+      "sha256": "a6728d5bcdfdfd7d7cc40da50b2670dfdf8cb3ca2f15ca551d6af7a55f00da22"
+    },
+    {
+      "path": "web/settlement-operator.mjs",
+      "bytes": 23445,
+      "sha256": "4f62b34a781af4d47c3eebc60e0edc185ede19f4bca3dee00670b7e21e24076c"
+    },
+    {
+      "path": "web/stellar-submission.mjs",
+      "bytes": 16112,
+      "sha256": "02dd9c522c60040cc805c94477b73d762e8c76b5e5fe876038cd2de55b4415f8"
+    },
+    {
+      "path": "web/styles.css",
+      "bytes": 5636,
+      "sha256": "4ba035091be0a83a305e2bfd74456ccc85c4788cda50411ab53c166e8b99b280"
+    },
+    {
+      "path": "web/wallet-entry.mjs",
+      "bytes": 6422,
+      "sha256": "2841e672c4870fc84995b4a634cba7cf3c1fda81d5f4a578254c18108359b9ec"
+    },
+    {
+      "path": "web/working.mjs",
+      "bytes": 3001,
+      "sha256": "f75afe4c263d83db9bcbbb14b519c1ff94ec63148388c06c2e78cd1b626eed42"
+    }
+  ]
+}
