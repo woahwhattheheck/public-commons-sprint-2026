@@ -32,6 +32,28 @@ Supply successive `--bank FILE --expect SHA256` pairs to apply source families i
 
 The output directory must be new and outside the original application. It records the composed source edition only. Continue the established application startup, native case operation, export and reopening course. A source stage does not itself run a server or change a provider record.
 
+## Receive the saved source documents directly
+
+When a provider splits one source bank across Markdown volumes, pass the first volume as `--bank` and each continuation as `--part` before the next bank. The CLI reconstructs globally ordered Base64 `text` fences or indexed `commons.artifact-base64-part/v1` JSON fences. Indexed parts must have complete, unique indices, consistent bank identities and matching ASCII-part SHA256 values. The resulting complete decoded bank must match `--expect`.
+
+```sh
+node source_bank_receive.mjs \
+  --application /absolute/path/to/current/source-root \
+  --bank /absolute/path/to/native-volume-1.md \
+  --part /absolute/path/to/native-volume-2.md \
+  --part /absolute/path/to/native-volume-3.md \
+  --expect NATIVE_DECODED_BANK_SHA256 \
+  --bank /absolute/path/to/browser-source.md \
+  --expect BROWSER_DECODED_BANK_SHA256 \
+  --bank /absolute/path/to/documentation-source.md \
+  --expect DOCUMENTATION_DECODED_BANK_SHA256 \
+  --output /absolute/path/to/fresh/source-root
+```
+
+Keep repository-relative source paths intact when the application imports supporting `business/` or `host/` modules outside its `tools/` directory. In that layout use the source-family root as `--application` and omit `--source-prefix`. The existing separate Workspace is supplied to the original application launcher afterward.
+
+A single full gzip carrier in a Markdown JSON fence is also accepted. Only carrier JSON scaffolding may have rich-text nonbreaking spaces normalized; the compressed source text is decoded and bound to its original SHA. Source bodies are never reformatted.
+
 ## Bank contract
 
 ```json
@@ -63,7 +85,7 @@ The output directory must be new and outside the original application. It record
 }
 ```
 
-Every file has a complete body and exact byte/SHA identity. Every patch belongs to a selected delta and its postimage is the corresponding full member. The planner reverses the ordered edits from that full postimage and verifies the predecessor SHA, then applies them forward to reproduce the exact full postimage. Both sides of an edit must be nonempty and distinct. Represent deletions with surrounding unchanged context so each side remains a unique literal.
+Every file has a complete body and exact byte/SHA identity. Every patch belongs to a selected delta and its postimage is the corresponding full member. The planner reverses the ordered edits from that full postimage and verifies the predecessor SHA, then applies them forward to reproduce the exact full postimage. Both sides of an edit must be nonempty and distinct. The existing producer aliases `before`/`after` are also accepted; conflicting aliases are rejected. Represent deletions with surrounding unchanged context so each side remains a unique literal.
 
 For an exact predecessor, the full postimage is used. For a concurrently edited source file, unique literal edits are composed while retaining unrelated text. Already applied edits are recognized. A divergent selected file without a valid patch, an ambiguous anchor, a mismatched complete body or an unsafe path stops composition before the fresh output is created.
 
@@ -87,4 +109,4 @@ Source checks, HTTP status, DOM counts, tests, captured-but-unviewed screenshots
 
 ## Validation of this edition
 
-The pure planner was executed on a complete existing two-file documentation bank, including its exact original predecessor. A second operation retained an unrelated concurrent source addition, and reopening that composed state produced no changes. The JavaScript receiving source was syntax parsed. Native filesystem staging remains part of the existing receiving worker's real application operation.
+The pure planner was executed on the three complete native, browser and documentation source families from an active internal application: 343 unique application files, 6,619,025 source bytes, selected host composition and retained existing dependencies. Reapplying all three banks to that completed source state produced no changes. Each saved source volume was independently read, decoded and checked against the complete bank/member identities. It was also executed on a complete existing two-file documentation bank, including its exact original predecessor. A second operation retained an unrelated concurrent source addition, and reopening that composed state produced no changes. The JavaScript receiving source was syntax parsed. Native filesystem staging remains part of the existing receiving worker's real application operation.

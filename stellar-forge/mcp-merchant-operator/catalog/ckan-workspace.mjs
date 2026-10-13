@@ -1,5 +1,6 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
+import { dcatCorrectionDefinitions } from './ckan-dcat-corrections.mjs';
 import { dcatWorkspaceDefinitions } from './ckan-dcat.mjs';
 import { dcatSemanticDefinitions } from './ckan-dcat-semantic.mjs';
 import { dcatSemanticComparisonDefinitions } from './ckan-dcat-semantic-comparison.mjs';
@@ -48,6 +49,7 @@ const projection = { type: 'object', minProperties: 1, maxProperties: 64,
 
 const definitions = [
   ...dcatWorkspaceDefinitions({ selected, changing, changed, alias, uuid, digest, offset, read, mutation }),
+  ...dcatCorrectionDefinitions({ selected, changing, changed, alias, uuid, digest, offset, read, mutation }),
   ...dcatSemanticDefinitions({ selected, changing, changed, alias, uuid, digest, offset, read, mutation }),
   ...dcatSemanticComparisonDefinitions({ selected, changing, changed, uuid, digest, offset, read, mutation }),
   ['merchant_ckan_workspaces', 'List host-declared original and receiving CKAN project aliases, browser ownership, current receiving operation, configured inputs and merchant/buyer availability. Does not open a project or read a catalogue.', {}, [], read],
@@ -63,7 +65,7 @@ const definitions = [
   ['merchant_ckan_workspace_archives', 'List complete original workspace archives with exact hashes, project counts and the authenticated streaming download route. Page with nextOffset; browserUrl identifies the existing owner.', {
     ...selected, offset, limit: { type: 'integer', minimum: 1, maximum: 100 },
   }, ['workspace'], read],
-  ['merchant_ckan_workspace_archive', 'Export the complete retained CKAN project through its original native archive operation. Preserves captured source meanings, publisher history, datasets, merchant packages, seller/buyer records and all DCAT original catalogs, full migration reviews, candidates and release/rollback history, plus complete semantic profiles, native runs, findings and operator decisions. Follow merchant_ckan_status until this operation completes, then list or inspect its retained archive.', {
+  ['merchant_ckan_workspace_archive', 'Export the complete retained CKAN project through its original native archive operation. Preserves captured source meanings, publisher history, datasets, merchant packages, seller/buyer records and all DCAT original catalogs, full migration reviews, candidates and release/rollback history, plus complete semantic profiles, native runs, findings and operator decisions, and correction draft sources, exact revision documents, attributed history and materialized candidates. Follow merchant_ckan_status until this operation completes, then list or inspect its retained archive.', {
     ...changing, maxBytes: { type: 'integer', minimum: 1, maximum: 8522825728 },
     maxFiles: { type: 'integer', minimum: 1, maximum: 100000 },
   }, changed, mutation],

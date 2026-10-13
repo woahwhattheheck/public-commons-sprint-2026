@@ -1,0 +1,44 @@
+{
+  "schema": "tjlabs.tiptap-workshare.v1",
+  "operationId": "TIPTAP-HOCUSPOCUS-APPLICATION-WORKSHARE-0C7A-20261012",
+  "company": {
+    "name": "Tiptap GmbH",
+    "contact": "humans@tiptap.dev",
+    "sourceUrl": "https://github.com/ueberdosis/hocuspocus"
+  },
+  "title": "Tiptap / Hocuspocus application migration",
+  "currency": "USD",
+  "fixedPrice": 8400,
+  "kickoff": 4200,
+  "acceptance": 4200,
+  "businessDays": 12,
+  "start": "After the application, source population, host, identity adapter and written scope are accepted",
+  "limits": {
+    "applications": 1,
+    "hosts": 1,
+    "authAdapters": 1,
+    "schemas": 1,
+    "documents": 1000,
+    "totalSourceBytes": 536870912,
+    "maxDocumentBytes": 33554432
+  },
+  "reviews": 2,
+  "handoffMinutes": 60,
+  "defectCorrectionBusinessDays": 10,
+  "sourceRoot": "revenue/tiptap_hocuspocus_workshare_20261012",
+  "reference": {
+    "path": "reference/documents.json",
+    "bytes": 3818,
+    "sha256": "752bb3a767e5b2f456308df021bff017059e0631fb4370f31509346ad3a45237",
+    "documents": 3,
+    "tenants": 2,
+    "authored": true
+  },
+  "evidence": {
+    "application": "Complete source",
+    "nativeReceiving": "The actual result is supplied separately when the original receiving operation completes"
+  },
+  "termsSource": "WORKSHARE.md",
+  "status": "proposal",
+  "preparedBy": "Bryce / TokenJunkie Labs"
+}
