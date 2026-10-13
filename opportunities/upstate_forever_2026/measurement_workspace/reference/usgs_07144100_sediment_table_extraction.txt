@@ -1,0 +1,433 @@
+Surrogate memo v2.doc.docx (https://water.usgs.gov/admin/memo/SW/sw.2016.07%2Bwq.2016.10.pdf)
+【turn308view0】 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 40; Source: open({"ref_id":"turn296view1","lineno":425}); Total lines: 1021
+L401@P11: the extrapolation range, then predicted values must either be:
+L402@P11: o censored at greater than the predicted value if the validation sample confirms
+L403@P11: that the direction of the model bias is indeed positive; for example, the model
+L404@P11: prediction is 100 but the validation sample is 200 then the predicted values
+L405@P11-12: may be set to >100, or13
+L406@P12: o removed or blocked in NWIS using thresholds if the validation sample does
+L407@P12: not confirm the direction of the model bias; for example, the model prediction
+L408@P12: is 100 but validation sample is 50.
+L409@P12: • Approved models may not be used for extrapolating more than 20 percent outside the
+L410@P12: range of the sample data used to fit the model until additional data are collected in that
+L411@P12: range and the model performance and sensor performance are validated or the model is
+L412@P12: refit using the new data. A minimum of one (but at least two are recommended)
+L413@P12: independent samples must be collected outside the range of the existing data to confirm
+L414@P12: the model is performing adequately. Model predictions made outside of the two previously
+L415@P12: mentioned allowable areas of extrapolation may not be served in the real-time water
+L416@P12: quality system and they must be removed or blocked in NWIS until the existing model is
+L417@P12: validated with the new data or a new model is fit that includes data in the range. Once a
+L418@P12: new model is approved, it may be used to make predictions for any data previously
+L419@P12: blocked in NWIS.
+L420@P12: • Approved models shall not be used for interpolating between time intervals for which the
+L421@P12: surrogate data are collected. That is, if surrogate data are collected at 30-minute intervals,
+L422@P12: the models may not be used to estimate at 15-minute intervals by averaging or otherwise
+L423@P12: interpolating between values of the surrogates collected at the longer time step.
+L424@P12: 9. Approved models can be disseminated and archived on the NRTWQ Web site
+L425@P12: (http://nrtwq.usgs.gov/). These time series are displayed in plots, tables, statistical
+L426@P12: summaries, and duration curves. Site and model information are also displayed. These
+L427@P12: computed values also can be displayed using NWIS, or using another approved data release
+L428@P12: method. As new models are employed, older models are archived along with the computed
+L429@P12: data. Models are numbered sequentially and include the station number, constituent, year the
+L430@P12: model was approved, and model version number if needed (for example,
+L431@P12: 06892350.SSC.WY15.ver1).
+L432@P12: 10. Surrogate turbidity and streamflow data for computed concentrations and loads are
+L433@P12: considered category 1 data and are approved by following the Continuous Records
+L434@P12: Processing (CRP) policy of the Water Mission Area (WRD Policy Numbered Memorandum
+L435@P12: 2010.02). Methods of collecting the surrogate measurements are documented in formal
+L436@P12: publications series such as USGS Techniques and Methods or the National Field Manual.
+L437@P12: Computed concentration and loads are approved following CRP policy under category 3
+L438@P12: which indicates approval to be completed within a year in most cases. All surrogate data
+L439@P12: must be stored in NWIS.
+L440@P12: 11. Circumstances may arise in which historical data need revision. For example, if errors are
+L441@P12-13: discovered in explanatory data such as turbidity, then errors also exist in computed 14
+L442@P13: suspended sediment data. Until further guidance is provided, Centers must use good
+L443@P13: judgment in deciding which circumstances justify correction of historical data.
+L444@P13: References
+L445@P13: Babyak, M.A., 2004, What you see may not be what you get-A brief, nontechnical introduction
+L446@P13: to overfitting in regression-type models: Psychosomatic Medicine, v. 66, no. 3, p. 411-421.
+L447@P13: Edwards, T.K., and Glysson, G.D., 1999, Field methods for measurement of fluvial sediment:
+L448@P13: U.S. Geological Survey Techniques of Water-Resources Investigations, book 3, chap. C2, 89
+L449@P13: p., accessed March 7, 2016, at https://pubs.er.usgs.gov/publication/twri03C2.
+L450@P13: Green, S.B., 1991, How many subjects does it take to do a regression analysis: Multivariate
+L451@P13: Behavioral Research, v. 26, no. 3, p.499-510.
+L452@P13: Harrell, F.E., Jr., 2001, Regression Modeling Strategies-With Applications to Linear Models,
+L453@P13: Logistic Regression, and Survival Analysis: Springer, New York, 568 p.
+L454@P13: Hipel, K.W., and McLeod, A.I., 1994, Modelling of Water Resources and Environmental
+L455@P13: Systems: Amsterdam, Elsevier, 1013 p.
+L456@P13: Landers, M.N., Straub, T.D., Wood, M.S., and Domanski, M.M., 2016, Sediment acoustic index
+L457@P13: method for computing continuous suspended-sediment concentrations: U.S. Geological Survey
+L458@P13: Techniques and Methods, book 3, chap. C5
+L459@P13: Rasmussen, P.P., Gray, J.R., Glysson, G.D., and Ziegler, A.C., 2009, Guidelines and procedures
+L460@P13: for computing time-series suspended-sediment concentrations and loads from in-stream
+L461@P13: turbidity-sensor and streamflow data: U.S. Geological Survey Techniques and Methods book
+L462@P13: 3, chap. C4, 53 p.
+L463@P13: U.S. Geological Survey, 2006, Collection of water samples (ver. 2.0): U.S. Geological Survey
+L464@P13: Techniques of Water-Resources Investigations, book 9, chap. A4, September 2006, accessed
+L465@P13: June 25, 2016, at http://pubs.water.usgs.gov/twri9A4/
+L466@P13: WRD Policy Numbered Memorandum No. 2010.02, Continuous Records Processing of all Water
+L467@P13: Time Series Data, accessed July, 2016 at
+L468@P13-14: http://water.usgs.gov/admin/memo/policy/wrdpolicy10.02.html15
+L469@P14: Attachment B. Example Model Archive Summary for a Turbidity Suspended-Sediment Model
+L470@P14: Model Archive Summary for Suspended-Sediment Concentration at Station 07144100;
+L471@P14: Little Arkansas River near Sedgwick, Kansas
+L472@P14: This model archive summary summarizes the suspended-sediment concentration (SSC) model developed to
+L473@P14: compute hourly SSC from January 1, 2007 onward. This model supersedes all models used from 2007 onward. The
+L474@P14: methods used follow USGS guidance as referenced in relevant Office of Surface Water/Office of Water Quality
+L475@P14: Technical Memoranda and USGS Techniques and Methods, book 3, chap. C4 (Rasmussen and others, 2009).
+L476@P14: Site and Model Information
+L477@P14: Site number: 07144100
+L478@P14: Site name: Little Arkansas River near Sedgwick, Kansas
+
+--------------------------------------------------------------------------------
+Surrogate memo v2.doc.docx (https://water.usgs.gov/admin/memo/SW/sw.2016.07%2Bwq.2016.10.pdf)
+【turn308view1】 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 40; Source: open({"ref_id":"turn296view1","lineno":500}); Total lines: 1021
+L479@P14: Location: Latitude 37°52'59", longitude 97°25'27" referenced to North American Datum of 1927, in NE ¼ NW ¼
+L480@P14: NW ¼ sec. 15, T. 25 S., R. 1 W., Sedgwick County, Kansas, Hydrologic Unit 11030012, on left bank at downstream
+L481@P14: side from county highway bridge, 2.1 miles (mi) south of Sedgwick, and at mile marker 23.7.
+L482@P14: Equipment: A YSI 6600 water-quality monitor equipped with sensors for water temperature, specific conductance
+L483@P14: (SC), dissolved oxygen, and pH, and a YSI Model 6136 turbidity sensor. The monitor is housed in a 4-inch plastic
+L484@P14: pipe and typically is placed in the deepest section of the river that has velocity similar to rest of the stream.
+L485@P14: Readings from the YSI 6600 are recorded every 30 minutes and transmitted by way of satellite, hourly. A YSI Model
+L486@P14: 6136 turbidity sensor started operation July 27, 2004.
+L487@P14: Model number: 07144100.SSC.WY07.1
+L488@P14: Date model was created: December 26, 2014
+L489@P14: Model calibration data period: July, 27 2004 to August 4, 2014
+L490@P14: Model application date: January 1, 2007 onward
+L491@P14: Computed by: Patrick Eslick, KS WSC, June 21, 2016
+L492@P14: Reviewed by: Patrick Rasmussen, KS WSC and Brian Kelly, KS WSC, July 8, 2016
+L493@P14: Approved by: Andy Ziegler, KS WSC Director, July 20, 2016
+L494@P14: Model Data
+L495@P14: All data were collected using U.S. Geological Survey (USGS) protocols and are stored in the National Water
+L496@P14: Information System (NWIS) database (http://dx.doi.org/10.5066/F7P55KJN). The regression model is based on
+L497@P14: 120 concurrent measurements of suspended-sediment concentration, streamflow, and turbidity samples collected
+L498@P14: from July 27, 2004 through August 4, 2014. Samples were collected throughout the range of continuously observed
+L499@P14: hydrologic and turbidity conditions. Summary statistics and the complete model-calibration data are provided in
+L500@P14: the dataset. Studentized residuals from the final model were inspected for values greater than 3 or less than
+L501@P14: negative 3. Values outside of the 3 to -3 range are considered potential outliers and were investigated. Samples
+L502@P14: collected May 29, 2008; December 1, 2009; December 17, 2009; and December 11, 2013; June 13, 2010; July 6,
+L503@P14-15: 2010; and August 15, 2013 were deemed outliers and were removed from the dataset. 16
+L504@P15: Sediment Data
+L505@P15: Cross-section samples are collected either from the downstream side of the bridge or instream upstream near the
+L506@P15: bridge. The equal-width-increment or multi-vertical method is used, and samples typically are composited for
+L507@P15: analysis. Cross-section samples are obtained during all discrete sample collections every month and during
+L508@P15: selected runoff events. A FISP US D-95 with a Teflon bottle, cap, and nozzle depth-integrating sampler is used
+L509@P15: from the bridge; and a DH-81with a Teflon bottle, cap, and nozzle hand sampler or a grab sample with a Teflon
+L510@P15: bottle is used for wading samples. Samples are analyzed for SSC and/ or LOI and 5-point grain size in the USGS
+L511@P15: Sediment Laboratory in Iowa City, Iowa.
+L512@P15: Surrogate Data
+L513@P15: The turbidity data used in this analysis were measured using a YSI model 6136 installed and in use from 2007
+L514@P15: onward. The 6136 replaced the old YSI model 6026 sensor. Data from the YSI 6026 and 6136 sensors are not
+L515@P15: equivalent and therefore cannot be used interchangeably with this new SSC model.
+L516@P15: See the Station Analysis for the streamflow and turbidity records for more information (available upon request).
+L517@P15: Model Development
+L518@P15: Regression analysis was done using R by examining turbidity and other continuously measured data as
+L519@P15: explanatory variables for estimating suspended-sediment concentration. A variety of models that predict SSC and
+L520@P15: models that predict log10(SSC) were evaluated. The distribution of residuals was examined for normality and plots
+L521@P15: of residuals (the difference between the measured and predicted values) as compared to predicted SSC were
+L522@P15: examined for homoscedasticity (meaning that their departures from zero did not change substantially over the
+L523@P15: range of predicted values). This comparison of several models led to the conclusion that the most appropriate and
+L524@P15: reliable model would be one that estimated log10(SSC).
+L525@P15: Turbidity and streamflow were selected as the best predictors of log10(SSC) based on residual plots, relatively high
+L526@P15: adjusted coefficient of determination (adjusted R2), and relatively low model standard percentage error (MSPE).
+L527@P15: Values for all of the aforementioned statistics and metrics were computed and are included below along with all
+L528@P15: relevant sample data and more in-depth statistical information.
+L529@P15: Model Summary
+L530@P15: Summary of final regression analysis for suspended-sediment concentration at site number 07144100.
+L531@P15: Suspended-sediment concentration-based model:
+L532@P15: log10(𝑆𝑆𝑆) = 0.933 × log10(𝑇𝑇𝑇𝑇) + 0.0431 × log10(𝑄) + 0.262 ,
+L533@P15: where
+L534@P15: SSC = suspended-sediment concentration, in milligrams per liter (mg/L);
+L535@P15: Q = streamflow in cubic feet per second (ft3/s); and,
+L536@P15: TURB = Turbidity, YSI model 6136, in formazin nephelometric units (FNU).
+L537@P15: The use of turbidity and streamflow as explanatory variables is appropriate physically and statistically. Turbidity
+L538@P15: makes sense physically because suspended sediment is composed of particles that scatter light in water.
+L539@P15: Suspended sediment correlates well with streamflow because high streamflow values tend to increase
+L540@P15: concentrations of SSC. The relation between turbidity and SSC can vary given varying concentrations of organic
+L541@P15: suspended particles that increase turbidity, but are not included in the SSC analysis.
+L542@P15: The log-transformed model may be retransformed to the original units so that SSC can be calculated directly. The
+L543@P15: retransformation introduces a bias in the calculated constituent. This bias may be corrected using Duan’s Bias
+L544@P15: Correction Factor (BCF). For this model, the calculated BCF is 1.02. The retransformed model, accounting for BCF
+L545@P15: is:
+L546@P15: 𝑆𝑆 = 1.865 × 𝑇𝑇𝑇 0.933 × 𝑄0.0431.
+L547@P15: Previous models
+
+--------------------------------------------------------------------------------
+Surrogate memo v2.doc.docx (https://water.usgs.gov/admin/memo/SW/sw.2016.07%2Bwq.2016.10.pdf)
+【turn308view2】 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 40; Source: open({"ref_id":"turn296view1","lineno":618}); Total lines: 1021
+L587@P19: logTURB -0.6600 1.000 -0.7150
+L588@P19: logQ -0.0075 -0.715 1.0000
+L589@P19: Outlier Test Criteria
+L590@P19: Leverage Cook's D DFFITS
+L591@P19:  0.050 0.194 0.258
+L592@P19: Flagged Observations
+L593@P19:  logSSC Estimate Residual Standard Residual Studentized Residual Leverage Cook's D DFFITS
+L594@P19: 6/9/2005 10:55 2.670 2.840 -0.1740 -2.090 -2.120 0.03630 0.05470 -0.411
+L595@P19: 5/8/2007 11:30 2.440 2.580 -0.1410 -1.690 -1.710 0.03600 0.03560 -0.329
+L596@P19: 5/25/2007 13:10 2.450 2.600 -0.1530 -1.830 -1.850 0.03820 0.04460 -0.369
+L597@P19: 8/5/2008 9:30 1.910 1.700 0.2130 2.530 2.590 0.01390 0.03000 0.307
+L598@P19: 4/6/2009 13:05 2.220 1.970 0.2490 2.940 3.050 0.00893 0.02600 0.289
+L599@P19: 5/8/2009 12:55 3.190 3.040 0.1540 1.850 1.860 0.03220 0.03770 0.340
+L600@P19: 9/24/2009 11:20 2.930 3.070 -0.1420 -1.730 -1.740 0.05320 0.05580 -0.413
+L601@P19: 1/19/2010 10:00 1.000 0.954 0.0463 0.563 0.561 0.06050 0.00680 0.142
+L602@P19: 2/4/2010 10:40 1.000 0.937 0.0626 0.761 0.760 0.05840 0.01200 0.189
+L603@P19: 2/23/2010 12:55 1.180 1.310 -0.1370 -1.640 -1.650 0.02770 0.02540 -0.278
+L604@P19: 4/14/2010 9:05 1.450 1.310 0.1330 1.590 1.600 0.02550 0.02200 0.259
+L605@P19: 6/13/2010 15:20 2.950 2.780 0.1610 1.930 1.950 0.03160 0.04050 0.353
+L606@P19: 8/25/2010 11:00 2.800 2.610 0.1940 2.310 2.350 0.01590 0.02870 0.299
+L607@P19: 8/15/2011 10:45 2.500 2.600 -0.1070 -1.300 -1.310 0.05960 0.03600 -0.329
+L608@P19: 7/12/2012 10:15 1.820 1.870 -0.0486 -0.592 -0.590 0.06020 0.00747 -0.149
+L609@P19: 7/19/2012 10:15 1.890 1.940 -0.0569 -0.697 -0.696 0.07530 0.01320 -0.198
+L610@P19: 12/12/2012 10:00 0.954 1.130 -0.1770 -2.120 -2.150 0.03090 0.04780 -0.384
+L611@P19: 1/16/2013 9:30 0.903 1.120 -0.2220 -2.650 -2.730 0.03030 0.07320 -0.481
+L612@P19: 2/13/2013 9:30 0.845 0.953 -0.1080 -1.300 -1.300 0.03810 0.02230 -0.259
+L613@P19: 6/24/2013 9:40 2.190 2.040 0.1470 1.760 1.770 0.02220 0.02330 0.267
+L614@P19: 8/7/2013 9:45 2.190 2.240 -0.0558 -0.679 -0.678 0.06110 0.01000 -0.173
+L615@P19: 11/25/2013 9:10 0.778 0.826 -0.0477 -0.581 -0.579 0.06150 0.00738 -0.148
+L616@P19-20: 1/14/2014 10:20 0.954 0.909 0.0457 0.555 0.553 0.05580 0.00607 0.13521
+L617@P20-22: Statistical Plots2223
+L618@P22: Cross Validation
+L619@P22: 
+L620@P22:  Minimum MSE of folds: 0.00526
+L621@P22:  Mean MSE of folds: 0.00727
+L622@P22:  Median MSE of folds: 0.00644
+L623@P22:  Maximum MSE of folds: 0.01250
+L624@P22: (Mean MSE of folds) / (Model MSE): 1.01000
+L625@P22: Red line - Model MSE
+L626@P22-23: Blue line - Mean MSE of folds24
+L627@P23: Model-Calibration Data Set
+L628@P23:  Date logSSC logTURB logQ SSC TURB Q Computed Computed Residual Normal Censored
+L629@P23:  0 logSSC SSC Quantiles Values
+L630@P23:  1 2004-07-27 2.58 2.3 3.77 384 200 5850 2.57 380 0.0127 0.0731 --
+L631@P23:  2 2005-01-27 2.09 1.91 2.23 122 81 171 2.14 140 -0.0529 -0.584 --
+L632@P23:  3 2005-03-23 2.7 2.41 3.77 506 260 5840 2.68 485 0.0263 0.351 --
+L633@P23:  4 2005-03-31 1.91 1.7 2.18 81 50 153 1.94 89.1 -0.0331 -0.329 --
+L634@P23:  5 2005-05-10 2.5 2.22 2.29 314 165 196 2.43 274 0.0669 0.917 --
+L635@P23:  6 2005-06-06 2.65 2.46 3.29 449 290 1940 2.7 512 -0.0493 -0.56 --
+L636@P23:  7 2005-06-09 2.67 2.58 4.08 469 380 11900 2.84 713 -0.174 -2.02 --
+L637@P23:  8 2005-08-31 2.15 1.98 2.05 141 96.5 111 2.2 162 -0.0529 -0.609 --
+L638@P23:  9 2007-01-10 1.04 0.839 1.16 11 6.9 14.5 1.09 12.7 -0.0536 -0.634 --
+L639@P23:  10 2007-03-12 1.6 1.36 1.28 40 23 19 1.59 39.4 0.0142 0.115 --
+L640@P23:  11 2007-03-21 1.69 1.41 1.71 49 26 51 1.66 46.2 0.0341 0.488 --
+L641@P23:  12 2007-03-27 2.56 2.4 2.2 362 250 158 2.59 400 -0.0357 -0.351 --
+L642@P23:  13 2007-04-02 2.89 2.58 3.46 775 380 2880 2.82 671 0.0709 0.982 --
+L643@P23:  14 2007-04-18 2.35 2.11 2.94 223 130 861 2.36 234 -0.0128 -0.178 --
+L644@P23:  15 2007-05-08 2.44 2.3 3.97 275 200 9280 2.58 388 -0.141 -1.6 --
+L645@P23:  16 2007-05-10 2.43 2.22 3.71 267 165 5170 2.49 316 -0.0648 -0.825 --
+L646@P23:  17 2007-05-24 3.03 2.73 3.73 1070 540 5390 2.97 957 0.0568 0.796 --
+L647@P23:  18 2007-05-25 2.45 2.32 4.04 280 208 10900 2.6 405 -0.153 -1.77 --
+L648@P23:  19 2007-07-11 2.65 2.32 3.28 446 210 1920 2.57 379 0.0788 1.09 --
+L649@P23:  20 2007-08-16 1.66 1.41 1.77 46 25.8 59 1.66 46.1 0.0071 -0.0104 --
+L650@P23:  21 2007-09-06 1.67 1.36 1.41 47 23 26 1.59 40 0.0783 1.05 --
+L651@P23:  22 2007-12-06 1.04 0.699 1.48 11 5 30 0.978 9.69 0.0633 0.855 --
+L652@P23:  23 2007-12-13 2.8 2.41 3.44 638 256 2740 2.66 464 0.147 1.6 --
+L653@P23:  24 2008-03-06 2.89 2.77 2.99 779 593 966 2.98 970 -0.087 -1.05 --
+L654@P23:  25 2008-04-14 2.54 2.36 2.68 343 230 484 2.58 389 -0.0463 -0.465 --
+L655@P23:  26 2008-06-30 2.59 2.33 2.94 389 212 872 2.56 369 0.0307 0.465 --
+L656@P23:  27 2008-08-05 1.91 1.48 1.41 82 30 25.5 1.7 51.2 0.213 2.22 --
+L657@P23:  28 2008-09-16 2.53 2.23 3.23 337 170 1690 2.48 309 0.0452 0.66 --
+L658@P23:  29 2009-04-06 2.22 1.72 2.27 165 53 187 1.97 94.9 0.249 2.58 --
+L659@P23:  30 2009-04-13 2.42 2.15 2.93 262 140 856 2.39 251 0.0272 0.373 --
+L660@P23:  31 2009-04-28 2.74 2.45 3.96 549 280 9190 2.72 530 0.0232 0.285 --
+L661@P23:  32 2009-05-08 3.19 2.81 3.54 1560 650 3430 3.04 1120 0.154 1.77 --
+L662@P23:  33 2009-07-30 2.46 2.32 2.71 287 210 507 2.55 358 -0.0877 -1.09 --
+L663@P23:  34 2009-09-09 2.62 2.32 3.51 413 210 3230 2.58 388 0.0357 0.512 --
+L664@P23:  35 2009-09-24 2.93 2.89 2.52 842 777 333 3.07 1190 -0.142 -1.68 --
+L665@P23:  36 2009-11-03 2.36 2.15 2.52 230 140 328 2.37 241 -0.0114 -0.157 --
+L666@P23:  37 2009-11-19 1.11 0.835 1.81 13 6.83 65 1.12 13.4 -0.00518 -0.136 --
+L667@P23:  38 2010-01-19 1 0.653 1.9 10 4.5 80 0.954 9.16 0.0463 0.713 --
+L668@P23:  39 2010-02-04 1 0.64 1.81 10 4.37 64 0.937 8.82 0.0626 0.825 --
+L669@P23:  40 2010-02-23 1.18 1.04 1.83 15 11 68.2 1.31 20.9 -0.137 -1.53 --
+L670@P23:  41 2010-03-10 2.51 2.18 2.74 322 150 549 2.41 262 0.0971 1.21 --
+L671@P23:  42 2010-04-14 1.45 1.05 1.72 28 11.2 53 1.31 21 0.133 1.53 --
+L672@P23:  43 2010-04-23 2.29 2.04 2.36 196 110 228 2.27 189 0.0237 0.307 --
+L673@P23:  44 2010-05-13 2.88 2.66 2.73 758 460 541 2.86 746 0.0152 0.136 --
+L674@P23:  45 2010-06-09 3.23 2.89 3.65 1680 784 4460 3.12 1340 0.105 1.25 --
+L675@P23:  46 2010-06-10 2.4 2.2 3.52 251 160 3290 2.47 301 -0.0707 -0.885 --
+L676@P23:  47 2010-06-13 2.95 2.52 3.92 883 333 8220 2.78 621 0.161 1.88 --
+L677@P23:  48 2010-06-14 2.68 2.43 4.07 484 267 11600 2.7 513 -0.0175 -0.242 --
+L678@P23:  49 2010-06-14 2.43 2.18 4.18 272 150 15100 2.47 303 -0.0382 -0.396 --
+L679@P23:  50 2010-06-14 2.38 2.18 4.17 242 150 14900 2.47 302 -0.0887 -1.17 --
+L680@P23:  51 2010-06-15 2.71 2.4 3.81 510 250 6440 2.66 470 0.0438 0.609 --
+
+Surrogate memo v2.doc.docx (https://water.usgs.gov/admin/memo/SW/sw.2016.07%2Bwq.2016.10.pdf)
+【turn309view0】 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 40; Source: open({"ref_id":"turn296view1","lineno":670}); Total lines: 1021
+L639@P23:  10 2007-03-12 1.6 1.36 1.28 40 23 19 1.59 39.4 0.0142 0.115 --
+L640@P23:  11 2007-03-21 1.69 1.41 1.71 49 26 51 1.66 46.2 0.0341 0.488 --
+L641@P23:  12 2007-03-27 2.56 2.4 2.2 362 250 158 2.59 400 -0.0357 -0.351 --
+L642@P23:  13 2007-04-02 2.89 2.58 3.46 775 380 2880 2.82 671 0.0709 0.982 --
+L643@P23:  14 2007-04-18 2.35 2.11 2.94 223 130 861 2.36 234 -0.0128 -0.178 --
+L644@P23:  15 2007-05-08 2.44 2.3 3.97 275 200 9280 2.58 388 -0.141 -1.6 --
+L645@P23:  16 2007-05-10 2.43 2.22 3.71 267 165 5170 2.49 316 -0.0648 -0.825 --
+L646@P23:  17 2007-05-24 3.03 2.73 3.73 1070 540 5390 2.97 957 0.0568 0.796 --
+L647@P23:  18 2007-05-25 2.45 2.32 4.04 280 208 10900 2.6 405 -0.153 -1.77 --
+L648@P23:  19 2007-07-11 2.65 2.32 3.28 446 210 1920 2.57 379 0.0788 1.09 --
+L649@P23:  20 2007-08-16 1.66 1.41 1.77 46 25.8 59 1.66 46.1 0.0071 -0.0104 --
+L650@P23:  21 2007-09-06 1.67 1.36 1.41 47 23 26 1.59 40 0.0783 1.05 --
+L651@P23:  22 2007-12-06 1.04 0.699 1.48 11 5 30 0.978 9.69 0.0633 0.855 --
+L652@P23:  23 2007-12-13 2.8 2.41 3.44 638 256 2740 2.66 464 0.147 1.6 --
+L653@P23:  24 2008-03-06 2.89 2.77 2.99 779 593 966 2.98 970 -0.087 -1.05 --
+L654@P23:  25 2008-04-14 2.54 2.36 2.68 343 230 484 2.58 389 -0.0463 -0.465 --
+L655@P23:  26 2008-06-30 2.59 2.33 2.94 389 212 872 2.56 369 0.0307 0.465 --
+L656@P23:  27 2008-08-05 1.91 1.48 1.41 82 30 25.5 1.7 51.2 0.213 2.22 --
+L657@P23:  28 2008-09-16 2.53 2.23 3.23 337 170 1690 2.48 309 0.0452 0.66 --
+L658@P23:  29 2009-04-06 2.22 1.72 2.27 165 53 187 1.97 94.9 0.249 2.58 --
+L659@P23:  30 2009-04-13 2.42 2.15 2.93 262 140 856 2.39 251 0.0272 0.373 --
+L660@P23:  31 2009-04-28 2.74 2.45 3.96 549 280 9190 2.72 530 0.0232 0.285 --
+L661@P23:  32 2009-05-08 3.19 2.81 3.54 1560 650 3430 3.04 1120 0.154 1.77 --
+L662@P23:  33 2009-07-30 2.46 2.32 2.71 287 210 507 2.55 358 -0.0877 -1.09 --
+L663@P23:  34 2009-09-09 2.62 2.32 3.51 413 210 3230 2.58 388 0.0357 0.512 --
+L664@P23:  35 2009-09-24 2.93 2.89 2.52 842 777 333 3.07 1190 -0.142 -1.68 --
+L665@P23:  36 2009-11-03 2.36 2.15 2.52 230 140 328 2.37 241 -0.0114 -0.157 --
+L666@P23:  37 2009-11-19 1.11 0.835 1.81 13 6.83 65 1.12 13.4 -0.00518 -0.136 --
+L667@P23:  38 2010-01-19 1 0.653 1.9 10 4.5 80 0.954 9.16 0.0463 0.713 --
+L668@P23:  39 2010-02-04 1 0.64 1.81 10 4.37 64 0.937 8.82 0.0626 0.825 --
+L669@P23:  40 2010-02-23 1.18 1.04 1.83 15 11 68.2 1.31 20.9 -0.137 -1.53 --
+L670@P23:  41 2010-03-10 2.51 2.18 2.74 322 150 549 2.41 262 0.0971 1.21 --
+L671@P23:  42 2010-04-14 1.45 1.05 1.72 28 11.2 53 1.31 21 0.133 1.53 --
+L672@P23:  43 2010-04-23 2.29 2.04 2.36 196 110 228 2.27 189 0.0237 0.307 --
+L673@P23:  44 2010-05-13 2.88 2.66 2.73 758 460 541 2.86 746 0.0152 0.136 --
+L674@P23:  45 2010-06-09 3.23 2.89 3.65 1680 784 4460 3.12 1340 0.105 1.25 --
+L675@P23:  46 2010-06-10 2.4 2.2 3.52 251 160 3290 2.47 301 -0.0707 -0.885 --
+L676@P23:  47 2010-06-13 2.95 2.52 3.92 883 333 8220 2.78 621 0.161 1.88 --
+L677@P23:  48 2010-06-14 2.68 2.43 4.07 484 267 11600 2.7 513 -0.0175 -0.242 --
+L678@P23:  49 2010-06-14 2.43 2.18 4.18 272 150 15100 2.47 303 -0.0382 -0.396 --
+L679@P23:  50 2010-06-14 2.38 2.18 4.17 242 150 14900 2.47 302 -0.0887 -1.17 --
+L680@P23:  51 2010-06-15 2.71 2.4 3.81 510 250 6440 2.66 470 0.0438 0.609 --
+L681@P23:  52 2010-06-15 2.69 2.4 3.8 486 250 6380 2.66 470 0.023 0.264 --
+L682@P23:  53 2010-06-16 2.72 2.34 3.68 525 217 4810 2.6 407 0.119 1.35 --
+L683@P23:  54 2010-08-19 1.8 1.56 1.79 63 36.3 61 1.79 63.4 0.00526 -0.0313 --
+L684@P23:  55 2010-08-25 2.8 2.38 2.89 633 240 770 2.61 413 0.194 2.02 --
+L685@P23:  56 2010-11-16 2.28 2.15 2.42 191 140 262 2.37 238 -0.0879 -1.13 --
+L686@P23:  57 2011-01-19 1.58 1.32 1.91 38 20.7 81 1.57 38 0.00809 0.0313 --
+L687@P23:  58 2011-03-07 1.3 1.15 1.71 20 14 51 1.41 25.9 -0.104 -1.3 --
+L688@P23-24:  59 2011-03-16 1.58 1.28 1.68 38 19 48 1.53 34.4 0.052 0.74 --25
+L689@P24:  60 2011-04-06 1.43 1.2 1.58 27 16 38 1.45 29 -0.0224 -0.264 --
+L690@P24:  61 2011-04-18 1.51 1.28 1.51 32 19 32 1.52 33.8 -0.0151 -0.199 --
+L691@P24:  62 2011-05-02 1.59 1.4 1.46 39 24.9 29 1.63 43.3 -0.0372 -0.373 --
+L692@P24:  63 2011-05-16 1.57 1.36 1.43 37 23 27 1.59 40.1 -0.0263 -0.285 --
+L693@P24:  64 2011-06-07 1.79 1.64 1.34 61 44 22 1.85 72.7 -0.0682 -0.855 --
+L694@P24:  65 2011-06-21 2.26 2.04 2.04 182 110 110 2.25 183 0.00516 -0.0522 --
+L695@P24:  66 2011-08-15 2.5 2.44 1.41 313 277 26 2.6 408 -0.107 -1.35 --
+L696@P24:  67 2011-09-22 2.18 2.04 1.66 152 110 45.7 2.24 176 -0.0566 -0.713 --
+L697@P24:  68 2011-12-20 2.95 2.7 3.04 895 500 1090 2.91 831 0.0404 0.535 --
+L698@P24:  69 2012-02-06 2.28 2.13 2.67 192 135 464 2.36 236 -0.0816 -0.982 --
+L699@P24:  70 2012-03-01 3.1 2.87 3.12 1270 740 1310 3.07 1210 0.0301 0.419 --
+L700@P24:  71 2012-04-07 2.26 2.11 2.41 182 130 259 2.34 222 -0.0786 -0.917 --
+L701@P24:  72 2012-04-17 1.79 1.56 1.92 61 36.5 82.7 1.8 64.7 -0.0172 -0.221 --
+L702@P24:  73 2012-05-09 1.94 1.7 1.63 87 50.5 42.5 1.92 85.1 0.0179 0.221 --
+L703@P24:  74 2012-05-30 1.92 1.64 0.898 84 43.5 7.9 1.83 68.8 0.0946 1.17 --
+L704@P24:  75 2012-06-12 1.97 1.75 1.15 94 56 14 1.94 89.3 0.0304 0.441 --
+L705@P24:  76 2012-06-18 2.32 2.18 2.11 210 150 130 2.38 247 -0.0615 -0.796 --
+L706@P24:  77 2012-06-19 2.2 2.08 1.89 158 120 77 2.28 196 -0.0848 -1.02 --
+L707@P24:  78 2012-07-12 1.82 1.71 0.342 66 50.8 2.2 1.87 75.2 -0.0486 -0.535 --
+L708@P24:  79 2012-07-19 1.89 1.79 0.204 77 62 1.6 1.94 89.4 -0.0569 -0.74 --
+L709@P24:  80 2012-09-11 1.79 1.65 0.633 62 45 4.3 1.83 69.2 -0.0396 -0.419 --
+L710@P24:  81 2012-10-24 1.79 1.58 0.672 62 38.2 4.7 1.77 59.7 0.0246 0.329 --
+L711@P24:  82 2012-11-14 1.28 1.04 0.82 19 11 6.6 1.27 18.9 0.00956 0.0522 --
+L712@P24:  83 2012-12-12 0.954 0.898 0.732 9 7.9 5.4 1.13 13.8 -0.177 -2.22 --
+L713@P24:  84 2013-01-16 0.903 0.886 0.82 8 7.7 6.6 1.12 13.6 -0.222 -2.58 --
+L714@P24:  85 2013-01-29 1.51 1.28 0.898 32 18.9 7.9 1.49 31.7 0.0129 0.094 --
+L715@P24:  86 2013-02-13 0.845 0.699 0.898 7 5 7.9 0.953 9.15 -0.108 -1.41 --
+L716@P24:  87 2013-03-12 1.64 1.3 1.34 44 20 22 1.53 34.8 0.109 1.3 --
+L717@P24:  88 2013-03-13 1.57 1.3 1.73 37 20 53.8 1.55 36.2 0.0175 0.199 --
+L718@P24:  89 2013-03-27 1.11 0.97 1 13 9.32 10 1.21 16.5 -0.0961 -1.25 --
+L719@P24:  90 2013-04-15 1.68 1.51 1.59 48 32 39 1.74 55.4 -0.0539 -0.66 --
+L720@P24:  91 2013-04-15 1.8 1.51 1.59 63 32 39 1.74 55.4 0.0642 0.885 --
+L721@P24:  92 2013-04-24 2.08 2.02 1.91 119 105 82 2.23 173 -0.155 -1.88 --
+L722@P24:  93 2013-05-06 2.12 1.93 2 132 85 101 2.15 144 -0.0283 -0.307 --
+L723@P24:  94 2013-05-09 2.67 2.57 2.05 463 367 114 2.74 566 -0.0787 -0.949 --
+
+--------------------------------------------------------------------------------
+Surrogate memo v2.doc.docx (https://water.usgs.gov/admin/memo/SW/sw.2016.07%2Bwq.2016.10.pdf)
+【turn309view1】 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 40; Source: open({"ref_id":"turn296view1","lineno":725}); Total lines: 1021
+L702@P24:  73 2012-05-09 1.94 1.7 1.63 87 50.5 42.5 1.92 85.1 0.0179 0.221 --
+L703@P24:  74 2012-05-30 1.92 1.64 0.898 84 43.5 7.9 1.83 68.8 0.0946 1.17 --
+L704@P24:  75 2012-06-12 1.97 1.75 1.15 94 56 14 1.94 89.3 0.0304 0.441 --
+L705@P24:  76 2012-06-18 2.32 2.18 2.11 210 150 130 2.38 247 -0.0615 -0.796 --
+L706@P24:  77 2012-06-19 2.2 2.08 1.89 158 120 77 2.28 196 -0.0848 -1.02 --
+L707@P24:  78 2012-07-12 1.82 1.71 0.342 66 50.8 2.2 1.87 75.2 -0.0486 -0.535 --
+L708@P24:  79 2012-07-19 1.89 1.79 0.204 77 62 1.6 1.94 89.4 -0.0569 -0.74 --
+L709@P24:  80 2012-09-11 1.79 1.65 0.633 62 45 4.3 1.83 69.2 -0.0396 -0.419 --
+L710@P24:  81 2012-10-24 1.79 1.58 0.672 62 38.2 4.7 1.77 59.7 0.0246 0.329 --
+L711@P24:  82 2012-11-14 1.28 1.04 0.82 19 11 6.6 1.27 18.9 0.00956 0.0522 --
+L712@P24:  83 2012-12-12 0.954 0.898 0.732 9 7.9 5.4 1.13 13.8 -0.177 -2.22 --
+L713@P24:  84 2013-01-16 0.903 0.886 0.82 8 7.7 6.6 1.12 13.6 -0.222 -2.58 --
+L714@P24:  85 2013-01-29 1.51 1.28 0.898 32 18.9 7.9 1.49 31.7 0.0129 0.094 --
+L715@P24:  86 2013-02-13 0.845 0.699 0.898 7 5 7.9 0.953 9.15 -0.108 -1.41 --
+L716@P24:  87 2013-03-12 1.64 1.3 1.34 44 20 22 1.53 34.8 0.109 1.3 --
+L717@P24:  88 2013-03-13 1.57 1.3 1.73 37 20 53.8 1.55 36.2 0.0175 0.199 --
+L718@P24:  89 2013-03-27 1.11 0.97 1 13 9.32 10 1.21 16.5 -0.0961 -1.25 --
+L719@P24:  90 2013-04-15 1.68 1.51 1.59 48 32 39 1.74 55.4 -0.0539 -0.66 --
+L720@P24:  91 2013-04-15 1.8 1.51 1.59 63 32 39 1.74 55.4 0.0642 0.885 --
+L721@P24:  92 2013-04-24 2.08 2.02 1.91 119 105 82 2.23 173 -0.155 -1.88 --
+L722@P24:  93 2013-05-06 2.12 1.93 2 132 85 101 2.15 144 -0.0283 -0.307 --
+L723@P24:  94 2013-05-09 2.67 2.57 2.05 463 367 114 2.74 566 -0.0787 -0.949 --
+L724@P24:  95 2013-05-15 2.15 1.93 1.51 140 85.5 32 2.13 137 0.0164 0.178 --
+L725@P24:  96 2013-05-21 2.28 2.08 1.7 192 120 50 2.28 192 0.0079 0.0104 --
+L726@P24:  97 2013-05-28 2.04 1.79 1.18 109 61.3 15.2 1.98 97.6 0.0563 0.768 --
+L727@P24:  98 2013-06-13 2.08 1.79 1.49 120 61 30.7 1.99 100 0.0871 1.13 --
+L728@P24:  99 2013-06-24 2.19 1.84 1.36 154 69.7 22.7 2.04 112 0.147 1.68 --
+L729@P24: 100 2013-07-09 1.93 1.69 0.519 86 48.4 3.3 1.86 73.3 0.0775 1.02 --
+L730@P24: 101 2013-07-29 2.33 2.2 3.38 215 160 2390 2.46 297 -0.132 -1.46 --
+L731@P24: 102 2013-07-29 2.37 2.2 3.37 236 160 2370 2.46 297 -0.0913 -1.21 --
+L732@P24: 103 2013-08-07 2.19 1.93 4.14 154 85.5 13800 2.24 178 -0.0558 -0.686 --
+L733@P24: 104 2013-09-12 1.45 1.23 1.82 28 17 65.3 1.49 31.4 -0.0414 -0.441 --
+L734@P24: 105 2013-10-24 1.15 0.883 1.48 14 7.63 30 1.15 14.4 -0.00338 -0.115 --
+L735@P24: 106 2013-11-25 0.778 0.531 1.57 6 3.4 37.3 0.826 6.82 -0.0477 -0.488 --
+L736@P24: 107 2014-01-14 0.954 0.616 1.65 9 4.13 45 0.909 8.25 0.0457 0.686 --
+L737@P24: 108 2014-02-20 1.26 0.91 1.69 18 8.13 49 1.18 15.6 0.0709 0.949 --
+L738@P24: 109 2014-03-17 1.11 0.82 1.57 13 6.6 37 1.09 12.7 0.0194 0.242 --
+L739@P24: 110 2014-04-09 1.34 1.04 1.48 22 11 30.5 1.3 20.2 0.0446 0.634 --
+L740@P24: 111 2014-05-08 1.66 1.3 1.34 46 20 22 1.53 34.8 0.129 1.41 --
+L741@P24: 112 2014-06-03 1.76 1.53 1.71 58 34 50.8 1.76 59.3 -0.00127 -0.094 --
+L742@P24: 113 2014-06-05 2.11 1.84 2.15 130 69 141 2.07 120 0.0434 0.584 --
+L743@P24: 114 2014-06-09 2.45 2.26 3.17 285 180 1470 2.5 325 -0.0483 -0.512 --
+L744@P24: 115 2014-06-12 2.64 2.34 3.59 441 220 3880 2.6 408 0.0419 0.56 --
+L745@P24: 116 2014-06-24 2.2 1.95 2.44 157 90 278 2.19 158 0.00493 -0.0731 --
+L746@P24: 117 2014-07-10 1.76 1.57 1.95 57 37.3 88.3 1.81 66.2 -0.0571 -0.768 --
+L747@P24: 118 2014-07-15 1.77 1.51 1.66 59 32.3 46 1.74 56.3 0.0284 0.396 --
+L748@P24: 119 2014-07-24 1.72 1.47 1.45 52 29.8 28 1.7 51.1 0.0155 0.157 --
+L749@P24-25: 120 2014-08-04 1.79 1.44 1.33 62 27.5 21.2 1.66 46.8 0.13 1.46 --26
+L750@P25: Definitions
+L751@P25: SSC: Suspended-sediment concentration (SSC) in mg/L (80154)
+L752@P25: TURB: Turbidity in FNU (63680)
+L753@P25-26: Q: Streamflow, in ft3/s (00060)27
+L754@P26: Attachment C. Example Model Archive Summary for an Acoustic Suspended Sediment Model
+L755@P26: Model Archive Summary for Suspended-Sediment Concentration at
+L756@P26: Station 01648010; Rock Creek at Joyce Road at Washington, DC
+L757@P26: This model archive summary documents the suspended-sediment concentration (SSC) model developed to
+L758@P26: compute 15-minute SSC for the U.S. Geological Survey (USGS) station, Rock Creek at Joyce Road (USGS ID:
+L759@P26: 01648010) from October 1, 2014 onward. This is the first model developed for the site to compute continuous
+L760@P26: SSC. The methods used follow USGS guidance as referenced in relevant Office of Surface Water/Office of
+L761@P26: Water Quality Technical Memoranda and USGS Techniques and Methods, book 3, chap. C5 (Landers and
+L762@P26: others, 2016).
+L763@P26: Site and Model Information
+L764@P26: Site number: 01648010
+L765@P26: Site name: Rock Creek at Joyce Rd, Washington, DC
+L766@P26: Location: Lat 38°57'36.6", long 77°02'31.4" (NAD 1927), Washington, DC, Hydrologic Unit: 02070010, on right
+L767@P26: bank at downstream side of bridge on Joyce Road.
+L768@P26: Drainage area: 62.7 mi2
+L769@P26: Model number: 01648010.SSC.WY15.1
+L770@P26: Date model was created: September 9, 2016
+L771@P26: Model calibration data period: October 8, 2014 to May 03, 2016
+L772@P26: Model application date: October 8, 2014 onwards
+L773@P26: Computed by: Joseph Bell, USGS, MD.DE.DC WSC (jmbell@usgs.gov)
+L774@P26: Reviewed by: Timothy Straub, USGS, IL-IA WSC (tdstraub@usgs.gov), and Mark Landers, USGS, OSW
+L775@P26: (landers@usgs.gov)
+L776@P26: Approved by: USGS, Center Director, MD.DE.DC Water Science Center
+L777@P26: Model Data
+L778@P26: All model data were collected using USGS protocols described in Edwards and Glysson (1999), Landers and
+L779@P26: others (2016), and the USGS National Field Manual. All data are stored in the National Water Information
+L780@P26: System (NWIS) database (http://dx.doi.org/10.5066/F7P55KJN).
+L781@P26: Suspended sediment characteristics at this site are computed from a regression model based on measured
+L782@P26: suspended sediment characteristics and sediment-corrected backscatter (𝑆𝑆������). The regression model is based
+L783@P26: on 41 concurrent measurements of SSC and 𝑆𝑆������ collected from October 8, 2014, through May 3, 2016. An
+L784@P26: additional 51 concurrent data sets collected during this period were evaluated and excluded from the
+
+--------------------------------------------------------------------------------
+ (https://water.usgs.gov/admin/memo/SW/sw.2016.07%2Bwq.2016.10.pdf)
+【turn309view2】<<ImageDisplayed>>
+--------------------------------------------------------------------------------
+ (https://water.usgs.gov/admin/memo/SW/sw.2016.07%2Bwq.2016.10.pdf)
+【turn309view3】<<ImageDisplayed>>
