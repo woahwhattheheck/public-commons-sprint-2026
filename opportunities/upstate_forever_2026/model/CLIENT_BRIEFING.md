@@ -14,7 +14,7 @@ Choose **Present** for one page at a time. Previous, Next and the section select
 
 Map pages open the retained map files in a separate browser tab. Keep the briefing with the extracted delivery folder so those files and report links remain available. The page runs locally without a web service or external scripts.
 
-**Print agenda and notes** prints the selected sections in landscape layout followed by the current meeting record. Browser print can save this as a PDF. Long tables retain repeated headers and can continue naturally onto another printed page.
+Use the **Print** selector to choose **Current briefing page**, **Selected agenda**, or **Agenda and meeting notes**, then choose **Print**. The current-page option follows the page shown in the counter in either reading or presentation mode. Browser print can save the selected material as a PDF. Landscape layout keeps repeated table headers and every row; content can continue naturally onto another physical sheet. The selected print scope also applies to the browser's Print command.
 
 ## Record the meeting
 
@@ -31,7 +31,7 @@ Each entry contains:
 
 Notes are saved in the local browser when storage is available. **Export meeting file** writes the complete editable JSON record; **Export readable notes** writes Markdown. Both include the exact report identity and selected agenda. Opening the JSON record in another copy of this same briefing restores the meeting and its action list.
 
-A meeting record belongs to the original report-model bytes and briefing edition. An imported file from a different report is identified by its binding before any current notes change. Opening an imported meeting asks before replacing entered notes. Browser storage can be unavailable for local files in some configurations; the page reports this and export remains available.
+A meeting record belongs to the original report-model bytes and briefing edition. An imported file from a different report is identified by its binding before any current notes change. Opening an imported meeting asks before replacing entered notes. Browser storage can be unavailable for local files in some configurations; the page reports this and export remains available. Python computes the original report-model hash during generation, so opening the briefing under `file://` does not depend on browser hashing or a secure web origin.
 
 The notes are a meeting record alongside the source report. Model inputs, numerical results, scientific interpretations and original delivery files retain their existing meaning.
 
@@ -48,7 +48,7 @@ The ordinary delivery builder generates six client companions:
 | client-report-briefing.html | Meeting presentation and local notes |
 | client-report-briefing.json | Briefing binding and complete page/source index |
 
-The two new descriptor keys are **client_report_briefing** and **client_report_briefing_index**. They enter the existing complete project-assets list, native working archive, delivery snapshot and GIS package. The client companion edition advances to **2026-10-13-client-report-10**, contributing to the existing delivery identity before a new report is built.
+The two new descriptor keys are **client_report_briefing** and **client_report_briefing_index**. They enter the existing complete project-assets list, native working archive, delivery snapshot and GIS package. The maintained client companion producer edition contributes to the existing delivery identity before a new report is built. The briefing binds the actual report edition retained in that report model.
 
 The briefing index records every page's source section, original table index, starting row and row count. Its binding includes delivery, baseline, ordered alternatives, grid, profile, delivery mode, original report edition, and SHA-256 of the exact retained report-model file bytes. **report_digest_method** identifies that byte basis. The renderer does not recompute physical or financial quantities.
 
