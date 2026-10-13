@@ -46,7 +46,8 @@ export function utilityWatershedChoicesHtml(choices, busy = false, observed = nu
           (row.missing_area_count ? ' · ' + esc(number(row.missing_area_count)) + ' missing source areas' : '') + '</td></tr>').join('') +
         '</tbody></table></div>' : '<p class="wc-note">' + esc(choice.reason) + '</p>';
       const observations = observed?.profile_sha256 === choice.profile_source?.sha256
-        ? list(observed.utilities).find(row => row.utility_id === choice.utility_id) : null;
+        ? list(observed.utilities).find(row => row.utility_id === choice.utility_id &&
+          JSON.stringify([...list(row.huc12s)].sort()) === JSON.stringify([...list(choice.huc12s)].sort())) : null;
       const observationHtml = observations ? '<h4>Original microbial sampling context</h4><p class="wc-note">' +
         esc(number(observations.summary.records)) + ' E. coli records at ' + esc(number(observations.summary.stations)) +
         ' stations on ' + esc(number(observations.summary.unique_dates)) + ' distinct dates; original MPN per 100 mL. ' +

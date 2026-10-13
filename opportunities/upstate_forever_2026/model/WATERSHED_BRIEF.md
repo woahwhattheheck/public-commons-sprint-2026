@@ -174,3 +174,10 @@ The HTML renderer now recognizes the saved observed-sources relative links as
 well as original publisher URLs. All source members have ordinary path/bytes/SHA256
 descriptors in export.json; an exported report can open them offline. The native
 report writer remains a standard-library implementation.
+
+A single `utility-watershed-packet.zip` download carries the verified saved file
+inventory at its original relative paths, including the brief, selected data,
+original profile and observation sources. Extract the ZIP and open
+`watershed-selection-brief.html`; its local source links resolve within the packet.
+The archive includes `packet.json` with each carried file identity. The native
+utility receiver writes the same complete packet for each utility selection.

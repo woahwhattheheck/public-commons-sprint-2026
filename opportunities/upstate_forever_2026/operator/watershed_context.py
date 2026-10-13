@@ -675,6 +675,7 @@ class WatershedContextActions:
                     "summary": observed_context["utility"]["summary"],
                     "quantity": observed_context["utility"]["model_interpretation"],
                 }
+            result["files"]["utility-watershed-packet.zip"] = observed_model.write_packet(target, result["files"])
             atomic_json(path, result)
         return result
 

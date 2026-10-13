@@ -54,3 +54,13 @@ The native receiver source_tools/receive_utility_source_context.py also binds an
 ## Source lineage
 
 inputs.json identifies every input by exact application path, SHA256, byte length and pinned repository source link. The underlying publisher references remain in the original microbial source-inputs.json and stream input-manifest.json. The three main original source services are [WQP](https://www.waterqualitydata.us/), [USGS WBD](https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6), and [USGS 02186702](https://waterdata.usgs.gov/monitoring-location/USGS-02186702/).
+
+## One complete offline utility packet
+
+The existing download panel includes `utility-watershed-packet.zip`. It contains
+all verified saved export files at their actual relative paths, plus a packet
+manifest. Extract the ZIP and open `watershed-selection-brief.html` to follow
+its source links locally. The native utility receiver writes this same packet.
+Automatic observed context attaches only when both the original profile and
+complete HUC membership match; other original utility selections export through
+their own existing source workflow.

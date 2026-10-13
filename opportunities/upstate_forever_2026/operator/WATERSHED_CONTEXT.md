@@ -497,3 +497,10 @@ receiving operation.
 
 The reusable source compiler is source_tools/build_utility_observed_context.mjs.
 Its complete method/source guide is source/utility-observed-context/20261013/README.md.
+
+A single `utility-watershed-packet.zip` download carries the verified saved file
+inventory at its original relative paths, including the brief, selected data,
+original profile and observation sources. Extract the ZIP and open
+`watershed-selection-brief.html`; its local source links resolve within the packet.
+The archive includes `packet.json` with each carried file identity. The native
+utility receiver writes the same complete packet for each utility selection.
