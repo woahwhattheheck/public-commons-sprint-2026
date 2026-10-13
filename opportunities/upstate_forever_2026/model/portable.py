@@ -60,6 +60,7 @@ APPLICATION_FILES = (
     "requirements-landcover.txt",
     "water_context_cli.py",
     "WATER_CONTEXT_OPERATOR.md",
+    "NATIVE_REUSE_MATCHING.md",
 )
 APPLICATION_DIRECTORIES = (
     "model",
