@@ -814,6 +814,43 @@ code{overflow-wrap:anywhere}a{color:#242424}@media print{main{margin:0;padding:0
 <p>Study <code>""" + esc(result["experiment_id"]) + "</code><br>Baseline <code>" + esc(result["selection"]["baseline_run_id"]) + "</code></p></main></body></html>"
 
 
+def _aggregation_adoption_files(directory, pair):
+    """Include the original small records behind an adopted aggregate."""
+    files, seen = set(), set()
+    adoption = pair.get("adopted_from")
+    while adoption:
+        if not isinstance(adoption, dict):
+            raise ValueError("Retained aggregation ancestry must be a source descriptor")
+        context_id = identifier(adoption.get("context_id"))
+        pair_id = identifier(adoption.get("pair_id"))
+        prefix = Path("paired-results") / context_id
+        relative = Path(adoption.get("path", ""))
+        if (relative.parent != prefix
+                or relative.name not in (pair_id + ".json", pair_id + ".partial.json")):
+            raise ValueError("Retained aggregation ancestry leaves its original context")
+        name = relative.as_posix()
+        if name in seen:
+            raise ValueError("Retained aggregation ancestry contains a cycle")
+        seen.add(name)
+        original = verify_file(directory, adoption)
+        record = read_json(original)
+        if (not isinstance(record, dict)
+                or record.get("schema") not in ("upstate.parameter-pair-result/v1",
+                                                "upstate.parameter-pair-checkpoint/v1")
+                or record.get("id") != pair_id
+                or not isinstance(record.get("selection"), dict)
+                or record["selection"].get("context_id") != context_id
+                or digest(record["selection"]) != pair_id
+                or record.get("adopted_from") != adoption.get("previous_adoption")):
+            raise ValueError("Retained aggregation ancestor differs from its original binding")
+        context = prefix / "context.json"
+        if digest(read_json(directory / context)) != context_id:
+            raise ValueError("Retained aggregation ancestor context changed")
+        files.update((name, context.as_posix()))
+        adoption = record.get("adopted_from")
+    return sorted(files)
+
+
 def _exports(workspace, state):
     directory = workspace.root / "experiments" / state["id"]
     profiles = {case["profile_id"]: workspace._get("profiles", case["profile_id"])
@@ -839,7 +876,9 @@ def _exports(workspace, state):
             raise ValueError("The retained aggregation context leaves its study")
         files.append(context.relative_to(directory).as_posix())
         for pair_id in dict.fromkeys(row["pair_id"] for row in aggregation["pairs"]):
-            files.append((context.parent / (identifier(pair_id) + ".json")).relative_to(directory).as_posix())
+            pair_path = context.parent / (identifier(pair_id) + ".json")
+            files.append(pair_path.relative_to(directory).as_posix())
+            files.extend(_aggregation_adoption_files(directory, read_json(pair_path)))
     descriptors = [describe_file(directory, directory / name) for name in files]
     descriptors.extend(map_files.values())
     for case in state["cases"]:
