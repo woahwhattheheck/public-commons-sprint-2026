@@ -448,16 +448,20 @@
       "source": "operator/install_receiving_waters.py",
       "source_role": "current_application_source",
       "path": "operator/install_receiving_waters.py",
-      "previous_bytes": 46109,
-      "previous_sha256": "2612306f9a422af0175600b7d1d492cd534469741186aaa81ccb7bca7cf7cd71",
+      "previous_bytes": 46653,
+      "previous_sha256": "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32",
       "retained_installed_editions": [
         {
           "bytes": 46109,
           "sha256": "2612306f9a422af0175600b7d1d492cd534469741186aaa81ccb7bca7cf7cd71"
+        },
+        {
+          "bytes": 46653,
+          "sha256": "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32"
         }
       ],
-      "bytes": 46653,
-      "sha256": "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32"
+      "bytes": 49036,
+      "sha256": "17d9436bbad3f111313fa2503d4f5bce338a2edd7b392cb36d1c8b0b5a95d458"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/MONITORING_API.md",
@@ -566,12 +570,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring-component.mjs",
       "path": "operator/web/monitoring-component.mjs",
-      "bytes": 24175,
-      "sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0",
+      "bytes": 24189,
+      "sha256": "af53661a464cfc5f838dbeae1552806a047544bdeb57e3aa1a0bc0af7566d1cd",
       "original_bytes": 23470,
       "original_sha256": "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d",
-      "previous_bytes": 23901,
-      "previous_sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+      "previous_bytes": 24175,
+      "previous_sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0",
       "retained_installed_editions": [
         {
           "bytes": 23690,
@@ -580,6 +584,10 @@
         {
           "bytes": 23901,
           "sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949"
+        },
+        {
+          "bytes": 24175,
+          "sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0"
         }
       ]
     },
