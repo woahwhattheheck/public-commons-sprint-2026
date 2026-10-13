@@ -2,7 +2,7 @@
 /* SPDX-License-Identifier: MIT */
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),http=require("node:http"),assert=require("node:assert/strict"),cp=require("node:child_process");
-const C=require("./workspace.cjs"),Example=require("./example.cjs"),{build}=require("./build.cjs");
+const C=require("./workspace.cjs"),Drafts=require("./drafts.cjs"),Example=require("./example.cjs"),{build}=require("./build.cjs");
 function installedPlaywright(cdp){
  const selected=process.env.ALCOR_PLAYWRIGHT_MODULE;
  let entry,metadata;
@@ -47,7 +47,7 @@ async function receive(out){
    result.connection="owned_chromium";
   }
   const createContext=async(viewport)=>{
-   const context=await browser.newContext({viewport,acceptDownloads:true,serviceWorkers:"block"});ownedContexts.add(context);
+   const context=await browser.newContext({viewport,acceptDownloads:true,serviceWorkers:"block"});ownedContexts.add(context);context.on("page",p=>p.on("dialog",dialog=>dialog.accept()));
    if(cdp){
     const allowed=new Map([["/release/Open_CMDB_Workspace.html",path.join(root,"release","Open_CMDB_Workspace.html")],["/received-handover/Open_CMDB_Workspace.html",path.join(root,"received-handover","Open_CMDB_Workspace.html")]]);
     await context.route("**/*",async route=>{
@@ -171,6 +171,70 @@ with zipfile.ZipFile(archive) as z:
   assert.deepEqual(C.receive(fs.readFileSync(temporaryReceived,"utf8")),phoneWorkspace);
   await screenshot("phone-temporary-complete-reopen",390);
   result.temporaryReceiving={originalExampleRevision:11,receivedRevision:14,completeOriginalEqual:true,completeReceivedEqual:true,reloadStartsNewSession:true};
+
+  // Continue the same complete received workspace; retain unfinished work separately.
+  await tab("intake");
+  await page.selectOption("#import-side","source");await page.fill("#import-label","Unfinished exact baseline");
+  await page.fill("#import-note",'Retain original note <angle> & "quotes".');
+  const unfinishedCsv="\ufeff"+Example.source;
+  await page.locator("#csv-file").setInputFiles({name:"unfinished-original.csv",mimeType:"text/csv",buffer:Buffer.from(unfinishedCsv)});
+  await tab("mapping");await page.fill("#mapping-label","Unfinished mapping");
+  await page.fill("#key-name","");await click('[data-action="add-field"]');
+  await page.fill("#field-name-"+Example.mapping.fields.length,"Unfinished added field");
+  await tab("comparison");await page.locator(".finding-choice").first().check();
+  await page.fill("#review-note",'Unfinished reviewer note <angle> & "quotes".');
+  await page.fill("#review-owner","");
+  await page.selectOption("#filter-status","open");await page.selectOption("#filter-status","all");
+  assert.equal(await page.locator(".finding-choice:checked").count(),1);
+  await tab("intake");assert.equal(await page.inputValue("#import-label"),"Unfinished exact baseline");
+  assert.equal(await page.locator("#draft-file-name").textContent(),"Retained original: unfinished-original.csv");
+  const recoveryFile=await download('[data-action="save-recovery"]',"complete-unfinished-work.json");
+  const recovered=Drafts.receive(fs.readFileSync(recoveryFile,"utf8"));
+  assert.deepEqual(recovered.workspace,phoneWorkspace);assert.equal(recovered.entries.length,3);
+  const intakeEntry=recovered.entries.find(e=>e.group==="intake"),mappingEntry=recovered.entries.find(e=>e.group==="mapping"),reviewEntry=recovered.entries.find(e=>e.group==="review");
+  assert.equal(intakeEntry.file.text,unfinishedCsv);assert.equal(intakeEntry.file.bytes,Buffer.byteLength(unfinishedCsv));
+  assert.equal(mappingEntry.mapping.key.name,"");assert.equal(mappingEntry.mapping.fields.at(-1).name,"Unfinished added field");
+  assert.equal(reviewEntry.findings.length,1);assert.equal(reviewEntry.values["review-owner"],"");
+  await screenshot("phone-unfinished-complete-recovery",390);
+  await page.reload();await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
+  await page.locator("#open-recovery").setInputFiles(recoveryFile);await idle();
+  await page.locator("#save-state").filter({hasText:"Session edition 14"}).waitFor();
+  const groupRow=group=>page.locator("#unfinished-work li").filter({has:page.locator("strong",{hasText:group})});
+  await click('#unfinished-work li:first-child [data-action="open-draft"]');
+  await tab("mapping");assert.equal(await page.inputValue("#key-name"),"");
+  assert.equal(await page.inputValue("#field-name-"+Example.mapping.fields.length),"Unfinished added field");
+  await tab("comparison");assert.equal(await page.inputValue("#review-note"),reviewEntry.values["review-note"]);
+  assert.equal(await page.locator(".finding-choice:checked").count(),1);
+  await tab("intake");
+  await page.locator("#csv-file").setInputFiles({name:"delayed-original.csv",mimeType:"text/csv",buffer:Buffer.from(unfinishedCsv)});
+  await page.evaluate(()=>{
+   const original=File.prototype.arrayBuffer;window.cmdbOriginalArrayBuffer=original;
+   File.prototype.arrayBuffer=async function(){const bytes=await original.call(this);window.cmdbReadStarted=true;await new Promise(resolve=>window.cmdbReleaseRead=resolve);return bytes;};
+  });
+  try{
+   await page.locator('[data-action="import"]').click();
+   await page.waitForFunction(()=>window.cmdbReadStarted&&document.getElementById("cmdb-root").inert);
+   await page.evaluate(()=>{document.getElementById("import-side").value="target";document.getElementById("import-label").value="Later DOM text";window.cmdbReleaseRead();});
+   await idle();await page.locator("#save-state").filter({hasText:"Session edition 15"}).waitFor();
+  }finally{await page.evaluate(()=>{File.prototype.arrayBuffer=window.cmdbOriginalArrayBuffer;delete window.cmdbOriginalArrayBuffer;delete window.cmdbReleaseRead;});}
+  const continuedFile=await download("#save-file","continued-workspace.json"),continued=C.receive(fs.readFileSync(continuedFile,"utf8"));
+  assert.equal(continued.snapshots.at(-1).side,"source");assert.equal(continued.snapshots.at(-1).label,"Unfinished exact baseline");
+  assert.equal(continued.snapshots.at(-1).text,unfinishedCsv);assert.equal(continued.revision,15);
+  assert.equal(await page.locator("#unfinished-work li").count(),2);
+  await groupRow("Field mapping").locator('[data-action="open-draft"]').click();await idle();
+  await page.locator("#save-state").filter({hasText:"Session edition 14"}).waitFor();
+  assert.equal(await page.inputValue("#key-name"),"");assert.equal(await page.locator("#workspace-select option").count(),2);
+  const earlierFile=await download("#save-file","unfinished-original-edition.json");
+  assert.deepEqual(C.receive(fs.readFileSync(earlierFile,"utf8")),phoneWorkspace);
+  await screenshot("phone-unfinished-original-edition",390);
+  const receivedAgain=await download('[data-action="save-recovery"]',"received-unfinished-mapping.json");
+  assert.equal(Drafts.receive(fs.readFileSync(receivedAgain,"utf8")).entries[0].mapping.key.name,"");
+  const otherKey=await page.locator("#workspace-select option").evaluateAll(xs=>xs.find(x=>x.textContent.includes("edition 15"))?.value);
+  assert(otherKey);await page.selectOption("#workspace-select",otherKey);await idle();
+  assert.equal(C.receive(fs.readFileSync(await download("#save-file","later-workspace-preserved.json"),"utf8")).revision,15);
+  result.unfinishedReceiving={groups:3,rawCsvBomPreserved:true,invalidFieldsRetained:true,selectionRetainedAcrossFilter:true,coldRecoveryEqual:true,capturedIntakeIntent:true,laterRevision:15,originalEditionPreserved:14};
+  record("complete_unfinished_work_received",result.unfinishedReceiving);
+
   assert.deepEqual(errors,[]);result.status="PASS";result.originalRevision=11;result.receivedRevision=14;result.browserErrors=errors;record("original_browser_complete",{views:views.length});save();
  }catch(error){result.status="FAILED";result.error={message:error.message,stack:error.stack};save();throw error;}
  finally{

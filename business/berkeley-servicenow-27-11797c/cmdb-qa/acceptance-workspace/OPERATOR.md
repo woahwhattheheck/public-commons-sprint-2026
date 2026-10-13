@@ -91,3 +91,24 @@ The source distribution also includes the headless operating interface and a com
 ## Browsers with local storage disabled
 
 When this browser cannot open its local working database, a permanent Temporary session message appears. The same original imports, mapping, comparison, review and acceptance controls remain available in memory. Session edition means the work is held only in the open view. Download the complete private workspace or handover before closing or reloading. Open the downloaded JSON in this application to continue, or open the complete handover HTML in a normal browser. Earlier browser-saved work is left intact. A save failure after browser storage has opened remains an error; it does not silently switch the existing workspace to temporary memory.
+
+
+## Preserve unfinished intake, mapping and review work
+
+Each entered intake, field mapping, new comparison, exception review and receiving decision stays with its exact saved workspace edition while this application remains open. Changing views, filters, finding pages or saved workspace copies retains these groups. The Unfinished work panel lists the groups for the selected workspace and counts groups held with other copies.
+
+Use **Download all unfinished work** before closing or reloading. This recovery JSON contains the complete saved workspace, each original edition needed by an unfinished group, every entered field, selected findings and the complete selected CSV bytes. **Save this group** makes an independently usable copy of one group and its original edition. Blank and invalid form text stays available for correction. These values become recorded operations only when you save the corresponding form normally.
+
+**Open unfinished work** receives the file into a separate workspace copy after checking its complete identities. Choose **Continue** for a group on the current edition. If another operation has since changed the workspace, **Open original edition** creates a separate copy of that group's original saved edition. The later workspace and its complete history remain available in the selector. Review and intentionally re-enter changes on a later edition if that is the intended receiving target; the application never silently applies an earlier draft to a newer comparison.
+
+Saving an intake, mapping, comparison, review or acceptance clears only that successfully recorded group. Other unfinished groups stay with their original editions. **Discard group** removes only the selected unfinished values after confirmation. The complete handover ZIP includes UNFINISHED-WORK.json whenever the selected workspace has unfinished groups; its workspace.json continues to represent the recorded operating history.
+
+The selected CSV remains available after leaving and returning to Intake. Its filename is shown below the file control. Receiving a file captures the selected side, label, correction relationship and note before reading its bytes. Controls pause for that operation, and the original workspace edition is checked again before saving. A read or save failure leaves the unfinished group available.
+
+Unfinished groups are held in this session until their explicit recovery download. Browser storage continues to save recorded operations; it does not secretly persist incomplete forms. In temporary browser mode, also save the private workspace or complete handover before leaving. Recovery files are private operating records containing the original exports and entered notes. Transfer them through the same authorized channel as the complete workspace.
+
+Complete recovery files are limited to 256 MiB and each original CSV to 16 MiB. If a combined recovery is too large, save each listed group separately. Every such file includes its necessary original workspace edition, so it can be received independently.
+
+A retained mapped column that is absent from a newly selected export remains visible as “not present in selected export.” Its original name stays in recovery until you deliberately select a replacement. Review input problems before saving the corrected mapping.
+
+Continuing an interrupted saved operation preserves unfinished groups. Its earlier command may already have completed, while the fields currently on screen can be later work. Review or explicitly discard those retained groups after the continuation.
