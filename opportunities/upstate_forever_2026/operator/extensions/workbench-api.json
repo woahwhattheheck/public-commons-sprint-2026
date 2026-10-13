@@ -1,0 +1,15 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "workbench-api",
+  "title": "Workbench API",
+  "version": "1",
+  "order": 98,
+  "backend": {
+    "module": "workbench_api",
+    "factory": {"handler": "WorkbenchAPI", "args": ["operator", "fault"]},
+    "routes": [
+      {"methods": ["GET"], "path": "/api/workbench-api", "operation": "catalog", "handler": "read", "args": ["workspace_key", "operation", "payload"]},
+      {"methods": ["GET"], "path": "/api/workbench-api/openapi", "operation": "openapi", "handler": "read", "args": ["workspace_key", "operation", "payload"]}
+    ]
+  }
+}

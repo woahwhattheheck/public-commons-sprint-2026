@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 from datetime import datetime, timezone
+from dataclasses import dataclass, field
 import hashlib
 import http.client
 import json
@@ -17,6 +18,7 @@ import re
 import stat
 import tempfile
 import time
+import urllib.parse
 from typing import Callable, Mapping
 
 SCHEMA = "upstate.retained-download/v1"
@@ -24,6 +26,94 @@ COHORT_SCHEMA = "upstate.retained-download-cohort/v1"
 BLOCK = 1024 * 1024
 CHECKPOINT_BYTES = 8 * BLOCK
 Progress = Callable[[dict], None]
+
+
+def canonical_https_origin(value: str) -> str:
+    """Admit one explicitly trusted DNS origin on normal HTTPS port 443."""
+    if (not isinstance(value, str) or not value or len(value) > 261
+            or any(ord(c) <= 32 or ord(c) >= 127 for c in value)):
+        raise ValueError("Choose the exact canonical HTTPS recipient origin.")
+    parsed = urllib.parse.urlsplit(value)
+    host = parsed.hostname or ""
+    label = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+    if (parsed.scheme != "https" or parsed.username is not None
+            or parsed.password is not None or parsed.path or parsed.query
+            or parsed.fragment or parsed.port is not None or len(host) > 253
+            or not re.fullmatch(label + r"(?:\." + label + r")+", host)
+            or value != "https://" + host):
+        raise ValueError("Use one canonical https://host origin on port 443, without a path or credential.")
+    return value
+
+
+@dataclass(frozen=True)
+class OperatorTransport:
+    """One credential is bound to exactly one admitted original transport.
+
+    Remote credentials belong to the recipient boundary, never to the native
+    operator. This class neither follows redirects nor reads proxy settings.
+    """
+    origin: str
+    credential: str = field(repr=False)
+    credential_kind: str
+    trusted_origin: str | None = None
+
+    def __post_init__(self):
+        if (not isinstance(self.credential, str) or not self.credential
+                or "\r" in self.credential or "\n" in self.credential):
+            raise ValueError("Select the original private transport credential.")
+        if self.credential_kind == "local-operator":
+            parsed = urllib.parse.urlsplit(self.origin)
+            if (parsed.scheme != "http" or parsed.hostname != "127.0.0.1"
+                    or type(parsed.port) is not int or not 1 <= parsed.port <= 65535
+                    or self.origin != "http://127.0.0.1:" + str(parsed.port)
+                    or self.trusted_origin is not None):
+                raise ValueError("Select the original loopback operator.")
+        elif self.credential_kind == "recipient":
+            selected = canonical_https_origin(self.origin)
+            if selected != canonical_https_origin(self.trusted_origin):
+                raise ValueError("The recipient origin differs from the explicitly trusted origin.")
+            if (len(self.credential) > 4096
+                    or any(ord(c) <= 32 or ord(c) >= 127 for c in self.credential)):
+                raise ValueError("Use the separately issued recipient credential.")
+        else:
+            raise ValueError("Choose the original local or explicit recipient credential type.")
+
+    @classmethod
+    def loopback(cls, port: int, token: str):
+        if type(port) is not int or not 1 <= port <= 65535:
+            raise ValueError("Select the existing loopback operator port.")
+        return cls("http://127.0.0.1:" + str(port), token, "local-operator")
+
+    @classmethod
+    def recipient(cls, origin: str, token: str, trusted_origin: str):
+        return cls(origin, token, "recipient", trusted_origin)
+
+    @property
+    def port(self):
+        return 443 if self.credential_kind == "recipient" else urllib.parse.urlsplit(self.origin).port
+
+    def connection(self, *, timeout=60):
+        # HTTPSConnection's ordinary default context verifies certificate and
+        # hostname. No custom trust roots, unverified context or redirect handler.
+        if self.credential_kind == "recipient":
+            return http.client.HTTPSConnection(
+                urllib.parse.urlsplit(self.origin).hostname, 443, timeout=timeout)
+        return http.client.HTTPConnection("127.0.0.1", self.port, timeout=timeout)
+
+    def headers(self):
+        result = {"Authorization": "Bearer " + self.credential}
+        if self.credential_kind == "recipient":
+            result["Origin"] = self.origin
+        return result
+
+
+def _transport(port, token, selected):
+    if selected is None:
+        return OperatorTransport.loopback(port, token)
+    if (not isinstance(selected, OperatorTransport)
+            or selected.port != port or selected.credential != token):
+        raise ValueError("Keep the selected original transport and credential together.")
+    return selected
 
 
 def descriptor(ticket: Mapping) -> dict:
@@ -145,7 +235,8 @@ def _checkpoint(path: Path, binding: dict, count: int, h) -> dict:
 
 
 def download(port: int, token: str, ticket: Mapping, destination,
-             *, progress: Progress | None = None) -> dict:
+             *, progress: Progress | None = None,
+             transport: OperatorTransport | None = None) -> dict:
     """Receive or resume one file from the same authenticated loopback operator.
 
     Re-invoke with the current original ticket after an interruption. A new port,
@@ -153,10 +244,7 @@ def download(port: int, token: str, ticket: Mapping, destination,
     The receiver performs no redirects and no automatic task/action retries.
     """
     selected = descriptor(ticket)
-    if type(port) is not int or not 1 <= port <= 65535:
-        raise ValueError("Select the existing loopback operator port")
-    if not isinstance(token, str) or not token or "\r" in token or "\n" in token:
-        raise ValueError("Select the existing private operator capability")
+    selected_transport = _transport(port, token, transport)
     destination = Path(destination).absolute()
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination = destination.parent.resolve(strict=True) / destination.name
@@ -227,12 +315,12 @@ def download(port: int, token: str, ticket: Mapping, destination,
             connection = None
             try:
                 if count < selected["bytes"] or selected["bytes"] == 0:
-                    headers = {"Authorization": "Bearer " + token,
+                    headers = {**selected_transport.headers(),
                                "Accept-Encoding": "identity"}
                     if count:
                         headers.update({"Range": f"bytes={count}-",
                                         "If-Range": '"' + selected["sha256"] + '"'})
-                    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=60)
+                    connection = selected_transport.connection(timeout=60)
                     connection.request("GET", selected["url"] + "?download=1", headers=headers)
                     response = connection.getresponse()
                     expected_status = 206 if count else 200
@@ -299,13 +387,15 @@ def download(port: int, token: str, ticket: Mapping, destination,
 
 
 def receive_cohort(port: int, token: str, tickets: list, directory,
-                   *, source: dict | None = None, progress: Progress | None = None) -> dict:
+                   *, source: dict | None = None, progress: Progress | None = None,
+                   transport: OperatorTransport | None = None) -> dict:
     """Receive every selected ticket with an immutable plan and restart progress.
 
     Exact repeated ticket identities share one member. Numbered native filenames
     prevent collisions while the plan preserves every original label and ticket.
     All URLs in the saved plan are relative; no capability or connection is saved.
     """
+    selected_transport = _transport(port, token, transport)
     if not isinstance(tickets, list) or not tickets:
         raise ValueError("Select a nonempty complete download cohort")
     directory = Path(directory).absolute()
@@ -360,7 +450,8 @@ def receive_cohort(port: int, token: str, tickets: list, directory,
                 if progress:
                     progress(status["current"])
             try:
-                value = download(port, token, row, directory / row["path"], progress=report)
+                value = download(port, token, row, directory / row["path"], progress=report,
+                                 transport=selected_transport)
                 results.append({**value, "path": row["path"]})
                 save()
             except BaseException as error:
