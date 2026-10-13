@@ -6,7 +6,7 @@ original source edition, selected geometry, rule reference and portable report.
 from __future__ import annotations
 
 from collections import Counter
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from functools import lru_cache
 import csv
 import io
@@ -121,6 +121,7 @@ def _infer_id(path, layer, source_sha256):
 def _reader(workspace, choice):
     import fiona
     from pyproj import CRS
+    from .spatial_esri import OriginalEsriFeatures, UnsupportedEsriGeometry, is_esri_source
     collection_id = _text(choice.get("source_collection_id"), "Source edition")
     source_id = _text(choice.get("source_id"), "Source")
     path, entry = workspace.source_file(collection_id, source_id)
@@ -130,8 +131,27 @@ def _reader(workspace, choice):
     if expected is not None and expected != entry["body"]["sha256"]:
         raise ValueError("The selected source edition changed; reopen its source choices")
     layer = choice.get("layer") or entry.get("layer")
-    kwargs = {"layer": layer} if layer else {}
-    with rasters.vector_environment(), fiona.open(rasters.native_vector_path(path), **kwargs) as src:
+    reader = None
+    with ExitStack() as stack:
+        src = None
+        if is_esri_source(path, entry):
+            try:
+                src = OriginalEsriFeatures(path, entry)
+            except UnsupportedEsriGeometry:
+                pass
+        if src is None:
+            stack.enter_context(rasters.vector_environment())
+            src = stack.enter_context(fiona.open(
+                rasters.native_vector_path(path), **({"layer": layer} if layer else {})))
+        else:
+            if layer is not None and layer not in src.layers:
+                raise ValueError("Select the retained original Esri polygon layer")
+            reader = {
+                **_json_value(src.reader_metadata),
+                "adapter": "model/spatial_esri.py:OriginalEsriFeatures",
+                "adapter_source_sha256": file_digest(Path(__file__).with_name("spatial_esri.py")),
+                "analysis_axes": "XY",
+            }
         if not src.crs_wkt and not src.crs:
             raise ValueError("The retained source needs its actual coordinate reference")
         crs = CRS.from_user_input(src.crs_wkt or src.crs)
@@ -140,7 +160,8 @@ def _reader(workspace, choice):
         metadata = entry.get("metadata", {})
         id_field = declared_id or entry.get("id_field") or metadata.get("id_field")
         if id_field is None:
-            id_field = _infer_id(rasters.native_vector_path(path), layer, entry["body"]["sha256"])
+            id_field = ((reader.get("source_object_id_field") or "__fid__") if reader is not None else
+                        _infer_id(rasters.native_vector_path(path), layer, entry["body"]["sha256"]))
         if id_field != "__fid__" and id_field not in props:
             raise ValueError("The selected native identity field does not exist")
         class_field = choice.get("class_field") or ("H2OCLASS" if "H2OCLASS" in props else None)
@@ -156,7 +177,48 @@ def _reader(workspace, choice):
             "classification_status": metadata.get("classification_status"),
             "scope": entry.get("scope", {}),
         }
+        if reader is not None:
+            info["geometry_reader"] = reader
+            info["original_fields"] = dict(src.schema["properties"])
         yield src, crs, info
+
+
+def _storage_schema(original, info):
+    """Keep source parts and scalar attributes in a mixed-geometry GeoPackage."""
+    properties = dict(original.schema["properties"])
+    if info.get("geometry_reader") is not None:
+        field_types = {
+            "esriFieldTypeSmallInteger": "int", "esriFieldTypeInteger": "int64",
+            "esriFieldTypeBigInteger": "int64", "esriFieldTypeOID": "int64",
+            "esriFieldTypeSingle": "float", "esriFieldTypeDouble": "float",
+            "esriFieldTypeString": "str", "esriFieldTypeGUID": "str",
+            "esriFieldTypeGlobalID": "str", "esriFieldTypeXML": "str",
+            # Original Esri JSON dates are epoch milliseconds, not reformatted dates.
+            "esriFieldTypeDate": "int64", "esriFieldTypeDateOnly": "str",
+            "esriFieldTypeTimeOnly": "str", "esriFieldTypeTimestampOffset": "str",
+        }
+        converted = {}
+        for name, kind in properties.items():
+            if kind in field_types:
+                converted[name] = field_types[kind]
+                continue
+            values = [row["properties"].get(name) for row in original]
+            present = [value for value in values if value is not None]
+            if not present or all(isinstance(value, str) for value in present):
+                converted[name] = "str"
+            elif all(isinstance(value, (bool, int)) for value in present):
+                converted[name] = "int64"
+            elif all(isinstance(value, (bool, int, float)) for value in present):
+                converted[name] = "float"
+            else:
+                raise ValueError("Choose a supported original scalar GIS field: " + name)
+        properties = converted
+    # Source schemas can say Polygon while native features contain MultiPolygon.
+    # A generic GPKG layer retains the actual geometry, without flattening parts.
+    geometry = original.schema["geometry"]
+    if info.get("geometry_reader") is not None or geometry in {"Polygon", "MultiPolygon"}:
+        geometry = "Unknown"
+    return {"geometry": geometry, "properties": properties}
 
 def _feature(feature, id_field):
     properties = {str(key): _json_value(value) for key, value in dict(feature["properties"]).items()}
@@ -321,6 +383,7 @@ def _selected(workspace, choice, *, saving=False, consume=None, preview_offset=0
         wanted_classes = {_class_key(value) for value in selection["class_values"]}
         found_classes, seen = set(), set()
         selected_ids, preview_features, native_counts = [], [], Counter()
+        selected_provenance = []
         classes, class_values = Counter(), {}
         project = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
         total, points, polygon_count, line_count = 0, 0, 0, 0
@@ -363,6 +426,13 @@ def _selected(workspace, choice, *, saving=False, consume=None, preview_offset=0
             bbox = _bounds(bbox, geometry.bounds)
             index = len(selected_ids)
             selected_ids.append(fid)
+            if info.get("geometry_reader") is not None:
+                selected_provenance.append({
+                    "native_feature_id": fid,
+                    "source_array_index": feature.source_feature_index,
+                    "native_id_basis": feature.id_basis,
+                    "geometry_operations": _json_value(feature.geometry_operations),
+                })
             if info["class_field"]:
                 classes[key] += 1
                 class_values[key] = class_value
@@ -392,6 +462,7 @@ def _selected(workspace, choice, *, saving=False, consume=None, preview_offset=0
         "schema": "upstate.water-designation-preview/v1",
         "source": info, "selection": selection, "summary": summary,
         "selected_ids": sorted(selected_ids), "offset": preview_offset,
+        **({"selected_feature_provenance": selected_provenance} if info.get("geometry_reader") is not None else {}),
         "returned_features": len(preview_features), "total_features": len(selected_ids),
         "next_offset": preview_offset + len(preview_features) if preview_offset + len(preview_features) < len(selected_ids) else None,
         "geojson": {"type": "FeatureCollection", "features": preview_features},
@@ -457,7 +528,11 @@ def _report(result):
     rule = choice["rule_reference"]
     rows = "".join("<tr><td>" + escape(str(row["value"])) + "</td><td>" + str(row["count"]) + "</td></tr>"
                    for row in s["classes"])
-    notes = "".join("<li>" + escape(note) + "</li>" for note in MEASURE_NOTES + choice["notes"])
+    interpretation = []
+    if source.get("geometry_reader") is not None:
+        interpretation.append(
+            "Declared Esri polygon rings use the retained source reader. Any ring correction is recorded per selected feature in selected-identities.json; the original response remains unchanged.")
+    notes = "".join("<li>" + escape(note) + "</li>" for note in MEASURE_NOTES + choice["notes"] + interpretation)
     rule_uri = escape(rule.get("uri") or "", quote=True)
     return """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>""" + escape(choice["title"]) + """</title><style>
@@ -485,8 +560,7 @@ def save(workspace, choice):
         # Bind the source edition before writing; the original source stays retained.
         with _reader(workspace, choice) as (original, _, info):
             selection = _normalized(choice, info, saving=True)
-            output_schema = {"geometry": original.schema["geometry"],
-                             "properties": dict(original.schema["properties"])}
+            output_schema = _storage_schema(original, info)
             occupied = {name.casefold() for name in output_schema["properties"]}
             def unused_name(name):
                 while name.casefold() in occupied:
@@ -538,7 +612,9 @@ def save(workspace, choice):
         selected_ids_path = directory / "selected-identities.json"
         atomic_json(selected_ids_path, {"source": info, "selection": selection,
                                        "selected_ids": result["selected_ids"],
-                                       "summary": result["summary"]}, immutable=True)
+                                       "summary": result["summary"],
+                                       **({"selected_feature_provenance": result["selected_feature_provenance"]}
+                                          if "selected_feature_provenance" in result else {})}, immutable=True)
         manifest_path = directory / "sources.json"
         rule = selection["rule_reference"]
         rule_path = directory / "rule-reference.json"
@@ -566,7 +642,12 @@ def save(workspace, choice):
                              "source_title": info["title"], "source_sha256": info["sha256"],
                              "original_id_field": info["id_field"],
                              "rule_reference": rule, "selection": selection,
-                             "geometry_derivation": "Exact selected native features; original CRS and attributes retained"},
+                             "geometry_derivation": (
+                                 "Retained Esri rings interpreted by the declared original parser; original body and per-feature operations retained"
+                                 if info.get("geometry_reader") is not None else
+                                 "Exact selected native features; original CRS and attributes retained"),
+                             **({"geometry_reader": info["geometry_reader"]}
+                                if info.get("geometry_reader") is not None else {})},
             }],
         }
         atomic_json(manifest_path, source_manifest)
