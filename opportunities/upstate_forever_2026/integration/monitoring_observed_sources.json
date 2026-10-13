@@ -72,9 +72,11 @@
     },
     {
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 11144,
-      "sha256": "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe",
-      "predecessor_sha256": []
+      "bytes": 11335,
+      "sha256": "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f",
+      "predecessor_sha256": [
+        "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe"
+      ]
     },
     {
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
@@ -114,21 +116,23 @@
     },
     {
       "path": "operator/extensions/monitoring.json",
-      "bytes": 1669,
-      "sha256": "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4",
+      "bytes": 1795,
+      "sha256": "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61",
       "predecessor_sha256": [
         "dd42f8a79612669422d6d1d3ddf91bff8f8d017d90eb60c2f601252e8627ced8",
-        "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c"
+        "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c",
+        "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4"
       ]
     },
     {
       "path": "operator/web/monitoring.mjs",
-      "bytes": 7810,
-      "sha256": "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919",
+      "bytes": 8104,
+      "sha256": "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a",
       "predecessor_sha256": [
         "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
         "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be",
-        "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a"
+        "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a",
+        "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919"
       ]
     },
     {
@@ -148,29 +152,32 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 14760,
-      "sha256": "f089667e84cfd0c188ba9b88b70b4eba254dbd0ad7515a1732e7669a159cc518",
+      "bytes": 15514,
+      "sha256": "b93c57c7eb4e0fbce2a92d09b9b4cf1346c7fd262bccb82ddc624e3714bcff4a",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
         "7620dbe4b3e5a4f6fd9a9d24215c393248198591dffa00ef8876791310e93a3c",
-        "fb09fda9c1ab9c0daabd7da2f7433c9e53e3e5ddf7ad8d98c37f23028c93d7fd"
+        "fb09fda9c1ab9c0daabd7da2f7433c9e53e3e5ddf7ad8d98c37f23028c93d7fd",
+        "f089667e84cfd0c188ba9b88b70b4eba254dbd0ad7515a1732e7669a159cc518"
       ]
     },
     {
       "path": "operator/monitoring_receiving.py",
-      "bytes": 16918,
-      "sha256": "7dbc67d5c58ce4bdffed8482ddd04f3ba030ee5ed845d16973f355e06f367155",
+      "bytes": 18059,
+      "sha256": "f59fea6a2b5c61f90803728776029b5880fe33bd61a2d7393e0abfa389727756",
       "predecessor_sha256": [
-        "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7"
+        "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7",
+        "7dbc67d5c58ce4bdffed8482ddd04f3ba030ee5ed845d16973f355e06f367155"
       ]
     },
     {
       "path": "integrations/monitoring/RECEIVING.md",
-      "bytes": 12853,
-      "sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e",
+      "bytes": 13814,
+      "sha256": "1f8b2c863fe73d91834e72fbc8da779f7957e289d3d60d097fa13062c5428bcb",
       "predecessor_sha256": [
-        "64c51b2a43621fd9f57b8457754a77a0bb7f0bc356aab1c253a6b0edf8ed451b"
+        "64c51b2a43621fd9f57b8457754a77a0bb7f0bc356aab1c253a6b0edf8ed451b",
+        "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
       ]
     },
     {
@@ -242,5 +249,12 @@
     }
   },
   "receiving": "integrations/monitoring/RECEIVING.md",
-  "receiving_base": "Current complete application atce1175a61650ffcd961ef784766df7d5c07e6b59, preserving Monitoring report and Implementation fieldwork composition"
+  "receiving_base": "Current complete application atce1175a61650ffcd961ef784766df7d5c07e6b59, preserving Monitoring report and Implementation fieldwork composition",
+  "selected_study_transfer": {
+    "source_manifest": "integration/monitoring_study_transfer_sources.json",
+    "guide": "model/MONITORING_STUDY_TRANSFER.md",
+    "receiving_option": {
+      "archive_scope": "selected"
+    }
+  }
 }

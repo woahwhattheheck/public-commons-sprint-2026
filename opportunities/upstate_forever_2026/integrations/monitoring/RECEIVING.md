@@ -170,10 +170,8 @@ after the existing workspace lock, before capturing any report output or
 retained source; preparation does not acquire the workspace lock afterward.
 
 
-## Maintained cumulative application source
+## Receive only the selected editable Monitoring study
 
-For the current complete application, use the existing installer in `docs/COMPLETE_APPLICATION_RECEIVING.md`. Its component catalogue now selects the current campaign-to-Implementation bridge, observed context, exact native reports and original source packets together.
+Add `"archive_scope": "selected"` to the same original receiving selection to create an original selected-study archive from its saved campaign and optional observational context. The existing receiver keeps one receipt/output lock, restores the archive through the original Workspace writer, compares the same native records, appends its independent receiving revision, and verifies retained campaign/replay identities again. The default remains `"complete"`. Use a new output directory when changing this explicit selection.
 
-The current Monitoring installer accepts `--source-root /absolute/pinned/application-or-repository` in addition to its existing target argument. When invoked from a complete current checkout without that option, it chooses that checkout's maintained source. `current_application_files.json` lists the owned current files and existing native dependencies. The original packaged `src/` route remains available for its original standalone bundle. Use `--check` to inspect the selected source mode, complete file identities and exact changes before applying the same invocation.
-
-The live application requires the existing Implementation, registered extension-host and Monitoring report-source families. The report-source producer/descriptor/assets remain with their own maintained installer; this installer checks their presence instead of replacing them. Updates preserve current unknown peer postimages and retain original backup/rollback handling. The cumulative whole-application route supplies these dependencies in one installation.
+The Monitoring browser now offers **Transfer editable study** alongside existing exports and report controls. Its original Study transfer preview includes the full parent/event/source dependency closure and related completed Monitoring report. The exact workflow and current source composition are in [MONITORING_STUDY_TRANSFER.md](../../model/MONITORING_STUDY_TRANSFER.md).
