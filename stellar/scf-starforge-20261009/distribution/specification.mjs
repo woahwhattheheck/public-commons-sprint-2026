@@ -1,5 +1,6 @@
 // MIT. Compose source-owned merchant registrations for checkout and pinned builds.
 import { createHash } from 'node:crypto';
+import { browserAssetDeclarations } from './browser-assets.mjs';
 import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -271,7 +272,70 @@ async function originalJson(root, path) {
   if (!info.isFile() || info.size > 1024 * 1024) throw new TypeError('Distribution declaration must be a regular file up to 1 MiB: ' + path);
   const bytes = await readFile(filename);
   if (bytes.length > 1024 * 1024) throw new TypeError('Distribution declaration exceeds 1 MiB: ' + path);
-  return { data: JSON.parse(bytes.toString('utf8')), descriptor: { path, bytes: bytes.length, sha256: digest(bytes) } };
+  return { bytes, data: JSON.parse(bytes.toString('utf8')), descriptor: { path, bytes: bytes.length, sha256: digest(bytes) } };
+}
+
+/** Authenticate dependency-only browser declarations without composing their capabilities. */
+async function installedBrowserDeclarations(root, manifest, entries, base, originalFiles) {
+  const evidence = manifest.browserAssetDeclarations;
+  if (evidence === undefined) return new Set(); // Original pre-dependency archives remain readable.
+  if (!Array.isArray(evidence) || evidence.length > entries.size)
+    throw new TypeError('Installed browser declaration inventory is invalid');
+  const retainedPaths = new Set(), declarations = new Map(originalFiles);
+  const assertIdentity = (input, retained, label) => {
+    if (!retained || retained.packagePath !== 'source/' + input.path ||
+        !Number.isSafeInteger(input.bytes) || input.bytes <= 0 || input.bytes > 1024 * 1024 ||
+        !/^[a-f0-9]{64}$/.test(input.sha256 ?? '') || !/^[a-f0-9]{40}$/.test(input.gitBlob ?? '') ||
+        retained.bytes !== input.bytes || retained.sha256 !== input.sha256 || retained.gitBlob !== input.gitBlob)
+      throw new TypeError('Installed browser declaration identity changed: ' + label);
+  };
+  for (const row of evidence) {
+    if (!plain(row) || Object.keys(row).some(key => !['path', 'gitBlob', 'sha256', 'bytes', 'registrations'].includes(key)) ||
+        typeof row.path !== 'string' || retainedPaths.has(row.path) ||
+        row.path !== distributionPath && !contributionPaths([row.path]).includes(row.path) ||
+        !Array.isArray(row.registrations) || !row.registrations.length)
+      throw new TypeError('Installed browser declaration evidence is invalid');
+    retainedPaths.add(row.path);
+    assertIdentity(row, entries.get(row.path), row.path);
+    let original = declarations.get(row.path);
+    if (!original) {
+      original = await originalJson(root, row.path);
+      declarations.set(row.path, original);
+    }
+    const bytes = original.bytes;
+    const gitBlob = createHash('sha1').update('blob ' + bytes.length + '\0').update(bytes).digest('hex');
+    if (original.descriptor.bytes !== row.bytes || original.descriptor.sha256 !== row.sha256 || gitBlob !== row.gitBlob)
+      throw new TypeError('Installed original browser declaration changed: ' + row.path);
+    for (const registration of row.registrations) {
+      if (!plain(registration) || Object.keys(registration).some(key => !['server', 'manifest'].includes(key)))
+        throw new TypeError('Installed browser registration is invalid: ' + row.path);
+      for (const key of ['server', 'manifest']) {
+        const path = filePath(registration[key], 'retained browser ' + key), file = entries.get(path);
+        if (!file || file.packagePath !== 'source/' + path || !Number.isSafeInteger(file.bytes) || file.bytes < 0 ||
+            !/^[a-f0-9]{64}$/.test(file.sha256 ?? '') || !/^[a-f0-9]{40}$/.test(file.gitBlob ?? ''))
+          throw new TypeError('Installed browser registration source is missing: ' + path);
+      }
+    }
+  }
+  // Reconstruct the producer's exact reached-server evidence from the retained
+  // original documents. Unreached registrations and unrelated donor fields are
+  // never composed or validated as enabled product capabilities.
+  const index = browserAssetDeclarations({ base,
+    contributions: [...declarations].filter(([path]) => path !== distributionPath)
+      .map(([path, original]) => ({ path, data: original.data })) });
+  const expected = new Map();
+  for (const server of index.servers) {
+    if (!entries.has(server)) continue;
+    for (const row of index.forServer(server)) {
+      const rows = expected.get(row.source) ?? [];
+      rows.push({ server: row.server, manifest: row.manifest }); expected.set(row.source, rows);
+    }
+  }
+  const canonical = rows => rows.map(row => JSON.stringify([row.server, row.manifest])).sort();
+  if (expected.size !== evidence.length || evidence.some(row =>
+    !expected.has(row.path) || !same(canonical(row.registrations), canonical(expected.get(row.path)))))
+    throw new TypeError('Installed browser declaration registrations changed');
+  return retainedPaths;
 }
 
 /** Load the same declarations from a source checkout or original installed archive. */
@@ -299,19 +363,24 @@ export async function readDistributionSpecification({ sourceRoot = ownRoot, sele
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
   const discoveredPaths = contributionPaths(names);
   const paths = recipe ? selectedContributionPaths(discoveredPaths, recipe) : discoveredPaths;
-  if (manifest && recipe && !same(paths, discoveredPaths))
-    throw new TypeError('Installed source selection contains unselected contribution files');
   const inputFiles = [original.descriptor], contributions = [];
+  const originalFiles = new Map([[distributionPath, original]]);
   for (const path of paths) {
     const file = await originalJson(root, path);
     inputFiles.push(file.descriptor); contributions.push({ path, data: file.data });
+    originalFiles.set(path, file);
   }
   if (recipeFile) inputFiles.push(recipeFile.descriptor);
   const distribution = composeDistribution({ base: original.data, contributions, selection: recipe });
   if (manifest) {
     const entries = new Map(manifest.files.map(entry => [entry.path, entry]));
     if (entries.size !== manifest.files.length) throw new TypeError('Installed distribution has duplicate files');
-    const expected = [distributionPath, ...contributionPaths([...entries.keys()]), ...(recipePath ? [recipePath] : [])];
+    const browserDeclarations = await installedBrowserDeclarations(root, manifest, entries, original.data, originalFiles);
+    const admittedContributions = [...new Set([...paths, ...contributionPaths([...browserDeclarations])])].sort();
+    if (!same(discoveredPaths, admittedContributions) ||
+        !same(contributionPaths([...entries.keys()]), admittedContributions))
+      throw new TypeError('Installed source selection contains unselected or unauthenticated contribution files');
+    const expected = [distributionPath, ...paths, ...(recipePath ? [recipePath] : [])];
     if (!same(inputFiles.map(entry => entry.path), expected))
       throw new TypeError('Installed distribution contribution inventory changed');
     for (const input of inputFiles) {
