@@ -12,11 +12,13 @@ import math
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from .common import INVEST_VERSION, atomic_bytes, atomic_json, describe_file
+from .common import atomic_bytes, atomic_json, describe_file
 from . import rasters, observation_diagnostics
-from .native_versions import POLICY as EXECUTION_VERSION_POLICY, model_versions, models_for_outputs
+from .model_selection import run_scope
+from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
+                              model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v12-observation-diagnostics-v1"
+REPORT_VERSION = "upstate.scientific-report/v13-execution-observation-diagnostics-v1"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -151,7 +153,7 @@ def _current_exports(baseline, grid):
     ]
 
 
-def _biophysical(workspace, profile):
+def _biophysical(workspace, profile, *, execution_versions=None):
     """Read the exact original CSV bound to the saved native profile."""
     from .model_selection import selected
     from .profiles import inspect_table
@@ -231,14 +233,32 @@ def _biophysical(workspace, profile):
             caption="Additional original CSV fields, including source descriptions and references. "
                     "Fields outside the selected model requirements retain their original names and values.",
         ))
-    blocks.append("Field definitions for the pinned native engine: "
-                  + "; ".join("https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/"
-                              + INVEST_VERSION + "/userguide/en/" + name + ".html"
-                              for name in active) + ".")
+    versions = execution_versions or {}
+    if versions:
+        references = []
+        for name in active:
+            record = versions.get(name)
+            if record is None:
+                continue
+            url = guide_url(name, record)
+            references.append([
+                name.upper(), version_label(record),
+                link("Version-specific model guide", url) if url else "Version-specific guide unavailable",
+            ])
+        if references:
+            blocks.append(_table(
+                ["Model", "Baseline version and source", "Field definitions"],
+                references, widths=[.6, 3.0, 2.4],
+                caption="Guides follow the baseline's retained producing-model version. "
+                        "Completed-stage, observed-run fallback and requested-legacy bases remain distinct.",
+            ))
+    else:
+        blocks.append("This profile preserves its original field definitions and coefficient values. "
+                      "Version-specific execution references accompany the retained native runs.")
     return blocks
 
 
-def _profile(profile, workspace):
+def _profile(profile, workspace, *, execution_versions=None):
     rows = []
     for model in ("ndr", "sdr"):
         for key, value in profile.get(model, {}).items():
@@ -253,7 +273,7 @@ def _profile(profile, workspace):
             blocks.append("Profile reference: " + _plain(reference))
     if profile.get("model_period"):
         blocks.append("Model period: " + _plain(profile["model_period"]))
-    blocks.extend(_biophysical(workspace, profile))
+    blocks.extend(_biophysical(workspace, profile, execution_versions=execution_versions))
     return blocks
 
 
@@ -461,7 +481,6 @@ def _receptors(inventory):
     return blocks
 
 
-
 def execution_provenance(baseline, alternatives):
     """Freeze original producing-model identity without recomputing quantities."""
     runs = [baseline] + list(alternatives)
@@ -483,17 +502,6 @@ def execution_provenance(baseline, alternatives):
         } for run in runs},
         "source_note": "Exact full run, stage, environment and original source records remain in the retained working project.",
     }
-
-
-def execution_summary(versions, *, include_basis=True):
-    labels = {"completed_stage_runtime": "completed stage",
-              "observed_run_fallback": "observed run fallback",
-              "requested_legacy": "legacy requested", "unavailable": "unavailable"}
-    return "; ".join(
-        name.upper() + " InVEST " + str(value.get("comparison_version") or "not recorded") +
-        ((" (" + labels.get(value.get("basis"), "unavailable") + ")") if include_basis else "")
-        for name, value in versions.items()
-    ) or "Original native InVEST execution; version metadata not recorded"
 
 
 def _native_execution(baseline, alternatives):
@@ -535,7 +543,10 @@ def refine_sections(sections, *, workspace, baseline, alternatives, comparison,
                     profile, grid, priority, observation_results, receptor_inventory=None):
     """Replace machine-record paragraphs and retain independently installed sections."""
     replacements = {
-        "Selected parameter profile": _profile(profile, workspace),
+        "Selected parameter profile": _profile(
+            profile, workspace,
+            execution_versions=model_versions(
+                baseline, models_for_outputs(run_scope(baseline)["available_artifacts"]))),
         "Current quantitative exports": _current_exports(baseline, grid),
         "Future conservation and development scenarios": _scenario_sections(workspace, alternatives, comparison),
         "Combined priorities": _priorities(priority),
@@ -835,6 +846,7 @@ def delivery_sections(state, *, working_archive_path=None):
                        ("source_report_json", "Original watershed report data"),
                        ("working_archive", "Complete scientific workspace"),
                        ("display_scales", "Map scale definitions"),
+                       ("native_execution", "Original producing native execution records"),
                        ("receptor_inventory", "Source-water contributing areas"),
                        ("parcel_source_lineage_report", "County parcel source editions"),
                        ("parcel_source_lineage", "Complete typed parcel source lineage"),
