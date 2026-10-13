@@ -2,6 +2,11 @@ import {HANDOVER_ROUTES,attachGrantHandover} from './grant-handover.mjs';
 // MIT. Connect the complete submission workspace to the existing grant composer.
 export const SUBMISSION_OPERATION = 'SCF-SUBMISSION-WORKSPACE-22B705-20261012';
 export const SUBMISSION_ROUTES = [
+  ["/grant-submission-working-copy.mjs",["grant-submission-working-copy.mjs","text/javascript; charset=utf-8"]],
+  ["/grant-form-workbook.mjs",["grant-form-workbook.mjs","text/javascript; charset=utf-8"]],
+  ["/grant-form-workbook-workspace.mjs",["grant-form-workbook-workspace.mjs","text/javascript; charset=utf-8"]],
+  ["/source-delimited.mjs",["source-delimited.mjs","text/javascript; charset=utf-8"]],
+  ["/grant-offline-package.mjs",["grant-offline-package.mjs","text/javascript; charset=utf-8"]],
   ['/grant-requirement-review-core.mjs',['grant-requirement-review-core.mjs','text/javascript; charset=utf-8']],
   ['/grant-requirement-review-workspace.mjs',['grant-requirement-review-workspace.mjs','text/javascript; charset=utf-8']],
   ['/grant-operating-plan-core.mjs',['grant-operating-plan-core.mjs','text/javascript; charset=utf-8']],
@@ -38,6 +43,9 @@ export function attachGrantSubmission({templateHtml,sourceIndex}){
     application_sha256:index.application.sha256,application_git_blob:index.application.git_blob,
     draft_schema:'stellar-forge.grant-submission-draft.v1',export_schema:'stellar-forge.grant-submission-export.v1',
     required_content_review:{schema:'stellar-forge.grant-required-content-review.v1',coverage_schema:'stellar-forge.grant-required-content-coverage.v1',route:'/grant-submission.html',view:'review',operation:'SCF-REQUIRED-CONTENT-REVIEW-7108-20261013'},
+    working_copy:{schema:'stellar-forge.grant-submission-working-copy.v1',export_schema:'stellar-forge.grant-submission-working-export.v1',route:'/grant-submission.html',query:'working',guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION_WORKING.md'},
+    form_workbook:{schema:'stellar-forge.grant-form-workbook.v1',view:'fields',guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION_WORKING.md'},
+    offline_editor:{schema:'stellar-forge.grant-offline-editor.v1',route:'/grant-submission.html',format:'self-contained-html',guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION_WORKING.md'},
     form_map_schema:'stellar-forge.grant-form-map.v1',operation:SUBMISSION_OPERATION,
     planning:{source_schema:'stellar-forge.grant-plan-source.v1',review_schema:'stellar-forge.grant-plan-review.v1',update_schema:'stellar-forge.grant-plan-update.v1',target_schema:'stellar-forge.grant-plan-target.v1',native_schema:'stellar-forge.sf47-planning.v1',formats:['json','zip'],operation:'SCF-PLAN-SUBMISSION-INTEGRATION-7F5A-20261012'},
     product_sources:{schema:'stellar-forge.grant-product-authoring.v1',
