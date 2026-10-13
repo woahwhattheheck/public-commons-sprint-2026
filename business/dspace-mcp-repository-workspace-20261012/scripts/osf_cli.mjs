@@ -37,7 +37,7 @@ function publishStage(stage,target,existingMatches){
 }
 function retain(target,bytes){
  target=path.resolve(target);privateDir(path.dirname(target));
- if(sameRetained(target,bytes))return target;
+ if(sameRetained(target,bytes)){syncDir(path.dirname(target));return target;}
  const stage=path.join(path.dirname(target),'.'+path.basename(target)+'.stage-'+randomUUID());
  let fd;
  try{
@@ -50,7 +50,7 @@ function retain(target,bytes){
 async function retainFile(target,source){
  target=path.resolve(target);source=path.resolve(source);privateDir(path.dirname(target));
  const expected=await fileHash(source);
- try{const actual=await fileHash(target);if(stable(actual)!==stable(expected))throw Error('The existing destination differs from this complete export.');return expected;}
+ try{const actual=await fileHash(target);if(stable(actual)!==stable(expected))throw Error('The existing destination differs from this complete export.');syncDir(path.dirname(target));return expected;}
  catch(error){if(error.code!=='ENOENT')throw error;}
  const stage=path.join(path.dirname(target),'.'+path.basename(target)+'.stage-'+randomUUID());
  try{
