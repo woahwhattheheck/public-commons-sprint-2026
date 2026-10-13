@@ -1,0 +1,315 @@
+{
+  "results": 498,
+  "resultIds": 498,
+  "limitRows": 447,
+  "limitIds": 447,
+  "mismatches": [],
+  "noLimitResults": [
+    {
+      "id": "STORET-983793232",
+      "activity": "21SC60WQ_WQX-AE12851",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983814112",
+      "activity": "21SC60WQ_WQX-AE05830",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983862538",
+      "activity": "21SC60WQ_WQX-AE22861",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983832305",
+      "activity": "21SC60WQ_WQX-AE16098",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983768428",
+      "activity": "21SC60WQ_WQX-AE10135",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983768431",
+      "activity": "21SC60WQ_WQX-AE10135",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983759117",
+      "activity": "21SC60WQ_WQX-AE09023",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983821114",
+      "activity": "21SC60WQ_WQX-AE14605",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983832303",
+      "activity": "21SC60WQ_WQX-AE16098",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983798948",
+      "activity": "21SC60WQ_WQX-AE13772",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983841442",
+      "activity": "21SC60WQ_WQX-AE17573",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983793230",
+      "activity": "21SC60WQ_WQX-AE12851",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983862541",
+      "activity": "21SC60WQ_WQX-AE22861",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983814114",
+      "activity": "21SC60WQ_WQX-AE05830",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983759116",
+      "activity": "21SC60WQ_WQX-AE09023",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983841443",
+      "activity": "21SC60WQ_WQX-AE17573",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983832307",
+      "activity": "21SC60WQ_WQX-AE16098",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983821111",
+      "activity": "21SC60WQ_WQX-AE14605",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983798946",
+      "activity": "21SC60WQ_WQX-AE13772",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983759114",
+      "activity": "21SC60WQ_WQX-AE09023",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983832301",
+      "activity": "21SC60WQ_WQX-AE16098",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983829013",
+      "activity": "21SC60WQ_WQX-AE07753",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983768426",
+      "activity": "21SC60WQ_WQX-AE10135",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983853215",
+      "activity": "21SC60WQ_WQX-AE20945",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983841444",
+      "activity": "21SC60WQ_WQX-AE17573",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983829014",
+      "activity": "21SC60WQ_WQX-AE07753",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983829015",
+      "activity": "21SC60WQ_WQX-AE07753",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983829012",
+      "activity": "21SC60WQ_WQX-AE07753",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983848362",
+      "activity": "21SC60WQ_WQX-AE19252",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983853213",
+      "activity": "21SC60WQ_WQX-AE20945",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983853214",
+      "activity": "21SC60WQ_WQX-AE20945",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983848359",
+      "activity": "21SC60WQ_WQX-AE19252",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983821112",
+      "activity": "21SC60WQ_WQX-AE14605",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983821110",
+      "activity": "21SC60WQ_WQX-AE14605",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983862540",
+      "activity": "21SC60WQ_WQX-AE22861",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983853216",
+      "activity": "21SC60WQ_WQX-AE20945",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983814113",
+      "activity": "21SC60WQ_WQX-AE05830",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983841441",
+      "activity": "21SC60WQ_WQX-AE17573",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983862539",
+      "activity": "21SC60WQ_WQX-AE22861",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983848360",
+      "activity": "21SC60WQ_WQX-AE19252",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983848363",
+      "activity": "21SC60WQ_WQX-AE19252",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983793238",
+      "activity": "21SC60WQ_WQX-AE12851",
+      "characteristic": "Depth",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983798949",
+      "activity": "21SC60WQ_WQX-AE13772",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983798947",
+      "activity": "21SC60WQ_WQX-AE13772",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-983793235",
+      "activity": "21SC60WQ_WQX-AE12851",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-1078027735",
+      "activity": "21SC60WQ_WQX-AF16532",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    },
+    {
+      "id": "STORET-1078025845",
+      "activity": "21SC60WQ_WQX-AF16055",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-1078025849",
+      "activity": "21SC60WQ_WQX-AF16055",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-1078027722",
+      "activity": "21SC60WQ_WQX-AF16532",
+      "characteristic": "Dissolved oxygen (DO)",
+      "condition": ""
+    },
+    {
+      "id": "STORET-1078027733",
+      "activity": "21SC60WQ_WQX-AF16532",
+      "characteristic": "pH",
+      "condition": ""
+    },
+    {
+      "id": "STORET-1078025851",
+      "activity": "21SC60WQ_WQX-AF16055",
+      "characteristic": "Temperature, water",
+      "condition": ""
+    }
+  ]
+}

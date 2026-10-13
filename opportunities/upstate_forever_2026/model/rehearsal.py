@@ -279,8 +279,10 @@ class Rehearsal:
         if comparison:
             expected = [choice.get("baseline_run_id")] + choice["alternative_run_ids"]
             actual = [comparison["baseline_run_id"]] + [r["run_id"] for r in comparison["alternatives"]]
-            if actual != expected or digest({"runs": actual, "direction": "alternative minus baseline"}) != comparison["id"]:
+            if actual != expected:
                 raise ValueError("Select the comparison of these exact baseline and alternative runs in their original order")
+            from .native_versions import validate_run_comparison
+            validate_run_comparison(self.ws, comparison)
         if delivery:
             spec = delivery["selection"]
             if spec.get("baseline_run_id") != choice.get("baseline_run_id") or spec.get("scenario_run_ids") != choice["alternative_run_ids"]:

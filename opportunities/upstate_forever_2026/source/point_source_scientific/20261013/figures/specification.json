@@ -1,0 +1,860 @@
+{
+  "schema": "upstate.scientific-figure-spec/v1",
+  "edition": "ECHO-POINT-SOURCE-SCIENTIFIC-20261013-r1",
+  "figures": [
+    {
+      "id": "upstream-five-year-phosphorus",
+      "title": "Currently upstream phosphorus: five complete years",
+      "caption": "Sum of the three separately retained Upper, Middle and Milliken monthly series. Every selected year has twelve unique numeric months. The current outfall-to-gauge relation is applied as context; original historical reporting features remain distinct.",
+      "source_members": [
+        "source/point_source_history/20261013/analysis.json"
+      ],
+      "panels": [
+        {
+          "id": "annual-tp",
+          "title": "Original complete monthly-period sums",
+          "x": {
+            "label": "Reporting year",
+            "unit": "",
+            "domain": [
+              2020.8,
+              2025.2
+            ],
+            "ticks": [
+              {
+                "value": 2021,
+                "label": "2021"
+              },
+              {
+                "value": 2022,
+                "label": "2022"
+              },
+              {
+                "value": 2023,
+                "label": "2023"
+              },
+              {
+                "value": 2024,
+                "label": "2024"
+              },
+              {
+                "value": 2025,
+                "label": "2025"
+              }
+            ]
+          },
+          "y": {
+            "label": "Phosphorus load",
+            "unit": "kg/year",
+            "domain": [
+              0,
+              1100
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 250,
+                "label": "250"
+              },
+              {
+                "value": 500,
+                "label": "500"
+              },
+              {
+                "value": 750,
+                "label": "750"
+              },
+              {
+                "value": 1000,
+                "label": "1000"
+              }
+            ]
+          },
+          "series": [
+            {
+              "geometry": "line",
+              "label": "Current upstream cohort",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 2021,
+                  "y": 985.58,
+                  "member_series_ids": [
+                    "SC0042994|001|1|00665",
+                    "SC0047856|001|1|00665",
+                    "SC0000477|T1M|1|00665"
+                  ]
+                },
+                {
+                  "x": 2022,
+                  "y": 929.25,
+                  "member_series_ids": [
+                    "SC0042994|001|1|00665",
+                    "SC0047856|001|1|00665",
+                    "SC0000477|T1M|1|00665"
+                  ]
+                },
+                {
+                  "x": 2023,
+                  "y": 949.71,
+                  "member_series_ids": [
+                    "SC0042994|001|1|00665",
+                    "SC0047856|001|1|00665",
+                    "SC0000477|T1M|1|00665"
+                  ]
+                },
+                {
+                  "x": 2024,
+                  "y": 520.7,
+                  "member_series_ids": [
+                    "SC0042994|001|1|00665",
+                    "SC0047856|001|1|00665",
+                    "SC0000477|T1M|1|00665"
+                  ]
+                },
+                {
+                  "x": 2025,
+                  "y": 955.7,
+                  "member_series_ids": [
+                    "SC0042994|001|1|00665",
+                    "SC0047856|001|1|00665",
+                    "SC0000477|T1M|1|00665"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "milliken-common-month-phosphorus",
+      "title": "Milliken phosphorus: the same eight original months",
+      "caption": "Original T1M / monitoring location 1 / parameter 00665 monthly loads. 2025 uses open circles and a solid line; 2026 uses filled squares and a dashed line. Each plotted point retains its original response and JSON pointer.",
+      "source_members": [
+        "source/point_source_drivers/20261013/analysis.json"
+      ],
+      "panels": [
+        {
+          "id": "paired-month-tp",
+          "title": "January–August, exact original monthly rows",
+          "x": {
+            "label": "Calendar month",
+            "unit": "",
+            "domain": [
+              0.7,
+              8.3
+            ],
+            "ticks": [
+              {
+                "value": 1,
+                "label": "Jan"
+              },
+              {
+                "value": 2,
+                "label": "Feb"
+              },
+              {
+                "value": 3,
+                "label": "Mar"
+              },
+              {
+                "value": 4,
+                "label": "Apr"
+              },
+              {
+                "value": 5,
+                "label": "May"
+              },
+              {
+                "value": 6,
+                "label": "Jun"
+              },
+              {
+                "value": 7,
+                "label": "Jul"
+              },
+              {
+                "value": 8,
+                "label": "Aug"
+              }
+            ]
+          },
+          "y": {
+            "label": "Reported phosphorus load",
+            "unit": "kg/month",
+            "domain": [
+              0,
+              200
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 50,
+                "label": "50"
+              },
+              {
+                "value": 100,
+                "label": "100"
+              },
+              {
+                "value": 150,
+                "label": "150"
+              },
+              {
+                "value": 200,
+                "label": "200"
+              }
+            ]
+          },
+          "series": [
+            {
+              "geometry": "line",
+              "label": "2025",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 1,
+                  "y": 69.53,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2025-est-N",
+                    "source_json_pointer": "/Results/Results/0",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2025&p_start_date=01%2F2025&p_end_date=12%2F2025",
+                    "original_period_end": "01/31/2025",
+                    "period_start": "2025-01-01",
+                    "period_end": "2025-01-31",
+                    "original_months_per_report": "1",
+                    "original_load": "69.53",
+                    "original_volume": "38.44",
+                    "original_average_concentration": "0.4779",
+                    "original_average_daily_load": "2.24",
+                    "original_average_daily_flow": "1.24",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "2.24",
+                    "original_quantity_2": "2.24",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.5600",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 2,
+                  "y": 35.34,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2025-est-N",
+                    "source_json_pointer": "/Results/Results/58",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2025&p_start_date=01%2F2025&p_end_date=12%2F2025",
+                    "original_period_end": "02/28/2025",
+                    "period_start": "2025-02-01",
+                    "period_end": "2025-02-28",
+                    "original_months_per_report": "1",
+                    "original_load": "35.34",
+                    "original_volume": "37.24",
+                    "original_average_concentration": "0.2507",
+                    "original_average_daily_load": "1.26",
+                    "original_average_daily_flow": "1.33",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "1.26",
+                    "original_quantity_2": "1.26",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.3400",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 3,
+                  "y": 43.91,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2025-est-N",
+                    "source_json_pointer": "/Results/Results/76",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2025&p_start_date=01%2F2025&p_end_date=12%2F2025",
+                    "original_period_end": "03/31/2025",
+                    "period_start": "2025-03-01",
+                    "period_end": "2025-03-31",
+                    "original_months_per_report": "1",
+                    "original_load": "43.91",
+                    "original_volume": "39.06",
+                    "original_average_concentration": "0.2970",
+                    "original_average_daily_load": "1.42",
+                    "original_average_daily_flow": "1.26",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "1.42",
+                    "original_quantity_2": "1.42",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.3700",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 4,
+                  "y": 33.91,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2025-est-N",
+                    "source_json_pointer": "/Results/Results/70",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2025&p_start_date=01%2F2025&p_end_date=12%2F2025",
+                    "original_period_end": "04/30/2025",
+                    "period_start": "2025-04-01",
+                    "period_end": "2025-04-30",
+                    "original_months_per_report": "1",
+                    "original_load": "33.91",
+                    "original_volume": "39",
+                    "original_average_concentration": "0.2297",
+                    "original_average_daily_load": "1.13",
+                    "original_average_daily_flow": "1.30",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "1.13",
+                    "original_quantity_2": "1.13",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.2900",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 5,
+                  "y": 25.9,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2025-est-N",
+                    "source_json_pointer": "/Results/Results/55",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2025&p_start_date=01%2F2025&p_end_date=12%2F2025",
+                    "original_period_end": "05/31/2025",
+                    "period_start": "2025-05-01",
+                    "period_end": "2025-05-31",
+                    "original_months_per_report": "1",
+                    "original_load": "25.90",
+                    "original_volume": "39.99",
+                    "original_average_concentration": "0.1711",
+                    "original_average_daily_load": "0.8354",
+                    "original_average_daily_flow": "1.29",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "0.8354",
+                    "original_quantity_2": "0.8354",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.2400",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 6,
+                  "y": 95.07,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2025-est-N",
+                    "source_json_pointer": "/Results/Results/2",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2025&p_start_date=01%2F2025&p_end_date=12%2F2025",
+                    "original_period_end": "06/30/2025",
+                    "period_start": "2025-06-01",
+                    "period_end": "2025-06-30",
+                    "original_months_per_report": "1",
+                    "original_load": "95.07",
+                    "original_volume": "33",
+                    "original_average_concentration": "0.7611",
+                    "original_average_daily_load": "3.17",
+                    "original_average_daily_flow": "1.10",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "3.17",
+                    "original_quantity_2": "3.17",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.9400",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 7,
+                  "y": 70.37,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2025-est-N",
+                    "source_json_pointer": "/Results/Results/39",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2025&p_start_date=01%2F2025&p_end_date=12%2F2025",
+                    "original_period_end": "07/31/2025",
+                    "period_start": "2025-07-01",
+                    "period_end": "2025-07-31",
+                    "original_months_per_report": "1",
+                    "original_load": "70.37",
+                    "original_volume": "31",
+                    "original_average_concentration": "0.5997",
+                    "original_average_daily_load": "2.27",
+                    "original_average_daily_flow": "1",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "2.27",
+                    "original_quantity_2": "2.27",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.8700",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 8,
+                  "y": 85.57,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2025-est-N",
+                    "source_json_pointer": "/Results/Results/69",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2025&p_start_date=01%2F2025&p_end_date=12%2F2025",
+                    "original_period_end": "08/31/2025",
+                    "period_start": "2025-08-01",
+                    "period_end": "2025-08-31",
+                    "original_months_per_report": "1",
+                    "original_load": "85.57",
+                    "original_volume": "32.55",
+                    "original_average_concentration": "0.6946",
+                    "original_average_daily_load": "2.76",
+                    "original_average_daily_flow": "1.05",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "2.76",
+                    "original_quantity_2": "2.76",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.7100",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                }
+              ]
+            },
+            {
+              "geometry": "line",
+              "label": "2026",
+              "marker": "square",
+              "points": [
+                {
+                  "x": 1,
+                  "y": 34.76,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2026-est-N",
+                    "source_json_pointer": "/Results/Results/6",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2026&p_start_date=01%2F2026&p_end_date=12%2F2026",
+                    "original_period_end": "01/31/2026",
+                    "period_start": "2026-01-01",
+                    "period_end": "2026-01-31",
+                    "original_months_per_report": "1",
+                    "original_load": "34.76",
+                    "original_volume": "28.52",
+                    "original_average_concentration": "0.3220",
+                    "original_average_daily_load": "1.12",
+                    "original_average_daily_flow": "0.9200",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "1.12",
+                    "original_quantity_2": "1.12",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.3400",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 2,
+                  "y": 47.29,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2026-est-N",
+                    "source_json_pointer": "/Results/Results/21",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2026&p_start_date=01%2F2026&p_end_date=12%2F2026",
+                    "original_period_end": "02/28/2026",
+                    "period_start": "2026-02-01",
+                    "period_end": "2026-02-28",
+                    "original_months_per_report": "1",
+                    "original_load": "47.29",
+                    "original_volume": "29.40",
+                    "original_average_concentration": "0.4250",
+                    "original_average_daily_load": "1.69",
+                    "original_average_daily_flow": "1.05",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "1.69",
+                    "original_quantity_2": "1.69",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.4600",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 3,
+                  "y": 47.99,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2026-est-N",
+                    "source_json_pointer": "/Results/Results/52",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2026&p_start_date=01%2F2026&p_end_date=12%2F2026",
+                    "original_period_end": "03/31/2026",
+                    "period_start": "2026-03-01",
+                    "period_end": "2026-03-31",
+                    "original_months_per_report": "1",
+                    "original_load": "47.99",
+                    "original_volume": "29.14",
+                    "original_average_concentration": "0.4351",
+                    "original_average_daily_load": "1.55",
+                    "original_average_daily_flow": "0.9400",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "1.55",
+                    "original_quantity_2": "1.55",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.4000",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 4,
+                  "y": 74.91,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2026-est-N",
+                    "source_json_pointer": "/Results/Results/22",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2026&p_start_date=01%2F2026&p_end_date=12%2F2026",
+                    "original_period_end": "04/30/2026",
+                    "period_start": "2026-04-01",
+                    "period_end": "2026-04-30",
+                    "original_months_per_report": "1",
+                    "original_load": "74.91",
+                    "original_volume": "30.60",
+                    "original_average_concentration": "0.6468",
+                    "original_average_daily_load": "2.50",
+                    "original_average_daily_flow": "1.02",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "2.50",
+                    "original_quantity_2": "2.50",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "1.20",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 5,
+                  "y": 114,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2026-est-N",
+                    "source_json_pointer": "/Results/Results/58",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2026&p_start_date=01%2F2026&p_end_date=12%2F2026",
+                    "original_period_end": "05/31/2026",
+                    "period_start": "2026-05-01",
+                    "period_end": "2026-05-31",
+                    "original_months_per_report": "1",
+                    "original_load": "114",
+                    "original_volume": "32.55",
+                    "original_average_concentration": "0.9253",
+                    "original_average_daily_load": "3.68",
+                    "original_average_daily_flow": "1.05",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "3.68",
+                    "original_quantity_2": "3.68",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "1",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 6,
+                  "y": 181,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2026-est-N",
+                    "source_json_pointer": "/Results/Results/42",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2026&p_start_date=01%2F2026&p_end_date=12%2F2026",
+                    "original_period_end": "06/30/2026",
+                    "period_start": "2026-06-01",
+                    "period_end": "2026-06-30",
+                    "original_months_per_report": "1",
+                    "original_load": "181",
+                    "original_volume": "29.10",
+                    "original_average_concentration": "1.64",
+                    "original_average_daily_load": "6.04",
+                    "original_average_daily_flow": "0.9700",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "6.04",
+                    "original_quantity_2": "6.04",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "1.50",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 7,
+                  "y": 184,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2026-est-N",
+                    "source_json_pointer": "/Results/Results/36",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2026&p_start_date=01%2F2026&p_end_date=12%2F2026",
+                    "original_period_end": "07/31/2026",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-07-31",
+                    "original_months_per_report": "1",
+                    "original_load": "184",
+                    "original_volume": "28.21",
+                    "original_average_concentration": "1.73",
+                    "original_average_daily_load": "5.95",
+                    "original_average_daily_flow": "0.9100",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "5.95",
+                    "original_quantity_2": "5.95",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "1.90",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                },
+                {
+                  "x": 8,
+                  "y": 108,
+                  "source_record": {
+                    "source_response_id": "four-permits-monitoring-period-2026-est-N",
+                    "source_json_pointer": "/Results/Results/46",
+                    "source_uri": "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_monitor_pd?output=JSON&p_permit_id=SC0042994%2CSC0047856%2CSC0000477%2CSC0035700&p_loads_data=DMR&p_nd=ZERO&p_param_group=N&p_est=N&p_year=2026&p_start_date=01%2F2026&p_end_date=12%2F2026",
+                    "original_period_end": "08/31/2026",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-08-31",
+                    "original_months_per_report": "1",
+                    "original_load": "108",
+                    "original_volume": "33.79",
+                    "original_average_concentration": "0.8473",
+                    "original_average_daily_load": "3.50",
+                    "original_average_daily_flow": "1.09",
+                    "measurement_type": "Average Quantity",
+                    "original_quantity_1": "3.50",
+                    "original_quantity_2": "3.50",
+                    "original_concentration_1": "--",
+                    "original_concentration_2": "--",
+                    "original_concentration_3": "0.9500",
+                    "original_qualifiers": {
+                      "Q1Qual": "=",
+                      "Q2Qual": "=",
+                      "C1Qual": "",
+                      "C2Qual": "",
+                      "C3Qual": "="
+                    },
+                    "non_detect_flag": "",
+                    "quality_flag": "",
+                    "nodi_description": "",
+                    "percent_loads_dmr": "100",
+                    "percent_loads_limits": "0",
+                    "load_unit": "kg/monitoring_period",
+                    "volume_unit": "million_US_gallons/monitoring_period",
+                    "concentration_unit": "mg/L"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

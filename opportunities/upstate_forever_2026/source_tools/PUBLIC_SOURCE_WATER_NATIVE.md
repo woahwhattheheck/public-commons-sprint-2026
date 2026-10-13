@@ -53,6 +53,40 @@ The preparation also writes scenario-source-areas.json, with schema upstate.scen
 
 Choose the baseline and scenarios in that form. Its model reports the selected published polygon intersected with the baseline reporting area, retaining the source-area origin with the saved analysis. Keep family totals from the receiving-water union when protection polygons overlap. Each zone remains available individually.
 
+## Original Esri ring interpretation
+
+The original Pioneer features 131 and 132 contain self-intersecting or touching
+rings. Receiving waters reads declared Esri polygon sources through the maintained
+`model.spatial_esri.OriginalEsriFeatures` reader, which delegates to
+`source.capture_upstream_network.esri_polygon`, also used by Conservation.
+That reader constructs the original rings, records each required Shapely
+`make_valid` operation, and combines ring interiors by symmetric difference.
+The original response, its ring coordinates, native OBJECTID values and source
+hash remain unchanged. No additional buffer is applied.
+
+Each new plan records the exact parser and adapter source hashes, original
+decoded body identity, original coordinate reference, selected feature-array
+positions and every geometry operation. These fields are in
+`identity.source_identities[].geometry_reader`,
+`identity.source_identities[].selected_features` and each receptor's
+`original_features`. Analysis uses planar XY geometry in the plan's declared
+projected metre CRS. A reconstructed valid analysis polygon and a publisher's
+stored area attribute remain distinct retained values.
+
+Receive `model/spatial_esri.py` and
+`source/capture_upstream_network.py` with the corrected
+`model/receiving_waters.py`. The receiving-water component fragment includes
+both original dependencies. Then rerun the same preparation command against the
+existing Workspace and outside-Workspace output directory. It reuses the exact
+original source collection and saves a new content-bound plan. Its implementation
+and source-reader identities distinguish it from any earlier saved plan; earlier
+records remain available unchanged. Continue with that newly written
+`public-water-preparation.json` for maps, monitoring priorities and reports.
+
+Other vector formats retain their existing reader and validation. Unsupported
+Esri non-polygon geometry follows the original GDAL path; malformed Esri polygon
+responses, CRS inconsistencies and unresolved invalid output fail explicitly.
+
 ## Original public sources
 
 Public layer directory:

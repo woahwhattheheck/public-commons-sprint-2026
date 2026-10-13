@@ -426,8 +426,8 @@ class _Closure:
             self._diagnostic(key, value, reason)
         elif kind == "comparisons":
             ids = [value["baseline_run_id"]] + [row["run_id"] for row in value["alternatives"]]
-            if value.get("id") != key or digest({"runs": ids, "direction": value["direction"]}) != key:
-                raise ValueError("The original native comparison changed its run cohort.")
+            from .native_versions import validate_run_comparison
+            validate_run_comparison(self.workspace, value, expected_id=key)
             for run_id in ids:
                 self.need("runs", run_id, "Native comparison cohort")
             self.tree(prefix.rstrip("/"))

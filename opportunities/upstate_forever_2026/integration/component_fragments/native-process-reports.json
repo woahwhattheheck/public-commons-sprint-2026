@@ -1,0 +1,33 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-process-reports",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3393",
+  "components": {
+    "native-process-reports": {
+      "title": "Original completed-stage native process reports",
+      "paths": [
+        "operator/native_process_operator.py",
+        "operator/extensions/native-process-reports.json",
+        "operator/web/native_processes.mjs",
+        "operator/web/native_processes.css",
+        "operator/NATIVE_PROCESS_REPORTS.md",
+        "model/native_process_report.py",
+        "model/process_quantities.py",
+        "model/NATIVE_PROCESS_QUANTITIES.md"
+      ],
+      "requires": [
+        "core",
+        "observed-context"
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "producer_merge": "7068c4c0724dd467902b13bf4923f9dc7e1b3f74",
+        "producer_receiving_merge": "67abdbdfce930bdd86f481c9530576b5635c8804",
+        "coordination": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791872212718389"
+      }
+    }
+  },
+  "required_components": [
+    "native-process-reports"
+  ]
+}
