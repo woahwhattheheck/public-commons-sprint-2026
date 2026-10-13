@@ -9,3 +9,10 @@ Start with Merchant context. The dated research identifies the original company,
 The free edition contains one original merchant. The paid edition contains its five original merchants. Each works offline and includes complete application source. Browser storage is convenient; the downloaded working file is your portable copy. The content CSV is a human review worksheet, with spreadsheet formula prefixes escaped. Use the complete working JSON for lossless receiving.
 
 Commercial terms in Pilot scope are your entered notes. The original five-profile research package price and the translation app's own plans are separate. Confirm any current app offer in the actual app before selecting it.
+
+Keep unfinished work
+When a form has unsaved edits, Save working file downloads a recovery JSON containing the complete saved work and every unfinished field in the current editor, including blank or invalid values and review notes. A clean editor still downloads the ordinary working JSON. Recovery files require this updated application; older applications reject them instead of silently losing the draft.
+
+Open the recovery JSON using Open working file. Its review shows the original merchant, saved revision and retained fields before changing any saved work. Reopen browser copy first if another tab has saved newer work. Recover draft on current work keeps that current revision and complete history, then restores unfinished fields for you to review. Save each intended form normally; invalid values remain unsaved and visible until corrected. Saving one form still asks before discarding a different unfinished form.
+
+Open file’s saved work and draft deliberately replaces the browser copy with the complete saved base inside the recovery file after confirmation. Download the current work first if you need both versions. The recovery review always offers the original recovery file for download. Closing that review does not save or discard fields already restored in the editor. No recovery action publishes to Shopify or treats an unfinished review as approval.

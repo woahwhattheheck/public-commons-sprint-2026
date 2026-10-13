@@ -95,6 +95,45 @@ const programme=async()=>{
   const otherTab=await context.newPage();otherTab.setDefaultTimeout(12000);otherTab.on('pageerror',e=>report.errors.push(e.message));await otherTab.goto(origin+f.name,{waitUntil:'load'});await otherTab.locator('[data-tab=pilot]').click();await otherTab.locator('#pilot-form [name=notes]').fill('Saved by the second browser tab.');await otherTab.locator('#pilot-form button:not([type])').first().click();await page.locator('#import-working').setInputFiles(working.path);await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Another tab changed the browser copy'));
   const currentStored=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),'tjlabs-localization:'+bundle.workspace.selection.editionId);if(currentStored.workspace.revision!==bundle.workspace.revision+1)throw Error('Stale working-file open overwrote the newer browser copy');await otherTab.close();await page.locator('#reopen-browser').click();
   await page.locator('#import-working').setInputFiles(working.path);await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Complete working file opened'));
+
+  // Retain raw unfinished fields through stale-tab recovery; saved state stays separate.
+  await page.locator('[data-tab=content]').click();await page.locator('.edit-unit').first().click();
+  const draftTranslation='Traduction inachevée — conserver ceci.\nSecond line with <angle> & quoted "text".';
+  const draftReview='Unfinished reviewer note retained independently.';
+  await page.locator('#unit-form [name=field]').fill('');
+  await page.locator('#unit-form [name=locale]').fill('');
+  await page.locator('#unit-form [name=url]').fill('not a complete URL');
+  await page.locator('#unit-form [name=translation]').fill(draftTranslation);
+  const draftReviewForm=page.locator('.review-form').first();await draftReviewForm.locator('xpath=..').locator('summary').click();await draftReviewForm.locator('[name=notes]').fill(draftReview);
+  const recoveryDownload=await download(f.kind,'unfinished-recovery','#export-working'),recovery=JSON.parse(recoveryDownload.bytes.toString('utf8'));
+  if(recovery.schema!=='tjlabs.merchant-localization-recovery.v1'||JSON.stringify(recovery.working)!==JSON.stringify(bundle)||recovery.editorDraft.forms.length!==2)throw Error('Recovery did not retain saved work and both unfinished forms separately');
+  const unfinished=recovery.editorDraft.forms.find(x=>x.kind==='unit'),reviewDraft=recovery.editorDraft.forms.find(x=>x.kind==='review');
+  if(unfinished.values.translation!==draftTranslation||unfinished.values.field!==''||unfinished.values.locale!==''||unfinished.values.url!=='not a complete URL'||reviewDraft.values.notes!==draftReview)throw Error('Raw unfinished fields changed during download');
+  const newerTab=await context.newPage();newerTab.setDefaultTimeout(12000);newerTab.on('pageerror',e=>report.errors.push(e.message));await newerTab.goto(origin+f.name,{waitUntil:'load'});await newerTab.locator('[data-tab=pilot]').click();await newerTab.locator('#pilot-form [name=notes]').fill('Newer saved work must survive draft recovery.');await newerTab.locator('#pilot-form button:not([type])').first().click();
+  const storageName='tjlabs-localization:'+bundle.workspace.selection.editionId,newerStored=await page.evaluate(key=>localStorage.getItem(key),storageName),newerBundle=JSON.parse(newerStored);
+  await page.locator('#import-working').setInputFiles(recoveryDownload.path);await page.locator('#recover-current').click();await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Another tab changed the browser copy'));
+  if(await page.evaluate(key=>localStorage.getItem(key),storageName)!==newerStored)throw Error('Recovery bypassed the live revision conflict');
+  await newerTab.close();await page.locator('#reopen-browser').click();await page.locator('#recover-current').click();
+  if(await page.locator('#unit-form [name=translation]').inputValue()!==draftTranslation||await page.locator('#unit-form [name=url]').inputValue()!=='not a complete URL'||await page.locator('.review-form [name=notes]').first().inputValue()!==draftReview)throw Error('Recovery lost unfinished translation or review fields');
+  if(await page.evaluate(key=>localStorage.getItem(key),storageName)!==newerStored)throw Error('Restoring raw fields silently saved invalid draft values');
+  for(const width of[1440,390]){await page.setViewportSize({width,height:1000});await inspect(f.kind,width,'unfinished-recovery');}
+  const retainedAgain=JSON.parse((await download(f.kind,'recovered-draft','#export-working')).bytes.toString('utf8'));
+  if(JSON.stringify(retainedAgain.editorDraft)!==JSON.stringify(recovery.editorDraft)||JSON.stringify(retainedAgain.working)!==JSON.stringify(newerBundle))throw Error('Re-export did not retain the current saved base and exact unfinished fields');
+  await page.locator('#unit-form [name=url]').fill('');
+  dialogPolicy='dismiss';await page.locator('#unit-form button:not([type])').click();dialogPolicy='accept';
+  if(await page.locator('.review-form [name=notes]').first().inputValue()!==draftReview)throw Error('Declining the other-form warning discarded review work');
+  await page.locator('#unit-form button:not([type])').click();await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Each content item needs a field and target locale'));
+  if(await page.evaluate(key=>localStorage.getItem(key),storageName)!==newerStored||await page.locator('#unit-form [name=translation]').inputValue()!==draftTranslation)throw Error('Invalid draft save altered current work or lost entered text');
+  await page.locator('#unit-form [name=field]').fill('Recovered preparation note');await page.locator('#unit-form [name=locale]').fill('fr');await page.locator('#unit-form [name=url]').fill('');await page.locator('#unit-form button:not([type])').click();
+  const recoveredWorking=await download(f.kind,'reconciled-working','#export-working'),reconciled=JSON.parse(recoveredWorking.bytes.toString('utf8')),merchant=reconciled.workspace.merchants[reconciled.workspace.selection.leadIds[0]];
+  if(reconciled.workspace.revision!==newerBundle.workspace.revision+1||merchant.project.notes!=='Newer saved work must survive draft recovery.'||merchant.units[0].translation!==draftTranslation||JSON.stringify(reconciled.workspace.history.slice(0,newerBundle.workspace.history.length))!==JSON.stringify(newerBundle.workspace.history))throw Error('Saving the reconciled draft lost the newer revision or its full history');
+  await page.locator('#import-working').setInputFiles(recoveryDownload.path);dialogPolicy='dismiss';await page.locator('#recover-saved').click();dialogPolicy='accept';
+  if(JSON.parse(await page.evaluate(key=>localStorage.getItem(key),storageName)).workspace.revision!==reconciled.workspace.revision)throw Error('Declining the saved-base replacement altered current work');
+  await page.locator('#recover-saved').click();
+  if(JSON.stringify(JSON.parse(await page.evaluate(key=>localStorage.getItem(key),storageName)))!==JSON.stringify(recovery.working)||await page.locator('#unit-form [name=translation]').inputValue()!==draftTranslation)throw Error('Explicit saved-base recovery did not preserve the original full working state and unfinished text');
+  await page.locator('#import-working').setInputFiles(recoveredWorking.path);await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Complete working file opened'));
+  await page.setViewportSize({width:1440,height:1000});
+
   for(const width of[1440,390]){await page.setViewportSize({width,height:1000});for(const tab of['context','pilot','content','glossary','handover']){if(interrupted)throw Error('Interrupted during original workspace');await page.locator('[data-tab='+tab+']').click();await inspect(f.kind,width,tab);}}
   const reportUrl=origin+f.kind+'-received-report.html';served.set(reportUrl,reportFile.bytes);await page.goto(reportUrl,{waitUntil:'load'});await inspect(f.kind,390,'downloaded-report');await page.setViewportSize({width:1440,height:1000});await inspect(f.kind,1440,'downloaded-report');
  }

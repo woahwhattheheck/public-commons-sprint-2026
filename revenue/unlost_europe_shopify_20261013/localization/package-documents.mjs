@@ -7,15 +7,15 @@ import {renderCustomerDocumentViewer} from './customer-document-viewer.mjs';
 export function buildPackageDocuments(working) {
  const packId=working?.pack?.id;
  if(packId!=='UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013')throw Error('Use the complete original Unlost working record');
- const at='2026-10-13T12:00:00.000Z';
+ const at='2026-10-13T15:00:00.000Z';
  const received=Core.applyLeadFulfillment({},{
-  operation_id:packId+':complete-document-receive-01',kind:'working-record-receive',
+  operation_id:packId+':complete-document-receive-02',kind:'working-record-receive',
   expected_root_sha256:Core.hash(Core.validateRoot({})),input:{bundle:working}
  },at);
  if(JSON.stringify(Core.leadFulfillmentExport(received.ledger,{packId,format:'working-record'}).value)!==JSON.stringify(working))throw Error('The complete original customer record changed on receiving');
  const outputs={},archives=[],panels=[],records=[];
  for(const kind of ['sample','paid']) {
-  const selected=Core.leadCustomerPackageSelection(received.ledger,packId+':'+kind+'-localization-package-02',packId);
+  const selected=Core.leadCustomerPackageSelection(received.ledger,packId+':'+kind+'-localization-package-03',packId);
   const entries=selected.files.map(file=>{
    const d=file.document,data=Zip.fromBase64(d.content_base64);
    if(data.length!==d.bytes||Sha.sha256Bytes(data).sha256!==d.sha256)throw Error('Original customer member differs: '+d.name);
