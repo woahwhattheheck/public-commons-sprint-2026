@@ -7,6 +7,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { applicationOperation } from './applications-core.mjs';
 import { need, plain, digest, absolute } from './storage.mjs';
+import { scanOutputSelection } from './output-search-core.mjs';
 
 export const OUTPUT_PAGE_BYTES = 65536;
 export const OUTPUT_MAX_PAGE_BYTES = 262144;
@@ -156,24 +157,141 @@ export async function openRetainedOutputDownload(source, input = {}) {
 }
 export async function writeApplicationOutputDownload(download, output) {
   let temporary, targetHandle;
-  const sha256 = createHash('sha256');
+  const sha256 = createHash('sha256'); let writtenBytes = 0;
   try {
     const path = absolute(output);
     need(await realpath(dirname(path)) === dirname(path), 'APPLICATION_OUTPUT_REAL_PARENT_REQUIRED');
     temporary = join(dirname(path), '.' + basename(path) + '.' + randomUUID() + '.part');
     targetHandle = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
     async function* counted() {
-      for await (const bytes of download.stream) { sha256.update(bytes); yield bytes; }
+      for await (const bytes of download.stream) { sha256.update(bytes); writtenBytes += bytes.length; yield bytes; }
     }
     await pipeline(Readable.from(counted()), targetHandle.createWriteStream({ autoClose: false }));
+    need(download.bytes === undefined || writtenBytes === download.bytes, 'APPLICATION_OUTPUT_DOWNLOAD_INCOMPLETE');
     await targetHandle.sync(); await targetHandle.close(); targetHandle = null;
     await link(temporary, path); // Never overwrite an existing operator file.
     return { ...(download.identity ?? { applicationId: download.applicationId, operationId: download.operationId }),
       sourceId: download.sourceId, selection: download.selection, output: path,
-      bytes: download.bytes, sha256: sha256.digest('hex') };
+      bytes: writtenBytes, sha256: sha256.digest('hex'),
+      ...(download.searchId ? { searchId: download.searchId, query: download.query,
+        contextBytes: download.contextBytes, endOffset: download.endOffset } : {}) };
   } finally {
     download.stream.destroy(); await download.close();
     if (targetHandle) await targetHandle.close();
     if (temporary) await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
   }
+}
+
+// Literal search uses the same original file generation and fixed end as a page.
+// Source adapters below resolve paths; no search caller supplies a filesystem path.
+const SEARCH_SCHEMA = 'stellar-forge.output-search.v1';
+const SEARCH_CURSOR_SCHEMA = 'stellar-forge.output-search-cursor.v1';
+export const OUTPUT_SEARCH_FIELDS = ['selection', 'query', 'cursor', 'limit', 'maxBytes', 'contextBytes'];
+const SEARCH_SOURCE_FIELDS = ['applicationId', 'operationId'];
+function searchFields(source, input, identities, download = false) {
+  const allowed = [...identities, ...(download ? ['selection', 'query', 'contextBytes'] : OUTPUT_SEARCH_FIELDS)];
+  need(plain(input) && Object.keys(input).every(key => allowed.includes(key)), code(source, 'SEARCH_FIELDS_INVALID'));
+}
+function searchParameters(source, input) {
+  need(typeof input.query === 'string', code(source, 'SEARCH_QUERY_INVALID'));
+  const needle = Buffer.from(input.query, 'utf8');
+  need(needle.length > 0 && needle.length <= 4096 && needle.toString('utf8') === input.query,
+    code(source, 'SEARCH_QUERY_INVALID'), 'Enter exact UTF-8 text between 1 and 4096 bytes.');
+  const limit = input.limit ?? 100, maxBytes = input.maxBytes ?? 8388608, contextBytes = input.contextBytes ?? 96;
+  need(Number.isSafeInteger(limit) && limit >= 1 && limit <= 200, code(source, 'SEARCH_LIMIT_INVALID'));
+  need(Number.isSafeInteger(maxBytes) && maxBytes >= needle.length && maxBytes <= 8388608, code(source, 'SEARCH_SCAN_INVALID'));
+  need(Number.isSafeInteger(contextBytes) && contextBytes >= 0 && contextBytes <= 4096, code(source, 'SEARCH_CONTEXT_INVALID'));
+  need(input.cursor === undefined || typeof input.selection === 'string', code(source, 'SEARCH_SELECTION_REQUIRED'));
+  return { needle, limit, maxBytes, contextBytes, query: input.query };
+}
+function searchIdentity(file, parameters) {
+  return digest(JSON.stringify({ schema: SEARCH_SCHEMA, selection: file.selection,
+    query: parameters.query, contextBytes: parameters.contextBytes }));
+}
+function searchStart(source, input, searchId, endOffset) {
+  if (input.cursor === undefined) return 0;
+  need(typeof input.cursor === 'string' && input.cursor.length <= 1024 &&
+    /^[A-Za-z0-9_-]+$/.test(input.cursor), code(source, 'SEARCH_CURSOR_INVALID'));
+  let value;
+  try { value = JSON.parse(Buffer.from(input.cursor, 'base64url').toString('utf8')); }
+  catch { need(false, code(source, 'SEARCH_CURSOR_INVALID')); }
+  need(plain(value) && Object.keys(value).length === 3 && value.schema === SEARCH_CURSOR_SCHEMA &&
+    value.searchId === searchId && integer(value.nextOffset) && value.nextOffset <= endOffset,
+    code(source, 'SEARCH_CURSOR_MISMATCH'), 'Resume the same selected output, exact query and context.', 409);
+  return value.nextOffset;
+}
+async function searchPage(file, parameters, offset) {
+  await validateFile(file);
+  const scan = await scanOutputSelection({
+    read: (start, length) => readRange(file.handle, start, length, file.source),
+    endOffset: file.selected.endOffset, offset, ...parameters,
+  });
+  const totalBytes = await validateFile(file), searchId = searchIdentity(file, parameters);
+  const matches = scan.matches.map(match => {
+    const bytes = Buffer.from(match.context.bytes);
+    return { offset: match.offset, endOffset: match.endOffset, context: {
+      offset: match.context.offset, endOffset: match.context.endOffset,
+      bytes: bytes.length, text: bytes.toString('utf8'), base64: bytes.toString('base64'),
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+    } };
+  });
+  return { schema: 'stellar-forge.output-search-page.v1', ...file.source.identity,
+    sourceId: file.sourceId, selection: file.selection, searchId,
+    query: parameters.query, contextBytes: parameters.contextBytes,
+    fromOffset: offset, nextOffset: scan.nextOffset, done: scan.done, scannedBytes: scan.scannedBytes,
+    endOffset: file.selected.endOffset, totalBytes, appendedBytes: totalBytes - file.selected.endOffset,
+    matches, nextCursor: scan.done ? null : Buffer.from(JSON.stringify({
+      schema: SEARCH_CURSOR_SCHEMA, searchId, nextOffset: scan.nextOffset,
+    })).toString('base64url') };
+}
+export async function searchRetainedOutput(source, input = {}) {
+  const parameters = searchParameters(source, input), file = await openSelected(source, input);
+  try {
+    return await searchPage(file, parameters, searchStart(source, input,
+      searchIdentity(file, parameters), file.selected.endOffset));
+  } finally { await file.handle.close(); }
+}
+export async function searchApplicationOutput(root, input = {}) {
+  searchFields({}, input, SEARCH_SOURCE_FIELDS);
+  const selected = Object.fromEntries(SEARCH_SOURCE_FIELDS.filter(key => input[key] !== undefined).map(key => [key, input[key]]));
+  return searchRetainedOutput(await applicationSource(root, selected), input);
+}
+export async function openApplicationOutputSearchDownload(root, input = {}) {
+  searchFields({}, input, SEARCH_SOURCE_FIELDS, true);
+  const selected = Object.fromEntries(SEARCH_SOURCE_FIELDS.filter(key => input[key] !== undefined).map(key => [key, input[key]]));
+  return openRetainedOutputSearchDownload(await applicationSource(root, selected), input);
+}
+export async function openRetainedOutputSearchDownload(source, input = {}) {
+  const parameters = searchParameters(source, input);
+  need(input.cursor === undefined && input.limit === undefined && input.maxBytes === undefined,
+    code(source, 'SEARCH_DOWNLOAD_FIELDS_INVALID'));
+  const file = await openSelected(source, input), searchId = searchIdentity(file, parameters);
+  let closed = false;
+  const close = async () => { if (!closed) { closed = true; await file.handle.close(); } };
+  const line = value => Buffer.from(JSON.stringify(value) + '\n', 'utf8');
+  async function* chunks() {
+    try {
+      yield line({ schema: 'stellar-forge.output-search-export.v1', type: 'selection', ...source.identity,
+        sourceId: file.sourceId, selection: file.selection, searchId, query: parameters.query,
+        contextBytes: parameters.contextBytes, endOffset: file.selected.endOffset, encoding: 'utf-8',
+        coordinates: 'zero-based original bytes, exclusive ends, overlapping literal matches' });
+      let offset = 0, count = 0, pages = 0;
+      while (true) {
+        need(!closed, code(source, 'SEARCH_CLOSED'));
+        const page = await searchPage(file, parameters, offset);
+        yield line({ type: 'page', ...page }); count += page.matches.length; pages++;
+        if (page.done) break;
+        need(page.nextOffset > offset, code(source, 'SEARCH_NO_PROGRESS'));
+        offset = page.nextOffset;
+      }
+      await validateFile(file);
+      yield line({ type: 'complete', schema: 'stellar-forge.output-search-export.v1',
+        searchId, sourceId: file.sourceId, selection: file.selection,
+        endOffset: file.selected.endOffset, matches: count, pages, done: true });
+    } finally { await close(); }
+  }
+  return { stream: Readable.from(chunks()), close, sourceId: file.sourceId,
+    selection: file.selection, searchId, query: parameters.query, contextBytes: parameters.contextBytes,
+    endOffset: file.selected.endOffset, ...source.identity, identity: { ...source.identity },
+    filename: source.filename + '.search.jsonl', type: 'application/x-ndjson; charset=utf-8' };
 }

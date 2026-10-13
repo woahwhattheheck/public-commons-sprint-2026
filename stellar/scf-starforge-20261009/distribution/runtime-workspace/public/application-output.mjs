@@ -1,4 +1,5 @@
 // MIT. One original-output reader for Applications, Launch Groups and Runtime operations.
+import { createOutputSearch } from './output-search.mjs';
 const node = (tag, text, className) => {
   const value = document.createElement(tag);
   if (text !== undefined) value.textContent = text;
@@ -12,6 +13,7 @@ const query = (path, input) => path + '?' + new URLSearchParams(
 const PAGE = 65536;
 export function createApplicationOutputReader({ root, api, getWorkspaceId, error, output = null,
   pageRoute = '/api/applications/output-page', downloadRoute = '/api/applications/output-download',
+  searchRoute = '/api/applications/output-search', searchDownloadRoute = '/api/applications/output-search-download',
   sourceFields = ['applicationId', 'operationId'], storagePrefix = 'starforge-application-output-',
   describe = value => 'operation ' + value.operationId }) {
   const sourceInput = value => Object.fromEntries(sourceFields.filter(key => value[key] !== undefined).map(key => [key, value[key]]));
@@ -73,6 +75,14 @@ export function createApplicationOutputReader({ root, api, getWorkspaceId, error
     findStatus.textContent = ((selectedMatch - 1) % matches.length + 1) + ' of ' + matches.length + ' shown matches';
   });
   root.append(toolbar, info, failure, location, findRow, body);
+  const completeSearch = createOutputSearch({ root, api, route: searchRoute, downloadRoute: searchDownloadRoute, storagePrefix,
+    async onOpen(value) {
+      if (!context) return;
+      generation++; loading = requested = failed = false;
+      live = false; selection = value.selection; offset = value.offset;
+      raw.checked = true; search.value = value.query; selectedMatch = 0;
+      persist(); await load();
+    } });
   const identity = () => context ? sourceIdentity(context) : '';
   const key = () => storagePrefix + identity();
   function persist() {
@@ -82,6 +92,7 @@ export function createApplicationOutputReader({ root, api, getWorkspaceId, error
   function select(value) {
     generation++; loading = false; requested = false; failed = false;
     context = { ...value, workspaceId: getWorkspaceId() }; page = null; body.textContent = '';
+    completeSearch.bind(sourceIdentity(context), sourceInput(context));
     live = true; selection = null; offset = null; renderedPage = null; failure.hidden = true;
     try {
       const saved = JSON.parse(sessionStorage.getItem(key()) ?? 'null');
@@ -141,7 +152,7 @@ export function createApplicationOutputReader({ root, api, getWorkspaceId, error
     try {
       const value = await api(query(pageRoute, { ...sourceInput(context), ...(live ? {} : { selection, offset }), limit: PAGE }));
       if (identity() !== own || generation !== ticket) return;
-      page = value; failed = false; failure.hidden = true;
+      page = value; failed = false; failure.hidden = true; completeSearch.page(value);
       if (!live) { selection = value.selection; offset = value.offset; persist(); }
       renderText();
     } catch (problem) {
@@ -168,7 +179,7 @@ export function createApplicationOutputReader({ root, api, getWorkspaceId, error
     async refresh() { await load(); },
     reset() {
       generation++; context = page = null; loading = requested = failed = false;
-      live = true; selection = offset = null; body.textContent = ''; failure.hidden = true; render();
+      live = true; selection = offset = null; body.textContent = ''; failure.hidden = true; completeSearch.reset(); render();
     },
   };
 }

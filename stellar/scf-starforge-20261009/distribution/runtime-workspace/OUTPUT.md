@@ -292,3 +292,7 @@ outgoing attachment and compare its complete original bytes with the retained
 selection. Preserve the source commit, workspace/run/attempt, actual rendered
 screens and resulting downloads in that original operation. Source review and
 V8 checks remain separate from this actual native and visual receiving.
+
+## Complete selected-output search
+
+The same reader now searches the complete fixed-end original selection. See [Search complete original output](./OUTPUT_SEARCH.md) for literal matching, retained cursors, match navigation, full JSONL export, the native API/CLI and the installed browser receiving course.
