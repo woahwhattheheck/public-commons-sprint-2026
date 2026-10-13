@@ -1,0 +1,1148 @@
+{
+  "schema": "commons.complete-original-receiving.v1",
+  "operation": "SCF-CARBON-CUSTOMER-AGENT-NATIVE-8D45-379A-20261013",
+  "sourceOwner": "8D45",
+  "receivingOwner": "379A",
+  "runtime": "Node22 or later; built-in modules",
+  "sourceBank": {
+    "bytes": 3061175,
+    "sha256": "8928b344805fa0fb74b54f0fb5c48fe9105efd4534c0945187ad9a4e98484a9b"
+  },
+  "sourcePublication": {
+    "merchant": {
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "pr": 1392,
+      "commit": "0d0fbd4770a42d949d436b9b81b2959b6d8918ac"
+    },
+    "commons": {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "pr": 3620,
+      "commit": "280d393844924ed76c83249e98397f529db51421"
+    }
+  },
+  "original166": {
+    "operation": "SCF-CARBON-NATIVE-8D45-20261012",
+    "files": 166,
+    "bytes": 2201314,
+    "sourceCanvas": "F0C8ANWNC4F",
+    "nativeCaller": "F0C8AUYFRE3",
+    "savedOriginal": {
+      "library_file_id": "libfile_b430a0e0a890819189a3a9b5d1c3c145",
+      "file_id": "file_00000000aa0c81f582c8042f3de9dd44",
+      "file_name": "SCF_Carbon_GiveCredit_Saved_Source_Recovery_379A_20261013.tar.gz",
+      "bytes": 10821473,
+      "sha256": "925ef3946e4fccffbf00d4578b31fefd63eca0077f006b9fdd2c73bc8a43f715"
+    }
+  },
+  "files": [
+    {
+      "path": "receive.mjs",
+      "bytes": 6777,
+      "sha256": "f18a2a784da6f9c0f571039b138f3943104561089d0029428c594306b96f79c1"
+    },
+    {
+      "path": "complete-source.json",
+      "bytes": 1261015,
+      "sha256": "963527b51ef027d784208949842e34579b38efa678ebe69f04da17f6601f6658"
+    },
+    {
+      "path": "README.md",
+      "bytes": 8718,
+      "sha256": "a8e22e9dee13131b2cfe2ff6c821cd7c5919588b3fd2501c439cf9d3dc74b26b"
+    }
+  ],
+  "originalSource": {
+    "files": 181,
+    "bytes": 2906769,
+    "entry": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/receiving.mjs",
+    "loadedModuleCount": 97,
+    "filesByPath": [
+      {
+        "path": "stellar-forge/mcp-merchant-operator/provider-contract.mjs",
+        "bytes": 6260,
+        "sha256": "abbc3a9f344f7e1be07f3085e6554f2c0ce1ccf131338d7ffa36f5694628394b",
+        "gitBlobSha1": "84a78fa4f594294b3b3e82d7056a5aeff740ab3d"
+      },
+      {
+        "path": "stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs",
+        "bytes": 156,
+        "sha256": "81c52bc3e26e35ba719be72bab26aadea2d5c3105448cd76857abecafc76db34",
+        "gitBlobSha1": "16dbce5411cddc372ac93cbe4813c373b9d81457"
+      },
+      {
+        "path": "stellar-forge/mcp-merchant-operator/retained-file-reads.mjs",
+        "bytes": 23135,
+        "sha256": "6c589b54c28a8bc6dbf7aab6bb9e548e4b7b3e4d030b7f2b5d8157f9dff7d209",
+        "gitBlobSha1": "0cc3502779b193521cd1d177e8d23b76ab625df2"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/browser-assets.mjs",
+        "bytes": 4571,
+        "sha256": "1aaa548c7982d80aa1c73715bf0322822d063cdc3d570172a5ee15487be9a2e9",
+        "gitBlobSha1": "63801fa838c0479e6ae156d9f155461f02df0cfb"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/carbon-customer-workspaces.json",
+        "bytes": 1718,
+        "sha256": "b50ae5c2406c597e42b1b7bcf1353f007106e382e50678f6d04ea87e6db8716f",
+        "gitBlobSha1": "dc72f76831516c161f0d6de69d118541c04cfe8d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/storage.mjs",
+        "bytes": 16897,
+        "sha256": "e43ff6917a3d2cb7d59c3ac8052eb27bae7bd0765904e8afb19c8770327fee6d",
+        "gitBlobSha1": "54c248fbcca28453e8ebcaca350a80f77a9004e2"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs",
+        "bytes": 1776,
+        "sha256": "8b41905d3ad920588a810e52157527ac887eb9785098c4c0f398657905163746",
+        "gitBlobSha1": "1c2a8f3a3488bc1c687ad9fdfb2fba7964baaedc"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/buyer-source.mjs",
+        "bytes": 19009,
+        "sha256": "0e8338ab52ad2c20b8a38c62d367161ec4bf0d3ceca554f050c937ecb22218d2",
+        "gitBlobSha1": "aa340977e728adb3980ac1f744ade75319553813"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/cryptoworth-csv.mjs",
+        "bytes": 14091,
+        "sha256": "7fbdc0e5cb586be6df6255fc6a624602278f52855ae764aeb33dc043d7912811",
+        "gitBlobSha1": "f9746085eceb06ca646add277a776f3c6ef26814"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/adjustments.mjs",
+        "bytes": 15181,
+        "sha256": "de28283632278129f9a8135d63c6b20bbbe39161471fe41b6adc84712909bca1",
+        "gitBlobSha1": "6554e1ec62d9bdae28e6bba1417ab0d65fe7ad72"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/cli.mjs",
+        "bytes": 15621,
+        "sha256": "e0f5ca951cd1fb834c80d2c9af5eeb9ff1f5953ff026d2fc8b7b81a2720e475c",
+        "gitBlobSha1": "4fc563a39e0520641bdb01b3202b341b55e572b3"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/customer-statements/core.mjs",
+        "bytes": 25502,
+        "sha256": "ecca1e995fbe326c99cd91e933d070adae2289708871be01bd87c847e2288c5e",
+        "gitBlobSha1": "34f0c321e12c256bed8181d24f6882551981f553"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/customer-statements/native-usage.mjs",
+        "bytes": 8297,
+        "sha256": "c1a95b6d703a1bf3f222d27f7c62c6038841f8dfbb4b06e0f56e93b03ace3a0d",
+        "gitBlobSha1": "21ff7348c423969e2563e36713fc70b98e7fb432"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/customer-statements/period-usage.mjs",
+        "bytes": 14364,
+        "sha256": "430f855a02d9720acfceab49ca711ee5058185d8a08aed2cb662be27bcccbf7e",
+        "gitBlobSha1": "1c92c3f7c580ae46ff61aded450f2b92aa124a15"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/customer-statements/public/app.mjs",
+        "bytes": 32981,
+        "sha256": "4236d4c64761b568882e44b609bd81f5e52fad191786ec272974f353990a1705",
+        "gitBlobSha1": "fd4a6f90ef82343d43ca51478278d6e613fc00c1"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/customer-statements/public/index.html",
+        "bytes": 8691,
+        "sha256": "9b4f481327504da93c96f4f01ac412c690b9bfafd2fbf3360d3991203be39a5c",
+        "gitBlobSha1": "0e78443a1ec9e15e2e3738274bb02a1c2e429e35"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/customer-statements/public/style.css",
+        "bytes": 8588,
+        "sha256": "f45172bb58adcaf72ea2766b8cbbaf9f26a97c5ab61f9d214a5efee08380fa2a",
+        "gitBlobSha1": "945ec5847f5254595424141d83ea170028802ca5"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/customer-statements/server.mjs",
+        "bytes": 6970,
+        "sha256": "be0984f3173959fe4e863353eeed0fa8fd770da16f69a48c8aba63e4fef3a602",
+        "gitBlobSha1": "888effa198134396bb02f3d4484dd69948cde30f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/customer-statements/store.mjs",
+        "bytes": 23076,
+        "sha256": "7de72b1c58623f019c1982a9387ddba03c8cfbaf0e645b625daf844e2b13d4bc",
+        "gitBlobSha1": "6697e6ae32120d3ce91aa40279eb8d08d21e7610"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/pricing.mjs",
+        "bytes": 12737,
+        "sha256": "7623fb428e91f70c03071994788fa0ab96740dba127651597e41f3c12700cd9a",
+        "gitBlobSha1": "9d92e6d949eae1489c205173487715f88b860cf7"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-coverage.mjs",
+        "bytes": 19093,
+        "sha256": "1afca30c608d66e121bfb82294b7f7d3b3c0062bcd5e0d36d62a5e6609fca798",
+        "gitBlobSha1": "9f6e83d7953207b6701ef86c0d23784613d809f6"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-parsers/README.md",
+        "bytes": 4011,
+        "sha256": "e618281527422389b75c6c27c83de4e04e4b5370d7539684b38db2f8efa4fd5a",
+        "gitBlobSha1": "c374724e730630f319b35613b5b3fae8c8bab96c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-parsers/bridge.py",
+        "bytes": 2035,
+        "sha256": "531ce3aad5fb41f869080ddbf16e0632870589460ed45cb4c094a68d687a8c24",
+        "gitBlobSha1": "d83b89f59b7cc6c33d7c19e8464e613180948355"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-parsers/mt940_engine.py",
+        "bytes": 27699,
+        "sha256": "238cad6cba076ce709dd1479ad15fdc559e05f6e56d936cce94a797b5b13bfbf",
+        "gitBlobSha1": "ee5a99c5b747e402bfb1f51175e61799859d3121"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-parsers/ofx_intake.py",
+        "bytes": 43686,
+        "sha256": "28299e8dfed0650a3399b8d02d36486167b49f7c571c7f9a7ec33552f8c66fe0",
+        "gitBlobSha1": "33e5a361632ffceeb07e685e402c774f5d9b4419"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-receipts-workspace.mjs",
+        "bytes": 24494,
+        "sha256": "a6c59a71042d05cface1f3bdfc0e486752c36d8b69342ae01290044fe1bf78c7",
+        "gitBlobSha1": "4aac65bdc3d800604a977f2627a1170ac396ae09"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-receipts.mjs",
+        "bytes": 70010,
+        "sha256": "477733dbc6eac3acaa891e0e011eda8c8b956f14d35c2353c0379cc3d8e839f1",
+        "gitBlobSha1": "7e0090a48ceeb900936e70f37a63d9013f846ba7"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statement-source.mjs",
+        "bytes": 13987,
+        "sha256": "0bdd5ef13d182b3937a6d8b38618bbf65cb39e774ebcb99eebf5556bf8f5bbd6",
+        "gitBlobSha1": "44b018601e0ddfc3ee5ca9f7b7d5a6537073152c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/CAMT053.md",
+        "bytes": 18225,
+        "sha256": "46847ca44cce8cf053114a146be760a8c7c1beb6b602cfc88dbdf91702f8c681",
+        "gitBlobSha1": "4c20b746483ded8d13a8db90928b7e404976f467"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/SOURCE_COLLECTIONS.md",
+        "bytes": 9864,
+        "sha256": "04dee862787578ecc5b42280c37c61fba73a7df2fd3653fff4660ca10aee736c",
+        "gitBlobSha1": "133e24335dd20faa644e5bfa4fa9e8b48a796d06"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/SOURCE_FORMATS.md",
+        "bytes": 14921,
+        "sha256": "bdbd4f8f402ea559edb11e468a9df5ab74779310492558cd8c35b13a6a4bd769",
+        "gitBlobSha1": "d4526a552c3f07841db47468e01ce62168c275a3"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/SOURCE_PROFILES.md",
+        "bytes": 10397,
+        "sha256": "d2d030606bffe27f81bc585d57a8f62a66aaaeedf76260edf4c6550cf4d2903f",
+        "gitBlobSha1": "af1a2339c46a4bef23983c331b5db11c935ae6de"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/accountant-receiving/ACCOUNTANT_RECEIVING.md",
+        "bytes": 14827,
+        "sha256": "cf699710dcfeade79e8f273c0c1da6a3f7f12699921d677932869a4ab8e474cc",
+        "gitBlobSha1": "ec625716e9363e795e9cfeafaceec1ee403a227f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/accountant-receiving/app.mjs",
+        "bytes": 27316,
+        "sha256": "670a49239db2d3c7d1b65f7e9638bc45831e937ef1d715f0d7c28678ebdcf206",
+        "gitBlobSha1": "b972088c1fe78147bf451d68f1eec3e42caff57b"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/accountant-receiving/core.mjs",
+        "bytes": 28338,
+        "sha256": "a71783c6731f1ca74293b19dcf6ae643d5cdcad16ca211200a88cfc2ad8e77e8",
+        "gitBlobSha1": "4a88ae3accab7c41220a034fa78ecda40b8df3a9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/accountant-receiving/index.html",
+        "bytes": 3117,
+        "sha256": "9f9558fe7b0cea5dbfb088156a5afa40f51199e55b03110e735d477d255eeb3f",
+        "gitBlobSha1": "2580bb9c88587aad9ae94b2efba8035ff54df010"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/accountant-receiving/storage.mjs",
+        "bytes": 4245,
+        "sha256": "84f61885f160ac909cb4e44a7a56c0470aa44c8f3105f9c2c71a9e7f462ca296",
+        "gitBlobSha1": "86e3d27aa2b84677879566ce7442bd36b91513fb"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/accountant-receiving/style.css",
+        "bytes": 5354,
+        "sha256": "b9af7c4b13d50b90c6d0c379098f2143f28aa3ee856f46acd1393f0798df7835",
+        "gitBlobSha1": "a537e79bd541cad7c5ed0f5848c2eb7f87c1f02f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/assembly.mjs",
+        "bytes": 18733,
+        "sha256": "c6a8aab15dd092fdc14a0a97ad9b2c7c76dbd3504af8b0709006283b9f777dd8",
+        "gitBlobSha1": "3661811adc13bad358fd7b4c3362102fd09d5556"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/browser-assets.json",
+        "bytes": 3911,
+        "sha256": "bfdb364771ce56e298f3d012b536ef46a1dcbed5a11ebe38cf838c94f394312e",
+        "gitBlobSha1": "9b7bdc10abf9a557d95a6fd35f62c516d0fdda56"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/client.mjs",
+        "bytes": 2846,
+        "sha256": "8d4e78827dbe1202e4c25da373798c5ebb1e8cd56e8605e77f078ef3a34a845f",
+        "gitBlobSha1": "06e0e2481abcf550337c37ba70ea1b580518c9c4"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/domain.mjs",
+        "bytes": 30941,
+        "sha256": "6bde731b0529219a9b237342f1a869c715c84050a0481e22243f18c5e8d692aa",
+        "gitBlobSha1": "9116d0f7e812fef2297e2eae92d0aa1b46cc2483"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/public/app.mjs",
+        "bytes": 131277,
+        "sha256": "0ae6b3fc83bc97178e50d007135a455ec7af91494c31c5d3875fb36319ebd632",
+        "gitBlobSha1": "258ca1c9ee1df17c9f6c6e7100e0940cbad41092"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/public/camt.mjs",
+        "bytes": 9432,
+        "sha256": "ba2d4394f13c71d6a9af476e68fa792d159c8f45961358e37b240f215588161e",
+        "gitBlobSha1": "9dbc542546c6a83c9dc1b4b6dfb55d37dff6731a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/public/config.json",
+        "bytes": 293,
+        "sha256": "9448525b4735617bb6e0d20e4dc9ef364de34ab7645d3078d0d0026d75d5d134",
+        "gitBlobSha1": "f3aa4f708ce0aaaeeacb100f3a6033c7a0e6bbd6"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/public/index.html",
+        "bytes": 2857,
+        "sha256": "228ebeb7e201090c2ecabd8c85308ab420634979b99d42756b2835326d5aa0fd",
+        "gitBlobSha1": "a7b9afaafc8fabdf062e8d86e68ca459c290a5e4"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/public/source-collection-model.mjs",
+        "bytes": 12371,
+        "sha256": "4e8c076305c3d65df10f2324e237d3c7c991216b8beaea93e1f8aaaee9851855",
+        "gitBlobSha1": "c88ec756e3aec539e7ccbf7f3be87b79d167cfe6"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/public/source-collections.mjs",
+        "bytes": 13657,
+        "sha256": "150198c03e16cde5b9124442543df5582a43148851974b4e64e89ee79901b464",
+        "gitBlobSha1": "06028707be096750d7c1098d5d30c9c8134a65f1"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/public/source-profile-model.mjs",
+        "bytes": 12564,
+        "sha256": "dd489f87904b0930a32dd5b28ee65dafaf0435c10feba7f5560e77f5894ed747",
+        "gitBlobSha1": "7d0121510340df7107e92ef22b2b1a0dc10b93fe"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/public/source-profiles.mjs",
+        "bytes": 10514,
+        "sha256": "5783296c30f556ad18e242f6dcd801dc09358ba5787759e81546120f415ee940",
+        "gitBlobSha1": "7613a51f18cb10c82ce5ec1612fcacc39c77a287"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/public/styles.css",
+        "bytes": 12631,
+        "sha256": "9374aa7a6abf877932ab83b960ff872565cf04b2292b2c5823317b25ec714852",
+        "gitBlobSha1": "2838c27ae0d609846bd1117831b9a31b373605cd"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/server.mjs",
+        "bytes": 4891,
+        "sha256": "74298106b1b0e6239d39eddb2310070f1c9312368a6edf85ecb707b1681637f1",
+        "gitBlobSha1": "51dc1a89d9c424a994b09106ed12f78e6afe3490"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/source-camt053.mjs",
+        "bytes": 80471,
+        "sha256": "72c303926855df056986cec65bb63e5f8eabb48f1425cff513da59118651c09b",
+        "gitBlobSha1": "3a087db1426c2997613b29d9111a880fb8471d32"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/source.mjs",
+        "bytes": 59845,
+        "sha256": "bb606bb9aaa3fcb0f4f5a62c53463a677d4723c470a778f8843906bc87ffed59",
+        "gitBlobSha1": "cd4a50b676c5208f8f5c01a190ec6bf124931984"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/bank-statements/store.mjs",
+        "bytes": 46617,
+        "sha256": "ed0bd0bb5c68fc9dd3d5da7f6d4da4b292ca283be6d9e589ced6161b58a71544",
+        "gitBlobSha1": "51ea9a7bbedaf3548b139318d7f0bac4887818a9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/browser-assets.json",
+        "bytes": 3085,
+        "sha256": "75503a3083ebf26a83363a2ccb0c4356350e5ee978dfddff9285f44b262d89f8",
+        "gitBlobSha1": "bb18c924b51eb23de24c2a985ac5f128ec5a7423"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/cash-planning-workspace.mjs",
+        "bytes": 7469,
+        "sha256": "ac40d5eb4ab3adadae3391f40d7883e0815e41b32a636c1124de32cbf2d70394",
+        "gitBlobSha1": "2256ed6bb20a7b739a718e8db967a675e72ffdd3"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/cash-planning.mjs",
+        "bytes": 25066,
+        "sha256": "8d177334a6fa7293a0a78cb16c94ac666fd521baf28b2b632edb2dfee8b4b16b",
+        "gitBlobSha1": "691594bc85931bfcaab54d336c9698ac03baa122"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/client.mjs",
+        "bytes": 16876,
+        "sha256": "25235f7d684853993e3f1d25e52ad7b00f07435fed6b36cb696b263dd782fbdd",
+        "gitBlobSha1": "71ee758460a58d03ccea811bedf45614c826ef9f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/collections-workspace.mjs",
+        "bytes": 8860,
+        "sha256": "4272f741d53f934029479569b5b75e81c6e0cdc5487186fc90d35f75a96350e9",
+        "gitBlobSha1": "05d6c8c0565dbf852b0ab40c4d9d06332394adea"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/collections.mjs",
+        "bytes": 17052,
+        "sha256": "c6e590f19ba83587a9e45dd2b6e13c616ed93edd745fdf0dea837d6dc5cc3460",
+        "gitBlobSha1": "b5432ac61becddc4c3a35b20be6377a763529e33"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/core.mjs",
+        "bytes": 42030,
+        "sha256": "27297de6e5df0439aa393b153961017e2b9cabb8945eb485916446857e4f16a1",
+        "gitBlobSha1": "408b2456d1fe3b6f2240e965bbe267ddfe13921c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/credit-control-workspace.mjs",
+        "bytes": 16335,
+        "sha256": "1ba56b70d94fb103d5dc6f10785b5cecb00c83d95543bdf07d7cc4b04f2dfd9e",
+        "gitBlobSha1": "c8f64cb2571eff8380bc120098a1ca09bf0f11c5"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/credit-control.mjs",
+        "bytes": 16828,
+        "sha256": "c6fb20a222e64dc1c01a03e0795e12ae15938cf76dac7d04396d1c423ead8fb3",
+        "gitBlobSha1": "90042fff54dafebde63463d2ec5fafbefd78dabc"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/customer-account-client.mjs",
+        "bytes": 2017,
+        "sha256": "f651dbfeea03e5b4b172693e8b5e6aae2e0f140e24020cc0dbb27354d9623824",
+        "gitBlobSha1": "3c991ff6981abf580726bafc28981261ce95e24a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/customer-account-response-workspace.mjs",
+        "bytes": 17575,
+        "sha256": "136974cb8327d34d1ca4dfd6e75fbe106065c0b9740a65982e2491c6b19f062f",
+        "gitBlobSha1": "5bfa2daa7dc8a10c34968c039e52f0d542d9b787"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/customer-account-response.mjs",
+        "bytes": 15145,
+        "sha256": "911eb74a92bbfa415d2edb0c7718bfcfff1bd1db055f10cb76737b46e459e752",
+        "gitBlobSha1": "58e5ad33ad8c481472a2bc549b974303e3d3cfee"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/browser-assets.json",
+        "bytes": 1071,
+        "sha256": "4b4cfa7b999dcfac00b4cd800a6efe495b828fcfd1d0e20bf7bf6f7f0aa3cf7d",
+        "gitBlobSha1": "7181ce557249b7c808658229277f78e1a72b9ca5"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/client.mjs",
+        "bytes": 2044,
+        "sha256": "bc8eebc8350a3ec9260b4546722542c924ebb49a88cba573e65124a10c103c0f",
+        "gitBlobSha1": "d641c2331a5c59ca72d7593bea1c8d5593702cda"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/core.mjs",
+        "bytes": 23227,
+        "sha256": "406e211bdd20a72658c54e27dd774f1e06714fe79e0e327cd64178bc80660ea8",
+        "gitBlobSha1": "155d12f1768768934151d74a23a0b4fb3bfef39c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/public/app.mjs",
+        "bytes": 41248,
+        "sha256": "02fd9354e81f538e7948f7435b5cedc3e9e2fb046088473b6cc3b0df74236169",
+        "gitBlobSha1": "36f2f3c0f6646204684749876344313bf3e24492"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/public/config.json",
+        "bytes": 80,
+        "sha256": "43e36997de232c06c1f3a5e66eb91eab8c91929c5f8c7da183beb0dee18885a3",
+        "gitBlobSha1": "f489db699d435008854a96a55580bb4ac79f3ab0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/public/index.html",
+        "bytes": 3169,
+        "sha256": "e0cf8e5ef23e57097bca44ce661a4283b04250beddb41fc7f5e10ac6054d3acc",
+        "gitBlobSha1": "5d94e74952f7f7329f2c370db203f0d96ef460bc"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/public/styles.css",
+        "bytes": 8591,
+        "sha256": "374024574b440aae505b2f7281c05395a2bd26d602d3708908d27060e9949ca1",
+        "gitBlobSha1": "9efc8b70f3775501e655d1f728488c303f1a2719"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/server.mjs",
+        "bytes": 5504,
+        "sha256": "0357d7862cb352fb850e11081a5904609bf64c5d3549c3e0d64afcd2999d20ff",
+        "gitBlobSha1": "ea92d77aa32ca5bc03cb5535d9132d41ac8d926e"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-plans/store.mjs",
+        "bytes": 16372,
+        "sha256": "bcd21d801dc6262d0436fe19c0ed8d2d51a62db486e39023a62c89a8ece45139",
+        "gitBlobSha1": "e2773d39c24bf9858cf38bf58d4613796076304c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-requests-verifier.mjs",
+        "bytes": 12194,
+        "sha256": "290f5245598fe8bfedceba8b2010eae27be8575e506c34d9154ea045072e98a5",
+        "gitBlobSha1": "d6b862f9d0d69f7e2a987c452199f40d269ef234"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-requests-workspace.mjs",
+        "bytes": 27649,
+        "sha256": "963f6cac80acabae291a58d78b1ea065b358d0b6d7a460ab003cf411a7fa5efa",
+        "gitBlobSha1": "c545874d9ba460a9304e1b0f82f3ab5eb351ce37"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/payment-requests.mjs",
+        "bytes": 19315,
+        "sha256": "ef45e8fc7ecc472d23902d71282b2f7683b1305077f2150bda9116891aba3bab",
+        "gitBlobSha1": "047101484f6748bf3d206c33b501e3998850c0ee"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/app.mjs",
+        "bytes": 77785,
+        "sha256": "58f27eeda5dc5bbf6d7f7a8919574904fe41255603a61353197242ac47c7b8af",
+        "gitBlobSha1": "6b7ee3248b21a5a0af7a0264fa442a1d092cdb4f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/bank-statements.mjs",
+        "bytes": 96167,
+        "sha256": "741b732197c10847341e82135fff72bfae551a9f9b65c0936a81c2e8593b54de",
+        "gitBlobSha1": "4c57dd56c1f1290e5a090cc4d028d3e20077ff20"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/cash-planning-display.mjs",
+        "bytes": 1288,
+        "sha256": "e89dedfc84ca0ee71619bd0ed9c37de6baa2aa616a91dea4e21d7734b730cb17",
+        "gitBlobSha1": "9960834788a54d86b28bae7b165df0b7f39876d0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/cash-planning.mjs",
+        "bytes": 23486,
+        "sha256": "3e402081331091ec60a30e51fc06426b05e1327645de37517065409b505732a1",
+        "gitBlobSha1": "95b52d206d9c3697ba76146a271ee420520ba7f5"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/collections.mjs",
+        "bytes": 23059,
+        "sha256": "f99abdfc504c1db4fb7309ebf1c6206419a974b3a0397195f26fa8a9b2e0c55a",
+        "gitBlobSha1": "384ff71bc4e5cd2be16ede1a2f1c51db348e3a6c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/config.json",
+        "bytes": 91,
+        "sha256": "3bc63c54b1168cf98a84b0493f2c0a8ce9ea86b8dab6ad29cae39acd8d7b05bd",
+        "gitBlobSha1": "a48078c5832f8f3623aefc7a27f0fdd3c6e9d339"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/credit-control.mjs",
+        "bytes": 29357,
+        "sha256": "0cb6f4d511add2ec58fd03c0e74725e800d77bf7e1884b70834198b5fed000a5",
+        "gitBlobSha1": "2b6e6e1812acb3cd99541a148e3c5a8527bc7922"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/customer-account-customer.mjs",
+        "bytes": 20279,
+        "sha256": "dda78b0ac3cea2d31f7ab35a2b354a8314bf4b377fa5f620c8cacc9423508bce",
+        "gitBlobSha1": "6fef06de0b78b18ef946487eb6b25b0095947f3f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/customer-account-response.mjs",
+        "bytes": 20094,
+        "sha256": "fbf82502559f31056bd228da6e04b8c80574dd53f9a7444f1435c6e647533fd5",
+        "gitBlobSha1": "3560de1f81ddfb6260fa348c1b340cbf0686fc47"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/customer-account.css",
+        "bytes": 2595,
+        "sha256": "f8bca1d159ae8c5794e31fecf71a41711dfbdfc8872ba252ff78874577339b8f",
+        "gitBlobSha1": "a130ea6815026ff3e9f40b782b31e1250cf8e1db"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/index.html",
+        "bytes": 3685,
+        "sha256": "16fdd068b9707617f81199d9135ff5fbe32485ae75ac74927c20c902f613fa24",
+        "gitBlobSha1": "f57090978c92a82bb46da5e14eff5c278f6e89a2"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/payment-requests.mjs",
+        "bytes": 21391,
+        "sha256": "dbf3176830ec55c76f8030a6e9eb0219ed5c6010dd1cf3afab7fd7d021187e5e",
+        "gitBlobSha1": "eb4d699b5c3ca496a3216bfc05d900fddfadf66b"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/refunds.mjs",
+        "bytes": 42599,
+        "sha256": "2c2191ebcccd4da587b0bf81a3cce13b2667a88f28699d22941114def61f3c8a",
+        "gitBlobSha1": "0b71ddfdb2e4ad88590444f74e778257ae516e07"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/remittances-app.mjs",
+        "bytes": 9488,
+        "sha256": "73efa3f415b87c9c441371c625add74a8d5551ac9575e966ae39391e77ad78a3",
+        "gitBlobSha1": "0487a3ce5962c1404f77cbb211546afcdfaacc61"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/remittances.css",
+        "bytes": 2272,
+        "sha256": "a6133f1eb102efda6b0bb86e405cb3532e41a32ff0b58d704786e212b385ec38",
+        "gitBlobSha1": "698d0c842750a40d6cae8f9def4cdec6ee677484"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/remittances.html",
+        "bytes": 3435,
+        "sha256": "7475950b684db40c965abc3e58196d19f792b6a52326a54437b9140279df6e4c",
+        "gitBlobSha1": "7ed9a91efb80f4ba3856def81630ee9dc6e6b7c0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/public/styles.css",
+        "bytes": 10844,
+        "sha256": "cb9764f388638c9c6e19c5786317fff91729bd141408f10bc0eae8cab5480ca0",
+        "gitBlobSha1": "ffc45558832429af297fe08a4f121c531d55abad"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/quote-import.mjs",
+        "bytes": 32106,
+        "sha256": "1b74b7db68d1ab481e7a2576d849ab2c4733a0633aaaa6d2f9126f027cc902a2",
+        "gitBlobSha1": "f14ed0fffc5bf48bec884c3130c86d9497f46020"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/refunds-workspace.mjs",
+        "bytes": 43543,
+        "sha256": "eb363eaf3ff196d255dd1265a1e93cd22e05e07f81d44e424acd28918e115291",
+        "gitBlobSha1": "f20207fe8d48bb1a11bd8f9e6acb61ec34ffb91a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/refunds.mjs",
+        "bytes": 33587,
+        "sha256": "7c379aa1de8c07303ade79e93b5d22507e52b9f2927bdb345a2a41389ecb31e7",
+        "gitBlobSha1": "3aeab32a82b018713e0e9328af5a7a8ac26bdab7"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/remittances-client.mjs",
+        "bytes": 1885,
+        "sha256": "1da3a409206589adc46ff5de69a2aeb3cfe9b7d24c213961d93f3cfaff929c15",
+        "gitBlobSha1": "92ee953bed910a0634597939d9e17f888ecd85e9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/remittances-workspace.mjs",
+        "bytes": 6564,
+        "sha256": "18e004da05d377eaeb951fc8f19e4bd7c291782f9d1622171bba3733e0bf09a5",
+        "gitBlobSha1": "7bbaefdc0739851f445e326d168499b81a4eb0bd"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/remittances.mjs",
+        "bytes": 20386,
+        "sha256": "89b5037503164cbd348a6f116b61efe5b04f0213b64d435c7a4ca1d04b0099b6",
+        "gitBlobSha1": "891b621db8e16ae85cbaa2fa58d5b330eeef4ec9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/server.mjs",
+        "bytes": 36816,
+        "sha256": "6f4bda6e52372ee21b50dbd83f7a818ef0fcf62a54bb3ddceb37b2b7feff7e08",
+        "gitBlobSha1": "a48d0bb485e704a0f03092d0ff9f81ed50b41967"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/store.mjs",
+        "bytes": 52896,
+        "sha256": "9125d690aca3039072c1c94cf278619c08e48c696426d654307b982ed941a0ab",
+        "gitBlobSha1": "28e3e9d0aa23aecda7b82d5f8fae573796663f75"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/reconcile.mjs",
+        "bytes": 30235,
+        "sha256": "98878857a81ad29b3894bd59a22a7591e189beed9316315ce8bdba374bb9a822",
+        "gitBlobSha1": "2d53a76d72622befad37bca98b5797ce03255f33"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/recovery.mjs",
+        "bytes": 18948,
+        "sha256": "2a3c5d32d948d4ee285a3ea7d7e3ccce1b2cd5bd699e8d6c8a4e542a7b8612eb",
+        "gitBlobSha1": "39e051f939210a0cd2c805a88a58cf61475d9969"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/adjustments-workspace.mjs",
+        "bytes": 27571,
+        "sha256": "6de4a8c0f16d8156130c78671502fb39625aced04b33843c975617c372766039",
+        "gitBlobSha1": "679aaee22942811da9eb3d4a55d4264bbcc5bf52"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/binding.mjs",
+        "bytes": 4099,
+        "sha256": "0defc6cf975a1fdb3012bf05afbbfaae5e749b20836f17086bb846f809233ece",
+        "gitBlobSha1": "f835a302d35c1701ec3cc9b33ecc2418f7b67caa"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/buyer-startup.mjs",
+        "bytes": 8351,
+        "sha256": "a51a14c8c223e83775b87bb5d9ec41fa2e9fa2abd819415dad0c8604d732df0d",
+        "gitBlobSha1": "3bbb310466d8d96d7d2d7054c07f2f32b08ccffe"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/period-workspace.mjs",
+        "bytes": 11631,
+        "sha256": "898685dae3caa5ba13d08f2ea1737f4c8dc76330a1f0f8b89694ddfb5c8846df",
+        "gitBlobSha1": "6ffe18e68c9408ea135bd003c4544d4d5350bffc"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/pricing-workspace.mjs",
+        "bytes": 10598,
+        "sha256": "0ad560f0df73779807416aa1859f3ed4a4d8fb714d9ce9d37d5685f1e3c428d5",
+        "gitBlobSha1": "4da19c75777366f96b14002927b0c8940aec49a0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/relocation.mjs",
+        "bytes": 7050,
+        "sha256": "a41be77fc6973bc8cf9b563eab413d85cc318df072537368dbda83e58a4ec967",
+        "gitBlobSha1": "11154f2dd596bc7c327a2f6cf960fa5cded88d34"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/store.mjs",
+        "bytes": 54882,
+        "sha256": "eb508cc6742d84b1822c7284382d4e7b1cd819a28559d0126a5507f73194a901",
+        "gitBlobSha1": "5fdcaad4bdceb860051f9cfa100b68ef608fd3f2"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/README.md",
+        "bytes": 15318,
+        "sha256": "6270ae9ab4ceb4c7f0f3433a70eb4b161cc260bf7f6c51553d3a0767276d9aca",
+        "gitBlobSha1": "cca729869698ddca1601334b2f94ab7483d5070d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/agent-client.mjs",
+        "bytes": 17890,
+        "sha256": "e6e5cc43f35db412080d047e663a5f9890255e2a019b85ee4a0b524c58a4cb5d",
+        "gitBlobSha1": "d81b2aac21d52bff43c07c8fedd70de2de0dbad8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/catalog.mjs",
+        "bytes": 7997,
+        "sha256": "2b10dbef09afb290cf2baedbd20a5ef0ad03b4e870e9c57056768a48a4f81793",
+        "gitBlobSha1": "cfb766b9d9b880e7ad8d702e79eee126820e81c5"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/cli.mjs",
+        "bytes": 4165,
+        "sha256": "9c9cf2efec4a17b913eee823f9a03b2a068f36b6d7c55b885e6e1cf9824aeb6d",
+        "gitBlobSha1": "2808737570212d292fd6cdbe7f73cd69fbf27422"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/configuration.mjs",
+        "bytes": 4816,
+        "sha256": "b4fc7da10da3bc93a84f866901862e7f2ba02448e8d901304d9871031dfa3323",
+        "gitBlobSha1": "e59c8f6b73afe55a81a75d5ba221fc149154adc1"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/connection.schema.json",
+        "bytes": 2098,
+        "sha256": "0a5c6b0e9c8aed97c33792e2d6f691903de269c662c2faaec5152d3eeea9053c",
+        "gitBlobSha1": "3e328d89104be814b75f0116a4eb76457d064494"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/files.mjs",
+        "bytes": 8282,
+        "sha256": "acfc638a79bd8e81d6e1399fa8399a0e7e9feeccc905ae1bd788858a95b65f64",
+        "gitBlobSha1": "66242538e6b0c993151b9b2cce0cebc748149d82"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/index.d.mts",
+        "bytes": 6378,
+        "sha256": "749da06091f73dd37a4bf074d8f7a2733eab7a5e1f98393fdc67a4db39d79068",
+        "gitBlobSha1": "304a64908fe419e25cb8fcf66141669f495ded4d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/index.mjs",
+        "bytes": 575,
+        "sha256": "b0623ac78266e863941c7c9d0a170f632ffa41073d90fb0073c6bf74a5d8ce33",
+        "gitBlobSha1": "d68cde9e9bf2023ab2eb0856f6937c5d3fde3de2"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/merchant-provider.mjs",
+        "bytes": 3325,
+        "sha256": "1f048f6d73521b1eb125b516b441a5ca1901de28d77b8b70a5faf9d12cb500a7",
+        "gitBlobSha1": "a9675bbcce1e566329c14329d308d0193134a06a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/merchant-setup.mjs",
+        "bytes": 10673,
+        "sha256": "73ebd14058a7e4f5d64cda0f22ce3cd2ce4625597a0c59fcf8fb38c62447e5a3",
+        "gitBlobSha1": "cd3ae7f3abc1a32587be797d0e476e6104dc372e"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/merchant.mjs",
+        "bytes": 10040,
+        "sha256": "eeaa1a9817e7efa15ab946a1e1921053ab7e8d621727ff0c37bd1fcec7c61a39",
+        "gitBlobSha1": "2cfd6aa64ec27e66dcb44e6592f0451877c3aed6"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/operation-schemas.mjs",
+        "bytes": 3659,
+        "sha256": "1525b06eb2bc64aeb819dd5508696860c41e98d662ddbd17d2fd0a20b8083025",
+        "gitBlobSha1": "b97750cf5ef4920e3e7ee84c2d78f134817fadf3"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/receive.mjs",
+        "bytes": 4737,
+        "sha256": "c3351b6583d25834da4ceedbdee4e0aa1d430448633cec0ae753ed81e3206859",
+        "gitBlobSha1": "6d91ea6c1c98cfe8ca9e1e6772715250831bf2fc"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/receiving.mjs",
+        "bytes": 11552,
+        "sha256": "77048744d71f3f0c5d831916271080381056e7060d79acbb988d48de436779ba",
+        "gitBlobSha1": "858ad44b6046d7d81d88b79b4daf0a5d2f1439dc"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/routes.mjs",
+        "bytes": 5429,
+        "sha256": "3050f92507b9aac1fb269d4aa1d7816ac2405024114411bf17c7b42390f011e6",
+        "gitBlobSha1": "dc26757359b0ce7932a626aae907ee085832b50f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/archive.mjs",
+        "bytes": 12048,
+        "sha256": "082dbb1fd1d10d42a40befc3355e23a60960f4a39de5ce16c470a79ae54fc9f6",
+        "gitBlobSha1": "ed03b606e27078cf90829272994b745ca5721674"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/browser-assets.json",
+        "bytes": 677,
+        "sha256": "3a9acf063ca56d22e2b4d1af497b6173340b490f0b648d21281a8e7eba15af7a",
+        "gitBlobSha1": "bcfa19bdbb9f5167a24fd3ff4511cd639bbda8ce"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/capture.mjs",
+        "bytes": 11208,
+        "sha256": "a55dd6bac293bf34c463ec34ba840febb3ef7040b3fe7bd3cc2e14987fd2044e",
+        "gitBlobSha1": "b6675536775c59839104ed334e1095c51876ae59"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/checkpoint-codec.mjs",
+        "bytes": 6476,
+        "sha256": "bc15c7a26704dbd907ed814f84ae9f3bbe91476ef202270fd80a3363b63cfa19",
+        "gitBlobSha1": "e35194d6b6c6e3f40f632736fff9870dccbb73fa"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/checkpoint.d.mts",
+        "bytes": 1937,
+        "sha256": "71b0ab32bdcea407417a558a7234ce7936397f77b165f6ce16c7d6023c4f0966",
+        "gitBlobSha1": "a140704940281424f7bbc7914174578e1e55c6e3"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/checkpoint.mjs",
+        "bytes": 11989,
+        "sha256": "5e84a7179c0ab1290038956a9c6a5163490c92926a8467ca95ef8799c88cfb56",
+        "gitBlobSha1": "bdbad326afda89ac5a6369cc89c04d14f70add61"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/client.mjs",
+        "bytes": 3587,
+        "sha256": "83667d631de612bdc98900e1ad1246b26aac78211a672ef96aed6e4bf70b2273",
+        "gitBlobSha1": "27fdc83676f13e361f3ee609381e70caf1b6e322"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/engine.mjs",
+        "bytes": 56609,
+        "sha256": "93853dca26c3db40f1945ee8a6543996fd8b68a5ba96b8ab7f7e6faac42fb4f0",
+        "gitBlobSha1": "0c8bdc9042d81954539dcadf0d632895a4e951e1"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/exports.mjs",
+        "bytes": 14307,
+        "sha256": "893f9a6035c2e2c774e7f155e34b3268dee43bf980ba6dbed764810bb3fc7a01",
+        "gitBlobSha1": "7fc611830b2bdb24eb57d4289bf6fe1d862fbc6b"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/funding.mjs",
+        "bytes": 14330,
+        "sha256": "d36edc9c9067e05d1780568a1da5ab11f2d24e6b51546ecc9d0b0674991eecc3",
+        "gitBlobSha1": "7044b8c4a15ff332c7af9a2cee64901aa4f26dbe"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/immutable.mjs",
+        "bytes": 1224,
+        "sha256": "89855b36a661b9772bf08a6eae848d5d4589877e5660ebf861704d597e28a851",
+        "gitBlobSha1": "99fa984559156f410261d271ea82bed4471c8732"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/json-stream.mjs",
+        "bytes": 2551,
+        "sha256": "0a66b39a1aa9b429d1093f2109ac921e745bdd6fb78f5f37f675b476273ddaac",
+        "gitBlobSha1": "df789444035e5bf3273afcd9f21d695f4b33ef83"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/ledger.mjs",
+        "bytes": 85161,
+        "sha256": "d5c6134cb53763ef33c756dd109de291d88ff357adc93305398f9218cecceb95",
+        "gitBlobSha1": "5fc37fdf1ec79ad75488de9440552aadc530b84d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/native-json.mjs",
+        "bytes": 5600,
+        "sha256": "7c036593891624d6556f3f452d6f69e080113f2f535aacad3b63c93a6b7f88ea",
+        "gitBlobSha1": "df37529914f644a94d0a5be0bcf2052cc996a461"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/public/app.mjs",
+        "bytes": 59638,
+        "sha256": "42bc7f367c25996f59646cc74a8337ce6c3fd5635b39081fc5e1ed79f75db215",
+        "gitBlobSha1": "5f12cfa14b6e9d76e1902685ac1ffd64fdd5964a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/public/index.html",
+        "bytes": 1478,
+        "sha256": "5d930bb24fd2a9ee64ca811d989961789d8b3c4bd552621b7d92fecfa0b8c1c6",
+        "gitBlobSha1": "5fded5f5dc76a257d30ef5cbbd7eb64c1e7a19a6"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/public/style.css",
+        "bytes": 5473,
+        "sha256": "bdb013d036e60624cde3df2c01c2288379cb3cbfd329c824b63e6daa285b4f63",
+        "gitBlobSha1": "b48b09848b2e8940822d25fd8575d3f43e6731ee"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/server.mjs",
+        "bytes": 19357,
+        "sha256": "49e0176f37f3e6b675e77e7d500ab66c1df64ce7ef502f4093547747e4ec97c5",
+        "gitBlobSha1": "14ace03966e00906c28997e7acde6eabea84b904"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/source.mjs",
+        "bytes": 9937,
+        "sha256": "533c9ba0886cbbaab7d98c1ef307f800f3d291deda5bb8c8079e24bac183bd7f",
+        "gitBlobSha1": "2d9035cc2ee6a8f1eeab9474f9fd599da59bf5d8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/store.mjs",
+        "bytes": 6789,
+        "sha256": "39f4eebb12f4f7043289ad4b2c64610d016f7565c0702c2621e3b719caefced3",
+        "gitBlobSha1": "8f2631d6b985dbeda28f4674ca5ad45f7005b52e"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/accounting.mjs",
+        "bytes": 2304,
+        "sha256": "9765cde4d83a0f09d7131a8c9681de25e32f794136500343372960080617919a",
+        "gitBlobSha1": "962b1d48fa4a391fdd79c26387f6a86d0b02729c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/browser-assets.json",
+        "bytes": 692,
+        "sha256": "cdd8d96734b3c3b3d0bf6e658de8cafd1a3d9f27c0ebde46e3adc5fe645dcd45",
+        "gitBlobSha1": "f63cb2ccda3e67682053407fba5ba3d4d2db4a56"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/capture.mjs",
+        "bytes": 8573,
+        "sha256": "5aae5b68b4c3bdbb5198f50783fcaece9f190a2903729f68418b11e82fa34064",
+        "gitBlobSha1": "412fd038c8a3afb3ce6a0bf118b6f55d15ee04e3"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/client.mjs",
+        "bytes": 2865,
+        "sha256": "f3f319d5ebd8a318e3951ce4be09689848dfc2b880aa1f3b4ce779bc36131aaf",
+        "gitBlobSha1": "61a5da68fdc5d86f17d32c62ed490646b57a7ec8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/engine.mjs",
+        "bytes": 29001,
+        "sha256": "9c69e2509ba6b872af7cd207d364354ac28dab6747e0505ad33532344665ff2f",
+        "gitBlobSha1": "248eebf529d68e43d62613c37a19d6367d2a52f9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/exports.mjs",
+        "bytes": 12125,
+        "sha256": "22c5b7fd958eaaaf2c78bd9c5aab6c526df885e40a903e106e9f86cf75816907",
+        "gitBlobSha1": "37e184849d1e58cbb38420250ccd423146bfb240"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/public/app.mjs",
+        "bytes": 45680,
+        "sha256": "0df1043142b622ea18aed2df69781a63bcef22185a92439152bc5e94ce7333d1",
+        "gitBlobSha1": "00092569a765423cf87cd452b6b6fe67cddeb3c1"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/public/index.html",
+        "bytes": 2191,
+        "sha256": "5aaa39a3cc9b0f203147413bf3817974594c3c5275ae8d640f78bc8857a685ad",
+        "gitBlobSha1": "9e478a79bbf1b4b6aae208c3a9e2d145c0428178"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/public/style.css",
+        "bytes": 5792,
+        "sha256": "7c67810fc859ff0f50888ddabaa509d12b0c84f75548b56a6a22f06f8052fe4e",
+        "gitBlobSha1": "967fe81cd7d25456696f03839056e533b0d7b9ce"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/server.mjs",
+        "bytes": 14588,
+        "sha256": "b73558badc6c45f85a6c2b08c5da954c8e6053bedc1d0f8f75299382c26a8a5f",
+        "gitBlobSha1": "4cd6c428ddfbe761a2fa5167ff42bb537e8a84fc"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source-edition/LICENSE",
+        "bytes": 1070,
+        "sha256": "0b95b336cc9b706d270a155abde21d268e9489f767733d6a38af54f937789a35",
+        "gitBlobSha1": "5cf4d4ff5beb3a8cab83292926fa9b1aa6e4fd4d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source-edition/distribution_txs.ndjson",
+        "bytes": 8602,
+        "sha256": "71c8c696e5d67a41f3fad6eb0546f498e65cebacafccfcee31fc1af00fe4a863",
+        "gitBlobSha1": "a5e365af3973e30552f84505a585034b01a55660"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source-edition/manifest.json",
+        "bytes": 2550,
+        "sha256": "bf87ab2076e16f24958e74ecf955ba538971e6385ad842def873ef5a5865b34c",
+        "gitBlobSha1": "90d5f8fe20e6c13d3ddf82bc97efdd5528a231d9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source-edition/minted_blocks.ndjson",
+        "bytes": 3195,
+        "sha256": "03e571c6a5a1dc919fd0e6b23ba39166810bedf985a1bb9f0b638b6e5920bd89",
+        "gitBlobSha1": "68839e1b21fb6a110e75eb658c4a632bc8f4e719"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source-edition/retirement_from_block.ndjson",
+        "bytes": 1872,
+        "sha256": "aaf78c13ab19fb896ae0b5c8b1c266fd2226f83a406651c26744369cdde8b966",
+        "gitBlobSha1": "2baac53c6027f1f27a4708f00a53048caf83e039"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source-edition/retirements.ndjson",
+        "bytes": 9458,
+        "sha256": "14f3e99ab7ae0f68d91921aad9c3b0dae1b48099bd20442a2ad69faaa4be954d",
+        "gitBlobSha1": "7843bd667777acde4dce779752c6af76cf6700ec"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source-edition/sink_status.ndjson",
+        "bytes": 3606,
+        "sha256": "62406e04dae867c7e45f14729695796c4a85c888e08b24f1d09da61522f788a2",
+        "gitBlobSha1": "28b897d0aba19111a069a2c56d5c41ddc0e8a629"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source-edition/sinking_txs.ndjson",
+        "bytes": 16064,
+        "sha256": "5a04c81448b0c11719a56f3a9f6e2632fddb2921225c1311b77ab6136375786e",
+        "gitBlobSha1": "4da4d64c94e88fe0f292e6fbaaa142521ddcb806"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source-edition/vcs_projects.ndjson",
+        "bytes": 225,
+        "sha256": "94ab5f3666196d7530f1af100a17ce0ad0232811b6ce52d14927201df36868ba",
+        "gitBlobSha1": "c58357a5681ded8c7fe0d7ab7c3eb308a428402b"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/source.mjs",
+        "bytes": 15141,
+        "sha256": "85a40daabffa4f5ab6022777eaaf6ef38f75fbfd4963f3d7c448cf9df6570999",
+        "gitBlobSha1": "38b0195407e6ffe5a93d8452b874983c17097f8c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/store.mjs",
+        "bytes": 4970,
+        "sha256": "650895f4d9ab0abb4b95139f7b8092f776b01ac91bb3a4994af2c21b5ebdf43b",
+        "gitBlobSha1": "62f05fbeba3459b9cd5268e1e1ca55e7b040e177"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/http-methods.mjs",
+        "bytes": 454,
+        "sha256": "c97e82c45d86c0b0d169f54ae63a474d8d29cfa69af445b563829163966ea8a9",
+        "gitBlobSha1": "06d82311e7cd4ebec0a5421b00f5c57205a673cf"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/route-path.mjs",
+        "bytes": 8319,
+        "sha256": "f73d1ec0b8a0deba22072f793086ef3075f4f0213b28e9cc3d716e0eb10b351e",
+        "gitBlobSha1": "4884fc0106dd3221f80490c1b30aac00c648f433"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf31-buyer-client/public-transport.mjs",
+        "bytes": 14318,
+        "sha256": "8bb1a5ecd80fcb168133d291fb46d3640e2c4423477df02c4b59d05e11bbddfa",
+        "gitBlobSha1": "323233a1b27ecc032ce5c62dab11e1bb1c57a3a1"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf31-buyer-client/request-body.mjs",
+        "bytes": 121,
+        "sha256": "bf4c83c27a0dea7ef18064743936c45786fe752e2db3428c538b117f146f9437",
+        "gitBlobSha1": "9505955700d595d3fc69aef41dcac48da1570d72"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf43-agent-commerce/verify.mjs",
+        "bytes": 12719,
+        "sha256": "22363f965e45eaaabf6615c81067ef663d2b53abbce285660b1a1a54f24d05a3",
+        "gitBlobSha1": "262d68a31e5c9f41e9809a3f45c77d4e39bd5d60"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf85-live-402-capture/proxy-connect.mjs",
+        "bytes": 4833,
+        "sha256": "6aca71bb1801fa0268da56708886ce879702d6ca3eaacfaefe092372b9f2bee1",
+        "gitBlobSha1": "e8d669d584ee4767afd1fd21eddd44bfc99c3732"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/networks.json",
+        "bytes": 888,
+        "sha256": "d03217620465940165a457bcafe84fe7587a31d4e500bbe144cc691cb5bb6f1f",
+        "gitBlobSha1": "2f92b8e3f8498fd07136c7f9b741c9e8fe3c3aa8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/rpc-transport.mjs",
+        "bytes": 1104,
+        "sha256": "aff8060ed42863f9d6b8311c8ba01bf1ee472c69a82087524e1bfee2debcc02f",
+        "gitBlobSha1": "45c384769225c2c4979d2b222b5758c2b8a61bf1"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/terms.mjs",
+        "bytes": 10439,
+        "sha256": "030f5afaf77f1331c13566364ddc6a3c3e37006e0246708c040fb98f7e6e95f5",
+        "gitBlobSha1": "e7de12283d30a475ca4a265258f8c403a96e90a9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/verify.mjs",
+        "bytes": 11024,
+        "sha256": "425816a60a1e90f02ae7b53b05f8b2d08aae0edf72a6f5f222a226763a95facf",
+        "gitBlobSha1": "671fb616736aa3645460f1ebba01b8b7fd7f4e6c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf98-merchant-delivery/outbox.mjs",
+        "bytes": 11720,
+        "sha256": "4c532bd485bc181440ed4567b982a8d92139acce61fdfdfcd62cf74b2e3f271c",
+        "gitBlobSha1": "48e4f643601fb8464f695dd8e8785f4ad9e0f21c"
+      }
+    ]
+  }
+}
