@@ -19,6 +19,7 @@ from .monitoring_sources import source_record, verify_binding, export_source
 
 SOURCE_SCHEMA = "upstate.monitoring-observed-source/v1"
 SCOPED_SOURCE_SCHEMA = "upstate.monitoring-observed-source/v2"
+CONCENTRATION_SOURCE_SCHEMA = "upstate.monitoring-observed-source/v3"
 SCHEMA = "upstate.monitoring_observed_contexts/v1"
 COLLECTION = "monitoring_observed_contexts"
 
@@ -63,6 +64,10 @@ def _flow_scope(value):
     scope = value.get("flow_scope")
     if scope is None:
         return None
+    if isinstance(scope, dict) and scope.get("mode") == "unavailable":
+        if value.get("schema") != CONCENTRATION_SOURCE_SCHEMA or scope != {"mode": "unavailable", "station_ids": []}:
+            raise ContractError("Unavailable flow requires the explicit concentration-only source schema")
+        return scope
     if not isinstance(scope, dict) or scope.get("mode") != "same_station_only":
         raise ContractError("Observed flow scope must declare same_station_only")
     gauge = _id(scope.get("gauge_station_id"), "flow gauge station")
@@ -80,6 +85,8 @@ def _flow_scope(value):
 def _flow_applies(scope, station, day):
     if scope is None:
         return True
+    if scope.get("mode") == "unavailable":
+        return False
     return (station in scope["station_ids"] and
             (scope.get("start_inclusive") is None or
              scope["start_inclusive"] <= day <= scope["end_inclusive"]))
@@ -91,7 +98,7 @@ def _episode_activity(scope, row):
 
 
 def _validate(value):
-    if not isinstance(value, dict) or value.get("schema") not in {SOURCE_SCHEMA, SCOPED_SOURCE_SCHEMA}:
+    if not isinstance(value, dict) or value.get("schema") not in {SOURCE_SCHEMA, SCOPED_SOURCE_SCHEMA, CONCENTRATION_SOURCE_SCHEMA}:
         raise ContractError("Select an original monitoring observational context source")
     needed = ("stations", "activities", "daily_flow", "relations", "annual_coverage",
               "station_year_coverage", "monthly_coverage", "high_flow_episodes", "paired_contrasts")
@@ -102,6 +109,11 @@ def _validate(value):
         station = _id(row["station_id"], "source station")
         if station in stations:
             raise ContractError("Original station IDs repeat")
+        if value["schema"] == CONCENTRATION_SOURCE_SCHEMA and row.get("coordinate_origin") == "not_received":
+            if any(row.get(key) is not None for key in ("longitude", "latitude", "datum")):
+                raise ContractError("Missing station coordinates must remain explicitly unavailable")
+            stations[station] = row
+            continue
         lon = _number(row["longitude"], "station longitude")
         lat = _number(row["latitude"], "station latitude")
         if (not -180 <= lon <= 180 or not -90 <= lat <= 90
@@ -111,6 +123,17 @@ def _validate(value):
     if value["schema"] == SCOPED_SOURCE_SCHEMA and value.get("flow_scope") is None:
         raise ContractError("A v2 observed source requires its explicit original station flow scope")
     _flow_scope(value)
+    if value["schema"] == CONCENTRATION_SOURCE_SCHEMA:
+        if (value.get("flow_scope") != {"mode": "unavailable", "station_ids": []}
+                or not isinstance(value.get("flow_availability"), dict)
+                or value["flow_availability"].get("status") != "not_received"):
+            raise ContractError("Concentration-only context must explicitly retain unavailable daily flow")
+        if any(value[key] for key in ("daily_flow", "high_flow_episodes", "paired_contrasts")):
+            raise ContractError("A concentration-only source cannot claim flow-derived support")
+        if not isinstance(value.get("native_observation_binding"), dict):
+            raise ContractError("Concentration-only source requires its original native observation binding")
+        if not isinstance(value.get("excluded_observations", []), list):
+            raise ContractError("Excluded original observations must remain a complete source table")
     seen = set()
     activity_dates = {}
     for row in value["activities"]:
@@ -157,7 +180,7 @@ def _validate(value):
         if row["at_or_above_annual_p95"] != (flow >= threshold):
             raise ContractError("Source daily threshold flag differs from its retained values")
         days[day] = row
-    if not stations or not days:
+    if not stations or (not days and value["schema"] != CONCENTRATION_SOURCE_SCHEMA):
         raise ContractError("Original stations and daily support are required")
     episodes = set()
     for row in value["high_flow_episodes"]:
@@ -243,6 +266,14 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
             plan_id=None, campaign_id=None, station_mapping=None,
             title="Observed support for the monitoring network"):
     value, binding = _source(workspace, source_collection_id, source_id)
+    return _preview(workspace, value=value, binding=binding, network_id=network_id,
+                    plan_id=plan_id, campaign_id=campaign_id,
+                    station_mapping=station_mapping, title=title)
+
+
+def _preview(workspace, *, value, binding, network_id=None, plan_id=None,
+             campaign_id=None, station_mapping=None, title="Observed support for the monitoring network"):
+    """Project a validated retained source; also used by read-only native intake."""
     network, plan, campaign = _selection(workspace, network_id, plan_id, campaign_id)
     mapping = station_mapping or {}
     if not isinstance(mapping, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in mapping.items()):
@@ -254,6 +285,7 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
     if len(set(mapping.values())) != len(mapping):
         raise ContractError("Explicit source stations must map to distinct native stations")
     flow_scope = _flow_scope(value)
+    flow_unavailable = bool(flow_scope and flow_scope.get("mode") == "unavailable")
     by_station = defaultdict(list)
     by_station_day = defaultdict(list)
     observations_by_station = defaultdict(list)
@@ -275,7 +307,8 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
         point = native.get("geometry", {}) if native else {}
         coords = point.get("coordinates") if point.get("type") == "Point" else None
         distance = (_distance([original["longitude"], original["latitude"]], coords[:2])
-                    if coords and original["datum"] == "WGS84" else None)
+                    if coords and original["datum"] == "WGS84"
+                    and original.get("coordinate_origin") != "retained_network_station" else None)
         records = by_station[key]
         matches.append({
             "source_station_id": key, "source_station_name": original.get("station_name", key),
@@ -284,7 +317,9 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
             "catchment_assignment": native.get("assignment") if native else None,
             "selected_search_area": bool(native and native.get("huc_id") in selected_ids),
             "coordinate_difference_m": distance,
-            "coordinate_review": ("different_datum" if original["datum"] != "WGS84" else
+            "coordinate_review": ("network_station_binding" if original.get("coordinate_origin") == "retained_network_station" else
+                                  "unavailable" if original.get("coordinate_origin") == "not_received" else
+                                  "different_datum" if original["datum"] != "WGS84" else
                                   "over_100m" if distance is not None and distance > 100 else
                                   "within_100m" if distance is not None else "unavailable"),
             "original_datum": original["datum"],
@@ -297,6 +332,11 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
             "original_longitude": original["longitude"], "original_latitude": original["latitude"],
             "native_geometry": point if native else None,
         })
+    if value["schema"] == CONCENTRATION_SOURCE_SCHEMA:
+        for item in matches:
+            source_station = source_stations[item["source_station_id"]]
+            item["coordinate_origin"] = source_station.get("coordinate_origin")
+            item["coordinate_source_bindings"] = source_station.get("coordinate_source_bindings")
     available = {m["source_station_id"] for m in matches if m["network_station_id"]}
     episode_scope_available = (available if flow_scope is None else
                                available.intersection(flow_scope["station_ids"]))
@@ -311,7 +351,9 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
         exact = by_station_day.get((source_station, day), []) if source_station else []
         flow_applicable = _flow_applies(flow_scope, source_station, day)
         flow = days.get(day) if flow_applicable else None
-        if flow_scope is not None and source_station is None:
+        if flow_unavailable:
+            flow_status = "not_received"
+        elif flow_scope is not None and source_station is None:
             flow_status = "station_not_bound_to_source"
         elif flow_scope is not None and source_station not in flow_scope["station_ids"]:
             flow_status = "station_outside_flow_scope"
@@ -330,7 +372,7 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
             "source_observation_status": "same_station_same_date" if exact else "no_same_station_sample" if source_station else "station_not_bound_to_source",
             "original_flow_status": flow_status,
             "flow_scope_applicable": flow_applicable,
-            "flow_gauge_station_id": flow_scope["gauge_station_id"] if flow_scope else None,
+            "flow_gauge_station_id": flow_scope.get("gauge_station_id") if flow_scope else None,
             "mean_cfs": flow["mean_cfs"] if flow else None,
             "flow_qualifiers": flow.get("qualifiers") if flow else None,
             "at_or_above_annual_p95": flow["at_or_above_annual_p95"] if flow else None,
@@ -369,7 +411,7 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
         "station_mapping": mapping, "station_matches": matches,
         "flow_scope": flow_scope,
         "observations": [row for row in value.get("observations", [])
-                         if row["station_id"] in available],
+                         if value["schema"] == CONCENTRATION_SOURCE_SCHEMA or row["station_id"] in available],
         "network_stations_without_source": sorted(set(native_stations) - set(resolved)),
         "calendar": calendar, "high_flow_episodes": episode_rows,
         "annual_coverage": value["annual_coverage"],
@@ -385,8 +427,8 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
             "matched_station_observations": sum(len(observations_by_station[key]) for key in available),
             "matched_flow_scope_stations": sum(flow_scope is None or key in flow_scope["station_ids"]
                                                for key in available),
-            "source_gauge_days": len(days), "source_high_flow_episodes": len(episode_rows),
-            "source_unsampled_episodes": sum(r["sampled_dates"] == 0 for r in episode_rows),
+            "source_gauge_days": len(days), "source_high_flow_episodes": None if flow_unavailable else len(episode_rows),
+            "source_unsampled_episodes": None if flow_unavailable else sum(r["sampled_dates"] == 0 for r in episode_rows),
             "matched_stations_unsampled_episodes": sum(r["matching_network_station_activities"] == 0 for r in episode_rows) if episode_scope_available else None,
             "saved_calendar_visits": len(calendar),
             "visits_with_received_daily_flow": sum(r["source_daily_record"] is not None for r in calendar),
@@ -396,7 +438,7 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
             "visits_without_flow_station_binding": sum(r["original_flow_status"] == "station_not_bound_to_source" for r in calendar),
             "bound_source_station_visits": sum(r["source_station_id"] is not None for r in calendar),
             "visits_sharing_original_sample_station_date": sum(bool(r["source_activity_ids_same_date"]) for r in calendar),
-            "high_flow_episodes_with_saved_calendar_date": sum(bool(r["saved_calendar_visit_keys"]) for r in episode_rows),
+            "high_flow_episodes_with_saved_calendar_date": None if flow_unavailable else sum(bool(r["saved_calendar_visit_keys"]) for r in episode_rows),
             "paired_contrasts_with_both_stations": sum(r["both_stations_in_saved_network"] for r in paired),
         },
         "interpretation": value["interpretation"] + [
@@ -406,10 +448,17 @@ def preview(workspace, *, source_collection_id, source_id, network_id=None,
             "Source-year and month coverage includes the original full " + str(len(source_stations)) + "-station cohort. Matched-station counts are separately labeled.",
             "Original station datums are retained. NAD83 coordinates are not relabeled or transformed to WGS84; their point-distance comparison is marked different_datum.",
             "Matched observations retain their original values, censoring intervals, statuses, units, comments and source row identities.",
-            ("Daily flow and episode activity/calendar support apply only to the original gauge station " + flow_scope["gauge_station_id"] + ". Episode sampling counts include original Sample-Routine activities only."
+            ("No daily-flow series was received for this concentration context. Flow-linked episodes, event coverage and loads are unavailable."
+             if flow_unavailable else "Daily flow and episode activity/calendar support apply only to the original gauge station " + flow_scope["gauge_station_id"] + ". Episode sampling counts include original Sample-Routine activities only."
              if flow_scope else "This unscoped source retains its original regional daily-flow date-context behavior."),
         ],
     }
+    if value["schema"] == CONCENTRATION_SOURCE_SCHEMA:
+        from copy import deepcopy
+        for key in ("native_observation_binding", "flow_availability", "excluded_observations"):
+            result[key] = deepcopy(value.get(key))
+        result["summary"]["excluded_original_observations"] = len(value.get("excluded_observations", []))
+        result["summary"]["source_original_rows"] = value["native_observation_binding"]["row_count"]
     return result
 
 
@@ -444,6 +493,9 @@ def inspect(workspace, context_id):
             raise ContractError("The retained campaign revision differs")
         if revision["plan_id"] != record["plan_id"] or revision["network_id"] != record["network_id"]:
             raise ContractError("Saved campaign context points to a different plan")
+    if record.get("native_observation_binding"):
+        from .monitoring_native_observations import verify_binding as verify_native_binding
+        verify_native_binding(workspace, record["native_observation_binding"])
     return record
 
 
@@ -465,6 +517,9 @@ def _csv(rows):
 
 
 def report_html(record):
+    if record.get("source_schema") == CONCENTRATION_SOURCE_SCHEMA:
+        from .monitoring_concentration_report import render
+        return render(record)
     esc = lambda value: html.escape(str(value if value is not None else ""))
     def table(rows, fields):
         return "<div class='table'><table><thead><tr>" + "".join("<th>"+esc(k.replace("_", " "))+"</th>" for k in fields) + "</tr></thead><tbody>" + "".join("<tr>" + "".join("<td>"+esc(json.dumps(r.get(k), ensure_ascii=False) if isinstance(r.get(k), (dict, list)) else r.get(k))+"</td>" for k in fields) + "</tr>" for r in rows) + "</tbody></table></div>"
@@ -506,6 +561,10 @@ def _export_members(workspace, record):
         yield "observed-context/" + key.replace("_", "-") + ".csv", bytes_member(_csv(record[key]))
     if "observations" in record:
         yield "observed-context/observations.csv", bytes_member(_csv(record.get("observations", [])))
+    if record.get("source_schema") == CONCENTRATION_SOURCE_SCHEMA:
+        from .monitoring_concentration_report import export_tables
+        for name, data in export_tables(record).items():
+            yield name, bytes_member(data)
     yield from source_export_members(workspace, "monitoring-observations", record["source_binding"])
 
 
@@ -532,6 +591,10 @@ def export_files(workspace, context_id, *, plan_id=None, network_id=None):
         files["observed-context/" + key.replace("_", "-") + ".csv"] = _csv(record[key])
     if "observations" in record:
         files["observed-context/observations.csv"] = _csv(record.get("observations", []))
+    if record.get("source_schema") == CONCENTRATION_SOURCE_SCHEMA:
+        from .monitoring_concentration_report import export_tables
+        for name, data in export_tables(record).items():
+            files[name] = data
     originals = export_source(workspace, "monitoring-observations", record["source_binding"])
     files.update(originals)
     return files

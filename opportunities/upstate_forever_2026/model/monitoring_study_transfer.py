@@ -449,6 +449,11 @@ def visit(closure, kind, key, value):
             raise ValueError("The observed Monitoring context changed while selected.")
         closure.need("monitoring_networks", value["network_id"], reason)
         closure.need("sources", value["source_binding"]["source_collection_id"], reason)
+        native_binding = value.get("native_observation_binding")
+        if native_binding and native_binding.get("project_id") == closure.workspace.project["id"]:
+            from .monitoring_native_observations import verify_binding
+            verify_binding(closure.workspace, native_binding)
+            closure.need("observations", native_binding["observation_id"], reason)
         if value.get("plan_id"):
             closure.need("monitoring_plans", value["plan_id"], reason)
         if value.get("campaign_revision_id"):

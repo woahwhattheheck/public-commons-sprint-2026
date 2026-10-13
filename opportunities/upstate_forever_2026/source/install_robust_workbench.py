@@ -21,6 +21,14 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/monitoring_native_observations.py",
+    "model/monitoring_concentration_report.py",
+    "operator/web/monitoring-native-context.mjs",
+    "operator/web/monitoring-native-context.css",
+    "source/NATIVE_OBSERVATIONS_SAMPLING.md",
+    "source_tools/sampling_native_observation_receiving.py",
+    "source_tools/selections/sampling_sv833_20261013.json",
+    "integration/component_fragments/monitoring-native-observations.json",
     "model/MONITORING.md",
     "model/MONITORING_FIELDWORK.md",
     "model/MONITORING_OBSERVED_CONTEXT.md",
@@ -499,6 +507,14 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/monitoring_native_observations.py",
+    "model/monitoring_concentration_report.py",
+    "operator/web/monitoring-native-context.mjs",
+    "operator/web/monitoring-native-context.css",
+    "source/NATIVE_OBSERVATIONS_SAMPLING.md",
+    "source_tools/sampling_native_observation_receiving.py",
+    "source_tools/selections/sampling_sv833_20261013.json",
+    "integration/component_fragments/monitoring-native-observations.json",
     "model/MONITORING.md",
     "model/MONITORING_FIELDWORK.md",
     "model/MONITORING_OBSERVED_CONTEXT.md",
@@ -2049,7 +2065,63 @@ def verify_sampling_native_evidence_dependencies(application, pending):
             assembled_data(application, pending, "operator/web/" + asset)
 
 
+def verify_native_observation_context_dependencies(application, pending):
+    """Keep the original concentration context, Sampling and native receiving together."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+    helper = source("model/monitoring_native_observations.py")
+    actions = source("model/monitoring_actions.py")
+    if helper is None and (actions is None or b"context.native.prepare" not in actions):
+        return
+    for name in (
+        "model/monitoring_native_observations.py",
+        "model/monitoring_concentration_report.py",
+        "operator/web/monitoring-native-context.mjs",
+        "operator/web/monitoring-native-context.css",
+        "source/NATIVE_OBSERVATIONS_SAMPLING.md",
+        "source_tools/sampling_native_observation_receiving.py",
+        "source_tools/selections/sampling_sv833_20261013.json",
+        "integration/component_fragments/monitoring-native-observations.json",
+        "model/monitoring_observed_context.py",
+        "model/monitoring_actions.py",
+        "model/monitoring_study_transfer.py",
+        "model/monitoring_recommendations.py",
+        "model/monitoring_common.py",
+        "model/monitoring_sources.py",
+        "model/monitoring_workspace.py",
+        "model/monitoring_network.py",
+        "model/monitoring_packet.py",
+        "model/observations.py",
+        "model/observation_support.py",
+        "model/common.py",
+        "model/workspace.py",
+        "operator/monitoring_native.py",
+        "operator/extensions/monitoring.json",
+        "operator/web/monitoring.mjs",
+        "operator/web/monitoring-observed.mjs",
+        "operator/web/monitoring_recommendations.mjs",
+        "source_tools/receive_sampling_recommendations.py",
+        "CURRENT_OWNER_DIRECTION.md",
+    ):
+        assembled_data(application, pending, name)
+    descriptor = json.loads(assembled_data(application, pending, "operator/extensions/monitoring.json"))
+    if ("monitoring.context.native.prepare" not in descriptor.get("backend", {}).get("actions", [])
+            or not {"monitoring-native-context.mjs", "monitoring-native-context.css"}.issubset(
+                descriptor.get("assets", []))):
+        raise ValueError("Install the complete original native observation context registration")
+    for asset in descriptor.get("assets", []):
+        assembled_data(application, pending, "operator/web/" + asset)
+    fragment = json.loads(assembled_data(application, pending,
+        "integration/component_fragments/monitoring-native-observations.json"))
+    family = fragment.get("components", {}).get("monitoring-native-observations", {})
+    if not {"monitoring", "monitoring-recommendations"}.issubset(family.get("requires", [])):
+        raise ValueError("Native concentration context requires original Monitoring and Sampling")
+    for path in family.get("paths", []):
+        assembled_data(application, pending, path)
+
+
 def verify_composition(application, pending):
+    verify_native_observation_context_dependencies(application, pending)
     verify_sampling_native_evidence_dependencies(application, pending)
     verify_terrain_receiving_dependencies(application, pending)
     verify_multivariate_control_dependencies(application, pending)

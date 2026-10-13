@@ -1,0 +1,67 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-native-observations",
+  "components": {
+    "monitoring-native-observations": {
+      "title": "Saved native observations, original measurement context and Sampling continuation",
+      "requires": [
+        "monitoring",
+        "monitoring-recommendations"
+      ],
+      "paths": [
+        "model/monitoring_native_observations.py",
+        "model/monitoring_concentration_report.py",
+        "operator/web/monitoring-native-context.mjs",
+        "operator/web/monitoring-native-context.css",
+        "source/NATIVE_OBSERVATIONS_SAMPLING.md",
+        "source_tools/sampling_native_observation_receiving.py",
+        "source_tools/selections/sampling_sv833_20261013.json",
+        "integration/component_fragments/monitoring-native-observations.json",
+        "model/monitoring_observed_context.py",
+        "model/monitoring_actions.py",
+        "model/monitoring_study_transfer.py",
+        "model/monitoring_recommendations.py",
+        "model/monitoring_common.py",
+        "model/monitoring_sources.py",
+        "model/monitoring_workspace.py",
+        "model/monitoring_network.py",
+        "model/monitoring_packet.py",
+        "model/observations.py",
+        "model/observation_support.py",
+        "model/common.py",
+        "model/workspace.py",
+        "operator/monitoring_native.py",
+        "operator/extensions/monitoring.json",
+        "operator/web/monitoring.mjs",
+        "operator/web/monitoring-observed.mjs",
+        "operator/web/monitoring_recommendations.mjs",
+        "source_tools/receive_sampling_recommendations.py",
+        "CURRENT_OWNER_DIRECTION.md"
+      ]
+    }
+  },
+  "extend_components": {
+    "monitoring": {
+      "paths": [
+        "model/monitoring_native_observations.py",
+        "model/monitoring_concentration_report.py",
+        "operator/web/monitoring-native-context.mjs",
+        "operator/web/monitoring-native-context.css",
+        "source/NATIVE_OBSERVATIONS_SAMPLING.md",
+        "integration/component_fragments/monitoring-native-observations.json"
+      ],
+      "requires": []
+    },
+    "study-transfer": {
+      "paths": [
+        "model/monitoring_native_observations.py",
+        "model/monitoring_concentration_report.py",
+        "source/NATIVE_OBSERVATIONS_SAMPLING.md"
+      ],
+      "requires": []
+    }
+  },
+  "required_components": [
+    "monitoring-native-observations"
+  ]
+}

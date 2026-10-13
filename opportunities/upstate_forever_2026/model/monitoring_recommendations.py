@@ -92,7 +92,11 @@ def _decimal(value, name, *, money=False):
 
 
 def _cohort(row):
-    fields = {key: {"present": key in row, "value": row.get(key)} for key in COHORT_FIELDS}
+    keys = COHORT_FIELDS
+    if row.get("sampling_cohort_schema") == "upstate.native-observation-sampling-cohort/v1":
+        keys = COHORT_FIELDS + ("time_basis", "temperature_basis", "particle_size_basis",
+                                "time_support", "quantity_basis", "measurement_support")
+    fields = {key: {"present": key in row, "value": row.get(key)} for key in keys}
     return digest(fields), fields
 
 
@@ -112,13 +116,17 @@ def _context_view(record):
         item["observation_count"] += 1
         item["station_ids"].add(row["station_id"])
     values = [{**row, "station_ids": sorted(row["station_ids"])} for _, row in sorted(cohorts.items())]
-    return {"context_id": record["id"], "context_digest": digest(record),
+    result = {"context_id": record["id"], "context_digest": digest(record),
             "network_id": record["network_id"], "network_digest": record["network_digest"],
             "source_binding": copy.deepcopy(record["source_binding"]),
             "source_period": copy.deepcopy(record["source_period"]),
             "stations": copy.deepcopy(record["station_matches"]), "cohorts": values,
             "flow_scope": copy.deepcopy(record.get("flow_scope")),
             "summary": copy.deepcopy(record["summary"])}
+    if record.get("source_schema") == "upstate.monitoring-observed-source/v3":
+        result["native_observation_binding"] = copy.deepcopy(record.get("native_observation_binding"))
+        result["flow_availability"] = copy.deepcopy(record.get("flow_availability"))
+    return result
 
 
 def context(workspace, context_id):
@@ -623,7 +631,10 @@ def report_html(record, native_designs=None):
         if "model_evidence" in row:
             from .monitoring_evidence_report import render
             details += render(row["model_evidence"])
-        details += "<p>Flow goal: " + esc(target["flow_goal"]) + "; matching historical episodes: " + str(len(row["evidence"]["high_flow_episodes"])) + ". Original station flow applicability: " + str(row["evidence"]["flow_scope_eligible"]) + ".</p>"
+        if row["evidence"]["flow_scope_eligible"]:
+            details += "<p>Flow goal: " + esc(target["flow_goal"]) + "; matching historical episodes: " + str(len(row["evidence"]["high_flow_episodes"])) + ". The retained flow scope applies to this station.</p>"
+        else:
+            details += "<p>Flow goal: " + esc(target["flow_goal"]) + ". Historical event coverage is unavailable for this station and source scope.</p>"
         details += "<ul>" + "".join("<li>" + esc(x) + "</li>" for x in row["warnings"]) + "</ul>"
         details += "<details><summary>Exact supporting observation and activity identifiers</summary><pre>" + esc(json.dumps({"observations": row["evidence"]["observation_ids"], "activities": row["evidence"]["activity_ids"], "cohort": row["cohort"]["fields"]}, ensure_ascii=False, indent=2)) + "</pre></details></section>"
     native = ""
@@ -632,11 +643,15 @@ def report_html(record, native_designs=None):
         native += table(["Target", "Proposed visits", "Native calendar visits in selected months", "Count met"], [
             (r["target_id"], r["proposed_visits"], r["calendar_visits_in_selected_months"], r["calendar_count_meets_request"]) for r in item["target_calendar"]])
     total = money(record["budget"]["known_total_cents"])
+    source_support = ""
+    if record["context_snapshot"].get("source_schema") == "upstate.monitoring-observed-source/v3":
+        from .monitoring_concentration_report import sampling_support
+        source_support = sampling_support(record["context_snapshot"])
     return ("<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
         "<title>" + esc(record["title"]) + "</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#eee;color:#202020;font:15px/1.5 system-ui,sans-serif}main{max-width:1200px;margin:auto;padding:28px;background:white}h1{font-size:28px}h2{font-size:20px;margin-top:30px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #bbb;padding:8px;overflow-wrap:anywhere}th{background:#eee}.table{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}section{break-inside:auto}h2,h3,h4,caption{break-after:avoid}tr{break-inside:avoid}caption{text-align:left;font-weight:600;padding:8px 0}details{margin:12px 0}@media(max-width:500px){main{padding:14px}}@media print{body,main{background:white}main{padding:0;max-width:none}thead{display:table-header-group}.table{overflow:visible}details{display:block}details>*{display:block}table{font-size:10px}.sampling-native-evidence details{display:none}}</style></head><body><main>"
         "<h1>" + esc(record["title"]) + "</h1><p>Proposed monitoring programme · recorded by " + esc(record["operator"]) + " at " + esc(record["recorded_at"]) + "</p>"
         "<p>Historical evidence: " + esc(record["selection"]["evidence_start"]) + " to " + esc(record["selection"]["evidence_end"]) + ". Known included planning cost: " + total + ("; complete." if record["budget"]["complete"] else "; additional selected costs remain unknown.") + "</p>"
-        "<p>" + esc(record["selection"]["planning_basis"]) + "</p>" + targets + details + native +
+        "<p>" + esc(record["selection"]["planning_basis"]) + "</p>" + source_support + targets + details + native +
         "<h2>Interpretation</h2><ul>" + "".join("<li>" + esc(x) + "</li>" for x in record["interpretation"]) + "</ul>"
         "<h2>Original source binding</h2><pre>" + esc(json.dumps(record["source_binding"], ensure_ascii=False, indent=2)) + "</pre>"
         "<h2>Operator notes</h2><p>" + esc(record["selection"]["notes"]) + "</p></main></body></html>")
