@@ -12,6 +12,8 @@ import { GRIDFABRIC_PROCEDURE_INPUT_SCHEMA, inspectGridFabricProcedureInput, pre
 import { captureGridFabricProcedure, readGridFabricProcedureCapture } from './gridfabric-procedure-native.mjs';
 import { exportGridProcedureArchive, receiveGridProcedureArchive } from '../../sf30-seller-sdk/gridfabric-plaid/procedure-archive.mjs';
 
+import {compareGridFabricCaptures,receiveGridFabricComparison,renderGridFabricComparisonHTML} from './gridfabric-procedure-comparison.mjs';
+
 const HELP = [
   'GridFabric customer procedures','',
   '  starforge gridfabric-procedure catalog --out NEW_COMPLETE_CATALOG_JSON',
@@ -28,6 +30,10 @@ const HELP = [
   '  starforge gridfabric-procedure receive --archive COMPLETE_ARCHIVE_GZ',
   '      --sha256 ARCHIVE_SHA256 --bytes ARCHIVE_BYTES --out NEW_CAPTURE_DIRECTORY',
   '      [--maximum-expanded-bytes BYTES]',
+  '  starforge gridfabric-procedure compare --before CAPTURE_DIRECTORY --after CAPTURE_DIRECTORY',
+  '      --out NEW_FILE --format json|html [--before-report REPORT_ID] [--after-report REPORT_ID]',
+  '  starforge gridfabric-procedure reopen-comparison --comparison COMPARISON_JSON',
+  '      --before CAPTURE_DIRECTORY --after CAPTURE_DIRECTORY --out NEW_FILE --format json|html',
   '  starforge gridfabric-procedure render --plan COMPLETE_PLAN_JSON --out NEW_FILE',
   '      --format html|markdown','',
   'input reads the existing authenticated workspace and selected instance.',
@@ -42,6 +48,8 @@ const HELP = [
   'All output files/directories are new; original customer files remain available.',''
 ].join('\n');
 const allowed = {
+  compare:['before','after','out','format','before-report','after-report'],
+  'reopen-comparison':['comparison','before','after','out','format'],
   catalog:['out'],
   input:['connection-file','id','title','instance','out','customer','owner','period'],
   prepare:['input','out','catalog'],
@@ -52,6 +60,8 @@ const allowed = {
   render:['plan','out','format']
 };
 const required = {
+  compare:['before','after','out','format'],
+  'reopen-comparison':['comparison','before','after','out','format'],
   catalog:['out'],
   input:['connection-file','id','title','instance','out'],
   prepare:['input','out'],
@@ -93,6 +103,19 @@ function byteCount(value,label) {
 export async function mainGridFabricProcedure(args=process.argv.slice(2)) {
   const {action,options}=argumentsFor(args);
   if(action==='help'){console.log(HELP);return;}
+  if(action==='compare'||action==='reopen-comparison'){
+    if(!['json','html'].includes(options.format))throw new TypeError('Choose json or html for the complete comparison.');
+    // The original reader receives all source, record, file and history bytes on both sides.
+    const before=await readGridFabricProcedureCapture(resolve(options.before));
+    const after=await readGridFabricProcedureCapture(resolve(options.after));
+    const result=action==='compare'?compareGridFabricCaptures(before,after,{
+      beforeReportId:options['before-report']??null,afterReportId:options['after-report']??null}):
+      receiveGridFabricComparison(await originalJSON(options.comparison),before,after);
+    const path=absoluteOutput(options.out);
+    if(options.format==='json')await saveExport(path,result);else await saveTextExport(path,renderGridFabricComparisonHTML(result));
+    console.log(JSON.stringify({path,selection:result.selection,summary:result.summary,
+      beforeCapture:result.before.receipt.sha256,afterCapture:result.after.receipt.sha256}));return result;
+  }
   if(action==='catalog') {
     const catalog=await loadCommandCatalog(),path=absoluteOutput(options.out);
     await saveExport(path,catalog);

@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "gridfabric-procedures",
-  "description": "Prepare customer GridFabric Operating Plans, capture complete original native records and files, and receive the saved plan history through the installed product.",
+  "description": "Prepare customer GridFabric Operating Plans, capture complete original native records and files, compare original report quantities and operating outcomes, and receive the full history.",
   "components": [
     "stellar/scf-starforge-20261009/distribution/discovery"
   ],
@@ -9,7 +9,7 @@
     "gridfabric-procedure": "stellar/scf-starforge-20261009/distribution/discovery/gridfabric-procedure-cli.mjs"
   },
   "commandDescriptions": {
-    "gridfabric-procedure": "Prepare, capture and reopen a complete customer GridFabric procedure using the original authenticated workspace and Operating Plans history."
+    "gridfabric-procedure": "Prepare, capture, compare and reopen complete customer GridFabric procedures and original report outcomes."
   },
   "exports": {
     "./operator/gridfabric-procedure": {
@@ -19,6 +19,10 @@
     "./operator/gridfabric-procedure/native": {
       "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/gridfabric-procedure-native.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/gridfabric-procedure-native.mjs"
+    },
+    "./operator/gridfabric-procedure/comparison": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/gridfabric-procedure-comparison.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/gridfabric-procedure-comparison.mjs"
     }
   }
 }

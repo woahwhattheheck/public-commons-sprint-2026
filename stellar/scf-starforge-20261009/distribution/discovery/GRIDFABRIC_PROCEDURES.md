@@ -6,12 +6,13 @@ The procedure uses the existing Operating Plans model and browser. Its native ca
 
 ## Browser workspace
 
-Open **Customer procedures** from the existing GridFabric console. The screen uses that application's private connection and the same Operating Plans model. Its four sections carry the work from preparation through customer receiving:
+Open **Customer procedures** from the existing GridFabric console. The screen uses that application's private connection and the same Operating Plans model. Its five sections carry the work from preparation through customer receiving:
 
 1. **Plan and steps** prepares the nine-step procedure, saves customer edits as revisions, attaches complete output files, and exports editable JSON or readable HTML/Markdown. Earlier revisions remain available.
 2. **Original records and files** pages through the native collections, shows complete records and selects their retained files. Review the workspace revision explicitly before capturing.
 3. **Capture and saved requests** saves the exact input, catalog, complete plan, request UUID and capture time in the browser before dispatch. It receives the full capture through an SDK connection to the running application. The application keeps its own durable request and attempt history.
-4. **Receive and return** reopens a complete capture archive or receives a returned editable plan. Compatible histories extend the same plan; divergent histories can be received as separate copies. Save or download an edited draft before receiving another history.
+4. **Compare reports and outcomes** compares original quantities, source gaps, mapping parameters, actual recorded outcomes and saved procedure changes. It reads both complete captures before deriving a comparison.
+5. **Receive and return** reopens a complete capture archive or receives a returned editable plan. Compatible histories extend the same plan; divergent histories can be received as separate copies. Save or download an edited draft before receiving another history.
 
 After a lost response, open the saved request and choose **Read this original outcome**. A retained incomplete request offers explicit continuation with the same UUID and frozen body. A separate capture receives a new UUID after the earlier attempt has been reviewed. The native request history is paginated: list pages show compact saved metadata, and opening an individual request reads and checks the complete capture.
 
@@ -201,3 +202,68 @@ The application embedding capture owns its client lifecycle. The capture functio
 - [GridFabric domain engine](../../sf30-seller-sdk/gridfabric-plaid/DOMAIN_OPERATIONS.md)
 - [Original typed SDK and MCP](../../sf30-seller-sdk/gridfabric-plaid/SDK_MCP.md)
 - [Energy product operating guide](../../../../products/energy-operations/OPERATING.md)
+
+
+## Compare a source correction with the earlier report
+
+Use **Compare reports and outcomes** after the original reporting workflow has prepared a revised response. The useful question is: which reported intervals changed, which source gaps remain, and which mapping or operating decisions explain the difference?
+
+1. In **Capture and saved requests**, open the earlier and later complete captures, or receive their complete archives in **Receive and return**. Select captures from the same original workspace and Plaid instance.
+2. Open **Compare reports and outcomes**. Select the before and after requests. A request UUID may also be entered directly when it is on another history page.
+3. Choose **Read both original captures**. The existing authenticated reader receives every original capture member. A restored browser response alone is insufficient.
+4. Choose the report on each side. Captures with more than one report require an explicit report choice. Choose **Compare selected reports**.
+5. Review source gaps and the before/after original quantities, then open the mapping parameters, calculation details, source rows and quality information. The interval table pages through all results; JSON and HTML downloads retain every row.
+6. Review retained device/management outcomes and customer procedure changes. Use the original main console or Operating Plans editor for any subsequent operating decision.
+
+Intervals match by original report specifier, rId and timestamp. A quantity difference is **after minus before**, using the exact decimal strings already calculated and rounded by the original GridFabric engine. It appears only when device, channel, kind, unit, aggregation, time basis and effective interval period match. Different units or semantics stay visible without a numeric subtraction. The comparison performs no new aggregation, unit conversion, energy-saving estimate or causal analysis.
+
+A **source gap resolved** means the same measurement changes from NEEDS_SOURCE to READY. A change to a different unit, device or period is identified as changed semantics even when its new report is READY. Missing values are never zero-filled. A row selected on only one side does not establish creation, deletion or zero activity in the operating workspace.
+
+READY means the original report response was prepared. VTN acceptance remains a separate original management outcome. An adapter's ACKNOWLEDGED status retains its original HTTP-success meaning and complete response. Changed source precedence, correction links and quality flags remain visible even when rounded quantities are equal.
+
+### Keep and reopen the complete comparison
+
+Download the **full comparison JSON**, **readable comparison report** and both **complete capture archives**. The JSON retains all selected original records, full plan histories, mappings, source metadata and comparison choices. Original binary files and raw responses remain in the two archives.
+
+On another receiving host, import both archives through the existing native receiver. Open the full comparison JSON in the comparison tab, read the two received original requests, and explicitly reopen the comparison. The result is re-derived from both complete originals and must match the saved JSON in full. An HTML report is readable on its own; exact source verification and continued comparison require the JSON and both archives.
+
+Comparison selections and an imported comparison are included in the existing complete browser-work backup. A cold page must read the original captures again. Prior imported comparisons can be retained in that backup while starting another selection. Editing a capture or report choice removes the displayed old result immediately.
+
+### Native comparison and exact receiving
+
+The same comparison model is available through the installed command. Both directories are received by the original full capture reader before any comparison is exported.
+
+```sh
+starforge gridfabric-procedure compare \
+  --before /private/customer/before-capture \
+  --after /private/customer/after-capture \
+  --before-report ORIGINAL_BEFORE_REPORT_ID \
+  --after-report ORIGINAL_AFTER_REPORT_ID \
+  --format json \
+  --out /private/customer/GridFabric_Report_Comparison.json
+
+starforge gridfabric-procedure reopen-comparison \
+  --comparison /private/customer/GridFabric_Report_Comparison.json \
+  --before /private/customer/before-capture \
+  --after /private/customer/after-capture \
+  --format html \
+  --out /private/customer/GridFabric_Report_Comparison.html
+```
+
+Omit a report flag only when its capture contains at most one report. Output destinations are new files. Comparison opens neither a GridFabric workspace nor an authenticated borrower; it uses the two previously captured directories.
+
+The typed pure API is exported at `@tokenjunkielabs/starforge-merchant/operator/gridfabric-procedure/comparison`:
+
+- `compareGridFabricCaptures(before,after,{beforeReportId,afterReportId})` receives two results from `readGridFabricProcedureCapture` and returns the complete derived comparison.
+- `receiveGridFabricComparison(saved,before,after)` re-derives and checks the complete saved comparison.
+- `renderGridFabricComparisonHTML(comparison)` renders every interval and retained operating context.
+
+The native capture includes the current comparison helper with the original source members. The reader also accepts the exact earlier helper roster, so already-delivered captures remain usable.
+
+### Inspect the exact outgoing product
+
+Run the original receiving operation with the actual customer or explicitly labelled engineering example captures. Use the existing authenticated browser owner and the additive `receiveGridFabricComparisonBrowser` course. The course downloads and reopens the complete comparison, checks original capture identities, reloads the browser's retained selection, saves desktop and narrow populated views, and opens the exact downloaded HTML for inspection.
+
+Before calling the outgoing product ready, the producing operator must **look at the actual desktop and narrow screenshots or screen**. Check quantities/units, source-gap interpretation, mapping details, navigation, selected-report controls, downloads and the cold reopen. Preserve the actual screen observations with the original receiving outcome. Source-level examples establish arithmetic and source joins; the receiving result records the actual rendered run.
+
+See [comparison browser receiving](GRIDFABRIC_COMPARISON_RECEIVING.md) for the existing-owner invocation and complete handover.
