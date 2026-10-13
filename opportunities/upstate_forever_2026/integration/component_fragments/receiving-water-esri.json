@@ -1,0 +1,13 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "receiving-water-esri",
+  "source_reference": "Original 640a source-plan exception1791873882.088269; maintained Spatial/Conservation Esri reader; original SCDES body ddac0feb1c704ca5e95336e21961e08beede1f83b6b820423dffa5a63bd8e285",
+  "extend_components": {
+    "receiving-waters": {
+      "paths": [
+        "model/spatial_esri.py",
+        "source/capture_upstream_network.py"
+      ]
+    }
+  }
+}
