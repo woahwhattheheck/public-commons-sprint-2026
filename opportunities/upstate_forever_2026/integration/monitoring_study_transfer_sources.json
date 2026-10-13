@@ -1,13 +1,13 @@
 {
   "schema": "upstate.monitoring-study-transfer-source/v1",
   "edition": "2026-10-13",
-  "base_commit": "9a4e9a010b1f4cfefc3e1ea02af473f70f836348",
+  "base_commit": "13e4baebd0fca7099c5368dd37eff1711d8b625a",
   "guide": "model/MONITORING_STUDY_TRANSFER.md",
   "files": [
     {
       "path": "model/monitoring_study_transfer.py",
-      "bytes": 25411,
-      "sha256": "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3"
+      "bytes": 27108,
+      "sha256": "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9"
     },
     {
       "path": "model/study_transfer.py",
@@ -46,8 +46,8 @@
     },
     {
       "path": "model/MONITORING_STUDY_TRANSFER.md",
-      "bytes": 7841,
-      "sha256": "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692"
+      "bytes": 8459,
+      "sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224"
     },
     {
       "path": "operator/STUDY_TRANSFER.md",
@@ -61,13 +61,13 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 21280,
-      "sha256": "9a6b8beb001af96487838b62d21a064ffd14e1fb8be7160981338adf80d27b9c"
+      "bytes": 21889,
+      "sha256": "1c52b77c3cf651568251c049c797f492bcf1eee408660309058b705bf49ab361"
     },
     {
       "path": "integration/monitoring_observed_sources.json",
-      "bytes": 15745,
-      "sha256": "1900de88e8f4e20de5ab535620036b5634dfd91beb2788f1fa6e36fd6187110c"
+      "bytes": 16271,
+      "sha256": "6903fe553d01dd601ee1c32d7a09c3e617ed3bc1c71eb552bdf6a47f404c0d91"
     },
     {
       "path": "integrations/monitoring/current_application_files.json",
@@ -76,8 +76,13 @@
     },
     {
       "path": "integration/component_fragments/monitoring-study-transfer.json",
-      "bytes": 1442,
-      "sha256": "be084556d443de041145bb467ed668fdcdbfe91ee8ffbf71bc143f74a1a609fc"
+      "bytes": 1486,
+      "sha256": "8d205d6c1f7e0044f4b39de8a8c4300179e4a925335ea04cc38ad9883b898e7b"
+    },
+    {
+      "path": "model/monitoring_field_return.py",
+      "bytes": 24812,
+      "sha256": "d9019900577dfb9ae9311e6086b3d2c175871c80055f5dec874e840c3455876b"
     }
   ],
   "requires": [
@@ -106,5 +111,14 @@
     "cold_restored_report": "Exact source-view hardlink transitions retain original SHA256 and dev/inode/size/mtime; directly selected-network plans seed completed report discovery.",
     "original_native_comparison": "Preserves current native_versions.validate_run_comparison from main9a4e9a0."
   },
-  "component_declaration": "integration/component_fragments/monitoring-study-transfer.json"
+  "component_declaration": "integration/component_fragments/monitoring-study-transfer.json",
+  "fieldwork_return": {
+    "source_commit": "1c008cb2785175dfd654ec60b9874b758fcb557a",
+    "validator": "model.monitoring_field_return.source_binding",
+    "members": [
+      "request.json",
+      "field-plan.json"
+    ],
+    "history": "Preserve the exact reviewed campaign revision and each native event binding; reuse native validation per retained request."
+  }
 }
