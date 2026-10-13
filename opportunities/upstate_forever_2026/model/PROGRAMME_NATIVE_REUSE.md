@@ -4,7 +4,7 @@ A source-update successor can select completed original runs as candidates for t
 
 ## Operator workflow
 
-Open the existing Programme, choose **Source update**, select its saved refresh plan and preview the successor. Expand **Source, dependency and native reuse details** for a case. The preview lists exact completed candidate IDs and the selected model stages they can supply. An original with no completed overlapping stage is shown separately with its reason for exclusion.
+Open the existing Programme, choose **Update sources**, select its saved refresh plan and preview the successor. Expand **Source, dependency and native reuse details** for a case. The preview lists exact completed candidate IDs and the selected model stages they can supply. An original with no completed overlapping stage is shown separately with its reason for exclusion.
 
 Create the reviewed successor, then continue it with the existing Programme execution controls. The native input matcher compares the original and successor inputs for each selected model. The original stage cache verifies copied native files. Matching stages retain their original source-run provenance; changed stages execute through the maintained native runner. The Programme's existing progress, report and comparison views show the resulting completion and stage history.
 
