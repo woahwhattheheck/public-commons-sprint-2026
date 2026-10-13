@@ -353,6 +353,9 @@ def _register_received_delivery(manifest, destination, working_archive=None):
                 raise ValueError("Received working archive conflicts with retained work")
         else:
             os.link(source, target)
+    if working_archive is not None:
+        from .received_delivery_navigation import build as build_received_navigation
+        record = build_received_navigation(directory, record, working_archive)
     atomic_json(state_path, record)
     return record
 
@@ -372,10 +375,13 @@ def received_delivery(manifest, destination, record=None):
         result.update(workspace_directory=str(directory),
                       record=str(directory / "delivery-state.json"),
                       state=record["state"])
-        working = record.get("files", {}).get("working_archive")
-        if working is not None:
-            result["files"]["working_archive"] = {
-                **working, "path": str(directory / working["path"])}
+        for role in ("working_archive", "received_delivery_inventory", "map_atlas_received_browser"):
+            retained = record.get("files", {}).get(role)
+            if retained is not None:
+                result["files"][role] = {
+                    **retained, "path": str(directory / retained["path"])}
+        if record.get("received_navigation"):
+            result["navigation"] = record["received_navigation"]
     return {"delivery": result}
 
 
