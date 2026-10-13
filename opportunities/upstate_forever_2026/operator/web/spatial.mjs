@@ -1,3 +1,5 @@
+import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView} from './receiving_water_spatial.mjs';
+
 const SVG_NS='http://www.w3.org/2000/svg';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
@@ -50,7 +52,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   function status(c,message){if(alive(c)){c.root.querySelector('[data-spatial-status]').textContent=message;}}
   function layer(c,selected){return c.model.catalog?.layers.find(item=>item.id===(selected?.layer_id||selected));}
   function selected(c,id){const row=layer(c,id);return row?{layer_id:row.id,...(row.kind==='raster'?{band:1}:{})}:null;}
-  function groupTitle(name){return ({source:'Original sources',grid:'Model grids',run:'Native runs',comparison:'Run comparisons',delivery:'Delivery assets'})[name]||name;}
+  function groupTitle(name){return ({'receiving-water-plan':'Receiving-water boundaries','receiving-water-analysis':'Receiving-water results',source:'Original sources',grid:'Model grids',run:'Native runs',comparison:'Run comparisons',delivery:'Delivery assets'})[name]||name;}
   function layerOptions(c,kind,selectedId,emptyTitle){
     const rows=(c.model.catalog?.layers||[]).filter(row=>!kind||row.kind===kind),groups=new Map();
     for(const row of rows){const name=groupTitle(row.group);if(!groups.has(name))groups.set(name,[]);groups.get(name).push(row);}
@@ -212,6 +214,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     for(const node of c.root.querySelectorAll('[data-spatial-map]'))node.dataset.tool=c.model.tool;
   }
   function targetMatches(row,target){
+    if(isReceivingWaterTarget(target))return receivingWaterTargetMatches(row,target);
     if(target.kind==='sources')return row.source_collection_id===target.id||row.owner_id===target.id&&row.group==='source';
     if(target.kind==='source-info')return row.source_collection_id===target.collection&&row.source_id===target.id;
     if(target.kind==='grids')return row.grid_id===target.id||row.owner_id===target.id&&row.group==='grid';
@@ -222,6 +225,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   }
   function applyTarget(c,target){
     const matches=c.model.catalog.layers.filter(row=>targetMatches(row,target));
+    if(isReceivingWaterTarget(target)){Object.assign(c.model,receivingWaterView(matches,target,id=>selected(c,id)));dirty(c);return;}
     if(!matches.length)throw Error('This retained item has no spatial layers available yet. Complete its native operation or choose an original source.');
     const raster=matches.find(row=>row.kind==='raster'),vector=matches.find(row=>row.kind==='vector');
     c.model.reference=selected(c,(raster||vector).id);c.model.primary=raster?selected(c,raster.id):null;

@@ -25,15 +25,22 @@ async function regular(path){
 }
 async function absent(path){try{await lstat(path);throw Object.assign(new Error('Preserve the existing path and select a new receiving operation directory: '+path),{code:'RECEIVING_EXISTS'});}catch(error){if(error.code!=='ENOENT')throw error;}}
 async function writeState(path,value){const temp=path+'.partial-'+randomUUID();const handle=await open(temp,'wx',0o600);try{await handle.writeFile(JSON.stringify(value,null,2)+'\n');await handle.sync();}finally{await handle.close();}await rename(temp,path);}
-async function identity(pid){
-  let bootId=null,startTicks=null,state=null;
+async function identity(pid,procPid=pid){
+  let bootId=null,startTicks=null,state=null,observedProcPid=null;
   try{bootId=(await readFile('/proc/sys/kernel/random/boot_id','utf8')).trim();}catch{}
-  try{const stat=await readFile('/proc/'+pid+'/stat','utf8'),fields=stat.slice(stat.lastIndexOf(')')+2).trim().split(/\s+/);startTicks=fields[19]||null;state=fields[0]||null;}catch{}
-  return {hostname:hostname(),pid,bootId,startTicks,state};
+  try{
+    const stat=await readFile('/proc/'+procPid+'/stat','utf8'),fields=stat.slice(stat.lastIndexOf(')')+2).trim().split(/\s+/);
+    const leadingPid=Number(stat.slice(0,stat.indexOf(' ')));
+    if(Number.isSafeInteger(leadingPid)&&leadingPid>0)observedProcPid=leadingPid;
+    startTicks=fields[19]||null;state=fields[0]||null;
+  }catch{}
+  return {hostname:hostname(),pid,procPid:observedProcPid,bootId,startTicks,state};
 }
 async function observeIdentity(old){
-  if(!Number.isSafeInteger(old?.pid)||old.pid<=0||!old.bootId||!old.startTicks||old.hostname!==hostname())return null;
-  const current=await identity(old.pid);
+  const procPid=old?.procPid??old?.pid;
+  if(!Number.isSafeInteger(old?.pid)||old.pid<=0||!Number.isSafeInteger(procPid)||procPid<=0
+    ||!old.bootId||!old.startTicks||old.hostname!==hostname())return null;
+  const current=await identity(old.pid,procPid);
   return current.state!=='Z'&&current.state!=='X'&&current.bootId===old.bootId&&current.startTicks===old.startTicks;
 }
 async function observeProcess(invocation){

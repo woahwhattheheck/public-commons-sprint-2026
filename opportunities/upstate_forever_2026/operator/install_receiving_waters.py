@@ -18,14 +18,16 @@ import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-3"
+PREFIX = "waterlink-receiving-waters-4"
 REQUIRED = (
     "model/receiving_waters.py",
+    "model/receiving_water_spatial.py",
     "model/receiving_water_delivery.py",
     "model/receiving_water_cli.py",
     "source_tools/receiving_water_catalog.py",
     "operator/receiving_water_actions.py",
     "operator/web/receiving_waters.mjs",
+    "operator/web/receiving_water_spatial.mjs",
     "operator/web/receiving_waters.css",
 )
 EXTENSION_REQUIRED = (
@@ -41,6 +43,8 @@ TARGETS = (
     "operator/web/index.html",
     "model/delivery.py",
     "model/portable.py",
+    "model/spatial.py",
+    "operator/web/spatial.mjs",
 )
 
 
@@ -147,7 +151,7 @@ def allow_browser_assets(text):
     names = ast.literal_eval(match.group(1))
     if not isinstance(names, set) or not all(isinstance(name, str) for name in names):
         raise ValueError("The operator static allowlist must contain original file names")
-    additions = {"receiving_waters.mjs", "receiving_waters.css"}
+    additions = {"receiving_waters.mjs", "receiving_waters.css", "receiving_water_spatial.mjs"}
     if additions <= names:
         return text
     replacement = "{" + ", ".join(repr(name) for name in sorted(names | additions)) + "}"
@@ -248,6 +252,18 @@ def join_app(text):
         "return submitAction('delivery.build',{...receivingWaters.deliverySelection({baseline_run_id:val('baseline'),scenario_run_ids:alternatives}),title:",
         "...receivingWaters.deliverySelection(",
     )
+    text = replace_once(
+        text, "  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection};\n",
+        "  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection,subject:button.dataset.subject,subject_kind:button.dataset.subjectKind,statistic:button.dataset.statistic,run:button.dataset.run,quantity:button.dataset.quantity};\n",
+        "subject:button.dataset.subject,subject_kind:button.dataset.subjectKind",
+    )
+    # Compose the original plural-selector repair when receiving an earlier core.
+    for old, new in (
+        ("for(const node of $('[data-view]'))", "for(const node of $$('[data-view]'))"),
+        ("for(const node of $('[data-native-models]',form)){", "for(const node of $$('[data-native-models]',form)){"),
+        ("for(const input of $('input,select,textarea,button',node))", "for(const input of $$('input,select,textarea,button',node))"),
+    ):
+        text = text.replace(old, new)
     return text
 
 
@@ -314,12 +330,78 @@ def join_portable(text):
     )
 
 
+def join_spatial(text):
+    text = replace_once(
+        text, 'return units in {"class", "classes", "mask", "category",',
+        'return units in {"class", "classes", "mask", "binary", "category",',
+        '"class", "classes", "mask", "binary"',
+    )
+    text = after_line(
+        text, "from .common import",
+        "from . import receiving_water_spatial\n",
+        "from . import receiving_water_spatial",
+    )
+    text = replace_once(
+        text, "        return tuple((str(p.relative_to(root)), _signature(p)) for p in sorted(paths))\n",
+        "        paths.extend(receiving_water_spatial.manifest_paths(self.workspace))\n"
+        "        return tuple((str(p.relative_to(root)), _signature(p)) for p in sorted(paths))\n",
+        "paths.extend(receiving_water_spatial.manifest_paths(self.workspace))",
+    )
+    text = replace_once(
+        text, "            # Atomic source manifests can be added during a native run. Never cache\n",
+        "            receiving_water_spatial.add_layers(ws, add)\n"
+        "            # Atomic source manifests can be added during a native run. Never cache\n",
+        "receiving_water_spatial.add_layers(ws, add)",
+    )
+    text = replace_once(
+        text, '                     "profile_id", "scenario_id", "baseline_run_id", "alternative_run_id", "direction"):\n',
+        '                     "profile_id", "scenario_id", "baseline_run_id", "alternative_run_id", "direction",\n'
+        '                     "receiving_water_plan_id", "receiving_water_analysis_id", "subject_id",\n'
+        '                     "subject_kind", "family", "relationship_precision", "quantity_scope",\n'
+        '                     "quantity", "statistic", "normalization_id", "relationship_method",\n'
+        '                     "source_body_sha256", "source_selection_id", "invest_version"):\n',
+        '"source_body_sha256", "source_selection_id", "invest_version")',
+    )
+    return text
+
+
+def join_spatial_app(text):
+    if "from './receiving_water_spatial.mjs'" not in text:
+        text = (
+            "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView} "
+            "from './receiving_water_spatial.mjs';\n\n" + text
+        )
+    text = replace_once(
+        text, "function groupTitle(name){return ({source:",
+        "function groupTitle(name){return ({'receiving-water-plan':'Receiving-water boundaries',"
+        "'receiving-water-analysis':'Receiving-water results',source:",
+        "'receiving-water-plan':'Receiving-water boundaries'",
+    )
+    text = replace_once(
+        text, "  function targetMatches(row,target){\n",
+        "  function targetMatches(row,target){\n"
+        "    if(isReceivingWaterTarget(target))return receivingWaterTargetMatches(row,target);\n",
+        "if(isReceivingWaterTarget(target))return receivingWaterTargetMatches(row,target)",
+    )
+    text = replace_once(
+        text, "  function applyTarget(c,target){\n"
+        "    const matches=c.model.catalog.layers.filter(row=>targetMatches(row,target));\n",
+        "  function applyTarget(c,target){\n"
+        "    const matches=c.model.catalog.layers.filter(row=>targetMatches(row,target));\n"
+        "    if(isReceivingWaterTarget(target)){Object.assign(c.model,receivingWaterView(matches,target,id=>selected(c,id)));dirty(c);return;}\n",
+        "Object.assign(c.model,receivingWaterView(matches,target,id=>selected(c,id)))",
+    )
+    return text
+
+
 JOINERS = {
     "operator/server.py": join_server,
     "operator/web/app.mjs": join_app,
     "operator/web/index.html": join_index,
     "model/delivery.py": join_delivery,
     "model/portable.py": join_portable,
+    "model/spatial.py": join_spatial,
+    "operator/web/spatial.mjs": join_spatial_app,
 }
 
 
@@ -383,10 +465,16 @@ def install(root, *, check=False):
                 raise ValueError("A complete installed receiving-water web asset is missing")
         target = root / EXTENSION_TARGET
         before = target.read_bytes() if target.exists() else None
-        if before is not None and json.loads(before) != template:
-            raise ValueError("The installed receiving-water descriptor has authored changes; compose that descriptor before replacing it")
+        installed = json.loads(before) if before is not None else None
+        if installed is not None and installed != template:
+            previous = json.loads(json.dumps(template))
+            previous["version"] = "2"
+            previous["assets"] = [name for name in previous["assets"]
+                                  if name != "receiving_water_spatial.mjs"]
+            if installed != previous:
+                raise ValueError("The installed receiving-water descriptor has authored changes; compose that descriptor before replacing it")
         originals[EXTENSION_TARGET] = before
-        if before is None:
+        if installed != template:
             changes[EXTENSION_TARGET] = (json.dumps(template, indent=2) + "\n").encode("utf-8")
     elif (root / EXTENSION_TARGET).exists():
         raise ValueError("This application already carries the shared receiving-water descriptor; restore the complete extension host join")
