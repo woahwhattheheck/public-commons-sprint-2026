@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "0c499d6fca46248d03bf18de62d50bd21d8be9e5",
@@ -1233,8 +1233,8 @@
     },
     {
       "path": "operator/web/station_geography.mjs",
-      "bytes": 75236,
-      "sha256": "46f355426b380ed3ba03a788489a9ef86307e878f3a18a1fe42ece7685570e8f"
+      "bytes": 76132,
+      "sha256": "6995ba876bc317aef8322180ad8525f167db31ebf012ddd408e0efb03ca63790"
     },
     {
       "path": "PUBLISHED_STUDIES.md",
@@ -1268,8 +1268,8 @@
     },
     {
       "path": "source_tools/offline_handover/offline_handover.html",
-      "bytes": 23314,
-      "sha256": "6e1032d350e26bf60c3a9df59aee68c1f3aa607ba64b5b0f844013036909cc09"
+      "bytes": 23979,
+      "sha256": "46e142fe2096eb34825fe82c3dadcc6087ff739cbc49e6e05687d54573d16a38"
     },
     {
       "path": "source_tools/offline_handover/README.md",
@@ -2678,6 +2678,10 @@
       "original_result_ids": 242,
       "activity_measurements": 142,
       "statistic_basis": "agreeing_original_activity_characteristic/v1"
+    },
+    "current_viewed_source_metadata": {
+      "scope": "Retains every current2.5.0 source member, original-result selection and Three/Twenty integration; matches Station geography and the actual viewed offline handover template to their existing committed bodies.",
+      "current_source_ref": "59d766278a5e13de136f274ac9a11f76cbec8ef0"
     }
   }
 }
