@@ -1,0 +1,29 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "assessment-receiving-browser",
+  "extend_components": {
+    "assessment-context": {
+      "paths": [
+        "source/observed-report-20261013/prepare_assessment.py",
+        "source/observed-report-20261013/PREPARE_ASSESSMENT.md",
+        "source/observed-report-20261013/receive_operator.py",
+        "source/observed-report-20261013/receive_course.py",
+        "source/observed-report-20261013/receive_browser.mjs",
+        "source/observed-report-20261013/assessment_browser.mjs",
+        "source/observed-report-20261013/ASSESSMENT_BROWSER.md"
+      ]
+    },
+    "station-assessment": {
+      "paths": [
+        "source/observed-report-20261013/prepare_assessment.py",
+        "source/observed-report-20261013/PREPARE_ASSESSMENT.md",
+        "source/observed-report-20261013/receive_operator.py",
+        "source/observed-report-20261013/receive_course.py",
+        "source/observed-report-20261013/receive_browser.mjs",
+        "source/observed-report-20261013/assessment_browser.mjs",
+        "source/observed-report-20261013/ASSESSMENT_BROWSER.md"
+      ]
+    }
+  },
+  "source_reference": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791883342570339"
+}

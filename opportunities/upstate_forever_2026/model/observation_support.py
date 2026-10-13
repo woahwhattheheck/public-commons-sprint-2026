@@ -162,6 +162,47 @@ def comparison_issues(row, metadata=None):
     return issues
 
 
+
+def admission_projection(rows, metadata=None):
+    """Describe current source eligibility without changing retained import rows."""
+    metadata = metadata or {}
+    eligible, reasons = [], {}
+    originally_admitted = 0
+    for row in rows:
+        original = bool(row.get("admitted"))
+        originally_admitted += int(original)
+        support_issues = comparison_issues(row, metadata)
+        native_parameter = row.get("parameter") in SPECIES
+        if original and native_parameter and not support_issues:
+            eligible.append(row)
+            continue
+        issues = list(row.get("issues", [])) + support_issues
+        if not native_parameter:
+            issues.append("This measurement is outside the native N/P/sediment annual-load comparison")
+        if not original and not issues:
+            issues.append("The retained import did not admit this original row as an annual catchment load")
+        for issue in dict.fromkeys(issues):
+            reasons.setdefault(issue, []).append(row["id"])
+    return {
+        "schema": "upstate.observation-source-admission/v1",
+        "source_row_count": len(rows),
+        "original_admitted_count": originally_admitted,
+        "eligible_count": len(eligible),
+        "excluded_count": len(rows) - len(eligible),
+        "previously_admitted_now_excluded": originally_admitted - len(eligible),
+        "eligible_record_ids": [row["id"] for row in eligible],
+        "parameters": sorted({row["parameter"] for row in eligible}),
+        "catchment_ids": sorted({row["catchment_id"] for row in eligible}),
+        "exclusion_reasons": [
+            {"reason": reason, "count": len(ids), "observation_record_ids": ids}
+            for reason, ids in reasons.items()
+        ],
+        "basis": "Current source admission requires the original import's admission plus current "
+                 "measurement-support, constituent, quantity and declared-coverage rules. "
+                 "Original rows remain unchanged. Native model availability, catchment identity "
+                 "and raster coverage are evaluated separately. A row can have several exclusion reasons.",
+    }
+
 def summarize(rows):
     kinds = Counter(row.get("measurement_support", "catchment_export") for row in rows)
     return {

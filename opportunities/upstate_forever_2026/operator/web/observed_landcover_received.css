@@ -1,0 +1,18 @@
+/* Original selected-watershed source cards; existing neutral Study layout. */
+.study-transfer .st-received-landcover,
+.study-transfer .st-received-landcover .st-received-source{min-width:0;max-width:100%}
+.study-transfer .st-received-landcover dl{display:grid;grid-template-columns:minmax(130px,1fr) minmax(0,2fr);gap:7px 16px;margin:12px 0}
+.study-transfer .st-received-landcover dt{font-weight:550}
+.study-transfer .st-received-landcover dd{min-width:0;margin:0;overflow-wrap:anywhere}
+.study-transfer .st-received-landcover code{white-space:normal;overflow-wrap:anywhere}
+.study-transfer .st-received-landcover .st-table-scroll{min-width:0}
+.study-transfer .st-received-landcover .st-table-scroll:focus-visible{outline:2px solid #444;outline-offset:2px}
+.study-transfer .st-received-landcover .st-actions>button{max-width:100%}
+@media(max-width:520px){
+.study-transfer .st-received-landcover dl{grid-template-columns:minmax(0,1fr);gap:3px}
+.study-transfer .st-received-landcover dd{margin-bottom:8px}
+}
+@media print{
+.study-transfer .st-received-landcover .st-actions{display:none}
+.study-transfer .st-received-landcover .st-table-scroll{max-height:none;overflow:visible}
+}
