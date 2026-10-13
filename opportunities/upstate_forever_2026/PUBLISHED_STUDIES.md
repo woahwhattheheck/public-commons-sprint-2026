@@ -307,3 +307,7 @@ python "$PUBLISHED_STUDY_SOURCE/install_published_studies.py" --application "$AC
 ```
 
 The receiving ECSA host must provide its current Workspace, extension registry, native queue, authenticated file tickets and extension file routes. A complete application checkout supplies those shared components. After installation, import the current bank with `--with-installed-context`, open its returned study/version in Published studies, produce `selected-study-report.zip` and a complete-study ZIP, then re-import that complete ZIP and use the original project archive/reopen workflow.
+
+## Stream observations and scientific analysis (1.5.1)
+
+The independent stream builtin `scdes-eighteenmile-streams-2020-2025` retains all 589 original results and their 153 activity identities. It joins the installed six-entry stream nutrient/flow analysis with its unchanged original files. See [STREAM_OBSERVATIONS.md](measurement_workspace/STREAM_OBSERVATIONS.md) for the native import, full report, selection behavior, source conventions, and complete offline rebuild. The lake study continues to use its own original source edition and context manifests.
