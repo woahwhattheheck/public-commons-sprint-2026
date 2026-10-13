@@ -11,8 +11,11 @@ import { jobIntakeExtension } from './intake/server.mjs';
 import { jobResolutionExtension } from './resolution/server.mjs';
 import { RESOLUTION_RECEIVING_BYTES } from '../../sf30-seller-sdk/jobs/resolution/limits.mjs';
 
-export async function startJobCustomerWorkspace({ model, port = 0, browserApproval = true, landing = 'request' } = {}) {
+export async function startJobCustomerWorkspace({ model, port = 0, browserApproval = true, landing = 'request', extensions = [] } = {}) {
   requireValue(model?.library && typeof model.retain === 'function', 'JOB_WORKSPACE_MODEL_REQUIRED');
+  requireValue(Array.isArray(extensions) && extensions.length <= 16 && extensions.every(extension =>
+    extension && Array.isArray(extension.additionalAssets) && typeof extension.authenticatedRoute === 'function' &&
+    (extension.close === undefined || typeof extension.close === 'function')), 'JOB_WORKSPACE_EXTENSIONS_INVALID');
   const closeCheckout = async () => {
     const failures = [];
     try { await model.resolution?.close(); } catch (error) { failures.push(error); }
@@ -21,7 +24,7 @@ export async function startJobCustomerWorkspace({ model, port = 0, browserApprov
     if (failures.length === 1) throw failures[0];
     if (failures.length) throw new AggregateError(failures, 'JOB_WORKSPACE_CHECKOUT_CLOSE_FAILED');
   };
-  const route = async ({ request, url, send, body }) => {
+  const route = async ({ request, url, send, body, signal }) => {
     if (!url.pathname.startsWith('/api/job-workspace/')) return false;
     try {
       const method = request.method, path = url.pathname.slice('/api/job-workspace'.length);
@@ -33,7 +36,9 @@ export async function startJobCustomerWorkspace({ model, port = 0, browserApprov
         send(model.list({ q: url.searchParams.get('q') ?? '', state: url.searchParams.get('state') ?? '',
           view: url.searchParams.get('view') ?? 'active', offset: Number(url.searchParams.get('offset') ?? 0),
           limit: Number(url.searchParams.get('limit') ?? 50) }));
-      } else if (path === '/register' && method === 'POST') send(await model.register(await body()), 201);
+      } else if (/^\/jobs\/[a-f0-9]{64}\/outputs$/.test(path) && method === 'GET')
+        send(await model.outputs(path.split('/')[2], { signal }));
+      else if (path === '/register' && method === 'POST') send(await model.register(await body()), 201);
       else if (path === '/retain' && method === 'POST') {
         const input = await body(2 * 1024 * 1024), encoded = input.acceptanceBase64;
         requireValue(typeof encoded === 'string' && encoded.length <= 87384 &&
@@ -66,9 +71,14 @@ export async function startJobCustomerWorkspace({ model, port = 0, browserApprov
   };
   let host, launch, privateLaunch;
   const release = async () => {
-    const results = await Promise.allSettled([closeCheckout(), host?.close()]);
-    const failures = results.filter(value => value.status === 'rejected').map(value => value.reason);
-    if (launch && results[1].status === 'fulfilled') {
+    const failures = []; let hostClosed = false;
+    // Stop HTTP admission, then drain trusted extensions before their native controllers close.
+    try { await host?.close(); hostClosed = true; } catch (error) { failures.push(error); }
+    for (const extension of [...extensions].reverse()) {
+      try { await extension.close?.(); } catch (error) { failures.push(error); }
+    }
+    try { await closeCheckout(); } catch (error) { failures.push(error); }
+    if (launch && hostClosed) {
       try {
         const current = await exists(privateLaunch) ? await readJson(privateLaunch) : null;
         if (current?.instanceId === launch.instanceId)
@@ -90,8 +100,8 @@ export async function startJobCustomerWorkspace({ model, port = 0, browserApprov
     const checkout = await jobCheckoutExtension(model.checkout, { browserApproval });
     const resolutions = await jobResolutionExtension(model.resolution);
     host = await serveLibrary(model.library, { port, maxBodyBytes: RESOLUTION_RECEIVING_BYTES,
-      additionalAssets: [...collections.additionalAssets, ...assets, ...intake.additionalAssets, ...checkout.additionalAssets, ...resolutions.additionalAssets],
-      authenticatedRoute: [collections.authenticatedRoute, resolutions.authenticatedRoute, route, intake.authenticatedRoute, checkout.authenticatedRoute] });
+      additionalAssets: [...collections.additionalAssets, ...assets, ...intake.additionalAssets, ...checkout.additionalAssets, ...resolutions.additionalAssets, ...extensions.flatMap(extension => extension.additionalAssets)],
+      authenticatedRoute: [collections.authenticatedRoute, resolutions.authenticatedRoute, route, intake.authenticatedRoute, checkout.authenticatedRoute, ...extensions.map(extension => extension.authenticatedRoute)] });
     const opened = { ...host, url: host.origin + '/jobs/#' + host.token,
       libraryUrl: host.origin + '/#' + host.token,
       collectionsUrl: host.origin + '/collections#' + host.token,

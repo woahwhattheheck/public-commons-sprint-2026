@@ -59,20 +59,45 @@ export function attachDeliveryInspection(host){
   if(!ids?.length)return '';
   return '<label>'+esc(label)+'<select data-delivery-inspection-choice="'+name+'">'+ids.map(id=>'<option value="'+esc(id)+'">'+esc(names(id))+'</option>').join('')+'</select></label>'+button(name,'Open selected');
  }
- async function prepare(record,expectedWorkspace=workspace()){
-  detach();const epoch=generation,identity=expectedWorkspace+':'+record.id;
-  let packet,error='';
-  try{
-   packet=await host.api(host.endpoint('/api/delivery-inspection',{delivery_id:record.id}));
-   if(packet.schema!=='upstate.delivery-inspection/v1'||packet.workspace_key!==expectedWorkspace||packet.delivery_id!==record.id)throw Error('The delivery file index belongs to another retained selection.');
-  }catch(e){
-   error=e.message||String(e);
+ function missingEndpoint(error){return error?.status===404&&error?.code==='ROUTE_MISSING';}
+ async function acquire(id,expectedWorkspace,legacyRecord){
+  let packet,record,error='';
+  try{packet=await host.api(host.endpoint('/api/delivery-inspection',{delivery_id:id}));}
+  catch(failure){
+   if(!missingEndpoint(failure))throw failure;
+   error='The current operator has not installed the delivery inspection endpoint';
+   record=legacyRecord||await host.api(host.endpoint('/api/item',{kind:'deliveries',id}));
+   if(record?.id!==id||record?.schema!=='upstate.delivery/v1')throw Error('The original delivery belongs to another retained selection.');
    packet={files:list(record._downloads).map(row=>({...row,key:row.id,path:row.filename,keys:[],title:row.label,fallback:true})),links:{}};
+   return {packet,record,error};
   }
+  if(packet?.schema!=='upstate.delivery-inspection/v1'||packet.workspace_key!==expectedWorkspace||packet.delivery_id!==id||
+     !Array.isArray(packet.files)||packet.file_count!==packet.files.length||packet.detail?.id!==id||packet.detail?.schema!=='upstate.delivery/v1')
+   throw Error('The delivery file index has an incomplete or different original identity. Receive the matching current operator component.');
+  for(const file of packet.files){
+   if(typeof file.path!=='string'||!file.path||!Array.isArray(file.keys)||!safeURL(file.url)||!safeURL(file.preview_url)||
+      !Number.isSafeInteger(file.bytes)||file.bytes<0||!/^[0-9a-f]{64}$/.test(file.sha256||''))
+    throw Error('The original delivery inventory contains an invalid file descriptor.');
+  }
+  return {packet,record:packet.detail,error};
+ }
+ function accept(record,packet,error,expectedWorkspace,epoch){
   if(epoch!==generation||expectedWorkspace!==workspace())return null;
+  const identity=expectedWorkspace+':'+record.id;
   const files=deliveryFileRows(packet.files),saved=remembered.get(identity)||{query:'',group:'',page:0,pageSize:50};
   active={record,packet,error,workspace:expectedWorkspace,identity,files,byPath:new Map(files.map(row=>[row.key,row])),display:{...saved},previewHistory:[],previewPath:null};
-  return render();
+  return {record,html:render()};
+ }
+ async function load(id,expectedWorkspace=workspace()){
+  if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose an original retained delivery.');
+  detach();const epoch=generation;
+  const result=await acquire(id,expectedWorkspace);
+  return accept(result.record,result.packet,result.error,expectedWorkspace,epoch);
+ }
+ async function prepare(record,expectedWorkspace=workspace()){
+  detach();const epoch=generation;
+  const result=await acquire(record.id,expectedWorkspace,record);
+  return accept(result.record,result.packet,result.error,expectedWorkspace,epoch)?.html??null;
  }
  function render(){
   const value=current(),row=value.record,links=value.packet.links||{},files=value.files;
@@ -81,7 +106,7 @@ export function attachDeliveryInspection(host){
   const report=match('report_html'),pdf=match('report'),atlas=match('map_atlas_browser')||match('map_atlas');
   const economic=files.find(row=>row.path==='economics/'+links.economic_edition_id+'/index.html');
   const mainArchive=match('delivery_archive'),working=match('working_archive'),original=files.find(row=>row.keys.includes('original_record'));
-  return '<section data-delivery-inspection><div class="meta"><span>'+esc(human(row.state))+'</span><span>Original audit: '+esc(row.package?.auditStatus||'In progress')+'</span><span>'+Object.keys(row.maps||{}).length+' retained map PDFs</span></div>'+
+  return '<section data-delivery-inspection><div class="meta"><span>'+esc(human(row.state))+'</span><span>Original audit: '+esc(row.package?.auditStatus||'In progress')+'</span><span>'+(row.map_count??Object.keys(row.maps||{}).length)+' retained map PDFs</span></div>'+
    (row.error?'<p class="notice error">'+esc(row.error.message)+'</p>':'')+
    (value.error?'<p class="notice" role="status">Original file index: '+esc(value.error)+'. Existing retained download links remain available.</p>':'')+
    '<h3 class="subheading">Scientific report and complete delivery</h3><div class="page-actions">'+previewControl(report,'Open linked scientific report')+previewControl(pdf,'Preview report PDF')+
@@ -224,5 +249,5 @@ export function attachDeliveryInspection(host){
   if(action==='water-analysis')return host.openReceivingAnalysis(id);
   return host.openItem(kind,id);
  }
- return {prepare,mount,dispatch,detach};
+ return {load,prepare,mount,dispatch,detach};
 }

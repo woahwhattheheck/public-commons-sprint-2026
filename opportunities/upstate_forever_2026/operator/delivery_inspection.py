@@ -262,6 +262,18 @@ def _links(record):
     }
 
 
+def _detail(record):
+    """Small original fields needed by the existing delivery detail."""
+    return {
+        "schema": record["schema"], "id": record["id"], "state": record.get("state"),
+        "selection": {"title": (record.get("selection") or {}).get("title")},
+        "map_count": len(record.get("maps") or {}),
+        "package": {"auditStatus": (record.get("package") or {}).get("auditStatus")},
+        "error": record.get("error"), "priority": record.get("priority"),
+        "_downloads": [],
+    }
+
+
 def read(operator, workspace_key, operation, payload):
     if operation != "inspect":
         raise ValueError("Choose the original delivery inspection.")
@@ -274,6 +286,7 @@ def read(operator, workspace_key, operation, payload):
     return {
         "schema": SCHEMA, "workspace_key": workspace_key, "delivery_id": key,
         "state": record.get("state"), "title": record.get("selection", {}).get("title"),
+        "detail": _detail(record),
         "files": files, "file_count": len(files), "total_bytes": sum(row["bytes"] for row in files),
         "links": _links(record), "preview_policy": "opaque_sandbox_with_declared_member_links",
         "support": "Each file is an original declared delivery member. Source areas remain independent; native receiving-water family totals use their retained union.",

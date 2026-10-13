@@ -27,7 +27,7 @@ Install these complete source files in the current application, composing the pr
 
 ## API contract
 
-GET /api/delivery-inspection?workspace=KEY&delivery_id=ID returns upstate.delivery-inspection/v1 with workspace_key, delivery_id, files, file_count, total_bytes and links. Each files entry contains original path, bytes, SHA256, retained field keys, title, original url and preview_url.
+GET /api/delivery-inspection?workspace=KEY&delivery_id=ID returns upstate.delivery-inspection/v1 with workspace_key, delivery_id, files, file_count, total_bytes, links and compact detail. The original delivery branch loads this endpoint exactly once, bypassing /api/item and its unrelated workspace overview/eager file-ticket expansion. detail carries exact original schema/id/state, title, map count, audit status, error and priority fields; the full original record remains a declared lazy download. Only an explicit HTTP404 ROUTE_MISSING falls back to the original item API on an older operator. Authorization errors and malformed/mismatched responses are surfaced directly. Each files entry contains original path, bytes, SHA256, retained field keys, title, original url and preview_url.
 
 GET /api/file/delivery-view/KEY/ID/MEMBER returns an exact original member through the existing ticket transport. Add ?download=1 for a download.
 
@@ -55,7 +55,7 @@ The standards relevant to this choice are WHATWG's iframe sandbox rules (https:/
 
 ## Focused receiving check
 
-Source evaluation exercised the actual client with 25,001 retained-file descriptors: complete-inventory normalization took 157 ms in this V8 session; the actual table emitted 50 data rows. A search matched the last retained file and clamped an out-of-range page correctly. The same check exercised derived-preview/original-download separation, the opaque sandbox, original scenario-analysis navigation and rejection after a workspace change. It used minimal DOM adapters; actual Python and browser receiving are the remaining environmental checks.
+Source evaluation exercised the actual client with 25,001 retained-file descriptors: complete-inventory normalization took 157 ms in this V8 session; the actual table emitted 50 data rows. A search matched the last retained file and clamped an out-of-range page correctly. The same check exercised derived-preview/original-download separation, the opaque sandbox, original scenario-analysis navigation and rejection after a workspace change. It used minimal DOM adapters. The direct-load check also confirmed one inspection request, preservation of the original map count, no fallback for authentication/malformed responses, and the explicit missing-route-only legacy fallback. Extracted actual detail/close code preserved a newer request against a queued close event and preserved an already reopened dialog. Actual Python and browser receiving are the remaining environmental checks.
 
 On the current complete native application, open an existing retained delivery with an attached scenario analysis and economic edition. Confirm:
 - the original HTML report opens; its economic index/selection/source-report links navigate or download through the parent and Back returns;

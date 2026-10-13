@@ -149,7 +149,7 @@ function render(){
   if(view!=='portfolios')portfolio.detach();
   mountPortfolioDetail();
   if(view==='rehearsal'){
-    for(const node of $('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
+    for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
     if(typeof spatialWorkspace!=='undefined')spatialWorkspace.suspend();
     if(typeof community!=='undefined')community.detach();
     if(typeof customerReviews!=='undefined')customerReviews.detach();
@@ -271,7 +271,11 @@ function detail(title,body,{kind,id,state:status}={}){
   if(!detailDialog.open)detailDialog.showModal();
 }
 async function openItem(kind,id,focus=true){
-  const request=++itemRequest,requestedWorkspace=workspace,row=await api(endpoint('/api/item',{kind,id}));if(workspace!==requestedWorkspace||request!==itemRequest)return;deliveryInspection.detach();detailContext={kind,id,state:row.state,files:row._downloads||[]};
+  const request=++itemRequest,requestedWorkspace=workspace;
+  const inspected=kind==='deliveries'?await deliveryInspection.load(id,requestedWorkspace):null;
+  const row=kind==='deliveries'?inspected?.record:await api(endpoint('/api/item',{kind,id}));
+  if(!row||workspace!==requestedWorkspace||request!==itemRequest)return;
+  if(kind!=='deliveries')deliveryInspection.detach();detailContext={kind,id,state:row.state,files:row._downloads||[]};
   let content='';
   if(kind==='portfolios'||kind==='portfolio_reports'){
     content=portfolio.renderItem(row,kind);
@@ -308,8 +312,7 @@ async function openItem(kind,id,focus=true){
     if(row.summary)content+=defs({map_mode:row.summary.mode,coordinate_system:row.summary.view?.crs,extent:row.summary.view?.bounds,annotations:row.summary.marker_count});
     content+=customerReviews.mapActions(row);
    }else if(kind==='deliveries'){
-    content=await deliveryInspection.prepare(row,requestedWorkspace);
-    if(content===null||workspace!==requestedWorkspace||request!==itemRequest)return;
+    content=inspected.html;
   }
   if(kind==='comparisons')content+='<div class="page-actions">'+button('comparison-delivery','Build delivery from this comparison','data-id="'+id+'"')+'</div>';
   if(kind==='runs'&&row.state==='complete')content+='<div class="page-actions">'+button('run-compare-selection','Compare this run','data-id="'+id+'"')+'</div>';

@@ -1,4 +1,5 @@
 // MIT. Project original buyer receipts into the existing resource-library verifier.
+import { RESULT_PACKAGE_TYPE, receivedOutputs, outputResources } from './outputs/library.mjs';
 import { openJobBuyer } from '../../sf30-seller-sdk/jobs/buyer.mjs';
 import { digest, jsonBytes } from '../node/store.mjs';
 import { readCatalog, buyerId, resourceId, delivered, failure, requireValue } from './state.mjs';
@@ -34,6 +35,12 @@ export async function readJobLibrarySource(config) {
           statusUrl: accepted.statusUrl, resultUrl: accepted.resultUrl, deliveredAt: saved.deliveredAt,
         },
       });
+      if (saved.contentType === RESULT_PACKAGE_TYPE) {
+        const received = await receivedOutputs({ directory: config.source, entryId: entry.id, receipt });
+        sources.push({ id: entry.id, outputs: { selectionSha256: received.selectionSha256,
+          manifestSha256: received.manifestSha256 } });
+        resources.push(...outputResources({ directory: config.source, entry, receipt, received }));
+      }
     } catch (error) { rejected.push({ id: entry.id, code: failure(error) }); }
   }
   // The source fingerprint covers the exact catalog and the public receipts read

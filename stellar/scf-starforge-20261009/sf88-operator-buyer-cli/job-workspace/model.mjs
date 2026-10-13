@@ -1,6 +1,7 @@
 // MIT. Customer application over original retained paid-job buyers and resource library.
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { RESULT_PACKAGE_TYPE, outputDirectory, outputResourceId, receivedOutputs } from './outputs/library.mjs';
 import { openJobBuyer, createJobBuyer } from '../../sf30-seller-sdk/jobs/buyer.mjs';
 import { acquireStateLease } from '../../merchant-fleet-gateway/state-lease.mjs';
 import { openLibrary } from '../resource-library/library.mjs';
@@ -83,7 +84,7 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
         revision: entry.revision, createdAt: entry.createdAt, updatedAt: entry.updatedAt,
         observedAt: entry.observedAt, receipt, lastError: entry.lastError,
         task: structuredClone(tasks.get(entry.id)?.public ?? entry.lastTask),
-        resourceId: resultId, resource: result };
+        resourceId: resultId, resource: result, outputPackage: receipt.delivery?.contentType === RESULT_PACKAGE_TYPE };
     }
     async function handle(entry) {
       let buyer = handles.get(entry.id);
@@ -148,6 +149,31 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
         return await remember(id, receipt);
       } catch (error) { await remember(id, null, failure(error)); throw error; }
     }
+    async function outputs(id, { signal } = {}) {
+      active(); const entry = row(id), buyer = await handle(entry);
+      const receipt = await buyer.receipt();
+      let received;
+      try { received = await receivedOutputs({ directory, entryId: id, receipt, signal }); }
+      catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+        const description = await buyer.outputPackage({ signal });
+        return { ...description, entryId: id, received: false, files: description.manifest.files.map(file =>
+          ({ ...file, resourceId: null, resource: null })) };
+      }
+      // A complete portable receiving directory remains usable after the original
+      // downloaded archive moves. Reopen verifies its retained copy and receipt.
+      return { package: received.package, manifestSha256: received.manifestSha256,
+        job: received.job, policySha256: received.policySha256,
+        entryId: id, received: true, selectionSha256: received.selectionSha256,
+        directory: received.directory, files: received.files.map(file => {
+          const id = outputResourceId(directory, entry.id, receipt.delivery.sha256, file.slot, file.sha256);
+          let resource = null;
+          try { resource = library.resource(id); } catch (error) {
+            if (error.code !== 'RESOURCE_NOT_IN_CURRENT_SOURCE') throw error;
+          }
+          return { ...file, resourceId: id, resource };
+        }) };
+    }
     async function update(id, { expectedRevision, label, archived } = {}) {
       return serial(async () => {
         active(); const before = row(id);
@@ -190,6 +216,8 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
           const destination = prior && roots.some(root => within(prior.path, root))
             ? prior.path : join(directory, 'artifacts', task.entryId + '.result');
           await buyer.download({ destination, signal, deadlineMs: remaining() });
+          if ((await buyer.receipt()).delivery?.contentType === RESULT_PACKAGE_TYPE)
+            await buyer.receiveOutputs({ directory: outputDirectory(directory, task.entryId), signal, deadlineMs: remaining() });
         }
         receipt = await buyer.receipt();
         await remember(task.entryId, receipt);
@@ -281,7 +309,7 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
       inputFileStorage, transferTimeoutMs });
     resolution = openJobResolutionController({ lease, getEntry: id => item(row(id)), listEntries: list,
       transport, fetchImpl, requestTimeoutMs, maxConcurrent });
-    return Object.freeze({ directory, library, checkout, intake, resolution, register, retain, reconcile, update, start, cancel, scan, list, status,
+    return Object.freeze({ directory, library, checkout, intake, resolution, register, retain, reconcile, update, start, cancel, scan, list, status, outputs,
       get(id) { return item(row(id)); },
       async wait(id, { taskId } = {}) {
         const task = tasks.get(id);

@@ -27,7 +27,7 @@ from . import portable
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
-ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs")
+ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions")
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
                    "observation-comparisons")
 DOCUMENTS = {
@@ -41,11 +41,19 @@ LOCKS = {
 }
 LABELS = {
     "experiment-diagnostics": "Scientific analyses", "experiments": "Experiment programmes",
-    "runs": "Native runs", "profiles": "Parameter profiles", "scenarios": "Land-cover scenarios",
+    "runs": "Native runs", "robust-decisions": "Decision studies",
+    "profiles": "Parameter profiles", "scenarios": "Land-cover scenarios",
     "sources": "Source collections", "grids": "Prepared grids",
     "observations": "Observation editions", "observation-comparisons": "Observation comparisons",
     "comparisons": "Native comparisons",
 }
+
+
+def _study_key(kind, value):
+    if kind == "robust-decisions":
+        from .decision_study_transfer import study_id
+        return study_id(value)
+    return identifier(value)
 
 
 def normalise(selection):
@@ -58,12 +66,12 @@ def normalise(selection):
         raise ValueError("Select an original scientific study selection.")
     roots = selection.get("roots")
     if not isinstance(roots, list) or not roots:
-        raise ValueError("Select at least one scientific analysis, programme or native run.")
+        raise ValueError("Select at least one scientific analysis, programme, native run or decision study.")
     unique = set()
     for item in roots:
         if not isinstance(item, dict) or set(item) != {"kind", "id"} or item["kind"] not in ROOT_KINDS:
-            raise ValueError("Study roots must name a saved scientific analysis, programme or native run.")
-        unique.add((item["kind"], identifier(item["id"])))
+            raise ValueError("Study roots must name a saved scientific analysis, programme, native run or decision study.")
+        unique.add((item["kind"], _study_key(item["kind"], item["id"])))
     related = selection.get("include_related_results", True)
     if type(related) is not bool:
         raise ValueError("Related results must be selected with a boolean.")
@@ -102,7 +110,10 @@ def _member(root, relative):
 
 
 def _record_path(kind, key):
-    identifier(key)
+    _study_key(kind, key)
+    if kind == "robust-decisions":
+        from .decision_study_transfer import MEMBER
+        return MEMBER
     if kind in IMMUTABLE_KINDS:
         return kind + "/" + key + ".json"
     if kind in DOCUMENTS:
@@ -111,7 +122,7 @@ def _record_path(kind, key):
 
 
 class _Closure:
-    def __init__(self, workspace, selection):
+    def __init__(self, workspace, selection, *, decision_database=None):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -122,6 +133,9 @@ class _Closure:
         self._requested = set()
         self.trees = {}
         self.related_issues = []
+        self.decision_database = decision_database
+        self.decision_records = {}
+        self.external_decision_dependencies = []
 
     def add_file(self, relative, expected=None):
         path = _member(self.root, relative)
@@ -183,7 +197,7 @@ class _Closure:
         return path.exists() or path.is_symlink()
 
     def need(self, kind, key, reason, *, required=True):
-        key = identifier(key)
+        key = _study_key(kind, key)
         token = (kind, key)
         if not self.exists(kind, key):
             if required:
@@ -340,7 +354,27 @@ class _Closure:
                 self.need("observation-comparisons", comparison_id,
                           "Saved successful scientific observation call")
 
+    def _decision(self, key, reason):
+        from . import decision_study_transfer as decisions
+        record = decisions.read(self.workspace, [key], database=self.decision_database)[key]
+        self.decision_records[key] = record
+        self.nodes[("robust-decisions", key)] = {
+            "kind": "robust-decisions", "id": key, "title": record["study"]["title"],
+            "state": "saved", "reasons": [reason],
+            "revisions": len(record["revisions"]), "calculations": len(record["runs"]),
+        }
+        self.external_decision_dependencies.extend(decisions.dependencies(
+            record, self.workspace.project["id"], external=True))
+        for dependency in decisions.dependencies(record, self.workspace.project["id"]):
+            self.need(dependency["kind"], dependency["id"], dependency["reason"],
+                      required=dependency["required"])
+        for relative, expected in decisions.operation_members(self.workspace, [key]).items():
+            self.add_file(relative, expected)
+
     def _visit(self, kind, key, reason):
+        if kind == "robust-decisions":
+            self._decision(key, reason)
+            return
         prefix = kind + "/" + key + "/"
         value = self.read(_record_path(kind, key))
         title = (value.get("title") or value.get("metadata", {}).get("title")
@@ -431,6 +465,10 @@ class _Closure:
         return self
 
     def assert_unchanged(self):
+        if self.decision_records:
+            from . import decision_study_transfer as decisions
+            if digest(decisions.read(self.workspace, self.decision_records, database=self.decision_database)) != digest(self.decision_records):
+                raise ValueError("The selected decision history changed during study capture.")
         for prefix, members in self.trees.items():
             if self._tree_members(prefix) != members:
                 raise ValueError("The selected scientific directory changed: " + prefix)
@@ -460,6 +498,7 @@ class _Closure:
             nodes.append(value)
         snapshot = {
             "project_id": self.workspace.project["id"], "selection": self.selection,
+            "decision_history_sha256": digest(self.decision_records),
             "files": [[name, list(item["identity"]), item.get("sha256")]
                       for name, item in sorted(self.files.items())],
         }
@@ -475,6 +514,10 @@ class _Closure:
             "nodes": nodes, "expected_unmaterialized": sorted(self.expected.values(), key=lambda row: (row["kind"], row["id"])),
             "planned_cases": sum(row.get("planned_cases", 0) for row in nodes),
             "related_result_issues": self.related_issues,
+            "external_decision_dependencies": self.external_decision_dependencies,
+            "decision_history": {"studies": len(self.decision_records),
+                                 "revisions": sum(len(row["revisions"]) for row in self.decision_records.values()),
+                                 "calculations": sum(len(row["runs"]) for row in self.decision_records.values())},
             "application": "The receiving archive includes the maintained application source.",
         }
 
@@ -568,7 +611,7 @@ def _investigation_dependencies(workspace, snapshot, plan):
     for row in rows:
         if not isinstance(row, dict) or row.get("kind") not in LABELS:
             raise ValueError("An investigation dependency has an unknown scientific record kind.")
-        key = (row["kind"], identifier(row.get("id")))
+        key = (row["kind"], _study_key(row["kind"], row.get("id")))
         required = row.get("required", True)
         if type(required) is not bool:
             raise ValueError("A scientific dependency must state whether its record is materialized.")
@@ -651,18 +694,23 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         stack.enter_context(held(root / ".workspace.lock", blocking=False))
         stack.enter_context(held(root / ".native-model-batch.lock", blocking=False))
         report("resolving")
-        closure = _Closure(workspace, normal).resolve()
+        decision_database = None
+        if any(row["kind"] == "robust-decisions" for row in normal["roots"]):
+            from . import decision_study_transfer as decisions
+            decision_database = stack.enter_context(decisions.source_snapshot(
+                workspace, directory=root.parent))
+        closure = _Closure(workspace, normal, decision_database=decision_database).resolve()
         original_plan = closure.plan()
         # Freeze the initially selected conversation cohort once, before its
         # science dependencies expand the selected record closure.
         dependencies = _investigation_dependencies(
             workspace, investigation_snapshot, original_plan)
         if dependencies:
-            closure = _Closure(workspace, normal).resolve(dependencies)
+            closure = _Closure(workspace, normal, decision_database=decision_database).resolve(dependencies)
         locked = set()
         # The first read discovers owners; repeat under their original locks.
         _capture_locks(stack, closure, locked)
-        closure = _Closure(workspace, normal).resolve(dependencies)
+        closure = _Closure(workspace, normal, decision_database=decision_database).resolve(dependencies)
         _capture_locks(stack, closure, locked)
         closure.assert_unchanged()
         plan = closure.plan()
@@ -688,13 +736,21 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             item["identity"] = observed
         closure.assert_unchanged()
         staged = Workspace(stage_root)
+        decision_history, decision_members = None, {}
+        if closure.decision_records:
+            from . import decision_study_transfer as decisions
+            report("decisions", studies=len(closure.decision_records))
+            decision_history, decision_members = decisions.capture(
+                workspace, staged, closure.decision_records, database=closure.decision_database)
+            closure.assert_unchanged()
         investigations, investigation_members = None, {}
         if investigation_snapshot is not None:
             report("investigations", files=plan["files"], bytes=plan["bytes"])
             investigations, investigation_members = _captured_investigations(
                 staged, investigation_snapshot(staged, plan))
             closure.assert_unchanged()
-        additional = {path: value for path, value in investigation_members.items() if path not in closure.files}
+        snapshot_members = {**decision_members, **investigation_members}
+        additional = {path: value for path, value in snapshot_members.items() if path not in closure.files}
         source_files = plan["files"] + len(additional)
         source_bytes = plan["bytes"] + sum(value["bytes"] for value in additional.values())
         identity = {
@@ -709,6 +765,9 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["investigation_dependencies"] = dependencies
         if investigations is not None:
             identity["investigations"] = investigations
+        if decision_history is not None:
+            identity["decision_history"] = decision_history
+            identity["external_decision_dependencies"] = plan["external_decision_dependencies"]
         transfer_id = digest(identity)
         receipt = {
             "schema": RECEIPT_SCHEMA, "id": transfer_id, "identity": identity,
@@ -726,14 +785,18 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             "workspace/" + member["path"]: {
                 "bytes": member["bytes"], "sha256": member["sha256"],
             }
-            for member in (investigations or {}).get("members", [])
-            if member["path"] == "intelligence/investigations.sqlite3"
+            for member in [
+                *(investigations or {}).get("members", []),
+                *(decision_history or {}).get("members", []),
+            ]
+            if member["path"] in {"intelligence/investigations.sqlite3",
+                                   "robust_decisions/robust_decisions.sqlite3"}
         }
         result = portable.backup(
             staged, archive_path, include_intermediates=True, include_deliveries=True,
             frozen_databases=frozen_databases)
         manifest = portable.inspect_archive(archive_path, verify=False)
-        for relative, item in {**closure.files, **investigation_members}.items():
+        for relative, item in {**closure.files, **snapshot_members}.items():
             retained = manifest["members"].get("workspace/" + relative)
             if retained is None or retained["bytes"] != item["bytes"]:
                 raise ValueError("The original archive omitted a selected scientific member: " + relative)
@@ -773,21 +836,31 @@ def verify_received_studies(workspace):
         if investigations is not None:
             from eco_intelligence.study_transfer import verify_received_investigations
             history = verify_received_investigations(workspace, investigations)
+        decision_history = None
+        if receipt["identity"].get("decision_history") is not None:
+            from .decision_study_transfer import verify_received
+            decision_history = verify_received(workspace, receipt["identity"]["decision_history"])
         result.append({"id": receipt["id"], "title": receipt["title"],
                        "retained_records": len(required), "identity": "MATCH",
-                       "investigations": history})
+                       "investigations": history, "decision_history": decision_history})
     return result
 
 
 def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
     if kind not in (None, "", *ROOT_KINDS):
-        raise ValueError("Choose analyses, programmes or native runs.")
+        raise ValueError("Choose analyses, programmes, native runs or decision studies.")
     if type(offset) is not int or offset < 0 or type(limit) is not int or limit < 1 or limit > 1000:
         raise ValueError("Use a nonnegative offset and a page size from 1 to 1000.")
     query = str(query).strip().casefold()
     rows = []
     for selected_kind in ROOT_KINDS:
         if kind and selected_kind != kind:
+            continue
+        if selected_kind == "robust-decisions":
+            from .decision_study_transfer import catalogue
+            for row in catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
             continue
         document = DOCUMENTS[selected_kind]
         for path in (workspace.root / selected_kind).glob("*/" + document):

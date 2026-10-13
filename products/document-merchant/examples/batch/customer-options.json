@@ -1,0 +1,10 @@
+{
+  "directory": "/srv/starforge/document-customer",
+  "fileRoots": [
+    "/srv/starforge/document-sources"
+  ],
+  "maxConcurrent": 1,
+  "checkout": {
+    "operatorWorkspace": "/srv/starforge/operator-workspace"
+  }
+}

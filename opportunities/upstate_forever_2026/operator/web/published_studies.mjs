@@ -93,7 +93,7 @@ export function createPublishedStudiesDesk(host) {
       MONTHS.map((month, index) => '<option value="' + (index + 1) + '">' + month + "</option>").join("") +
       '</select></label></div><p class="ps-help">Month and year select continuous summaries. Seasonal tables retain their full published sampling campaign. Surface field ranges and continuous sensors retain their reported depths.</p></form>' +
       '<nav class="ps-tabs" aria-label="Study tables">' +
-      [["seasonal","Seasonal"],["continuous","Continuous"],["observed","Report comparison"],["wqp","WQP source context"],["flow","Upstream flow"],["ranges","Field ranges"],["stations","Stations"],["sources","Sources and methods"]]
+      [["seasonal","Seasonal"],["continuous","Continuous"],["observed","Report comparison"],["wqp","WQP source context"],["flow","Upstream flow"],["figures","Scientific figures"],["ranges","Field ranges"],["stations","Stations"],["sources","Sources and methods"]]
         .map(([id, title]) => '<button type="button" data-ps-tab="' + id + '" aria-pressed="' + (id === tab) + '">' + title + "</button>").join("") +
       '</nav><div data-ps-tables></div><aside class="ps-row-detail" data-ps-detail hidden aria-label="Original row details"></aside>';
   }
@@ -165,6 +165,7 @@ export function createPublishedStudiesDesk(host) {
       "</ul><p>Export the complete study to keep the report and all original companion files together for offline use.</p></section>";
   }
 
+
   function sourcePage(row) {
     if (row.source_file?.startsWith("wqp") || row.source_file?.startsWith("cohort_reconciliation")) {
       const source = arr(complete?.source_artifacts).find(item => item.path === row.source_file);
@@ -221,6 +222,9 @@ export function createPublishedStudiesDesk(host) {
         '</p><p>Activity values, original sample counts and printed report statistics remain visible together. Quantified-only statistics use the original recorded numbers. Censored rows retain blank values and their own detection limits.</p></section>';
       const illustrated = arr(complete?.source_artifacts).find(item => item.path === "wqp_20261013/lake-observations-report.html");
       if (illustrated) output += '<p>' + link(illustrated.preview_url || illustrated.download?.url, "Original activity figures and complete chlorophyll cohort report") + '</p>';
+      const paired = arr(complete?.source_artifacts).find(item => item.path === "paired_analysis/paired-observations-report.html");
+      if (paired) output += '<p>' + link(paired.preview_url || paired.download?.url, "Original matched-activity and paired-station analysis") +
+        ' · The report export includes its linked tables and complete original source files.</p>';
       output += table("Observed series and report rows", series, [
         ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_support","Sample support"],["record_count","Original rows"],
         ["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
@@ -229,6 +233,23 @@ export function createPublishedStudiesDesk(host) {
       ]);
       output += series.map(row => '<p class="ps-help"><strong>' + esc(row.site_id) + " / " + esc(label(row.parameter)) +
         ":</strong> " + esc(row.basis) + "</p>").join("");
+      const supported = series.filter(row => row.observation_support).map(row => {
+        const support = row.observation_support;
+        const endpoint = value => value == null ? "" : Number(value).toPrecision(6);
+        return {...row, ...support, mean_interval: support.complete_interval_support
+          ? "[" + endpoint(support.mean_lower) + ", " + endpoint(support.mean_upper) + (support.mean_upper_inclusive ? "]" : ")")
+          : "Unavailable",
+          limits: arr(support.reporting_limits).map(item => item.value + " " + item.unit).join("; ")};
+      });
+      if (supported.length) {
+        output += table("Original concentration support", supported, [
+          ["site_id","Station"],["parameter","Parameter"],["project_id","Project"],["activity_type","Activity type"],
+          ["record_count","Original rows"],["quantified_count","Quantified"],["below_limit_count","Below limit"],
+          ["unresolved_count","Unresolved"],["mean_interval","All-row mean interval"],["unit","Unit"],
+          ["limits","Original reporting limits"]
+        ],false);
+        output += '<p class="ps-help">Each interval uses every selected row in its original station, parameter, project and activity-type series. A below-limit value contributes [0, its original limit), conditional on nonnegative concentration. The upper endpoint is excluded when a row is censored. These are arithmetic bounds; the source values and printed report cohort stay intact. Complete endpoints and source selectors are included in the context export.</p>';
+      }
       const calendars = series.map(row => ({
         ...row, missing_dates: arr(row.missing_chlorophyll_dates).join("; "),
         extra_dates: arr(row.additional_dates).join("; "), methods: arr(row.original_methods).join("; "),
@@ -264,13 +285,13 @@ export function createPublishedStudiesDesk(host) {
       output += table("Source coverage", arr(dated.coverage), [
         ["site_id","Station"],["project_id","Project"],["characteristic","Original characteristic"],
         ["sample_fraction","Fraction"],["reported_unit","Unit"],["record_count","Rows"],
-        ["numeric_reported_count","Numeric reported"],["quantified_count","Quantified"],["censored_below_count","Censored below"]
+        ["numeric_reported_count","Numeric reported"],["quantified_count","Quantified"],["censored_below_count","Censored below"],["censored_above_count","Censored above"]
       ]);
       output += table("Retained original results", arr(dated.rows), [
         ["site_id","Station"],["date","Date"],["local_time","Local time"],["source_timezone","Source zone"],
         ["project_id","Project"],["activity_type","Activity type"],["parameter_original","Original characteristic"],["sample_fraction","Fraction"],
         ["value","Value"],["unit","Unit"],["detection_condition","Detection"],["detection_limit","Limit"],
-        ["detection_limit_unit","Limit unit"],["depth","Depth"],["depth_unit","Depth unit"],
+        ["detection_limit_unit","Limit unit"],["detection_limit_type","Limit type"],["censor_direction","Censor direction"],["depth","Depth"],["depth_unit","Depth unit"],
         ["cohort_selection","Cohort selection"],["activity_id","Activity identifier"]
       ]);
       const empty = arr(dated.summary?.empty_source_stations).filter(id => selection.site_ids.includes(id));
@@ -292,6 +313,27 @@ export function createPublishedStudiesDesk(host) {
       ]);
       output += '<p class="ps-help">Selected activity dates outside this retained flow-date table: ' +
         esc(arr(dated.dates_without_flow_context).join(", ") || "none") + ".</p>";
+    } else if (tab === "figures") {
+      const originals = [
+        ["figures/chlorophyll_time_series.svg","Chlorophyll at the five original stations"],
+        ["figures/chlorophyll_distributions.svg","All selected chlorophyll observations and distributions"],
+        ["figures/sampling_flow_context.svg","Observed upstream flow on the original laboratory dates"],
+        ["figures/chlorophyll_antecedent_context.svg","Chlorophyll and preceding upstream flow"],
+      ];
+      const assets = arr(complete?.source_artifacts);
+      output = '<section class="ps-methods"><h2>Original scientific figures</h2><p>These retained figures show the complete original 75-observation chlorophyll cohort and 16 laboratory dates. They retain their full source scope when the study tables are filtered. Original axis scales, activity identities and units are preserved.</p><p>The report package includes these original SVGs, numerical plot data, source inputs and their offline reconstruction code.</p></section>';
+      let count = 0;
+      for (const [name,title] of originals) {
+        const item = assets.find(asset => asset.path === name);
+        if (!item) continue;
+        count++;
+        output += '<section class="ps-visual"><h3>' + esc(title) + '</h3><p>' + link(item.download?.url,"Download original SVG") +
+          '</p><img loading="lazy" src="' + esc(item.download?.url || "") + '" alt="' + esc(title) + '"></section>';
+      }
+      if (!count) output += '<p class="ps-help">Import the complete current study source to retain its scientific figure component.</p>';
+      output += '<ul class="ps-source-list">' + assets.filter(item => [
+        "figures/plot-data.csv","figures/distribution-statistics.csv","figures/figure-spec.json","figures/README.md"
+      ].includes(item.path)).map(item => '<li>' + link(item.download?.url,item.path) + '</li>').join("") + '</ul>';
     } else if (tab === "ranges") {
       const rows = arr(context.surface_parameter_ranges).map(row => ({...row, record_id: arr(tables.surface_ranges).find(raw => raw.site_id === row.site_id)?.record_id}));
       output = table("Surface field ranges", rows, [

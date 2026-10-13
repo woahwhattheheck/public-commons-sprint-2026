@@ -21,7 +21,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-6"
+DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-7"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -40,7 +40,10 @@ def _source_records(workspace, selection, grid, baseline):
         records[role] = {"id": role, "source_id": entry["id"], "title": entry["title"],
                          "vintage": entry["vintage"], "uri": entry["uri"],
                          "sha256": entry["body"]["sha256"], "units": entry.get("units"),
-                         "conversion": entry.get("conversion")}
+                         "conversion": entry.get("conversion"),
+                         **{key: entry[key] for key in ("data_status", "legal_edition_status",
+                                                       "catalogue_source_id", "source_labels")
+                            if key in entry}}
     source_choices = dict(selection.get("source_roles", {}))
     overlay_choices = selection.get("overlays", {})
     for name, role in (("high_quality_waters", "HIGH_QUALITY_WATERS"),
@@ -58,7 +61,10 @@ def _source_records(workspace, selection, grid, baseline):
             raise ValueError("LS_FACTOR is supplied by the original SDR terrain calculation; keep external references under a separate source ID")
         records[role] = {"id": role, "source_id": entry["id"], "title": entry["title"],
                          "vintage": entry["vintage"], "uri": entry["uri"],
-                         "sha256": entry["body"]["sha256"], "selection": choice}
+                         "sha256": entry["body"]["sha256"], "selection": choice,
+                         **{key: entry[key] for key in ("data_status", "legal_edition_status",
+                                                       "catalogue_source_id", "source_labels")
+                            if key in entry}}
     if "LS_FACTOR" not in records:
         item = baseline["stages"]["sdr"]["files"].get("ls")
         if not item:
