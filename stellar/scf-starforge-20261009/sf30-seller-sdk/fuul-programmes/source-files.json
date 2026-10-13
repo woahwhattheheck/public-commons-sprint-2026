@@ -51,8 +51,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/storage.mjs",
-      "bytes": 7357,
-      "sha256": "bee7d94573457532cbda3125a717ace8f9efc640c3ede656d7aac7aa8286a825",
+      "bytes": 9584,
+      "sha256": "90e50055b920f27e171404fe6ec9ae06e24ddd6660d64d4b25302705423b9d1c",
       "contentType": "text/javascript"
     },
     {
