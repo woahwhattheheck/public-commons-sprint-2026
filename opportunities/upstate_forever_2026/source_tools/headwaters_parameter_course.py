@@ -218,21 +218,136 @@ def _decision_export(workspace, plan, directory):
     return result
 
 
+def reference_report_basis(workspace, ensemble_id, course):
+    """Describe the completed original reference trio without promoting the course.
+
+    The full design and pending sensitivities stay retained. Callers choose a
+    separately labelled source/report edition and its own receiving contract.
+    """
+    record, plan, _ = _load(workspace, ensemble_id)
+    if (course.get("schema") != SCHEMA
+            or course.get("project_id") != workspace.project["id"]
+            or course.get("ensemble_id") != plan["id"]
+            or course.get("selection") != record["selection"]
+            or course.get("input_classification") != record["input_classification"]):
+        raise ValueError("Use the original parameter-course result in its own project")
+    member = plan["members"][0]
+    scenarios = [plan["baseline_scenario_id"], *plan["alternative_scenario_ids"]]
+    if [item["scenario_id"] for item in member["runs"]] != scenarios:
+        raise ValueError("The reference member no longer preserves original scenario order")
+    runs = [workspace.inspect_run(item["run_id"]) for item in member["runs"]]
+    for run, scenario in zip(runs, scenarios):
+        if (run["selection"]["profile_id"] != member["profile_id"]
+                or run["selection"]["grid_id"] != plan["grid_id"]
+                or run["selection"]["scenario_id"] != scenario):
+            raise ValueError("The reference run no longer matches the saved course")
+    decisions = course.get("joint_decisions", {})
+    comparisons = [item for item in decisions.get("comparisons", [])
+                   if item["member_id"] == member["id"]]
+    if len(comparisons) > 1:
+        raise ValueError("The retained course repeats its original reference comparison")
+    comparison = comparisons[0] if comparisons else None
+    if comparison and (comparison["profile_id"] != member["profile_id"]
+            or comparison["baseline_run_id"] != runs[0]["id"]
+            or comparison["alternative_run_ids"] != [run["id"] for run in runs[1:]]):
+        raise ValueError("The retained reference comparison uses different native runs")
+    ready = all(run["state"] == "complete" for run in runs) and comparison is not None
+    return {
+        "schema": "upstate.headwaters-reference-report-basis/v1",
+        "project_id": workspace.project["id"], "ensemble_id": plan["id"],
+        "state": "reference_complete" if ready else "waiting_for_reference",
+        "reference_ready": ready, "course_state": course["state"],
+        "input_classification": record["input_classification"],
+        "reference_member_id": member["id"], "reference_profile_id": member["profile_id"],
+        "reference_run_ids": [run["id"] for run in runs],
+        "baseline_run_id": runs[0]["id"],
+        "alternative_run_ids": [run["id"] for run in runs[1:]],
+        "comparison_id": comparison["comparison_id"] if ready else None,
+        "planned_profile_count": len(plan["members"]),
+        "completed_comparison_profile_count": len(decisions.get("comparisons", [])),
+        "native_progress": deepcopy(plan["progress"]),
+        "pending_members": deepcopy(decisions.get("pending_members", [])),
+        "scope": "The original reference profile and its complete selected alternatives; "
+                 "the retained sensitivity design keeps its own progress and pending members.",
+    }
+
+
+def _retained_complete(workspace, record, plan, directory, previous, raster_products):
+    """Reuse the exact completed record before any timestamp-writing operation."""
+    from model.common import verify_file
+
+    if not previous:
+        return None
+    if (previous.get("schema") != SCHEMA
+            or previous.get("project_id") != workspace.project["id"]
+            or previous.get("ensemble_id") != plan["id"]
+            or previous.get("selection") != record["selection"]
+            or previous.get("input_classification") != record["input_classification"]):
+        raise ValueError("The retained parameter result belongs to a different source selection")
+    if previous.get("state") != "complete":
+        return None
+    operation = previous.get("operation", {})
+    decisions = previous.get("joint_decisions", {})
+    comparisons = decisions.get("comparisons", [])
+    if (plan["state"] != "complete" or operation.get("state") != "complete"
+            or decisions.get("state") != "complete" or decisions.get("pending_members")
+            or operation.get("errors") or len(comparisons) != len(plan["members"])):
+        raise ValueError("The completed parameter result does not match its complete native design")
+    for member, comparison in zip(plan["members"], comparisons):
+        if (any(run["state"] != "complete" for run in member["runs"])
+                or comparison["member_id"] != member["id"]
+                or comparison["profile_id"] != member["profile_id"]
+                or comparison["baseline_run_id"] != member["runs"][0]["run_id"]
+                or comparison["alternative_run_ids"] !=
+                   [run["run_id"] for run in member["runs"][1:]]):
+            raise ValueError("The completed parameter result uses different native members")
+    if raster_products and not operation.get("requested", {}).get("raster_products"):
+        # This is an explicit product expansion, not an unchanged resume. The
+        # caller preserves this earlier result as an immutable edition first.
+        return None
+    if raster_products:
+        products = operation.get("raster_products", [])
+        if ([item["scenario_id"] for item in products] != plan["alternative_scenario_ids"]
+                or any(item["state"] != "complete" for item in products)):
+            raise ValueError("The completed parameter result omits requested paired products")
+    for product in operation.get("raster_products", []):
+        verify_file(workspace.root, product["archive"])
+    report = operation.get("report", {})
+    if report.get("state") != "complete":
+        raise ValueError("The completed parameter result has no completed original report")
+    report_directory = workspace.root / "ensemble_reports" / report["id"]
+    for descriptor in report.get("files", {}).values():
+        verify_file(report_directory, descriptor)
+    for product in decisions.get("support_group_reports", []):
+        verify_file(workspace.root, product["archive_identity"])
+    return deepcopy(previous)
+
+
 def continue_course(workspace, ensemble_id, *, execute=False, raster_products=True,
                     on_progress=None):
     """Continue the same native operation and retain its full joint decision edition."""
-    from model.common import atomic_json, now
+    from model.common import atomic_json, digest, now, read_json
     from model.ensemble_operations import operation
 
     from model.common import held
 
     record, plan, directory = _load(workspace, ensemble_id)
     with held(directory / ".headwaters-course.lock", blocking=False):
+        path = directory / "headwaters-results.json"
+        previous = read_json(path) if path.exists() else {}
+        retained = _retained_complete(
+            workspace, record, plan, directory, previous, raster_products)
+        if retained is not None:
+            return retained
+        if previous.get("state") == "complete":
+            atomic_json(directory / "headwaters-result-editions" / (digest(previous) + ".json"),
+                        previous, immutable=True)
         result = {"schema": SCHEMA, "project_id": workspace.project["id"],
                   "ensemble_id": plan["id"], "selection": record["selection"],
                   "input_classification": record["input_classification"],
-                  "started_at": now(), "state": "running" if execute else "reporting"}
-        path = directory / "headwaters-results.json"
+                  "started_at": (previous.get("started_at", now())
+                                 if previous.get("state") != "complete" else now()),
+                  "state": "running" if execute else "reporting"}
         atomic_json(path, result)
         try:
             result["operation"] = operation(
@@ -244,6 +359,7 @@ def continue_course(workspace, ensemble_id, *, execute=False, raster_products=Tr
             complete = (result["operation"]["state"] == "complete"
                         and result["joint_decisions"]["state"] == "complete")
             result.update(state="complete" if complete else "partial", completed_at=now())
+            result["reference_report_basis"] = reference_report_basis(workspace, plan["id"], result)
             atomic_json(path, result)
             return result
         except BaseException as error:
