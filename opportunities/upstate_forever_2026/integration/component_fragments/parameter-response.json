@@ -1,0 +1,51 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "parameter-response",
+  "source_reference": "operator/PARAMETER_RESPONSE.md",
+  "extend_components": {
+    "parameter-studies": {
+      "paths": [
+        "model/parameter_response.py",
+        "model/parameter_studies.py",
+        "operator/parameter_study_api.py",
+        "operator/web/parameter_studies.mjs",
+        "operator/web/parameter_studies.css",
+        "operator/PARAMETER_RESPONSE.md",
+        "integration/component_fragments/parameter-response.json"
+      ]
+    },
+    "calibration": {
+      "paths": [
+        "model/parameter_response.py",
+        "model/parameter_studies.py",
+        "operator/parameter_study_api.py",
+        "operator/web/parameter_studies.mjs",
+        "operator/web/parameter_studies.css",
+        "operator/PARAMETER_RESPONSE.md",
+        "integration/component_fragments/parameter-response.json"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/parameter_response.py",
+        "model/parameter_studies.py",
+        "operator/parameter_study_api.py",
+        "operator/web/parameter_studies.mjs",
+        "operator/web/parameter_studies.css",
+        "operator/PARAMETER_RESPONSE.md",
+        "integration/component_fragments/parameter-response.json"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "model/parameter_response.py",
+        "model/parameter_studies.py",
+        "operator/parameter_study_api.py",
+        "operator/web/parameter_studies.mjs",
+        "operator/web/parameter_studies.css",
+        "operator/PARAMETER_RESPONSE.md",
+        "integration/component_fragments/parameter-response.json"
+      ]
+    }
+  }
+}

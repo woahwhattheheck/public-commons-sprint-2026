@@ -18,7 +18,10 @@ import re
 import sys
 import tempfile
 
-FILES = ("model/calibration_native_study_transfer.py",
+FILES = ("model/parameter_response.py",
+         "operator/PARAMETER_RESPONSE.md",
+         "integration/component_fragments/parameter-response.json",
+         "model/calibration_native_study_transfer.py",
          "model/calibration_study_receiving.py",
          "model/study_receiving.py",
          "operator/study_receiving.py",
@@ -662,3 +665,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
