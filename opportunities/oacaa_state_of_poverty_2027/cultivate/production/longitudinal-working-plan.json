@@ -1,0 +1,604 @@
+{
+  "schema": "tjl.oacaa.acs-working-plan.v1",
+  "measurementPeriod": "Annual 2018–2019 and 2021–2024; five-year 2006–2010 and 2020–2024; 1999 income benchmark",
+  "cohorts": [
+    {
+      "key": "county",
+      "path": "datasets/ohio-acs5-poverty-ratios-2024.json",
+      "datasetId": "ohio-acs5-poverty-ratios-2024",
+      "bytes": 118445,
+      "sha256": "5e0572cacae6dc9056c0ad3ff95e978821ddf91c62c02c2749d4212b7dae326b",
+      "originals": [
+        "sources/Ohio-ACS2024-fiveyear-C17002-original.json"
+      ]
+    },
+    {
+      "key": "history",
+      "path": "datasets/ohio-poverty-ratio-history.json",
+      "datasetId": "ohio-poverty-ratio-history",
+      "bytes": 6579,
+      "sha256": "04ae7e96e5e8e31656fbb058df8f63245e6b41741030f4fa3e92ce2ca0f29f76",
+      "originals": [
+        "sources/Ohio-Census2000-SF3-P088-original-public-table.txt",
+        "sources/Ohio-ACS2010-fiveyear-C17002-original-public-table.txt",
+        "sources/Ohio-ACS2024-fiveyear-C17002-original.json"
+      ]
+    },
+    {
+      "key": "annual",
+      "path": "datasets/ohio-us-annual-poverty-ratios-2018-2024.json",
+      "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+      "bytes": 25106,
+      "sha256": "00bea4973d3977cb8a60a54d2650b5f63a53dc9c1addafb270cd153a321f35b7",
+      "originals": [
+        "sources/ACS2018-oneyear-C17002-Ohio-original-public-table.txt",
+        "sources/ACS2018-oneyear-C17002-US-original-public-table.txt",
+        "sources/ACS2019-oneyear-C17002-Ohio-original-public-table.txt",
+        "sources/ACS2019-oneyear-C17002-US-original-public-table.txt",
+        "sources/ACS2021-oneyear-C17002-Ohio-original-public-table.txt",
+        "sources/ACS2021-oneyear-C17002-US-original-public-table.txt",
+        "sources/ACS2022-oneyear-C17002-Ohio-original-public-table.txt",
+        "sources/ACS2022-oneyear-C17002-US-original-public-table.txt",
+        "sources/ACS2023-oneyear-C17002-Ohio-original-public-table.txt",
+        "sources/ACS2023-oneyear-C17002-US-original-public-table.txt",
+        "sources/ACS2024-oneyear-C17002-Ohio-US-original-redistribution.json",
+        "sources/ACS2024-oneyear-C17002-US-original-public-table.txt"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "longitudinal-current-c17002",
+      "title": "2020–2024 ACS five-year C17002: Ohio and every county",
+      "url": "https://api.censusreporter.org/1.0/data/show/acs2024_5yr?table_ids=C17002&geo_ids=04000US39,05000US39001,05000US39003,05000US39005,05000US39007,05000US39009,05000US39011,05000US39013,05000US39015,05000US39017,05000US39019,05000US39021,05000US39023,05000US39025,05000US39027,05000US39029,05000US39031,05000US39033,05000US39035,05000US39037,05000US39039,05000US39041,05000US39043,05000US39045,05000US39047,05000US39049,05000US39051,05000US39053,05000US39055,05000US39057,05000US39059,05000US39061,05000US39063,05000US39065,05000US39067,05000US39069,05000US39071,05000US39073,05000US39075,05000US39077,05000US39079,05000US39081,05000US39083,05000US39085,05000US39087,05000US39089,05000US39091,05000US39093,05000US39095,05000US39097,05000US39099,05000US39101,05000US39103,05000US39105,05000US39107,05000US39109,05000US39111,05000US39113,05000US39115,05000US39117,05000US39119,05000US39121,05000US39123,05000US39125,05000US39127,05000US39129,05000US39131,05000US39133,05000US39135,05000US39137,05000US39139,05000US39141,05000US39143,05000US39145,05000US39147,05000US39149,05000US39151,05000US39153,05000US39155,05000US39157,05000US39159,05000US39161,05000US39163,05000US39165,05000US39167,05000US39169,05000US39171,05000US39173,05000US39175",
+      "locator": "All 89 geographies, cells 001–008 estimates and original MOEs; complete response in sources/",
+      "note": "Census Bureau data served by Census Reporter; state and counties overlap."
+    },
+    {
+      "id": "longitudinal-sf3-1999",
+      "title": "Census 2000 SF3 P088",
+      "url": "https://data.census.gov/table/DECENNIALSF32000.P088?g=040XX00US39,050XX00US39",
+      "locator": "Ohio / ten original cells / income in 1999",
+      "note": "Retained complete public table text."
+    },
+    {
+      "id": "longitudinal-acs-2010",
+      "title": "2006–2010 ACS five-year C17002",
+      "url": "https://data.census.gov/table/ACSDT5Y2010.C17002?g=040XX00US39",
+      "locator": "Ohio / eight estimate/MOE pairs / source footnote",
+      "note": "Retained complete public table text."
+    },
+    {
+      "id": "longitudinal-standard-gap",
+      "title": "Census guidance on the 2020 ACS release",
+      "url": "https://www.census.gov/programs-surveys/acs/guidance/comparing-acs-data/2020.html",
+      "locator": "Standard one-year release replaced by experimental estimates; comparison guidance",
+      "note": "The standard annual series preserves an explicit 2020 gap."
+    },
+    {
+      "id": "longitudinal-comparison-guide",
+      "title": "Census guidance on comparing ACS estimates",
+      "url": "https://www.census.gov/programs-surveys/acs/guidance/comparing-acs-data.html",
+      "locator": "Nonoverlapping five-year periods; one-year versus five-year; Census 2000 comparison",
+      "note": "Comparison products and periods remain explicit."
+    },
+    {
+      "id": "longitudinal-original-report",
+      "title": "The State of Poverty in Ohio 2026",
+      "url": "https://oacaa.org/wp-content/uploads/2026/08/2026-state-of-poverty-report_final-low.pdf",
+      "locator": "Tables 8, 9 and 11; original retained OCR spans in source archive",
+      "note": "Original transcription retained separately from selected primary data."
+    },
+    {
+      "id": "longitudinal-annual-ohio-2018",
+      "title": "Ohio 2018 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2018.C17002?g=040XX00US39",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2018-oneyear-C17002-Ohio-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-us-2018",
+      "title": "US 2018 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2018.C17002?g=010XX00US",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2018-oneyear-C17002-US-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-ohio-2019",
+      "title": "Ohio 2019 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2019.C17002?g=040XX00US39",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2019-oneyear-C17002-Ohio-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-us-2019",
+      "title": "US 2019 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2019.C17002?g=010XX00US",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2019-oneyear-C17002-US-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-ohio-2021",
+      "title": "Ohio 2021 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2021.C17002?g=040XX00US39",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2021-oneyear-C17002-Ohio-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-us-2021",
+      "title": "US 2021 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2021.C17002?g=010XX00US&y=2021",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2021-oneyear-C17002-US-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-ohio-2022",
+      "title": "Ohio 2022 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2022.C17002?g=040XX00US39",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2022-oneyear-C17002-Ohio-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-us-2022",
+      "title": "US 2022 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2022.C17002?g=010XX00US",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2022-oneyear-C17002-US-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-ohio-2023",
+      "title": "Ohio 2023 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2023.C17002?g=040XX00US39",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2023-oneyear-C17002-Ohio-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-us-2023",
+      "title": "US 2023 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2023.C17002?g=010XX00US",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2023-oneyear-C17002-US-original-public-table.txt",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-ohio-2024",
+      "title": "Ohio 2024 ACS one-year C17002",
+      "url": "https://api.censusreporter.org/1.0/data/show/acs2024_1yr?table_ids=C17002&geo_ids=04000US39,01000US",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2024-oneyear-C17002-Ohio-US-original-redistribution.json",
+      "note": "Original complete source preserved."
+    },
+    {
+      "id": "longitudinal-annual-us-2024",
+      "title": "US 2024 ACS one-year C17002",
+      "url": "https://data.census.gov/table/ACSDT1Y2024.C17002?g=010XX00US",
+      "locator": "Eight original estimate/MOE pairs; sources/ACS2024-oneyear-C17002-US-original-public-table.txt",
+      "note": "Primary Census values selected after exact redistribution comparison."
+    }
+  ],
+  "sections": [
+    {
+      "id": "longitudinal-overview",
+      "title": "Poverty levels and change over time",
+      "summary": "Annual trends, source-consistent county estimates and correctly identified historical benchmarks",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "longitudinal-overview-period",
+          "type": "paragraph",
+          "text": "The annual chapters use standard ACS one-year estimates. The county directory uses the 2020–2024 ACS five-year release. The historical chapter identifies each source by its actual measurement period, keeping the 1999-income Census benchmark distinct from the two ACS five-year periods.",
+          "sourceIds": [
+            "longitudinal-comparison-guide",
+            "longitudinal-current-c17002",
+            "longitudinal-sf3-1999"
+          ]
+        },
+        {
+          "id": "longitudinal-overview-definition",
+          "type": "paragraph",
+          "text": "The population consists of people for whom poverty status was determined. Below twice the poverty threshold includes people below poverty; these cumulative groups overlap. The seven source income-ratio bands are disjoint and remain available in every editable dataset.",
+          "sourceIds": [
+            "longitudinal-current-c17002"
+          ]
+        },
+        {
+          "id": "longitudinal-overview-uncertainty",
+          "type": "paragraph",
+          "text": "Original 90% component margins of error travel with every ACS source. Derived sum and percentage margins are blank. Changes shown here are descriptive estimates; they do not establish statistical significance or causes.",
+          "sourceIds": [
+            "longitudinal-comparison-guide"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "longitudinal-history",
+      "title": "Ohio historical sources with their actual periods",
+      "summary": "1999 income; 2006–2010 and 2020–2024 ACS five-year estimates",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "longitudinal-history-source",
+          "type": "paragraph",
+          "text": "The retained 2026 report transcription labels its baseline 2010. Its Ohio population 11,046,987 and below-twice-poverty count 2,919,858 match the 2000 Census SF3 table measuring 1999 income. The working table preserves that benchmark under its actual period and includes the separately received 2006–2010 ACS source.",
+          "sourceIds": [
+            "longitudinal-original-report",
+            "longitudinal-sf3-1999",
+            "longitudinal-acs-2010"
+          ]
+        },
+        {
+          "id": "longitudinal-history-change",
+          "type": "paragraph",
+          "text": "Across the nonoverlapping ACS periods 2006–2010 and 2020–2024, Ohio’s below-twice-poverty estimate changes from 3,561,514 people (31.8%) to 3,372,969 (29.3%). That is 188,545 fewer people and a 2.5 percentage-point decrease. The relative rate change is −7.9%; percentage points and relative percent change describe different calculations.",
+          "sourceIds": [
+            "longitudinal-acs-2010",
+            "longitudinal-current-c17002",
+            "longitudinal-comparison-guide"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "longitudinal-annual-ohio",
+      "title": "Ohio annual poverty trend",
+      "summary": "Standard ACS one-year estimates, 2018–2024",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "longitudinal-annual-ohio-gap",
+          "type": "paragraph",
+          "text": "The 2020 standard one-year release was not produced. Its blank row represents a source gap, not zero poverty. Experimental 2020 estimates are excluded from this comparison. Bars show only available standard years; the table preserves the missing year explicitly.",
+          "sourceIds": [
+            "longitudinal-standard-gap"
+          ]
+        },
+        {
+          "id": "longitudinal-annual-ohio-change",
+          "type": "paragraph",
+          "text": "From 2019 to 2024, the Ohio poverty-determined population estimate rises by 221,392, while the below-poverty estimate falls by 16,879, from 1,484,862 to 1,467,983. The below-poverty count change is −1.1%. These annual source counts agree with the original Table 9 transcription.",
+          "sourceIds": [
+            "longitudinal-annual-ohio-2019",
+            "longitudinal-annual-ohio-2024",
+            "longitudinal-original-report"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "longitudinal-annual-us",
+      "title": "United States annual poverty trend",
+      "summary": "Standard ACS one-year estimates, 2018–2024",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "longitudinal-annual-us-gap",
+          "type": "paragraph",
+          "text": "The 2020 standard one-year release was not produced. Its blank row represents a source gap, not zero poverty. Experimental 2020 estimates are excluded from this comparison. Bars show only available standard years; the table preserves the missing year explicitly.",
+          "sourceIds": [
+            "longitudinal-standard-gap"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "longitudinal-counties",
+      "title": "Income below twice poverty: every Ohio county",
+      "summary": "2020–2024 ACS five-year estimates",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "longitudinal-counties-definition",
+          "type": "paragraph",
+          "text": "The directory uses one consistent five-year source for all 88 counties. Ohio’s statewide row is a benchmark from that same source and overlaps every county. Counts and rates use each geography’s poverty-determined population; county values and the state row must not be added together.",
+          "sourceIds": [
+            "longitudinal-current-c17002"
+          ]
+        },
+        {
+          "id": "longitudinal-counties-concordance",
+          "type": "paragraph",
+          "text": "Seventy-eight geography rows in the retained Table 11 transcription match all three checked current values: population, below-twice-poverty count and percentage. The other transcribed rows contain missing or merged cells. The editable directory uses the complete received source values and retains every original transcription in the concordance.",
+          "sourceIds": [
+            "longitudinal-current-c17002",
+            "longitudinal-original-report"
+          ]
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "cohort": "history",
+      "mapping": {
+        "id": "longitudinal-history-table",
+        "kind": "table",
+        "sectionId": "longitudinal-history",
+        "sectionTitle": "Ohio historical sources with their actual periods",
+        "blockId": "longitudinal-history-table",
+        "title": "Ohio source periods and poverty ratios",
+        "caption": "The 1999 benchmark is a different survey/reference period. All population counts refer to the poverty-determined universe.",
+        "rowIds": [
+          "ohio-1999-sf3",
+          "ohio-2006-2010",
+          "ohio-2020-2024"
+        ],
+        "columns": [
+          "label",
+          "population",
+          "below100",
+          "below100_rate",
+          "below200",
+          "below200_rate"
+        ]
+      }
+    },
+    {
+      "cohort": "history",
+      "mapping": {
+        "id": "longitudinal-history-acs-chart",
+        "kind": "chart",
+        "sectionId": "longitudinal-history",
+        "sectionTitle": "Ohio historical sources with their actual periods",
+        "blockId": "longitudinal-history-acs-chart",
+        "title": "Ohio below twice poverty: comparable ACS periods",
+        "caption": "Percent; two nonoverlapping ACS five-year periods. Descriptive estimates.",
+        "rowIds": [
+          "ohio-2006-2010",
+          "ohio-2020-2024"
+        ],
+        "columns": [],
+        "labelColumn": "label",
+        "valueColumn": "below200_rate",
+        "chartType": "bar"
+      }
+    },
+    {
+      "cohort": "annual",
+      "mapping": {
+        "id": "longitudinal-annual-ohio-table",
+        "kind": "table",
+        "sectionId": "longitudinal-annual-ohio",
+        "sectionTitle": "Ohio annual poverty trend",
+        "blockId": "longitudinal-annual-ohio-table",
+        "title": "Annual source counts and rates",
+        "caption": "Empty 2020 cells preserve the unavailable standard release. Below 100% is included within below 200%.",
+        "rowIds": [
+          "ohio-2018",
+          "ohio-2019",
+          "ohio-2020",
+          "ohio-2021",
+          "ohio-2022",
+          "ohio-2023",
+          "ohio-2024"
+        ],
+        "columns": [
+          "label",
+          "population",
+          "below100",
+          "below100_rate",
+          "below200",
+          "below200_rate"
+        ]
+      }
+    },
+    {
+      "cohort": "annual",
+      "mapping": {
+        "id": "longitudinal-annual-ohio-chart",
+        "kind": "chart",
+        "sectionId": "longitudinal-annual-ohio",
+        "sectionTitle": "Ohio annual poverty trend",
+        "blockId": "longitudinal-annual-ohio-chart",
+        "title": "Annual poverty rate",
+        "caption": "Percent of people for whom poverty status was determined; 2020 standard estimate unavailable.",
+        "rowIds": [
+          "ohio-2018",
+          "ohio-2019",
+          "ohio-2021",
+          "ohio-2022",
+          "ohio-2023",
+          "ohio-2024"
+        ],
+        "columns": [],
+        "labelColumn": "label",
+        "valueColumn": "below100_rate",
+        "chartType": "bar"
+      }
+    },
+    {
+      "cohort": "annual",
+      "mapping": {
+        "id": "longitudinal-annual-us-table",
+        "kind": "table",
+        "sectionId": "longitudinal-annual-us",
+        "sectionTitle": "United States annual poverty trend",
+        "blockId": "longitudinal-annual-us-table",
+        "title": "Annual source counts and rates",
+        "caption": "Empty 2020 cells preserve the unavailable standard release. Below 100% is included within below 200%.",
+        "rowIds": [
+          "us-2018",
+          "us-2019",
+          "us-2020",
+          "us-2021",
+          "us-2022",
+          "us-2023",
+          "us-2024"
+        ],
+        "columns": [
+          "label",
+          "population",
+          "below100",
+          "below100_rate",
+          "below200",
+          "below200_rate"
+        ]
+      }
+    },
+    {
+      "cohort": "annual",
+      "mapping": {
+        "id": "longitudinal-annual-us-chart",
+        "kind": "chart",
+        "sectionId": "longitudinal-annual-us",
+        "sectionTitle": "United States annual poverty trend",
+        "blockId": "longitudinal-annual-us-chart",
+        "title": "Annual poverty rate",
+        "caption": "Percent of people for whom poverty status was determined; 2020 standard estimate unavailable.",
+        "rowIds": [
+          "us-2018",
+          "us-2019",
+          "us-2021",
+          "us-2022",
+          "us-2023",
+          "us-2024"
+        ],
+        "columns": [],
+        "labelColumn": "label",
+        "valueColumn": "below100_rate",
+        "chartType": "bar"
+      }
+    },
+    {
+      "cohort": "county",
+      "mapping": {
+        "id": "longitudinal-counties-state",
+        "kind": "table",
+        "sectionId": "longitudinal-counties",
+        "sectionTitle": "Income below twice poverty: every Ohio county",
+        "blockId": "longitudinal-counties-state",
+        "title": "Ohio benchmark from the county source",
+        "caption": "The statewide row is a benchmark, not an additional county.",
+        "rowIds": [
+          "04000US39"
+        ],
+        "columns": [
+          "label",
+          "population",
+          "below100",
+          "below100_rate",
+          "below200",
+          "below200_rate"
+        ]
+      }
+    },
+    {
+      "cohort": "county",
+      "mapping": {
+        "id": "longitudinal-counties-directory",
+        "kind": "table",
+        "sectionId": "longitudinal-counties",
+        "sectionTitle": "Income below twice poverty: every Ohio county",
+        "blockId": "longitudinal-counties-directory",
+        "title": "Complete 88-county directory",
+        "caption": "Below twice poverty includes below poverty. Derived margins of error are blank; original component MOEs remain in the dataset.",
+        "rowIds": [
+          "05000US39001",
+          "05000US39003",
+          "05000US39005",
+          "05000US39007",
+          "05000US39009",
+          "05000US39011",
+          "05000US39013",
+          "05000US39015",
+          "05000US39017",
+          "05000US39019",
+          "05000US39021",
+          "05000US39023",
+          "05000US39025",
+          "05000US39027",
+          "05000US39029",
+          "05000US39031",
+          "05000US39033",
+          "05000US39035",
+          "05000US39037",
+          "05000US39039",
+          "05000US39041",
+          "05000US39043",
+          "05000US39045",
+          "05000US39047",
+          "05000US39049",
+          "05000US39051",
+          "05000US39053",
+          "05000US39055",
+          "05000US39057",
+          "05000US39059",
+          "05000US39061",
+          "05000US39063",
+          "05000US39065",
+          "05000US39067",
+          "05000US39069",
+          "05000US39071",
+          "05000US39073",
+          "05000US39075",
+          "05000US39077",
+          "05000US39079",
+          "05000US39081",
+          "05000US39083",
+          "05000US39085",
+          "05000US39087",
+          "05000US39089",
+          "05000US39091",
+          "05000US39093",
+          "05000US39095",
+          "05000US39097",
+          "05000US39099",
+          "05000US39101",
+          "05000US39103",
+          "05000US39105",
+          "05000US39107",
+          "05000US39109",
+          "05000US39111",
+          "05000US39113",
+          "05000US39115",
+          "05000US39117",
+          "05000US39119",
+          "05000US39121",
+          "05000US39123",
+          "05000US39125",
+          "05000US39127",
+          "05000US39129",
+          "05000US39131",
+          "05000US39133",
+          "05000US39135",
+          "05000US39137",
+          "05000US39139",
+          "05000US39141",
+          "05000US39143",
+          "05000US39145",
+          "05000US39147",
+          "05000US39149",
+          "05000US39151",
+          "05000US39153",
+          "05000US39155",
+          "05000US39157",
+          "05000US39159",
+          "05000US39161",
+          "05000US39163",
+          "05000US39165",
+          "05000US39167",
+          "05000US39169",
+          "05000US39171",
+          "05000US39173",
+          "05000US39175"
+        ],
+        "columns": [
+          "label",
+          "population",
+          "below100_rate",
+          "below200",
+          "below200_rate"
+        ]
+      }
+    }
+  ],
+  "sharedOriginals": [
+    "sources/OACAA2026-Tables8-9-11-retained-OCR.json",
+    "sources/Census-ACS-comparison-guidance-reader.txt",
+    "longitudinal_reporting.cjs",
+    "LONGITUDINAL_SOURCE_MANIFEST.json",
+    "LONGITUDINAL_CONCORDANCE.json",
+    "LONGITUDINAL_SOURCE_GUIDE.md",
+    "longitudinal-working-plan.json",
+    "longitudinal-source-lock.json"
+  ],
+  "concordance": "LONGITUDINAL_CONCORDANCE.json"
+}

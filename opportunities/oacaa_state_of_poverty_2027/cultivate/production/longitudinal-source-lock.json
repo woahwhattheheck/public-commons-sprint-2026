@@ -1,0 +1,130 @@
+{
+  "schema": "tjl.oacaa.acs-source-lock.v1",
+  "files": [
+    {
+      "path": "sources/Ohio-ACS2024-fiveyear-C17002-original.json",
+      "bytes": 35915,
+      "sha256": "d2d9d70df9b49ca20bc6270d40664b82687d11e4bca0986b0930c6bb1d568c1e"
+    },
+    {
+      "path": "sources/Ohio-Census2000-SF3-P088-original-public-table.txt",
+      "bytes": 10410,
+      "sha256": "edac67b48fac758527c44b710926a5b9cb67cc8db9e57de381492b3aa5372086"
+    },
+    {
+      "path": "sources/Ohio-ACS2010-fiveyear-C17002-original-public-table.txt",
+      "bytes": 4634,
+      "sha256": "bf07cd5b4ade7feb5fca70084439ef2c2694680174396de316b545a4831705f2"
+    },
+    {
+      "path": "sources/OACAA2026-Tables8-9-11-retained-OCR.json",
+      "bytes": 19138,
+      "sha256": "c04896bc774e150a54390ce202135a8abf66c07274d1c232d3b4de2644ee520d"
+    },
+    {
+      "path": "sources/ACS2024-oneyear-C17002-Ohio-US-original-redistribution.json",
+      "bytes": 1498,
+      "sha256": "3b412c3044178f82d51aff0a255a321ee334ae567c42ecb0a79e86934b636d41"
+    },
+    {
+      "path": "sources/ACS2018-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 4606,
+      "sha256": "b205efa061e6beeff6ca20e6c9e8eeb3bb1292fb900b32e90bf2b9d92e2a7c87"
+    },
+    {
+      "path": "sources/ACS2018-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 4631,
+      "sha256": "c277a8ce26f417197209c7cc81826e6a811008cc58597999cb0e0ac6dda9f95c"
+    },
+    {
+      "path": "sources/ACS2019-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 4604,
+      "sha256": "8ed0d6551283333710e11671d684184153a5c919a41c1da2aee054fd60bcc6e3"
+    },
+    {
+      "path": "sources/ACS2019-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 4629,
+      "sha256": "3d273d813343c9e5f2e89f2195c659a557241adace8a3941e0a51644e369a383"
+    },
+    {
+      "path": "sources/ACS2021-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 4409,
+      "sha256": "94bd80766ce6f1f8122a314c1c8b790740fd6849899d9ed5643d7f28d7d5bf08"
+    },
+    {
+      "path": "sources/ACS2021-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 4442,
+      "sha256": "0381c491f1e3a8b0f020f9cd78afdf8a6e0a5bfde683e483db97a18faa45bcf5"
+    },
+    {
+      "path": "sources/ACS2022-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 4738,
+      "sha256": "e5430f3d0df9a119c320fc1acc371bfbe91d85c000ebfd9d78201c1446241e50"
+    },
+    {
+      "path": "sources/ACS2022-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 4763,
+      "sha256": "11644cf5d246f96898fc9d2ffe68966d14891a0c0a2e4dab2e1f75959e639bad"
+    },
+    {
+      "path": "sources/ACS2023-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 5059,
+      "sha256": "94f299c2cf774e1dd4ec355192c831445cc8c27357e093a6290649be9ac96731"
+    },
+    {
+      "path": "sources/ACS2023-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 5037,
+      "sha256": "4f06b22d4240c695f201d7dac3294f10e8ade5c2c8a49e0a1f9316444f621b28"
+    },
+    {
+      "path": "sources/ACS2024-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 8944,
+      "sha256": "aba2ffc6fe6bba12592fca0e036c3b029ee089b13e8f3b292bf314f6a9c743bc"
+    },
+    {
+      "path": "sources/Census-ACS-comparison-guidance-reader.txt",
+      "bytes": 27204,
+      "sha256": "289adb3fdf542aede2613c67e0b669d8f66d2765a6e400a9e41b31bf37e54c00"
+    },
+    {
+      "path": "LONGITUDINAL_SOURCE_MANIFEST.json",
+      "bytes": 8645,
+      "sha256": "8efaa19e7eaa82cf81157059b9d377eaaaf273893078a0757cd1b07187622dcb"
+    },
+    {
+      "path": "longitudinal_reporting.cjs",
+      "bytes": 20236,
+      "sha256": "0898369ec08ab4534b2535c508181a8b3d5a71f58ca40711ff9c8dd6bda07a22"
+    },
+    {
+      "path": "datasets/ohio-acs5-poverty-ratios-2024.json",
+      "bytes": 118445,
+      "sha256": "5e0572cacae6dc9056c0ad3ff95e978821ddf91c62c02c2749d4212b7dae326b"
+    },
+    {
+      "path": "datasets/ohio-poverty-ratio-history.json",
+      "bytes": 6579,
+      "sha256": "04ae7e96e5e8e31656fbb058df8f63245e6b41741030f4fa3e92ce2ca0f29f76"
+    },
+    {
+      "path": "datasets/ohio-us-annual-poverty-ratios-2018-2024.json",
+      "bytes": 25106,
+      "sha256": "00bea4973d3977cb8a60a54d2650b5f63a53dc9c1addafb270cd153a321f35b7"
+    },
+    {
+      "path": "LONGITUDINAL_CONCORDANCE.json",
+      "bytes": 74030,
+      "sha256": "5c7d7994125a50624894005681160c10f3cb69c8834276c1e7d51fa92fd6186b"
+    },
+    {
+      "path": "longitudinal-working-plan.json",
+      "bytes": 25003,
+      "sha256": "eba0f50b6773fba41dcf06f20754c5a19a28547178dccc5046ac90d0d105a059"
+    },
+    {
+      "path": "LONGITUDINAL_SOURCE_GUIDE.md",
+      "bytes": 10553,
+      "sha256": "688321f7be3d05303d23f2b5cc181ba5ebcd45fa02d5360b0aeeda391537232a"
+    }
+  ]
+}
