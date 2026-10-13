@@ -27,6 +27,11 @@ reused through their maintained identity; the updated report sections receive
 a new immutable report-source identity. Keep the prior preparation's original
 selection and outputs together.
 
+Before opening or preparing each report, the chapter selects **Refresh retained
+studies** and checks the running operator's catalogue against the prepared report
+version. When source has been installed over a running operator, restart that same
+operator before continuing so its loaded report module matches the preparation.
+
 ## Join the already operating browser receiver
 
 For the receiver's existing live server and completed native report receipt:

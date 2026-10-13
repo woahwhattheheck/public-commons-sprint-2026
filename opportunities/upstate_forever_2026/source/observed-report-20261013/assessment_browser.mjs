@@ -178,6 +178,16 @@ export async function runAssessmentReceivingChapter({
     page.on('response', listener);
     let timer;
     try {
+      // Refresh through the visible desk before acting: a retained operator process
+      // can still have an older report module loaded after its disk source changed.
+      const catalogResponse = page.waitForResponse(responseAt('/api/assessment-context/catalog',
+        { workspace }), { timeout });
+      await page.locator('[data-ac-action="reload"]').click();
+      const catalog = await originalJSON(await catalogResponse, 'Current assessment report catalogue');
+      requireValue(catalog.report_version === report.version,
+        'Restart the existing operator with the installed source before continuing this preparation: ' +
+        'loaded report ' + String(catalog.report_version || 'unversioned') +
+        ', prepared report ' + String(report.version) + '.');
       const state = await refreshedState();
       const owned = (state.tasks || []).filter(task =>
         task.workspace === workspace && task.action === 'assessment.context.report');
