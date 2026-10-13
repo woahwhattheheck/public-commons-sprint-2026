@@ -17,6 +17,21 @@ def run_lean_aviary(value):
  for key,pin in (("bridgePredecessorSource",bridge_adoption["previous"]),("bridgeSource",bridge_adoption["selected"])):
   raw=value[key].encode()
   need(len(raw)==pin["bytes"] and sha(raw)==pin["sha256"],"The selected save-source adoption bytes differ")
+ prepared_adoption=value["preparedSaveAdoption"]
+ need(prepared_adoption.get("schema")=="commons.aviary.private-prepared-save-source-adoption.v1"
+      and prepared_adoption.get("operationId")==operation,"The original prepared-save adoption belongs to another operation")
+ for key,pin in (("bridgeSource",prepared_adoption["bridge"]),("runtimeSource",prepared_adoption["runtime"])):
+  raw=value[key].encode("utf-8")
+  need(len(raw)==pin["bytes"] and sha(raw)==pin["sha256"],"The complete prepared-save source changed")
+ expected_helpers=prepared_adoption["helpers"]
+ need(isinstance(value.get("preparedLibraryHelpers"),list) and len(value["preparedLibraryHelpers"])==3
+      and {r["path"] for r in value["preparedLibraryHelpers"]}==set(expected_helpers),
+      "The complete maintained save-helper graph changed")
+ for member in value["preparedLibraryHelpers"]:
+  raw=member["content"].encode("utf-8");pin=expected_helpers[member["path"]]
+  need(len(raw)==pin["bytes"]==member["bytes"] and sha(raw)==pin["sha256"]==member["sha256"],
+       "A maintained save-helper source changed")
+  ast.parse(raw,filename=member["path"])
  source_keys=("runtimeSource","bridgeSource","releaseSource","entryText","runtimeArchiveSource")
  for key in source_keys:ast.parse(value[key],filename=key+".py")
  self_raw=Path("/proc/self/stat").read_text()
@@ -64,6 +79,8 @@ def run_lean_aviary(value):
   ("official-library-save",value["bridgeSource"].encode(),".py"),
   ("official-library-save-predecessor",value["bridgePredecessorSource"].encode(),".py"),
   ("official-library-name-adoption",(json.dumps(value["bridgeSourceAdoption"],sort_keys=True,indent=2)+"\n").encode(),".json"),
+  ("original-library-name-adoption",(json.dumps(value["previousBridgeSourceAdoption"],sort_keys=True,indent=2)+"\n").encode(),".json"),
+  ("private-prepared-save-adoption",(json.dumps(value["preparedSaveAdoption"],sort_keys=True,indent=2)+"\n").encode(),".json"),
   ("completed-lock-release",value["releaseSource"].encode(),".py"),
   ("late-runtime-preservation",value["runtimeArchiveSource"].encode(),".py"),
   ("lean-continuation",value["mainSource"].encode(),".py"),
