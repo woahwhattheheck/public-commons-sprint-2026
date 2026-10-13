@@ -347,6 +347,9 @@ def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[
             "parameter": OBSERVATION_PARAMETERS.get(raw["parameter"], raw["parameter"]),
             "source_file": source_file, "source_csv_row": number, "raw_cells": original,
             "source_depth_token": raw["depth"], "source_value_token": raw["value"],
+            "activity_type": original.get("activity_type", original.get("ActivityTypeCode", "")),
+            "activity_comment": original.get("activity_comment", original.get("ActivityCommentText", "")),
+            "result_comment": original.get("result_comment", original.get("ResultCommentText", "")),
         }
         for field in ("value", "detection_limit", "depth"):
             if raw[field] == "":
@@ -449,9 +452,9 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
     ]
     groups = {}
     for row in chosen:
-        groups.setdefault((row["site_id"], row["parameter"]), []).append(row)
+        groups.setdefault((row["site_id"], row["parameter"], row.get("project_id", ""), row.get("activity_type", "")), []).append(row)
     series = []
-    for (site_id, parameter), records in sorted(groups.items()):
+    for (site_id, parameter, project_id, activity_type), records in sorted(groups.items()):
         numeric = [row["value"] for row in records if row["value"] is not None and not row["censored"]]
         units = sorted({row["unit"] for row in records if row["value"] is not None and row["unit"]})
         comparable_units = len(units) == 1 and all(
@@ -480,7 +483,13 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
         additional_dates = sorted(set(dates) - reference_dates) if reference_dates else []
         censored = sum(row["censored"] for row in records)
         missing = sum(row["value"] is None and not row["censored"] for row in records)
-        basis = "Original quantified activities; arithmetic mean and sample SD; censored and missing values retain their source fields."
+        basis = "Original quantified activities; arithmetic mean and sample SD; censored and missing values retain their source fields. Source project and activity type define separate series."
+        support = "Reconciled chlorophyll cohort" if parameter == "total_chlorophyll_a" and all(row["source_file"] in (COHORT_FILE, WQP_COHORT) for row in records) else "Original campaign activities"
+        if support == "Reconciled chlorophyll cohort":
+            basis += " " + " ".join(sorted({row.get("selection_basis", "") for row in records if row.get("selection_basis")}))
+        if parameter == "microcystins":
+            support = "Microcystin campaign context"
+            basis += " All original campaign microcystin activities are shown with their actual activity type and calendar; printed report statistics retain their separate analytical cohort."
         if censored:
             basis += " This quantified-only mean uses no substituted values; the published mean retains the report's separate censor treatment."
         if parameter == "microcystins" and (missing_reference_dates or additional_dates):
@@ -490,7 +499,8 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
         if qualifiers:
             basis += " Original result qualifiers are retained: " + ", ".join(qualifiers) + "."
         series.append({
-            "site_id": site_id, "parameter": parameter,
+            "site_id": site_id, "parameter": parameter, "project_id": project_id,
+            "activity_type": activity_type, "sample_support": support,
             "parameter_original": sorted({row["parameter_original"] for row in records}),
             "unit": units[0] if comparable_units else "; ".join(units),
             "record_count": len(records), "activity_count": len(set(identifiers)),
@@ -510,7 +520,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
             "source_pdf_page": published.get("source_pdf_page") if published else None,
             "source_selector": records[0]["source_selector"], "basis": basis,
             "complete_uncensored_campaign": bool(
-                published and comparable_units and units[0] == published["units"]
+                parameter == "total_chlorophyll_a" and published and comparable_units and units[0] == published["units"]
                 and not censored and not missing and len(identifiers) == len(set(identifiers))
                 and len(set(dates)) == study.get("grab_sampling", {}).get("visits_per_site")
                 and not qualifiers
@@ -1184,6 +1194,7 @@ class PublishedStudyStore:
         observations = context.get("observations", {})
         observed = table("Original activities and published summaries", observations.get("series", []), [
             ("site_id", "Station"), ("parameter", "Parameter"), ("unit", "Unit"),
+            ("project_id", "Source project"), ("activity_type", "Original activity type"), ("sample_support", "Sample support"),
             ("record_count", "Original rows"), ("activity_count", "Activities"),
             ("numeric_count", "Quantified"), ("censored_count", "Censored"),
             ("published_n", "Printed n"), ("mean", "Quantified mean"),
@@ -1201,7 +1212,8 @@ class PublishedStudyStore:
         ])
         observed += table("Original activity chronology", observations.get("rows", []), [
             ("site_id", "Station"), ("date", "Date"), ("local_time", "Local time"),
-            ("source_timezone", "Source time zone"), ("parameter_original", "Source parameter"),
+            ("source_timezone", "Source time zone"), ("project_id", "Source project"),
+            ("activity_type", "Original activity type"), ("parameter_original", "Source parameter"),
             ("value", "Original value"), ("unit", "Unit"), ("detection_condition", "Detection"),
             ("detection_limit", "Limit"), ("detection_limit_unit", "Limit unit"),
             ("depth", "Depth"), ("depth_unit", "Depth unit"), ("activity_id", "Activity identifier"),
