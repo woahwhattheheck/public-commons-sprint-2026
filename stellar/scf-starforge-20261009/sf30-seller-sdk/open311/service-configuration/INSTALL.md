@@ -1,5 +1,7 @@
 # Install municipal service configuration
 
+For the complete six-application installation and saved-workspace path, use [Operate the municipal suite](../../../../../products/open311/OPERATING.md). [Receive the editable desks](../../../../../products/open311/RECEIVING.md) gives every workspace schema and exact receiving command; [Municipal workflows and source formats](../../../../../products/open311/WORKFLOWS.md) connects collection, reporting, GIS, Follow-through, Field Desk and implementation.
+
 The **open311-service-configuration** source selection delivers the complete municipal suite: source collection, reporting, GIS, request/work-order Follow-through, Field Desk and service configuration. Each application opens its own saved private directory; full original exports connect them.
 
 ## Build the selected source
