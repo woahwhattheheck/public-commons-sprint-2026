@@ -654,9 +654,9 @@ class NativeJobs:
             value["study_context"] = task["_native_study_context"]
         if task.get("_native_ensemble_context"):
             value["ensemble_context"] = task["_native_ensemble_context"]
+        with self.lock:
+            value["stop_requested"] = task["id"] in self.pending_stops
         if not execution:
-            with self.lock:
-                value["stop_requested"] = task["id"] in self.pending_stops
             return value
         request, directory = execution["request"], execution["directory"]
         heartbeat = _read(directory / "heartbeat.json") or {}
@@ -667,7 +667,8 @@ class NativeJobs:
                      alive=self._alive(execution), worker=execution["worker"],
                      heartbeat_at=heartbeat.get("at"),
                      elapsed_seconds=finished.get("elapsed_seconds", heartbeat.get("elapsed_seconds")),
-                     stop_requested=bool(stop), stop_requested_at=(stop or {}).get("requested_at"),
+                     stop_requested=value["stop_requested"] or bool(stop),
+                     stop_requested_at=(stop or {}).get("requested_at"),
                      reconnected=_read(directory / "reconnected.json"),
                      supervision=supervision, failure=_read(directory / "failure.json"),
                      resources=self._resources(execution.get("identity")),
