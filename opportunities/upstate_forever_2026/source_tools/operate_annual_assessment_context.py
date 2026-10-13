@@ -27,7 +27,7 @@ def main():
         raise ValueError("Keep operation outputs outside the retained workspace.")
     sys.path[:0] = [str(APP / "operator"), str(APP)]
     from server import Operator
-    from model.common import atomic_json, read_json
+    from model.common import atomic_json, file_digest, read_json
 
     ROOT.mkdir(parents=True, exist_ok=True)
     PROGRESS = ROOT / "working-project-progress.json"
@@ -38,6 +38,7 @@ def main():
         print(json.dumps({"stage": "opening maintained operator", "workspace": str(WORKSPACE)}), flush=True)
         return Operator(WORKSPACE, STATE, source_manifests=(MANIFEST, MICROBIAL_MANIFEST))
     operator = opening()
+    receiver = None
     key = operator.primary
     workspace = operator.ws(key)
     assert workspace.project["id"] == args.project_id, "Choose the stated original project."
@@ -45,27 +46,31 @@ def main():
     write_progress()
     print(json.dumps({"stage": "operator opened", "workspace": key, "project": workspace.project}), flush=True)
 
-    def existing(suffix):
+    def existing(suffix, *, engine=None, workspace_key=None):
+        engine = operator if engine is None else engine
+        workspace_key = key if workspace_key is None else workspace_key
         operation_id = "ES9960-context-20261013-" + suffix
-        matches = [task for task in operator.task_list(key) if task.get("operation_id") == operation_id]
+        matches = [task for task in engine.task_list(workspace_key) if task.get("operation_id") == operation_id]
         if len(matches) > 1:
             raise RuntimeError("Duplicate operation identity " + operation_id)
         return matches[0] if matches else None
 
-    def queued(action, payload, suffix):
+    def queued(action, payload, suffix, *, engine=None, workspace_key=None, track_tasks=True):
+        engine = operator if engine is None else engine
+        workspace_key = key if workspace_key is None else workspace_key
         operation_id = "ES9960-context-20261013-" + suffix
-        task = operator.submit(key, action, payload, operation_id)
+        task = engine.submit(workspace_key, action, payload, operation_id)
         if task["state"] in {"failed", "interrupted"}:
-            operator.resume(task["id"])
-            task = operator.task(task["id"])
-        if task["action"] != action or task["workspace"] != key:
+            engine.resume(task["id"])
+            task = engine.task(task["id"])
+        if task["action"] != action or task["workspace"] != workspace_key:
             raise RuntimeError("Operation identity belongs to another request")
-        if task["id"] not in progress["tasks"]:
+        if track_tasks and task["id"] not in progress["tasks"]:
             progress["tasks"].append(task["id"])
             write_progress()
         end, last = time.monotonic() + 1200, 0
         while True:
-            task = operator.task(task["id"])
+            task = engine.task(task["id"])
             if task["state"] == "complete":
                 print(json.dumps({"stage": "task complete", "action": action, "id": task["id"]}), flush=True)
                 return task
@@ -300,8 +305,108 @@ def main():
         result["capture_task_id"] = capture_task["id"]
         result["task_ids"] = list(progress["tasks"])
         atomic_json(ROOT / "working-project-native-result.json", result)
-        print(json.dumps({"stage": "scientific context maps complete", "result": result}), flush=True)
+        # Restore this exact exported edition into an independently reopened
+        # operator. Stable upload/task identities let the same command continue
+        # after interruption without producing another receiving project.
+        receiver_directory = ROOT / "archive-receiver" / "workspace"
+        receiver_state = ROOT / "archive-receiver" / "operator"
+        transfer_id = capture_task["result"]["transfer_id"]
+        receiving = progress.setdefault("receiving", {
+            "transfer_id": transfer_id, "project_id": workspace.project["id"],
+            "workspace_directory": str(receiver_directory),
+            "operator_directory": str(receiver_state)
+        })
+        if (receiving["transfer_id"] != transfer_id
+                or receiving["project_id"] != workspace.project["id"]
+                or receiving["workspace_directory"] != str(receiver_directory)
+                or receiving["operator_directory"] != str(receiver_state)):
+            raise ValueError("The retained receiving request belongs to a different exported project edition.")
+        write_progress()
+        def open_receiver():
+            return Operator(receiver_directory, receiver_state, create=True,
+                            title="Upper Savannah complete scientific-context project receiving")
+        receiver = open_receiver()
+        receiver_key = receiver.primary
+        archive_path = Path(capture_task["result"]["path"])
+        archive_bytes, archive_sha256 = archive_path.stat().st_size, file_digest(archive_path)
+        known_receive = existing("receive-with-microbial", engine=receiver, workspace_key=receiver_key)
+        if known_receive:
+            receive_payload = known_receive["payload"]
+            if receive_payload["transfer_id"] != transfer_id:
+                raise ValueError("The original receiving task selected a different snapshot.")
+            upload_id = receive_payload["upload_id"]
+        else:
+            upload_id = receiving.get("upload_id")
+            if upload_id is None:
+                with archive_path.open("rb") as stream:
+                    uploaded = receiver.receive_upload(
+                        stream, archive_bytes, quote(archive_path.name, safe=""), "application/zip")
+                upload_id = uploaded["id"]
+                receiving["upload_id"] = upload_id
+                write_progress()
+            receive_payload = {"upload_id": upload_id, "transfer_id": transfer_id}
+        uploaded = receiver.upload(upload_id)
+        if uploaded["bytes"] != archive_bytes or uploaded["sha256"] != archive_sha256:
+            raise ValueError("The retained receiving upload differs from the exact project archive.")
+        receiving.update(upload_id=upload_id, archive_bytes=archive_bytes, archive_sha256=archive_sha256)
+        write_progress()
+        receive_task = queued("workspace.receive", receive_payload, "receive-with-microbial",
+                              engine=receiver, workspace_key=receiver_key, track_tasks=False)
+        received = receive_task["result"]
+        receiving.update(task_id=receive_task["id"], received_workspace_key=received["workspace_key"],
+                         result=received)
+        write_progress()
+        workspace_keys = sorted(receiver.workspaces)
+        receiver.close()
+        receiver = open_receiver()
+        if sorted(receiver.workspaces) != workspace_keys:
+            raise ValueError("The independently reopened receiving operator lost a registered project.")
+        restored_key = received["workspace_key"]
+        restored_ws = receiver.ws(restored_key)
+        if restored_ws.project != workspace.project:
+            raise ValueError("The receiving project identity differs from the original project.")
+        restored_spatial = receiver.spatial_reviews[restored_key]
+        restored_task_rows = received["recovery"]["tasks"]
+        retained_tasks = []
+        for source_task_id in capture_payload["task_ids"]:
+            original_task = operator.task(source_task_id)
+            matching = [row for row in restored_task_rows
+                        if row.get("operation_id") == original_task["operation_id"]]
+            if len(matching) != 1:
+                raise ValueError("Receiving lacks one selected original operation: " + original_task["operation_id"])
+            restored_task = receiver.task(matching[0]["id"])
+            if (restored_task.get("transfer_origin", {}).get("task_id") != source_task_id
+                    or restored_task["state"] != original_task["state"]):
+                raise ValueError("Receiving task history differs from its original selected operation.")
+            if original_task["action"] in {"source.import", "spatial.review.save"}:
+                if restored_task["result"]["id"] != original_task["result"]["id"]:
+                    raise ValueError("Receiving changed an original source collection or saved review identity.")
+            retained_tasks.append({"source_task_id": source_task_id, "received_task_id": restored_task["id"],
+                                   "operation_id": original_task["operation_id"], "state": restored_task["state"]})
+        reopened_views = []
+        for row in saved:
+            review = restored_ws._get("spatial-reviews", row["review_id"])
+            validation = restored_spatial.validate_saved(review)
+            overlay = restored_spatial.overlay({"selection": row["selection"], "view": review["view"],
+                                                "limit": 500, "tolerance": 0})
+            if (overlay["returned"] != row["selected_count"] or overlay.get("next_offset") is not None
+                    or overlay["source_sha256"] != row["source_sha256"]):
+                raise ValueError("The received saved view differs from its original source selection.")
+            reopened_views.append({"key": row["key"], "review_id": row["review_id"],
+                                   "selected_count": overlay["returned"],
+                                   "source_sha256": overlay["source_sha256"], "validation": validation})
+        result["receiving"] = {
+            "transfer_id": transfer_id, "task_id": receive_task["id"], "result": received,
+            "workspace_key": restored_key, "workspace": str(restored_ws.root),
+            "operator_state": str(receiver_state), "project": restored_ws.project,
+            "archive_bytes": archive_bytes, "archive_sha256": archive_sha256,
+            "restored_tasks": retained_tasks, "reopened_views": reopened_views
+        }
+        atomic_json(ROOT / "working-project-native-result.json", result)
+        print(json.dumps({"stage": "scientific context project received and reopened", "result": result}), flush=True)
     finally:
+        if receiver is not None:
+            receiver.close()
         operator.close()
 
 
