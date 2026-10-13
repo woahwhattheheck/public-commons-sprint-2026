@@ -6,8 +6,11 @@ Run from the application root:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import os
 from pathlib import Path
 import sys
+import tempfile
 
 from .implementation import (
     COLLECTIONS, MAX_JSON_BYTES, ImplementationError, ImplementationStore,
@@ -15,7 +18,7 @@ from .implementation import (
     read_document, render_report_html, report_csv, schedule_plan, summarize_plan,
     utc_now, validate_plan,
 )
-from .implementation import _safe_output
+from .implementation import _safe_output, _fsync_directory
 
 
 def _duration(value: str):
@@ -89,6 +92,31 @@ def build_parser():
     export.add_argument("output")
     export.add_argument("--revision", type=int)
     export.add_argument("--overwrite", action="store_true")
+
+
+    evidence_export = commands.add_parser(
+        "evidence-export", help="Retain a complete plan and original-file ZIP; optionally copy it out."
+    )
+    evidence_export.add_argument("plan_id")
+    evidence_export.add_argument("--revision", type=int, help="Exact retained revision (default: current).")
+    evidence_export.add_argument("--out", help="Optional destination ZIP outside the implementation bank.")
+    evidence_export.add_argument("--overwrite", action="store_true",
+                                 help="Replace an existing --out file; otherwise publication is create-only.")
+
+    evidence_import = commands.add_parser(
+        "evidence-import", help="Validate original evidence bytes and import their complete plan."
+    )
+    evidence_import.add_argument("input", help="Complete upstate.implementation-evidence/v1 ZIP.")
+    evidence_import.add_argument("--expected-revision", type=int,
+                                 help="Optional additional current-revision check; omit for a new plan.")
+    evidence_import.add_argument("--plan-id", help="Require the archive's original plan ID.")
+
+    evidence_inspect = commands.add_parser(
+        "evidence-inspect", help="Validate a complete evidence ZIP without creating or changing a workspace."
+    )
+    evidence_inspect.add_argument("input")
+    evidence_inspect.add_argument("--include-plan", action="store_true",
+                                  help="Include the complete unchanged plan as document in the JSON result.")
 
     report = commands.add_parser("report", help="Create a new complete HTML/CSV/JSON report directory.")
     report.add_argument("plan_id")
@@ -275,10 +303,69 @@ def _record_from_args(args):
     raise ImplementationError(f"Unsupported record command: {command}")
 
 
+
+def _copy_evidence_archive(store, receipt, output, overwrite):
+    """Stream and atomically publish a verified copy of the retained ZIP."""
+    source = store.root / receipt["reference"]
+    destination = Path(output).expanduser().absolute()
+    if destination.is_symlink():
+        raise ImplementationError("Evidence output must not be a symlink.")
+    if destination.resolve() == source.resolve():
+        return str(source)
+    bank = store.base.parent.resolve()
+    if destination.resolve().is_relative_to(bank):
+        raise ImplementationError(
+            "Choose an evidence output outside the managed implementation bank."
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=".pending-evidence-copy-", dir=destination.parent
+    )
+    temporary = Path(temporary_name)
+    digest, count = hashlib.sha256(), 0
+    try:
+        with os.fdopen(descriptor, "wb") as target, source.open("rb") as original:
+            for chunk in iter(lambda: original.read(1024 * 1024), b""):
+                count += len(chunk)
+                if count > receipt["bytes"]:
+                    raise ImplementationError("The retained evidence archive changed during copy.")
+                digest.update(chunk)
+                target.write(chunk)
+            if (count, digest.hexdigest()) != (receipt["bytes"], receipt["sha256"]):
+                raise ImplementationError("The retained evidence archive changed during copy.")
+            target.flush()
+            os.fsync(target.fileno())
+        if overwrite:
+            os.replace(temporary, destination)
+        else:
+            try:
+                os.link(temporary, destination)
+            except FileExistsError as exc:
+                raise ImplementationError(
+                    f"Output already exists: {destination}. Choose another path or use --overwrite."
+                ) from exc
+        _fsync_directory(destination.parent)
+        return str(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
 def execute(args):
     if args.command == "validate":
         plan = read_document(args.input)
         return dict(valid=True, plan_id=plan["id"], revision=plan["revision"])
+    if args.command == "evidence-inspect":
+        from .implementation_evidence import read_package
+        source = Path(args.input).expanduser().resolve(strict=True)
+        received = read_package(source)
+        result = dict(
+            valid=True, file_ref=str(source), archive_bytes=received["bytes"],
+            archive_sha256=received["sha256"], plan_id=received["plan"]["id"],
+            revision=received["plan"]["revision"], title=received["plan"]["title"],
+            source_count=len(received["files"]), manifest=received["manifest"],
+        )
+        if args.include_plan:
+            result["document"] = received["plan"]
+        return result
     store = ImplementationStore(args.workspace)
     command = args.command
     if command == "create":
@@ -301,6 +388,21 @@ def execute(args):
         return {"file_ref": store.export_json(
             args.plan_id, args.output, args.revision, overwrite=args.overwrite,
         )}
+    if command == "evidence-export":
+        from .implementation_evidence import export_package
+        if args.overwrite and args.out is None:
+            raise ImplementationError("--overwrite requires --out.")
+        receipt = export_package(store, args.plan_id, revision=args.revision)
+        native_file = str(store.root / receipt["reference"])
+        file_ref = (_copy_evidence_archive(store, receipt, args.out, args.overwrite)
+                    if args.out is not None else native_file)
+        return dict(receipt, file_ref=file_ref, native_file_ref=native_file)
+    if command == "evidence-import":
+        from .implementation_evidence import import_package
+        return import_package(
+            store, Path(args.input).expanduser(), expected_revision=args.expected_revision,
+            expected_plan_id=args.plan_id, actor=args.actor,
+        )
     if command == "schedule":
         return schedule_plan(store.get(args.plan_id), args.as_of)
     if command == "summary":
