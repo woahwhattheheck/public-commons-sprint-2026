@@ -7,9 +7,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .common import digest, held, identifier
-from .compute_programme import (ComputeProgrammes, SELECTION_SCHEMA,
-                                _models, _native_selection)
+from .common import digest, identifier, selected_models
+from .compute_programme import ComputeProgrammes, SELECTION_SCHEMA
 
 
 def _engine():
@@ -46,6 +45,8 @@ def _reference(workspace, plan):
     if any(selected[name] != plan["baseline"][name]
            for name in ("grid_id", "profile_id", "scenario_id")):
         raise ValueError("The experiment reference differs from its retained native selection.")
+    if selected_models(selected) != selected_models(plan["baseline"]):
+        raise ValueError("The experiment reference differs from its retained selected native models.")
     return reference
 
 
@@ -58,21 +59,23 @@ def _row(case, reference):
     for name in ("profile_id", "scenario_id"):
         if source_selection.get(name) != case[name]:
             raise ValueError("An experiment case differs from its generated profile or scenario.")
-    # Older saved planners omitted partial models from generated run IDs.
-    # The retained reference run preserves the actual requested native stages.
-    models = _models(source_selection.get("models"), selected.get("models"))
-    native = _native_selection(selected["grid_id"], case["profile_id"],
-                               case["scenario_id"], models)
+    models = selected_models(source_selection)
+    if models != selected_models(selected):
+        raise ValueError("An experiment case must retain the reference native model families.")
+    native = dict(source_selection)
     run_id = digest(native)
+    if run_id != case["run_id"]:
+        raise ValueError("The materialized experiment run differs from its retained native selection.")
     if case["kind"] in ("reference", "parameter"):
         if case["scenario_id"] != selected["scenario_id"]:
             raise ValueError("A parameter case must retain the reference land cover.")
         baseline_id = reference["id"]
     elif case["kind"] == "landcover":
-        baseline_id = digest(_native_selection(
-            selected["grid_id"], case["profile_id"], selected["scenario_id"], models))
+        baseline_id = digest({**native, "scenario_id": selected["scenario_id"]})
     else:
         raise ValueError("Select a reference, parameter, or land-cover experiment case.")
+    if baseline_id != case["baseline_run_id"]:
+        raise ValueError("The experiment case differs from its original matched baseline.")
     pairing = {"case_id": case["id"], "kind": case["kind"],
                "run_id": run_id, "baseline_run_id": baseline_id}
     source_run_id = case.get("source_run_id", case["run_id"])
@@ -104,7 +107,7 @@ def preview(workspace, experiment_id, offset=0, limit=100):
     engine = _engine()
     plan = engine._plan(workspace, key)
     reference = _reference(workspace, plan)
-    cases = engine.inspect(workspace, key, offset=offset, limit=limit)["cases"]
+    cases = engine.expanded_cases(workspace, key, offset=offset, limit=limit)["cases"]
     next_offset = offset + len(cases)
     rows = [_row(case, reference) for case in cases]
     return {
@@ -124,48 +127,41 @@ def preview(workspace, experiment_id, offset=0, limit=100):
 
 
 def create(workspace, experiment_id):
+    """Materialize the shared experiment iterator and prepare its native programme."""
     key = identifier(experiment_id)
     engine = _engine()
     manager = ComputeProgrammes(workspace)
-    directory = workspace.root / "experiments" / key
-    with held(directory / ".experiment.lock", blocking=False):
-        plan = engine._plan(workspace, key)
-        reference = _reference(workspace, plan)
-        rows, native_runs, profiles = [], {}, set()
-        reference_key = None
-        for case, option in engine._case_definitions(workspace, plan):
-            if option["id"] not in profiles:
-                if option["derived"]:
-                    saved = workspace.save_profile(option["profile"])
-                else:
-                    saved = workspace._get("profiles", option["id"])
-                if saved["id"] != option["id"]:
-                    raise ValueError("Materialized experiment profile differs from its original selection.")
-                profiles.add(option["id"])
-            row = _row(case, reference)
-            rows.append(row)
-            native_runs[row["key"]] = row["changes"]["pairing"]["run_id"]
-            if case["kind"] == "reference" and native_runs[row["key"]] == reference["id"]:
-                if reference_key is not None:
-                    raise ValueError("The experiment expanded more than one original reference case.")
-                reference_key = row["key"]
-        if not reference_key or len(rows) != plan["counts"]["cases"]:
-            raise ValueError("The saved experiment's expanded case count or reference differs.")
-        prepared_ids = set(native_runs.values())
-        if any(row["changes"]["pairing"]["baseline_run_id"] not in prepared_ids for row in rows):
-            raise ValueError("The experiment must retain each case's matching native baseline.")
-        selection = {
-            "schema": SELECTION_SCHEMA, "title": plan["selection"]["title"],
-            "description": "Native programme from retained experiment " + key,
-            "grid_id": plan["baseline"]["grid_id"], "baseline_run": reference_key,
-            "runs": rows, "source_reference": "upstate.experiment:" + key,
-        }
-        proposed = manager.preview(selection)
-        if any(row["run_id"] != native_runs[row["key"]] for row in proposed["runs"]):
-            raise ValueError("Prepared programme selections differ from the canonical native case bindings.")
-        result = manager.create(proposed["selection"])
-        return {**result, "experiment_id": key,
-                "experiment_pairing": "selection.runs[].changes.pairing"}
+    plan = engine._plan(workspace, key)
+    reference = _reference(workspace, plan)
+    rows, native_runs = [], {}
+    reference_key = None
+    # The shared iterator takes the experiment lock around each retained case.
+    # Do not hold it across this loop or while the programme takes its own lock.
+    for case in engine.materialize_cases(workspace, key):
+        row = _row(case, reference)
+        rows.append(row)
+        native_runs[row["key"]] = row["changes"]["pairing"]["run_id"]
+        if case["kind"] == "reference" and native_runs[row["key"]] == reference["id"]:
+            if reference_key is not None:
+                raise ValueError("The experiment expanded more than one original reference case.")
+            reference_key = row["key"]
+    if not reference_key or len(rows) != plan["counts"]["cases"]:
+        raise ValueError("The saved experiment's expanded case count or reference differs.")
+    prepared_ids = set(native_runs.values())
+    if any(row["changes"]["pairing"]["baseline_run_id"] not in prepared_ids for row in rows):
+        raise ValueError("The experiment must retain each case's matching native baseline.")
+    selection = {
+        "schema": SELECTION_SCHEMA, "title": plan["selection"]["title"],
+        "description": "Native programme from retained experiment " + key,
+        "grid_id": plan["baseline"]["grid_id"], "baseline_run": reference_key,
+        "runs": rows, "source_reference": "upstate.experiment:" + key,
+    }
+    proposed = manager.preview(selection)
+    if any(row["run_id"] != native_runs[row["key"]] for row in proposed["runs"]):
+        raise ValueError("Prepared programme selections differ from the canonical native case bindings.")
+    result = manager.create(proposed["selection"])
+    return {**result, "experiment_id": key,
+            "experiment_pairing": "selection.runs[].changes.pairing"}
 
 
 
@@ -181,26 +177,34 @@ def sync_completed(workspace, programme):
     engine = _engine()
     plan = engine._plan(workspace, key)
     reference = _reference(workspace, plan)
-    completed = {row["run_id"] for row in programme["runs"]
+    # Keep one lookup for completed native IDs and their verification status.
+    # Shared paired baselines need only one retained-run read.
+    completed = {row["run_id"]: False for row in programme["runs"]
                  if row.get("native_state", row.get("state")) == "complete"}
-    required = set()
-    count = 0
-    for case, _ in engine._case_definitions(workspace, plan):
-        row = _row(case, reference)
-        pairing = row["changes"]["pairing"]
-        if (case["run_id"] != pairing["run_id"]
-                or case["baseline_run_id"] != pairing["baseline_run_id"]):
-            raise ValueError("The experiment planner must retain the selected native models before result synchronization.")
-        required.update((pairing["run_id"], pairing["baseline_run_id"]))
-        count += 1
-    if count != plan["counts"]["cases"] or not required.issubset(completed):
-        raise ValueError("The completed programme must contain every selected experiment run and its paired baseline.")
-    for run_id in required:
-        if workspace.inspect_run(run_id)["state"] != "complete":
-            raise ValueError("Complete the selected native run before synchronizing experiment results: " + run_id)
-    # The executor takes its own experiment/native locks, reuses these completed
-    # runs, and computes the planner's actual paired metrics and saved summary.
-    # completed_only also prevents native execution if a run changes meanwhile.
+    total = plan["counts"]["cases"]
+    count = offset = 0
+    while offset < total:
+        page = engine.expanded_cases(workspace, key, offset=offset, limit=500)
+        cases = page["cases"]
+        if not cases:
+            raise ValueError("The saved experiment case page ended before its retained case count.")
+        for case in cases:
+            row = _row(case, reference)
+            pairing = row["changes"]["pairing"]
+            for run_id in (pairing["run_id"], pairing["baseline_run_id"]):
+                if run_id not in completed:
+                    raise ValueError("The completed programme must contain every selected experiment run and its paired baseline.")
+                if not completed[run_id]:
+                    if workspace.inspect_run(run_id)["state"] != "complete":
+                        raise ValueError("Complete the selected native run before synchronizing experiment results: " + run_id)
+                    completed[run_id] = True
+            count += 1
+        offset += len(cases)
+    if count != total:
+        raise ValueError("The completed programme differs from the retained experiment case count.")
+    # Programme execute/resume has released its native locks before this call.
+    # The experiment executor retains the actual matched metrics and summary;
+    # completed_only prevents native calculation if a run changes meanwhile.
     result = engine.execute(workspace, key, completed_only=True)
     return {"experiment_id": key, "state": result["state"],
             "progress": result["progress"], "updated_at": result.get("updated_at"),
