@@ -240,9 +240,10 @@ class ParcelIntake:
             item = descriptor(raw)
             require(item["path"] != MANIFEST and item["path"] not in seen and item.get("family") in FAMILIES and
                     isinstance(item.get("sourceId"), str) and item["sourceId"] and
-                    isinstance(item.get("sourceUrl"), str) and item["sourceUrl"].startswith(("https://", "http://")) and
+                    ((item["family"] == "source-metadata" and "sourceUrl" not in item) or
+                     (isinstance(item.get("sourceUrl"), str) and item["sourceUrl"].startswith(("https://", "http://")))) and
                     isinstance(item.get("capturedAt"), str) and item["capturedAt"],
-                    "PARCEL_SOURCE_FILE", "Retain each original file's unique path, source, URL and capture time.")
+                    "PARCEL_SOURCE_FILE", "Retain each original file's unique path, source and capture time; active source files also require their original public URL.")
             seen.add(item["path"])
             require(item["bytes"] <= MAX_JSON, "PARCEL_SOURCE_SIZE", "Each original parcel source file supports up to 256 MiB.")
             file_digest(member(self.root, item["path"]), expected=item, progress=progress)

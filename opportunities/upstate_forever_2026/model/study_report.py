@@ -150,9 +150,53 @@ def _execution_section(value):
         'and file-copy methods. The execution CSV retains each original run and donor.</p></section>')
 
 
-def _decision_section(value):
-    if not value or not value.get("pairs"):
+
+def _shortlist_section(value):
+    if not value or not value.get("shortlist"):
         return ""
+    names = {row["scenario_id"]: row["scenario"] for row in value["shortlist"]}
+    rows, details = [], []
+    for row in value["shortlist"]:
+        rows.append([
+            _text(row["scenario"]),
+            str(row["fully_compared_profiles"]) + " / " + str(row["expected_profiles"]),
+            str(row["frontier_profiles"]), str(row["dominated_profiles"]),
+            str(row["unresolved_profiles"]), _text(row["response"]),
+        ])
+    for row in value["profile_frontiers"]:
+        details.append([
+            _text(row["scenario"]), _text(row["profile"]),
+            _text({"frontier": "On physical frontier", "dominated": "Dominated",
+                   "incomplete": "Incomplete comparison"}[row["state"]]),
+            str(row["comparable_opponents"]) + " / " + str(row["expected_opponents"]),
+            _text("; ".join(names.get(key, key) for key in row["dominated_by"]) or "—"),
+            _text("; ".join(names.get(key, key) for key in row["tradeoff_with"]) or "—"),
+        ])
+    return (
+        '<section><h2>Alternatives to examine together</h2>'
+        '<p>The physical frontier contains alternatives with no observed dominator. '
+        'A dominator lowers at least one selected pollutant without increasing another. '
+        'Frontier membership is established within '
+        'a profile only after every selected opponent has comparable completed results. '
+        'An observed dominator can be identified before that full comparison finishes.</p>'
+        + _table(["Alternative", "Fully compared profiles", "On frontier", "Dominated",
+                  "Unresolved", "Source-profile result"], rows)
+        + '<p class="definition">An alternative stays on the frontier across sources only '
+        'when every selected profile and opponent is covered. Equal alternatives can both '
+        'remain on the frontier. Review each alternative’s baseline effects alongside costs, '
+        'feasibility and policy priorities before choosing an intervention.</p>'
+        + '<details><summary>Frontier and tradeoffs within each profile</summary>'
+        + _table(["Alternative", "Profile", "Physical result", "Compared opponents",
+                  "Dominated by", "Pollutant tradeoffs with"], details)
+        + '<p>The shortlist CSV retains every opponent, unavailable comparison reason, '
+        'native run and paired baseline.</p></details></section>')
+
+def _decision_section(value):
+    if not value:
+        return ""
+    shortlist = _shortlist_section(value)
+    if not value.get("pairs"):
+        return shortlist
     pairs, ranges = [], []
     for pair in value["pairs"]:
         pairs.append([
@@ -172,7 +216,7 @@ def _decision_section(value):
                 '<code title="' + _text(group["support_sha256"]) + '">'
                 + _text(group["support_sha256"][:12]) + '</code>',
             ])
-    return (
+    return shortlist + (
         '<section><h2>Compare the management alternatives</h2>'
         '<p>An alternative dominates when at least one selected pollutant export is lower '
         'and all others are equal or lower. Each comparison uses the same coefficient profile, '
@@ -577,6 +621,8 @@ def build(workspace, experiment_id, *, profiles=None):
                     "Study execution CSV", "text/csv", study_execution.csv_bytes(execution)),
                 "study-alternative-comparisons.csv": (
                     "Alternative comparison CSV", "text/csv", study_decisions.csv_bytes(decisions)),
+                "study-alternative-shortlist.csv": (
+                    "Alternative shortlist CSV", "text/csv", study_decisions.shortlist_csv_bytes(decisions)),
                 "study-source-coefficients.csv": (
                     "Actual source coefficient CSV", "text/csv",
                     study_interpretation.coefficient_csv(interpretation)),

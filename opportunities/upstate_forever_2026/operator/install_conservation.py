@@ -34,6 +34,7 @@ OWNED = frozenset({
     "model/keowee_priority.py",
     "model/keowee_profile_adapter.py",
     "model/portfolios.py",
+    "model/source_lineage.py",
     "operator/CONSERVATION.md",
     "operator/CONSERVATION_CATALOG.md",
     "operator/CONSERVATION_CATALOG_BROWSER.md",
@@ -157,6 +158,7 @@ KNOWN_PRIOR = {
         "7478f563ff1ee1a2626b06df63e62a59c25277a91ad28d217fba7f4fe0ab7949"
     ],
     "operator/install_conservation.py": [
+        "920c83ab79a998750b34a6fa49f014575b873f1b41d655baaa66d0db0dbc8aff",
         "c9aaa958816139e151fd99cc194deac931186783563738119e7b4ae69a413696",
         "3df8ad132ad6f9046b26f151ff82c29aa7faffdbbf9d1bedb5d5262cadac4e6b",
         "833aed492f04532201544e5f959ca852fe730d79969a6bc009a754f0f14dc42d",
@@ -871,6 +873,7 @@ def read_packet(path):
         "model/keowee_priority.py",
         "model/keowee_profile_adapter.py",
         "model/portfolios.py",
+        "model/source_lineage.py",
         "operator/conservation.py",
         "operator/conservation_browser_receiving.py",
         "operator/conservation_catalog.py",

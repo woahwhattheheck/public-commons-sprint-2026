@@ -217,7 +217,7 @@ If the current original study bank is not materialized in that application, impo
 
     python "$ACTUAL_APP/measurement_workspace/published_studies.py" \
       --application "$ACTUAL_APP" --workspace "$ACTUAL_WORKSPACE" \
-      import "$CURRENT_STUDY_BANK"
+      import "$CURRENT_STUDY_BANK" --with-installed-context
 
 Use the returned study/version in the native desk. A selected report and complete-study export can also be produced from that same Workspace:
 
@@ -266,3 +266,44 @@ Selected report export now includes `selected-study-report.zip`. Extract that pa
 All 62 source-bank members match their declared byte lengths and SHA256 values. The exact updated normalizer reproduces all seven derived output files, and the pinned original D3 modules plus figure core reproduce all four SVGs, both figure tables and the complete figure specification byte for byte. The original study and figure manifests resolve 24 native entries with all referenced source hashes intact. The separate paired-analysis module was independently executed from its retained five original WQP CSVs (533 rows) through the original normalizer and actual analysis/report functions. All eleven published output files reproduced byte for byte. An independent decimal interval calculation checked all 128 microcystin contrast endpoints, endpoint inclusion and directions; all agreed. The seven-entry paired manifest resolves all 154 references to 22 unchanged source/output bodies, and its ten local report downloads resolve within the package.
 
 Native receiving continues through the same Workspace import, queued operator actions, browser source/detail links, report export, complete-study re-import and project archive reopen commands above.
+
+
+## Compose a received edition with installed original context (1.4.0)
+
+A study import saves one immutable source version. Sequential imports select separate versions. To retain the current original source edition and the installed reports together, use the explicit composition option on the same import:
+
+```sh
+python "$ACTUAL_APP/measurement_workspace/published_studies.py" \
+  --application "$ACTUAL_APP" --workspace "$ACTUAL_WORKSPACE" \
+  import "$CURRENT62_BANK_OR_CANVAS" --with-installed-context
+```
+
+The native import form has the equivalent **Include installed Eighteenmile reports and analyses** checkbox. The queued `published-study.import` action accepts `include_installed_context: true`. An API caller that omits the field keeps its existing source-only import behavior. Repeated `--context-manifest PATH` arguments allow an explicit subset.
+
+Composition follows the installed chlorophyll cohort, illustrated observation report, paired analysis and microcystin report reconciliation manifests. It also follows the two maintained standalone flow manifests and the earlier WQP observation manifest when installed. Every referenced body and companion retains its original bytes, SHA256 and native source ID. Identical overlaps are reused; differing overlaps are reported before any study version is created. All retained paths resolve within the original study directory. The record retains each included manifest identity and source inventory, and the Sources and methods tab and exported report list the included context.
+
+The new `eighteenmile_lake_microcystin_reconciliation.sources.json` preserves the separate inferred Table 8 candidate cohort: 73 selected original rows and 12 exclusions from the 85-row campaign. Its five native entries retain the report, selected/excluded tables, decimal-precision comparison, original date/clock comparisons, executable calculation and all original inputs. The broader campaign remains the original observed support in the existing comparison table. The candidate cohort and its inference are available through their own retained report and downloads.
+
+The complete study ZIP retains this composed source version for re-import. A selected report ZIP retains every original linked report and its declared companions under their original relative tree. Existing native source registration, queued actions, authentication, report sandbox and portable-project behavior remain part of the receiving host.
+
+### Cold installation of the entire Published Studies family
+
+A receiver whose application does not already contain this extension should obtain the complete source at the delivery commit. `published_studies_family.json` enumerates the exact family files and hashes for this revision. Its paths are relative to `opportunities/upstate_forever_2026`; the inventory itself is additional. The original current62 bank remains a separately versioned data edition and can be imported directly after installation.
+
+The complete authored code family consists of:
+
+| Component | Required paths |
+| --- | --- |
+| Study and original concentration model | `measurement_workspace/published_studies.py`, `measurement_workspace/observation_support.py`, `measurement_workspace/OBSERVATION_SUPPORT.md` |
+| Native operator | `operator/published_study_operator.py`, `operator/extensions/published-studies.json` |
+| Native browser | `operator/web/published_studies.mjs`, `operator/web/published_studies.css` |
+| Install, receive, original page rendering | `install_published_studies.py`, `receive_published_studies.py`, `tools/attach_published_report.py` |
+| Guide and complete inventory | `PUBLISHED_STUDIES.md`, `published_studies_family.json` |
+
+The source tree also includes all original study root files, the earlier WQP report family, the reconciled cohort, standalone observed-flow family, paired analysis, Table 8 reconciliation, concentration-support result and the four application-root source manifests. The installer traverses their native manifests and copies the complete referenced closure. It creates the measurement package initializer when missing and extends the receiver’s current portable application inventory while preserving its other entries. Existing source conflicts are checked before installing code. Run the maintained installer from that complete source tree:
+
+```sh
+python "$PUBLISHED_STUDY_SOURCE/install_published_studies.py" --application "$ACTUAL_APP"
+```
+
+The receiving ECSA host must provide its current Workspace, extension registry, native queue, authenticated file tickets and extension file routes. A complete application checkout supplies those shared components. After installation, import the current bank with `--with-installed-context`, open its returned study/version in Published studies, produce `selected-study-report.zip` and a complete-study ZIP, then re-import that complete ZIP and use the original project archive/reopen workflow.

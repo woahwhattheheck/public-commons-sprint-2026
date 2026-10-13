@@ -81,3 +81,28 @@ python integration/run_watershed_context_operator.py \
 The driver uploads and queues receiving, reopens the same result through the canonical receiver, and downloads all seven original outputs. It then performs registered-root analysis, original Workspace source import, HUC detail, saved priority selection, native CSV and publisher-link checks, original verified downloads, workspace archive transfer, restored-source analysis, and selection reopen. The original completed result and the default analysis are checked separately. Reopened JSON, CSV, Markdown/HTML briefs, and original seven outputs are compared byte for byte.
 
 The output is a new workspace plus operator-journey.json recording actual tasks, source identities, selected membership, downloaded bytes, and restored workspace identity. Use the browser action or existing CLI directly when receiving into an existing production workspace.
+
+## Maintain the complete edition in an existing Workspace
+
+The additive complete-native-sources.json manifest retains the original received archive, seven reports, original model sources and invocation records as companions. The current loader adds the original classified-source inventory, the 303-record WBD response and its exact-byte publisher metadata. These scientific source companions do not replace the original report inputs.
+
+The original manifest is retained as `original-sources.json` in the installed application. The manifest preparation command accepts that alias and the original `sources.json` spelling, preserves every verified existing companion, and merges the current scientific originals atomically into complete-native-sources.json when a native network is present. The original complete-sources.json remains unchanged:
+
+```sh
+"$PYTHON" -B -m source_tools.prepare_watershed_manifest --source-dir "$EDITION"
+"$PYTHON" -B source_tools/receive_watershed_edition.py \
+  --application "$APPLICATION" --manifest "$EDITION/complete-native-sources.json" \
+  --workspace "$WORKSPACE" --output "$RECEIVING_OUTPUT"
+```
+
+Choose an owned receiving output directory outside the application and Workspace. Omit `--workspace` to initialize a new Workspace below that receiving output. Rerun the same command to continue its persisted phases.
+
+The receiver imports the complete edition, adopts the original completed result through the maintained canonical receiver, opens the original Lower Tugaloo selection and exports its planning brief. It then analyzes the current exact source edition through the same provider action and saves a separate report and selection export. The original report uses its retained two-input fingerprint; the current native-network report uses its own three-input fingerprint. Both remain visible in Regional watersheds.
+
+The current-source backup is `watershed-workspace-current-sources.zip`. Its independent restore is `reopened-current-sources/`. These names preserve any older original-only receiving archive already in the output directory. The receiver reopens both reports, both selections, complete original source inventories, CSV/Markdown/HTML downloads, and the application source used to produce them. The receipt records both report IDs and both export IDs.
+
+The source installer validates and copies every member declared by the current parent, complete and additive native source manifests, including nested received reports and the original ZIP. A component overlay can reuse byte-matching members already installed in the application. Preserve that existing edition when applying the component; its original archive and received companions are part of the full application source.
+
+For the scientific validator, both `native-network.json` and `native-network.json.gz` retain the original bytes. If both encodings exist, select one explicitly with `--native-network-name`. Native publisher metadata may be embedded, retained in `native-network-source.json`, or resolved from an exact matching source manifest through `--source-manifest`. Paths and hashes bind that metadata to the actual selected network and context.
+
+The whole-edition command uses the maintained completed-archive adapter, which enriches byte-matching existing reports before invoking the canonical receiver and attaches the original completed connectivity outputs. The current shared provider also retains whole imported source entries and immutable source-edition fingerprints. Those inventories and contributing-area CSVs remain available after Workspace backup and reopen.

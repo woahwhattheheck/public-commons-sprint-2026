@@ -1,0 +1,153 @@
+{
+  "type": "FeatureCollection",
+  "name": "scdes-eighteenmile-study-2023-nad83",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4269"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-838",
+      "properties": {
+        "source_id": "scdes-eighteenmile-study-2023-nad83",
+        "site_id": "SV-838",
+        "label": "SV-838 \u2014 Eighteenmile Creek Upper Lake Arm",
+        "site_name": "Eighteenmile Creek Upper Lake Arm",
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "organization_id": "21SC60WQ_WQX",
+        "monitoring_location_id": "21SC60WQ_WQX-SV-838",
+        "sampling_start": "2023-04-05",
+        "sampling_end": "2023-10-17",
+        "sample_depth_m": 0.3,
+        "statistic_basis": "Published seasonal sample summary",
+        "total_p_mean_mg_l": 0.04,
+        "total_p_sample_n": 15,
+        "total_n_mean_mg_l": 0.44,
+        "total_n_sample_n": 15,
+        "total_n_formula": "Total Kjeldahl Nitrogen + nitrate/nitrite",
+        "chlorophyll_a_mean_ug_l": 24.1,
+        "chlorophyll_a_n_published": 15,
+        "chlorophyll_a_count_note": null,
+        "microcystins_mean_ug_l": 0.04,
+        "microcystins_sample_n": 14,
+        "ph_min_su": 7.02,
+        "ph_max_su": 8.81,
+        "do_min_mg_l": 8.62,
+        "do_max_mg_l": 11.23,
+        "turbidity_max_fnu": 24.27,
+        "coordinate_datum": "NAD83",
+        "source_crs": "EPSG:4269",
+        "huc8": "03060101",
+        "study_huc10": "0306010106",
+        "coordinate_source_url": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-838/",
+        "study_source_url": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+        "study_table_reference": "Surface TP: Table 9, PDF 24; TN: Table 10, PDF 25; chlorophyll: Table 7, PDF 21; microcystins: Table 8, PDF 23; field ranges: Table 2, PDF 11.",
+        "concentration_summary_note": "Published detection-limit substitutions and source sample counts are retained in seasonal_summaries.csv and source_notes.json."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.82471,
+          34.58697
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-839",
+      "properties": {
+        "source_id": "scdes-eighteenmile-study-2023-nad83",
+        "site_id": "SV-839",
+        "label": "SV-839 \u2014 Eighteenmile Creek Mid-Lake Arm",
+        "site_name": "Eighteenmile Creek Mid-Lake Arm",
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "organization_id": "21SC60WQ_WQX",
+        "monitoring_location_id": "21SC60WQ_WQX-SV-839",
+        "sampling_start": "2023-04-05",
+        "sampling_end": "2023-10-17",
+        "sample_depth_m": 0.3,
+        "statistic_basis": "Published seasonal sample summary",
+        "total_p_mean_mg_l": 0.02,
+        "total_p_sample_n": 15,
+        "total_n_mean_mg_l": 0.27,
+        "total_n_sample_n": 15,
+        "total_n_formula": "Total Kjeldahl Nitrogen + nitrate/nitrite",
+        "chlorophyll_a_mean_ug_l": 15.4,
+        "chlorophyll_a_n_published": 15,
+        "chlorophyll_a_count_note": null,
+        "microcystins_mean_ug_l": 0.051,
+        "microcystins_sample_n": 15,
+        "ph_min_su": 7.08,
+        "ph_max_su": 8.48,
+        "do_min_mg_l": 7.8,
+        "do_max_mg_l": 10.37,
+        "turbidity_max_fnu": 10.77,
+        "coordinate_datum": "NAD83",
+        "source_crs": "EPSG:4269",
+        "huc8": "03060101",
+        "study_huc10": "0306010106",
+        "coordinate_source_url": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-839/",
+        "study_source_url": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+        "study_table_reference": "Surface TP: Table 9, PDF 24; TN: Table 10, PDF 25; chlorophyll: Table 7, PDF 21; microcystins: Table 8, PDF 23; field ranges: Table 2, PDF 11.",
+        "concentration_summary_note": "Published detection-limit substitutions and source sample counts are retained in seasonal_summaries.csv and source_notes.json."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.83203,
+          34.57821
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-840",
+      "properties": {
+        "source_id": "scdes-eighteenmile-study-2023-nad83",
+        "site_id": "SV-840",
+        "label": "SV-840 \u2014 Lake Hartwell off Eighteenmile Creek arm",
+        "site_name": "Lake Hartwell off Eighteenmile Creek arm",
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "organization_id": "21SC60WQ_WQX",
+        "monitoring_location_id": "21SC60WQ_WQX-SV-840",
+        "sampling_start": "2023-04-05",
+        "sampling_end": "2023-10-17",
+        "sample_depth_m": 0.3,
+        "statistic_basis": "Published seasonal sample summary",
+        "total_p_mean_mg_l": 0.01,
+        "total_p_sample_n": 15,
+        "total_n_mean_mg_l": 0.22,
+        "total_n_sample_n": 15,
+        "total_n_formula": "Total Kjeldahl Nitrogen + nitrate/nitrite",
+        "chlorophyll_a_mean_ug_l": 6.1,
+        "chlorophyll_a_n_published": 4,
+        "chlorophyll_a_count_note": "Published Table 7 count is 4; report methods describe 15 surface samples per site.",
+        "microcystins_mean_ug_l": 0.044,
+        "microcystins_sample_n": 14,
+        "ph_min_su": 6.83,
+        "ph_max_su": 7.87,
+        "do_min_mg_l": 6.35,
+        "do_max_mg_l": 10.14,
+        "turbidity_max_fnu": 4.34,
+        "coordinate_datum": "NAD83",
+        "source_crs": "EPSG:4269",
+        "huc8": "03060101",
+        "study_huc10": "0306010106",
+        "coordinate_source_url": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-840/",
+        "study_source_url": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+        "study_table_reference": "Surface TP: Table 9, PDF 24; TN: Table 10, PDF 25; chlorophyll: Table 7, PDF 21; microcystins: Table 8, PDF 23; field ranges: Table 2, PDF 11.",
+        "concentration_summary_note": "Published detection-limit substitutions and source sample counts are retained in seasonal_summaries.csv and source_notes.json."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.83284,
+          34.5646
+        ]
+      }
+    }
+  ]
+}

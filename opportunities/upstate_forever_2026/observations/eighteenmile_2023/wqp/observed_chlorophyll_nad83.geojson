@@ -1,0 +1,135 @@
+{
+  "type": "FeatureCollection",
+  "name": "scdes-eighteenmile-2023-wqp-observed-nad83",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4269"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-838",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.82471,
+          34.58697
+        ]
+      },
+      "properties": {
+        "source_id": "scdes-eighteenmile-2023-wqp-observed-nad83",
+        "site_id": "SV-838",
+        "label": "SV-838 - measured 2023 chlorophyll",
+        "site_name": "Eighteenmile Creek Upper Lake Arm",
+        "monitoring_location_id": "21SC60WQ_WQX-SV-838",
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "sampling_start": "2023-04-05",
+        "sampling_end": "2023-10-17",
+        "sample_depth_m": 0.3,
+        "statistic_basis": "Reconciled original WQP CHLA activities; numeric concentration",
+        "chlorophyll_a_mean_ug_l": 24.097333333333335,
+        "chlorophyll_a_sd_ug_l": 8.583679253316117,
+        "chlorophyll_a_min_ug_l": 12.35,
+        "chlorophyll_a_max_ug_l": 38.88,
+        "chlorophyll_a_n_measured": 15,
+        "chlorophyll_a_n_published": 15,
+        "annual_original_result_rows": 29,
+        "microcystin_original_result_rows": 14,
+        "microcystin_censored_below_rows": 2,
+        "source_crs": "EPSG:4269",
+        "coordinate_datum": "NAD83",
+        "coordinate_source_url": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-838/",
+        "study_huc10": "0306010106",
+        "source_query": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-838&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+        "source_sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+        "selection_note": "Shared original15-date lake calendar, CHLA project and source activity clocks separate two routine overlaps. Source EST/EDT labels retained.",
+        "observations_table": "scdes-eighteenmile-2023-wqp-measurements",
+        "source_record_lineage": "wqp/derived/selected_chlorophyll.csv"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-839",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.83203,
+          34.57821
+        ]
+      },
+      "properties": {
+        "source_id": "scdes-eighteenmile-2023-wqp-observed-nad83",
+        "site_id": "SV-839",
+        "label": "SV-839 - measured 2023 chlorophyll",
+        "site_name": "Eighteenmile Creek Mid-Lake Arm",
+        "monitoring_location_id": "21SC60WQ_WQX-SV-839",
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "sampling_start": "2023-04-05",
+        "sampling_end": "2023-10-17",
+        "sample_depth_m": 0.3,
+        "statistic_basis": "Reconciled original WQP CHLA activities; numeric concentration",
+        "chlorophyll_a_mean_ug_l": 15.415333333333335,
+        "chlorophyll_a_sd_ug_l": 7.429484568419329,
+        "chlorophyll_a_min_ug_l": 7.52,
+        "chlorophyll_a_max_ug_l": 31.25,
+        "chlorophyll_a_n_measured": 15,
+        "chlorophyll_a_n_published": 15,
+        "annual_original_result_rows": 30,
+        "microcystin_original_result_rows": 15,
+        "microcystin_censored_below_rows": 2,
+        "source_crs": "EPSG:4269",
+        "coordinate_datum": "NAD83",
+        "coordinate_source_url": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-839/",
+        "study_huc10": "0306010106",
+        "source_query": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-839&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+        "source_sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+        "selection_note": "Shared original15-date lake calendar, CHLA project and source activity clocks separate two routine overlaps. Source EST/EDT labels retained.",
+        "observations_table": "scdes-eighteenmile-2023-wqp-measurements",
+        "source_record_lineage": "wqp/derived/selected_chlorophyll.csv"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-840",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.83284,
+          34.5646
+        ]
+      },
+      "properties": {
+        "source_id": "scdes-eighteenmile-2023-wqp-observed-nad83",
+        "site_id": "SV-840",
+        "label": "SV-840 - measured 2023 chlorophyll",
+        "site_name": "Lake Hartwell off Eighteenmile Creek arm",
+        "monitoring_location_id": "21SC60WQ_WQX-SV-840",
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "sampling_start": "2023-04-05",
+        "sampling_end": "2023-10-17",
+        "sample_depth_m": 0.3,
+        "statistic_basis": "Reconciled original WQP CHLA activities; numeric concentration",
+        "chlorophyll_a_mean_ug_l": 6.065333333333333,
+        "chlorophyll_a_sd_ug_l": 1.7513214058723394,
+        "chlorophyll_a_min_ug_l": 3.36,
+        "chlorophyll_a_max_ug_l": 8.55,
+        "chlorophyll_a_n_measured": 15,
+        "chlorophyll_a_n_published": 4,
+        "annual_original_result_rows": 29,
+        "microcystin_original_result_rows": 14,
+        "microcystin_censored_below_rows": 2,
+        "source_crs": "EPSG:4269",
+        "coordinate_datum": "NAD83",
+        "coordinate_source_url": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-840/",
+        "study_huc10": "0306010106",
+        "source_query": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-840&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+        "source_sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+        "selection_note": "Shared original15-date lake calendar, CHLA project and source activity clocks separate two routine overlaps. Source EST/EDT labels retained.",
+        "observations_table": "scdes-eighteenmile-2023-wqp-measurements",
+        "source_record_lineage": "wqp/derived/selected_chlorophyll.csv"
+      }
+    }
+  ]
+}

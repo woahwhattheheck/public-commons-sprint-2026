@@ -385,15 +385,15 @@ def _check_plan(receiving_path, plan_path, *, workspace=None):
     return path, plan_path, receipt, ws, grid, profile, baseline, plan
 
 
-def _progress(directory, state, **updates):
-    state.update(updates, updated_at=now())
-    state["worker"] = {"hostname": socket.gethostname(), "pid": os.getpid(),
+def _progress(directory, record, **updates):
+    record.update(updates, updated_at=now())
+    record["worker"] = {"hostname": socket.gethostname(), "pid": os.getpid(),
                        "python": sys.executable}
-    atomic_json(directory / "progress.json", state)
-    print(json.dumps({"operation_id": state["id"], "state": state.get("state"),
-                      "phase": state.get("phase"), "programme_id": state.get("programme_id"),
-                      "worker": state["worker"], "native_process": state.get("native_process"),
-                      "completed_native_runs": state.get("completed_native_runs", 0)},
+    atomic_json(directory / "progress.json", record)
+    print(json.dumps({"operation_id": record["id"], "state": record.get("state"),
+                      "phase": record.get("phase"), "programme_id": record.get("programme_id"),
+                      "worker": record["worker"], "native_process": record.get("native_process"),
+                      "completed_native_runs": record.get("completed_native_runs", 0)},
                      sort_keys=True), flush=True)
 
 

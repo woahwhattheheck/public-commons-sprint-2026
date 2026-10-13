@@ -16,6 +16,7 @@ from directory_runtime import (BaseWorkspace,InputError,ConflictError,source,pri
 from directory_source import retained_file_descriptors
 import directory_schema as schema
 from directory_conformance import KINDS as CONFORMANCE_KINDS
+from directory_corrections_schema import KINDS as CORRECTION_KINDS
 
 WORKSPACE_PACKET="stellar-forge.human-services-directory-workspace-packet.v1"
 HANDOFF_PACKET="stellar-forge.human-services-directory-handoff-packet.v1"
@@ -91,6 +92,13 @@ class DirectoryReceiving:
         from directory_operating_returns import retained_return_files
         for record in records.get("operatingPlanReturns",[]):
             for descriptor in retained_return_files(record):add(descriptor)
+        for kind in CORRECTION_KINDS:
+            for record in records.get(kind,[]):
+                for descriptor in record.get("files",{}).values():add(descriptor)
+                for selected in record.get("sources",[]):
+                    for key in ("originalFile","derivedFile","indexFile"):add(selected[key])
+                    for member in selected.get("changedMembers",[]):
+                        add(member["originalFile"]);add(member["derivedFile"])
         return result
 
     def _directory_write_packet(self,output,registry,members,packet_schema,handoff_id=None):
@@ -271,8 +279,9 @@ class DirectoryReceiving:
         present=set(registry.get("records",{}));current=schema.KINDS-{"receives"}
         # Preserve exact historical registry bytes. The previous complete product
         # did not yet have the four additive conformance collections.
-        prior=current-{"operatingPlanReturns"}
-        if present not in (current,prior,prior-{"operatingPlans"},prior-{"operatingPlans"}-CONFORMANCE_KINDS):
+        previous=current-set(CORRECTION_KINDS)
+        prior=previous-{"operatingPlanReturns"}
+        if present not in (current,previous,prior,prior-{"operatingPlans"},prior-{"operatingPlans"}-CONFORMANCE_KINDS):
             raise InputError("Complete receiving must retain every original directory collection")
         from directory_workspace import clean_record
         for kind,rows in registry["records"].items():
@@ -333,6 +342,7 @@ class DirectoryReceiving:
         self._verify_conformance_received(registry)
         self._verify_operating_plans_received(registry)
         self._verify_operating_returns_received(registry)
+        self._verify_directory_corrections()
 
     def _receive_directory(self,packet_path,packet_schema):
         path,_,archive_id=file_info(packet_path)

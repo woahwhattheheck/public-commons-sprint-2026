@@ -3,11 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path, PurePosixPath
 import shutil
-from .common import describe_file, file_digest, read_json
+from .common import atomic_json, describe_file, file_digest, read_json
 
 SCHEMA = "upstate.observed-report/v1"
 ROLE = "OBSERVED_CONTEXT"
-EDITION = "observed-context-20261013-v1"
+EDITION = "observed-context-20261013-v2"
 
 def _relative(value):
     if not isinstance(value, str) or "\\" in value or "\0" in value:
@@ -71,6 +71,49 @@ def bind(workspace, selection):
     source = _source(workspace, selection)
     return source["binding"] if source else None
 
+
+def _concentration_support(source):
+    """Use the maintained original-study row and series producers."""
+    from measurement_workspace import published_studies
+    from measurement_workspace.observation_support import (
+        CONCENTRATIONS, enrich_observation_context,
+    )
+
+    members = source["members"]
+    measured = published_studies.WQP_FILE
+    cohort = published_studies.WQP_COHORT
+    if measured not in members and cohort not in members:
+        return None
+    required = (measured, cohort, "study.json", "stations.csv", "seasonal_summaries.csv")
+    missing = [name for name in required if name not in members]
+    if missing:
+        raise ValueError("Observed concentration context is missing original inputs: " + ", ".join(missing))
+    originals = {name: members[name]["path"].read_bytes() for name in required}
+    study = published_studies._json(originals["study.json"])
+    if study.get("schema") != published_studies.STUDY_SCHEMA:
+        raise ValueError("Observed concentration study has another original schema")
+    stations = published_studies._csv_rows(originals["stations.csv"], "stations")
+    seasonal = published_studies._csv_rows(originals["seasonal_summaries.csv"], "seasonal")
+    rows = published_studies._combined_observations(originals)
+    sites = {row["site_id"] for row in stations}
+    observations = published_studies._observation_context(
+        rows, seasonal, study, sites, set(CONCENTRATIONS), {"surface"},
+    )
+    return {
+        "schema": "upstate.observed-concentration-context/v1",
+        "source_binding": source["binding"],
+        "study_id": study["study_id"],
+        "selection": {
+            "site_ids": sorted(sites), "parameters": sorted(CONCENTRATIONS),
+            "strata": ["surface"], "sampling_period": study.get("grab_sampling", {}),
+        },
+        "input_members": {
+            name: {"bytes": members[name]["bytes"], "sha256": members[name]["sha256"]}
+            for name in required
+        },
+        "observations": enrich_observation_context(observations),
+    }
+
 def collect(workspace, selection, directory, state):
     """Return current report blocks and retained original assets for one delivery."""
     source = _source(workspace, selection)
@@ -105,6 +148,23 @@ def collect(workspace, selection, directory, state):
                     if relative not in delivered:
                         raise ValueError("Report link names an unretained source member")
                     item["path"] = delivered[relative]["path"]
+    concentration = _concentration_support(source)
+    if concentration is not None:
+        from measurement_workspace.observation_support import report_sections
+        support_path = directory / "observed-support" / binding["body_sha256"] / "concentration-context.json"
+        atomic_json(support_path, concentration)
+        support_file = describe_file(
+            directory, support_path, source_id=binding["source_id"],
+            title="Original concentration rows, support and source selection",
+        )
+        files["concentration_support"] = support_file
+        sections.extend(report_sections(concentration))
+        sections.append(["Original concentration records and support", [
+            {"kind": "links", "items": [{
+                "title": "Complete concentration context and original result selectors",
+                "path": support_file["path"],
+            }]},
+        ]])
     if recipe.get("figures"):
         spec_path = _relative(recipe["figure_spec"]).as_posix()
         if spec_path not in members:

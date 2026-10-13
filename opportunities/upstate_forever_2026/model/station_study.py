@@ -25,6 +25,7 @@ DOMAIN_SHA = "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
 ASSESSMENT_URI = "https://apps.des.sc.gov/PublicNotices/SearchAndDisplay/PDF/302110"
 SUPPLEMENT_URI = "https://www.waterqualitydata.us/data/Station/search?siteid=21SC60WQ_WQX-SV-376%3B21SC60WQ_WQX-RS-24163%3B21SC60WQ_WQX-RS-21014%3B21SC60WQ_WQX-RL-21217%3B21SC60WQ_WQX-RL-24073%3B21SC60WQ_WQX-RL-21209%3B21SC60WQ_WQX-RS-22078%3B21SC60WQ_WQX-RL-21225&mimeType=csv"
 ATLAS_URI = "https://gis.des.sc.gov/gisserver/rest/services/water/BW_Monitoring_Stations/MapServer/9"
+PUBLISHED_WQP_TWO_SHA = "5588a64fbae5229687aef7063948083f05b5f0639dfd108ae0c3db40614677cd"
 PUBLISHED_STUDY_ID = "upper-savannah-published-assessments-2024-2026-159"
 PUBLISHED_TITLE = "Upper Savannah published assessments — 159 monitoring stations"
 PUBLISHED_ASSESSMENT_SHA = "01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7"
@@ -116,11 +117,20 @@ def _domain(workspace, rows):
 
 def _published_study(workspace, rows, atlas, wqp, domain, domain_count, problems):
     """Reuse the original station sources for the complete published 159-site study."""
+    from .station_inventory import published_inventory
     inventory_item = _by_hash(rows, [PUBLISHED_ASSESSMENT_SHA], {"table"})
+    native_inventory=None
+    native_error=None
+    try:
+        native_inventory=published_inventory(workspace,rows,domain)
+    except (OSError,ValueError,TypeError,KeyError) as problem:
+        native_error="Original normalized assessment inventory: "+str(problem)
     selection = {"title": PUBLISHED_TITLE, "sources": [], "site_tables": [], "watersheds": [],
                  "observation_ids": [], "observation_tables": [], "sites": [],
                  "aliases": {}, "choices": {}}
     missing, inventory = list(problems), []
+    if native_error:
+        missing.append(native_error)
     if atlas is None:
         missing.append("Import the retained original 705-station monitoring layer.")
     else:
@@ -134,12 +144,21 @@ def _published_study(workspace, rows, atlas, wqp, domain, domain_count, problems
             reference.update(x_field="LongitudeMeasure", y_field="LatitudeMeasure",
                              source_crs="EPSG:4326", format="csv")
         selection["sources"].append(reference)
+    additional=_by_hash(rows,[PUBLISHED_WQP_TWO_SHA],{"vector"})
+    if additional is None:
+        missing.append("Import the original WQP station-page points for RS-21038 and RS-22075.")
+    else:
+        selection["sources"].append(_ref(additional,station_id_field="MonitoringLocationName",
+            native_id_field="MonitoringLocationIdentifier",source_crs="EPSG:4326"))
     if domain is None:
         missing.append("Import the retained original 217-HUC upstream domain.")
     else:
         selection["watersheds"].append(domain)
-    if inventory_item is None:
-        missing.append("Import the completed 192-record published assessment inventory for 159 sites.")
+    if native_inventory is not None:
+        inventory=native_inventory["records"]
+        selection["site_tables"]=native_inventory["references"]
+    elif inventory_item is None:
+        missing.append("Import both original normalized published assessment banks, or the existing completed 192-record inventory for 159 sites.")
     else:
         try:
             reference = _ref(inventory_item, station_id_field="site")
@@ -172,8 +191,12 @@ def _published_study(workspace, rows, atlas, wqp, domain, domain_count, problems
             "missing": missing, "selection": selection,
             "source_summary": {"assessment_rows": len(inventory),
                                "station_count": len({record["site"] for record in inventory}),
-                               "watershed_count": domain_count, "assessment_editions": editions},
-            "source_links": [{"title": "Retained original monitoring layer", "uri": ATLAS_URI},
+                               "watershed_count": domain_count, "assessment_editions": editions,
+                               "inventory_format":native_inventory["format"] if native_inventory else "retained_published_csv",
+                               "additional_location_sites":["RS-21038","RS-22075"],
+                               "additional_location_source_available":additional is not None},
+            "source_links": ([{"title":"Original two-station WQP source","uri":additional[1].get("uri")}] if additional else []) +
+                            [{"title": "Retained original monitoring layer", "uri": ATLAS_URI},
                              {"title": "Retained WQP point supplement", "uri": SUPPLEMENT_URI},
                              {"title": "Published 2024 assessment", "uri": PUBLISHED_ASSESSMENT_URI},
                              {"title": "TMDL status July 28, 2026", "uri": TMDL_URI}]}
