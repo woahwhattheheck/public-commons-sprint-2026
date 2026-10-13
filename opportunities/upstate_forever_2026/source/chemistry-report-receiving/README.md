@@ -16,7 +16,7 @@ Use the current cumulative application containing:
 
 Use the [complete current Chemistry27 source bank](chemistry-source-bank.json) retained beside this guide, with its matching guarded installer and source manifest. This is the complete editor-lifetime successor to the merged PR3893 receiving edition: 377,616 UTF-8 bytes / SHA256 `ff2b0cfad89d8bf522b3d2d6dc7fecc217658881f3459f80716feffb476db381`. It supplies 27 complete leaves and inherits eleven omitted required leaves from the actual installed application. The Study phase requires the maintained `model/chemistry_study_transfer.py` supporting BOTH `native-chemistry-scientific-source-v1` and `native-chemistry-scientific-source-v2`; the corrected complete helper is 24,377 bytes / SHA256 `2fefa43d8ac88706252500ecc64bf37682f2aa34ae80a88e55b3826ac4f670ca`. It preserves the actual producing edition while retaining local editable cases, runs, reports and sources. The earlier v1-only resolver omitted that history for v2 sources. Adopt the complete source/installer/manifest successor together, then continue this same course. Use the delivered bank’s operating guide for installation; this browser course does not install or rewrite the application.
 
-The existing regional native operation is Chemistry5170, joined to DD6B/E8D9’s original report course2722. Continue its physically received project and actual installed application. The original project is `b9d5d257-c6bb-4f07-b975-8e8c63705db3`; default case `ddd984b567d881798f214530ebf0aef4601ab0744df7af7831bcb17e4e302abb`.
+The existing regional native operation is Chemistry5170, joined to DD6B’s original report course2722 and accepted by RIVER13. Continue its physically received project and actual installed application. RIVER13’s completed compound calibration, sensitivity, original 512-draw uncertainty and monitoring results are the current saved-result continuation; source publication PR4008 carries the complete current Chemistry43 application addition. The original project is `b9d5d257-c6bb-4f07-b975-8e8c63705db3`; default case `ddd984b567d881798f214530ebf0aef4601ab0744df7af7831bcb17e4e302abb`.
 
 The application’s registered **Workspace key** can differ from that project UUID. Read the actual operator Workspace selector or ready record and use its key.
 
@@ -41,6 +41,25 @@ ALL ATTACHMENTS count. Literally open, view, play and use the final delivered HT
 For the Ecosystem product use plain industrial design: readable tables, clear hierarchy, consistent typography and spacing, restrained controls, useful labels and responsive layouts. No decorative template slop. Keep the real workflows, data and computation. Reviews must lead directly to repairs and must not replace hard implementation/integration or become endless rechecking. The existing focused-validation policy remains; do not run broad suites or build a separate verification product. Prior empty-Workspace screenshots are not acceptance of a completed scientific Workspace.
 
 PERSISTENT PROPAGATION REQUIRED: copy this rule into every active owner-controlled policy/instruction surface the provider and workers actually read: global and project AGENTS, CLAUDE, GEMINI and rules files, provider-specific boot instructions, Commons source mirrors, cloud repository instruction copies, and current build and receiving guides. Every delegating peer includes this complete rule in child assignments, including its all-attachments and final-media clarification. Return exact changed paths, source/version and readback. A Slack ACK alone is not propagation. Preserve all existing owner controls and do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work. Continue the same Ecosystem Sprint Integration assembled product and its original scientific, run, browser and receiver owners. Continue native source, runtime and archive joins rather than diverting everyone to cosmetic review. Preserve October13 cutoff10amEDT/14UTC; this does not expire standing inspection rule or change other owner-directed schedules.
+
+## Reopen the completed native report edition
+
+The native receiving command already retains a complete `receiving.json` and `scientific-preview.json` in its selected output directory. Its `steps.summary` records the actual completed run IDs, compound case, report IDs, typed-source IDs and combined scientific report edition. Each `steps["report-" + mode]` ties a source and report to the exact native run. Use those original receipts to create the browser selection:
+
+~~~sh
+node source/chemistry-report-receiving/browser.mjs \
+  --from-native /ACTUAL/compound-receiving-output \
+  --workspace-key ACTUAL_REGISTERED_WORKSPACE_KEY \
+  --write-config /mnt/data/chemistry-browser-selection.json
+~~~
+
+The command requires matching summary, scientific-report receipt and original preview identities. It uses the retained source order, matches each original report/source pair to its native run, and copies the actual project, case, title and contact. It records SHA256 of both original receipt files. It creates a new configuration file without overwriting a prior receiving selection. Run the ordinary browser command below with that file and the existing authenticated operator.
+
+The resulting `scientific_report_edition_id` selects the **already completed original combined edition**. The course still operates the real replace/append controls and previews their exact ordered sources. It then opens the selected saved edition through its visible native control, checks its project, source order, title and exact contact, and proceeds through its retained files, export and selected-Study reopen. The journal keeps `composer_preview_id` and `scientific_report_id` separately. This branch submits no scientific render action.
+
+The distinction matters for historical identity: the original native renderer preserves an omitted contact as `{}`, while the current browser composer serializes its three empty contact fields as an object containing three empty strings. Those two source identities are different. An existing browser can also retain an earlier contact draft. Supplying `contact` now explicitly fills or clears all three visible fields. The saved-edition check preserves the original full contact object exactly; it does not rewrite a historical edition to match the current form.
+
+For a manually prepared selection using `scientific_report_edition_id`, include the original nonempty `title`, exact `contact` object, actual completed `runs` with their `report_id` and `source_record_id`, and actual registered Workspace key. An original empty object must remain `"contact": {}`. Without a saved combined edition ID, the ordinary course continues to prepare or reopen the current composer preview. In both paths, the exported and restored Study root is the actual selected scientific edition.
 
 ## Runtime
 
@@ -72,7 +91,7 @@ Edit `workspace_key`. The example has the original four IDs, case/project identi
 }
 ~~~
 
-Optional `contact` has `name`, `organization` and `email`. Use the intended actual document contact. For another original case, replace or omit `case_id` and supply its actual `project_id`. Run/report/source IDs are original 64-character hex identities.
+Optional `contact` has `name`, `organization` and `email`. Supplying it fills or clears all three fields, so an earlier browser draft cannot silently supply a contact. With `scientific_report_edition_id`, retain the full exact original contact object and title. For another original case, replace or omit `case_id` and supply its actual `project_id`. Run/report/source IDs are original 64-character hex identities.
 
 Run against the private original operator URL:
 
@@ -98,7 +117,7 @@ Use a dedicated output directory and one receiving process for it.
 4. Open its actual iframe. Capture desktop 1440×1000 and narrow 390×844 screenshots, including each second-level report section at both sizes. Download the original report and editable/scientific ZIP controls; verify byte lengths and SHA256.
 5. Open or prepare each typed scientific source, including its completed-task button. Report/run/source IDs must agree.
 6. Use **Open this report only** for the first source and **Add to current report** for subsequent sources. The actual preview must return exactly those identities in their original order.
-7. Operate **Preview selected sources** and **Prepare PDF, HTML and data**, or reopen the existing edition returned by that preview. Download HTML/PDF and complete scientific-report ZIP through the original visible anchors.
+7. Operate **Preview selected sources**. If `scientific_report_edition_id` is supplied, open that exact original saved edition and verify its retained identity. Otherwise operate **Prepare PDF, HTML and data**, or reopen the existing edition returned by the current preview. Download HTML/PDF and complete scientific-report ZIP through the original visible anchors.
 8. Transfer that saved report to Study transfer, preview its source/history closure and export the one selected report root.
 9. With `restore_study: true`, choose that downloaded ZIP in **Receive study archive**, wait for the original `workspace.restore` task, select its returned Workspace and reopen every Chemistry report/source plus the saved scientific report.
 10. Save actual browser errors, interrupted tasks if any, source/result IDs, checked downloads and screenshots.
@@ -121,7 +140,7 @@ The browser’s original draft and pending-request handling remain in place. A c
 
 ## Read the result
 
-`receiving.json` holds original input selection, per-run report/source IDs, combined scientific report ID, original operation/task identities, Study ZIP and received Workspace key.
+`receiving.json` holds original input selection, per-run report/source IDs, current composer preview ID, selected saved scientific report ID, original operation/task identities, Study ZIP and received Workspace key.
 
 - `records/` contains the actual API responses used for Workspace, results, previews, tasks and report/source editions.
 - `downloads/` contains original control downloads, each checked against retained bytes/SHA256.

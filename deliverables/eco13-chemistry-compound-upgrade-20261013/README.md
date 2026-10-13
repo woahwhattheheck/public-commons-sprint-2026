@@ -4,7 +4,7 @@ This bank carries the full maintained Chemistry 0.3.0 component, explicit prepar
 
 ## Included source
 
-The 4 source parts contain **43 complete UTF-8 files / 906,512 source bytes**:
+The 4 source parts contain **43 complete UTF-8 files / 915,538 source bytes**:
 
 - All **38** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
 - The complete native receiving script and guide, the original Chemistry report browser course and guide, and the complete 27-member source bank linked by that browser guide. These five receiving files are staged beside the complete component.
@@ -25,6 +25,21 @@ The existing Scientific Reports composer must export `SCIENTIFIC_REPORT_SOURCE_S
 The scientific Python environment needs NumPy, SciPy, ReportLab and the full application's existing transfer dependencies. Complete transfer requires its maintained `model.portable.resume_restore` API, checked before native course effects. Preserve the current shared portable implementation; this frozen Chemistry component does not replace it. Use the same environment that opens the current regional Workspace.
 
 The retained project for this course is `b9d5d257-c6bb-4f07-b975-8e8c63705db3`. The current independently received regional archive includes the original authored four-reach case and its completed calibration, 512-draw uncertainty and monitoring analyses. The receiving guide lists their complete native IDs. Scientific source collections, observed records, model requests and completed run artifacts remain in that existing Workspace.
+
+## Continue the exact saved scientific edition
+
+At the existing completed native boundary, the staged browser can build its configuration directly from the native output. This uses the actual original `receiving.json` and `scientific-preview.json`; it preserves completed run/report/source identities, original ordering, project and case, title and the exact historical contact object.
+
+```sh
+node "$STAGE/source/chemistry-report-receiving/browser.mjs" \
+  --from-native "$OUTPUT" \
+  --workspace-key ACTUAL_REGISTERED_WORKSPACE_KEY \
+  --write-config /actual/chemistry-browser-selection.json
+```
+
+Use that configuration in the existing browser command with the accepting host's private operator URL and Playwright. The current composer replace/append/preview controls are operated, then the exact native combined edition is opened for its original downloads, selected Study export and independent reopening. The journal retains the current composer preview separately from the selected scientific edition; historical contact identity remains unchanged. The existing durable request admission/recovery is preserved.
+
+Only the browser receiving driver and its guide change in this complete source edition. All 38 installed component leaves, the native receiving command, original numerical results, other three source parts and bootstrap remain unchanged. The two full source postimages are identified by public source bank `82fcbaafaab280c38de102b76e1744668a1af2cc` and their exact member hashes in `manifest.json`. Stage into a fresh source directory at the existing source boundary, preserving any active accepted browser process and its original configuration/journal.
 
 ## Stage, install and operate
 
