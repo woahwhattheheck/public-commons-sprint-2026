@@ -158,9 +158,30 @@ export function createSourceBankToolkit(options = {}) {
     for (const entry of entries) {
       if (!entry || typeof entry !== "object") fail("invalid source file descriptor");
       const path = portablePath(entry.path);
-      let data;
-      if (entry.content_base64 !== undefined) {
-        if (entry.content !== undefined) fail("ambiguous source content fields: " + path);
+      let data, memberTransport;
+      const contentFields = ["content", "content_base64", "content_gzip_base64"]
+        .filter(key => entry[key] !== undefined);
+      if (contentFields.length !== 1) fail("source member needs one unambiguous content field: " + path);
+      if (entry.content_gzip_base64 !== undefined) {
+        // This is the member's transport, not an instruction to decompress an
+        // original .gz file again. The declared hash describes the exact output.
+        if (!Number.isSafeInteger(entry.bytes) || entry.bytes < 0 ||
+            typeof entry.sha256 !== "string" || !shaPattern.test(entry.sha256))
+          fail("gzip source member needs original bytes and SHA-256: " + path);
+        if (entry.encoding && !["utf-8", "utf8", "text", "base64"].includes(entry.encoding))
+          fail("unsupported gzip source member encoding: " + path);
+        const maximum = Math.min(limits.maxMemberBytes, limits.maxOutputBytes - total);
+        if (entry.bytes > maximum) fail("gzip source member exceeds expanded byte limit: " + path);
+        if ((entry.gzip_bytes === undefined) !== (entry.gzip_sha256 === undefined))
+          fail("gzip source member needs both compressed identity fields: " + path);
+        const packed = decodeBase64(entry.content_gzip_base64, limits.maxInputBytes, path + " gzip");
+        count(packed.length, entry.gzip_bytes, path + " gzip");
+        const packedHash = hash(packed, entry.gzip_sha256, path + " gzip");
+        data = codec.gunzip(packed, {
+          maxOutputBytes: entry.bytes, maxMembers: limits.maxGzipMembers
+        });
+        memberTransport = { encoding: "gzip+base64", bytes: packed.length, sha256: packedHash };
+      } else if (entry.content_base64 !== undefined) {
         data = decodeBase64(entry.content_base64, Math.min(limits.maxMemberBytes, limits.maxOutputBytes - total), path);
       } else if (entry.encoding === "base64") {
         data = decodeBase64(entry.content, Math.min(limits.maxMemberBytes, limits.maxOutputBytes - total), path);
@@ -177,9 +198,19 @@ export function createSourceBankToolkit(options = {}) {
       const row = fileRow(path, data, entry);
       row.executable = [0o755, "755", "0755", "100755"].includes(entry.mode);
       row.declaredSha256 = entry.sha256 !== undefined;
-      if (entry.declaredMetadata !== undefined) row.declaredMetadata = { ...entry.declaredMetadata };
+      if (memberTransport) {
+        row.transport = memberTransport;
+        const { content, content_base64, content_gzip_base64, declaredMetadata, ...descriptor } = entry;
+        row.declaredMetadata = descriptor;
+      }
+      if (entry.declaredMetadata !== undefined) {
+        const { content_gzip_base64, ...descriptor } = entry.declaredMetadata;
+        row.declaredMetadata = descriptor;
+      }
       total += data.length; files.push(row);
     }
+    count(files.length, bank.file_count, "source bank file count");
+    count(total, bank.source_bytes, "source bank source bytes");
     return summarize("source-bank", files, {
       schema, sourceRoot: bank.source_root ?? bank.base_path ?? (schema === "commons.source-map/1" ? bank.prefix ?? null : null),
       ...(scientificContext ? { sourceContext: {
