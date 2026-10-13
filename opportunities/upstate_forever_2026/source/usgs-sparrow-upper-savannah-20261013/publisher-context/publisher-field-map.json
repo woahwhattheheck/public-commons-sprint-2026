@@ -1,0 +1,1662 @@
+{
+  "schema": "upstate.sparrow-publisher-fields/v1",
+  "publisher": {
+    "url": "https://apps.usgs.gov/sparrow/sparrow-southeast-2012/",
+    "version": "v0.9.0",
+    "htmlSha256": "de9a0426af64a791e88fb67d5682c2e9fbb2c2305cf79116b57d553ae9249d9f",
+    "javaScriptSha256": "dc0f7551a5101e543a0699b3b4bef95713df258e76b43b075ecc7d5676c81d13"
+  },
+  "fields": [
+    {
+      "parameter": "nitrogen",
+      "layer": 9,
+      "field": "ACCL",
+      "publisherLabel": "Accumulated load (kg)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Accumulated Flow or Accumulated Load</b><br/> The predicted mean daily flow (cubic feet per second) or mean annual load of the constituent (kilograms or metric tons\n                                per year) leaving a stream reach that reflects the accumulated mass of the constituent contributed by all sources in the\n                                total drainage area upstream of the reach outlet. The accumulated value includes the effects of in-stream attenuation\n                                processes in all upstream reaches.\n                            </p>",
+        "label": "Accumulated Flow or Accumulated Load",
+        "text": "Accumulated Flow or Accumulated Load The predicted mean daily flow (cubic feet per second) or mean annual load of the constituent (kilograms or metric tons per year) leaving a stream reach that reflects the accumulated mass of the constituent contributed by all sources in the total drainage area upstream of the reach outlet. The accumulated value includes the effects of in-stream attenuation processes in all upstream reaches."
+      },
+      "unit": "kg/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "reach_accumulated",
+      "recommendedComparisonSupport": "reach_accumulated",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_nitrogen",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "ACCL_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "ACCL_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "ACCL_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "ACCL_S4",
+          "key": "s4",
+          "label": "Manure, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "ACCL_S5",
+          "key": "s5",
+          "label": "Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "nitrogen",
+      "layer": 9,
+      "field": "INCL",
+      "publisherLabel": "Incremental load (kg)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Incremental Flow or Incremental Load</b><br/> The predicted mean daily flow (cfs, cubic feet per second) or mean annual load of the constituent (kg, kilograms or MT, metric tons\n                                per year) leaving a stream reach that reflects only those sources contributed from within the incremental drainage area\n                                of that reach. The incremental value includes the effects of in-stream attenuation processes associated with one half of\n                                the incremental reach length. Incremental drainage areas are represented here as “catchments”.\n                            </p>",
+        "label": "Incremental Flow or Incremental Load",
+        "text": "Incremental Flow or Incremental Load The predicted mean daily flow (cfs, cubic feet per second) or mean annual load of the constituent (kg, kilograms or MT, metric tons per year) leaving a stream reach that reflects only those sources contributed from within the incremental drainage area of that reach. The incremental value includes the effects of in-stream attenuation processes associated with one half of the incremental reach length. Incremental drainage areas are represented here as “catchments”."
+      },
+      "unit": "kg/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "reach_incremental",
+      "recommendedComparisonSupport": "reach_incremental",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_nitrogen",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "INCL_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "INCL_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "INCL_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "INCL_S4",
+          "key": "s4",
+          "label": "Manure, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "INCL_S5",
+          "key": "s5",
+          "label": "Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "nitrogen",
+      "layer": 9,
+      "field": "ACCY",
+      "publisherLabel": "Accumulated yield (kg/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Accumulated Yield</b><br/> The Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet. Units are millimeters per\n                                year, kilograms per square kilometer per year or metric tons per square kilometer per year.\n\n                            </p>",
+        "label": "Accumulated Yield",
+        "text": "Accumulated Yield The Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "kg/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "reach_accumulated",
+      "recommendedComparisonSupport": "reach_accumulated",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_nitrogen",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "ACCY_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "ACCY_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "ACCY_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "ACCY_S4",
+          "key": "s4",
+          "label": "Manure, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "ACCY_S5",
+          "key": "s5",
+          "label": "Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "nitrogen",
+      "layer": 9,
+      "field": "INCY",
+      "publisherLabel": "Incremental yield (kg/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Incremental Yield</b><br/> The Incremental Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms\n                                per square kilometer per year or metric tons per square kilometer per year.\n                            </p>",
+        "label": "Incremental Yield",
+        "text": "Incremental Yield The Incremental Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "kg/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "reach_incremental",
+      "recommendedComparisonSupport": "reach_incremental",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_nitrogen",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "INCY_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "INCY_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "INCY_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "INCY_S4",
+          "key": "s4",
+          "label": "Manure, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "INCY_S5",
+          "key": "s5",
+          "label": "Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "nitrogen",
+      "layer": 9,
+      "field": "DACCL",
+      "publisherLabel": "Delivered accumulated load (kg)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Accumulated Flow or Delivered Accumulated Load</b><br/> Accumulated flow or load multiplied by the delivery fraction.\n                            </p>",
+        "label": "Delivered Accumulated Flow or Delivered Accumulated Load",
+        "text": "Delivered Accumulated Flow or Delivered Accumulated Load Accumulated flow or load multiplied by the delivery fraction."
+      },
+      "unit": "kg/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_nitrogen",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DACCL_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "DACCL_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "DACCL_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "DACCL_S4",
+          "key": "s4",
+          "label": "Manure, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "DACCL_S5",
+          "key": "s5",
+          "label": "Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "nitrogen",
+      "layer": 9,
+      "field": "DINCL",
+      "publisherLabel": "Delivered incremental load  (kg)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Incremental Flow or Delivered Incremental Load</b><br/> Incremental flow or load multiplied by the delivery fraction.\n                            </p>",
+        "label": "Delivered Incremental Flow or Delivered Incremental Load",
+        "text": "Delivered Incremental Flow or Delivered Incremental Load Incremental flow or load multiplied by the delivery fraction."
+      },
+      "unit": "kg/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_nitrogen",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DINCL_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "DINCL_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "DINCL_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "DINCL_S4",
+          "key": "s4",
+          "label": "Manure, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "DINCL_S5",
+          "key": "s5",
+          "label": "Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "nitrogen",
+      "layer": 9,
+      "field": "DACCY",
+      "publisherLabel": "Delivered accumulated yield (kg/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Accumulated Yield</b><br/> The Delivered Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet or total of the\n                                \"grouped by\" area. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square\n                                kilometer per year.\n\n                            </p>",
+        "label": "Delivered Accumulated Yield",
+        "text": "Delivered Accumulated Yield The Delivered Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet or total of the \"grouped by\" area. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "kg/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_nitrogen",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DACCY_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "DACCY_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "DACCY_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "DACCY_S4",
+          "key": "s4",
+          "label": "Manure, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "DACCY_S5",
+          "key": "s5",
+          "label": "Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "nitrogen",
+      "layer": 9,
+      "field": "DINCY",
+      "publisherLabel": "Delivered incremental yield (kg/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Incremental Yield</b><br/> The Delivered Incremental Flow or Load divided by the incremental drainage area of the reach. Units are millimeters per\n                                year, kilograms per square kilometer per year or metric tons per square kilometer per year.\n                            </p>",
+        "label": "Delivered Incremental Yield",
+        "text": "Delivered Incremental Yield The Delivered Incremental Flow or Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "kg/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_nitrogen",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DINCY_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "DINCY_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "DINCY_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "DINCY_S4",
+          "key": "s4",
+          "label": "Manure, including indirect transport through atmosphere to stream"
+        },
+        {
+          "field": "DINCY_S5",
+          "key": "s5",
+          "label": "Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "nitrogen",
+      "layer": 9,
+      "field": "CONCENTRAT",
+      "publisherLabel": "Concentration, mg/L",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Concentration</b><br /> The Accumulated Load divided by the Accumulated Flow. This should be interpreted as the mean-annual flow-weighted\n                                concentration. Units are milligrams per liter.\n                            </p>",
+        "label": "Concentration",
+        "text": "Concentration The Accumulated Load divided by the Accumulated Flow. This should be interpreted as the mean-annual flow-weighted concentration. Units are milligrams per liter."
+      },
+      "unit": "mg/L",
+      "quantity": "mean_annual_flow_weighted_concentration",
+      "evidenceKind": "external_model_estimate",
+      "sourceSupport": "reach_accumulated",
+      "fraction": "total_nitrogen",
+      "nativeComparability": "Concentration is not an annual mass load; retain as context."
+    },
+    {
+      "parameter": "phosphorus",
+      "layer": 0,
+      "field": "ACCL",
+      "publisherLabel": "Accumulated load (kg)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Accumulated Flow or Accumulated Load</b><br/> The predicted mean daily flow (cubic feet per second) or mean annual load of the constituent (kilograms or metric tons\n                                per year) leaving a stream reach that reflects the accumulated mass of the constituent contributed by all sources in the\n                                total drainage area upstream of the reach outlet. The accumulated value includes the effects of in-stream attenuation\n                                processes in all upstream reaches.\n                            </p>",
+        "label": "Accumulated Flow or Accumulated Load",
+        "text": "Accumulated Flow or Accumulated Load The predicted mean daily flow (cubic feet per second) or mean annual load of the constituent (kilograms or metric tons per year) leaving a stream reach that reflects the accumulated mass of the constituent contributed by all sources in the total drainage area upstream of the reach outlet. The accumulated value includes the effects of in-stream attenuation processes in all upstream reaches."
+      },
+      "unit": "kg/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "reach_accumulated",
+      "recommendedComparisonSupport": "reach_accumulated",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_phosphorus",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "ACCL_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "ACCL_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "ACCL_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer"
+        },
+        {
+          "field": "ACCL_S4",
+          "key": "s4",
+          "label": "Manure"
+        },
+        {
+          "field": "ACCL_S5",
+          "key": "s5",
+          "label": "Phosphate Mining"
+        },
+        {
+          "field": "ACCL_S6",
+          "key": "s6",
+          "label": "Natural Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "phosphorus",
+      "layer": 0,
+      "field": "INCL",
+      "publisherLabel": "Incremental load (kg)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Incremental Flow or Incremental Load</b><br/> The predicted mean daily flow (cfs, cubic feet per second) or mean annual load of the constituent (kg, kilograms or MT, metric tons\n                                per year) leaving a stream reach that reflects only those sources contributed from within the incremental drainage area\n                                of that reach. The incremental value includes the effects of in-stream attenuation processes associated with one half of\n                                the incremental reach length. Incremental drainage areas are represented here as “catchments”.\n                            </p>",
+        "label": "Incremental Flow or Incremental Load",
+        "text": "Incremental Flow or Incremental Load The predicted mean daily flow (cfs, cubic feet per second) or mean annual load of the constituent (kg, kilograms or MT, metric tons per year) leaving a stream reach that reflects only those sources contributed from within the incremental drainage area of that reach. The incremental value includes the effects of in-stream attenuation processes associated with one half of the incremental reach length. Incremental drainage areas are represented here as “catchments”."
+      },
+      "unit": "kg/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "reach_incremental",
+      "recommendedComparisonSupport": "reach_incremental",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_phosphorus",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "INCL_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "INCL_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "INCL_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer"
+        },
+        {
+          "field": "INCL_S4",
+          "key": "s4",
+          "label": "Manure"
+        },
+        {
+          "field": "INCL_S5",
+          "key": "s5",
+          "label": "Phosphate Mining"
+        },
+        {
+          "field": "INCL_S6",
+          "key": "s6",
+          "label": "Natural Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "phosphorus",
+      "layer": 0,
+      "field": "ACCY",
+      "publisherLabel": "Accumulated yield (kg/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Accumulated Yield</b><br/> The Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet. Units are millimeters per\n                                year, kilograms per square kilometer per year or metric tons per square kilometer per year.\n\n                            </p>",
+        "label": "Accumulated Yield",
+        "text": "Accumulated Yield The Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "kg/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "reach_accumulated",
+      "recommendedComparisonSupport": "reach_accumulated",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_phosphorus",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "ACCY_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "ACCY_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "ACCY_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer"
+        },
+        {
+          "field": "ACCY_S4",
+          "key": "s4",
+          "label": "Manure"
+        },
+        {
+          "field": "ACCY_S5",
+          "key": "s5",
+          "label": "Phosphate Mining"
+        },
+        {
+          "field": "ACCY_S6",
+          "key": "s6",
+          "label": "Natural Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "phosphorus",
+      "layer": 0,
+      "field": "INCY",
+      "publisherLabel": "Incremental yield (kg/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Incremental Yield</b><br/> The Incremental Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms\n                                per square kilometer per year or metric tons per square kilometer per year.\n                            </p>",
+        "label": "Incremental Yield",
+        "text": "Incremental Yield The Incremental Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "kg/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "reach_incremental",
+      "recommendedComparisonSupport": "reach_incremental",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_phosphorus",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "INCY_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "INCY_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "INCY_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer"
+        },
+        {
+          "field": "INCY_S4",
+          "key": "s4",
+          "label": "Manure"
+        },
+        {
+          "field": "INCY_S5",
+          "key": "s5",
+          "label": "Phosphate Mining"
+        },
+        {
+          "field": "INCY_S6",
+          "key": "s6",
+          "label": "Natural Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "phosphorus",
+      "layer": 0,
+      "field": "DACCL",
+      "publisherLabel": "Delivered accumulated load (kg)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Accumulated Flow or Delivered Accumulated Load</b><br/> Accumulated flow or load multiplied by the delivery fraction.\n                            </p>",
+        "label": "Delivered Accumulated Flow or Delivered Accumulated Load",
+        "text": "Delivered Accumulated Flow or Delivered Accumulated Load Accumulated flow or load multiplied by the delivery fraction."
+      },
+      "unit": "kg/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_phosphorus",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DACCL_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "DACCL_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "DACCL_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer"
+        },
+        {
+          "field": "DACCL_S4",
+          "key": "s4",
+          "label": "Manure"
+        },
+        {
+          "field": "DACCL_S5",
+          "key": "s5",
+          "label": "Phosphate Mining"
+        },
+        {
+          "field": "DACCL_S6",
+          "key": "s6",
+          "label": "Natural Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "phosphorus",
+      "layer": 0,
+      "field": "DINCL",
+      "publisherLabel": "Delivered incremental load  (kg)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Incremental Flow or Delivered Incremental Load</b><br/> Incremental flow or load multiplied by the delivery fraction.\n                            </p>",
+        "label": "Delivered Incremental Flow or Delivered Incremental Load",
+        "text": "Delivered Incremental Flow or Delivered Incremental Load Incremental flow or load multiplied by the delivery fraction."
+      },
+      "unit": "kg/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_phosphorus",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DINCL_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "DINCL_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "DINCL_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer"
+        },
+        {
+          "field": "DINCL_S4",
+          "key": "s4",
+          "label": "Manure"
+        },
+        {
+          "field": "DINCL_S5",
+          "key": "s5",
+          "label": "Phosphate Mining"
+        },
+        {
+          "field": "DINCL_S6",
+          "key": "s6",
+          "label": "Natural Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "phosphorus",
+      "layer": 0,
+      "field": "DACCY",
+      "publisherLabel": "Delivered accumulated yield (kg/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Accumulated Yield</b><br/> The Delivered Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet or total of the\n                                \"grouped by\" area. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square\n                                kilometer per year.\n\n                            </p>",
+        "label": "Delivered Accumulated Yield",
+        "text": "Delivered Accumulated Yield The Delivered Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet or total of the \"grouped by\" area. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "kg/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_phosphorus",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DACCY_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "DACCY_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "DACCY_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer"
+        },
+        {
+          "field": "DACCY_S4",
+          "key": "s4",
+          "label": "Manure"
+        },
+        {
+          "field": "DACCY_S5",
+          "key": "s5",
+          "label": "Phosphate Mining"
+        },
+        {
+          "field": "DACCY_S6",
+          "key": "s6",
+          "label": "Natural Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "phosphorus",
+      "layer": 0,
+      "field": "DINCY",
+      "publisherLabel": "Delivered incremental yield (kg/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Incremental Yield</b><br/> The Delivered Incremental Flow or Load divided by the incremental drainage area of the reach. Units are millimeters per\n                                year, kilograms per square kilometer per year or metric tons per square kilometer per year.\n                            </p>",
+        "label": "Delivered Incremental Yield",
+        "text": "Delivered Incremental Yield The Delivered Incremental Flow or Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "kg/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "total_phosphorus",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DINCY_S1",
+          "key": "s1",
+          "label": "Municipal Wastewater Treatment Discharge"
+        },
+        {
+          "field": "DINCY_S2",
+          "key": "s2",
+          "label": "Urban Land"
+        },
+        {
+          "field": "DINCY_S3",
+          "key": "s3",
+          "label": "Farm Fertilizer"
+        },
+        {
+          "field": "DINCY_S4",
+          "key": "s4",
+          "label": "Manure"
+        },
+        {
+          "field": "DINCY_S5",
+          "key": "s5",
+          "label": "Phosphate Mining"
+        },
+        {
+          "field": "DINCY_S6",
+          "key": "s6",
+          "label": "Natural Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "phosphorus",
+      "layer": 0,
+      "field": "CONCENTRAT",
+      "publisherLabel": "Concentration, mg/L",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Concentration</b><br /> The Accumulated Load divided by the Accumulated Flow. This should be interpreted as the mean-annual flow-weighted\n                                concentration. Units are milligrams per liter.\n                            </p>",
+        "label": "Concentration",
+        "text": "Concentration The Accumulated Load divided by the Accumulated Flow. This should be interpreted as the mean-annual flow-weighted concentration. Units are milligrams per liter."
+      },
+      "unit": "mg/L",
+      "quantity": "mean_annual_flow_weighted_concentration",
+      "evidenceKind": "external_model_estimate",
+      "sourceSupport": "reach_accumulated",
+      "fraction": "total_phosphorus",
+      "nativeComparability": "Concentration is not an annual mass load; retain as context."
+    },
+    {
+      "parameter": "sediment",
+      "layer": 27,
+      "field": "ACCL",
+      "publisherLabel": "Accumulated load (MT)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Accumulated Flow or Accumulated Load</b><br/> The predicted mean daily flow (cubic feet per second) or mean annual load of the constituent (kilograms or metric tons\n                                per year) leaving a stream reach that reflects the accumulated mass of the constituent contributed by all sources in the\n                                total drainage area upstream of the reach outlet. The accumulated value includes the effects of in-stream attenuation\n                                processes in all upstream reaches.\n                            </p>",
+        "label": "Accumulated Flow or Accumulated Load",
+        "text": "Accumulated Flow or Accumulated Load The predicted mean daily flow (cubic feet per second) or mean annual load of the constituent (kilograms or metric tons per year) leaving a stream reach that reflects the accumulated mass of the constituent contributed by all sources in the total drainage area upstream of the reach outlet. The accumulated value includes the effects of in-stream attenuation processes in all upstream reaches."
+      },
+      "unit": "metric_tonnes/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "reach_accumulated",
+      "recommendedComparisonSupport": "reach_accumulated",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "suspended_sediment",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "ACCL_S1",
+          "key": "s1",
+          "label": "Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "ACCL_S2",
+          "key": "s2",
+          "label": "Urban Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "ACCL_S3",
+          "key": "s3",
+          "label": "Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "ACCL_S4",
+          "key": "s4",
+          "label": "Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "ACCL_S5",
+          "key": "s5",
+          "label": "Agricultural Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "ACCL_S6",
+          "key": "s6",
+          "label": "Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "ACCL_S7",
+          "key": "s7",
+          "label": "Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "ACCL_S8",
+          "key": "s8",
+          "label": "Transitional Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "ACCL_S9",
+          "key": "s9",
+          "label": "Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "ACCL_S10",
+          "key": "s10",
+          "label": "Forested Land and all surficial geology classes"
+        },
+        {
+          "field": "ACCL_S11",
+          "key": "s11",
+          "label": "Channel Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "sediment",
+      "layer": 27,
+      "field": "INCL",
+      "publisherLabel": "Incremental load (MT)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Incremental Flow or Incremental Load</b><br/> The predicted mean daily flow (cfs, cubic feet per second) or mean annual load of the constituent (kg, kilograms or MT, metric tons\n                                per year) leaving a stream reach that reflects only those sources contributed from within the incremental drainage area\n                                of that reach. The incremental value includes the effects of in-stream attenuation processes associated with one half of\n                                the incremental reach length. Incremental drainage areas are represented here as “catchments”.\n                            </p>",
+        "label": "Incremental Flow or Incremental Load",
+        "text": "Incremental Flow or Incremental Load The predicted mean daily flow (cfs, cubic feet per second) or mean annual load of the constituent (kg, kilograms or MT, metric tons per year) leaving a stream reach that reflects only those sources contributed from within the incremental drainage area of that reach. The incremental value includes the effects of in-stream attenuation processes associated with one half of the incremental reach length. Incremental drainage areas are represented here as “catchments”."
+      },
+      "unit": "metric_tonnes/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "reach_incremental",
+      "recommendedComparisonSupport": "reach_incremental",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "suspended_sediment",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "INCL_S1",
+          "key": "s1",
+          "label": "Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "INCL_S2",
+          "key": "s2",
+          "label": "Urban Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "INCL_S3",
+          "key": "s3",
+          "label": "Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "INCL_S4",
+          "key": "s4",
+          "label": "Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "INCL_S5",
+          "key": "s5",
+          "label": "Agricultural Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "INCL_S6",
+          "key": "s6",
+          "label": "Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "INCL_S7",
+          "key": "s7",
+          "label": "Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "INCL_S8",
+          "key": "s8",
+          "label": "Transitional Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "INCL_S9",
+          "key": "s9",
+          "label": "Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "INCL_S10",
+          "key": "s10",
+          "label": "Forested Land and all surficial geology classes"
+        },
+        {
+          "field": "INCL_S11",
+          "key": "s11",
+          "label": "Channel Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "sediment",
+      "layer": 27,
+      "field": "ACCY",
+      "publisherLabel": "Accumulated yield (MT/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Accumulated Yield</b><br/> The Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet. Units are millimeters per\n                                year, kilograms per square kilometer per year or metric tons per square kilometer per year.\n\n                            </p>",
+        "label": "Accumulated Yield",
+        "text": "Accumulated Yield The Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "metric_tonnes/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "reach_accumulated",
+      "recommendedComparisonSupport": "reach_accumulated",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "suspended_sediment",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "ACCY_S1",
+          "key": "s1",
+          "label": "Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "ACCY_S2",
+          "key": "s2",
+          "label": "Urban Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "ACCY_S3",
+          "key": "s3",
+          "label": "Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "ACCY_S4",
+          "key": "s4",
+          "label": "Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "ACCY_S5",
+          "key": "s5",
+          "label": "Agricultural Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "ACCY_S6",
+          "key": "s6",
+          "label": "Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "ACCY_S7",
+          "key": "s7",
+          "label": "Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "ACCY_S8",
+          "key": "s8",
+          "label": "Transitional Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "ACCY_S9",
+          "key": "s9",
+          "label": "Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "ACCY_S10",
+          "key": "s10",
+          "label": "Forested Land and all surficial geology classes"
+        },
+        {
+          "field": "ACCY_S11",
+          "key": "s11",
+          "label": "Channel Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "sediment",
+      "layer": 27,
+      "field": "INCY",
+      "publisherLabel": "Incremental yield (MT/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Incremental Yield</b><br/> The Incremental Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms\n                                per square kilometer per year or metric tons per square kilometer per year.\n                            </p>",
+        "label": "Incremental Yield",
+        "text": "Incremental Yield The Incremental Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "metric_tonnes/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "reach_incremental",
+      "recommendedComparisonSupport": "reach_incremental",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "suspended_sediment",
+      "deliveryTargetField": null,
+      "sourceComponents": [
+        {
+          "field": "INCY_S1",
+          "key": "s1",
+          "label": "Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "INCY_S2",
+          "key": "s2",
+          "label": "Urban Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "INCY_S3",
+          "key": "s3",
+          "label": "Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "INCY_S4",
+          "key": "s4",
+          "label": "Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "INCY_S5",
+          "key": "s5",
+          "label": "Agricultural Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "INCY_S6",
+          "key": "s6",
+          "label": "Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "INCY_S7",
+          "key": "s7",
+          "label": "Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "INCY_S8",
+          "key": "s8",
+          "label": "Transitional Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "INCY_S9",
+          "key": "s9",
+          "label": "Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "INCY_S10",
+          "key": "s10",
+          "label": "Forested Land and all surficial geology classes"
+        },
+        {
+          "field": "INCY_S11",
+          "key": "s11",
+          "label": "Channel Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "sediment",
+      "layer": 27,
+      "field": "DACCL",
+      "publisherLabel": "Delivered accumulated load (MT)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Accumulated Flow or Delivered Accumulated Load</b><br/> Accumulated flow or load multiplied by the delivery fraction.\n                            </p>",
+        "label": "Delivered Accumulated Flow or Delivered Accumulated Load",
+        "text": "Delivered Accumulated Flow or Delivered Accumulated Load Accumulated flow or load multiplied by the delivery fraction."
+      },
+      "unit": "metric_tonnes/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "suspended_sediment",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DACCL_S1",
+          "key": "s1",
+          "label": "Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DACCL_S2",
+          "key": "s2",
+          "label": "Urban Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DACCL_S3",
+          "key": "s3",
+          "label": "Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DACCL_S4",
+          "key": "s4",
+          "label": "Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DACCL_S5",
+          "key": "s5",
+          "label": "Agricultural Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DACCL_S6",
+          "key": "s6",
+          "label": "Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DACCL_S7",
+          "key": "s7",
+          "label": "Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DACCL_S8",
+          "key": "s8",
+          "label": "Transitional Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DACCL_S9",
+          "key": "s9",
+          "label": "Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DACCL_S10",
+          "key": "s10",
+          "label": "Forested Land and all surficial geology classes"
+        },
+        {
+          "field": "DACCL_S11",
+          "key": "s11",
+          "label": "Channel Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "sediment",
+      "layer": 27,
+      "field": "DINCL",
+      "publisherLabel": "Delivered incremental load  (MT)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Incremental Flow or Delivered Incremental Load</b><br/> Incremental flow or load multiplied by the delivery fraction.\n                            </p>",
+        "label": "Delivered Incremental Flow or Delivered Incremental Load",
+        "text": "Delivered Incremental Flow or Delivered Incremental Load Incremental flow or load multiplied by the delivery fraction."
+      },
+      "unit": "metric_tonnes/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "annual_mass_rate",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "suspended_sediment",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DINCL_S1",
+          "key": "s1",
+          "label": "Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DINCL_S2",
+          "key": "s2",
+          "label": "Urban Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DINCL_S3",
+          "key": "s3",
+          "label": "Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DINCL_S4",
+          "key": "s4",
+          "label": "Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DINCL_S5",
+          "key": "s5",
+          "label": "Agricultural Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DINCL_S6",
+          "key": "s6",
+          "label": "Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DINCL_S7",
+          "key": "s7",
+          "label": "Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DINCL_S8",
+          "key": "s8",
+          "label": "Transitional Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DINCL_S9",
+          "key": "s9",
+          "label": "Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DINCL_S10",
+          "key": "s10",
+          "label": "Forested Land and all surficial geology classes"
+        },
+        {
+          "field": "DINCL_S11",
+          "key": "s11",
+          "label": "Channel Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "sediment",
+      "layer": 27,
+      "field": "DACCY",
+      "publisherLabel": "Delivered accumulated yield (MT/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Accumulated Yield</b><br/> The Delivered Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet or total of the\n                                \"grouped by\" area. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square\n                                kilometer per year.\n\n                            </p>",
+        "label": "Delivered Accumulated Yield",
+        "text": "Delivered Accumulated Yield The Delivered Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet or total of the \"grouped by\" area. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "metric_tonnes/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "suspended_sediment",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DACCY_S1",
+          "key": "s1",
+          "label": "Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DACCY_S2",
+          "key": "s2",
+          "label": "Urban Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DACCY_S3",
+          "key": "s3",
+          "label": "Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DACCY_S4",
+          "key": "s4",
+          "label": "Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DACCY_S5",
+          "key": "s5",
+          "label": "Agricultural Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DACCY_S6",
+          "key": "s6",
+          "label": "Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DACCY_S7",
+          "key": "s7",
+          "label": "Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DACCY_S8",
+          "key": "s8",
+          "label": "Transitional Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DACCY_S9",
+          "key": "s9",
+          "label": "Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DACCY_S10",
+          "key": "s10",
+          "label": "Forested Land and all surficial geology classes"
+        },
+        {
+          "field": "DACCY_S11",
+          "key": "s11",
+          "label": "Channel Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "sediment",
+      "layer": 27,
+      "field": "DINCY",
+      "publisherLabel": "Delivered incremental yield (MT/km2)",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Incremental Yield</b><br/> The Delivered Incremental Flow or Load divided by the incremental drainage area of the reach. Units are millimeters per\n                                year, kilograms per square kilometer per year or metric tons per square kilometer per year.\n                            </p>",
+        "label": "Delivered Incremental Yield",
+        "text": "Delivered Incremental Yield The Delivered Incremental Flow or Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+      },
+      "unit": "metric_tonnes/km2/year",
+      "unitBasis": "Publisher JavaScript mass/area labels plus publisher HTML mean-annual definitions; original release dictionary corroborates kg/year or metric tons/year",
+      "quantity": "areal_yield",
+      "sourceSupport": "delivered_to_coastal_target",
+      "recommendedComparisonSupport": "other",
+      "evidenceKind": "external_model_estimate",
+      "fraction": "suspended_sediment",
+      "deliveryTargetField": "TARGET",
+      "sourceComponents": [
+        {
+          "field": "DINCY_S1",
+          "key": "s1",
+          "label": "Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DINCY_S2",
+          "key": "s2",
+          "label": "Urban Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DINCY_S3",
+          "key": "s3",
+          "label": "Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DINCY_S4",
+          "key": "s4",
+          "label": "Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DINCY_S5",
+          "key": "s5",
+          "label": "Agricultural Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DINCY_S6",
+          "key": "s6",
+          "label": "Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DINCY_S7",
+          "key": "s7",
+          "label": "Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock"
+        },
+        {
+          "field": "DINCY_S8",
+          "key": "s8",
+          "label": "Transitional Land and Residuum in sedimentary rock(discontinuous)"
+        },
+        {
+          "field": "DINCY_S9",
+          "key": "s9",
+          "label": "Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock"
+        },
+        {
+          "field": "DINCY_S10",
+          "key": "s10",
+          "label": "Forested Land and all surficial geology classes"
+        },
+        {
+          "field": "DINCY_S11",
+          "key": "s11",
+          "label": "Channel Sources"
+        }
+      ],
+      "nativeComparability": "Requires explicit original quantity/fraction/time/spatial support assessment; not landscape-to-stream equivalence"
+    },
+    {
+      "parameter": "sediment",
+      "layer": 27,
+      "field": "CONCENTRAT",
+      "publisherLabel": "Concentration, mg/L",
+      "definition": {
+        "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Concentration</b><br /> The Accumulated Load divided by the Accumulated Flow. This should be interpreted as the mean-annual flow-weighted\n                                concentration. Units are milligrams per liter.\n                            </p>",
+        "label": "Concentration",
+        "text": "Concentration The Accumulated Load divided by the Accumulated Flow. This should be interpreted as the mean-annual flow-weighted concentration. Units are milligrams per liter."
+      },
+      "unit": "mg/L",
+      "quantity": "mean_annual_flow_weighted_concentration",
+      "evidenceKind": "external_model_estimate",
+      "sourceSupport": "reach_accumulated",
+      "fraction": "suspended_sediment",
+      "nativeComparability": "Concentration is not an annual mass load; retain as context."
+    }
+  ],
+  "sourceDefinitions": {
+    "catchmentDefinitions_tn": {
+      "name": "catchmentDefinitions_tn",
+      "offset": 2980,
+      "originalText": "{comid:\"SPARROW Reach ID \",st_comid:\"SPARROW Reach ID by State\",pname:\"Catchment Name\",accl:\"Accumulated load (kg)\",concentrat:\"Concentration, mg/L\",incl:\"Incremental load (kg)\",accy:\"Accumulated yield (kg/km2)\",incy:\"Incremental yield (kg/km2)\",daccl:\"Delivered accumulated load (kg)\",daccy:\"Delivered accumulated yield (kg/km2)\",dincl:\"Delivered incremental load  (kg)\",dincy:\"Delivered incremental yield (kg/km2)\"}",
+      "value": {
+        "comid": "SPARROW Reach ID ",
+        "st_comid": "SPARROW Reach ID by State",
+        "pname": "Catchment Name",
+        "accl": "Accumulated load (kg)",
+        "concentrat": "Concentration, mg/L",
+        "incl": "Incremental load (kg)",
+        "accy": "Accumulated yield (kg/km2)",
+        "incy": "Incremental yield (kg/km2)",
+        "daccl": "Delivered accumulated load (kg)",
+        "daccy": "Delivered accumulated yield (kg/km2)",
+        "dincl": "Delivered incremental load  (kg)",
+        "dincy": "Delivered incremental yield (kg/km2)"
+      }
+    },
+    "nitrogenSourceDefinitions": {
+      "name": "nitrogenSourceDefinitions",
+      "offset": 4999,
+      "originalText": "{s1:\"Municipal Wastewater Treatment Discharge\",s2:\"Urban Land\",s3:\"Farm Fertilizer, including indirect transport through atmosphere to stream\",s4:\"Manure, including indirect transport through atmosphere to stream\",s5:\"Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background\"}",
+      "value": {
+        "s1": "Municipal Wastewater Treatment Discharge",
+        "s2": "Urban Land",
+        "s3": "Farm Fertilizer, including indirect transport through atmosphere to stream",
+        "s4": "Manure, including indirect transport through atmosphere to stream",
+        "s5": "Atmospheric Emissions and Subsequent Deposition from Power Plants, Other Industry, Vehicles, and Background"
+      }
+    },
+    "catchmentDefinitions": {
+      "name": "catchmentDefinitions",
+      "offset": 2545,
+      "originalText": "{comid:\"SPARROW Reach ID\",st_comid:\"SPARROW Reach by State\",pname:\"Catchment Name\",accl:\"Accumulated load (kg)\",concentrat:\"Concentration, mg/L\",incl:\"Incremental load (kg)\",accy:\"Accumulated yield (kg/km2)\",incy:\"Incremental yield (kg/km2)\",daccl:\"Delivered accumulated load (kg)\",daccy:\"Delivered accumulated yield (kg/km2)\",dincl:\"Delivered incremental load  (kg)\",dincy:\"Delivered incremental yield (kg/km2)\"}",
+      "value": {
+        "comid": "SPARROW Reach ID",
+        "st_comid": "SPARROW Reach by State",
+        "pname": "Catchment Name",
+        "accl": "Accumulated load (kg)",
+        "concentrat": "Concentration, mg/L",
+        "incl": "Incremental load (kg)",
+        "accy": "Accumulated yield (kg/km2)",
+        "incy": "Incremental yield (kg/km2)",
+        "daccl": "Delivered accumulated load (kg)",
+        "daccy": "Delivered accumulated yield (kg/km2)",
+        "dincl": "Delivered incremental load  (kg)",
+        "dincy": "Delivered incremental yield (kg/km2)"
+      }
+    },
+    "phosphorusSourceDefinitions": {
+      "name": "phosphorusSourceDefinitions",
+      "offset": 4831,
+      "originalText": "{s1:\"Municipal Wastewater Treatment Discharge\",s2:\"Urban Land\",s3:\"Farm Fertilizer\",s4:\"Manure\",s5:\"Phosphate Mining\",s6:\"Natural Sources\"}",
+      "value": {
+        "s1": "Municipal Wastewater Treatment Discharge",
+        "s2": "Urban Land",
+        "s3": "Farm Fertilizer",
+        "s4": "Manure",
+        "s5": "Phosphate Mining",
+        "s6": "Natural Sources"
+      }
+    },
+    "catchmentDefinitions_ss": {
+      "name": "catchmentDefinitions_ss",
+      "offset": 3829,
+      "originalText": "{comid:\"SPARROW Reach ID \",st_comid:\"SPARROW Reach ID by State\",pname:\"Catchment Name\",accl:\"Accumulated load (MT)\",concentrat:\"Concentration, mg/L\",incl:\"Incremental load (MT)\",accy:\"Accumulated yield (MT/km2)\",incy:\"Incremental yield (MT/km2)\",daccl:\"Delivered accumulated load (MT)\",daccy:\"Delivered accumulated yield (MT/km2)\",dincl:\"Delivered incremental load  (MT)\",dincy:\"Delivered incremental yield (MT/km2)\"}",
+      "value": {
+        "comid": "SPARROW Reach ID ",
+        "st_comid": "SPARROW Reach ID by State",
+        "pname": "Catchment Name",
+        "accl": "Accumulated load (MT)",
+        "concentrat": "Concentration, mg/L",
+        "incl": "Incremental load (MT)",
+        "accy": "Accumulated yield (MT/km2)",
+        "incy": "Incremental yield (MT/km2)",
+        "daccl": "Delivered accumulated load (MT)",
+        "daccy": "Delivered accumulated yield (MT/km2)",
+        "dincl": "Delivered incremental load  (MT)",
+        "dincy": "Delivered incremental yield (MT/km2)"
+      }
+    },
+    "sedimentSourceDefinitions": {
+      "name": "sedimentSourceDefinitions",
+      "offset": 5499,
+      "originalText": "{s1:\"Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock\",s2:\"Urban Land and Residuum in sedimentary rock(discontinuous)\",s3:\"Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock\",s4:\"Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock\",s5:\"Agricultural Land and Residuum in sedimentary rock(discontinuous)\",s6:\"Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock\",s7:\"Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock\",s8:\"Transitional Land and Residuum in sedimentary rock(discontinuous)\",s9:\"Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock\",s10:\"Forested Land and all surficial geology classes\",s11:\"Channel Sources\"}",
+      "value": {
+        "s1": "Urban Land and Alluvium and residuum in very fine- grained sedimentary rock and igneous and metamorphic rock",
+        "s2": "Urban Land and Residuum in sedimentary rock(discontinuous)",
+        "s3": "Urban Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock",
+        "s4": "Agricultural Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock",
+        "s5": "Agricultural Land and Residuum in sedimentary rock(discontinuous)",
+        "s6": "Agricultural Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock",
+        "s7": "Transitional Land and Alluvium and residuum in very fine - grained sedimentary rock and igneous and metamorphic rock",
+        "s8": "Transitional Land and Residuum in sedimentary rock(discontinuous)",
+        "s9": "Transitional Land and Fine - and medium - grained sediments, residuum in alluvium, and residuum in carbonate and fine - grained sedimentary rock",
+        "s10": "Forested Land and all surficial geology classes",
+        "s11": "Channel Sources"
+      }
+    }
+  },
+  "htmlDefinitions": [
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Accumulated Flow or Accumulated Load</b><br/> The predicted mean daily flow (cubic feet per second) or mean annual load of the constituent (kilograms or metric tons\n                                per year) leaving a stream reach that reflects the accumulated mass of the constituent contributed by all sources in the\n                                total drainage area upstream of the reach outlet. The accumulated value includes the effects of in-stream attenuation\n                                processes in all upstream reaches.\n                            </p>",
+      "label": "Accumulated Flow or Accumulated Load",
+      "text": "Accumulated Flow or Accumulated Load The predicted mean daily flow (cubic feet per second) or mean annual load of the constituent (kilograms or metric tons per year) leaving a stream reach that reflects the accumulated mass of the constituent contributed by all sources in the total drainage area upstream of the reach outlet. The accumulated value includes the effects of in-stream attenuation processes in all upstream reaches."
+    },
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Incremental Flow or Incremental Load</b><br/> The predicted mean daily flow (cfs, cubic feet per second) or mean annual load of the constituent (kg, kilograms or MT, metric tons\n                                per year) leaving a stream reach that reflects only those sources contributed from within the incremental drainage area\n                                of that reach. The incremental value includes the effects of in-stream attenuation processes associated with one half of\n                                the incremental reach length. Incremental drainage areas are represented here as “catchments”.\n                            </p>",
+      "label": "Incremental Flow or Incremental Load",
+      "text": "Incremental Flow or Incremental Load The predicted mean daily flow (cfs, cubic feet per second) or mean annual load of the constituent (kg, kilograms or MT, metric tons per year) leaving a stream reach that reflects only those sources contributed from within the incremental drainage area of that reach. The incremental value includes the effects of in-stream attenuation processes associated with one half of the incremental reach length. Incremental drainage areas are represented here as “catchments”."
+    },
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Accumulated Yield</b><br/> The Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet. Units are millimeters per\n                                year, kilograms per square kilometer per year or metric tons per square kilometer per year.\n\n                            </p>",
+      "label": "Accumulated Yield",
+      "text": "Accumulated Yield The Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+    },
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Incremental Yield</b><br/> The Incremental Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms\n                                per square kilometer per year or metric tons per square kilometer per year.\n                            </p>",
+      "label": "Incremental Yield",
+      "text": "Incremental Yield The Incremental Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+    },
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Accumulated Flow or Delivered Accumulated Load</b><br/> Accumulated flow or load multiplied by the delivery fraction.\n                            </p>",
+      "label": "Delivered Accumulated Flow or Delivered Accumulated Load",
+      "text": "Delivered Accumulated Flow or Delivered Accumulated Load Accumulated flow or load multiplied by the delivery fraction."
+    },
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Incremental Flow or Delivered Incremental Load</b><br/> Incremental flow or load multiplied by the delivery fraction.\n                            </p>",
+      "label": "Delivered Incremental Flow or Delivered Incremental Load",
+      "text": "Delivered Incremental Flow or Delivered Incremental Load Incremental flow or load multiplied by the delivery fraction."
+    },
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Accumulated Yield</b><br/> The Delivered Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet or total of the\n                                \"grouped by\" area. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square\n                                kilometer per year.\n\n                            </p>",
+      "label": "Delivered Accumulated Yield",
+      "text": "Delivered Accumulated Yield The Delivered Accumulated Flow or Load divided by the total drainage area upstream of the reach outlet or total of the \"grouped by\" area. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+    },
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivered Incremental Yield</b><br/> The Delivered Incremental Flow or Load divided by the incremental drainage area of the reach. Units are millimeters per\n                                year, kilograms per square kilometer per year or metric tons per square kilometer per year.\n                            </p>",
+      "label": "Delivered Incremental Yield",
+      "text": "Delivered Incremental Yield The Delivered Incremental Flow or Load divided by the incremental drainage area of the reach. Units are millimeters per year, kilograms per square kilometer per year or metric tons per square kilometer per year."
+    },
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Concentration</b><br /> The Accumulated Load divided by the Accumulated Flow. This should be interpreted as the mean-annual flow-weighted\n                                concentration. Units are milligrams per liter.\n                            </p>",
+      "label": "Concentration",
+      "text": "Concentration The Accumulated Load divided by the Accumulated Flow. This should be interpreted as the mean-annual flow-weighted concentration. Units are milligrams per liter."
+    },
+    {
+      "originalHtml": "<p class=\"p-meta p-light fullwidth\">\n                                <b>Delivery Fraction (definition)</b><br /> The fraction of the flow or load leaving a reach that is not attenuated\n                                or removed by natural processes during\n                                downstream transport to a specified downstream target reach. A delivery fraction of 1 indicates that 100 percent of\n                                the\n                                flow or load leaving the reach is delivered to the downstream target.\n                                <br /> For delivered results shown here, the downstream targets represent the South Atlantic coast and the Gulf of\n                                America coast of the US.\n                            </p>",
+      "label": "Delivery Fraction (definition)",
+      "text": "Delivery Fraction (definition) The fraction of the flow or load leaving a reach that is not attenuated or removed by natural processes during downstream transport to a specified downstream target reach. A delivery fraction of 1 indicates that 100 percent of the flow or load leaving the reach is delivered to the downstream target. For delivered results shown here, the downstream targets represent the South Atlantic coast and the Gulf of America coast of the US."
+    }
+  ],
+  "calibrationFieldResolution": {
+    "nitrogen": {
+      "ACTUAL": {
+        "label": "Beale or Fluxmaster Estimated TN Load",
+        "unit": "kg/year"
+      },
+      "PLOAD_TOTA": {
+        "label": "SPARROW Estimated TN Load",
+        "unit": "kg/year"
+      }
+    },
+    "phosphorus": {
+      "ACTUAL": {
+        "label": "Beale or Fluxmaster Estimated TP Load",
+        "unit": "kg/year"
+      },
+      "PLOAD_TOTA": {
+        "label": "SPARROW Estimated TP Load",
+        "unit": "kg/year"
+      }
+    },
+    "sediment": {
+      "ACTUAL_MT": {
+        "label": "Beale or Fluxmaster Estimated SSC or TSS Load",
+        "unit": "metric_tonnes/year"
+      },
+      "PLOAD_MT": {
+        "label": "SPARROW Estimated SSC Load",
+        "unit": "metric_tonnes/year"
+      },
+      "TSS_CONV": {
+        "label": "SPARROW Estimated Factor for converting TSS to SSC",
+        "interpretation": "The popup calls this a factor but retained values are log coefficients; use original report equation3 as explicitly derived context, not multiplication by the negative stored value."
+      },
+      "caseNote": "Publisher popup property spellings use mixed case; received schema uses uppercase. Exact original names are preserved; correspondence is explicitly case-matched."
+    }
+  },
+  "scope": "Only original catchment layers0,9,27. Do not use HUC/state aggregate alternate source-key definitions for these catchments."
+}
