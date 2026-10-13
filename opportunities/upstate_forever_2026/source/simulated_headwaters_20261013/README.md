@@ -58,6 +58,8 @@ The restored project is checked for its selected completed runs, delivery, both 
 
 The owner-directed build interval ends **13 October 2026 at 14:00 UTC / 10:00 Eastern**. The executing owner preserves completed work and the current saved stage at that cutoff.
 
+The maintained CLI arms that cutoff in its own main process and checks it before every phase. SIGINT, the cutoff and a handled SIGTERM preserve the original interrupted phase, completed native stages and source/run identities; the CLI returns exit status 130. `demo-checkpoint.json` beside `demo-receiving.json` records the actual stopped stage, retained selection and existing archive/reopen coordinates. It starts no continuation automatically. A later continuation requires a new explicit owner request and uses the same Workspace and retained receipt. Existing process timers and deliberately ignored SIGTERM handlers are preserved; a conflicting active timer must be composed by its existing process owner before this command starts.
+
 ## Reproduce the retained inputs
 
 `generate-inputs.mjs` exports the pure deterministic `buildInputs()` function. It preserves every source cell, geometry and declared assumption in the original recipe:
