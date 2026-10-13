@@ -18,7 +18,7 @@ from .model_selection import run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v18-original-source-admission"
+REPORT_VERSION = "upstate.scientific-report/v19-original-source-readable-layout"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -1195,6 +1195,8 @@ def report_pdf(path, title, sections, *, contact, source_records,
     styles["BodyText"].fontName = "Helvetica"
     styles["BodyText"].fontSize = 9
     styles["BodyText"].leading = 13
+    styles["Heading2"].keepWithNext = True
+    styles["Heading3"].keepWithNext = True
     cell_style = ParagraphStyle("ScientificTable", parent=styles["BodyText"],
                                 fontSize=8, leading=10, splitLongWords=1)
     story = [Paragraph(escape(str(title)), styles["Title"]), Spacer(1, .15 * inch)]
@@ -1234,18 +1236,24 @@ def report_pdf(path, title, sections, *, contact, source_records,
                         break
             yield target, label
 
-    def append(block):
+    def append(block, section_heading=None):
         if isinstance(block, dict) and block.get("kind") == "figure":
             from .scientific_figures import panel_drawings
             figure = _figure(block, Path(path).parent)
+            heading = [paragraph(section_heading, styles["Heading2"])] if section_heading else []
             if figure.get("title"):
-                story.append(paragraph(figure["title"], styles["Heading3"]))
+                heading.append(paragraph(figure["title"], styles["Heading3"]))
             drawings = list(panel_drawings(figure["spec"], 7.1 * inch))
             if not drawings:
                 raise ValueError("Scientific figure contains no native report panels")
-            for drawing in drawings[:-1]:
-                story.extend([drawing, Spacer(1, .08 * inch)])
-            story.append(KeepTogether([
+            # A title travels with its first plotted panel, not an empty page edge.
+            if len(drawings) > 1:
+                story.append(KeepTogether(heading + [drawings[0]]))
+                story.append(Spacer(1, .08 * inch))
+                for drawing in drawings[1:-1]:
+                    story.extend([drawing, Spacer(1, .08 * inch)])
+                heading = []
+            story.append(KeepTogether(heading + [
                 drawings[-1], Spacer(1, .05 * inch), paragraph(figure["caption"]),
             ]))
         elif isinstance(block, dict) and block.get("kind") == "links":
@@ -1265,8 +1273,15 @@ def report_pdf(path, title, sections, *, contact, source_records,
         story.append(Spacer(1, .08 * inch))
 
     for heading, blocks in sections:
-        story.append(paragraph(heading, styles["Heading2"]))
-        for block in blocks:
+        # The section heading and first figure are a single page-aware unit.
+        # Explicit grouping avoids a nested KeepTogether leaving the outer title.
+        if blocks and isinstance(blocks[0], dict) and blocks[0].get("kind") == "figure":
+            append(blocks[0], section_heading=heading)
+            remaining = blocks[1:]
+        else:
+            story.append(paragraph(heading, styles["Heading2"]))
+            remaining = blocks
+        for block in remaining:
             append(block)
     story.append(paragraph("Source editions", styles["Heading2"]))
     append(_source_block(source_records))
@@ -1306,7 +1321,11 @@ def _html_block(block, *, figure_images=None):
         value = _cell(value)
         if isinstance(value, dict):
             return '<a href="' + html_escape(value["href"], quote=True) + '">' + html_escape(value["label"]).replace("\n", "<br>") + "</a>"
-        return html_escape(value).replace("\n", "<br>")
+        escaped = html_escape(value).replace("\n", "<br>")
+        import re
+        if re.fullmatch(r"[+−-]?[0-9][0-9,]*(?:\.[0-9]+)?(?:[eE][+−-]?[0-9]+)?%?", value.strip()):
+            return '<span class="scientific-number">' + escaped + '</span>'
+        return escaped
     if isinstance(block, dict) and block.get("kind") == "figure":
         figure = _figure(block)
         title = ("<strong>" + cell(figure["title"]) + "</strong> "
@@ -1402,11 +1421,11 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
         "*{box-sizing:border-box}body{margin:0;background:#fff;color:#171717;font:15px/1.5 Arial,sans-serif}"
         "main{max-width:1120px;margin:auto;padding:32px}h1{font-size:30px;line-height:1.2}"
         "h2{font-size:21px;border-bottom:1px solid #777;padding-bottom:8px;margin-top:32px}"
-        "a{color:inherit;text-decoration:underline}nav{border:1px solid #aaa;padding:12px 20px}"
+        "a{color:inherit;text-decoration:underline;overflow-wrap:anywhere}li{overflow-wrap:anywhere}nav{border:1px solid #aaa;padding:12px 20px}"
         "nav ol{columns:2;margin:8px 0;padding-left:20px}section{scroll-margin-top:20px}"
-        "p{max-width:95ch;overflow-wrap:anywhere}.table-wrap{overflow-x:auto;margin:16px 0}"
+        "p{max-width:95ch;overflow-wrap:anywhere}.table-wrap{overflow-x:auto;max-width:100%;margin:16px 0;overscroll-behavior-x:contain}"
         "table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;"
-        "padding:8px;border-bottom:1px solid #ccc;overflow-wrap:anywhere}th{background:#eee;border-bottom:1px solid #444}"
+        "padding:8px;border-bottom:1px solid #ccc;overflow-wrap:normal;word-break:normal}.scientific-number{white-space:nowrap;font-variant-numeric:tabular-nums}th{background:#eee;border-bottom:1px solid #444}"
         "caption{text-align:left;margin-bottom:8px}.scientific-figure{margin:20px 0}"
         ".scientific-figure img{display:block;max-width:100%;height:auto}"
         ".scientific-figure figcaption{margin-top:8px;font-size:13px;max-width:95ch}"
