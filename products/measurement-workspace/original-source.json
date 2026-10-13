@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.measurement-workspace-source.v1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
-  "sourceCommit": "a86893e4b783cc7e8e824451904e1390ea5eea7b",
+  "sourceCommit": "d61a1af14f5b5f8f6ad8f4d1b1729cd9ba9eac68",
   "description": "Exact original Node scientific service, complete browser source, native archive helpers, original observed-load kernel, public station receiving input and selected operating guides. No private customer workspace, credentials or commercial documents.",
   "files": [
     {
@@ -126,9 +126,9 @@
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/intake-receiving.mjs",
-      "bytes": 12704,
-      "sha256": "e3310a8956847ce529d18503a07baa098151bbcb7b50eef3d46541556a2180f2",
-      "gitBlob": "d2c972ae10dac346c361b47b0b7b315f717b19fb"
+      "gitBlob": "1e088cd094841524038e63b08d48eb50c1f93de6",
+      "bytes": 12732,
+      "sha256": "1a5f9aaa3888709cea03d1fb5ae9872ffeba94a7738e9ab1a37ac71613a319f8"
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/intake.mjs",
@@ -396,9 +396,9 @@
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/web/intake.mjs",
-      "bytes": 25206,
-      "sha256": "eeae911c9e7f75998978ab8d0bddb6749b4c81673dae8ee429bd4425f1ec58eb",
-      "gitBlob": "b0fe0cb113a434fba1f60f98f69676f4856dd030"
+      "gitBlob": "7b80c5fe6c9c2118ad30200f18da76a02c18bce3",
+      "bytes": 25515,
+      "sha256": "9cfeb6c29bee0e861ac6303b6c2d69235c0795a9466e34acec429e8346d10bc0"
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/web/large_files.mjs",
@@ -450,9 +450,9 @@
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/web/workspace.css",
-      "bytes": 17087,
-      "sha256": "55479cfae4a111c3974acff0f4a8be31b77d3ba173dee38b948b22fac9d4c2a0",
-      "gitBlob": "d8343e8946e3af25e7442b7f2dd299a205d84a26"
+      "gitBlob": "fc31b221befcdd72d04ec4b567b8b3478eb7c499",
+      "bytes": 17146,
+      "sha256": "d91324b26dab37fb8f0e41fc7b551dc46f0ad3dadce8aa3708b8e5f4cfa21b54"
     },
     {
       "path": "opportunities/upstate_forever_2026/measurement_workspace/web/workspace.js",

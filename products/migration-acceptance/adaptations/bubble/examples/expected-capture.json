@@ -1,0 +1,360 @@
+{
+  "schema": "bubble.capture.v1",
+  "operationId": "authored-bubble-expected-20261013",
+  "state": "complete",
+  "configuration": {
+    "schema": "bubble.capture-config.v1",
+    "operationId": "authored-bubble-expected-20261013",
+    "endpoint": {
+      "origin": "https://example-expected.bubbleapps.io",
+      "versionPath": "/version-test"
+    },
+    "authEnv": "BUBBLE_EXPECTED_TOKEN",
+    "plan": "ordinary",
+    "consistency": {
+      "mode": "observed-interval"
+    },
+    "types": [
+      {
+        "id": "organizations",
+        "typeName": "organizations",
+        "scope": {
+          "population": "Explicit authored organizations roster; no customer or API request",
+          "coverage": "all-live",
+          "inactive": "Both authored active and inactive rows retained",
+          "deleted": "not-observed-by-list"
+        },
+        "partitioning": {
+          "mode": "single",
+          "populationCoverage": "complete-declared",
+          "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+        },
+        "partitions": [
+          {
+            "id": "all",
+            "constraints": [],
+            "sort_field": "Created Date",
+            "descending": false,
+            "additional_sort_fields": [
+              {
+                "sort_field": "_id",
+                "descending": false
+              }
+            ],
+            "expectedCount": {
+              "value": 2,
+              "source": "examples/README.md#authored-record-roster",
+              "evidence": "Exact authored full roster retained in this capture body."
+            }
+          }
+        ]
+      },
+      {
+        "id": "people",
+        "typeName": "people",
+        "scope": {
+          "population": "Explicit authored people roster; no customer or API request",
+          "coverage": "all-live",
+          "inactive": "Both authored active and inactive rows retained",
+          "deleted": "not-observed-by-list"
+        },
+        "partitioning": {
+          "mode": "single",
+          "populationCoverage": "complete-declared",
+          "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+        },
+        "partitions": [
+          {
+            "id": "all",
+            "constraints": [],
+            "sort_field": "Created Date",
+            "descending": false,
+            "additional_sort_fields": [
+              {
+                "sort_field": "_id",
+                "descending": false
+              }
+            ],
+            "expectedCount": {
+              "value": 2,
+              "source": "examples/README.md#authored-record-roster",
+              "evidence": "Exact authored full roster retained in this capture body."
+            }
+          }
+        ]
+      },
+      {
+        "id": "cases",
+        "typeName": "cases",
+        "scope": {
+          "population": "Explicit authored cases roster; no customer or API request",
+          "coverage": "all-live",
+          "inactive": "Both authored active and inactive rows retained",
+          "deleted": "not-observed-by-list"
+        },
+        "partitioning": {
+          "mode": "single",
+          "populationCoverage": "complete-declared",
+          "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+        },
+        "partitions": [
+          {
+            "id": "all",
+            "constraints": [],
+            "sort_field": "Created Date",
+            "descending": false,
+            "additional_sort_fields": [
+              {
+                "sort_field": "_id",
+                "descending": false
+              }
+            ],
+            "expectedCount": {
+              "value": 2,
+              "source": "examples/README.md#authored-record-roster",
+              "evidence": "Exact authored full roster retained in this capture body."
+            }
+          }
+        ]
+      },
+      {
+        "id": "documents",
+        "typeName": "documents",
+        "scope": {
+          "population": "Explicit authored documents roster; no customer or API request",
+          "coverage": "all-live",
+          "inactive": "Both authored active and inactive rows retained",
+          "deleted": "not-observed-by-list"
+        },
+        "partitioning": {
+          "mode": "single",
+          "populationCoverage": "complete-declared",
+          "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+        },
+        "partitions": [
+          {
+            "id": "all",
+            "constraints": [],
+            "sort_field": "Created Date",
+            "descending": false,
+            "additional_sort_fields": [
+              {
+                "sort_field": "_id",
+                "descending": false
+              }
+            ],
+            "expectedCount": {
+              "value": 2,
+              "source": "examples/README.md#authored-record-roster",
+              "evidence": "Exact authored full roster retained in this capture body."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "startedAt": "2026-10-13T00:10:00Z",
+  "completedAt": "2026-10-13T00:13:00Z",
+  "consistency": {
+    "mode": "observed-interval"
+  },
+  "types": [
+    {
+      "id": "organizations",
+      "partitions": [
+        {
+          "id": "all",
+          "pages": [
+            {
+              "request": {
+                "cursor": 0,
+                "limit": 100,
+                "exclude_remaining": false,
+                "selectionSha256": "5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c"
+              },
+              "status": 200,
+              "receivedAt": "2026-10-13T00:11:00Z",
+              "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"org-target-100\",\"organization_code\":\"ORG-N\",\"name\":\"Example North Services\",\"region\":\"North\",\"enabled\":true},{\"_id\":\"org-target-200\",\"organization_code\":\"ORG-S\",\"name\":\"Example South Services\",\"region\":\"South\",\"enabled\":true}]}}",
+              "bytes": 295,
+              "sha256": "ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7"
+            }
+          ],
+          "countBefore": {
+            "request": {
+              "cursor": 0,
+              "limit": 100,
+              "exclude_remaining": false,
+              "selectionSha256": "5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c"
+            },
+            "status": 200,
+            "receivedAt": "2026-10-13T00:11:00Z",
+            "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"org-target-100\",\"organization_code\":\"ORG-N\",\"name\":\"Example North Services\",\"region\":\"North\",\"enabled\":true},{\"_id\":\"org-target-200\",\"organization_code\":\"ORG-S\",\"name\":\"Example South Services\",\"region\":\"South\",\"enabled\":true}]}}",
+            "bytes": 295,
+            "sha256": "ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7"
+          },
+          "countAfter": {
+            "request": {
+              "cursor": 0,
+              "limit": 100,
+              "exclude_remaining": false,
+              "selectionSha256": "5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c"
+            },
+            "status": 200,
+            "receivedAt": "2026-10-13T00:12:00Z",
+            "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"org-target-100\",\"organization_code\":\"ORG-N\",\"name\":\"Example North Services\",\"region\":\"North\",\"enabled\":true},{\"_id\":\"org-target-200\",\"organization_code\":\"ORG-S\",\"name\":\"Example South Services\",\"region\":\"South\",\"enabled\":true}]}}",
+            "bytes": 295,
+            "sha256": "ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7"
+          }
+        }
+      ]
+    },
+    {
+      "id": "people",
+      "partitions": [
+        {
+          "id": "all",
+          "pages": [
+            {
+              "request": {
+                "cursor": 0,
+                "limit": 100,
+                "exclude_remaining": false,
+                "selectionSha256": "27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e"
+              },
+              "status": 200,
+              "receivedAt": "2026-10-13T00:11:00Z",
+              "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"person-target-100\",\"member_code\":\"P-001\",\"name\":\"Example Person A\",\"organization\":\"org-target-100\",\"allowed_organizations\":[\"org-target-100\",\"org-target-200\"],\"email\":null,\"created_at\":\"2026-10-01T09:00:00Z\"},{\"_id\":\"person-target-200\",\"member_code\":\"P-002\",\"name\":\"Example Person B\",\"organization\":\"org-target-200\",\"allowed_organizations\":[\"org-target-200\"],\"created_at\":\"2026-10-02T10:00:00Z\"}]}}",
+              "bytes": 465,
+              "sha256": "e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837"
+            }
+          ],
+          "countBefore": {
+            "request": {
+              "cursor": 0,
+              "limit": 100,
+              "exclude_remaining": false,
+              "selectionSha256": "27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e"
+            },
+            "status": 200,
+            "receivedAt": "2026-10-13T00:11:00Z",
+            "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"person-target-100\",\"member_code\":\"P-001\",\"name\":\"Example Person A\",\"organization\":\"org-target-100\",\"allowed_organizations\":[\"org-target-100\",\"org-target-200\"],\"email\":null,\"created_at\":\"2026-10-01T09:00:00Z\"},{\"_id\":\"person-target-200\",\"member_code\":\"P-002\",\"name\":\"Example Person B\",\"organization\":\"org-target-200\",\"allowed_organizations\":[\"org-target-200\"],\"created_at\":\"2026-10-02T10:00:00Z\"}]}}",
+            "bytes": 465,
+            "sha256": "e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837"
+          },
+          "countAfter": {
+            "request": {
+              "cursor": 0,
+              "limit": 100,
+              "exclude_remaining": false,
+              "selectionSha256": "27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e"
+            },
+            "status": 200,
+            "receivedAt": "2026-10-13T00:12:00Z",
+            "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"person-target-100\",\"member_code\":\"P-001\",\"name\":\"Example Person A\",\"organization\":\"org-target-100\",\"allowed_organizations\":[\"org-target-100\",\"org-target-200\"],\"email\":null,\"created_at\":\"2026-10-01T09:00:00Z\"},{\"_id\":\"person-target-200\",\"member_code\":\"P-002\",\"name\":\"Example Person B\",\"organization\":\"org-target-200\",\"allowed_organizations\":[\"org-target-200\"],\"created_at\":\"2026-10-02T10:00:00Z\"}]}}",
+            "bytes": 465,
+            "sha256": "e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cases",
+      "partitions": [
+        {
+          "id": "all",
+          "pages": [
+            {
+              "request": {
+                "cursor": 0,
+                "limit": 100,
+                "exclude_remaining": false,
+                "selectionSha256": "20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc"
+              },
+              "status": 200,
+              "receivedAt": "2026-10-13T00:11:00Z",
+              "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"case-target-100\",\"case_code\":\"CASE-001\",\"organization\":\"org-target-100\",\"person\":\"person-target-100\",\"amount\":\"1234.49\",\"status\":\"open\",\"opened_date\":\"2026-10-01\",\"closed_date\":null},{\"_id\":\"case-target-200\",\"case_code\":\"CASE-002\",\"organization\":\"org-target-200\",\"person\":\"person-target-200\",\"amount\":\"0.00\",\"status\":\"closed\",\"opened_date\":\"2026-10-02\",\"closed_date\":\"2026-10-10\"}]}}",
+              "bytes": 450,
+              "sha256": "8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b"
+            }
+          ],
+          "countBefore": {
+            "request": {
+              "cursor": 0,
+              "limit": 100,
+              "exclude_remaining": false,
+              "selectionSha256": "20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc"
+            },
+            "status": 200,
+            "receivedAt": "2026-10-13T00:11:00Z",
+            "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"case-target-100\",\"case_code\":\"CASE-001\",\"organization\":\"org-target-100\",\"person\":\"person-target-100\",\"amount\":\"1234.49\",\"status\":\"open\",\"opened_date\":\"2026-10-01\",\"closed_date\":null},{\"_id\":\"case-target-200\",\"case_code\":\"CASE-002\",\"organization\":\"org-target-200\",\"person\":\"person-target-200\",\"amount\":\"0.00\",\"status\":\"closed\",\"opened_date\":\"2026-10-02\",\"closed_date\":\"2026-10-10\"}]}}",
+            "bytes": 450,
+            "sha256": "8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b"
+          },
+          "countAfter": {
+            "request": {
+              "cursor": 0,
+              "limit": 100,
+              "exclude_remaining": false,
+              "selectionSha256": "20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc"
+            },
+            "status": 200,
+            "receivedAt": "2026-10-13T00:12:00Z",
+            "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"case-target-100\",\"case_code\":\"CASE-001\",\"organization\":\"org-target-100\",\"person\":\"person-target-100\",\"amount\":\"1234.49\",\"status\":\"open\",\"opened_date\":\"2026-10-01\",\"closed_date\":null},{\"_id\":\"case-target-200\",\"case_code\":\"CASE-002\",\"organization\":\"org-target-200\",\"person\":\"person-target-200\",\"amount\":\"0.00\",\"status\":\"closed\",\"opened_date\":\"2026-10-02\",\"closed_date\":\"2026-10-10\"}]}}",
+            "bytes": 450,
+            "sha256": "8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b"
+          }
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "partitions": [
+        {
+          "id": "all",
+          "pages": [
+            {
+              "request": {
+                "cursor": 0,
+                "limit": 100,
+                "exclude_remaining": false,
+                "selectionSha256": "dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328"
+              },
+              "status": 200,
+              "receivedAt": "2026-10-13T00:11:00Z",
+              "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"doc-target-100\",\"document_code\":\"DOC-001\",\"case\":\"case-target-100\",\"name\":\"Example intake attachment\",\"asset\":{\"url\":\"https://example.org/authored/intake.pdf\",\"name\":\"intake.pdf\"},\"enabled\":true},{\"_id\":\"doc-target-200\",\"document_code\":\"DOC-002\",\"case\":\"case-target-200\",\"name\":\"Example closure attachment\",\"asset\":null,\"enabled\":false}]}}",
+              "bytes": 406,
+              "sha256": "5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165"
+            }
+          ],
+          "countBefore": {
+            "request": {
+              "cursor": 0,
+              "limit": 100,
+              "exclude_remaining": false,
+              "selectionSha256": "dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328"
+            },
+            "status": 200,
+            "receivedAt": "2026-10-13T00:11:00Z",
+            "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"doc-target-100\",\"document_code\":\"DOC-001\",\"case\":\"case-target-100\",\"name\":\"Example intake attachment\",\"asset\":{\"url\":\"https://example.org/authored/intake.pdf\",\"name\":\"intake.pdf\"},\"enabled\":true},{\"_id\":\"doc-target-200\",\"document_code\":\"DOC-002\",\"case\":\"case-target-200\",\"name\":\"Example closure attachment\",\"asset\":null,\"enabled\":false}]}}",
+            "bytes": 406,
+            "sha256": "5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165"
+          },
+          "countAfter": {
+            "request": {
+              "cursor": 0,
+              "limit": 100,
+              "exclude_remaining": false,
+              "selectionSha256": "dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328"
+            },
+            "status": 200,
+            "receivedAt": "2026-10-13T00:12:00Z",
+            "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"doc-target-100\",\"document_code\":\"DOC-001\",\"case\":\"case-target-100\",\"name\":\"Example intake attachment\",\"asset\":{\"url\":\"https://example.org/authored/intake.pdf\",\"name\":\"intake.pdf\"},\"enabled\":true},{\"_id\":\"doc-target-200\",\"document_code\":\"DOC-002\",\"case\":\"case-target-200\",\"name\":\"Example closure attachment\",\"asset\":null,\"enabled\":false}]}}",
+            "bytes": 406,
+            "sha256": "5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165"
+          }
+        }
+      ]
+    }
+  ],
+  "observation": "AUTHORED EXAMPLE: bodies were created from the explicit fictional roster. No Bubble account was accessed."
+}

@@ -334,8 +334,8 @@
     },
     {
       "path": "measurement_workspace/engine/intake-receiving.mjs",
-      "bytes": 12704,
-      "sha256": "e3310a8956847ce529d18503a07baa098151bbcb7b50eef3d46541556a2180f2"
+      "bytes": 12732,
+      "sha256": "1a5f9aaa3888709cea03d1fb5ae9872ffeba94a7738e9ab1a37ac71613a319f8"
     },
     {
       "path": "measurement_workspace/engine/intake.mjs",
@@ -579,8 +579,8 @@
     },
     {
       "path": "measurement_workspace/web/intake.mjs",
-      "bytes": 25206,
-      "sha256": "eeae911c9e7f75998978ab8d0bddb6749b4c81673dae8ee429bd4425f1ec58eb"
+      "bytes": 25515,
+      "sha256": "9cfeb6c29bee0e861ac6303b6c2d69235c0795a9466e34acec429e8346d10bc0"
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
@@ -619,8 +619,8 @@
     },
     {
       "path": "measurement_workspace/web/workspace.css",
-      "bytes": 17087,
-      "sha256": "55479cfae4a111c3974acff0f4a8be31b77d3ba173dee38b948b22fac9d4c2a0"
+      "bytes": 17146,
+      "sha256": "d91324b26dab37fb8f0e41fc7b551dc46f0ad3dadce8aa3708b8e5f4cfa21b54"
     },
     {
       "path": "measurement_workspace/web/workspace.js",
@@ -1034,8 +1034,8 @@
     },
     {
       "path": "operator/web/measured_intake.mjs",
-      "bytes": 25206,
-      "sha256": "eeae911c9e7f75998978ab8d0bddb6749b4c81673dae8ee429bd4425f1ec58eb"
+      "bytes": 25515,
+      "sha256": "9cfeb6c29bee0e861ac6303b6c2d69235c0795a9466e34acec429e8346d10bc0"
     },
     {
       "path": "operator/web/measured_large_files.mjs",
@@ -1054,8 +1054,8 @@
     },
     {
       "path": "operator/web/measured_observations.css",
-      "bytes": 17087,
-      "sha256": "55479cfae4a111c3974acff0f4a8be31b77d3ba173dee38b948b22fac9d4c2a0"
+      "bytes": 17146,
+      "sha256": "d91324b26dab37fb8f0e41fc7b551dc46f0ad3dadce8aa3708b8e5f4cfa21b54"
     },
     {
       "path": "operator/web/measured_observations.mjs",
@@ -1536,7 +1536,8 @@
       "149c076998da792e0fc17177c770f175d2d94d440d4e2ffa4f2e08aa6c44a99d",
       "813f90ac8a6a661f76ef0a3514fe7a781b17267203fa272acc06b37f05b24856",
       "2d65d43b394d96482aae53c506891552d3ee24dd9ebf926670f12a24ba0fdf36",
-      "1ab1079adbe979b3bff352458d632f0a5ad3eba52a7b376f22e1d3bffe2e6220"
+      "1ab1079adbe979b3bff352458d632f0a5ad3eba52a7b376f22e1d3bffe2e6220",
+      "55479cfae4a111c3974acff0f4a8be31b77d3ba173dee38b948b22fac9d4c2a0"
     ],
     "measurement_workspace/web/workspace.js": [
       "e29054f855bc5da1d2c13707364e72a34cd574f42c9dde359bb7be5a6b354dd1",
@@ -1552,7 +1553,8 @@
       "149c076998da792e0fc17177c770f175d2d94d440d4e2ffa4f2e08aa6c44a99d",
       "813f90ac8a6a661f76ef0a3514fe7a781b17267203fa272acc06b37f05b24856",
       "2d65d43b394d96482aae53c506891552d3ee24dd9ebf926670f12a24ba0fdf36",
-      "1ab1079adbe979b3bff352458d632f0a5ad3eba52a7b376f22e1d3bffe2e6220"
+      "1ab1079adbe979b3bff352458d632f0a5ad3eba52a7b376f22e1d3bffe2e6220",
+      "55479cfae4a111c3974acff0f4a8be31b77d3ba173dee38b948b22fac9d4c2a0"
     ],
     "operator/web/measured_observations.mjs": [
       "e29054f855bc5da1d2c13707364e72a34cd574f42c9dde359bb7be5a6b354dd1",
@@ -1779,6 +1781,9 @@
     ],
     "operator/web/measured_native_observations.mjs": [
       "7ac70571b1f9449e5e2337e71fe104f0d4cdf3b691e47b7dba812fce046f212a"
+    ],
+    "measurement_workspace/engine/intake-receiving.mjs": [
+      "e3310a8956847ce529d18503a07baa098151bbcb7b50eef3d46541556a2180f2"
     ]
   },
   "requires": [
