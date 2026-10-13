@@ -96,13 +96,13 @@ Import the completed published inventory in addition to the same retained monito
 
 Run from the existing application directory:
 
-    python -m model.station_study --workspace WORKSPACE \\
-      --create-workspace --build \\
-      --study-id upper-savannah-published-assessments-2024-2026-159 \\
-      --source-manifest MONITORING/sources.json \\
-      --source-manifest WQP_SUPPLEMENT/sources.json \\
-      --source-manifest ORIGINAL_DOMAIN/sources.json \\
-      --source-manifest PUBLISHED_INVENTORY/sources.json \\
+    python -m model.station_study --workspace WORKSPACE \
+      --create-workspace --build \
+      --study-id upper-savannah-published-assessments-2024-2026-159 \
+      --source-manifest MONITORING/sources.json \
+      --source-manifest WQP_SUPPLEMENT/sources.json \
+      --source-manifest ORIGINAL_DOMAIN/sources.json \
+      --source-manifest PUBLISHED_INVENTORY/sources.json \
       --receive-workspace SECOND_WORKSPACE --create-receiving-workspace
 
 The existing workspace creation, native build, portable archive and receiving commands are shared by both studies. This selection requires 192 records at 159 exact station IDs, including both published editions. It resolves original inputs by their retained byte identity. The 2024 records carry their original assessment cause/use and published HUC; the July 2026 records also carry TMDL support status, report and approval date. Five of the retained eight WQP stations belong to this published inventory. The accepted draft-study inventory overlaps the published inventory at 82 station IDs; all remaining IDs are matched against the same complete retained source layer.
@@ -112,3 +112,72 @@ The original station table, candidate choices, mapped watershed filter and full 
 Each assessment record retains a publisher_huc12 and separately receives geographic_huc12s plus publisher_huc_relation. Multiple publisher assignments are retained, including the two original RS-06190 assignments. The native receive command compares the original station identities, mapped memberships and assessment records after reopening.
 
 The build creates assessment_links.csv, assessment_sites.geojson, and spatial-sources.json alongside the existing full station outputs. Both point layers join the maintained Spatial review source catalogue automatically. Complete original inventory rows, source editions and candidate identities remain available in the panel, report and portable archive.
+
+## Use the original normalized JSON banks directly
+
+The published 159-site preset now prefers both complete retained JSON banks when
+they are imported. It preserves the existing accepted CSV inventory as a fallback.
+The normal station build and receiving operation remain the same.
+
+Import the existing full producer source manifest from F0C8KECMA4V, containing:
+
+- inputs/303d-2024-pdf-table-normalized.json, 2,674,649 bytes,
+  SHA256 69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c.
+- inputs/tmdl-attainment-native-20260728.json, 1,260,570 bytes,
+  SHA256 cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522.
+
+Each original body has schema upstate.water-quality-assessments/v1. The exact
+retained 217 original domain HUC12 values filter records by their publisher huc12.
+This selects 108 published 2024 records and 84 July 2026 records: 192 distinct
+source records at 159 stations. Both complete statewide bodies and every declared
+source companion travel in the geography ZIP; selected rows are not rewritten as
+a second CSV source.
+
+Every row reference retains the original records[index], JSON pointer, native
+record id, publisher source ID/hash and the imported normalized body SHA. These
+are different identity layers. Original source_row and source_page remain source
+metadata: all 813 TMDL records have source_row=1, so those fields cannot identify
+or deduplicate records. The original 2024 source has multiple cause records for
+some source rows. Every record remains distinct.
+
+The existing inventory selector accepts known original JSON inventories as well
+as CSV. Source references can specify typed where or where_in filters against
+actual original fields. The prepared study writes its exact HUC selection into
+the immutable source reference. Additional point sources and location choices
+continue to use the existing native station path.
+
+### Complete the published study's two additional station locations
+
+The published 159-site study selects 152 sites from the original SCDES705 source,
+five from the existing WQP8 supplement, and RS-21038 plus RS-22075 from the
+additional official WQP station-page source. The original 87-site preset is unchanged.
+The additional source ID is scdes-wqp-assessment159-additional-two-20261013;
+body wqp_two_monitoring_sites.geojson, 2,433 bytes, SHA256
+5588a64fbae5229687aef7063948083f05b5f0639dfd108ae0c3db40614677cd.
+It preserves native WQP station IDs, all reported metadata, source-page references
+and WGS84 coordinates. Its declared representation is station-page metadata with
+copied native points; it is not a downloaded publisher CSV.
+
+Run the existing complete operation with these retained source manifests:
+
+    python -m model.station_study \
+      --workspace ACTUAL_STUDY --create-workspace --build \
+      --study-id upper-savannah-published-assessments-2024-2026-159 \
+      --source-manifest MONITORING/sources.json \
+      --source-manifest WQP8/sources.json \
+      --source-manifest ORIGINAL_DOMAIN/sources.json \
+      --source-manifest ES9960_COMPLETE_ORIGINALS/sources.json \
+      --source-manifest WQP_ADDITIONAL_TWO/sources.json \
+      --receive-workspace ACTUAL_RECEIVING --create-receiving-workspace
+
+The preset binds both normalized assessment banks and the same exact original
+217 HUC selection. The source summary identifies its JSON selection and additional
+location source. The existing CSV-backed alternative uses the same additional
+point source and source-preserving native operation.
+
+The component installer also retains the accepted original CSV beside
+source/station-assessment-context/sources.json. Its original body is 111,624
+bytes with SHA256 01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7.
+This fallback manifest can be imported directly when the original statewide
+JSON banks have not yet been received. Both paths preserve the original 192
+edition-specific records and use the same three native station sources.

@@ -7,6 +7,8 @@ const number = value => Number.isFinite(value) ?
 const select = (name, values, selected='', attributes='') =>
   '<select name="'+esc(name)+'" '+attributes+'>'+values.map(([id, label]) =>
   '<option value="'+esc(id)+'" '+(id===selected?'selected':'')+'>'+esc(label)+'</option>').join('')+'</select>';
+const methodLabel=row=>row.method_label||String(row.final_method||'').replaceAll('_',' ');
+const unitLabel=value=>value==='metric_tonnes/year'?'metric tonnes/year':value;
 const field = (label, body, help='') => '<label><span>'+esc(label)+'</span>'+body+
   (help?'<small>'+esc(help)+'</small>':'')+'</label>';
 const action = (name, label, id='', extra='') => '<button type="button" data-annual-action="'+esc(name)+
@@ -18,14 +20,24 @@ const table = (heads, rows) => '<div class="annual-table"><table><thead><tr>'+
 export function createAnnualReferences(host) {
   let root=null, workspace=null, epoch=0, catalog=null, inventory=null, error='', pending=false;
   let chosen=new Map(), query='', series='', page=0, loading=null, taskSignature='';
-  let files=null, browsing=false;
-  const defaults={mode:'registered',root_id:'',path:'',load_upload_id:'',site_upload_id:'',
+  let files=null, browsing=false, inventoryRequest=0;
+  const defaults={source_edition:'f7dn436b',mode:'registered',root_id:'',path:'',load_upload_id:'',site_upload_id:'',
     huc8:'03060101, 03060102, 03060103, 03060104, 03060105, 03060106, 03060107',
     title:'USGS annual-reference selection',comparability_note:''};
-  const draft={mode:'registered', root_id:'', path:'', load_upload_id:'', site_upload_id:'',
+  const draft={source_edition:'f7dn436b',mode:'registered', root_id:'', path:'', load_upload_id:'', site_upload_id:'',
     huc8:'03060101, 03060102, 03060103, 03060104, 03060105, 03060106, 03060107',
     title:'USGS annual-reference selection', comparability_note:''};
   const current = () => host.getState()?.workspace_key;
+  const fallbackEdition={id:'f7dn436b',title:'USGS published annual estimates — F7DN436B',
+    description:'Original paired stations, final estimators, source periods and published standard errors.',
+    modes:['registered','uploads','published'],available:true};
+  const editions=()=>catalog?.source_editions||[fallbackEdition];
+  const edition=()=>editions().find(row=>row.id===draft.source_edition)||fallbackEdition;
+  function normalizeMode(){
+    const modes=edition().modes;
+    if(!modes.includes(draft.mode))draft.mode=modes[0];
+    if(draft.mode==='registered'&&!catalog?.source_roots?.length)draft.mode='published';
+  }
   const key = () => 'upstate-annual-reference:'+workspace;
   function save() {
     try { sessionStorage.setItem(key(), JSON.stringify({draft, selected:[...chosen], query, series,
@@ -58,7 +70,7 @@ export function createAnnualReferences(host) {
         if(!still(token, selected)) return;
         catalog=value;
         if(!draft.root_id && value.source_roots.length) draft.root_id=value.source_roots[0].id;
-        if(draft.mode==='registered' && !value.source_roots.length) draft.mode='published';
+        normalizeMode();
         error='';
         render();
       } catch(err) { if(still(token, selected)){error=err.message;render();} }
@@ -67,7 +79,10 @@ export function createAnnualReferences(host) {
     return loading;
   }
   async function openInventory(id) {
+    const request=++inventoryRequest;
     const value=await read('inventory', {task_id:id});
+    if(request!==inventoryRequest)return;
+    draft.source_edition=value.source_edition||'f7dn436b';normalizeMode();
     if(inventory?.task_id && inventory.task_id!==id) chosen=new Map();
     inventory=value; page=0;
     const rows=new Map(value.records.map(row=>[row.record_id,row]));
@@ -86,13 +101,16 @@ export function createAnnualReferences(host) {
   }
   function sourceForm() {
     const roots=(catalog?.source_roots || []).map(row=>[row.id,row.label]);
-    const mode=select('mode', [['registered','Use received originals'],['uploads','Use original ZIP uploads'],
-                             ['published','Receive the published originals']],draft.mode);
+    const selectedEdition=edition(),regional=selectedEdition.id==='southeast-sparrow-2012';
+    const modeLabels={registered:'Use received originals',uploads:'Use original ZIP uploads',
+      published:regional?'Use retained published targets':'Receive the published originals'};
+    const mode=select('mode',selectedEdition.modes.map(id=>[id,modeLabels[id]]),draft.mode);
     let selected='';
     if(draft.mode==='registered') {
       selected=field('Registered source folder', select('root_id',[['','Choose source folder'],...roots],draft.root_id))+
         field('Directory within that folder','<input name="path" value="'+esc(draft.path)+'">',
-          'This directory must contain the complete load_est.zip and sitegage.zip originals.')+
+          regional?'This directory must contain the complete original calibration tables, metadata and published-reach crosswalk.':
+            'This directory must contain the complete load_est.zip and sitegage.zip originals.')+
         '<div class="annual-buttons">'+action('browse','Browse directories')+'</div>';
     } else if(draft.mode==='uploads') {
       const options=bytes=>[['','Choose original ZIP'],...(catalog?.uploads || [])
@@ -101,14 +119,19 @@ export function createAnnualReferences(host) {
         field('Paired station and flow records',select('site_upload_id',options(519872),draft.site_upload_id))+
         '<p class="annual-help">Select the complete originals already added through this operator’s upload flow.</p>';
     } else {
-      selected='<p class="annual-help">The existing native queue receives the two fixed USGS source archives and their original dictionary. Completed original files are reused when the task resumes.</p>';
+      selected=regional?
+        '<p class="annual-help">Use the retained original nitrogen, phosphorus and sediment calibration tables, regional metadata and published-reach crosswalk. The native queue reuses received source files and retrieves missing originals through their published URLs.</p>':
+        '<p class="annual-help">The existing native queue receives the two fixed USGS source archives and their original dictionary. Completed original files are reused when the task resumes.</p>';
     }
-    return '<section class="section"><h2>Original annual-load source</h2><p>USGS F7DN436B publishes long-term mean annual estimates with a 2012 reference year. Its original estimator, uncertainty and sampling periods travel with each selected observation.</p>'+
-      '<div class="annual-fields">'+field('Source intake',mode)+selected+
+    return '<section class="section"><h2>Original annual-load source</h2><p>'+esc(selectedEdition.description)+
+      '</p><div class="annual-fields">'+field('Published source edition',
+      select('source_edition',editions().map(row=>[row.id,row.title]),draft.source_edition))+
+      field('Source intake',mode)+selected+
       field('Source HUC8 selection','<input name="huc8" value="'+esc(draft.huc8)+'">',
         'Use comma-separated original eight-digit HUC codes. The default covers the seven Upper Savannah HUC8s.')+
       '</div>'+directoryBrowser()+'<div class="annual-buttons">'+action('inventory','Read original station records','',
-        pending?'disabled':'class="primary"')+'</div></section>';
+        pending||selectedEdition.available===false?'disabled':'class="primary"')+'</div>'+
+      (selectedEdition.available===false?'<p class="annual-help">Receive this edition’s complete source adapter into the application to open its original tables.</p>':'')+'</section>';
   }
   function directoryBrowser() {
     if(!browsing) return '';
@@ -131,7 +154,9 @@ export function createAnnualReferences(host) {
         const open=row.action==='annual-reference.inventory' && row.state==='complete'?
           action('open-inventory','Select records',row.task_id):'';
         const calibrate=binding?action('calibrate','Open calibration',row.task_id):'';
-        return '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.task_id))+'</small></td><td>'+
+        const sourceTitle=editions().find(value=>value.id===(row.source_edition||'f7dn436b'))?.title||row.source_edition;
+        return '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.task_id))+'</small><small>'+
+          esc(sourceTitle)+'</small></td><td>'+
           esc(row.state)+(row.stage&&row.stage!=='complete'?'<small>'+esc(row.stage)+'</small>':'')+
           (row.error?'<small>'+esc(row.error.message)+'</small>':'')+'</td><td>'+
           esc(binding?String(binding.admitted_count)+' imported':counts)+'</td><td><div class="annual-buttons">'+
@@ -150,26 +175,30 @@ export function createAnnualReferences(host) {
       return '<tr><td><input type="checkbox" name="record" value="'+esc(row.record_id)+'" aria-label="Select '+
         esc(row.station_id+' '+row.series)+'" '+(selected?'checked':'')+' '+(unavailable?'disabled':'')+
         '></td><td><strong>'+esc(row.station_name||row.station_id)+'</strong><small>'+
-        esc(row.station_id)+' · flow '+esc(row.flow_station_id)+'</small><small>HUC '+esc(row.huc8.join(', '))+
+        esc(row.station_id)+(row.flow_station_id?' · flow '+esc(row.flow_station_id):'')+'</small><small>HUC '+esc(row.huc8.join(', '))+
         ' · COMID '+esc(row.comid)+'</small></td><td>'+esc(row.series.toUpperCase())+'<small>'+
-        esc(row.parameter)+'</small></td><td>'+number(row.value)+'<small>kg/year · '+esc(row.final_method)+
-        '</small><small>SE '+number(row.uncertainty?.value)+' kg/year</small></td><td>'+
+        esc(row.parameter)+'</small></td><td>'+number(row.value)+'<small>'+esc(unitLabel(row.value_unit||'kg/year'))+' · '+esc(methodLabel(row))+
+        '</small><small>'+(Number.isFinite(row.uncertainty?.value)?
+          'SE '+number(row.uncertainty.value)+' '+esc(unitLabel(row.uncertainty.unit||row.value_unit||'kg/year')):
+          'Published standard error unavailable')+'</small></td><td>'+
         esc(row.temporal_basis?.flow_start_inclusive || row.period_start || '—')+'<small>through '+
-        esc(row.temporal_basis?.flow_end_inclusive || '—')+'</small></td><td>'+
+        esc(row.temporal_basis?.flow_end_inclusive || '—')+'</small>'+
+        (row.temporal_basis?.scope==='source_global'?'<small>Published regional target horizon</small>':'')+'</td><td>'+
         (unavailable?'<p>'+esc(row.issues.join('; ') || 'No original USGS station/reach option in this row.')+'</p>':
           select('catchment',possible.map(item=>[item.id,item.label]),choice,'data-record="'+esc(row.record_id)+'"'))+
         '</td><td>'+action('record-detail','Original fields',row.record_id)+'</td></tr>';
     });
     const selected=selectedRows();
     return '<section class="section"><h2>Select original reference records</h2><p>'+
-      inventory.station_count+' stations in the selected original HUC fields. '+selected.length+
+      esc(editions().find(row=>row.id===inventory.source_edition)?.title||fallbackEdition.title)+
+      ' · '+inventory.station_count+' stations in the selected original HUC fields. '+selected.length+
       ' records selected. Each load is already an annual mass rate.</p>'+
       '<div class="annual-fields">'+field('Find a station, reach or HUC','<input name="query" value="'+esc(query)+'">')+
       field('Constituent',select('series',[['','All constituents'],['tn','Total nitrogen'],['tp','Total phosphorus'],
         ['ssc','Suspended sediment'],['tss','Total suspended solids']],series))+'</div>'+
       '<div class="annual-buttons">'+action('select-visible','Select usable records on this page')+
       action('clear-selection','Clear selection')+'</div>'+
-      table(['Use','Original station','Constituent','Published estimate','Included flow period','Catchment source',''],reviewRows)+
+      table(['Use','Original station','Constituent','Published estimate','Reference period','Catchment source',''],reviewRows)+
       '<div class="annual-buttons">'+action('previous','Previous page','',page===0?'disabled':'')+
       '<span>Page '+(page+1)+' of '+pages+' · '+filtered.length+' matching records</span>'+
       action('next','Next page','',page>=pages-1?'disabled':'')+'</div>'+
@@ -200,9 +229,11 @@ export function createAnnualReferences(host) {
     if(!row) return;
     const dialog=root.querySelector('.annual-record-dialog');
     dialog.querySelector('[data-record-content]').innerHTML='<h2>'+esc(row.station_name||row.station_id)+
-      ' · '+esc(row.series.toUpperCase())+'</h2><p>Published estimator: '+esc(row.final_method)+
+      ' · '+esc(row.series.toUpperCase())+'</h2><p>Published estimator: '+esc(methodLabel(row))+
       '. Original load field: '+esc(row.selected_load_field)+'.</p><p>'+
-      'The included source period and original water-quality dates are retained below.</p><pre>'+esc(JSON.stringify(row,null,2))+'</pre>';
+      (row.temporal_basis?.scope==='source_global'?
+        'The displayed period is the published regional calibration-target horizon. The original source record and its method attributes are retained below.':
+        'The included source period and original water-quality dates are retained below.')+'</p><pre>'+esc(JSON.stringify(row,null,2))+'</pre>';
     dialog.addEventListener('close',()=>render(),{once:true});
     dialog.showModal();
   }
@@ -239,9 +270,11 @@ export function createAnnualReferences(host) {
       if(draft.mode==='registered'&&!draft.root_id) throw Error('Choose the registered source folder.');
       if(draft.mode==='uploads'&&(!draft.load_upload_id||!draft.site_upload_id)) throw Error('Choose both original ZIP uploads.');
       pending=true;render();
-      await host.submitAction('annual-reference.inventory',{mode:draft.mode,root_id:draft.root_id,path:draft.path,
+      if(edition().available===false)throw Error('Receive the complete adapter for this source edition first.');
+      await host.submitAction('annual-reference.inventory',{source_edition:draft.source_edition,
+        mode:draft.mode,root_id:draft.root_id,path:draft.path,
         load_upload_id:draft.load_upload_id,site_upload_id:draft.site_upload_id,huc8,
-        title:'USGS annual records · '+huc8.join(', ')});
+        title:edition().title+' · '+huc8.join(', ')});
       return;
     }
     if(name==='import'){
@@ -290,9 +323,13 @@ export function createAnnualReferences(host) {
     if(name==='series'){series=element.value;page=0;save();render();return;}
     if(Object.hasOwn(draft,name)) {
       draft[name]=element.value;
+      if(name==='source_edition'){
+        inventoryRequest++;inventory=null;chosen.clear();query='';series='';page=0;
+        files=null;browsing=false;draft.mode=edition().modes[0];normalizeMode();
+      }
       if(name==='root_id'){draft.path='';files=null;browsing=false;}
       save();
-      if(['mode','root_id'].includes(name)) render();
+      if(['source_edition','mode','root_id'].includes(name)) render();
     }
   }
   function input(event) {
@@ -323,7 +360,7 @@ export function createAnnualReferences(host) {
   function detach() {
     if(root){root.removeEventListener('click',click);root.removeEventListener('change',change);root.removeEventListener('input',input);}
     root=null;workspace=null;catalog=null;inventory=null;chosen=new Map();error='';pending=false;
-    files=null;browsing=false;loading=null;taskSignature='';epoch++;
+    files=null;browsing=false;loading=null;taskSignature='';epoch++;inventoryRequest++;
   }
   return {mount,update,detach};
 }

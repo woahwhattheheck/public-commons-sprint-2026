@@ -76,6 +76,13 @@ export function mountDirectoryCorrections({root,api,download,getState,notify=()=
   libraryOffset:0,libraryPage:null,openKind:null,openId:null,record:null,changePage:null,changeOffset:0,
   pending:null,lastResponse:null,catalogue:null,view:'edit'};
  let generation=0;
+ function current(mine=generation){
+  if(S.disposed||mine!==generation){const error=new Error('This correction view is closed; reopen its retained working request.');error.name='AbortError';throw error;}
+ }
+ async function observed(work){const mine=generation;current(mine);const value=await work();current(mine);return value;}
+ const originalApi=api,originalDownload=download;
+ api=(...args)=>observed(()=>originalApi(...args));
+ download=(...args)=>observed(()=>originalDownload(...args));
  const key=()=> 'directory.corrections.working.'+S.workspaceId;
  const path=(...parts)=>'/api/directory/'+parts.map(encode).join('/');
  const section=element('section',{class:'dcw','data-directory-corrections-ready':'false'});
@@ -87,18 +94,18 @@ export function mountDirectoryCorrections({root,api,download,getState,notify=()=
    lastResponse:S.lastResponse?clone(S.lastResponse):null};
  }
  function persist(){
-  if(!S.workspaceId)return;
+  if(S.disposed||!S.workspaceId)return;
   try{sessionStorage.setItem(key(),JSON.stringify(working()));S.storageError='';}
   catch{S.storageError='The browser could not retain this complete working copy. Download working JSON before leaving.';}
  }
- function changed(){S.dirty=true;persist();}
+ function changed(){if(S.disposed)return;S.dirty=true;persist();}
  function freeze(){section.querySelectorAll('input,textarea,select,button').forEach(n=>{if(S.busy)n.disabled=true;});}
  async function task(work){
   if(S.busy||S.disposed)return;
   S.busy=true;S.error='';freeze();const mine=generation;
   try{await work();if(mine!==generation||S.disposed)return;}
-  catch(error){S.error=error?.message||String(error);notify(S.error);}
-  finally{S.busy=false;persist();if(!S.disposed)render();}
+  catch(error){if(mine===generation&&!S.disposed){S.error=error?.message||String(error);notify(S.error);}}
+  finally{if(mine===generation&&!S.disposed){S.busy=false;persist();render();}}
  }
  function button(label,work,attributes={}){
   const node=element('button',{type:'button',...attributes},label);
@@ -161,7 +168,9 @@ export function mountDirectoryCorrections({root,api,download,getState,notify=()=
   S.rowPage=await page(path('editions',S.editionId,'rows')+'?'+query);
   S.rowOffset=offset;
  }
+ function replaceEditor(){return !S.editor||confirm('Discard the unfinished row editor and open the selected original row? Save or add the current edit first to keep it.');}
  async function chooseRow(row){
+  if(!replaceEditor())return;
   need(S.editionId&&S.edition,'Choose its retained source edition.');
   const full=await api(path('editions',S.editionId,'rows',row.sourceId,row.recordId));
   const source=await api(path('sources',row.sourceId));
@@ -185,6 +194,7 @@ export function mountDirectoryCorrections({root,api,download,getState,notify=()=
   return validateEdit(edit);
  }
  async function editExisting(index){
+  if(!replaceEditor())return;
   const edit=S.edits[index];need(edit,'Select an existing ordered edit.');
   const full=await api(path('editions',S.editionId,'rows',edit.sourceId,edit.recordId));
   for(const name of ['rowSha256','resourceSha256','memberSha256'])need(full[name]===edit[name],'The original editing basis changed.');
@@ -324,10 +334,23 @@ export function mountDirectoryCorrections({root,api,download,getState,notify=()=
   }
   box.append(field('Reason for this edit',e.reason,v=>e.reason=v,{textarea:true,test:'dcw-reason'}),
    button(e.position===null?'Add reviewed edit':'Update ordered edit',async()=>{const edit=editFromEditor();if(e.position===null){need(S.edits.length<10000,'Keep at most10,000 edits.');S.edits.push(edit);}else S.edits[e.position]=edit;S.editor=null;S.originalRow=null;changed();},{'data-testid':'dcw-add-edit'}),
-   button('Close row editor',async()=>{S.editor=null;S.originalRow=null;changed();}),
+   button('Close row editor',async()=>{if(!confirm('Discard the unfinished row editor? Add or update its edit first to keep it.'))return;S.editor=null;S.originalRow=null;changed();}),
    row?details('Complete original JSON row',row.json??row):element('div'),
    button('Download complete original row',()=>download(path('sources',e.ref.sourceId,'rows',e.ref.recordId,'file'))));
   return box;
+ }
+ function moveEdit(from,to){
+  [S.edits[from],S.edits[to]]=[S.edits[to],S.edits[from]];
+  if(S.editor?.position===from)S.editor.position=to;
+  else if(S.editor?.position===to)S.editor.position=from;
+  changed();
+ }
+ function removeEdit(index){
+  if(S.editor?.position===index){
+   if(!confirm('Remove this ordered edit and discard its unfinished row editor?'))return;
+   S.editor=null;S.originalRow=null;
+  }else if(S.editor?.position!==null&&S.editor?.position>index)S.editor.position--;
+  S.edits.splice(index,1);changed();
  }
  function renderEdits(){
   const list=S.edits.slice(S.editOffset,S.editOffset+25).map((edit,i)=>({edit,index:S.editOffset+i}));
@@ -342,9 +365,9 @@ export function mountDirectoryCorrections({root,api,download,getState,notify=()=
     {label:'Edit',cell:r=>r.edit.action+' '+(r.edit.pointer??r.edit.column??'complete cells')},{label:'Reason',cell:r=>r.edit.reason},
     {label:'Review',cell:r=>element('div',{class:'dcw-actions'},[
      button('Edit',()=>editExisting(r.index),{'data-testid':'dcw-edit-'+r.index}),
-     button('Up',async()=>{[S.edits[r.index-1],S.edits[r.index]]=[S.edits[r.index],S.edits[r.index-1]];S.editor=null;changed();},{disabled:r.index===0}),
-     button('Down',async()=>{[S.edits[r.index+1],S.edits[r.index]]=[S.edits[r.index],S.edits[r.index+1]];S.editor=null;changed();},{disabled:r.index===S.edits.length-1}),
-     button('Remove',async()=>{S.edits.splice(r.index,1);S.editor=null;changed();})])}],list),
+     button('Up',async()=>moveEdit(r.index,r.index-1),{disabled:r.index===0}),
+     button('Down',async()=>moveEdit(r.index,r.index+1),{disabled:r.index===S.edits.length-1}),
+     button('Remove',async()=>removeEdit(r.index))])}],list),
    pager({total:S.edits.length,offset:S.editOffset,limit:25,rows:list,nextOffset:S.editOffset+list.length<S.edits.length?S.editOffset+list.length:null},
     async offset=>{S.editOffset=offset;}),
    button('Save complete correction plan',()=>perform('prepare',prepareBody()),{'data-testid':'dcw-prepare',disabled:!!S.pending||!!S.editor}),
@@ -390,7 +413,7 @@ export function mountDirectoryCorrections({root,api,download,getState,notify=()=
  function render(){
   if(S.disposed)return;
   const workingFile=element('input',{type:'file',accept:'.json,application/json','data-testid':'dcw-working-file','aria-label':'Open complete working correction'});
-  workingFile.addEventListener('change',()=>task(async()=>{const file=workingFile.files?.[0];if(!file)return;need(file.size<=33554432,'Choose a complete working file within32MiB.');const value=JSON.parse(await file.text());validateWorking(value,S.workspaceId);need(!S.pending,'Reconcile the exact pending request before importing another working copy.');if(S.dirty&&!confirm('Replace this working correction with the selected complete file?'))return;await restoreWorking(value);}));
+  workingFile.addEventListener('change',()=>task(async()=>{const file=workingFile.files?.[0];if(!file)return;need(file.size<=33554432,'Choose a complete working file within32MiB.');const value=JSON.parse(await observed(()=>file.text()));validateWorking(value,S.workspaceId);need(!S.pending,'Reconcile the exact pending request before importing another working copy.');if(S.dirty&&!confirm('Replace this working correction with the selected complete file?'))return;await restoreWorking(value);}));
   const status=S.error?element('p',{class:'dcw-status',role:'alert'},'Error: '+S.error):
    S.message?element('p',{class:'dcw-status',role:'status'},S.message):element('span');
   const header=element('header',{class:'dcw-header'},[
@@ -419,7 +442,7 @@ export function mountDirectoryCorrections({root,api,download,getState,notify=()=
  window.addEventListener('beforeunload',beforeUnload);
  return {
   async open(){
-   const state=await getState();need(state?.directory?.workspaceId||state?.workspaceId,'Open the original Directory workspace.');
+   const state=await observed(()=>getState());need(state?.directory?.workspaceId||state?.workspaceId,'Open the original Directory workspace.');
    S.workspaceId=state.directory?.workspaceId||state.workspaceId;S.actor=state.operatingActor||S.actor;S.catalogue=await api('/api/directory/catalogue');
    need(S.catalogue.inputSchemas?.correction_prepare,'Install the complete original correction catalogue.');
    let saved=null;try{saved=sessionStorage.getItem(key());}catch{S.storageError='Browser storage is unavailable. Download working JSON before leaving.';}
