@@ -23,6 +23,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      verify_file)
 
 from .station_assessment_context import enrich as enrich_assessments, geojson as assessment_geojson, report_section as assessment_report
+from .station_wbd_context import VERSION as WBD_CONTEXT_VERSION, enrich as enrich_wbd_context, report_section as wbd_context_report
 
 VERSION = "1.2.2"
 KIND = "station-geographies"
@@ -581,7 +582,7 @@ def _report(result, watershed_geojson):
         "<body><h1>" + escape(result["title"]) + "</h1><p>Original station locations, exact study identifiers and membership in retained watershed geometry. Observation values, units, dates, qualifiers and methods are retained with their original rows.</p>" +
         '<div class="metrics">' + cards + "</div><h2>Study geography</h2>" + _svg_map(stations, watershed_geojson) +
         "<p>Display coordinates use EPSG:4326. Each station keeps native source coordinates, source CRS, feature identifiers and original attributes. Polygon covers includes boundary points; all overlapping matches remain in the crosswalk.</p>" +
-        '<div class="exports">' + links + '</div>' + assessment_report(result) + '<h2>Every selected study station</h2><div class="scroll"><table><thead><tr><th>Station</th><th>Location status</th><th>Longitude, latitude</th><th>Watershed membership</th><th>Observation rows</th><th>Original locations</th></tr></thead><tbody>' +
+        '<div class="exports">' + links + '</div>' + assessment_report(result) + wbd_context_report(result) + '<h2>Every selected study station</h2><div class="scroll"><table><thead><tr><th>Station</th><th>Location status</th><th>Longitude, latitude</th><th>Watershed membership</th><th>Observation rows</th><th>Original locations</th></tr></thead><tbody>' +
         "".join(station_rows) + "</tbody></table></div><h2>Original source editions</h2><div class=\"scroll\"><table><thead><tr><th>Title</th><th>Source ID</th><th>Original hash</th><th>Provider reference</th></tr></thead><tbody>" +
         sources + "</tbody></table></div><h2>Reopen the original selection</h2><p>In the operator, open Station geography and choose Reopen original geography package. Select station-geography.zip. It contains the native sources, companions, observation originals and complete selection needed to create an editable geography edition in the receiving workspace.</p>" +
         "<p>Created " + escape(result["created_at"]) + " · build <code>" + escape(result["build_id"]) + "</code></p></body></html>")
@@ -657,7 +658,7 @@ def build(workspace, selection):
     for binding in [*station_bindings, *watershed_bindings, *table_bindings, *inventory_bindings]:
         bindings_by_id[(binding["collection_id"], binding["source_id"])] = binding
     bindings = list(bindings_by_id.values())
-    build_id = digest({"version": VERSION, "selection": selection,
+    build_id = digest({"version": VERSION, "wbd_context_version": WBD_CONTEXT_VERSION, "selection": selection,
         "sources": [{"collection_id": s["collection_id"], "source_id": s["source_id"], "sha256": s["source_sha256"]} for s in bindings],
         "observations": [o["id"] for o in observations]})
     destination = workspace.root / "station-geography" / build_id
@@ -690,6 +691,7 @@ def build(workspace, selection):
         "watershed_feature_count": len(watershed_geojson["features"]), "source_count": len(bindings),
         "status_counts": counts, "outside_watersheds_count": sum(r["watershed_status"] == "outside" for r in rows)}
     summary.update(assessment_summary)
+    summary.update(enrich_wbd_context(rows))
     result = {"schema": RESULT_SCHEMA, "version": VERSION, "build_id": build_id,
         "project_id": workspace.project["id"], "title": selection.get("title") or "Study station geography",
         "created_at": created, "selection": selection, "summary": summary, "stations": rows,
@@ -705,7 +707,8 @@ def build(workspace, selection):
             "properties": {key: row[key] for key in ("station_id", "status", "selected_candidate_id",
                 "selected_source_ref", "watersheds", "watershed_status", "observation_count", "source_references", "aliases",
                 "assessment_record_count", "assessment_editions", "assessment_cause_codes",
-                "assessment_cause_labels", "publisher_huc12s") if key in row}})
+                "assessment_cause_labels", "publisher_huc12s", "wbd_context_status",
+                "selected_current_huc12s", "selected_wbd_point_ids", "wbd_source_context") if key in row}})
         for candidate in row["candidates"]:
             candidate_features.append({"type": "Feature", "id": candidate["candidate_id"],
                 "geometry": {"type": "Point", "coordinates": candidate["coordinates_wgs84"]} if candidate["coordinates_wgs84"] else None,
@@ -720,7 +723,8 @@ def build(workspace, selection):
         "candidate_ids": [c["candidate_id"] for c in row["candidates"]]} for row in rows]
     atomic_bytes(destination / "stations.csv", _csv(
         ["station_id", "label", "status", "longitude", "latitude", "watershed_status", "watersheds",
-         "observation_count", "selected_candidate_id", "selected_source_ref", "candidate_ids", "aliases", "source_references", "issues"], flat_stations), immutable=True)
+         "observation_count", "selected_candidate_id", "selected_source_ref", "candidate_ids", "aliases", "source_references", "wbd_context_status",
+         "selected_current_huc12s", "selected_wbd_point_ids", "wbd_source_context", "issues"], flat_stations), immutable=True)
     crosswalk = []
     for row in rows:
         for membership in row["watersheds"] or [{}]:
