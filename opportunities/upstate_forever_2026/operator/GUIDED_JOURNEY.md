@@ -314,4 +314,26 @@ The registered host uses its existing journey controller for backup capture. The
 
 The map legend and point inspection read land-cover descriptions from the selected original biophysical tables. Discrete grey shades identify categories. The profile detail opens the exact retained table while native work continues. Step 7 opens **Scenario reports** for retained scenario analyses; a completed run also opens comparison selection directly, and a saved comparison carries its baseline and alternatives into the delivery form.
 
-The issuer requires every final Upper Savannah map dataset on a **30 × 30 m raster grid**, including an external modeling buffer whose distance the consultant selects. The original Gura working demonstration uses its native **300 m** land-cover grid and a separately recorded upstream buffer. Select the appropriate original source edition and reporting boundary in the grid form; the saved grid retains both cell size and buffer as distinct values. The regional production maps use Upper Savannah sources and the South Carolina reporting extent with upstream context. See the issuer's combined RFP, PDF page 2, and `../RFP_RESPONSE_MAP.md` for the exact seven map requirements and delivery scope.
+The issuer requires every final Upper Savannah map dataset on a **30 × 30 m raster grid**, including an external modeling buffer whose distance the consultant selects. The regional production maps use Upper Savannah sources and the South Carolina reporting extent with upstream context. See the issuer's combined RFP, PDF page 2, and `../RFP_RESPONSE_MAP.md` for the exact seven map requirements and delivery scope.
+
+Gura has two retained source editions. Select the edition that belongs to the analysis:
+
+| Analysis | Retained grid and source | Receiving command |
+| --- | --- | --- |
+| Original Gura data from the official InVEST 3.20.0 release | **15 m** cells, EPSG:32737; the original rasters have 1939 columns and 603 rows. The original watershed comparison uses an explicit zero upstream buffer. | `source_tools/receive_gura_native.py` |
+| Earlier Gura working demonstration | Its separately retained **300 m** grid and recorded upstream buffer. | `source_tools/receive_gura.py` |
+| Upper Savannah production | **30 m** regional inputs and the selected external modeling buffer. | The retained regional workflow and project inputs. |
+
+The official Gura README describes 30 m elevation resampled to the supplied 15 m land-use grid. A run may cover a smaller watershed window on that same 15 m lattice. Its cell area is **0.0225 hectares**. The legacy 300 m grid has **9 hectares** per cell. Retain the selected grid's cell area when reading annual mass and per-hectare export values; do not exchange conversion factors between editions. Source edition, engine version, grid resolution and upstream buffer remain separate saved values.
+
+For the original 15 m comparison, use the complete application containing the native receiver and original-grid support from PR 2886 and PR 2898, together with its installed InVEST 3.20.0 environment. Point the command at the existing application, scientific workspace and directory containing the unchanged release `NDR.zip` and `SDR.zip`:
+
+```bash
+python "${application_root:?}/source_tools/receive_gura_native.py" \
+  --application "${application_root:?}" \
+  --workspace "${workspace_root:?}" \
+  --inputs "${gura_archive_directory:?}" \
+  --models ndr sdr --mode both
+```
+
+The official source archives are [NDR.zip](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/data/NDR.zip) and [SDR.zip](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/data/SDR.zip). The receiving driver checks the pinned archive identities and original cells before preparing the workspace run. The saved grid retains the chosen resolution and buffer when the project is reopened.

@@ -46,11 +46,16 @@ against the same project and scientific records. Distinct prior notes remain
 available in the guide's note versions.
 
 The original reference resolution is preserved when revising a prepared grid.
-For the official Gura study, the cell size is 300 m and the upstream context
-buffer is an independent 300 m setting. The issuer requires final Upper Savannah map data on a 30 × 30 m regional
+The official InVEST 3.20.0 Gura release data retain their original 15 m cells;
+`source_tools/receive_gura_native.py` compares the original watershed with
+an explicit zero upstream buffer. The earlier Gura working demonstration
+retains its separate 300 m grid and independently recorded upstream buffer
+through `source_tools/receive_gura.py`. These are distinct source editions.
+The issuer requires final Upper Savannah map data on a 30 × 30 m regional
 grid, with an external modeling buffer chosen for the catchment (RFP p. 2).
-The Gura grid supports the original working demonstration. An omitted `resolution_m` retains the historic
-30 m selection identity.
+An omitted `resolution_m` retains the historic 30 m selection identity.
+See the source-edition table and original archive links in `GUIDED_JOURNEY.md`
+when choosing a Gura receiver.
 
 See `GUIDED_JOURNEY.md` for the complete operating sequence.
 
