@@ -17,10 +17,11 @@ from typing import Any, Mapping
 from .common import INVEST_VERSION
 from . import native_study
 from .model_selection import MODEL_LABELS, MODEL_OUTPUTS, run_scope
-from .native_versions import POLICY as EXECUTION_VERSION_POLICY, model_versions, models_for_outputs
+from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
+                              model_versions, models_for_outputs, version_label)
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-9"
+REPORT_EDITION = "2026-10-13-client-report-10"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -170,6 +171,26 @@ def _execution_source(record):
     if record.get("reused_from"):
         parts.append("retained reused stage")
     return "; ".join(parts)
+
+
+def _execution_references(versions_by_run):
+    """Group version-specific guides while retaining every producing run/basis."""
+    references = {}
+    for run_id, versions in versions_by_run.items():
+        for model, record in versions.items():
+            key = (model, record.get("comparison_version"), record.get("basis"),
+                   record.get("requested_version"), record.get("differs_from_requested"))
+            if key not in references:
+                references[key] = {
+                    "model": model, "version": record.get("comparison_version"),
+                    "purpose": "Native model documentation for the retained version",
+                    "basis": record.get("basis"), "version_label": version_label(record),
+                    "requested_version": record.get("requested_version"),
+                    "differs_from_requested": record.get("differs_from_requested"),
+                    "url": guide_url(model, record), "run_ids": [],
+                }
+            references[key]["run_ids"].append(run_id)
+    return list(references.values())
 
 
 def _execution_summary(versions):
@@ -398,6 +419,7 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         run["id"]: model_versions(run, execution_models[run["id"]])
         for run in [baseline] + alternatives
     }
+    scientific_references = _execution_references(execution_versions)
     selected_models = model_scopes[baseline["id"]]["selected_models"]
     study_mode = native_study.mode(selection) == "native_study"
     study = dict(state.get("native_study") or selection.get("native_study") or {})
@@ -613,10 +635,11 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
          if study_mode else
          "The RFP's final mapping deliverables are listed on PDF page 2; the final/working-file and presentation requirements are on PDF page 3. Appendix PDF pages 6-9 provide the utility and broader sampling context.")
     ], [_table(["Source role", "Vintage", "Original URI"], source_rows),
-        _table(["Scientific reference", "Original URI"], [
-            ["InVEST " + INVEST_VERSION + " " + MODEL_LABELS.get(model, model.upper()) + " reference guide",
-             MODEL_GUIDES[model]] for model in selected_models
-        ])]))
+        _table(["Scientific reference", "Version and source", "Original URI"], [
+            [MODEL_LABELS.get(item["model"], item["model"].upper()) + " guide",
+             item["version_label"], item["url"] or "Version-specific guide unavailable"]
+            for item in scientific_references
+        ], "Each reference follows the retained producing-model version; report data identify its runs.")]))
 
     files = state.get("files") or {}
     handoff_rows = []
@@ -681,9 +704,7 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
             "models": {key: list(value) for key, value in execution_models.items()},
             "runs": execution_versions,
         },
-        "scientific_references": [{"model": model, "version": INVEST_VERSION,
-                                   "purpose": "Retained reference guide", "url": MODEL_GUIDES[model]}
-                                  for model in selected_models],
+        "scientific_references": scientific_references,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "project": dict(workspace.project),
         "delivery_id": state.get("id"),

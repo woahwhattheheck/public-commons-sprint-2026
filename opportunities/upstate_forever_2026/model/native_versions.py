@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from urllib.parse import quote
 from .model_selection import MODEL_OUTPUTS, run_models
 
 POLICY = "completed_stage_runtime_else_observed_run_else_labeled_requested_legacy"
@@ -74,3 +75,40 @@ def comparison_versions(runs, models):
     return {"policy": POLICY, "models": list(selected),
             "versions": {model: baseline[model]["comparison_version"] for model in selected},
             "runs": by_run}
+
+
+def version_label(info):
+    """Describe a retained version without turning a fallback into execution evidence."""
+    info = info or {}
+    version = _text(info.get("comparison_version"))
+    if not version:
+        return "InVEST version unavailable"
+    basis = info.get("basis")
+    descriptions = {
+        "completed_stage_runtime": "completed stage runtime",
+        "observed_run_fallback": "observed run runtime; stage version unavailable",
+        "observed_runtime": "observed run runtime",
+        "requested_legacy": "requested legacy version; execution version unavailable",
+    }
+    description = descriptions.get(basis, "retained version; source basis unavailable")
+    requested = _text(info.get("requested_version")) or _text(info.get("requested"))
+    if requested and requested != version:
+        description += "; requested " + requested
+    return "InVEST " + version + " (" + description + ")"
+
+
+def guide_url(model, info):
+    """Return the model guide for the retained comparison version, when available."""
+    if model not in MODEL_OUTPUTS:
+        raise ValueError("Choose an original native model.")
+    version = _text((info or {}).get("comparison_version"))
+    if not version:
+        return None
+    return ("https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/" +
+            quote(version, safe="") + "/userguide/en/" + model + ".html")
+
+
+def run_label(run):
+    """Keep each selected model's version and source basis visible in one label."""
+    return "; ".join(model.upper() + ": " + version_label(info)
+                     for model, info in model_versions(run).items())
