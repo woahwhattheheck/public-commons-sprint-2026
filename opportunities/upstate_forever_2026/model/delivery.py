@@ -796,7 +796,8 @@ def build(workspace, selection):
                 state["files"]["report"] = describe_file(directory, target)
                 atomic_json(state_path, state)
             companion_keys = ("client_report", "client_report_html",
-                              "client_report_markdown", "client_report_model")
+                              "client_report_markdown", "client_report_model",
+                              "client_report_briefing", "client_report_briefing_index")
             if not all(name in state["files"] for name in companion_keys):
                 generated = client_report.build_report(
                     workspace=workspace, directory=directory, selection=selection,
