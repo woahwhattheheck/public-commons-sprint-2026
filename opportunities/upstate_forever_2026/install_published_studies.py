@@ -14,6 +14,9 @@ from datetime import datetime, timezone
 CODE_FILES = (
     "measurement_workspace/published_studies.py",
     "measurement_workspace/study_reviews.py",
+    "measurement_workspace/geographic_study_selection.py",
+    "measurement_workspace/GEOGRAPHIC_STUDY_SELECTION.md",
+    "source_tools/receive_geographic_study_review.py",
     "measurement_workspace/STUDY_REVIEWS.md",
     "measurement_workspace/study_context.py",
     "measurement_workspace/observation_support.py",
@@ -40,6 +43,7 @@ CODE_FILES = (
     "PUBLISHED_STUDIES.md",
     "published_studies_family.json",
     "integration/component_fragments/published-study-reviews.json",
+    "integration/component_fragments/geographic-study-selection.json",
     "install_published_studies.py",
     "receive_published_studies.py",
     "tools/attach_published_report.py",
@@ -191,6 +195,10 @@ def main():
             data_files.extend(temporal_context.source_paths(source))
     data_files = sorted(set(data_files))
     expected = list(CODE_FILES) + data_files
+    if all((application / path).is_file() for path in (
+            "operator/station_geography.py", "model/station_geography.py")):
+        expected.extend(("operator/web/station_geography.mjs",
+                         "operator/extensions/station-geography.json"))
     for relative in expected:
         if not (source / relative).is_file():
             parser.error("The source carrier is missing " + relative)

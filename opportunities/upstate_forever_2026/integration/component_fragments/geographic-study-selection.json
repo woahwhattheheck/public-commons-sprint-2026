@@ -1,0 +1,14 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-study-selection",
+  "extend_components": {
+    "published-studies": {
+      "paths": [
+        "measurement_workspace/geographic_study_selection.py",
+        "measurement_workspace/GEOGRAPHIC_STUDY_SELECTION.md",
+        "source_tools/receive_geographic_study_review.py"
+      ]
+    }
+  },
+  "required_components": []
+}
