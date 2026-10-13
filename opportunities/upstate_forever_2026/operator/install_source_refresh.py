@@ -29,6 +29,8 @@ FILES = (
     "model/source_refresh_compat.py",
     "model/source_refresh_legacy.py",
     "model/source_refresh_legacy_cli.py",
+    "model/source_refresh_receiving.py",
+    "source/run_source_updates_browser.mjs",
     "source_tools/landcover_change.py",
     "operator/source_refresh.py",
     "operator/source_refresh_legacy.py",
@@ -58,11 +60,13 @@ KNOWN_RELEASES = {
         "0d5c82011c23a6ddd0f2e1b2560d938a10babda51f8a48eb3b21203e01d1f12b",
         "57c45e6d341370109e154bfe382844316d75f29f1c13535062d5a67c025dd559",
         "5c2fae7ab68c48ae8108efbd0735133070815654e494981a9496d8c9c25e5862",
-        "eddb911a423838aa2b91db159af773f29f7fdb4f63ca1dc42b1b4f33b7f310ef"
+        "eddb911a423838aa2b91db159af773f29f7fdb4f63ca1dc42b1b4f33b7f310ef",
+        "492e943128f78f5789f0e21ec1e31ead5c31190dd1db0291a89c88fe8b12754e"
     ],
     "model/source_refresh_cli.py": [
         "96118eaaa41b9f213746024d6d13035b95ccd1a24a0af1bbe88c8b1a796e37d3",
-        "59084a5a125313fd3b892eef58630ca298d1d8a95193c977e76e691fbc8196d5"
+        "59084a5a125313fd3b892eef58630ca298d1d8a95193c977e76e691fbc8196d5",
+        "3972e333aa9b7943d2e24b9ef392d1987c3c2f76d5eabeec00271f8b78213936"
     ],
     "source_tools/landcover_change.py": [
         "bed7e6bea0279590f588602ec48c22433647e4dd79d89dba23ad34c614e844ce"
@@ -73,13 +77,15 @@ KNOWN_RELEASES = {
         "71901ef2b72892a2407d74c4db2a44dc15e82f42f07a0824156d8c47149fb958",
         "10c286cb8d859ee608d44a62ae81552cc4c624c4dd3aca2b1c7117366ec94f78",
         "803ec50452ae0e91cd57c01aac09e10ea5ef6a0dec90f783e00e3930c95030d4",
-        "f9c08a33ce9d08f596baaa55cf909d6c58014123b5f6b7717adcedd5a3800d13"
+        "f9c08a33ce9d08f596baaa55cf909d6c58014123b5f6b7717adcedd5a3800d13",
+        "f7d6be944852ba2e617a55128bfb59b743094fec7e557ad364224c1f5c0fe185"
     ],
     "operator/web/source-refresh.html": [
         "dd609cbd1a5e9a6ad8bcf4180aaa4714d93936e3f42cc7aa7e4f5da361537e3f",
         "9de35568bb92a9fe93519e93b92faa01b6fd0ed821d6d9e31c717aa7bf31ab7c",
         "8f0a8720078f313872b03f20353d9f74e095ca4940a2504e1735b1c3abb26f0e",
-        "ab79d4564f94af8ce583e426b56b17ac19a5e35462da7fa60a5180eaf01a171e"
+        "ab79d4564f94af8ce583e426b56b17ac19a5e35462da7fa60a5180eaf01a171e",
+        "4974ebe5fefe218fa90149e05b0c4489d30d1b450c997558a5b54e688554fff2"
     ],
     "operator/web/source-refresh.mjs": [
         "e323aaa2fc0f1f486365e2adc12944f21852577656a3d09fb28d4dd8be5074bd",
@@ -87,7 +93,9 @@ KNOWN_RELEASES = {
         "85dd8178ba2727cc69ef6c8a5bc0271783c30ce37966a5f0f87fe7583e2d6d94",
         "58dcacb2ad0d5aa24beea7afd9cee9b7835fc8c11a32dad479614335300a27a7",
         "881fd5317b1fb556461af1484704540c2ef0116294031e47006ad6657a483cb1",
-        "74c939685ae1d6abb32918932345101bb878c01dab44be1eed98940c6532781c"
+        "74c939685ae1d6abb32918932345101bb878c01dab44be1eed98940c6532781c",
+        "956a8fd908495b37915674713f7c1f88fdecfacc3dd0b9388041ae688e168275",
+        "70a3965275d657bb214efdadf50437ce2d28f9018dccdfbd8009c52cd6109602"
     ],
     "operator/web/source-refresh-nav.mjs": [
         "5b5413232748ed4aeb70bb0b31d6b8e3f0308ed92eec642b5199f67c177c3f70",
@@ -102,7 +110,9 @@ KNOWN_RELEASES = {
         "d5638a7ea89219c4465e19f18fdf54e393557ccaed96471720e62bca3d4c4d78",
         "3320a1abddc882ac10534c7139430f52e98e5cbab11132b3a82fa7d05af0e19e",
         "a601dda094dd0841016cf5d4835a055e7da3b910583deb61361ebec21d942cfc",
-        "1054da9af879eb2f75f0886dd11524f15022c024bff5ef9eac5406124676894c"
+        "1054da9af879eb2f75f0886dd11524f15022c024bff5ef9eac5406124676894c",
+        "915587db87612a08b9a7c72e61c0c23b8f6e74f47a4f5d9dd00ddfa86a5bc7e2",
+        "68de10652357116be30f68648666b0dace95c57d748cc48c03d9a4d5eafa836d"
     ],
     "source/landcover-change/METHOD.md": [
         "38939f8077422e6210b8d2f31739962fc3160a9a65cbfe031f0e3c914d17931c"
@@ -117,10 +127,14 @@ KNOWN_RELEASES = {
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
         "57fb0ee006ee3e718bd17feb3de0613aebc8d2734dc4f98c76c7e71879747545",
         "05b9e89c91a03435b166bd1cbcb296221d4792b37d41f941f269a6cf7310417f",
-        "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385"
+        "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385",
+        "167ac16828dfad3609fc4e9b51c55a85076d2748db67f591ab83e462974b8b61",
+        "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db"
     ],
     "operator/extensions/source-updates.json": [
-        "c849509ff20f8c6959fc8b9687dcd99a8f5f782a61e7cc306342e412fbf955c5"
+        "c849509ff20f8c6959fc8b9687dcd99a8f5f782a61e7cc306342e412fbf955c5",
+        "4e92f023a4a6b6de1710186a4bd8bab62e06701c35fe3c5f2fdd208c0558c669",
+        "952bdc1e7a021678ab8db367c19ef755b47c7a40f4a430a93d68f862f6a83285"
     ],
     "operator/source_refresh_native.py": [
         "7c619c771fa584568ecf9ea68a9227bd7594ab9fa90f65bb3f753cb0f9acb6da"
@@ -136,13 +150,46 @@ KNOWN_RELEASES = {
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
         "57fb0ee006ee3e718bd17feb3de0613aebc8d2734dc4f98c76c7e71879747545",
         "05b9e89c91a03435b166bd1cbcb296221d4792b37d41f941f269a6cf7310417f",
-        "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385"
+        "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385",
+        "167ac16828dfad3609fc4e9b51c55a85076d2748db67f591ab83e462974b8b61",
+        "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db"
+    ],
+    "model/source_refresh_compat.py": [
+        "cf775aa3c318ab2f9ae7b1432faa932f57303f754f44d0cc6cc50ce939932de4"
+    ],
+    "model/source_refresh_legacy.py": [
+        "eddb911a423838aa2b91db159af773f29f7fdb4f63ca1dc42b1b4f33b7f310ef"
+    ],
+    "model/source_refresh_legacy_cli.py": [
+        "59084a5a125313fd3b892eef58630ca298d1d8a95193c977e76e691fbc8196d5"
     ],
     "operator/source_refresh_legacy.py": [
-        "9060fa2d033c88f59b6674c2cdc08ab6d99895530ac32f7a508b3d355556e056"
+        "9060fa2d033c88f59b6674c2cdc08ab6d99895530ac32f7a508b3d355556e056",
+        "8c1d10c96566752ddde72c11e64bc09df8ceaa5d10d18805c4ef65ce0e861ddf",
+        "63daebbd8deb6faa4b0f219e4949fbd437b85e4de377d625da5558e58f928b5f"
+    ],
+    "operator/web/source-refresh-legacy/source-refresh.html": [
+        "ab79d4564f94af8ce583e426b56b17ac19a5e35462da7fa60a5180eaf01a171e"
+    ],
+    "operator/web/source-refresh-legacy/source-refresh.mjs": [
+        "74c939685ae1d6abb32918932345101bb878c01dab44be1eed98940c6532781c",
+        "b7559b98370916d7b638b99f5b7b2982fc438af714c1f3d2a43da35d4eb48099"
+    ],
+    "operator/web/source-refresh-legacy/source-refresh.css": [
+        "7f60d9e886ae06382d0e518c54734c24c4e30430656517c30d62f5715919eb3e"
+    ],
+    "operator/web/source-refresh-legacy/source-refresh-nav.css": [
+        "08d39dd1b5165733005ae946cc895e81ed7ca461e126c4c4d80673ecac39a540"
     ],
     "docs/source-refresh-compatibility.md": [
-        "e7add31bcf296b06a80fe1fa936b37c62cc7bce3ed5449be9357997900137547"
+        "e7add31bcf296b06a80fe1fa936b37c62cc7bce3ed5449be9357997900137547",
+        "4698277a21b8bf0044bc5335964d94e6d8847e6627f0133e5668012cfedaf705"
+    ],
+    "source/run_source_updates_browser.mjs": [
+        "c7539ecd51d357ebbce9b644c4f036267538fcefc804de3a8572db294a56f728"
+    ],
+    "model/source_refresh_receiving.py": [
+        "83e88d5c6ca62843716a4cba3cfa3272060b9a815f98b10396ba7ed5ab575d8c"
     ]
 }
 STATE_SCHEMA = "upstate.source-refresh-install/v2"
@@ -337,14 +384,21 @@ def install(application, source=None, integration="auto", *, source_root=None, d
         source = source.parent
     if dry_run:
         return _install(application, source, integration, dry_run=True)
-    lock = target_path(application, "source/source-refresh-install/.install.lock")
-    lock.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(lock, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    shared = target_path(application, ".locks/extension-install.lock")
+    shared.parent.mkdir(parents=True, exist_ok=True)
+    shared_fd = os.open(shared, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
-        return _install(application, source, integration)
+        fcntl.flock(shared_fd, fcntl.LOCK_EX)
+        lock = target_path(application, "source/source-refresh-install/.install.lock")
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(lock, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            return _install(application, source, integration)
+        finally:
+            os.close(fd)
     finally:
-        os.close(fd)
+        os.close(shared_fd)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
