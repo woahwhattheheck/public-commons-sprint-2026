@@ -1,0 +1,124 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "regional-soil",
+  "title": "Regional soil",
+  "version": "1",
+  "order": 21,
+  "assets": [
+    "source_workbench.mjs",
+    "source_workbench.css",
+    "regional_soil.mjs"
+  ],
+  "backend": {
+    "module": "regional_soil",
+    "factory": {
+      "handler": "RegionalSoil",
+      "args": [
+        "operator",
+        "fault",
+        "source_roots"
+      ]
+    },
+    "actions": [
+      "regional-soil.prepare",
+      "regional-soil.compose"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/regional-soil/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/regional-soil/files",
+        "operation": "files",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/regional-soil/progress",
+        "operation": "progress",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/regional-soil/result",
+        "operation": "result",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/regional_soil.mjs",
+    "factory": "createRegionalSoilDesk",
+    "requires": [
+      "getState",
+      "getWorkspace",
+      "api",
+      "refresh",
+      "toast",
+      "navigate",
+      "openItem",
+      "showTask"
+    ],
+    "styles": [
+      "/web/source_workbench.css"
+    ],
+    "view": {
+      "id": "regional-soil",
+      "title": "Regional soil",
+      "after": "source-preparation"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "suspend"
+    }
+  }
+}

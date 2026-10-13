@@ -27,7 +27,15 @@ const displayLabel = row => row.title || row.label || row.name || short(row.id);
 const taskName = task => task.payload?.title || (task.action === 'source.compose' ? 'Combine source editions' : (task.payload?.method || 'Prepare original source'));
 const terminal = state => ['complete','failed','interrupted','cancelled'].includes(state);
 
-export function createSourceWorkbench(host) {
+export function createSourceWorkbench(host, configuration = {}) {
+  const settings = {
+    namespace:'source-preparation', storageKey:'upstate-source-workbench-v1',
+    prepareAction:'source.prepare', composeAction:'source.compose',
+    title:'Prepare study inputs',
+    description:'Prepare original elevation, land cover, rainfall and soil data, then import a complete source edition for modeling.',
+    ...configuration
+  };
+  const taskName = task => task.payload?.title || (task.action === settings.composeAction ? 'Combine source editions' : (task.payload?.method || 'Prepare original source'));
   let container = null, workspace = null, catalog = null, loading = false, generation = 0;
   let busy = false, error = '', message = '', currentTask = null, progress = null;
   let tasksFingerprint = '', sourcesFingerprint = '', progressBusy = false, state = null;
@@ -35,7 +43,7 @@ export function createSourceWorkbench(host) {
   let requests = [], browser = null, browserGeneration = 0, controls = null;
   let operationView = {query:'', status:'all', offset:0}, operationCache = null;
   let resultTask = null, resultDocument = null, resultBusy = false, resultGeneration = 0;
-  const local = () => 'upstate-source-workbench-v1:' + workspace;
+  const local = () => settings.storageKey + ':' + workspace;
   const storageRead = () => {
     try {
       const saved = JSON.parse(sessionStorage.getItem(local()) || '{}');
@@ -85,19 +93,19 @@ export function createSourceWorkbench(host) {
     return true;
   };
   async function read(operation, payload = {}, expectedWorkspace = workspace) {
-    return host.api('/api/source-preparation/' + operation, {
+    return host.api('/api/' + settings.namespace + '/' + operation, {
       method:'POST', body:{workspace:expectedWorkspace, ...payload}
     });
   }
   function ownedTasks() {
-    return list(state?.tasks).filter(task => ['source.prepare','source.compose'].includes(task.action));
+    return list(state?.tasks).filter(task => [settings.prepareAction,settings.composeAction].includes(task.action));
   }
   function sourceOperations() {
     const queue = state?.tasks, retained = catalog?.prepared;
     if (operationCache?.queue === queue && operationCache?.retained === retained) return operationCache.rows;
     const indexed = new Map();
     for (const row of list(retained)) {
-      if (!row.task_id || !['source.prepare','source.compose'].includes(row.action)) continue;
+      if (!row.task_id || ![settings.prepareAction,settings.composeAction].includes(row.action)) continue;
       indexed.set(row.task_id, {id:row.task_id, action:row.action, state:row.state, stage:row.stage,
         payload:{title:row.title, method:row.method}, updated_at:row.updated_at,
         ended_at:row.state === 'complete' ? row.updated_at : null, error:row.error, restored:true,
@@ -363,11 +371,18 @@ export function createSourceWorkbench(host) {
         (url.startsWith('/api/file/') ? '<a href="'+escapeHTML(download)+'" download>Download</a>' : '') + '</div></div>';
     }).join('');
     const stages = list(document.stages);
+    const summary = result.summary && typeof result.summary === 'object' ? result.summary : {};
+    const summaryRows = list(summary.rows).filter(row => Array.isArray(row) && row.length === 2);
+    const summaryDetails = Object.entries(summary.details || {}).filter(([,value]) => value != null);
+    const sourceSummary = summaryRows.length || summaryDetails.length ? '<section><h3>' +
+      escapeHTML(summary.title || 'Source summary') + '</h3>' + resultSummary(summaryRows) +
+      summaryDetails.map(([label,value]) => '<details><summary>' + escapeHTML(label) +
+        '</summary><pre class="sp-log">' + escapeHTML(JSON.stringify(value,null,2)) + '</pre></details>').join('') + '</section>' : '';
     dialog.innerHTML = '<header><div><h2 id="sp-result-title">'+escapeHTML(title)+'</h2><p>' +
       (task?.restored ? 'Saved source preparation in this study' : 'Original source operation') +
       '</p></div>'+textButton('result-close','Close')+'</header>' +
       (resultBusy ? '<p role="status">Reading the saved source result and original files…</p>' : '') +
-      (document.error ? '<p class="sp-inline-error" role="alert">'+escapeHTML(document.error)+'</p>' : '') + details +
+      (document.error ? '<p class="sp-inline-error" role="alert">'+escapeHTML(document.error)+'</p>' : '') + details + sourceSummary +
       (observed.error ? '<p class="sp-inline-error">'+escapeHTML(observed.error.message || observed.error)+'</p>' : '') +
       '<div class="sp-actions">'+textButton('result-refresh','Refresh result',resultBusy ? 'disabled' : '')+
       (collectionId ? textButton('open-source','Open imported edition','data-sp-id="'+escapeHTML(collectionId)+'"') : '')+
@@ -663,12 +678,12 @@ export function createSourceWorkbench(host) {
     if(!form.matches('[data-sp-form],[data-sp-compose-form]'))return;
     event.preventDefault();event.stopPropagation();
     try{
-      if(form.matches('[data-sp-form]')){const payload=preparePayload(form);if(payload)await submit('source.prepare',payload);}
+      if(form.matches('[data-sp-form]')){const payload=preparePayload(form);if(payload)await submit(settings.prepareAction,payload);}
       else {
         if(!form.reportValidity())return;
         if(!mergeDraft.prepared.length&&!mergeDraft.collections.length&&!mergeDraft.registered.length)
           throw new Error('Choose at least one prepared input or source edition to combine.');
-        await submit('source.compose',{title:mergeDraft.title.trim()||'Upper Savannah selected model inputs',
+        await submit(settings.composeAction,{title:mergeDraft.title.trim()||'Upper Savannah selected model inputs',
           prepared_task_ids:mergeDraft.prepared,source_collection_ids:mergeDraft.collections,registered_ids:mergeDraft.registered,
           import_sources:mergeDraft.import_sources!==false});
       }
@@ -681,7 +696,7 @@ export function createSourceWorkbench(host) {
     operationView={query:'',status:'all',offset:0};operationCache=null;resultTask=null;resultDocument=null;resultBusy=false;
     mergeDraft={title:'',prepared:[],collections:[],registered:[],import_sources:true};storageRead();
     container.innerHTML='<div data-sp-desk class="sp-desk"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>' +
-      '<h1>Prepare study inputs</h1><p>Prepare original elevation, land cover, rainfall and soil data, then import a complete source edition for modeling.</p></div><div class="page-actions">' +
+      '<h1>' + escapeHTML(settings.title) + '</h1><p>' + escapeHTML(settings.description) + '</p></div><div class="page-actions">' +
       textButton('go-sources','Original sources')+textButton('reload','Refresh catalogue')+'</div></header>' +
       '<div class="sp-notice sp-error" role="alert" data-sp-error hidden></div><div class="sp-notice" role="status" aria-live="polite" data-sp-message hidden></div>' +
       '<section class="section sp-preparation"><div class="sp-method-row"><label for="sp-method">Source to prepare</label><select id="sp-method" data-sp-method></select>' +
