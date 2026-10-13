@@ -5,11 +5,16 @@ from .monitoring_common import ContractError
 from .monitoring_workspace import MonitoringWorkspace
 
 READS = {"context.catalog", "context.list", "context.get", "context.preview", "list", "get", "frontier.progress", "campaign.get", "campaign.list", "campaign.history", "capabilities", "source.catalog"}
-WRITES = {"context.prepare", "context.export", "network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "export"}
+WRITES = {"context.prepare", "context.export", "network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "campaign.fieldwork", "export"}
 
 def invoke(workspace, action, params, *, export_root=None):
     if not isinstance(params, dict): raise ContractError("Monitoring parameters must be a JSON object")
     service = MonitoringWorkspace(workspace, export_root=export_root)
+    if action == "campaign.fieldwork":
+        from .monitoring_implementation import receive
+        try: inspect.signature(receive).bind(service, **params)
+        except TypeError as exc: raise ContractError(str(exc)) from exc
+        return receive(service, **params)
     if action.startswith("context."):
         from . import monitoring_observed_context as observed
         functions = {"context.catalog": observed.catalog, "context.list": observed.list_saved,

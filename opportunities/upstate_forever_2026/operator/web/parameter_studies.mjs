@@ -13,6 +13,50 @@ const references = value => (Array.isArray(value) ? value : [value]).filter(Bool
 const modelNames = selection => (selection?.models || ['ndr', 'sdr']).map(value => String(value).toUpperCase()).join(' + ');
 const readLines = value => String(value || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
 
+function versionRows(bindings, labels = {}, guides = {}) {
+  const rows = [];
+  for (const [runId, models] of Object.entries(bindings || {})) {
+    for (const [model, info] of Object.entries(models || {})) {
+      if (!info || typeof info !== 'object') continue;
+      const basis = {completed_stage_runtime: 'Completed native stage', observed_run_fallback: 'Observed run metadata',
+        requested_legacy: 'Requested version (legacy)', unavailable: 'Unavailable'}[info.basis] || info.basis || 'Not recorded';
+      const reused = info.reused_from;
+      const guide = guides[runId]?.[model];
+      const documentation = typeof guide === 'string' && /^https?:\/\//i.test(guide) ?
+        '<a href="' + escapeHTML(guide) + '" target="_blank" rel="noopener noreferrer">Model guide</a>' : '';
+      rows.push('<tr><td class="mono" style="overflow-wrap:anywhere">' + escapeHTML(runId) +
+        '</td><td>' + escapeHTML(String(model).toUpperCase()) + '</td><td>' +
+        escapeHTML(info.comparison_version || 'Unavailable') + '<small>' +
+        escapeHTML(labels[runId]?.[model] || basis) + '</small>' + documentation + '</td><td>' +
+        escapeHTML(info.requested_version || 'Not recorded') + '</td><td>' +
+        escapeHTML(info.stage_completed_at || 'Not recorded') + '</td><td class="mono" style="overflow-wrap:anywhere">' +
+        escapeHTML(reused?.run_id ? reused.run_id + ' / ' + (reused.model || model) : '—') + '</td></tr>');
+    }
+  }
+  return rows;
+}
+
+function baselineExecution(item) {
+  const rows = versionRows({Baseline: item?.baseline_native_versions || {}},
+    {Baseline: item?.baseline_version_labels || {}});
+  return rows.length ? '<details class="technical"><summary>Retained baseline execution</summary>' +
+    gridTable(['Run', 'Model', 'Recorded version and source', 'Requested version', 'Stage completed', 'Reused origin'], rows) +
+    '</details>' : '<p class="note">The retained baseline has no per-model execution record available in this view.</p>';
+}
+
+function resultExecution(result) {
+  const cohort = result.native_versions;
+  if (!cohort?.runs) return '<p class="note">This saved result has no per-model execution provenance. Its original run selections remain in the full results JSON.</p>';
+  const rows = versionRows(cohort.runs, result.native_version_labels, result.native_version_guides);
+  const versions = Object.entries(cohort.versions || {}).map(([model, version]) =>
+    escapeHTML(model.toUpperCase()) + ' ' + escapeHTML(version)).join(' · ');
+  return '<details class="technical"><summary>Executed model versions · ' + versions + '</summary>' +
+    '<p>Each selected model has a consistent comparison version across the compared cases. The source label distinguishes completed-stage execution, observed-run metadata and requested legacy versions.</p>' +
+    gridTable(['Run', 'Model', 'Recorded version and source', 'Requested version', 'Stage completed', 'Reused origin'], rows.slice(0, 200)) +
+    (rows.length > 200 ? '<p>Showing 200 of ' + format(rows.length) + ' run/model rows.</p>' : '') +
+    '<p>The native-version CSV/JSON downloads below retain every run/model record and nested stage-reuse history.</p></details>';
+}
+
 function aggregationProgress(item) {
   const value = item?.aggregation_progress || item?.aggregation;
   if (!value) return '';
@@ -70,7 +114,7 @@ export function attachParameterStudies(host) {
     ['Grid', named('grids', selection?.grid_id)],
     ['Land-cover scenario', named('scenarios', selection?.scenario_id)],
     ['Baseline profile', named('profiles', selection?.profile_id)],
-    ['InVEST', selection?.invest_version || '—']
+    ['Requested InVEST', selection?.invest_version || '—']
   ].map(([name, value]) => '<div><dt>' + name + '</dt><dd>' + escapeHTML(value) + '</dd></div>').join('');
 
   function render() {
@@ -159,7 +203,7 @@ export function attachParameterStudies(host) {
       (activeCase && isBusy ? '<p class="note">Executing ' + escapeHTML(activeCase.label) + ' · native run ' + escapeHTML(short(activeCase.run_id)) + '</p>' : '') +
       aggregationProgress(item) +
       (item.error ? '<div class="notice error">' + escapeHTML(item.error.message || item.error) + '</div>' : '') +
-      '<dl class="parameter-study-provenance">' + provenance(item.baseline_selection) + '</dl>' +
+      '<dl class="parameter-study-provenance">' + provenance(item.baseline_selection) + '</dl>' + baselineExecution(item) +
       '<details class="technical"><summary>Selected axes and scientific rationale</summary>' + axesSummary(item.selection.axes) + '</details>' +
       '<div data-parameter-study-error></div></div></section>' +
       '<section class="section"><header class="section-header"><div><h2>Native cases</h2><p>Each case uses the baseline grid and land-cover scenario with its selected parameter profile.</p></div><label class="parameter-study-filter">Find a case<input data-parameter-study-case-filter type="search" value="' + escapeHTML(caseFilter) + '" placeholder="Case, parameter, or run ID"></label></header><div data-parameter-study-cases></div></section>' +
@@ -186,7 +230,9 @@ export function attachParameterStudies(host) {
     const page = matching.slice(caseOffset, caseOffset + 50);
     const rows = page.map(row => '<tr><td class="name-cell"><strong>' + escapeHTML(row.label) + '</strong><small class="mono">' +
       escapeHTML(short(row.run_id)) + '</small></td><td>' + status(row.state) + (row.error ? '<small>' +
-      escapeHTML(row.error.message || row.error) + '</small>' : '') + '</td><td class="mono">' +
+      escapeHTML(row.error.message || row.error) + '</small>' : '') +
+      (row.native_version_labels ? '<small>' + Object.entries(row.native_version_labels).map(([model, value]) =>
+        escapeHTML(model.toUpperCase() + ': ' + value)).join('<br>') + '</small>' : '') + '</td><td class="mono">' +
       (Object.entries(row.overrides || {}).map(([name, value]) => escapeHTML(name) + ' = ' + format(value)).join('<br>') || 'Baseline values') +
       '</td><td class="actions-cell"><button type="button" data-action="item" data-kind="runs" data-id="' + escapeHTML(row.run_id) +
       '">Open native run</button><button type="button" data-action="run-log" data-id="' + escapeHTML(row.run_id) +
@@ -223,7 +269,7 @@ export function attachParameterStudies(host) {
        ['Case parameter', row.case_parameter], ['Response per parameter unit', row.response_per_parameter_unit], ['Elasticity', row.elasticity]]
         .map(([name, value]) => '<dt>' + name + '</dt><dd>' + format(value) + '</dd>').join('') + '</dl></details></td></tr>');
     panel.innerHTML = '<p class="note">' + escapeHTML(modelNames({models: result.models})) + ' · ' + escapeHTML(result.comparison_basis) + '</p>' +
-      (result.mass_basis ? '<p class="note">' + escapeHTML(result.mass_basis) + '</p>' : '') + controls +
+      (result.mass_basis ? '<p class="note">' + escapeHTML(result.mass_basis) + '</p>' : '') + resultExecution(result) + controls +
       (rows.length ? gridTable(['Case and reporting area', 'Baseline mass', 'Case mass', 'Change', 'Valid-cell coverage'], rows) : '<p class="note">No completed rows match these filters.</p>') +
       '<div class="parameter-study-pager"><span>' + (rows.length ? format(result.offset + 1) + '–' + format(result.offset + rows.length) : '0') + ' of ' +
       format(result.filtered_rows) + ' result rows</span>' + button('results-prev', 'Previous', result.offset ? '' : 'disabled') +
@@ -302,7 +348,7 @@ export function attachParameterStudies(host) {
       if (current !== draftRoot || sequence !== catalogSequence || selectedWorkspace !== workspace()) return;
       draftCatalog = result;
       current.querySelector('[data-baseline-description]').innerHTML = '<dl class="parameter-study-provenance">' +
-        provenance(result.selection) + '</dl><p class="note">Baseline ' + escapeHTML(result.baseline_state) + ' · ' +
+        provenance(result.selection) + '</dl>' + baselineExecution(result) + '<p class="note">Baseline ' + escapeHTML(result.baseline_state) + ' · ' +
         escapeHTML(result.profile_title) + ' · ' + (result.pollutants || []).map(value => escapeHTML(label(value))).join(', ') + '</p>';
       current.querySelectorAll('.parameter-study-axis').forEach(fillParameters);
     } catch (error) {
@@ -344,7 +390,9 @@ export function attachParameterStudies(host) {
       confirmedSelection = {input: JSON.stringify(selection), selection: result.selection};
       panel.innerHTML = '<div class="notice"><strong>' + format(result.case_count) + ' native cases · ' +
         format(result.alternatives) + ' parameter alternatives plus the baseline</strong>' + escapeHTML(label(result.design)) +
-        ' · ' + escapeHTML(modelNames({models: result.models})) + ' · InVEST ' + escapeHTML(result.invest_version) + '</div>' + axesSummary(result.axes) +
+        ' · ' + escapeHTML(modelNames({models: result.models})) + ' · baseline requested InVEST ' + escapeHTML(result.invest_version) +
+        (result.preparation_invest_version ? ' · preparing new cases with InVEST ' + escapeHTML(result.preparation_invest_version) : '') +
+        '</div>' + baselineExecution(result) + axesSummary(result.axes) +
         (result.examples?.length ? '<details class="technical"><summary>Example case selections (' + format(result.example_count) +
           ' of ' + format(result.alternatives) + ' alternatives)</summary>' + gridTable(['Case', 'Overrides'],
           result.examples.map(row => '<tr><td>' + escapeHTML(row.label) + '</td><td class="mono">' +

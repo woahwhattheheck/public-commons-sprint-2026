@@ -14,6 +14,7 @@ from directory_operating_plans import MAX_REQUEST as OPERATING_PLAN_REQUEST
 from directory_operating_returns import MAX_REQUEST as OPERATING_RETURN_REQUEST
 from directory_corrections_schema import MAX_INPUT as CORRECTION_REQUEST, KINDS as CORRECTION_KINDS
 from directory_correction_worksheets_schema import MAX_INPUT as WORKSHEET_REQUEST, KINDS as WORKSHEET_KINDS
+from directory_correction_worksheet_reconciliation_schema import MAX_INPUT as RECONCILIATION_REQUEST, KINDS as RECONCILIATION_KINDS
 from referral_server import Handler as BaseHandler
 import directory_schema as schema
 
@@ -169,6 +170,13 @@ class Handler(BaseHandler):
                 self._query(target,());return self._native_download(ws.directory_conformance_file(collections[t[1]],t[2],t[4]))
         if len(t)==3 and t[0]=="correctionWorksheets" and t[2]=="document":
             self._query(target,());return self._json(ws.directory_correction_worksheet_document(t[1]))
+        if t==["correction-worksheet-reconciliations","catalogue"]:
+            self._query(target,());return self._json(ws.directory_correction_worksheet_reconciliation_catalogue())
+        if len(t)==3 and t[0]in RECONCILIATION_KINDS and t[2]=="rows":
+            q,offset,limit=self._page_args(target,("rowKey","state"))
+            return self._json(ws.directory_correction_worksheet_reconciliation_rows(t[0],t[1],offset,limit,row_key=q.get("rowKey"),state=q.get("state")))
+        if len(t)==4 and t[0]in RECONCILIATION_KINDS and t[2]=="files":
+            self._query(target,());return self._native_download(ws.directory_correction_worksheet_reconciliation_file(t[0],t[1],t[3]))
         if len(t)==3 and t[0]in WORKSHEET_KINDS and t[2]=="rows":
             q,offset,limit=self._page_args(target,("rowKey","state"))
             return self._json(ws.directory_correction_worksheet_rows(t[0],t[1],offset,limit,row_key=q.get("rowKey"),state=q.get("state")))
@@ -215,7 +223,10 @@ class Handler(BaseHandler):
         routes.update({("connections",):ws.directory_connection,("requests",):ws.directory_request,
             ("editions",):ws.directory_edition,("comparisons",):ws.directory_compare,("imports",):ws.save_directory_import})
         if tuple(t)in routes:
-            if t and t[0]=="correction-worksheets":
+            if t and t[0]=="correction-worksheet-reconciliations":
+                value=source.json_value(self._body(RECONCILIATION_REQUEST).read())
+                if not isinstance(value,dict):raise InputError("Expected one complete three-way reconciliation input object")
+            elif t and t[0]=="correction-worksheets":
                 value=source.json_value(self._body(WORKSHEET_REQUEST).read())
                 if not isinstance(value,dict):raise InputError("Expected one complete worksheet input object")
             elif t and t[0]=="corrections":

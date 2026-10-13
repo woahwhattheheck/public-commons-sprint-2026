@@ -11,6 +11,6 @@ dependencies:
   - pyproj
   - shapely
   - numpy
-  - matplotlib
+  - matplotlib-base
   - reportlab
   - pillow

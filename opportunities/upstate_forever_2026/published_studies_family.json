@@ -1,10 +1,10 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.7.1",
+  "version": "1.8.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "a01ff11151a70d5162c585db5b8225c60bb71c59",
-  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension.",
+  "source_reference_base": "250039f3973a41bc8fbd82de0074eaf51e3e5ffb",
+  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe.",
   "external_source_edition": {
     "files": 62,
     "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
@@ -32,6 +32,11 @@
       "sha256": "34af2770b39339760994263833e981692cc1c75806206f78dbd9705c30b8eee8"
     },
     {
+      "path": "eighteenmile_paired_sensitivity.sources.json",
+      "bytes": 10719,
+      "sha256": "2c0cb2ca5ce42dc4b701bafb97d8f429e2b3a30709fe0b1c1cac306c2c0be81a"
+    },
+    {
       "path": "eighteenmile_physical_context.sources.json",
       "bytes": 35704,
       "sha256": "105aaf503d6b5bb85c7c42e2c1023d879e67ae03a3c7acb83579c14d219fbe83"
@@ -48,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 11453,
-      "sha256": "41ee8969c30ec18526fdf7522bde5c293fbeae69ecb055ea1c1e472a0c82d78b"
+      "bytes": 11803,
+      "sha256": "6f2360db117c12fa70261184c609a005e9d6dc497b386a6201276c65647d1113"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -73,23 +78,33 @@
     },
     {
       "path": "measurement_workspace/STREAM_OBSERVATIONS.md",
-      "bytes": 14514,
-      "sha256": "e3273a1fd2ab22ad35c442b068f8a1cdf78013b83b27675bce840042182703ef"
+      "bytes": 17209,
+      "sha256": "21e70d6a80e6a3034781ceae52f7691e8f6c3e7a1e54b836716781c4dbc9c995"
     },
     {
       "path": "measurement_workspace/study_context.py",
-      "bytes": 4617,
-      "sha256": "590e1dfcba556bfcfce7b7fdaf89d9c241b699e0fc63f3cde175c04535c33e6c"
+      "bytes": 5008,
+      "sha256": "cfda0c0bfb3b6d66b4aba62dc9e22d7231516aee1c10cf1801e3497ce7bba6a0"
     },
     {
       "path": "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
-      "bytes": 5565,
-      "sha256": "9628f1eb87df13b801eb216f3f9d6cbe8b127744f770cdc2ba02971c27c3b8e3"
+      "bytes": 7726,
+      "sha256": "20fd5f2ab93b57ba7e30df1c9516e33cc91a9b2d2b08fec537c9f97da8c6d03a"
+    },
+    {
+      "path": "measurement_workspace/utility_microbiology_context.py",
+      "bytes": 16066,
+      "sha256": "57e727ae4d3cc7828a49b0367a335a2219a80898a7d16067e3fb2e9305c02a3a"
     },
     {
       "path": "measurement_workspace/utility_microbiology.py",
-      "bytes": 20691,
-      "sha256": "953f6fc320ed53ab08ac3a08c01b8e9b1ce41b1c4c1ecf438a73dad262193fae"
+      "bytes": 23319,
+      "sha256": "f987e5e8a89aa9f372b8db7a96400b1fd8537df5f02ec74d0d39934d35685b2a"
+    },
+    {
+      "path": "microbial_temporal_observed_report.sources.json",
+      "bytes": 6407,
+      "sha256": "7142fd1776de0ec7028fa0235a9ecce457b04efe7bb2f82f3e2a9d0d8351271c"
     },
     {
       "path": "model/UTILITY_MICROBIAL_STUDY.md",
@@ -657,6 +672,11 @@
       "sha256": "1e9cf2a1646173ee68ef8f8643aa35d6c3367816ab4784ac2d77991feaa0e87e"
     },
     {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/build_paired_sensitivity.mjs",
+      "bytes": 4312,
+      "sha256": "b6b24632f0a7c2b02c8d96f8f9c7aa93a8cd649ecfc02c4d8938b8fa2bddd02e"
+    },
+    {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/build_study.mjs",
       "bytes": 2547,
       "sha256": "5317cfac56f02f53103782ea97aa50f508371f22049d6179341748aa4d27873f"
@@ -727,9 +747,44 @@
       "sha256": "622caf002d5dd47e1c1d2f96dd6b4b2beb20d308622e8c7a4eda56f144fa015e"
     },
     {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired_sensitivity_report.mjs",
+      "bytes": 12417,
+      "sha256": "f797675b060cf2c96448426aa8771ccff84c1444c2f0b4eab2e9e83aa9ad000d"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/PAIRED_SENSITIVITY.md",
+      "bytes": 6007,
+      "sha256": "e9fe4d1f464584ccbf4305a75c9f68cd1e2dc20b129840ce7a9e9b38affb1925"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired_sensitivity.mjs",
+      "bytes": 9721,
+      "sha256": "95f24b9d4bd5017c38d6faba4848bee3c7f6f4220a78b7adeb71b35df188d54e"
+    },
+    {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-nitrogen-components.csv",
       "bytes": 6896,
       "sha256": "65db2355418943f74fbe641e0611e935338601fe8920286147c190efc7097100"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-sensitivity-input.json",
+      "bytes": 481,
+      "sha256": "a3bf27777603ffdbfc90d8bdd868afd0093dd9c12c1e74b8edbf4447c8bd8065"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-sensitivity-scenarios.csv",
+      "bytes": 43624,
+      "sha256": "7756d6d6f4f9089c1880bbd4e940a9889b9f8cdbe7145c7c9507a2557f0dc25f"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-sensitivity.html",
+      "bytes": 122856,
+      "sha256": "da007422a985338f96bcfe78ad7953e7cb0064c9e32f8dce93ee2e423eb44963"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-sensitivity.json",
+      "bytes": 109194,
+      "sha256": "890afdb9cf931e08cb9e3b86d5af4a20c57fbd4090d253e795acc8e4a4f8909d"
     },
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
@@ -852,9 +907,14 @@
       "sha256": "59df488cc9820a6eef7750d6938cf91573f701c8ad4683a6c102ec26c7a04863"
     },
     {
+      "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+      "bytes": 55405,
+      "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
+    },
+    {
       "path": "operator/extensions/published-studies.json",
       "bytes": 2476,
-      "sha256": "d9d0a7731a2c01cc3b41aecb038d366c8eeeb2bd4b69bbdb706ce4654e05f993"
+      "sha256": "62891332f4888ef975c314fbe1a2e9b37abbed55a9c3ef9f0838f744c8368a26"
     },
     {
       "path": "operator/published_study_operator.py",
@@ -873,8 +933,8 @@
     },
     {
       "path": "PUBLISHED_STUDIES.md",
-      "bytes": 34110,
-      "sha256": "5b15a2ae0d724de33dde8201321f8825f7c61b9d6dc71bd60fc58a12b4f84155"
+      "bytes": 34931,
+      "sha256": "de74d5f15174c51c9b6ddf3b868e596046923135331dc07c30a6a278f4a13696"
     },
     {
       "path": "receive_published_studies.py",
@@ -885,6 +945,136 @@
       "path": "source_tools/build_eighteenmile_stream_study.mjs",
       "bytes": 15219,
       "sha256": "75d8a835a20bd9e55b5ab02a74a3d9586b56c17e9d7d2348e9a4d10247f2aafa"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/analysis-summary.json",
+      "bytes": 8450,
+      "sha256": "e492f216935e85cef11ba789cca65f39aaa330f7c8e2b40d6c6825588b1591fd"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/analysis.mjs",
+      "bytes": 20084,
+      "sha256": "4c00450d05f8e6509ea300af53aeca2cbbb17f87bbd1584fa1353919a8829e0b"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/annual-sampling-coverage.csv",
+      "bytes": 206,
+      "sha256": "8e2d8aa914bb20a28e2403af83ce31c0e7eaea8c3eabd8e48f46ce33b0560d63"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/build-explorer.mjs",
+      "bytes": 3065,
+      "sha256": "f2e8657a2b91c538faafc438158f2045e7b3f0fd12ae7c11e4a1748892cdccba"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/CALENDAR_SUPPORT.md",
+      "bytes": 4401,
+      "sha256": "75c3234c22751e414251703de2095ebf7c6ecd07598b80cbb52aa5a476f354c3"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/calendar-support-comparisons.csv",
+      "bytes": 17589,
+      "sha256": "11e7a36b5eeca7a7aee55e654c30446effb473c8b2da795b239eb8b6576cd878"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/calendar-support-source-rows.csv",
+      "bytes": 122498,
+      "sha256": "fe5265cac8f80ef6a2f1a654526e86f536b94819f2bbd1bebf669ad32a99cc15"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/calendar-support-summary.json",
+      "bytes": 2686,
+      "sha256": "bf51236ce577930f1f557e41eb5f7195c858b6ffbcdd11c07aa26c8863f13779"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/comment-sensitivity.csv",
+      "bytes": 13752,
+      "sha256": "74d9853ac07b5339a3cdbe2577948cc9393537bb7da0519980610744c5d8ce15"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/compare-calendar-support.mjs",
+      "bytes": 6915,
+      "sha256": "3aeb39798609ccce35a85e87cb46d8f9da6f744fbbd983d9dcbff6031cdd2742"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/EXPLORER.md",
+      "bytes": 6530,
+      "sha256": "31a92dfd2f8eba4cb1c097489c28a7b262af5208616de3dd91f4eccf3e252055"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/explorer.mjs",
+      "bytes": 37040,
+      "sha256": "04ca0c78d2ba74c3ac4653e87602b338f2412d284e144deb30ea45e313d33e72"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/field-replicates.csv",
+      "bytes": 708,
+      "sha256": "9e922602ca20ddaeac8d4858c65404ba7bded9b71b8c43b1f09645562803b004"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/flagged-source-comments.csv",
+      "bytes": 28893,
+      "sha256": "a62b00d921d09b939a4ad67b746ba2b4afc392a1aa076477b450783d2e4eb384"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/flow-daily-2022.csv",
+      "bytes": 21567,
+      "sha256": "8fbd91d565fe517080ff8edd45cd309bfdaa31fbd1a745bf001bac48f12d14ad"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/flow-sample-join.csv",
+      "bytes": 7536,
+      "sha256": "d71fee49d8363898397f7039d6ee1beb0100f4fea9373d4f7cb682e96f88e44b"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/index.html",
+      "bytes": 129048,
+      "sha256": "0726905a81183bc2a67eeb49f69c3bb5f84cfc73cc5d83446dc95945dd0343e6"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/observed-report.json",
+      "bytes": 11453,
+      "sha256": "1eb83346c82d755bec698cd7259a076b97eba9406c1952aa9d0d99235a0c5f9a"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/README.md",
+      "bytes": 10529,
+      "sha256": "0e986818ee59d1cb6db66e947b5bb53bd9ddcc35d3fdc335be1df6affc547d4e"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/record-intervals.csv",
+      "bytes": 227126,
+      "sha256": "4ad3864e802385c038f4c9005ed72c79f93de6b930a5b66b061ac325143ddfa0"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/reproduce.mjs",
+      "bytes": 2314,
+      "sha256": "a6f5101449c038a5a3563b644372f8cad5035d2d5dd6efa3583ee85b06de8a76"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/source-manifest.json",
+      "bytes": 9294,
+      "sha256": "e044c8bad2693b34c3f5912ff1f360d7a2da594b92504fc2ec6ac2f69573f391"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-month-summary.csv",
+      "bytes": 122016,
+      "sha256": "2d3090b1f3e63f42abb2e2950cd71c839ce5fb039667a2e0555ace8cc5f23390"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-season-summary.csv",
+      "bytes": 48144,
+      "sha256": "9ce54e608a226b26200092b15225bb63d033a3982a03ee897060d88f349fce08"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-summary.csv",
+      "bytes": 13740,
+      "sha256": "306f93bda04c2d8727f6c0fef782deff5f599a3818beb30c09e1f3aaed9c94ba"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-year-summary.csv",
+      "bytes": 30692,
+      "sha256": "5ddba3ebf23067820609734731f817b4513ba3a5381e175cd3b5340579d43f21"
     },
     {
       "path": "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
@@ -1180,6 +1370,21 @@
     "stream_analysis_manifest": {
       "commit": "ce3f9cb0543e97e44be328dc2b403d71c07f1e77",
       "sha256": "d169eaa09e680fa6a9efd530e9b77decb60bdaf79c17e40d8cc807c03d25c538"
+    },
+    "microbial_temporal_context": {
+      "original_analysis_commit": "b44910ba39d668e778bf34a0a19f5bd02b0b00da",
+      "calendar_authored_commit": "3f164c39d4f58d2c9baeac9b557a7e4461a896a4",
+      "explorer_merge_commit": "271b6313992e6d257edb6e4fbb1a5affc8ccd45f",
+      "manifest": "microbial_temporal_observed_report.sources.json",
+      "manifest_sha256": "7142fd1776de0ec7028fa0235a9ecce457b04efe7bb2f82f3e2a9d0d8351271c",
+      "source_files": 30,
+      "source_bytes": 1343693,
+      "binding_module": "measurement_workspace/utility_microbiology_context.py"
+    },
+    "paired_sensitivity": {
+      "commit": "da78bc3dcd9af746c2ac2af311fcdaee9c34a4e0",
+      "manifest": "eighteenmile_paired_sensitivity.sources.json",
+      "manifest_sha256": "2c0cb2ca5ce42dc4b701bafb97d8f429e2b3a30709fe0b1c1cac306c2c0be81a"
     }
   }
 }

@@ -261,7 +261,7 @@ function update(){
  document.getElementById('previous').disabled=index===0;document.getElementById('next').disabled=index>=visible.length-1;
  document.getElementById('page-counter').textContent=visible.length?(index+1)+' / '+visible.length:'No pages selected';
  document.getElementById('present').textContent=presenting?'Read report':'Present';
- document.querySelectorAll('[data-chapter-link]').forEach(function(a){var on=current()&&a.dataset.chapterLink===current().dataset.chapter;a.toggleAttribute('aria-current',!!on);a.parentElement.hidden=!agenda.has(a.dataset.chapterLink);});
+ document.querySelectorAll('[data-chapter-link]').forEach(function(a){var on=current()&&a.dataset.chapterLink===current().dataset.chapter;if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');a.parentElement.hidden=!agenda.has(a.dataset.chapterLink);});
  var select=document.getElementById('chapter-select');select.value=current()?current().dataset.chapter:'';
  Array.from(select.options).forEach(function(o){o.disabled=!agenda.has(o.value);});
  var meta=currentMeta();document.getElementById('note-context').textContent=meta?meta.title+' · '+meta.id:'';
@@ -321,7 +321,7 @@ function download(name,type,body){var url=URL.createObjectURL(new Blob([body],{t
 document.getElementById('export-json').onclick=function(){save();download('meeting-notes-'+binding.report_sha256.slice(0,12)+'.json','application/json',JSON.stringify(notes,null,2)+'\n');};
 document.getElementById('export-markdown').onclick=function(){save();download('meeting-notes-'+binding.report_sha256.slice(0,12)+'.md','text/markdown;charset=utf-8',markdown());};
 document.getElementById('import-notes').onchange=async function(e){
- var file=e.target.files[0];if(!file)return;try{if(file.size>8*1024*1024)throw Error('Choose a meeting file under 8 MiB.');var next=validate(JSON.parse(await file.text()));if(notes.entries.length||Object.values(notes.meeting).some(Boolean)){if(!window.confirm('Replace the notes open in this browser with the imported meeting? Export the current notes first if you want to keep both.'))return;}notes=next;agenda=new Set(notes.agenda);bindMeeting();renderNotes();setAgenda(notes.agenda);message('Meeting notes opened for this report edition.');}catch(error){message(error.message);}finally{e.target.value='';}
+ var file=e.target.files[0];if(!file)return;try{if(file.size>64*1024*1024)throw Error('Choose a meeting file under 64 MiB.');var next=validate(JSON.parse(await file.text()));if(notes.entries.length||Object.values(notes.meeting).some(Boolean)){if(!window.confirm('Replace the notes open in this browser with the imported meeting? Export the current notes first if you want to keep both.'))return;}notes=next;agenda=new Set(notes.agenda);bindMeeting();renderNotes();setAgenda(notes.agenda);message('Meeting notes opened for this report edition.');}catch(error){message(error.message);}finally{e.target.value='';}
 };
 function preparePrint(){
  printing=true;

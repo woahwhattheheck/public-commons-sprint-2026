@@ -35,7 +35,27 @@ const geographySources=[],geographyInput={},geographyPaths={
 };
 for(const [role,path]of Object.entries(geographyPaths))geographyInput[role]=JSON.parse(await retained(path,role,geographySources));
 const geography=buildFlowGeography({...geographyInput,sourceInputs:geographySources});
-const text=renderFlowReport({...combined,dmr,geography});
+const seasonalRoot='observations/flow_seasonality_20261013/';
+const seasonalManifest=JSON.parse(await readFile(join(application,'observed_flow_seasonality.sources.json'),'utf8'));
+const seasonalMembers=seasonalManifest.entries.flatMap(entry=>[entry,...(entry.companions||[])]);
+async function seasonalMember(name){
+ const record=seasonalMembers.find(item=>item.path===seasonalRoot+name);
+ if(!record)throw Error('Seasonal source member was not retained: '+name);
+ const bytes=await readFile(join(application,record.path));
+ if(bytes.length!==record.bytes||createHash('sha256').update(bytes).digest('hex')!==record.sha256)throw Error('Retained seasonal source identity differs: '+name);
+ return JSON.parse(bytes.toString('utf8'));
+}
+const snapshot=await seasonalMember('original-flow-data.json'),seasonality=await seasonalMember('explorer-data.json');
+const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+const same=(left,right)=>JSON.stringify(canonical(left))===JSON.stringify(canonical(right));
+const frozenDaily=Object.entries(snapshot.series).flatMap(([key,rows])=>rows.map(row=>[key,...row.slice(0,3),snapshot.source_ids[row[3]],...row.slice(4)]));
+const currentDaily=combined.daily.map(row=>[row.site+'-'+row.date.slice(0,4),row.date,row.reported_mean_cfs,row.qualifiers,row.source_id,row.source_values_index===''?null:Number(row.source_values_index),row.source_record_index===''?null:Number(row.source_record_index),row.source_line?Number(row.source_line):null]);
+const sortDaily=rows=>rows.sort((a,b)=>a[0].localeCompare(b[0])||a[1].localeCompare(b[1]));
+const sortAnnual=rows=>[...rows].sort((a,b)=>a.site.localeCompare(b.site)||a.period_start.localeCompare(b.period_start));
+if(!same(sortDaily(currentDaily),sortDaily(frozenDaily))||!same(sortAnnual(combined.annual),sortAnnual(snapshot.annual)))
+ throw Error('The current daily or annual hydrology differs from the selected seasonal source edition; rebuild one corresponding original edition before joining them');
+if(seasonality.schema!=='upstate.observed-flow-seasonality-explorer/v1')throw Error('Original seasonal comparison source has another schema');
+const text=renderFlowReport({...combined,dmr,geography,seasonality});
 const columns=Object.keys(combined.quality[0]),quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
 const csv=[columns,...combined.quality.map(row=>columns.map(k=>row[k]))].map(row=>row.map(quote).join(',')).join('\n')+'\n';
 const outputRoot=join(application,'observations/calibration_context_20261013'),outputs=[];

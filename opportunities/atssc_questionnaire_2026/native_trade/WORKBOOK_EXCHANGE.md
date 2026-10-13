@@ -18,7 +18,7 @@ Select an original answer cell, choose its explicit value type, and add it to th
 
 Formula cells and array/data-table formula ranges belong to the existing calculation workflow. Merged answer ranges use their first cell. These rules prevent an answer edit from destroying a formula group or becoming invisible beneath a merged cell.
 
-The resulting input edition is ready for the Producer calculation workflow. Calculation can retain its output through the original import_workbook operation, after which the same exchange reader inspects that calculated edition and its caches.
+The resulting input edition is ready for the existing native calculation workflow. In Workbooks, choose **Calculate native workbook**, or choose **Submit workbook revision** for the respondent's returned workbook. Calculation retains its output through the original import_workbook operation, after which the same exchange reader inspects that calculated edition and its caches.
 
 ## Bind answers to the original template
 
@@ -99,7 +99,8 @@ Add "workbook_exchange" to the existing EXTENSION_MODULES tuple in questionnaire
 
     EXTENSION_MODULES = (
         "respondent_operations", "reporting_workbench",
-        "workbook_calculation", "workbook_intake", "workbook_exchange",
+        "workbook_calculation", "workbook_intake", "questionnaire_locale",
+        "source_formula", "workbook_exchange",
     )
 
 Each retained exchange runs one original _write transaction, including the successor workbook insert and the export manifest. It therefore shares the core's stable request-ID replay and collision behavior.
@@ -120,7 +121,21 @@ The original project exporter includes these source files, the complete SQLite d
 
 The imported original remains the authoritative retained input. Export validates its expected SHA before touching a cell. Each unselected ZIP member must have the same bytes/hash in the exported edition. The original worksheet XML is spliced at parsed cell boundaries, preserving namespace declarations, extension metadata and untouched rows/cells. New physical cells are inserted in numeric row/column order.
 
-No global temporary directory, browser, network service, spreadsheet interpreter or secondary database is required by the exchange module. Workbook calculation remains the maintained Producer workflow. The internal extraction package consumes those same source-cell records through the maintained operating workbook writer. Public and protected respondent documents retain the original reporting workbench's mappings and disclosure decisions.
+Workbook calculation uses the maintained native calculation workflow. The internal extraction package consumes those same source-cell records through the existing operating workbook writer. Public and protected respondent documents retain the original reporting workbench's mappings and disclosure decisions.
+
+## Complete retained-customer operation
+
+Run the full five-family programme on an independently received complete project:
+
+    python application/WORKBOOK_EXCHANGE_CUSTOMER.py --workspace workspace
+
+The programme uses the case's existing complete family definitions, publications and original entered plan. It retains all prior workbook BLOBs, calculation jobs, revisions and reports, then appends its source-linked exchange respondents and native editions in the same authority. Its output is saved under `workspace/source-evidence/workbook-exchange-customer`, including all original/input/calculated workbooks, complete mappings and four-sheet extraction packages, typed source records, native review findings and paired reports. Exact requests resume the retained edits and revisions.
+
+The original text kind takes precedence over a numeric display format when an unlocked original cell already contains text, with original validations and explicit classifications taking precedence. For the retained domestic-producer source, the programme appends its complete kind-corrected definition/publication under the original questionnaire ID. Original definitions, publications, records and files remain retained alongside the successor.
+
+Original formula errors and no-data markers remain typed review findings under `validation.formula_issues` and in the register's Validation worksheet. They are distinct from entered-answer validation issues. Selecting cached values uses the actual retained calculated edition; missing caches remain pending calculation. The complete JSON companion retains every original issue, value and source coordinate.
+
+The four-sheet register uses readable wrapped columns, retained identifiers, filters and frozen source keys. Metadata counts, physical rows and Boolean states retain their native Excel types; exact source lexical values and formula expressions remain text beside their explicit source type. The original-format input and calculated workbooks remain the authority for calculation.
 
 ## Native original-source operation
 

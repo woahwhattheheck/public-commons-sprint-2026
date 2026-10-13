@@ -3436,6 +3436,323 @@
           }
         }
       }
+    },
+    "correction_worksheet_reconciliation_prepare": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "actor",
+        "returnId",
+        "currentEditionId",
+        "bindings"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "returnId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "currentEditionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "predecessorId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rowKey",
+              "original",
+              "current",
+              "reason"
+            ],
+            "properties": {
+              "rowKey": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "original": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "sourceId",
+                  "recordId",
+                  "rowSha256",
+                  "resourceSha256",
+                  "memberSha256"
+                ],
+                "properties": {
+                  "sourceId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "recordId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "rowSha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "resourceSha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "memberSha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                }
+              },
+              "current": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "sourceId",
+                      "recordId",
+                      "rowSha256",
+                      "resourceSha256",
+                      "memberSha256"
+                    ],
+                    "properties": {
+                      "sourceId": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                      },
+                      "recordId": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                      },
+                      "rowSha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                      },
+                      "resourceSha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                      },
+                      "memberSha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16384
+              }
+            }
+          }
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 16384
+        }
+      }
+    },
+    "correction_worksheet_reconciliation_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "actor",
+        "reconciliationId",
+        "choices"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "reconciliationId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "choices": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "changeId",
+              "decision",
+              "reason"
+            ],
+            "properties": {
+              "changeId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "accept-proposed",
+                  "keep-current",
+                  "resolve-row"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16384
+              }
+            }
+          }
+        },
+        "rowResolutions": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rowKey",
+                  "reason",
+                  "representation",
+                  "valueJson"
+                ],
+                "properties": {
+                  "rowKey": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16384
+                  },
+                  "representation": {
+                    "const": "json",
+                    "type": "string"
+                  },
+                  "valueJson": {
+                    "type": "string",
+                    "maxLength": 16777216
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rowKey",
+                  "reason",
+                  "representation",
+                  "cells"
+                ],
+                "properties": {
+                  "rowKey": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16384
+                  },
+                  "representation": {
+                    "const": "csv",
+                    "type": "string"
+                  },
+                  "cells": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100000,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 16777216
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 16384
+        }
+      }
+    },
+    "correction_worksheet_reconciliation_export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reconciliationId",
+        "actor"
+      ],
+      "properties": {
+        "reconciliationId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "reviewId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 16384
+        }
+      }
     }
   },
   "actions": [
@@ -3686,6 +4003,27 @@
       "python": "review_directory_correction_worksheet_return",
       "path": "/api/directory/correction-worksheets/review",
       "method": "POST"
+    },
+    {
+      "id": "correction-worksheet-reconciliation-prepare",
+      "input": "correction_worksheet_reconciliation_prepare",
+      "python": "prepare_directory_correction_worksheet_reconciliation",
+      "path": "/api/directory/correction-worksheet-reconciliations/prepare",
+      "method": "POST"
+    },
+    {
+      "id": "correction-worksheet-reconciliation-review",
+      "input": "correction_worksheet_reconciliation_review",
+      "python": "review_directory_correction_worksheet_reconciliation",
+      "path": "/api/directory/correction-worksheet-reconciliations/review",
+      "method": "POST"
+    },
+    {
+      "id": "correction-worksheet-reconciliation-export",
+      "input": "correction_worksheet_reconciliation_export",
+      "python": "export_directory_correction_worksheet_reconciliation",
+      "path": "/api/directory/correction-worksheet-reconciliations/export",
+      "method": "POST"
     }
   ],
   "limits": {
@@ -3733,7 +4071,9 @@
     "correctionWorksheets",
     "correctionWorksheetImports",
     "correctionWorksheetReturns",
-    "correctionWorksheetReviews"
+    "correctionWorksheetReviews",
+    "correctionWorksheetReconciliations",
+    "correctionWorksheetReconciliationReviews"
   ],
   "mutableKinds": [
     "acquisitions",
@@ -3770,5 +4110,6 @@
   "operatingPlansCatalogueFile": "directory-operating-plans-schema.json",
   "operatingReturnsCatalogueFile": "directory-operating-returns-schema.json",
   "correctionsCatalogueFile": "directory-corrections-schema.json",
-  "correctionWorksheetsCatalogueFile": "directory-correction-worksheets-schema.json"
+  "correctionWorksheetsCatalogueFile": "directory-correction-worksheets-schema.json",
+  "correctionWorksheetReconciliationCatalogueFile": "directory-correction-worksheet-reconciliation-schema.json"
 }
