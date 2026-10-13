@@ -26,10 +26,10 @@ ACTIONS = frozenset({
     "implementation.plan.save", "implementation.plan.report",
     "implementation.records.append", "implementation.source.attach",
     "implementation.source.import", "implementation.selection.import",
-    "implementation.observations.import", "implementation.lab.import",
+    "implementation.observations.import", "implementation.lab.import", "implementation.briefing.import",
     "implementation.lab.dispatch",
 })
-READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile"})
+READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "briefing-catalog", "briefing-preview"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -41,6 +41,7 @@ WRITE_ROUTES = {
     "selection-import": "implementation.selection.import",
     "observations-import": "implementation.observations.import",
     "lab-import": "implementation.lab.import",
+    "briefing-import": "implementation.briefing.import",
     "dispatch": "implementation.lab.dispatch",
 }
 
@@ -228,6 +229,11 @@ class ImplementationOperator:
         payload = payload or {}
         if not isinstance(payload, dict):
             raise self.Fault("IMPLEMENTATION_INPUT", "Supply implementation read parameters.")
+        if operation == "briefing-catalog":
+            from model.briefing_implementation import delivery_catalog
+            return delivery_catalog(self.operator.ws(workspace))
+        if operation == "briefing-preview":
+            return self._briefing(workspace, payload, preview=True)
         if operation == "list":
             return self.list(workspace)
         if operation == "selections":
@@ -510,6 +516,41 @@ class ImplementationOperator:
         return dict(self._dispatch_result(workspace, plan_id, operation_id),
                     status=result["status"])
 
+    def _briefing(self, workspace, value, *, preview=False, actor=""):
+        from model import briefing_implementation
+        if not isinstance(value, dict):
+            raise self.Fault("IMPLEMENTATION_BRIEFING", "Select the original meeting notes and saved plan.")
+        ws = self.operator.ws(workspace)
+        notes_id = value.get("notes_upload_id")
+        if not isinstance(notes_id, str) or not notes_id:
+            raise self.Fault("IMPLEMENTATION_BRIEFING", "Upload the original meeting notes JSON.")
+        notes = self.operator.upload(notes_id)
+        if value.get("delivery_id"):
+            if value.get("report_upload_id") or value.get("index_upload_id"):
+                raise self.Fault("IMPLEMENTATION_BRIEFING", "Choose a saved report or an exported report pair.")
+            paths = briefing_implementation.delivery_sources(ws, value["delivery_id"])
+        else:
+            report = self.operator.upload(value.get("report_upload_id"))
+            index = self.operator.upload(value.get("index_upload_id"))
+            paths = {"report": report["path"], "index": index["path"]}
+        plan_id = self._id(value.get("plan_id"))
+        revision = self._integer(value.get("revision"), "revision")
+        document = self.store(workspace).get(plan_id, revision)
+        digest = document_digest(document)
+        supplied = value.get("document_digest")
+        if supplied is not None and supplied != digest or not preview and supplied != digest:
+            raise self.Fault("IMPLEMENTATION_BRIEFING", "Preview the exact saved working revision.", 409)
+        arguments = {"selected_entry_ids": value.get("selected_entry_ids")}
+        if preview:
+            result = briefing_implementation.preview(ws, document, paths["report"], paths["index"], notes["path"], **arguments)
+        else:
+            result = briefing_implementation.receive(
+                ws, document, paths["report"], paths["index"], notes["path"],
+                expected_operation_id=value.get("briefing_operation_id"), actor=actor, **arguments)
+        return {**result, "workspace_key": workspace,
+                "notes_upload_id": notes_id,
+                "delivery_id": value.get("delivery_id")}
+
     def _lab(self, workspace, value, *, operation, actor=""):
         """Receive original CSV bytes through the host's verified upload ticket."""
         from model.implementation_lab_results import (
@@ -760,7 +801,7 @@ class ImplementationOperator:
             document = None
             plan_id = self._id(value.get("plan_id", value.get("id")))
         if (action not in ("implementation.plan.report", "implementation.observations.import",
-                           "implementation.lab.import", "implementation.lab.dispatch")
+                           "implementation.lab.import", "implementation.lab.dispatch", "implementation.briefing.import")
                 and (not task.get("attempts") or len(task["attempts"]) > 1)):
             replay = self._replay(store, plan_id, actor)
             if replay is not None:
@@ -799,6 +840,8 @@ class ImplementationOperator:
                 return self._source_import(store, task, plan_id, expected, actor)
             if action == "implementation.plan.report":
                 return self._report(store, task, plan_id)
+            if action == "implementation.briefing.import":
+                return self._briefing(workspace, value, actor=actor)
             if action == "implementation.lab.dispatch":
                 return self._dispatch(workspace, value, operation="dispatch", actor=actor)
             if action == "implementation.lab.import":
