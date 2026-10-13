@@ -85,8 +85,22 @@ def _number(value):
     return result
 
 
-def _question_context(question):
-    label = _text(question.get("label", question["id"]))
+def _question_label(question, language="en"):
+    label = question.get("label", question["id"])
+    if language == "fr" and question.get("original_row_french_label"):
+        label = question["original_row_french_label"]
+        option = question.get("original_answer_option", {})
+        option_label = option.get("french_label") or option.get("label")
+        if option_label and _text(option_label) not in _text(label).split(" — "):
+            label = _text(label) + " — " + _text(option_label)
+        cell = question.get("source", {}).get("cell")
+        if question.get("source_calculated") and cell:
+            label = _text(label) + " — " + _text(cell)
+    return _text(label)
+
+
+def _question_context(question, language="en"):
+    label = _question_label(question, language)
     heading = question.get("original_question_heading")
     if isinstance(heading, dict):
         heading = heading.get("text")
@@ -96,9 +110,23 @@ def _question_context(question):
         context.append("Worksheet " + _text(section))
     if heading and _text(heading) != label:
         context.append(_text(heading))
-    prompt = question.get("original_question_text")
-    if prompt and _text(prompt) not in {label, _text(heading)}:
+    prompt = question.get("original_french_text") if language == "fr" else None
+    prompt = prompt or question.get("original_question_text")
+    if prompt and _text(prompt) not in {label, _text(heading), _text(question.get("original_row_label")), _text(question.get("original_row_french_label"))}:
         context.append(_text(prompt))
+    for entry in question.get("original_context", []):
+        if not isinstance(entry, dict):
+            continue
+        value = entry.get("french_text") if language == "fr" else None
+        value = value or entry.get("text")
+        if value and _text(value) not in context and _text(value) not in label.split(" — "):
+            context.append(_text(value))
+    period = question.get("original_period_context")
+    if isinstance(period, dict):
+        value = period.get("french_label") if language == "fr" else None
+        value = value or period.get("label")
+        if value and _text(value) not in context and _text(value) not in label.split(" — "):
+            context.append(_text(value))
     return context
 
 
@@ -120,7 +148,7 @@ def document_model(payload):
         "created": _text(payload.get("created") or payload.get("updated")),
         "record_id": _text(payload.get("report_id") if edition == "public" else payload.get("report_id") or payload.get("response_id") or payload.get("respondent_id")),
         "question_count": len(questions), "responses": [], "numeric_totals": [],
-        "language": payload.get("language", "en"),
+        "language": payload.get("language") or payload.get("definition", {}).get("language") or "en",
         "orientation":"portrait", "density":"comfortable", "columns":1,
         "description":"", "view_sections":[], "include_response_details":True,
     }
@@ -161,19 +189,19 @@ def document_model(payload):
             choice = choices.get(qid, {})
             classification = _choice(question, choice)
             item = {
-                "id": qid, "label": _text(question.get("label", qid)),
+                "id": qid, "label": _question_label(question, model["language"]),
                 "kind": question.get("kind", "text"), "unit": _text(question.get("unit")),
                 "classification": classification,
                 "alternative": _text(alternatives.get(qid) or choice.get("public_alternative")),
             }
-            item["context"] = _question_context(question)
+            item["context"] = _question_context(question, model["language"])
             original = response["values"].get(qid)
             withheld = edition == "public" and classification == "protected"
             if item["kind"] == "table":
                 columns = question.get("columns", [])
                 if not columns or not isinstance(original, (list, type(None))):
                     raise DocumentExportError("A table answer needs declared columns and retained rows")
-                item["columns"] = [{"id": c["id"], "label": _text(c.get("label", c["id"])), "unit": _text(c.get("unit"))} for c in columns]
+                item["columns"] = [{"id": c["id"], "label": _text((c.get("french_label") if model["language"] == "fr" else None) or c.get("label", c["id"])), "unit": _text(c.get("unit"))} for c in columns]
                 original_rows = original or []
                 cell_choices = choice.get("cells", [])
                 item["rows"] = []
@@ -208,8 +236,8 @@ def document_model(payload):
         numbers = released_numbers[q["id"]]
         total = sum(numbers, Decimal(0))
         model["numeric_totals"].append({
-            "label": _text(q.get("label", q["id"])), "unit": _text(q.get("unit")),
-            "context": _question_context(q),
+            "label": _question_label(q, model["language"]), "unit": _text(q.get("unit")),
+            "context": _question_context(q, model["language"]),
             "answered": str(len(numbers)), "sum": format(total, "f") if numbers else "No public answers" if edition == "public" else "Not answered",
             "mean": format(total / len(numbers), "f") if numbers else "",
             "minimum": format(min(numbers), "f") if numbers else "",

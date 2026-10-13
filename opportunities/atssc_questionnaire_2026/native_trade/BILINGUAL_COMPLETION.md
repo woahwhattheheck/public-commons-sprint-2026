@@ -16,6 +16,10 @@ Display wording is pinned to the exact original questionnaire and definition ver
 
 The full original workbook compiler supplies original question stems, section headings, row labels and any retained French source text. Respondent pages display a complete original stem once per source group, followed by its fields; a page beginning inside that group repeats its context. French group text comes from the retained source. Individual labels use separately authored wording, or an original French text when it corresponds to that individual prompt. This keeps a shared group instruction distinct from a row label such as a country or year.
 
+Original family pages also use the source-owned display definition to show the full year and partial-year column headings, measure, country and subgroup context. The corresponding original French row labels and context stay separate from authored wording. Read-only totals retain their original period context. Resolving this presentation keeps the publication's answer schema, source coordinates, current values and historical reports intact.
+
+Certification prompts include their original Yes/No or Oui/Non branch. The original workbook's `X` marker remains the stored answer key; the displayed option uses that source row's exact English or French wording. Original exporter group headings stay visible, while entered exporter names remain answer data with their own disclosure.
+
 ## Reports and communications
 
 Reporting controls support both interface languages. Saved templates and frozen report content retain their authored titles, notes, native values and disclosure-specific statistics. The current customer example is **Trade questionnaire response report**, template version 5, using the six explicitly selected entered demonstration responses. Its ordered sections and public/protected editions remain accessible through HTML, CSV, JSON, PDF, Word, Excel and PowerPoint downloads.

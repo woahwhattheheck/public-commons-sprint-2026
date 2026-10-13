@@ -38,6 +38,8 @@ available in the workspace's history.
 The source-owned renderers use the same projected public/protected payload as
 PDF and Word. `office_reports.py`, the standard blank slide template under
 `office-assets/`, and `document_charts.py` travel with every complete project.
-The Excel and PowerPoint rendering path uses Python's standard library and the
-delivered application source. The offline document runtime also supplies the
-shared PDF/Word model used by these renderers.
+The Excel rendering path uses Python's standard library and the delivered
+application source. PowerPoint table pagination uses the delivered licensed
+DejaVu font metrics and document runtime so long original labels remain readable
+across complete native slides. The same offline runtime supplies the shared
+PDF/Word model used by these renderers.
