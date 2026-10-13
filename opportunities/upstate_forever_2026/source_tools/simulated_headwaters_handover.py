@@ -293,7 +293,8 @@ def _render(case, receipt, complete, report_files, map_files, browser):
                    if row["path"].lower().endswith((".png", ".jpg", ".jpeg"))]
     chapter_files = ["browser/" + row["path"] for row in browser_files
                      if row["path"].lower().endswith((".pdf", ".html", ".zip"))
-                     and ("field" in row["path"].lower() or "customer" in row["path"].lower())]
+                     and ("field" in row["path"].lower() or "customer" in row["path"].lower()
+                          or "qc-comparison" in row["path"].lower())]
     stage_names = [
         ("baseline_native", "Baseline native calculation"),
         ("alternative_native", "Riparian native calculation"),
@@ -364,7 +365,7 @@ def _render(case, receipt, complete, report_files, map_files, browser):
         + ('The recorded operator course' if recording else 'The saved teaching course') + '</h2>'
         '<p>The course follows the actual retained case and saved controls. Its teaching selection and narration script identify the original inputs and displayed quantities.</p>'
         + media + _file_list(teaching)
-        + ('<details><summary>Field and customer handback downloads</summary>' + _file_list(chapter_files) + '</details>' if chapter_files else '')
+        + ('<details><summary>Field, QC comparison and customer handback downloads</summary>' + _file_list(chapter_files) + '</details>' if chapter_files else '')
         + ('<details><summary>Original desktop and narrow-screen captures</summary>' + _file_list(screenshots) + '</details>' if screenshots else '')
         + '</section>' + elapsed + '<section aria-labelledby="continue-heading"><h2 id="continue-heading">Continue the same working project</h2>'
         '<div class="actions">' + _link(project_zip, "Download the complete working project", download=True, css="button primary")
