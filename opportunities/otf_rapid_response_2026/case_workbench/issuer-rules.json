@@ -1,0 +1,32 @@
+{
+  "schema": "commons.otf-rrf-casework-rules.v1",
+  "source_notice": "https://www.opentech.fund/news/open-technology-fund-requests-proposals-for-the-rapid-response-fund/",
+  "source_pdf": "https://www.opentech.fund/wp-content/uploads/2026/10/Rapid-Response-Fund_RFP-2026-.pdf",
+  "published": "2026-10-06",
+  "retrieved": "2026-10-13",
+  "original_pdf_bytes": 236699,
+  "notice_retained_source_sha256": "eac5a0919a7c0ff87b698c9f1a571a7fbf28a139050c04ce0ea4f115c3a535fe",
+  "pdf_extraction_sha256": "d818cf4dc7e66ad525364aed6b19a614de2a8a00b532333e3fff85be05d357a2",
+  "rules": {
+    "currency": "USD",
+    "initial_award_max_cents": 15000000,
+    "initial_term": "one year",
+    "utilization_guaranteed": false,
+    "max_loaded_labor_categories": 5,
+    "case_authorization": "OTF program manager written approval before casework",
+    "excluded_costs": [
+      "proposal preparation",
+      "case application preparation"
+    ],
+    "direct_costs": "Actual preapproved reasonable necessary allowable costs; no markup",
+    "invoice_report": "As required by the actual engagement",
+    "anti_lobbying_threshold": "Actual awarded contract value at least USD 100,000"
+  },
+  "implementation_choices": {
+    "labor_time": "Whole minutes, original UTC start/end, per-entry half-up rounding to USD cents. Review against the actual signed contract before use.",
+    "retained_sources": "Full original bytes, independent content digests and immutable operation history.",
+    "scope_changes": "Explicit plan and written approval editions preserve past work bindings.",
+    "invoices": "Frozen exact entry selections; source-recorded submission and payment are separate.",
+    "role_rates": "Actual awarded rates retained for the life of this workbook. A changed rate schedule needs a new contract workbook with the original retained source; ceiling/end amendments are supported."
+  }
+}
