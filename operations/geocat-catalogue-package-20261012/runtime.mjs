@@ -84,6 +84,8 @@ async function main(){
   return {...description,lockSha256:sha(await readFile(join(input.directory,'package-lock.json'))),
    packageJsonSha256:sha(await readFile(join(input.directory,'package.json')))};
  }
+ if(input.action==='install')return installer.installRuntime({directory:input.directory,
+  offline:input.offline,cache:input.cache,npm:input.npm});
  if(input.action==='adopt')return installer.adoptRuntimeDependencies({directory:input.directory});
  if(input.action==='inspect')return installer.inspectRuntimeInstall({directory:input.directory,load:true,source:true,python:input.python});
  need(input.action==='application','PACKAGE_RECEIVING_ACTION_UNKNOWN');
