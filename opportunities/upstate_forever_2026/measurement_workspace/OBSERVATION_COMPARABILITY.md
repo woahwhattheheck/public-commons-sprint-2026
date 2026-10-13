@@ -126,7 +126,7 @@ exports contain every filtered row across all pages.
 ## Native application and portable receiving
 
 The additive `integration/component_fragments/observation-comparability.json`
-selects the complete four-file component and its maintained observed-context
+selects the complete maintained component and its maintained observed-context
 and generic scientific-report-rendering dependencies through the ordinary installer. It does not change the shared
 component catalogue. The existing Sources import and ordered Scientific study
 reports controls consume its original native manifest/recipe; this component
@@ -247,9 +247,12 @@ after updates; an interrupted import resumes the same fully retained output.
 The original numerical calculation is the same maintained
 `measurement_workspace.observation_comparability` producer.
 
-Open the saved result from its task or the saved-comparison selector. **Open in
-Scientific Reports** passes that exact retained source to the existing ordered
-composer. The complete source ZIP contains the generated offline desk, all
+Open the saved result from its task or the saved-comparison selector. **Open this
+report only** replaces the existing composer draft with that exact retained source
+and its saved title. **Add to current report** appends that source to the existing
+ordered selection, preserving the existing nonempty title and source order. Both
+use the maintained Scientific Reports composer; choose the intended operation
+explicitly so an unrelated draft cannot silently become this comparison's report. The complete source ZIP contains the generated offline desk, all
 original input responses, every comparison/support CSV, structured data, native
 source manifest, calculation/desk source, store module and this guide. Extract
 the whole ZIP before opening `index.html`, so its original source links resolve.
