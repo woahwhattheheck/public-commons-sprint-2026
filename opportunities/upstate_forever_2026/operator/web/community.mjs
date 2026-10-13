@@ -176,14 +176,36 @@ function interventionCost(value){
   return BigInt(whole||'0').toString()+'.'+fraction.padEnd(2,'0').slice(0,2);
 }
 
-export function readInterventionCsv(source,table,previous=[],sourceSha256='',selection={}){
+export function mapInterventionColumns(headers,mapping=null){
+  const explicit=mapping!==null&&mapping!==undefined;
+  if(explicit&&(!mapping||typeof mapping!=='object'||Array.isArray(mapping)||Object.keys(mapping).some(field=>!interventionFields.includes(field))))
+    throw Error('Map only the original intervention plan fields.');
+  if(!explicit){
+    const missing=interventionRequiredColumns.filter(column=>!headers.includes(column));
+    if(missing.length)throw Error('The intervention CSV lacks columns: '+missing.join(', ')+'.');
+  }
+  const columns={},fieldProvenance=[];
+  for(const field of interventionFields){
+    let column=explicit&&Object.hasOwn(mapping,field)?mapping[field]:(headers.includes(field)?field:null);
+    if(column==='')column=null;
+    if(column!==null&&(typeof column!=='string'||!headers.includes(column)))
+      throw Error('Intervention field '+field+' needs an original CSV column.');
+    if(column===null&&interventionRequiredColumns.includes(field)&&field!=='id')
+      throw Error('Choose an original CSV column for '+field+'.');
+    columns[field]=column;
+    fieldProvenance.push({field,source_column:column,source_column_number:column===null?null:headers.indexOf(column)+1,
+      basis:column!==null?'original-column':field==='id'?'generated-source-row-id':'native-default'});
+  }
+  return {columns,fieldProvenance,explicit};
+}
+
+export function readInterventionCsv(source,table,previous=[],sourceSha256='',selection={},columnMapping=null){
   if(!/^[0-9a-f]{64}$/.test(sourceSha256))throw Error('The received CSV needs its exact SHA-256.');
   const parsed=parseCommunityCsv(source);
   if(!parsed.length)throw Error('The intervention CSV has no column headings.');
   const headers=parsed.shift().cells;
   if(headers.some(column=>!column)||new Set(headers).size!==headers.length)throw Error('The intervention CSV needs distinct, nonempty column headings.');
-  const missing=interventionRequiredColumns.filter(column=>!headers.includes(column));
-  if(missing.length)throw Error('The intervention CSV lacks columns: '+missing.join(', ')+'.');
+  const mapped=mapInterventionColumns(headers,columnMapping);
   const groups=selectCommunityGroups(table?.groups,selection),geoids=new Set(list(table?.groups).map(group=>group.geoid));
   const watersheds=new Set(list(table?.groups).flatMap(group=>list(group.memberships).map(member=>member.watershed_id)));
   const prior=new Map(list(previous).map(row=>[row.id,row])),seen=new Set(),records=[],sourceRows=[],errors=[],normalizedGeographies=[];
@@ -201,7 +223,8 @@ export function readInterventionCsv(source,table,previous=[],sourceSha256='',sel
     if(cells.every(value=>!value.trim()))continue;
     ordinal++;
     if(cells.length!==headers.length){errors.push('CSV row '+line+': expected '+headers.length+' columns; received '+cells.length+'.');continue;}
-    const original=Object.fromEntries(headers.map((column,index)=>[column,cells[index]]));
+    const sourceValues=Object.fromEntries(headers.map((column,index)=>[column,cells[index]]));
+    const original=Object.fromEntries(interventionFields.map(field=>[field,mapped.columns[field]===null?'':sourceValues[mapped.columns[field]]]));
     const id=original.id.trim()||'I-CSV-'+sourceSha256.slice(0,16)+'-'+ordinal;
     try{
       if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(id))throw Error('Use a portable intervention identifier with letters, digits, dots, underscores or hyphens.');
@@ -235,10 +258,12 @@ export function readInterventionCsv(source,table,previous=[],sourceSha256='',sel
   }
   if(errors.length){const error=Error('Correct '+errors.length+' intervention CSV '+(errors.length===1?'row':'rows')+' before importing.');error.rowErrors=errors;throw error;}
   if(!records.length)throw Error('The intervention CSV contains no intervention rows.');
-  const ignored=headers.filter(column=>!interventionFields.includes(column));
+  const ignored=headers.filter(column=>!Object.values(mapped.columns).includes(column));
   const cents=records.filter(row=>row.cost_estimate_usd!==null).reduce((sum,row)=>sum+BigInt(row.cost_estimate_usd.replace('.','')),0n);
   const centsText=cents.toString().padStart(3,'0');
-  return {records,rows:sourceRows,summary:{row_count:records.length,...interventionChanges(previous,records),
+  return {records,rows:sourceRows,
+    ...(mapped.explicit?{column_mapping:mapped.columns,source_headers:[...headers],field_provenance:mapped.fieldProvenance}:{}),
+    summary:{row_count:records.length,...interventionChanges(previous,records),
     normalized_geographies:normalizedGeographies,derived_columns:ignored.filter(column=>interventionDerivedColumns.includes(column)),
     additional_columns:ignored.filter(column=>!interventionDerivedColumns.includes(column)),
     known_estimate_count:records.filter(row=>row.cost_estimate_usd!==null).length,
@@ -349,7 +374,7 @@ export function validateCommunityView(value,state){
 export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState,openDelivery,openScientificReport,openStudyTransfer}){
   const cache=new Map(),pending=new Map();
   let activeWorkspace=null,container=null,mountController=null,loadError='',formTable=null,formWorkspace=null,validatedView=null;
-  let formPlanPrevious=null,formCsvPreview=null,formInterventionImport=null,formCsvEpoch=0;
+  let formPlanPrevious=null,formCsvPreview=null,formCsvInput=null,formInterventionImport=null,formCsvEpoch=0;
   let formWatershedCatalog=[],formWatershedReport=null,formWatershedError='',formWatershedCatalogError='';
   let formWatershedGeneration=0,formWatershedRequest=0,reportSourceRequest=0;
   let studyTransferRequest=0;
@@ -808,12 +833,48 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   }
 
   function interventionImportForm(){
-    return '<fieldset class="full"><legend>Receive an edited intervention programme</legend>'+
-      '<p class="note">Choose the exported interventions.csv, review its changes, then load the rows into this plan. Saving keeps the received file and this complete revision together. Row order becomes programme order; population and household context are recalculated from the retained communities.</p>'+
-      field('Edited intervention CSV','<input type="file" name="community_intervention_csv" accept=".csv,text/csv">','Quoted commas, multiline notes and spreadsheet HUC12 values are supported.',true)+
-      '<div class="page-actions">'+button('intervention-import-preview','Preview CSV changes','','small')+'</div>'+
+    return '<fieldset class="full"><legend>Receive an intervention programme</legend>'+
+      '<p class="note">Choose an intervention CSV, map its original columns to plan fields, and preview the changes before loading its rows. Saving retains the original file, field mapping and complete revision. Row order becomes programme order; population and household context come from the retained communities.</p>'+
+      field('Intervention CSV','<input type="file" name="community_intervention_csv" accept=".csv,text/csv">','Quoted commas, multiline notes and spreadsheet HUC12 values are supported.',true)+
+      '<div class="page-actions">'+button('intervention-import-columns','Read file columns','','small')+button('intervention-import-preview','Preview CSV changes','','small')+'</div>'+
+      '<div id="community-import-mapping"></div><p id="community-import-mapping-status" class="note" role="status"></p>'+
       '<div id="community-import-error" class="notice error" role="alert" hidden></div>'+
       '<div id="community-import-preview"></div><p id="community-import-applied" class="note" role="status"></p></fieldset>';
+  }
+  const interventionFieldLabels={
+    id:'Intervention ID',title:'Intervention title',priority:'Priority',strategy:'Strategy',status:'Status',
+    utility_id:'Original utility ID',watershed_id:'Original HUC12',geoids:'Block-group GEOIDs',
+    reason:'Reason and intended benefit',owner:'Work owner',next_step:'Next work step',
+    cost_estimate_usd:'Estimated cost (USD)',notes:'Notes'};
+  const interventionDefaultNotes={
+    id:'An unmapped or blank ID is generated from the original file SHA256 and row.',
+    priority:'Blank uses medium.',strategy:'Blank uses investigate.',status:'Blank uses proposed.',
+    geoids:'Separate GEOIDs with semicolons; blank uses the selected utility/watershed membership.',
+    cost_estimate_usd:'Use the original nonnegative USD estimate. Blank stays unspecified.',
+    utility_id:'Values must identify an actual utility in this retained table.',
+    watershed_id:'Values must identify an actual watershed for that utility.'};
+  function readInterventionColumnChoices(host){
+    const controls=[...host.querySelectorAll('[data-community-import-field]')];
+    return controls.length?Object.fromEntries(controls.map(node=>[node.dataset.communityImportField,node.value||null])):null;
+  }
+  function showInterventionColumns(host,headers,mapping){
+    const choices=headers.map((name,index)=>({id:name,title:(index+1)+': '+name}));
+    host.querySelector('#community-import-mapping').innerHTML=
+      '<h3>Original column mapping</h3><p class="note">Exact standard headings are selected automatically. Choose other headings explicitly. The saved import records the original column name and position for every plan field.</p>'+
+      '<div class="form-grid">'+interventionFields.map(field=>fieldControl(field)).join('')+'</div>';
+    function fieldControl(name){
+      const required=interventionRequiredColumns.includes(name)&&name!=='id';
+      const placeholder=required?'Choose original column':name==='id'?'Generate stable IDs':'Use native default / blank';
+      return field(interventionFieldLabels[name]+(required?' *':''),
+        select('community_import_map_'+name,choices,mapping[name]||'',placeholder,'data-community-import-field="'+e(name)+'"'),
+        interventionDefaultNotes[name]||'Original received text.');
+    }
+  }
+  function invalidateInterventionPreview(host,message){
+    ++formCsvEpoch;formCsvPreview=null;
+    host.querySelector('#community-import-preview').innerHTML='';
+    host.querySelector('#community-import-error').hidden=true;
+    host.querySelector('#community-import-mapping-status').textContent=message;
   }
   function interventionImportSummary(result,source){
     const s=result.summary;
@@ -823,15 +884,18 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       n(s.removed_ids.length)+' removed and '+n(s.unchanged_ids.length)+' unchanged compared with the saved plan.</p>'+
       '<p>'+usd(s.known_estimate_total)+' across '+n(s.known_estimate_count)+' entered estimates.</p>'+
       (s.normalized_geographies.length?'<p class="note">Restored original geographic identifiers: '+s.normalized_geographies.map(row=>'row '+row.row+' '+e(row.original)+' → '+e(row.resolved)).join('; ')+'.</p>':'')+
-      (s.additional_columns.length?'<p class="note">Additional columns retained in the received CSV: '+e(s.additional_columns.join(', '))+'.</p>':'')+
+      (s.additional_columns.length?'<p class="note">Unmapped columns retained in the received CSV: '+e(s.additional_columns.join(', '))+'.</p>':'')+
+      (result.field_provenance?'<details><summary>Retained source-field mapping</summary>'+table(['Plan field','Original CSV column','Column','Basis'],
+        result.field_provenance.map(row=>'<tr><th scope="row">'+e(interventionFieldLabels[row.field])+'</th><td>'+e(row.source_column??'Unmapped')+'</td><td>'+e(row.source_column_number??'')+'</td><td>'+e(human(row.basis.replaceAll('-','_')))+'</td></tr>'))+'</details>':'')+
       '<details class="technical"><summary>Review all '+n(s.row_count)+' intervention rows</summary>'+table(['CSV row','Intervention','Utility / HUC12','Block groups','Status','Owner','Estimate'],rows)+'</details>'+
       '<div class="page-actions">'+button('intervention-import-apply','Load these intervention rows','','primary')+'</div>';
   }
-  async function previewInterventionImport(){
+  async function previewInterventionImport(columnsOnly=false){
     ensureFormWorkspace();
     const host=form(),target=host?.querySelector('#community-import-preview'),errorNode=host?.querySelector('#community-import-error');
     if(!target||!formTable)throw Error('Open the intervention plan before receiving a CSV.');
     const file=host.querySelector('[name="community_intervention_csv"]')?.files?.[0],epoch=++formCsvEpoch;
+    const requestedMapping=readInterventionColumnChoices(host),priorSource=formCsvInput?.source;
     formCsvPreview=null;target.innerHTML='';errorNode.hidden=true;errorNode.textContent='';
     try{
       if(!file)throw Error('Choose the edited interventions.csv file.');
@@ -843,9 +907,18 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       const checksum=[...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');
       if(epoch!==formCsvEpoch||form()!==host)return;
       ensureFormWorkspace();
-      const result=readInterventionCsv(raw,formTable,list(formPlanPrevious?.interventions),checksum,readSelection());
+      const parsed=parseCommunityCsv(raw),headers=parsed[0]?.cells;
+      if(!headers?.length||headers.some(column=>!column)||new Set(headers).size!==headers.length)
+        throw Error('The intervention CSV needs distinct, nonempty column headings.');
       const source={filename:file.name,media_type:'text/csv; charset=utf-8',bytes:bytes.byteLength,sha256:checksum,text:raw};
-      formCsvPreview={result,source};target.innerHTML=interventionImportSummary(result,source);
+      const mapping=priorSource?.sha256===checksum&&requestedMapping?requestedMapping:
+        Object.fromEntries(interventionFields.map(field=>[field,headers.includes(field)?field:null]));
+      formCsvInput={source,headers};showInterventionColumns(host,headers,mapping);
+      host.querySelector('#community-import-mapping-status').textContent='Original file: '+file.name+' · '+headers.length+' columns. Review the mapping, then preview the changes.';
+      if(columnsOnly){target.innerHTML='';return;}
+      const result=readInterventionCsv(raw,formTable,list(formPlanPrevious?.interventions),checksum,readSelection(),mapping);
+      formCsvPreview={result,source,columnMapping:result.column_mapping};
+      target.innerHTML=interventionImportSummary(result,source);
     }catch(error){
       if(epoch!==formCsvEpoch||form()!==host)return;
       target.innerHTML='';errorNode.hidden=false;
@@ -855,9 +928,13 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   function applyInterventionImport(){
     ensureFormWorkspace();
     if(!formCsvPreview)throw Error('Preview the edited CSV before loading its rows.');
-    const host=form(),{source}=formCsvPreview;
+    const host=form(),{source,columnMapping}=formCsvPreview;
     let result;
-    try{result=readInterventionCsv(source.text,formTable,list(formPlanPrevious?.interventions),source.sha256,readSelection());}
+    try{
+      if(JSON.stringify(readInterventionColumnChoices(host))!==JSON.stringify(columnMapping))
+        throw Error('Preview the current field mapping before loading its rows.');
+      result=readInterventionCsv(source.text,formTable,list(formPlanPrevious?.interventions),source.sha256,readSelection(),columnMapping);
+    }
     catch(error){const node=host.querySelector('#community-import-error');node.hidden=false;node.innerHTML='<strong>'+e(error.message)+'</strong>'+(error.rowErrors?.length?'<ul>'+error.rowErrors.map(message=>'<li>'+e(message)+'</li>').join(''):'');return;}
     const selected=selectCommunityGroups(formTable.groups,readSelection()),allowed=new Map(selected.map(group=>[group.geoid,group]));
     const outside=result.records.filter(row=>row.geoids.some(id=>!allowed.has(id)||!list(allowed.get(id).memberships).some(member=>member.utility_id===row.utility_id&&member.watershed_id===row.watershed_id)));
@@ -868,7 +945,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     }
     host.querySelector('#community-import-error').hidden=true;
     host.querySelector('#community-interventions').innerHTML=result.records.map(row=>interventionRow(formTable,row)).join('');
-    formInterventionImport={schema:'upstate.intervention-csv-import/v1',source,selection:readSelection()};
+    formInterventionImport={schema:'upstate.intervention-csv-import/v1',source,selection:readSelection(),column_mapping:result.column_mapping};
     host.querySelector('#community-import-preview').innerHTML='';
     host.querySelector('#community-import-applied').textContent=result.records.length+' interventions loaded from '+source.filename+'. Review or edit the rows below, then save the complete plan revision.';
     formCsvPreview=null;
@@ -927,6 +1004,13 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     host.addEventListener('change',event=>{
       if(!host.dataset.communityPlan)return;
       const target=event.target;
+      if(target.dataset.communityImportField){
+        invalidateInterventionPreview(host,'Mapping changed. Preview the current columns before loading intervention rows.');
+      }
+      if(target.name==='community_intervention_csv'){
+        formCsvInput=null;host.querySelector('#community-import-mapping').innerHTML='';
+        invalidateInterventionPreview(host,'Read the selected file columns or preview its intervention rows.');
+      }
       if(['community_plan_utilities','community_plan_watersheds','community_plan_geoids'].includes(target.name)){updatePlanSummary();updateWatershedPreview();}
       if(target.name==='community_watershed_context')void loadWatershedContext();
       if(['community_grid','community_baseline'].includes(target.name))updateContext({changed:target.name});
@@ -953,7 +1037,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     const t=await get('community_tables',tableId);
     if(generation!==formWatershedGeneration||selectedWorkspace!==workspace())return;
     formTable=t;formWorkspace=workspace();
-    formPlanPrevious=old;formCsvPreview=null;formInterventionImport=null;formCsvEpoch++;
+    formPlanPrevious=old;formCsvPreview=null;formCsvInput=null;formInterventionImport=null;formCsvEpoch++;
     formWatershedCatalog=list(data().watershed_context_reports);
     formWatershedReport=null;formWatershedError='';formWatershedCatalogError='';formWatershedRequest++;
     await readWatershedCatalog();
@@ -1176,6 +1260,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     if(action==='report-preview')return reportDetail(node.dataset.id,{preview:node.dataset.preview==='true'});
     if(action==='native-item')return nativeItem(node);
     if(action==='study-transfer')return transferStudy(node);
+    if(action==='intervention-import-columns')return previewInterventionImport(true);
     if(action==='intervention-import-preview')return previewInterventionImport();
     if(action==='intervention-import-apply')return applyInterventionImport();
     if(action==='intervention-add'){

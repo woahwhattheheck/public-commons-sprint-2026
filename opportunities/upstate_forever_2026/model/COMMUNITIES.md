@@ -26,17 +26,19 @@ The plan can bind original source editions, an existing grid, completed or in-pr
 
 Saving a revision retains the previous plan and binds the new selection. To change the underlying table edition, create a new plan.
 
-## Receive an edited intervention programme
+## Receive and map an intervention programme
 
-Open a saved plan and choose **Revise plan**. In **Receive an edited intervention programme**, select the report's edited `interventions.csv` and choose **Preview CSV changes**. The preview shows every source-row error, added/changed/removed intervention counts, the programme rows and the entered estimate total.
+Open a saved plan and choose **Revise plan**, or open a new plan using the same retained community table. In **Receive an intervention programme**, select the original UTF-8 CSV and choose **Read file columns**. Map each plan field to the actual source column. Exact standard headings are selected automatically; other headings require an explicit choice. **Preview CSV changes** reads the complete file and shows source-row errors, added/changed/removed intervention counts, the programme rows, entered estimate subtotal and the retained field mapping.
+
+An exported `interventions.csv` can still be previewed directly. Changing the selected file or a field mapping clears the earlier preview. Review the current mapping and preview again before loading rows. The already loaded intervention editor and its original import remain intact until a new preview is applied.
 
 Choose **Load these intervention rows** after reviewing the preview. The imported rows appear in the existing intervention editor, where you can make further changes. **Save revised plan** creates the next immutable revision, retaining the previous plan, the import's selected geography and the exact received CSV filename, UTF-8 text, byte count and SHA-256.
 
-Keep the exported column headings. `id`, `title`, `utility_id`, `watershed_id` and `reason` are required. Existing intervention IDs retain their identity; a blank ID receives a stable ID derived from the received file and source row. The existing priority, strategy and status choices still apply. Separate multiple GEOIDs with semicolons. Quoted commas and multiline notes are supported. Preserve geographic identifiers as text in a spreadsheet; leading zeros are restored only when the resulting HUC12 or GEOID matches the retained original table.
+Map an original column to `title`, `utility_id`, `watershed_id` and `reason`. Map `id` to preserve existing intervention identities; an explicitly unmapped or blank ID receives a stable ID derived from the original received file SHA-256 and source row. When using the original canonical CSV API without a mapping, its required `id`, `title`, `utility_id`, `watershed_id` and `reason` headers retain their original behavior. The existing priority, strategy and status choices still apply. Separate multiple GEOIDs with semicolons. Quoted commas and multiline notes are supported. Preserve geographic identifiers as text in a spreadsheet; leading zeros are restored only when the resulting HUC12 or GEOID matches the retained original table.
 
-CSV row order determines intervention order. Exported `position`, `population_context` and `household_context` values are recalculated from the selected plan and source rows. Additional columns stay in the original received CSV. Known formula-text escapes from the preceding plan round-trip to the original text; edited text remains the received text.
+CSV row order determines intervention order. Exported `position`, `population_context` and `household_context` values are recalculated from the selected plan and source rows. Unmapped columns stay in the original received CSV. A missing optional column uses the existing native default: medium priority, investigate strategy, proposed status, selected membership for blank GEOIDs, and an unspecified cost. Known formula-text escapes from the preceding plan round-trip to the original text; edited text remains the received text.
 
-A report built from the new revision contains the current `interventions.csv`, the exact `received-interventions.csv` and `INTERVENTION_IMPORT.json`, which records the import comparison and any later editor changes. Those files, the revised plan and its original source context travel in the existing workspace backup and restore.
+A report built from the new revision contains the current `interventions.csv`, the exact `received-interventions.csv` and `INTERVENTION_IMPORT.json`, which records the import comparison and any later editor changes. For mapped intake it also retains the exact original headers and each plan field's source column, one-based column number and interpretation. The human report includes the same field mapping. Those files, the revised plan and its original source context travel in the existing workspace backup and restore.
 
 The same revision is available directly from the original Community CLI:
 
@@ -45,6 +47,26 @@ python model/community_cli.py --workspace /path/to/upstate-workspace plan-revise
 ~~~
 
 The command retains the original table, community selection, scientific context and notes, then prints the newly saved plan. Use that plan's ID with the existing `report-build` command. A malformed row or invalid community membership returns its source-row error before a revision is saved.
+
+
+For a client spreadsheet with different headings, pass `--column-mapping original-columns.json`. This JSON object names native plan fields on the left and exact original column headings on the right, for example:
+
+~~~json
+{
+  "id": null,
+  "title": "Work package",
+  "utility_id": "System ID",
+  "watershed_id": "HUC12",
+  "reason": "Intended benefit",
+  "owner": "Work owner",
+  "next_step": "Next action",
+  "cost_estimate_usd": "Planning estimate USD"
+}
+~~~
+
+Unspecified mapping entries use an exact same-named source column when one exists, otherwise the native default. An explicit `null` ignores that field's source column; required title, utility, watershed and reason mappings must be provided. A mapped column must exist in the received file. Source names are exact, including case and spaces. Multiple plan fields may deliberately use the same source column, and each binding is retained.
+
+The original file is never rewritten to manufacture canonical headings. The native validator reparses its exact retained bytes with the saved mapping, then applies the existing utility/watershed/GEOID membership rules, intervention choices and nonnegative two-decimal USD validation. Unknown estimates remain unspecified. Values are not reclassified or converted between currencies by a heading mapping. The imported record is preserved when a later revision edits its intervention rows, and the existing saved-change comparison records those edits.
 
 ## Deliver and reopen
 
