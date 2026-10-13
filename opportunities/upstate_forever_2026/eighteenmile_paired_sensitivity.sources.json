@@ -59,8 +59,8 @@
         },
         {
           "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/build_paired_sensitivity.mjs",
-          "bytes": 4288,
-          "sha256": "c5933aa1fd051a60c35674fc42d04ef4a6d1d13cb0faf5e56b772313fdd4e950"
+          "bytes": 4312,
+          "sha256": "b6b24632f0a7c2b02c8d96f8f9c7aa93a8cd649ecfc02c4d8938b8fa2bddd02e"
         },
         {
           "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/build_study.mjs",
@@ -144,8 +144,8 @@
         },
         {
           "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired_sensitivity.mjs",
-          "bytes": 9457,
-          "sha256": "97ea0bde4435a2c656a7d2f7c4b7d2a3ece1ea3770e2621ba5c401b9b53275a5"
+          "bytes": 9721,
+          "sha256": "95f24b9d4bd5017c38d6faba4848bee3c7f6f4220a78b7adeb71b35df188d54e"
         },
         {
           "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-nitrogen-components.csv",
@@ -164,8 +164,8 @@
         },
         {
           "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-sensitivity.json",
-          "bytes": 174678,
-          "sha256": "a1a6d54717f2f5740d92da72830b7a098c10ad9358b0866b3836b2f6e251b747"
+          "bytes": 109194,
+          "sha256": "890afdb9cf931e08cb9e3b86d5af4a20c57fbd4090d253e795acc8e4a4f8909d"
         },
         {
           "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
