@@ -13,7 +13,7 @@ from . import assessment_context, observed_context
 from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, read_json, verify_file)
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 SCHEMA = "upstate.assessment-report-context/v1"
 RECIPE = "assessment-report.json"
 MANIFEST = "assessment-report.sources.json"
@@ -110,9 +110,58 @@ def _links(items):
     return {"kind": "links", "items": [{"title": title, "path": path} for title, path in items]}
 
 
+def _compared_memberships(row, selection):
+    """Read original memberships only from the source used by this comparison."""
+    selected = selection.get("watershed_source") or {}
+    expected = (selected.get("collection_id"), selected.get("source_id"))
+    if any(value is None for value in expected):
+        return []
+    return [member for member in row.get("computed_memberships", [])
+            if (member.get("source_ref", {}).get("collection_id"),
+                member.get("source_ref", {}).get("source_id")) == expected]
+
+
+def _membership_labels(members):
+    labels = []
+    for member in members:
+        native = member.get("watershed_id")
+        label = _text(native)
+        if sum(other.get("watershed_id") == native for other in members) > 1:
+            reference = member.get("source_ref") or {}
+            feature = reference.get("native_feature_id")
+            if feature is None:
+                feature = "index " + _text(reference.get("source_feature_index"))
+            label += " [feature " + _text(feature) + "]"
+        label += " (" + _text(member.get("relation")) + ")"
+        labels.append(label)
+    return "\n".join(labels) if labels else "No retained membership in compared source"
+
+
+def _comparison_counts(rows):
+    return [sum(row.get("association_agreement") is True for row in rows),
+            sum(row.get("association_agreement") is False for row in rows),
+            sum(row.get("association_agreement") is None for row in rows)]
+
+
+def _ordered_groups(result, selection):
+    """Present editions in the retained inventory selection order."""
+    references = [inventory["table"] for inventory in selection.get("inventories", [])]
+    if not references and selection.get("table"):
+        references = [selection["table"]]
+    rank = {(reference.get("collection_id"), reference.get("source_id")): index
+            for index, reference in enumerate(references)}
+    row_rank = {row.get("assessment_row_id") or assessment_context._row_id(row):
+                rank.get((row.get("source_ref", {}).get("collection_id"),
+                          row.get("source_ref", {}).get("source_id")), len(rank))
+                for row in result.get("rows", [])}
+    return sorted(result["assessment_groups"], key=lambda group:
+                  min((row_rank.get(row_id, len(rank)) for row_id in group.get("row_ids", [])),
+                      default=len(rank)))
+
+
 def _sections(context, parcel=None):
     result, summary = context["result"], context["summary"]
-    groups = result["assessment_groups"]
+    groups = _ordered_groups(result, context["selection"])
     editions = []
     seen = set()
     for group in groups:
@@ -125,6 +174,8 @@ def _sections(context, parcel=None):
             editions.append(values)
     rows = result["rows"]
     comparisons = [row for row in rows if row.get("association_status") != "both_resolved_agree"]
+    watershed_source = context["selection"]["watershed_source"]
+    source_label = str(watershed_source["source_id"]) + " / " + str(watershed_source["collection_id"])
     sections = [
         ["Assessment geographic context — " + context["title"], [
             result["relation"],
@@ -135,6 +186,11 @@ def _sections(context, parcel=None):
                     "Relationship basis"],
                    [[context["id"], summary["station_count"], summary["assessment_row_count"],
                      summary["watershed_count"], result["relationship_basis"]]]),
+            _table(["Assessment records agreeing", "Assessment records differing",
+                    "Assessment records with unresolved comparison"], [_comparison_counts(rows)]),
+            "Compared original watershed source: " + source_label + ". These counts refer to "
+            "distinct original assessment records, so a station with several causes or editions "
+            "can occur more than once.",
             "Original selection and filters: " + json.dumps(context["selection"],
                 ensure_ascii=False, sort_keys=True, allow_nan=False),
         ]],
@@ -159,14 +215,18 @@ def _sections(context, parcel=None):
             "independent original records.",
         ]],
         ["Publisher and computed geography — unresolved or differing relationships", [
-            _table(["Station", "Original row ID", "Edition", "Cause", "Use", "Support",
-                    "Original publisher watershed", "Publisher polygons", "Computed polygons",
+            _table(["Station", "Edition", "Cause / use", "Support",
+                    "Original assessment watershed", "Computed watershed membership",
                     "Comparison"],
-                   [[row["station_id"], row.get("assessment_row_id") or assessment_context._row_id(row),
-                     row.get("assessment_edition"), row["cause"], row["impaired_use"],
+                   [[row["station_id"], row.get("assessment_edition"),
+                     _text(row["cause"]) + " / " + _text(row["impaired_use"]),
                      row.get("use_support"), row.get("original_watershed_value"),
-                     row.get("published_polygon_ids"), row.get("computed_polygon_ids"),
+                     _membership_labels(_compared_memberships(row, context["selection"])),
                      row.get("association_status")] for row in comparisons]),
+            "Computed watershed IDs and interior/boundary relationships come from the retained "
+            "station memberships in the compared source above. Other watershed sources remain "
+            "in each original row's complete computed_memberships; they are not used for this comparison. "
+            "A published-only or unresolved relationship remains separate from a resolved difference.",
             "An unresolved side is not a geographic disagreement. Original row dictionaries, "
             "native publisher identity, normalized source-body identity and original array pointer "
             "or CSV row remain in the complete linked JSON and CSV.",
