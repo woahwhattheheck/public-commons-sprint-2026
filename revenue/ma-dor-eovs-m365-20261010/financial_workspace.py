@@ -132,6 +132,9 @@ def definition_create(store, op):
         domain.require(change["category"] == "change" and change["status"] == "approved" and
                        definition["parent_id"] in change["related_ids"],
                        "FINANCE_CHANGE", "A definition change requires the original approved change and previous definition binding.")
+        domain.require(not any(parse_json(r[0]).get("parent_id") == change["id"] for r in store.conn.execute(
+            "SELECT body_json FROM entities WHERE kind='finance.control'")), "FINANCE_CHANGE_SUPERSEDED",
+            "A later control edition supersedes or withdraws this change approval.")
     return record(store, op, "finance.definition", definition["title"],
                   {"definition": definition, "definition_sha256": identity(definition), "company": definition["company"],
                    "family": definition["family"], "parent_id": definition.get("parent_id"),
@@ -207,8 +210,8 @@ def review_create(store, op):
         if decision["status"] == "resolved":
             correction = get(store, "finance.reconciliation", decision.get("correction_reconciliation_id"))
             domain.require(correction["company"] == reconciliation["company"] and correction["family"] == reconciliation["family"] and
-                           correction["period"] == reconciliation["period"] and correction["comparison"]["complete"],
-                           "FINANCE_CORRECTION_SCOPE", "Correction evidence must be the same complete company/family/period.")
+                           correction["period"] == reconciliation["period"] and correction["definition_id"] == reconciliation["definition_id"] and correction["comparison"]["complete"],
+                           "FINANCE_CORRECTION_SCOPE", "Correction evidence must use the same exact definition and complete company/family/period.")
             match = next((i for i in iter_items(store, correction["id"], "items") if i["id"] == item_id), None)
             domain.require(match is not None and match["status"] == "MATCH", "FINANCE_CORRECTION", "The original key must actually match in the corrected result.")
         checked.append({**decision, "evidence_files": refs})
@@ -218,7 +221,7 @@ def review_create(store, op):
                   {"reconciliation_id": reconciliation["id"], "parent_id": p.get("parent_id"),
                    "reviewer_role": p["reviewer_role"], "note": p["note"], "evidence_files": evidence,
                    "decisions": checked, "ready": reconciliation["comparison"]["complete"] and
-                     bool(items) and all(d["status"] != "open" for d in checked)})
+                     all(d["status"] != "open" for d in checked)})
 
 def control_create(store, op):
     p = request_body(op, ("title", "category", "status", "owner", "note", "external_reference",
@@ -242,6 +245,8 @@ def control_create(store, op):
         for value in authority.values(): text(value, "actual authority")
     if p["status"] == "executed":
         domain.require(old is not None and old["status"] == "approved", "FINANCE_CONTROL_APPROVAL", "Execution follows its retained original approval.")
+        domain.require(set(related) == set(old["related_ids"]), "FINANCE_CONTROL_APPROVED_SCOPE",
+                       "Execution must retain the complete originally approved scope; scope changes require their own approved edition.")
     return record(store, op, "finance.control", p.get("title"),
                   {key: p.get(key) for key in ("category", "status", "owner", "note", "external_reference",
                                               "parent_id", "related_ids", "authority")} | {"evidence_files": evidence})
@@ -260,8 +265,12 @@ def release_create(store, op):
     dates = [(x["start"], x["end"]) for x in periods]
     domain.require(len(set(dates)) == len(dates), "FINANCE_RELEASE_PERIODS", "A changed label is not a second reporting period.")
     selected, coverage = [], set()
+    later_review_parents = {parse_json(r[0]).get("parent_id") for r in store.conn.execute(
+        "SELECT body_json FROM entities WHERE kind='finance.review'")}
     for review_id in p.get("review_ids", []):
         review = get(store, "finance.review", review_id)
+        domain.require(review_id not in later_review_parents, "FINANCE_REVIEW_SUPERSEDED",
+                       "Select the current review head; a later review may reopen earlier discrepancies.")
         rec = get(store, "finance.reconciliation", review["reconciliation_id"])
         domain.require(review["ready"] and rec["company"] == p["company"], "FINANCE_RELEASE_REVIEW", "Release needs completed original scope reviews.")
         key = (rec["family"], identity(rec["period"]))
