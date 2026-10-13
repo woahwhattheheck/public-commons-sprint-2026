@@ -156,6 +156,11 @@ def _sections(report):
                        _amount(row["alternatives"]["control"]["changed_hectares"]),
                        _amount(row["balance"]["changed_hectares_difference"], signed=True),
                        _local_state(row)] for row in rows]
+        coverage = [[row["title"], _count(row["selected_cells"]),
+                     *[_count(row["valid_cells"][role]) for role in ROLES],
+                     _count(row["common_valid_cells"])] for row in rows]
+        empty_with_cells = [row["title"] for row in rows
+                            if row.get("vector_geometry_empty_with_selected_cells")]
         origins = [[row["title"], _origin_values(row, 81), _origin_values(row, 82),
                     _origin_values(row, None)] for row in rows]
         other_codes = sorted({item["from_code"] for row in rows for item in row["balance"]["by_origin"]
@@ -168,12 +173,22 @@ def _sections(report):
             *_tables(["Region", "Common cells", "R changed ha", "C changed ha", "R − C ha",
                       "Local accounting"], allocation,
                      "Exact cell-count equality determines the diagnostic; displayed hectares are rounded."),
+            *_tables(["Region", "Selected cells", "Baseline valid", "R valid", "C valid",
+                      "Common valid"], coverage,
+                     "Original region mask and each categorical raster validity. These counts "
+                     "retain the native raster mask, including any boundary cells that have no "
+                     "nonempty vector display geometry."),
             *_tables(["Region", "Code 81 R / C ha", "Code 82 R / C ha", "Other origins R / C ha"],
                      origins, "Changed cells grouped by their original baseline class. All destination "
                      "codes, unchanged transitions and individual other origin codes are retained in "
                      "transitions.csv and allocation.json. Other changed origin codes in this group: "
                      + (", ".join(str(code) for code in other_codes) or "none") + "."),
         ]
+        if empty_with_cells:
+            blocks.append("Raster-mask support with empty display geometry: "
+                          + "; ".join(empty_with_cells)
+                          + ". Original selected cells and all quantities remain in the tables; "
+                          "no substitute polygon or inferred geometry is drawn.")
         sections.append(["Local allocation — " + title, blocks])
     support_groups = defaultdict(list)
     quantity_groups = defaultdict(list)
@@ -196,7 +211,7 @@ def _sections(report):
         "land cover. Changed hectares on this joint support describe the input allocation only.",
         "Original Receiving quantities use baseline-versus-each-alternative pairwise support. "
         "Their common-cell counts and baseline totals can differ between R and C. The original "
-         "signed change is alternative minus baseline from the original stored Float32 difference pixels. "
+        "signed change is alternative minus baseline from the original stored Float32 difference pixels. "
         "Baseline and alternative totals retain their original numeric accumulation; subtracting those "
         "displayed totals need not exactly reproduce the stored signed change. These values are copied unchanged; no "
         "difference of R and C pairwise totals or benefit per changed hectare is calculated.",
@@ -414,8 +429,6 @@ def write(directory: Path, report: dict, features: dict) -> dict:
             raise ValueError("Map allocation values differ from the retained report")
         for key in ("selected_cells", "common_valid_cells"):
             _count(row[key])
-        if not _nonempty(by_id[row["id"]]["geometry"]) and row["selected_cells"]:
-            raise ValueError("A region with selected cells cannot lose its map geometry")
     area = _finite(report["grid"]["pixel_area_ha"], "positive pixel area")
     if area <= 0:
         raise ValueError("Allocation cell area must be positive")
