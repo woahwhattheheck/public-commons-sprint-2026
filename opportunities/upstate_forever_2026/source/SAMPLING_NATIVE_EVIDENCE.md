@@ -2,7 +2,7 @@
 
 TokenJunkieLabs · Ecosystem Sciences
 
-Sampling now retains a completed native scientific source beside an authored monitoring target. A scientist selects an actual matched-control outcome or Terrain response source, selects one of its native quantities, and explains how the result motivates the target. The saved proposal contains that evidence with its original source edition, scientific files, spatial support, native versions, station assignment, analytical cohort and historical observation window.
+Sampling now retains a completed native scientific source beside an authored monitoring target. A scientist selects an actual matched-control outcome, Terrain response or saved native Conservation portfolio source, selects one of its native quantities, and explains how the result motivates the target. The saved proposal contains that evidence with its original source edition, scientific files, spatial support, native versions, station assignment, analytical cohort and historical observation window.
 
 The existing Sampling compiler still calculates historical date gaps, laboratory reporting-limit context, itemized planning cost and eligible historical flow episodes. Its original network, design and calendar functions remain the execution path. The native evidence accompanies those decisions through preview, saved revisions, the readable Sampling report, original-file export and editable Study transfer.
 
@@ -38,7 +38,7 @@ Choose these values from the actual catalogue. The example strings document the 
 
 The original proposal schema and all other target fields remain in force. There is one selected native source and one quantity per evidence-bearing target. Several targets can reference the same source while retaining different quantities, analytical cohorts or scientific rationales.
 
-The source must be an original **OBSERVED_CONTEXT** document with an ordinary scientific report recipe. Supported producers are the existing matched-control outcomes and Terrain scientific-source modules. The resolver verifies the recipe and complete source-member inventory, the original scientific identities, the selected quantity and producing project. For same-project sources, it also reopens the original completed native result. A retained report from another project preserves that relationship explicitly.
+The source must be an original **OBSERVED_CONTEXT** document with an ordinary scientific report recipe. Supported producers are the existing matched-control outcomes, Terrain scientific-source and saved Conservation report-source modules. The resolver verifies the recipe and complete source-member inventory, the original scientific identities, the selected quantity and producing project. For same-project sources, it also reopens the original completed native result. A retained report from another project preserves that relationship explicitly.
 
 ## What the report shows
 
@@ -151,3 +151,30 @@ The evidence phase retains its inputs and outputs in **OUTPUT/native-evidence/**
 Receiving should operate a real selected native source through the original catalogue, an authored target, preview/save/reopen, a changed revision, the original native design/calendar, report/native-file downloads and full plus selected Study receiving. Exercise both supported source families when their completed sources are available in the original project. A foreign retained report should keep its original project relationship. Open the exported report and original native attachments at desktop and narrow widths, and inspect the printed layout. The readable chapter uses small two-column tables and lets long scientific sections flow across printed pages. Detailed original metadata stays expandable on screen and available in the exported scientific files; printed pages emphasize the rationale, source identities, support and native quantities.
 
 Source catalogue errors identify the concrete original document that could not be read. Repair that original source or its actual missing dependency in the same course, retain the original completed operation, and continue with the same scientific inputs and selected object identities.
+
+
+## Saved Conservation decisions in measurement design
+
+Complete and save a Conservation portfolio in the existing Conservation desk, then prepare its original **Scientific report** source. This retains the selected plan, study, exact candidates, original planning/source data, native bindings, editable selected-union geography and decision packet. A native-model portfolio appears in the existing Sampling evidence chooser alongside control outcomes and Terrain. A geographic context-only portfolio remains geographic context rather than a modeled mass source.
+
+Choose the exact completed source and pollutant for a Sampling target and author its applicability to the target's original station, analytical cohort and observation window. For example, explain which retained family comparison motivates field investigation, what measurements could address the hypothesis, and which geographic and constituent relationships still need establishing. The software does not infer a station catchment from selected land or convert modeled annual export into a concentration, seasonal load or sampling benefit.
+
+The readable target review and exported Sampling report preserve:
+
+- The saved plan and study IDs, scientific purpose, original selected planning-unit IDs and original selected-union GeoPackage layer/CRS.
+- Pollutant quantities from the **saved union summary**. Overlapping unit rows are available for inspection but are never summed into a portfolio total by this bridge.
+- Baseline own-support totals, fixed-baseline pairwise comparisons, and all-declared-family comparisons in distinct sections. Each pollutant retains its own original support; no implicit cross-pollutant mask or unit sum is introduced.
+- For each native pair, its actual run identities, original annual mass unit, signed alternative-minus-baseline change, baseline-minus-alternative reduction, common finite/structural coverage and unavailable values. Structural-only support does not become zero modeled mass.
+- Matched-family labels, scientist-written reasons and references; per-pollutant common-support IDs and original mask hashes. The masks travel inside the original decision packet and are checked directly against retained study descriptors.
+- Original source attributes/classifications, producing native versions and full source bodies. A source retained from another project stays explicitly foreign; this bridge does not claim a new local native execution.
+- The saved analysis request, weights, filters, constraints, fixed normalization and original preference/case results when that report edition carries them. They remain authored decision context, not calibrated probabilities or statistical power. Original report edition1, which predates separate optimization companions, retains its exact reference without presenting absent case rows.
+
+Only pollutants present in at least one actual bound original native output are offered. An originally selected pollutant with no finite mass on the chosen footprint remains selectable with its original null value and reason; an output omitted from every bound model is not offered merely because the historical summary contains a placeholder.
+
+All choices use the existing optional `model_evidence` target field. The saved proposal, revisions, Monitoring design/calendar and full editable Study transfer remain the original workflow. The original source's recipe and every companion are retained in the Sampling export under `native-evidence/<collection>/<source>/`; open the saved decision ZIP, GIS layers, original report and complete source files there. A same-project Study transfer also includes the original Conservation report-source and its complete plan/study history through the maintained resolver.
+
+### Producing and receiving this joined product
+
+Continue the existing Sampling receiving operation on its actual retained Workspace. Select one completed original native Conservation portfolio source and author a target hypothesis against its actual observational context. Operate the populated desktop and390px target editor, review both original scientific support and exact observation metadata, save and reopen the same proposal, then open the Sampling report and every accompanying original report, CSV/GIS/JSON and ZIP member. Use the original design/calendar actions only with their explicitly authored scheduling inputs. Export the existing complete Workspace and selected Study, independently reopen the same saved proposal and original source files, and confirm the source, plan, native-run, station/cohort and target identities remain unchanged. Preserve all running native operations and earlier completed files.
+
+The implementation adds `model/conservation_sampling_evidence.py` to the existing monitoring-native-evidence component and declares the original Conservation family dependency. It extends the maintained evidence resolver, readable report and existing Sampling panel; there is no second sampling compiler or geographic solver.
