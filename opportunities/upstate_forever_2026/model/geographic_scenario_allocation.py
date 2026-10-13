@@ -16,6 +16,7 @@ from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, now, read_json, verify_file)
 from . import rasters, receiving_waters as waters, scenario_footprint
 from . import geographic_scenario_allocation_report as rendering
+from . import geographic_scenario_contrasts as contrasts
 
 SCHEMA = "upstate.geographic-scenario-allocation/v1"
 FOLDER = "geographic-scenario-allocations"
@@ -371,12 +372,13 @@ def _raster_grid(source, grid):
             or source.crs != CRS.from_user_input(grid["crs"])):
         raise ValueError("Use exact original aligned land-cover and contribution-mask grids")
 
-def _compute(workspace, grid, footprints, runs, definitions, analyses, progress):
+def _compute(workspace, grid, footprints, runs, definitions, analyses, progress, physical_binding):
     import numpy as np
     import rasterio
     from rasterio.windows import Window, bounds
     from shapely.geometry import box
     values = {row["id"]: _empty() for row in definitions}
+    physical = {row["id"]: contrasts.empty(physical_binding) for row in definitions}
     with ExitStack() as stack:
         sources = {}
         for role, footprint in footprints.items():
@@ -384,6 +386,7 @@ def _compute(workspace, grid, footprints, runs, definitions, analyses, progress)
             sources[role] = stack.enter_context(rasterio.open(path))
             _raster_grid(sources[role], grid)
         native = _bands(workspace, stack, grid, analyses, runs)
+        scalar_sources = contrasts.open_sources(workspace, physical_binding, stack)
         for row in definitions:
             for pollutant in native[row["quantity_scope"]]:
                 values[row["id"]]["native_support"][pollutant] = {
@@ -429,6 +432,7 @@ def _compute(workspace, grid, footprints, runs, definitions, analyses, progress)
                     if np.any(good & ((raw != np.floor(raw)) | (raw <= -2147483648) | (raw > 2147483647))):
                         raise ValueError("Original land-cover classes must be exact signed-int32 values")
                     arrays[role], valid[role] = raw, good
+                scalar_values = contrasts.read_window(scalar_sources, window, physical_binding)
                 by_scope = {}
                 for scope in {row["quantity_scope"] for row in active}:
                     by_scope[scope] = {
@@ -446,6 +450,8 @@ def _compute(workspace, grid, footprints, runs, definitions, analyses, progress)
                         inside = waters._inside(grid, row["geometry"], window)
                     if np.any(inside):
                         _accumulate(values[row["id"]], arrays, valid, inside, by_scope[row["quantity_scope"]])
+                        contrasts.accumulate(physical[row["id"]], arrays, valid, inside,
+                                             scalar_values, physical_binding)
                 windows += 1
                 if progress and windows % 32 == 0:
                     progress({"stage": "local_scenario_allocation", "completed_active_windows": windows,
@@ -461,6 +467,12 @@ def _compute(workspace, grid, footprints, runs, definitions, analyses, progress)
         item["vector_area_ha"] = row["geometry"].area / 10000.0
         item["geometry_sha256"] = digest(row["geometry"].__geo_interface__)
         item.update(_finish(value, {role: runs[role]["id"] for role in ROLES}, grid["pixel_area_ha"]))
+        item["physical_contrasts"] = contrasts.finish(physical[row["id"]], physical_binding)
+        all_classes = item["physical_contrasts"]["classes"][0]
+        if (all_classes["common_categorical_cells"] != item["common_valid_cells"]
+                or any(all_classes["changed_cells"][role] != item["alternatives"][role]["changed_cells"]
+                       for role in ALTERNATIVES)):
+            raise ValueError("Physical-input contrasts changed the original allocation denominator")
         result.append(item)
     return result
 
@@ -542,6 +554,7 @@ def prepare(workspace, prepared, context, *, progress=None):
     grid = grid_record["grid"]
     waters._validate_analysis_grid(grid)
     definitions, analyses, geometry_binding = _regions(workspace, prepared, context, grid_record, run_ids)
+    physical_binding = contrasts.bind(workspace, grid_record)
     identity = {
         "schema": SCHEMA, "project_id": workspace.project["id"], "prepared_id": prepared["id"],
         "prepared_sha256": file_digest(root / "prepared.json"), "context_id": context["id"],
@@ -551,6 +564,8 @@ def prepare(workspace, prepared, context, *, progress=None):
         "geometry_binding": geometry_binding,
         "implementation_sha256": file_digest(__file__),
         "rendering_sha256": file_digest(rendering.__file__),
+        "physical_contrasts_implementation_sha256": file_digest(contrasts.__file__),
+        "physical_input_binding": physical_binding,
         "receiving_implementation_sha256": file_digest(waters.__file__),
         "footprint_reader_sha256": file_digest(scenario_footprint.__file__),
     }
@@ -566,7 +581,8 @@ def prepare(workspace, prepared, context, *, progress=None):
             staging.mkdir(exist_ok=True)
             with tempfile.TemporaryDirectory(prefix=key + "-", dir=staging) as temporary:
                 pending = Path(temporary)
-                regions = _compute(workspace, grid, footprints, runs, definitions, analyses, progress)
+                regions = _compute(workspace, grid, footprints, runs, definitions, analyses,
+                                   progress, physical_binding)
                 report = {
                     "schema": SCHEMA, "id": key, "project_id": workspace.project["id"],
                     "prepared_id": prepared["id"], "context_id": context["id"],
@@ -577,6 +593,8 @@ def prepare(workspace, prepared, context, *, progress=None):
                 }
                 features = _export(pending, report, definitions)
                 rendered = rendering.write(pending, report, features)
+                contrasts.write(pending, report)
+                rendered["sections"].extend(contrasts.sections(report))
                 atomic_json(pending / "original-prepared.json", prepared)
                 atomic_json(pending / "original-context-selection.json", context["identity"])
                 profile_path = verify_file(Path(__file__).resolve().parents[1],
@@ -590,7 +608,7 @@ def prepare(workspace, prepared, context, *, progress=None):
                     "source_links": ["allocation.json", "allocations.csv", "transitions.csv",
                         "native-support.csv", "pairwise-native-quantities.csv", "regions.geojson",
                         "original-prepared.json", "original-context-selection.json",
-                        "original-utility-profile.json"],
+                        "original-utility-profile.json", *contrasts.MEMBERS],
                 }
                 if rendered.get("figures"):
                     recipe.update(figures=rendered["figures"], figure_spec=rendered["figure_spec"])
