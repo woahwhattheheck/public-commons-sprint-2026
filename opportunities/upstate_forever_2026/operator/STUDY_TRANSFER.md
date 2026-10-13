@@ -239,3 +239,11 @@ The source lineage is specific to the original producer. A same-project Diagnost
 After receiving through the original archive restore, open **Sources → Saved scientific reports**. The edition keeps the same full identity, original Workspace path inside its render identity, ordered sources and output checksums. It does not rerender or substitute the new receiver path. **Use these studies in another report** starts a separate edition with the original source choices. Existing Diagnostic, Monitoring and calibration views reopen their retained records. Full Workspace backup remains available when the entire project is required.
 
 The new typed root is `{"kind":"scientific-report-editions","id":"<full-original-edition-id>"}`. It uses the existing study selection, preview, export, receipt, download and receive contracts. Report-file ZIP downloads remain a convenient document handoff; editable Study transfer additionally carries the selected original scientific context.
+
+## Open the received Monitoring study
+
+After receiving the selected archive into an independent Workspace, refresh **Study transfer** and choose **Open in Monitoring** on the retained network, design, campaign or observational-context row. This opens the existing Monitoring desk with that exact record. Unreadable catalogue entries retain their error and do not offer the opening action.
+
+For a source-only study, open the saved observational context. The network is selected and the context's original station rows, observation filters and package download are available without creating a sampling design. Historical context calendars remain frozen in the saved context even when a current campaign has advanced. A new preview uses the design or campaign that the operator explicitly selects above it.
+
+The opening route uses the original read endpoints and authenticated extension host. It does not enqueue a model run, rewrite the received records or select another Workspace. If the Workspace changes during a read, open the desired record again in that Workspace.
