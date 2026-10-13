@@ -60,6 +60,13 @@ def operate(args):
         analysis = receiving_waters.inspect(workspace, identifier(args.analysis_id))
         if analysis["state"] != "complete" or analysis["plan_id"] != plan["id"]:
             raise ValueError("Select a completed analysis of the original prepared plan")
+    if args.scope_analysis_id:
+        if not args.analysis_id:
+            raise ValueError("Select the original --analysis-id before its --scope-analysis-id")
+        other = receiving_waters.inspect(workspace, identifier(args.scope_analysis_id))
+        if (other["state"] != "complete" or other["plan_id"] != plan["id"]
+                or other["quantity_scope"] == analysis["quantity_scope"]):
+            raise ValueError("Select the complete other quantity support of this original plan")
     node = existing_executable(args.node, "Node")
     chromium = existing_executable(args.chromium, "Chromium") if args.chromium else None
     modules = args.node_modules
@@ -93,11 +100,18 @@ def operate(args):
             "model/receiving_water_accounting.py", "model/spatial_esri.py",
             "source/capture_upstream_network.py",
         )
+    if args.scope_analysis_id:
+        source_paths += ("operator/web/receiving_water_scope_compare.mjs",
+                         "operator/web/receiving_waters.css",
+                         "operator/web/receiving_waters_extension.mjs",
+                         "operator/extensions/receiving-waters.json")
+    source_paths = tuple(dict.fromkeys(source_paths))
     sources = [{"name": name, **record(APP / name)} for name in source_paths]
     identity = {
         "schema": SCHEMA, "project_id": workspace.project["id"],
         "workspace": str(workspace.root), "plan_id": plan["id"],
         "analysis_id": args.analysis_id,
+        **({"scope_analysis_id": args.scope_analysis_id} if args.scope_analysis_id else {}),
         "preparation": preparation, "operator_state": str(state),
         "application_identity": digest([
             {key: row[key] for key in ("name", "bytes", "sha256")} for row in sources
@@ -148,6 +162,7 @@ def operate(args):
             if args.editable_selection:
                 control["editable_selection"] = True
             for key, value in (("analysis_id", args.analysis_id),
+                               ("scope_analysis_id", args.scope_analysis_id),
                                ("node_modules", modules), ("chromium", chromium)):
                 if value is not None:
                     control[key] = value
@@ -166,6 +181,14 @@ def operate(args):
                 for row in browser["cases"].values()
             ):
                 raise ValueError("The original browser has unfinished saved/exported/reopened maps")
+            if args.scope_analysis_id:
+                scoped = browser.get("scope_comparison", {})
+                expected_scope_ids = {args.analysis_id, args.scope_analysis_id}
+                if (not scoped.get("complete") or not scoped.get("reopened")
+                        or {scoped.get("reporting_analysis_id"),
+                            scoped.get("model_domain_analysis_id")} != expected_scope_ids):
+                    raise ValueError("The original quantity-support comparison did not finish export and reopening")
+                result["scope_comparison"] = scoped
             if args.editable_selection:
                 editable = browser.get("editable_selection", {})
                 expected = {"plan", "analysis"} if args.analysis_id else {"plan"}
@@ -231,6 +254,7 @@ def main(argv=None):
     parser.add_argument("--chromium")
     parser.add_argument("--operator-state", type=Path)
     parser.add_argument("--analysis-id")
+    parser.add_argument("--scope-analysis-id", help="Complete saved analysis of the same cohort on the other quantity support")
     parser.add_argument("--editable-selection", action="store_true",
                         help="Operate saved Study return, exact revisions, source-plan comparison and reopening in the same browser course")
     parser.add_argument("--paper", choices=("letter", "a4"), default="letter")
