@@ -194,3 +194,8 @@ receiver's native binding record. The native producer validates the case/source
 relationship and preserves the originating selection. Failed lookup or adoption
 leaves the existing working definition and saved binding intact. The reopened
 binding supplies the original native payload to the same Chemistry queue.
+
+
+## Saved Observation editions
+
+Choose a named immutable edition in the existing **Observation source** control to carry its complete original population and scientific relationship decisions through Chemistry. The edition’s frozen eligibility is intersected with current native eligibility; revised review decisions require a revised edition. Existing original-record binding remains available. See the [complete saved-edition, native report and editable receiving course](../measurement_workspace/OBSERVATION_EDITION_CHEMISTRY.md).

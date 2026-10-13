@@ -1,0 +1,24 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-observation-chemistry",
+  "source_reference": "ECO-OBSERVATION-EDITION-NATIVE-15227-20261013: immutable original Observation editions through the maintained Reach Chemistry source binding, scientific report and full editable receive.",
+  "components": {
+    "measurement-observation-chemistry": {
+      "title": "Saved Observation editions in original Reach Chemistry",
+      "paths": [
+        "integration/component_fragments/measurement-observation-chemistry.json",
+        "measurement_workspace/observation_edition_source.py",
+        "measurement_workspace/OBSERVATION_EDITION_CHEMISTRY.md",
+        "source/run_measured_chemistry_receiving.py",
+        "source/MEASURED_CHEMISTRY_RECEIVING.md"
+      ],
+      "requires": [
+        "measurement-chemistry",
+        "measurement-observation-editions"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-observation-chemistry"
+  ]
+}

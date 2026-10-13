@@ -66,8 +66,10 @@ def _query(filters, **extra):
     return urlencode({**filters, **extra})
 
 
-def _snapshot(service, filters, expected_revision=None):
+def _snapshot(service, filters, expected_revision=None, observation_edition=None):
     """Use the original engine's one-transaction full-record/source snapshot."""
+    if observation_edition is not None and filters:
+        raise ValueError("A saved Observation edition already binds its complete source population; clear additional filters")
     extra = {} if expected_revision is None else {"expected_revision": expected_revision}
     result = service.json("GET", "snapshot?" + _query(filters, **extra))
     revision = result["revision"]
@@ -78,12 +80,16 @@ def _snapshot(service, filters, expected_revision=None):
     rows = result["records"]
     if result["total"] != len(rows) or len({r["id"] for r in rows}) != len(rows):
         raise ValueError("The original source snapshot does not cover its complete unique population")
+    if observation_edition is not None:
+        from .observation_edition_source import snapshot
+        return snapshot(service, observation_edition, result)
     return result
 
 
 def catalog(workspace, service):
+    from .observation_edition_source import catalogue
     bindings = workspace._list(FAMILY)
-    return {"cases": Chemistry(workspace).catalog()["cases"],
+    return {"observation_editions": catalogue(service), "cases": Chemistry(workspace).catalog()["cases"],
             "bindings": [{k: b[k] for k in ("id", "title", "case_id", "original_case_id", "counts", "source_revision")}
                          for b in bindings],
             "measurement_choices": MEASUREMENT_CHOICES,
@@ -92,7 +98,7 @@ def catalog(workspace, service):
 
 def inspect(workspace, service, payload):
     case = Chemistry(workspace).get_case(payload["case_id"])
-    snap = _snapshot(service, payload.get("filters", {}), payload.get("expected_revision"))
+    snap = _snapshot(service, payload.get("filters", {}), payload.get("expected_revision"), payload.get("observation_edition"))
     groups = {}
     for row in snap["records"]:
         key = (row["characteristic"], row["method"], row["fraction"], row["basis"], row["unit"])
@@ -113,7 +119,9 @@ def inspect(workspace, service, payload):
         values.append({**group, "stations": sorted(group["stations"]), "dates": sorted(group["dates"]),
                        "censors": dict(group["censors"]), "exclusions": dict(group["exclusions"])})
     return {"case": case, "revision": snap["revision"], "filters": payload.get("filters", {}),
-            "records": snap["records"], "groups": values, "measurement_choices": MEASUREMENT_CHOICES}
+            "records": snap["records"], "groups": values, "measurement_choices": MEASUREMENT_CHOICES,
+            "observation_edition": snap.get("observation_edition_source", {}).get("selection"),
+            "observation_edition_counts": snap.get("observation_edition_source", {}).get("counts")}
 
 
 def _mapping(project, value):
@@ -261,7 +269,8 @@ def _observation(project, row, mapping, station, selection):
                 "fraction": row["fraction"], "reported_unit": row.get("reportedUnit"),
                 "original_exclusions": reasons, "resolved_exclusions": [r for r in reasons if r in resolved],
                 "interval_source": interval_source, "source_interval": interval,
-                "resolution_notes": resolution_notes}}
+                "resolution_notes": resolution_notes,
+                **({"observation_edition": deepcopy(row["observation_edition"])} if "observation_edition" in row else {})}}
     if interval["lower"] == interval["upper"]:
         value.update(qualifier="equal", mg_l=interval["lower"])
     else:
@@ -482,7 +491,7 @@ def prepare(workspace, service, selection):
     selection = deepcopy(selection)
     chemistry = Chemistry(workspace)
     original = chemistry.get_case(selection["case_id"])
-    snap = _snapshot(service, selection.get("filters", {}), selection.get("expected_revision"))
+    snap = _snapshot(service, selection.get("filters", {}), selection.get("expected_revision"), selection.get("observation_edition"))
     review = _review(original, snap, selection)
     collections = _referenced_collections(service, snap)
     from model.reach_chemistry import inference as native_inference
@@ -490,10 +499,15 @@ def prepare(workspace, service, selection):
     producer = {"format": "measured-chemistry-producer/v1", "adapter_sha256": file_digest(Path(__file__)),
                 "native_inference_sha256": file_digest(Path(native_inference.__file__)),
                 "original_interval_reader_sha256": file_digest(original_reader) if original_reader.is_file() else None}
+    if "observation_edition_source" in snap:
+        from . import observation_edition_source
+        producer["observation_edition_adapter_sha256"] = file_digest(Path(observation_edition_source.__file__))
+    edition_source = ({"observation_edition_source": snap["observation_edition_source"]}
+                      if "observation_edition_source" in snap else {})
     identity = digest({"selection": selection, "case_sha256": original["project_sha256"],
                        "revision": snap["revision"], "records": snap["records"], "producer": producer,
                        "collections": [item["id"] for item in collections],
-                       "native_measurement_domain": snap["summary"]["reaches"]})
+                       "native_measurement_domain": snap["summary"]["reaches"], **edition_source})
     directory = workspace.root / "measurement-chemistry" / identity
     directory.mkdir(parents=True, exist_ok=True)
     with held(directory / ".prepare.lock"):
@@ -515,7 +529,7 @@ def prepare(workspace, service, selection):
                     "original_case_id": original["id"], "project_sha256": original["project_sha256"],
                     "source_revision": snap["revision"], "original_records": snap["records"], "producer": producer,
                     "source_collections": source_collections,
-                    "native_measurement_domain": snap["summary"]["reaches"], **review}
+                    "native_measurement_domain": snap["summary"]["reaches"], **edition_source, **review}
         atomic_json(directory / "binding-source.json", document, immutable=True)
         source_id = "measured-chemistry-" + identity
         manifest = {"schema": "upstate.sources/v1", "title": selection["title"],
@@ -537,7 +551,7 @@ def prepare(workspace, service, selection):
             "selection": selection, "source": source, "source_sha256": manifest["entries"][0]["sha256"],
             "producer": producer, "source_collections": source_collections,
             "native_measurement_domain": snap["summary"]["reaches"],
-            "directory": str(directory.relative_to(workspace.root)), **review})
+            "directory": str(directory.relative_to(workspace.root)), **edition_source, **review})
         atomic_json(receipt, {"binding_id": binding["id"]}, immutable=True)
         return get(workspace, binding["id"])
 
@@ -563,7 +577,9 @@ def native_payload(binding, chemistry, case_id=None):
         "producer": binding["producer"],
         "selection": binding["selection"], "counts": binding["counts"],
         "accepted": binding["accepted"], "excluded": binding["excluded"],
-        "derived": binding["derived"], "derived_excluded": binding["derived_excluded"]}}
+        "derived": binding["derived"], "derived_excluded": binding["derived_excluded"],
+        **({"observation_edition_source": binding["observation_edition_source"]}
+           if "observation_edition_source" in binding else {})}}
     return {"case_id": case["id"], "request": request}
 
 
@@ -609,6 +625,8 @@ def adopt_source(workspace, payload):
         "native_measurement_domain": document.get("native_measurement_domain", []),
         "source": choice, "source_sha256": file_digest(source_path),
         "received_from": {"case_id": document["original_case_id"], "selection": document["selection"]},
+        **({"observation_edition_source": document["observation_edition_source"]}
+           if "observation_edition_source" in document else {}),
         **{key: document[key] for key in ("accepted", "excluded", "derived", "derived_excluded", "counts", "request")}})
     return get(workspace, binding["id"])
 
@@ -641,6 +659,7 @@ def main(argv=None):
     inspection = sub.add_parser("inspect")
     inspection.add_argument("--case-id", required=True)
     inspection.add_argument("--filters", help="JSON file with original measurement filters")
+    inspection.add_argument("--observation-edition", help="JSON file with exact saved edition id and digest")
     preparation = sub.add_parser("prepare")
     preparation.add_argument("--selection", required=True)
     for action in ("get", "export"):
@@ -660,6 +679,8 @@ def main(argv=None):
         payload = {"action": args.action}
         if args.action == "inspect":
             payload.update(case_id=args.case_id, filters=read_json(args.filters) if args.filters else {})
+            if args.observation_edition:
+                payload["observation_edition"] = read_json(args.observation_edition)
         if args.action == "prepare":
             payload["selection"] = read_json(args.selection)
         if args.action in ("get", "export"):

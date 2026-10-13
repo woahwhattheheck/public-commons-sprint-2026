@@ -1,6 +1,6 @@
 {
   "schema": "upstate.measurements-installation/v1",
-  "edition": "complete-measurements-saved-result-source-returns-20261013",
+  "edition": "complete-measurements-observation-chemistry-20261013",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "original_core_commit": "a81e07284183a2008a413198714759488c2d2c9d",
@@ -133,6 +133,21 @@
       "guide": "measurement_workspace/SAVED_RESULT_SOURCE_RETURNS.md",
       "source_review": "Complete source selection, exact displayed snapshot, original draft admission and asynchronous caller identity executed; SQLite and rendered receiving remain the original equipped course.",
       "preserves": "Original saved scientific results and revisions, current original source associations, unfinished Source returns publication, complete original publisher and ZIP receiver, current sediment and observation-edition controls."
+    },
+    "observation_chemistry": {
+      "operation_id": "ECO-OBSERVATION-EDITION-NATIVE-15227-20261013",
+      "composed_main": "dbe4b364bb81d96c77176fefffe8b224166b2ada",
+      "predecessor_inventory": "0793dd864f087c4b974d30a663ce2dd33ae9de5c",
+      "source_bank": "97b900d595fcd86bd1aaacd22c1ed2c5ec532206",
+      "preserves": "Complete current Measurements, Flow, intake, Native Observations and shared operator peers. Frozen saved-edition eligibility intersects current eligibility; original Reach Chemistry science remains authoritative.",
+      "native_receiving": "Original 36-record authored-reference course adds explicit --save-observation-edition; no new native controller or solver.",
+      "complete_peer_dependencies": {
+        "current_tree": "9ad4131257a1d206c3a1cbdf70d2da1ba882a1e2",
+        "flow_comparison": "b769363d99be8c7ba4d93ad23d61d50f944757d4",
+        "sediment_workspace": "63120c7e1d9be8f7cc465fedd738f3983c3bbc72",
+        "method": "Unchanged current peer modules, full original reference files, guides and registered assets included because current shared hosts already import them.",
+        "source_returns": "result_handback original current source retained"
+      }
     }
   },
   "files": [
@@ -173,8 +188,8 @@
     },
     {
       "path": "integration/component_fragments/measurement-chemistry.json",
-      "bytes": 1543,
-      "sha256": "f8fcf75b6012bb24df0adac24c52e32c42394a9b88a27faa366e87e584e45013"
+      "bytes": 1606,
+      "sha256": "4342891ca683b0f5e5035c5e7d8989eab8cb78a381cac2cea3aeba7c2bf9197b"
     },
     {
       "path": "integration/component_fragments/measurement-collections.json",
@@ -183,8 +198,8 @@
     },
     {
       "path": "integration/component_fragments/measurement-flow-studies.json",
-      "bytes": 11092,
-      "sha256": "354aec2b84fd2fcaa303cf618f62d7227f0cf7636be820acc9580bd473bec374"
+      "bytes": 11259,
+      "sha256": "51b3300d1c784ecf07c40b5be8943bcb262b7fac4c9c588cfed7df78f93f2227"
     },
     {
       "path": "integration/component_fragments/measurement-large-files.json",
@@ -223,8 +238,8 @@
     },
     {
       "path": "MEASURED_CHEMISTRY.md",
-      "bytes": 16738,
-      "sha256": "f299673aeeb705317a79dd5ce222fa86ea1b78f911d92125ffb6db15533ccc50"
+      "bytes": 17272,
+      "sha256": "8277bb4a4aa20f0104767a160879a386243bc76df780c51e6cd7faadebbe7c86"
     },
     {
       "path": "MEASURED_OBSERVATIONS.md",
@@ -263,8 +278,8 @@
     },
     {
       "path": "measurement_workspace/chemistry.py",
-      "bytes": 40609,
-      "sha256": "896083e15789debc1fcd2fea2fe26f8a60ae0588b6229c67444bc75020acd4ef"
+      "bytes": 42412,
+      "sha256": "22cdcd2e8b8d781edb93d794f3cb2c2be453f3ead72fada3a835cbb13ffa79bf"
     },
     {
       "path": "measurement_workspace/DAILY_FLOW_STUDIES.md",
@@ -503,8 +518,8 @@
     },
     {
       "path": "measurement_workspace/engine/workspace.mjs",
-      "bytes": 23827,
-      "sha256": "5d4a617293f38fe8c58cd5a703243b85b9dd27aa01a8e665f1642c7bf4349d48"
+      "bytes": 23989,
+      "sha256": "69ea2c9eab39cfb8c156252f442c500f741f8e4b05529b83324f914e7f30a820"
     },
     {
       "path": "measurement_workspace/extension.py",
@@ -598,8 +613,8 @@
     },
     {
       "path": "measurement_workspace/web/chemistry.mjs",
-      "bytes": 33682,
-      "sha256": "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9"
+      "bytes": 36122,
+      "sha256": "70eb51e65ce68c4250789f7d0b44e789b9f79219172718f65bcd377c814d73ed"
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
@@ -608,8 +623,8 @@
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 10408,
-      "sha256": "53ca268bcaf42c86e7a3e5f3ac3bcae35c9b6b6a2a05fe31186fc6eb85621b3f"
+      "bytes": 10978,
+      "sha256": "d98bc3f5194407beb5c14fc7bb3d7ab80fa02facfa61116accd23635f174d685"
     },
     {
       "path": "measurement_workspace/web/flow_editions.css",
@@ -618,8 +633,8 @@
     },
     {
       "path": "measurement_workspace/web/flow_editions.mjs",
-      "bytes": 32574,
-      "sha256": "689462902ff3c180baed40b522e74570dea89906eba13ac4a966c074ea99144e"
+      "bytes": 35475,
+      "sha256": "1ee41493de73dfa9403cbd91f138778b677cb93157ba83b82354291a557c67d9"
     },
     {
       "path": "measurement_workspace/web/flow_loads_ui.mjs",
@@ -1033,8 +1048,8 @@
     },
     {
       "path": "operator/MEASURED_CHEMISTRY.md",
-      "bytes": 10515,
-      "sha256": "bc0be0e63d82023510886feb69dbcd5d74f665718e16b629a0d578488606b6b4"
+      "bytes": 11052,
+      "sha256": "b3ddaab72db10dc0ad3fe2524a7222dfb96c68216ecef2c5c9f4575292bd2a2c"
     },
     {
       "path": "operator/measurement_returned_reviews_native.py",
@@ -1078,8 +1093,8 @@
     },
     {
       "path": "operator/web/flow_editions.mjs",
-      "bytes": 32574,
-      "sha256": "689462902ff3c180baed40b522e74570dea89906eba13ac4a966c074ea99144e"
+      "bytes": 35475,
+      "sha256": "1ee41493de73dfa9403cbd91f138778b677cb93157ba83b82354291a557c67d9"
     },
     {
       "path": "operator/web/flow_loads_ui.mjs",
@@ -1088,8 +1103,8 @@
     },
     {
       "path": "operator/web/measured_chemistry.mjs",
-      "bytes": 33682,
-      "sha256": "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9"
+      "bytes": 36122,
+      "sha256": "70eb51e65ce68c4250789f7d0b44e789b9f79219172718f65bcd377c814d73ed"
     },
     {
       "path": "operator/web/measured_collections.mjs",
@@ -1113,8 +1128,8 @@
     },
     {
       "path": "operator/web/measured_observations_extension.mjs",
-      "bytes": 10979,
-      "sha256": "318000da39f13c99c61742298fd658b78dc08b2cc8aaedb44cd541f976d5dc7d"
+      "bytes": 11549,
+      "sha256": "152f481368cf76e9e5a5ddbceaa9c7fcec6c92d0eca59c8dd53256bce8f112ca"
     },
     {
       "path": "operator/web/measured_observations.css",
@@ -1428,8 +1443,8 @@
     },
     {
       "path": "source/MEASURED_CHEMISTRY_RECEIVING.md",
-      "bytes": 14195,
-      "sha256": "6ce4c211a91336c094a123b295731ccd1a177ed293235af7a071592f05c26ad3"
+      "bytes": 16320,
+      "sha256": "38b457832ff0f00f40e5f605a16dc0f77c9e0ff8b048b31f265be4effdc652bc"
     },
     {
       "path": "source/observed-load-integration-20261013/flow-study-load-contract.json",
@@ -1438,8 +1453,103 @@
     },
     {
       "path": "source/run_measured_chemistry_receiving.py",
-      "bytes": 34879,
-      "sha256": "cfcdb9ec23abfc783aea59b255f1a376cc7700958c1ab5783cb6c7f944d3f558"
+      "bytes": 39590,
+      "sha256": "fe133b88ca7a4b27b04c6f161b3f9f1a40dda73e07e7829c0b2453ceea095f04"
+    },
+    {
+      "path": "measurement_workspace/observation_edition_source.py",
+      "bytes": 5987,
+      "sha256": "b16a807d1e66b3d352ddf5ad9e6d26e9be5000587d0109e881a81cba27f8f7a8"
+    },
+    {
+      "path": "measurement_workspace/OBSERVATION_EDITION_CHEMISTRY.md",
+      "bytes": 8049,
+      "sha256": "0d375963a1cba92743c648403431d896713834c020506e0777d0fdbf9b34071a"
+    },
+    {
+      "path": "integration/component_fragments/measurement-observation-chemistry.json",
+      "bytes": 978,
+      "sha256": "c4d745a0ce7890f29ae48d1fd0582e0a76b2e145204e91294a251501cc57dce6"
+    },
+    {
+      "path": "measurement_workspace/engine/flow_comparison.mjs",
+      "bytes": 17408,
+      "sha256": "54cad6cb5990134685442188faa0dc21f210b8bed09451cd6ce27aa2d8da2f56"
+    },
+    {
+      "path": "measurement_workspace/engine/sediment_workspace.mjs",
+      "bytes": 30944,
+      "sha256": "41aba5c9cbb48941828b08a5731b1aa3efe109444ccd3e8b8c8db1e193be9806"
+    },
+    {
+      "path": "measurement_workspace/engine/sediment_reports.mjs",
+      "bytes": 27841,
+      "sha256": "98ffcf9351bf8e65e5e8e86176ba6f1cb62f91a144b6d4e59a649a2ec49b6753"
+    },
+    {
+      "path": "measurement_workspace/web/sediment.mjs",
+      "bytes": 61325,
+      "sha256": "90ec6f0d0422ba833b222ffd7989af747d2ab7e8fa57b8583ebd11633f508abd"
+    },
+    {
+      "path": "operator/web/sediment.mjs",
+      "bytes": 61325,
+      "sha256": "90ec6f0d0422ba833b222ffd7989af747d2ab7e8fa57b8583ebd11633f508abd"
+    },
+    {
+      "path": "measurement_workspace/FLOW_COMPARISON_RECEIVING.md",
+      "bytes": 4165,
+      "sha256": "e26d28fa1404473e3789ae9717244cf80f78e24246fa0d5a35cb3956ff9ba6e7"
+    },
+    {
+      "path": "source_tools/flow_comparisons.mjs",
+      "bytes": 2986,
+      "sha256": "36e97e36715936646a3273a984aa3f6b8039568f160365646f73b6df8b374fd6"
+    },
+    {
+      "path": "measurement_workspace/reference/sediment-reference.mjs",
+      "bytes": 19586,
+      "sha256": "d30d824673d21a180d3b968059c64f09b5444e2290a82cffe258f022e4700437"
+    },
+    {
+      "path": "measurement_workspace/engine/sediment_pairs.mjs",
+      "bytes": 33912,
+      "sha256": "80f9d764f93ad541abc290a2f6f32d294046a55d24fdb472028e8206a40d8d05"
+    },
+    {
+      "path": "measurement_workspace/engine/sediment_surrogate.mjs",
+      "bytes": 31392,
+      "sha256": "7dde86d802dd03a879812fd672791f05ee58f55c9065e1108bf859279d38407c"
+    },
+    {
+      "path": "measurement_workspace/SEDIMENT_SURROGATE.md",
+      "bytes": 26347,
+      "sha256": "40e4560d8df608c33de0a289b9dcd1fd8eee36062fab7c75a8a873ca84841470"
+    },
+    {
+      "path": "measurement_workspace/reference/run-sediment-reference.mjs",
+      "bytes": 10840,
+      "sha256": "ca2b37137919dcd08df28f770fe7f5a74068b4c157820d7ce398a207c9123acc"
+    },
+    {
+      "path": "measurement_workspace/reference/sediment_reference_course.mjs",
+      "bytes": 6930,
+      "sha256": "a7f1cd2753c916b02ff8eb53cb59e5e22545485f3ea14a73f0c61b4da8369741"
+    },
+    {
+      "path": "measurement_workspace/reference/usgs_07144100_sediment_2004_2014.csv",
+      "bytes": 3153,
+      "sha256": "7783717d890ffc902096823a626b080cbaa457bc82977ebe97961abc74881e26"
+    },
+    {
+      "path": "measurement_workspace/reference/usgs_07144100_sediment_2004_2014.json",
+      "bytes": 3165,
+      "sha256": "748cb4ef126b346d001fe86211ee6b2a2632712e36889862056c8a28036cd5ff"
+    },
+    {
+      "path": "measurement_workspace/reference/usgs_07144100_sediment_table_extraction.txt",
+      "bytes": 34708,
+      "sha256": "42f9679306a429c6df3f3fe62922bb8bfd47bb556fa0f203b5b912c6203192fa"
     }
   ],
   "predecessors": {
@@ -1461,7 +1571,8 @@
       "ae27aeaf1c57d67b71699a99c5894c00c209a15139c74c27cc0a90b3af7999d3",
       "108b2d92ee97d986162909cb36613879e69ac12398f9d402638aba5d7c0712b6",
       "8c3d173100c3f9f14db0de62a71c8a507cb94d402ca1ddec2fa335fc1a58055f",
-      "d5414ec5fd900f4e7e44d878f887bbcc4982b2860302ad303c9ee81eecee3cc6"
+      "d5414ec5fd900f4e7e44d878f887bbcc4982b2860302ad303c9ee81eecee3cc6",
+      "5d4a617293f38fe8c58cd5a703243b85b9dd27aa01a8e665f1642c7bf4349d48"
     ],
     "measurement_workspace/extension.py": [
       "5a0c67271d01b4b32e3ca97c637b8d2adf71da97d288a442272fd98acfb57ef6",
@@ -1475,7 +1586,8 @@
       "7194eec1453cf39034e38f2a359e7ba474bf438773de0418c4b0d4b5865b349f",
       "7f94db4b1de020b61a5fe6b4536e271110a8cc6cae26129afbac7d96bc4e6131",
       "00a35730b8f0f891826927d923dabcb48b44c9fe6f7d7c4555185fa67c2bfea3",
-      "d17cd011e4a115f64414d3db372d6e76be4174a64056e23e2b17963ed27e914e"
+      "d17cd011e4a115f64414d3db372d6e76be4174a64056e23e2b17963ed27e914e",
+      "53ca268bcaf42c86e7a3e5f3ac3bcae35c9b6b6a2a05fe31186fc6eb85621b3f"
     ],
     "operator/extensions/measured-observations.json": [
       "4995708ba0285439ab85d0a0d5af614d1b1aca9d6240f22246a53e54b400315e",
@@ -1497,7 +1609,8 @@
       "94deae59dc244f1d18822336b47cc2bc937aee5939acdf74fed94009f79d9b14",
       "2e8a342d1e54d0b2b340f71cb74030fe0f757d4f725eabf460904f5e30cd35f2",
       "21aa79ec6326366e8f01074213338ab02e4bcc67fb7fcabc5eb01677ad67171d",
-      "908a1b01cf4a1c65b6d448d9deefdaa20dc8dacd7c4fcc80ae307c6e87cc235d"
+      "908a1b01cf4a1c65b6d448d9deefdaa20dc8dacd7c4fcc80ae307c6e87cc235d",
+      "318000da39f13c99c61742298fd658b78dc08b2cc8aaedb44cd541f976d5dc7d"
     ],
     "MEASURED_CHEMISTRY.md": [
       "a9d47546de0a79b85d9c86621bd55d4325d9c257b953ad48774fa7a3e264db15",
@@ -1515,11 +1628,13 @@
     ],
     "measurement_workspace/web/chemistry.mjs": [
       "b53448e5c62827bf4c8f58b5f0cb237d9ee6bf86f48d7a871100c7286003edb5",
-      "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda"
+      "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda",
+      "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9"
     ],
     "operator/web/measured_chemistry.mjs": [
       "b53448e5c62827bf4c8f58b5f0cb237d9ee6bf86f48d7a871100c7286003edb5",
-      "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda"
+      "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda",
+      "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9"
     ],
     "operator/install_measurements.py": [
       "25330d2b0f8fada8d8847e3a17c2ada2ac53714a5c9d2fb44f59fadd38f7489b",
@@ -1556,7 +1671,8 @@
       "f20740c3b339a2583f54245006b8bc742ed3de39e426c5419a865fd614dc367a",
       "f319ea6572b623fc749d904a1b3ada6de89cb91ca4aa7d95f415a7f803d7ed49",
       "db17b091b7212c715093fb467fc9f81e43c4c8fc7a045e2de759c470ea506a3d",
-      "9573bc894b059ed561f83020772692a595e4e123bad947457e1f219c6eeacc97"
+      "9573bc894b059ed561f83020772692a595e4e123bad947457e1f219c6eeacc97",
+      "f7430cd088b0096849106a842e5d233c2beb05d04770383bf75a8924c97d2ae9"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -1623,7 +1739,8 @@
       "b6cc24dbadce5f8b1bc4ac1eb2a8b86b146f6fc04d5b060b1096b05fd7204b8e"
     ],
     "operator/MEASURED_CHEMISTRY.md": [
-      "31fe6da10443f3fd22938d77c1505832063d4661ec2470e896cb33e540209732"
+      "31fe6da10443f3fd22938d77c1505832063d4661ec2470e896cb33e540209732",
+      "bc0be0e63d82023510886feb69dbcd5d74f665718e16b629a0d578488606b6b4"
     ],
     "measurement_workspace/web/workspace.css": [
       "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039",
@@ -1863,7 +1980,8 @@
       "c936fa143df287115eb88fae80ca5ced1556338338300befdfcd979ab1d9f963"
     ],
     "integration/component_fragments/measurement-flow-studies.json": [
-      "d88239eaa9c806ae16464ee3c764898cc78eb04ffead262de6845be899d1499b"
+      "d88239eaa9c806ae16464ee3c764898cc78eb04ffead262de6845be899d1499b",
+      "354aec2b84fd2fcaa303cf618f62d7227f0cf7636be820acc9580bd473bec374"
     ],
     "measurement_workspace/DAILY_FLOW_STUDIES.md": [
       "704c4a9e16948a9f5ad57ca87fab9ef95c937c388cd3041fc62784f79f28b52c"
@@ -1898,6 +2016,12 @@
     ],
     "operator/web/flow_editions.css": [
       "9a5f279697e6be5b6266a8653a6c8f6a423eb9bee4311ff3914b32f37d0c6e38"
+    ],
+    "measurement_workspace/web/flow_editions.mjs": [
+      "689462902ff3c180baed40b522e74570dea89906eba13ac4a966c074ea99144e"
+    ],
+    "operator/web/flow_editions.mjs": [
+      "689462902ff3c180baed40b522e74570dea89906eba13ac4a966c074ea99144e"
     ]
   },
   "requires": [

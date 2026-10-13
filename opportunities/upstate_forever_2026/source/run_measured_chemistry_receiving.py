@@ -299,6 +299,44 @@ def receive_collection_zip(service, raw, destination, expected):
     return received
 
 
+def saved_observation_edition(service, population, output, request, originals):
+    """Save/read the original engine's immutable edition; preserve exact retry request."""
+    request_path = output / "observation-edition-request.json"
+    source_ids = sorted({item["id"] for row in population["records"] for item in row["sources"]})
+    scope = {"source_ids": source_ids, "filters": {}}
+    if request_path.exists():
+        submitted = read_json(request_path)
+        require(submitted["scope"] == scope
+                and submitted["operation_id"] == "measured-chemistry-edition-" + digest(request),
+                "The retained edition request belongs to another original population")
+    else:
+        capture = service.json("POST", "observation-editions/inspect", {
+            "scope": scope, "expected_revision": population["revision"]})
+        require({row["id"] for row in capture["records"]} == set(originals)
+                and len(capture["records"]) == 36,
+                "The selected original source editions contain a different reference population")
+        submitted = {
+            "operation_id": "measured-chemistry-edition-" + digest(request),
+            "scope": capture["scope"], "expected_revision": capture["workspace_revision"],
+            "source_binding": capture["source_binding"],
+            "title": "Original 36-record authored Chemistry reference",
+            "reviewer": REVIEWER,
+            "purpose": ("Retain every original authored observation independently, with its source "
+                        "and frozen review; no duplicate relationship or field-data inference."),
+            "groups": [], "exclusions": [],
+        }
+        atomic_json(request_path, submitted, immutable=True)
+    saved = service.json("POST", "observation-editions/editions", submitted)
+    edition = service.json("GET", "observation-editions/editions/" + saved["edition_id"])
+    require(edition["digest"] == saved["digest"]
+            and {row["id"] for row in edition["capture"]["records"]} == set(originals)
+            and len(edition["capture"]["records"]) == 36
+            and all(row["disposition"] == "retained" for row in edition["rows"]),
+            "The saved edition changed the full independent original reference population")
+    atomic_json(output / "observation-edition.json", edition, immutable=True)
+    return {"id": edition["edition_id"], "digest": edition["digest"]}
+
+
 def run_course(args):
     started = time.perf_counter()
     workspace = Workspace(args.workspace.resolve(strict=True), create=False)
@@ -316,6 +354,11 @@ def run_course(args):
         "script_sha256": file_digest(Path(__file__)),
         "implementation": {name: file_digest(APP / name) for name in IMPLEMENTATION},
     }
+    if args.save_observation_edition:
+        request["observation_edition"] = True
+        for name in ("measurement_workspace/observation_edition_source.py",
+                     "measurement_workspace/engine/observation_editions.mjs"):
+            request["implementation"][name] = file_digest(APP / name)
     state_path = output / "receiving.json"
     if not state_path.exists():
         require(not (output / "received-workspace").exists(),
@@ -360,15 +403,25 @@ def run_course(args):
                     revision = response["revision"]
                 population = service.json("GET", query + "&expected_revision=" + str(revision))
                 originals = original_rows(population, original_request, prefix)
+                edition_selection = None
+                if args.save_observation_edition:
+                    edition_selection = saved_observation_edition(service, population, output, request, originals)
+                    save("observation_edition", edition_selection)
+                    population = service.json("GET", query)
+                    require(original_rows(population, original_request, prefix) == originals,
+                            "Original reference records changed while saving the edition")
+                candidate = reviewed_selection(case, original_run, original_request, population, originals, prefix)
+                if edition_selection is not None:
+                    candidate["filters"] = {}
+                    candidate["observation_edition"] = edition_selection
                 selection_path = output / "binding-selection.json"
                 if selection_path.exists():
                     selection = read_json(selection_path)
-                    candidate = reviewed_selection(case, original_run, original_request, population, originals, prefix)
                     require({k: v for k, v in selection.items() if k != "expected_revision"} ==
                             {k: v for k, v in candidate.items() if k != "expected_revision"},
                             "Original reviewed selection changed after interruption")
                 else:
-                    selection = reviewed_selection(case, original_run, original_request, population, originals, prefix)
+                    selection = candidate
                     atomic_json(selection_path, selection, immutable=True)
                 existing = [row for row in workspace._list(measured.FAMILY)
                             if row.get("selection") == selection and row.get("project_sha256") == case["project_sha256"]]
@@ -386,6 +439,11 @@ def run_course(args):
                 binding = measured.get(workspace, state["steps"]["binding"]["binding_id"])
                 originals = read_json(output / "original-record-map.json")
             compare_bound_observations(binding, originals)
+            if args.save_observation_edition:
+                edition = read_json(output / "observation-edition.json")
+                require(binding["observation_edition_source"]["edition"] == edition
+                        and binding["observation_edition_source"]["selection"] == state["steps"]["observation_edition"],
+                        "The original native binding omitted or changed its saved Observation edition")
             collections = binding.get("source_collections", [])
             require(collections and any(item["collection_id"] == state["steps"]["collection"]["collection_id"]
                                         for item in collections),
@@ -489,6 +547,11 @@ def run_course(args):
             for name, rows in portable["tables"].items():
                 if name != "events":
                     require(current["tables"][name] == rows, "Independent measured receiving changed original table " + name)
+            if args.save_observation_edition:
+                restored_edition = incoming_measurements.json(
+                    "GET", "observation-editions/editions/" + edition["edition_id"])
+                require(restored_edition == edition,
+                        "Cold receiving changed the immutable original Observation edition")
             original_events = {row["id"]: row for row in portable["tables"]["events"]}
             received_events = {row["id"]: row for row in current["tables"]["events"]}
             require(all(received_events.get(key) == row for key, row in original_events.items()),
@@ -510,6 +573,9 @@ def run_course(args):
                     and adopted["source_collections"] == binding["source_collections"],
                     "Adoption lost the original selection or source collection editions")
             compare_bound_observations(adopted, originals)
+            if args.save_observation_edition:
+                require(adopted["observation_edition_source"] == binding["observation_edition_source"],
+                        "Received Chemistry adoption changed the complete edition source and frozen decisions")
             atomic_json(output / "downloads" / "received-binding.json", adopted, immutable=True)
             require(chemistry.get_case(case["id"]) == case and chemistry.get_run(original_run["id"]) == original_run,
                     "The original authored case or calibration changed")
@@ -526,6 +592,8 @@ def run_course(args):
                 "received_run_id": incoming_run["id"], "records": 36, "fit": 28, "holdout": 8,
                 "downloads": str(output / "downloads"), "calendar_encoding": CALENDAR,
             }
+            if args.save_observation_edition:
+                summary["observation_edition"] = state["steps"]["observation_edition"]
             save("summary", summary)
             save("last_invocation_seconds", time.perf_counter() - started)
             atomic_json(output / "opening.json", summary, immutable=True)
@@ -543,6 +611,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--case-id", default=CASE)
     parser.add_argument("--calibration-run", default=CALIBRATION)
+    parser.add_argument("--save-observation-edition", action="store_true",
+                        help="Save the complete original 36-record edition before native Chemistry binding and verify its cold receive")
     args = parser.parse_args()
     print(json.dumps(run_course(args), ensure_ascii=False, indent=2, allow_nan=False))
 
