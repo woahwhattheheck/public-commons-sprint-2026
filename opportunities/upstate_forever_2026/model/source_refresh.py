@@ -611,6 +611,7 @@ def _compare_refreshed_runs(workspace, plan, baseline, alternative):
     and the raster delta uses their common finite support.
     """
     from . import rasters
+    from .native_versions import comparison_versions, models_for_outputs
     import numpy as np
     import rasterio
 
@@ -618,6 +619,11 @@ def _compare_refreshed_runs(workspace, plan, baseline, alternative):
     alternative_names = sorted(set(alternative.get("artifacts", {})) & set(rasters.MASS_UNITS))
     if not names or names != alternative_names:
         raise ComparisonIncompatible("Original and refreshed runs need the same nonempty set of native mass outputs")
+    try:
+        native_versions = comparison_versions(
+            [baseline, alternative], models_for_outputs(names))
+    except ValueError as error:
+        raise ComparisonIncompatible(str(error)) from error
     for name in names:
         units = rasters.MASS_UNITS[name]
         if (baseline["artifacts"][name].get("units") != units
@@ -663,6 +669,7 @@ def _compare_refreshed_runs(workspace, plan, baseline, alternative):
         "baseline_grid_id": original_grid["id"],
         "alternative_grid_id": replacement_grid["id"],
         "native_artifacts": names,
+        "native_version_provenance": native_versions,
         "baseline_models": baseline["selection"].get("models"),
         "alternative_models": alternative["selection"].get("models"),
         "grid_support_fingerprints": support_fingerprints,
@@ -670,7 +677,8 @@ def _compare_refreshed_runs(workspace, plan, baseline, alternative):
         "comparison_scope": "Identical model domain, reporting partitions and reporting mask; alternative minus baseline on common finite output cells with explicit excluded coverage",
     }
     key = digest({"runs": ids, "direction": "alternative minus baseline",
-                  "source_refresh_scope": "common-finite-support/v1"})
+                  "source_refresh_scope": "common-finite-support/v2",
+                  "native_version_provenance": native_versions})
     directory = workspace.root / "comparisons" / key
     with held(directory / ".comparison.lock", blocking=False):
         retained_path = directory / "comparison.json"
@@ -764,6 +772,7 @@ def _compare_refreshed_runs(workspace, plan, baseline, alternative):
             checks["native_coverage"][name] = coverage
         result = {"schema": "upstate.run-comparison/v1", "id": key,
                   "baseline_run_id": ids[0], "direction": "alternative minus baseline",
+                  "native_version_provenance": native_versions,
                   "source_refresh_context": context, "spatial_support": checks, "alternatives": []}
         value = {"run_id": alternative["id"], "selection": deepcopy(alternative["selection"]),
                  "profile_changed": alternative["selection"]["profile_id"] != baseline["selection"]["profile_id"],
@@ -810,6 +819,10 @@ def _execute_and_compare(workspace: Any, plan: Mapping[str, Any], state: Dict[st
         if not impacts[original_id]["requires_native_rerun"]:
             continue
         row = {"from_run_id": original_id, "to_run_id": target_id}
+        # A retained older delta remains an immutable Workspace object. Only
+        # the current eligible result belongs in the active source-plan report.
+        state["comparisons"] = [item for item in state["comparisons"]
+                                if item["from_run_id"] != original_id]
         try:
             before = workspace.inspect_run(original_id)
             after = workspace.inspect_run(target_id)
@@ -817,10 +830,6 @@ def _execute_and_compare(workspace: Any, plan: Mapping[str, Any], state: Dict[st
                 state["comparison_results"][original_id] = {
                     **row, "state": "pending",
                     "reason": "Both original and refreshed native runs must be complete"}
-            elif before["selection"].get("invest_version") != after["selection"].get("invest_version"):
-                state["comparison_results"][original_id] = {
-                    **row, "state": "incompatible",
-                    "reason": "Original and refreshed runs use different InVEST versions"}
             else:
                 result = _compare_refreshed_runs(workspace, plan, before, after)
                 if not isinstance(result, Mapping) or not result.get("id"):
