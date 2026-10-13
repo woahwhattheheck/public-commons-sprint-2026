@@ -50,8 +50,8 @@
     },
     {
       "path": "application/arches_app.py",
-      "bytes": 12702,
-      "sha256": "837c8c0ee5f9faf35aa54bfd247754e4fbab5b69dd7d7dd14c84fa7c6eddbabe",
+      "bytes": 14218,
+      "sha256": "3504561f1e07890bc44a32e5e2d79039c6e7ba8da1f2a5829cb730310c97bede",
       "kind": "application-source"
     },
     {
@@ -62,8 +62,8 @@
     },
     {
       "path": "application/OPERATING_GUIDE.md",
-      "bytes": 17675,
-      "sha256": "9edb2ebcad8005d694e87aa27afbb01f71b2aaa35ed4a94ee78ae6adf9fd3976",
+      "bytes": 17995,
+      "sha256": "254e750ef44dd1e69989a3acae30e1e8bf3f9751f4250a0e88c836b8e6825db3",
       "kind": "application-source"
     },
     {
@@ -164,8 +164,8 @@
     },
     {
       "path": "application/NATIVE_SKOS_RECEIVING.md",
-      "bytes": 8102,
-      "sha256": "d60f02d4addb38bbcb2a0d0b1a675db04baf190a33626606bbbc32c9c72fff61",
+      "bytes": 9490,
+      "sha256": "8bce92d2ba29885696069c637f2f572c77ab4bbf5486b7f51d34fc33fa76648e",
       "kind": "application-source"
     },
     {

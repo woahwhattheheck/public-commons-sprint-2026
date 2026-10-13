@@ -62,3 +62,22 @@ Current receiving status: complete additive source and original fixtures retaine
 ## Original native exporter cohort
 
 The publisher's actual resource_export_tests.py also selects the paired RDF files and resource_export_test.json, an unchanged4,894,163-byte graph with78nodes/23groups. Its two-resource/18-tile native truth uses the same graph/publication and resolves the selected collection in External Identifier Type and Description Type. Four additional original collection IDs remain absent from the small RDF pair. Keep that full cohort as original structural receiving and unresolved-context diagnostics; never relabel its nodes or manufacture membership to obtain READY. All original files and their identities remain in the source qualification carrier.
+
+## Receive the complete native edition from the command line
+
+After context preparation returns READY, use its exact manifest_sha256 and the existing staff workspace's current revision:
+
+```sh
+python3 -B application/arches_app.py receive-native \
+  --workspace /absolute/path/to/staff-workspace \
+  --context /absolute/path/to/receiving/native-context \
+  --manifest-sha256 RETAINED_READY_MANIFEST_SHA256 \
+  --source /absolute/path/to/original/native-resources.json \
+  --scope ORIGINAL_SELECTION_SCOPE --coverage complete \
+  --actor STAFF_NAME --operation-id ORIGINAL_RECEIVING_OPERATION \
+  --expected-revision CURRENT_WORKSPACE_REVISION
+```
+
+Repeat --source for the complete input selection and --notice for original supporting notices. Use --parent-release for the existing accepted release when comparing the next edition. The command requires an existing staff workspace, calls the same pinned receive_candidate and original import transaction, and prints the retained snapshot/revision. Repeating the unchanged original operation recovers its existing result. Refresh the staff browser and review that edition's real resources and issues before publishing a release.
+
+This command does not approve records or create a target platform import. Original SKOS, graph, native-context manifest, resources and notices flow through the same source retention and whole-workspace export.
