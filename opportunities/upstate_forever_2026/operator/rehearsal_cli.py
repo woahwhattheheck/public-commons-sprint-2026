@@ -6,19 +6,17 @@ This command never starts a scientific worker or silently retries a mutation.
 """
 from __future__ import annotations
 import argparse
-import hashlib
 import http.client
 import json
-import os
 from pathlib import Path
 import re
 import sys
-import tempfile
 import urllib.parse
 
 APP = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(APP))
-from model.common import canonical, file_digest, identifier, read_json
+from model.common import canonical, identifier, read_json
+from model.retained_download import download as receive_download, receive_cohort
 
 ACTIONS = {"rehearsal.save", "rehearsal.begin", "rehearsal.record", "rehearsal.export"}
 MAX_JSON = 4 * 1024 * 1024
@@ -93,56 +91,15 @@ class Client:
             raise ValueError("Select this workspace's original rehearsal task")
         return self.json("/api/task/resume", {"id": current["id"]})
 
-    def download(self, ticket, destination):
-        destination = Path(destination)
-        if destination.exists():
-            if not destination.is_file() or destination.stat().st_size != ticket["bytes"] or file_digest(destination) != ticket["sha256"]:
-                raise ValueError("The existing receiving file differs from the selected original download")
-            return {"path": str(destination), "bytes": ticket["bytes"], "sha256": ticket["sha256"], "reused": True}
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        if (not re.fullmatch(r"/api/file/[0-9a-f]{64}", ticket["url"])
-            or not re.fullmatch(r"[0-9a-f]{64}", ticket["sha256"])
-            or isinstance(ticket["bytes"], bool) or not isinstance(ticket["bytes"], int) or ticket["bytes"] < 0):
-            raise ValueError("Select an exact original retained-file ticket")
-        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=60)
-        pending = None
-        try:
-            connection.request("GET", ticket["url"] + "?download=1",
-                               headers={"Authorization": "Bearer " + self.token})
-            response = connection.getresponse()
-            if (response.status != 200 or response.getheader("Content-Length") != str(ticket["bytes"])
-                or response.getheader("ETag") != '"' + ticket["sha256"] + '"'):
-                raise ValueError("The original full download headers differ")
-            fd, name = tempfile.mkstemp(prefix=".rehearsal-download-", dir=destination.parent)
-            pending = Path(name)
-            h, count = hashlib.sha256(), 0
-            with os.fdopen(fd, "wb") as out:
-                while True:
-                    block = response.read(1024 * 1024)
-                    if not block:
-                        break
-                    count += len(block)
-                    if count > ticket["bytes"]:
-                        raise ValueError("The original download exceeded its complete descriptor")
-                    h.update(block); out.write(block)
-                out.flush(); os.fsync(out.fileno())
-            if count != ticket["bytes"] or h.hexdigest() != ticket["sha256"]:
-                raise ValueError("The complete original download differs")
-            try:
-                os.link(pending, destination)
-            except FileExistsError:
-                if destination.stat().st_size != count or file_digest(destination) != ticket["sha256"]:
-                    raise ValueError("A different output appeared during the original download")
-            directory = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(directory)
-            finally:
-                os.close(directory)
-            return {"path": str(destination), "bytes": count, "sha256": h.hexdigest(), "reused": False}
-        finally:
-            connection.close()
-            if pending is not None:
-                pending.unlink(missing_ok=True)
+    def download(self, ticket, destination, *, progress=None):
+        return receive_download(self.port, self.token, ticket, destination, progress=progress)
+
+    def download_all(self, tickets, directory, *, task=None, progress=None):
+        source = {"workspace": self.workspace}
+        if task is not None:
+            source["task"] = identifier(task)
+        return receive_cohort(self.port, self.token, tickets, directory,
+                              source=source, progress=progress)
 
 
 def main():
@@ -164,6 +121,11 @@ def main():
     download.add_argument("--task", required=True)
     download.add_argument("--member", required=True, help="Exact _downloads filename or ticket ID")
     download.add_argument("--out", type=Path, required=True)
+    download.add_argument("--progress", action="store_true", help="Write durable byte progress to stderr")
+    cohort = sub.add_parser("download-all", help="Receive every original file from one completed task")
+    cohort.add_argument("--task", required=True)
+    cohort.add_argument("--out", type=Path, required=True, help="Directory for the complete selected cohort")
+    cohort.add_argument("--progress", action="store_true", help="Write durable per-member progress to stderr")
     args = parser.parse_args()
     client = Client(args.connection)
     if args.workspace:
@@ -182,11 +144,16 @@ def main():
         task = client.task(args.task)
         if task["workspace"] != client.workspace or task["state"] != "complete":
             raise ValueError("Select a completed task in the current workspace")
-        matches = [item for item in task.get("_downloads", [])
-                   if args.member in (item["id"], item["filename"])]
-        if len(matches) != 1:
-            raise ValueError("Choose one exact original download filename or ticket ID")
-        value = client.download(matches[0], args.out)
+        progress = (lambda value: print(json.dumps(value, ensure_ascii=False), file=sys.stderr, flush=True)) if args.progress else None
+        if args.command == "download-all":
+            value = client.download_all(task.get("_downloads", []), args.out,
+                                        task=task["id"], progress=progress)
+        else:
+            matches = [item for item in task.get("_downloads", [])
+                       if args.member in (item["id"], item["filename"])]
+            if len(matches) != 1:
+                raise ValueError("Choose one exact original download filename or ticket ID")
+            value = client.download(matches[0], args.out, progress=progress)
     print(json.dumps(value, indent=2, ensure_ascii=False))
 
 

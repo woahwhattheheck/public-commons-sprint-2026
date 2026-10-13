@@ -16,13 +16,14 @@ import re
 import tempfile
 import uuid
 
-OWNED = frozenset({
+LEGACY_OWNED = frozenset({
     "model/rehearsal.py", "operator/rehearsal.py", "operator/rehearsal_cli.py",
     "operator/web/rehearsal.mjs", "operator/web/rehearsal.css",
     "operator/install_rehearsal.py", "operator/REHEARSAL.md",
     "operator/rehearsal_receiving.py", "operator/rehearsal_browser.mjs",
     "operator/rehearsal.example.json",
 })
+OWNED = LEGACY_OWNED | {"model/retained_download.py", "operator/RECEIVING_DOWNLOADS.md"}
 SCHEMA = "upstate.rehearsal-addon/v1"
 
 def sha(body):
@@ -231,8 +232,12 @@ def read_packet(path):
         }
     else:
         value = json.loads(path.read_text(encoding="utf-8"))
-    if value.get("schema") != SCHEMA or set(value.get("files", {})) != OWNED:
-        raise ValueError("Select the complete ten-file rehearsal source packet")
+    names = set(value.get("files", {}))
+    if value.get("schema") != SCHEMA or names not in (LEGACY_OWNED, OWNED):
+        raise ValueError("Select a complete original or current rehearsal source packet")
+    if (names == LEGACY_OWNED
+            and "from model.retained_download import" in value["files"]["operator/rehearsal_cli.py"]):
+        raise ValueError("The restartable receiving client needs its complete transfer source and guide")
     for name, body in value["files"].items():
         if not isinstance(body, str):
             raise ValueError("A complete source body is required: " + name)
@@ -326,7 +331,7 @@ def install(application, source=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--application", type=Path, required=True)
-    parser.add_argument("--source", type=Path, help="Complete source packet; defaults to the ten original addon files beside this installer")
+    parser.add_argument("--source", type=Path, help="Complete source packet; defaults to the complete current addon files beside this installer")
     args = parser.parse_args()
     print(json.dumps(install(args.application, args.source), indent=2, sort_keys=True))
 
