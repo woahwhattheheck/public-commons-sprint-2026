@@ -229,8 +229,8 @@ class CaptureWorkspace:
                 split.append(receipt)
                 pins = item["requestedPins"]; half = len(pins) // 2
                 check(half > 0, "CAPTURE_SPLIT", "An indivisible selected response cannot be split.")
-                visit(lookup_job(item["kind"], pins[:half], item["id"] + "-a"))
-                visit(lookup_job(item["kind"], pins[half:], item["id"] + "-b"))
+                visit(lookup_job(item["kind"], pins[:half], item["id"] + "-a", item.get("recordLimit", 2000)))
+                visit(lookup_job(item["kind"], pins[half:], item["id"] + "-b", item.get("recordLimit", 2000)))
             else:
                 complete.append(receipt)
         for item in initial_jobs(): visit(item)
@@ -243,9 +243,11 @@ class CaptureWorkspace:
                 self._selection_cache = (city_identity, keys, selection)
             else:
                 _, keys, selection = self._selection_cache
+            geometry_schema = next((x for x in complete if x["job"]["id"] == "pittsburgh-parcels-catalog-before"), None)
+            geometry_limit = min(2000, geometry_schema["metadataIdentity"]["maxRecordCount"]) if geometry_schema else 2000
             for offset in range(0, len(keys), BATCH):
                 for kind in ("county", "geometry"):
-                    visit(lookup_job(kind, keys[offset:offset + BATCH]))
+                    visit(lookup_job(kind, keys[offset:offset + BATCH], geometry_limit=geometry_limit))
             if not pending:
                 for item in final_jobs(): visit(item)
         check(len(jobs) < 4900, "CAPTURE_FILES", "The complete capture would exceed the receiving file inventory.")
