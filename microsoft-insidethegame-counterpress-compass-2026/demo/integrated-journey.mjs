@@ -134,7 +134,9 @@ export async function createIntegratedJourney({root,output,options}){
     match:'Counterpress_Broadcast_Match.json',html:'Counterpress_Broadcast_Handover.html',
     vtt:'Counterpress_Broadcast_Captions.vtt',coach:'Counterpress_Coach_Review.json',
     recap:'Counterpress_Player_Recap.json',recapHtml:'Counterpress_Player_Recap.html',
-    guide:'READ_ME.html',video:'Counterpress_Compass_Running_Demo.mp4',story:'Counterpress_Automatic_Story.json'
+    guide:'READ_ME.html',video:'Counterpress_Compass_Running_Demo.mp4',story:'Counterpress_Automatic_Story.json',
+    recipientMatch:'Counterpress_Recipient_Revised_Match.json',recipientCoach:'Counterpress_Recipient_Revised_Coach_Review.json',
+    recipientHtml:'Counterpress_Recipient_Revised_Broadcast.html',recipientVtt:'Counterpress_Recipient_Revised_Captions.vtt'
   };
   function retained(packet){
     equal(packet.match,original.match,'The original complete match changed');
@@ -376,6 +378,40 @@ export async function createIntegratedJourney({root,output,options}){
         requireValue((await readArchive(receivingPage,recipientId)).review.broadcast.title==='Harbor FC: producer copy',
           'Recipient cannot edit its imported review');
         equal(await readArchive(page,state.highId),finalMatch,'Recipient editing changed the sender review');
+        await receivingPage.reload({waitUntil:'domcontentloaded'});
+        await receivingPage.locator('#preview:enabled').waitFor();
+        const edited=structuredClone(finalMatch);edited.review.broadcast.title='Harbor FC: producer copy';
+        equal(await readArchive(receivingPage,recipientId),edited,'Recipient revision did not reopen intact');
+        await download(receivingPage,'#downloadMatch',join(output,artifacts.recipientMatch));
+        await download(receivingPage,'#downloadHtml',join(output,artifacts.recipientHtml));
+        await download(receivingPage,'#downloadVtt',join(output,artifacts.recipientVtt));
+        equal(await json(join(output,artifacts.recipientMatch)),edited,'Recipient match export changed its revision');
+        await receivingPage.goto(origin+'/coach-review',{waitUntil:'domcontentloaded'});
+        await receivingPage.waitForFunction(()=>document.querySelectorAll('.match-detail').length===2);
+        await download(receivingPage,'#export',join(output,artifacts.recipientCoach));
+        const editedCoach=await json(join(output,artifacts.recipientCoach));
+        equal(editedCoach.matches.find(item=>item.package.match.scenario==='high-press').package,edited,
+          'Recipient coach export changed its revised match');
+        equal(editedCoach.matches.find(item=>item.package.match.scenario==='low-block').package.match,low.match,
+          'Recipient coach export changed the other complete match');
+        const reopenedContext=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
+        try{
+          const reopenedPage=await reopenedContext.newPage();reopenedPage.setDefaultTimeout(12000);
+          const reopenedErrors=[];reopenedPage.on('pageerror',error=>reopenedErrors.push(error.message));
+          await importCoach(reopenedPage,origin,join(output,artifacts.recipientCoach));
+          const reopenedItems=await collection(reopenedPage);
+          const reopenedId=reopenedItems.find(item=>item.scenario==='high-press')?.id;
+          requireValue(reopenedItems.length===2&&reopenedId&&reopenedId!==recipientId&&reopenedId!==state.highId,
+            'Reopening the recipient edition did not create its independent collection');
+          equal(await readArchive(reopenedPage,reopenedId),edited,'Reimport changed the complete recipient edition');
+          await openBroadcast(reopenedPage,origin,reopenedId);
+          equal(await reopenedPage.locator('#title').inputValue(),'Harbor FC: producer copy','The later title did not reopen');
+          await reopenedPage.reload({waitUntil:'domcontentloaded'});
+          await reopenedPage.locator('#preview:enabled').waitFor();
+          equal(await readArchive(reopenedPage,reopenedId),edited,'Reload changed the reimported recipient edition');
+          requireValue(!reopenedErrors.length,'Reopened recipient browser errors: '+reopenedErrors.join('; '));
+        }finally{await reopenedContext.close();}
+        equal(await readArchive(page,state.highId),finalMatch,'Reopening a later edition changed the original sender');
         await receivingPage.goto(pathToFileURL(join(output,artifacts.html)).href,{waitUntil:'domcontentloaded'});
         await receivingPage.locator('.jump[data-count="636"]').click();
         await receivingPage.waitForFunction(()=>document.querySelector('#eventPosition').textContent.includes('e636'));
@@ -392,20 +428,24 @@ export async function createIntegratedJourney({root,output,options}){
         equal(await fs.readFile(embeddedVtt,'utf8'),await fs.readFile(join(output,artifacts.vtt),'utf8'),
           'The standalone timed-caption download differs');
         requireValue(!errors.length,'Recipient browser errors: '+errors.join('; '));
-        portable={coachImported:true,independentCollection:true,editableCopy:true,sourceReplay:true,embeddedMatchDownload:true};
+        portable={coachImported:true,independentCollection:true,editableCopy:true,sourceReplay:true,embeddedMatchDownload:true,
+          recipientRevisionExported:true,recipientRevisionReimported:true,recipientRevisionReloaded:true,originalSenderPreserved:true};
       }finally{await receiver.close();}
 
       const guide='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
         '<title>Counterpress Compass — working product handover</title><style>body{margin:0;background:#f2f2f2;color:#222;font:16px/1.55 system-ui}main{max-width:1020px;margin:auto;padding:32px}section{background:#fff;border:1px solid #ccc;padding:24px;margin:20px 0}h1{font-size:34px;line-height:1.2}h2{font-size:22px}a{color:#222}video{width:100%;background:#111}li{margin:10px 0}code{overflow-wrap:anywhere}pre{padding:16px;background:#eee;overflow:auto}@media(max-width:600px){main{padding:16px}section{padding:16px}}</style><main>'+
         '<p>COUNTERPRESS / COMPASS</p><h1>Match review to broadcast handover</h1><p>Open the running-product film, review the original source plays, or continue editing the complete saved match.</p>'+
         '<section><h2>Watch the working product</h2><video controls preload="metadata" src="'+artifacts.video+'"><track kind="captions" label="English chapters" srclang="en" src="captions.vtt"></video>'+
-        '<p>The '+video.encodedDurationSeconds.toFixed(2)+'-second clip records the actual application. English chapter captions are included in the picture and as editable subtitle files.</p></section>'+
+        '<p>The '+video.encodedDurationSeconds.toFixed(2)+'-second clip records the actual application. '+
+        (video.captionDelivery==='switchable-track-and-sidecars'?'English chapter captions are included as a switchable subtitle track and editable subtitle files.':'English chapter captions are included in the picture and as editable subtitle files.')+'</p></section>'+
         '<section><h2>Open the delivered review</h2><ul><li><a href="'+artifacts.html+'">Broadcast handover with original-event replay</a></li>'+
         '<li><a href="'+artifacts.recapHtml+'">H10 player recap and half-by-half comparison</a></li>'+
         '<li><a href="'+artifacts.story+'">Automatic H10 five-play broadcast draft</a></li>'+
         '<li><a href="'+artifacts.match+'">Complete editable match and broadcast captions</a></li>'+
         '<li><a href="'+artifacts.coach+'">Complete high-press and low-block coach review</a></li>'+
-        '<li><a href="'+artifacts.vtt+'">Broadcast subtitles aligned to this recording</a></li></ul></section>'+
+        '<li><a href="'+artifacts.vtt+'">Broadcast subtitles aligned to this recording</a></li>'+ 
+        '<li><a href="'+artifacts.recipientCoach+'">Recipient’s revised complete coach review, exported and reopened independently</a></li>'+
+        '<li><a href="'+artifacts.recipientHtml+'">Recipient’s revised broadcast handover</a></li></ul></section>'+
         '<section><h2>Continue in the application</h2><p>Use Node 22 or later. From the extracted handover directory, start the included application:</p>'+
         '<pre>node application/src/server.mjs</pre><p>Open <a href="http://127.0.0.1:3167">http://127.0.0.1:3167</a>, choose <strong>Compare saved matches</strong>, and import <strong>'+artifacts.coach+'</strong>. Both matches become editable in that browser. The high-press match includes the original saved explanation, H10 playlist and broadcaster captions.</p>'+
         '<p>In <strong>Broadcast handover</strong>, open that match and choose <strong>'+artifacts.video+'</strong> as its recording. The video stays on your machine. Each caption keeps its original match event and its separate video in/out times.</p>'+
