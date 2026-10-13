@@ -44,7 +44,7 @@ fs.writeFileSync(path.join(out,'OWNER_INSTRUCTION.md'),originals.ownerInstructio
 const report={schema:'unlost.localization-browser-operation.v1',startedAt:new Date().toISOString(),status:'starting',source:originals.files.map(({content,...f})=>f),views:[],downloads:[],errors:[]};
 const save=()=>fs.writeFileSync(path.join(out,'operation.json'),JSON.stringify(report,null,2)+'\n',{mode:0o600});
 const origin='https://unlost-localization.invalid/',served=new Map(originals.files.map(f=>[origin+f.name,Buffer.from(f.content)]));
-let browser,context,page,interrupted=false,timer;
+let browser,context,page,interrupted=false,timer,dialogPolicy='accept';
 const inspect=async(kind,width,view)=>{
  const entry={kind,width,view,images:[],errors:[]};report.views.push(entry);
  await page.evaluate(async()=>{await document.fonts.ready;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
@@ -63,7 +63,7 @@ const programme=async()=>{
  browser=await pw.chromium.connectOverCDP(options['--cdp'],{noDefaults:true,timeout:20000});if(interrupted)throw Error('Interrupted during browser connection');
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,serviceWorkers:'block',colorScheme:'light',reducedMotion:'reduce'});if(interrupted)throw Error('Interrupted during private-context creation');
  await context.route('**/*',route=>{const bytes=served.get(route.request().url());return bytes?route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:bytes,headers:{'cache-control':'no-store'}}):route.abort();});
- page=await context.newPage();page.setDefaultTimeout(12000);page.setDefaultNavigationTimeout(15000);page.on('dialog',dialog=>dialog.accept());page.on('pageerror',e=>report.errors.push(e.message));
+ page=await context.newPage();page.setDefaultTimeout(12000);page.setDefaultNavigationTimeout(15000);page.on('dialog',dialog=>dialogPolicy==='dismiss'?dialog.dismiss():dialog.accept());page.on('pageerror',e=>report.errors.push(e.message));
  report.status='operating';report.browser=browser.version();save();console.log(JSON.stringify({stage:'unlost_localization_browser_started',out,browser:report.browser}));
  for(const f of originals.files){
   if(interrupted)throw Error('Interrupted before original application');
@@ -77,7 +77,9 @@ const programme=async()=>{
   await page.locator('#unit-form [name=resourceType]').selectOption('other');await page.locator('#unit-form [name=field]').fill('Preparation note');await page.locator('#unit-form [name=sourceText]').fill('Preserve designer names, dimensions and condition notes.');
   await page.locator('#unit-form [name=translation]').fill('Conserver les noms des designers, les dimensions et les remarques sur l’état.');await page.locator('#unit-form [name=notes]').fill('TJL-authored preparation note; this is separate from original merchant catalog text.');await page.locator('#unit-form button:not([type])').click();
   const review=page.locator('.review-form').first();await review.locator('xpath=..').locator('summary').click();await review.locator('[name=status]').selectOption('approved');await review.locator('[name=notes]').fill('Reviewed this exact authored preparation note.');await review.locator('button').click();
-  await page.locator('.edit-unit').first().click();await page.locator('#unit-form [name=sourceText]').fill('Preserve designer names, dimensions and condition notes. Keep shipping-quote instructions.');await page.locator('#unit-form button:not([type])').click();
+  await page.locator('.edit-unit').first().click();const changedSource='Preserve designer names, dimensions and condition notes. Keep shipping-quote instructions.';await page.locator('#unit-form [name=sourceText]').fill(changedSource);
+  const otherReview=page.locator('.review-form').first();await otherReview.locator('xpath=..').locator('summary').click();await otherReview.locator('[name=notes]').fill('A separate unsaved review edit.');dialogPolicy='dismiss';await otherReview.locator('button').click();dialogPolicy='accept';if(await page.locator('#unit-form [name=sourceText]').inputValue()!==changedSource)throw Error('Declining to discard another form lost entered source text');
+  await page.locator('#unit-form button:not([type])').click();
   if(await page.locator('.badge').first().textContent()!=='Changed since review')throw Error('Source change did not expose the old review');
   if(!await page.locator('#panel').textContent().then(t=>t.includes('Conserver les noms des designers')))throw Error('The entered translation was lost');
   await inspect(f.kind,1440,'source-change');
@@ -90,6 +92,8 @@ const programme=async()=>{
   const sourceFile=await download(f.kind,'source','#download-source');const source=JSON.parse(sourceFile.bytes.toString('utf8'));
   if(source.schema!=='tjlabs.localization-application-source.v1'||source.files.length!==6)throw Error('Complete application source download differs');for(const sf of source.files)if(Buffer.byteLength(sf.content)!==sf.bytes||sha(Buffer.from(sf.content))!==sf.sha256)throw Error('Downloaded source member differs');
   const working=await download(f.kind,'working','#export-working');const bundle=JSON.parse(working.bytes.toString('utf8'));if(bundle.workspace.selection.kind!==f.kind||bundle.workspace.merchants[bundle.workspace.selection.leadIds[0]].snapshots.length!==1)throw Error('Whole working download differs');
+  const otherTab=await context.newPage();otherTab.setDefaultTimeout(12000);otherTab.on('pageerror',e=>report.errors.push(e.message));await otherTab.goto(origin+f.name,{waitUntil:'load'});await otherTab.locator('[data-tab=pilot]').click();await otherTab.locator('#pilot-form [name=notes]').fill('Saved by the second browser tab.');await otherTab.locator('#pilot-form button:not([type])').first().click();await page.locator('#import-working').setInputFiles(working.path);await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Another tab changed the browser copy'));
+  const currentStored=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),'tjlabs-localization:'+bundle.workspace.selection.editionId);if(currentStored.workspace.revision!==bundle.workspace.revision+1)throw Error('Stale working-file open overwrote the newer browser copy');await otherTab.close();await page.locator('#reopen-browser').click();
   await page.locator('#import-working').setInputFiles(working.path);await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Complete working file opened'));
   for(const width of[1440,390]){await page.setViewportSize({width,height:1000});for(const tab of['context','pilot','content','glossary','handover']){if(interrupted)throw Error('Interrupted during original workspace');await page.locator('[data-tab='+tab+']').click();await inspect(f.kind,width,tab);}}
   const reportUrl=origin+f.kind+'-received-report.html';served.set(reportUrl,reportFile.bytes);await page.goto(reportUrl,{waitUntil:'load'});await inspect(f.kind,390,'downloaded-report');await page.setViewportSize({width:1440,height:1000});await inspect(f.kind,1440,'downloaded-report');

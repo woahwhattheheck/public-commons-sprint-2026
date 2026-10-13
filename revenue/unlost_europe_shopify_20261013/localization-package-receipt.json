@@ -2,7 +2,7 @@
   "schema": "unlost.localization-delivery.v1",
   "prepared_at": "2026-10-13T12:00:00.000Z",
   "pack_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013",
-  "working_record_sha256": "f86db35e1a9984084620b8a03027d93129f072cc310849b079b30b731ea18ab2",
+  "working_record_sha256": "b3d820f84a4cddda4a1f9112df4449a0e0c8f8e5bfafdb4bc2dffaf07242b814",
   "companies": 6,
   "editions": 2,
   "customer_files": 14,
@@ -17,20 +17,20 @@
     {
       "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:guide",
       "name": "localization-README.txt",
-      "bytes": 1611,
-      "sha256": "923624015a9e00a484c3af58e9829d896ff8d4fcc7bc7da973b98a153091fb47"
+      "bytes": 1610,
+      "sha256": "e4c2f4ea5a508dd58fef5680acafba5ddc95a24bbe217de632dc30a82886d2fe"
     },
     {
       "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-app-html",
       "name": "localization-sample/app.html",
-      "bytes": 148885,
-      "sha256": "450ffa2fcdc3a5e326b51d7e3612fd2bfb00be68f288e237bc5ee18b88626cc3"
+      "bytes": 149897,
+      "sha256": "00404da4cf402976475074bb8b1f910561e8a549c617a3bc4427437dd6ca0375"
     },
     {
       "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-application-source-json",
       "name": "localization-sample/application-source.json",
-      "bytes": 76518,
-      "sha256": "ff221301af0ce1c7564dd930af37d8733a15b17febca017f59de2ca77c7cb286"
+      "bytes": 77027,
+      "sha256": "cc6e2f2a828c11e6e1d1c2ef8649812960bbacc32eacc34087bef18c1a9dacce"
     },
     {
       "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-working-json",
@@ -41,14 +41,14 @@
     {
       "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-app-html",
       "name": "localization-paid/app.html",
-      "bytes": 204882,
-      "sha256": "8b6f306f0d3716f9b641d7bdf6d2d5426a6183e343da8ccffe18c60f99b7f6cc"
+      "bytes": 205894,
+      "sha256": "3b1c4f2a537ad03ce516654f344747ba24edd0070a905b1ccdf432102dec3951"
     },
     {
       "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-application-source-json",
       "name": "localization-paid/application-source.json",
-      "bytes": 108026,
-      "sha256": "d0d7932b52c974b5131840e8eccb4d557c435063fa3f4d135829569798ac78d3"
+      "bytes": 108535,
+      "sha256": "46fa35a8d79c243598d15d6a570d6c87e1db93ae213d552a442e1f464715cf81"
     },
     {
       "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-working-json",
