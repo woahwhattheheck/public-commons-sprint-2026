@@ -67,6 +67,7 @@ try{
     child.once('error',error=>{childSettled=true;resolveRun({spawnError:{name:error.name,message:error.message}});});
     child.once('exit',(code,signal)=>{childSettled=true;resolveRun({code,signal});});
   });
+  if(interruption)stop(interruption);
   state.pid=child.pid??null;await save();
   report({stage:'original_customer_agent_started',operation:packet.operation,pid:state.pid,root,node:process.version});
   timeout=setTimeout(()=>stop('Original operation exceeded900seconds'),900000);

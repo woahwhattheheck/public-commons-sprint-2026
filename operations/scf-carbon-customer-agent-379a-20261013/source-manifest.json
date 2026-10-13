@@ -37,8 +37,8 @@
   "files": [
     {
       "path": "receive.mjs",
-      "bytes": 6777,
-      "sha256": "f18a2a784da6f9c0f571039b138f3943104561089d0029428c594306b96f79c1"
+      "bytes": 6815,
+      "sha256": "af107b456366a69e9d75da7989d14faaa9e9b148c4b253de97fb6e5cf61f3d2d"
     },
     {
       "path": "complete-source.json",
