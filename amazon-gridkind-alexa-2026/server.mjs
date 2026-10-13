@@ -11,6 +11,7 @@ import {analyze} from './robustness/compare.mjs';
 import {planWeek,inspectWeek,weekCsv,weekCalendar} from './weekly.mjs';
 import {openHouseholdWorkspace,digest,WorkspaceError} from './workspace.mjs';
 import {createRequestDetail,requestPackage,previewReview,reconcileReview} from './week-review.mjs';
+import {createHouseholdMCP,PROTOCOL} from './mcp.mjs';
 import {renderWeekReviewPage} from './week-review-page.mjs';
 const ROOT=dirname(fileURLToPath(import.meta.url));
 const LIMIT=100;
@@ -126,7 +127,7 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
   function weekReviewAction(id,body){
     try{return performWeekReviewAction(id,body);}
     catch(error){
-      const status=error instanceof WorkspaceError?error.status:400;
+      const status=error instanceof WorkspaceError?error.status:([400,401,403,404,409,413].includes(error.status)?error.status:400);
       if(body?.action==='apply-return'&&[400,409].includes(status)){
         // This second owned read follows the rejected attempt. Another process may
         // have committed after the initial lookup but before our revision check.
@@ -245,12 +246,73 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
     else{live.agent=candidate;live.planRecordId=newPlanRecord;committed(id,live);}
     return {state:view(id),record:result};
   }
+  function assistantView(id,endpoint){
+    const selected=store.current(id);
+    return {householdId:selected.id,householdName:selected.name,endpoint,protocolVersion:PROTOCOL,
+      grants:store.assistant.list(id,selected.id),state:view(id)};
+  }
+  function assistantAction(id,body){
+    if(body.action==='create')return {grant:store.assistant.create(id,body,()=>check(id,body,true)),state:view(id)};
+    if(body.action==='revoke')return {grant:store.assistant.revoke(id,body,()=>check(id,body,true)),state:view(id)};
+    throw new WorkspaceError('Choose create or revoke for the original assistant connection.');
+  }
+  function artifact(grant,args){
+    let filename,mimeType,text;
+    if(args.format==='household'){
+      const bundle=store.exportHousehold(grant.owner,grant.householdId);
+      filename='gridkind-household-'+grant.householdId.slice(0,8)+'.json';mimeType='application/json';text=JSON.stringify(bundle,null,2)+'\n';
+    }else{
+      const saved=store.record(grant.owner,grant.householdId,args.recordId);
+      if(args.format==='week_csv'||args.format==='week_calendar'){
+        if(saved.kind!=='week')throw new WorkspaceError('Choose an original saved week.');
+        const report=inspectWeek(saved.detail.report),csv=args.format==='week_csv';
+        filename='gridkind-week-'+report.input.startDate+'-'+saved.id.slice(0,8)+(csv?'.csv':'.ics');
+        mimeType=csv?'text/csv':'text/calendar';
+        text=csv?weekCsv(report):weekCalendar(report,{recordId:saved.id,createdAt:saved.createdAt});
+      }else{
+        if(saved.kind!=='week-request')throw new WorkspaceError('Choose an original weekly review request.');
+        const bundle=requestPackage(saved),html=args.format==='offline_review';
+        filename='gridkind-week-review-'+saved.id+(html?'.html':'.json');mimeType=html?'text/html':'application/json';
+        text=html?renderWeekReviewPage(bundle,reviewSources):JSON.stringify(bundle,null,2)+'\n';
+      }
+    }
+    const bytes=Buffer.byteLength(text);
+    if(bytes>8*1024*1024)throw new WorkspaceError('The complete artifact exceeds the MCP response limit. Download it through the original browser export.',413);
+    return {filename,mimeType,text,bytes,sha256:createHash('sha256').update(text).digest('hex'),householdId:grant.householdId};
+  }
+  const mcp=createHouseholdMCP({
+    access:store.assistant,state:view,
+    history:(grant,args)=>store.history(grant.owner,{householdId:grant.householdId,offset:args.offset??0,limit:args.limit??20}),
+    record:(grant,id)=>store.record(grant.owner,grant.householdId,id),
+    exportArtifact:artifact,
+    checkpoint:owner=>{const previous=clients.get(owner),snapshot=previous?{...previous}:null;return()=>{if(snapshot)clients.set(owner,snapshot);else clients.delete(owner);};},
+    dispatch:(grant,name,args)=>{
+      const id=grant.owner,{requestId,...body}=args;
+      if(name==='gridkind_propose')return action(id,{action:'propose',context:body.context,input:body.input,label:body.label});
+      if(name==='gridkind_cancel')return action(id,{action:'cancel',context:body.context});
+      if(name==='gridkind_simulate')return action(id,{action:'execute',context:body.context,id:body.planId});
+      if(name==='gridkind_save_scenario')return workspaceAction(id,{...body,action:'save'});
+      if(name==='gridkind_compare_tariffs')return compare(id,body);
+      if(name==='gridkind_plan_week')return weekAction(id,{...body,action:'plan'});
+      if(name==='gridkind_adopt_day')return weekAction(id,{...body,action:'adopt-day'});
+      if(name==='gridkind_review_request')return weekReviewAction(id,{...body,action:'request'});
+      if(name==='gridkind_review_preview'||name==='gridkind_review_apply'){
+        const {requestRecordId,...rest}=body;
+        return weekReviewAction(id,{...rest,requestId:requestRecordId,action:name==='gridkind_review_preview'?'preview-return':'apply-return'});
+      }
+      throw new WorkspaceError('Unknown assistant operation.');
+    }
+  });
   const server=http.createServer(async(req,res)=>{
     let id;
     try{
       if(!acceptsHost(req,host))return respond(res,403,{error:'Loopback demo Host mismatch'});
       const url=new URL(req.url,'http://localhost'),path=url.pathname;
-      if(req.method==='GET'&&['/','/week','/week-ui.js','/week.css','/week-review.mjs','/weekly.mjs','/engine.mjs','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/style.css'].includes(path)){
+      if(path==='/mcp'){
+        if(!['127.0.0.1','::1','localhost'].includes(host))return respond(res,403,{error:'Assistant access is supported only on the original loopback server.'});
+        return await mcp.handle(req,res,{readBody,origin:'http://'+req.headers.host});
+      }
+      if(req.method==='GET'&&['/','/week','/week-ui.js','/week.css','/week-review.mjs','/weekly.mjs','/engine.mjs','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/assistant.js','/style.css'].includes(path)){
         const file=path==='/'?'index.html':path==='/week'?'week.html':path.slice(1);
         const mime=path==='/'||path==='/week'?'text/html; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
         res.writeHead(200,{'content-type':mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});
@@ -259,6 +321,10 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
       if(!path.startsWith('/api/'))return respond(res,404,{error:'Not found'});
       id=browser(req,res);
       if(req.method==='GET'){
+        if(path==='/api/assistant'){
+          if(!['127.0.0.1','::1','localhost'].includes(host))throw new WorkspaceError('Assistant access requires the loopback server.',403);
+          return respond(res,200,assistantView(id,'http://'+req.headers.host+'/mcp'));
+        }
         if(path==='/api/state')return respond(res,200,view(id));
         if(path==='/api/workspace/history')return respond(res,200,store.history(id,{householdId:url.searchParams.get('householdId')||undefined,offset:Number(url.searchParams.get('offset')||0)}));
         if(path==='/api/workspace/record')return respond(res,200,store.record(id,url.searchParams.get('householdId')||store.current(id).id,url.searchParams.get('id')));
@@ -292,21 +358,22 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
           return respond(res,200,bundle,{'content-disposition':`attachment; filename="gridkind-household-${bundle.payload.household.id.slice(0,8)}.json"`});
         }
       }
-      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace','/api/week','/api/week-review'].includes(path))return respond(res,405,{error:'Unsupported operation'});
+      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace','/api/week','/api/week-review','/api/assistant'].includes(path))return respond(res,405,{error:'Unsupported operation'});
       if(req.headers.origin&&new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'Cross-origin disabled'});
+      if(path==='/api/assistant'&&!['127.0.0.1','::1','localhost'].includes(host))throw new WorkspaceError('Assistant access requires the loopback server.',403);
       const body=await readBody(req,path==='/api/workspace'?8*1024*1024:path==='/api/week-review'?256*1024:40000);
       // Resolve current selection after the complete request is read. Every UI
       // mutation carries its saved revision, active household and live generation.
-      const result=path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):path==='/api/week'?weekAction(id,body):path==='/api/week-review'?weekReviewAction(id,body):workspaceAction(id,body);
+      const result=path==='/api/assistant'?assistantAction(id,body):path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):path==='/api/week'?weekAction(id,body):path==='/api/week-review'?weekReviewAction(id,body):workspaceAction(id,body);
       return respond(res,200,result);
     }catch(error){
-      const status=error instanceof WorkspaceError?error.status:400;
+      const status=error instanceof WorkspaceError?error.status:([400,401,403,404,409,413].includes(error.status)?error.status:400);
       let state;
       if(status===409&&id){try{state=view(id);}catch{}}
       return respond(res,status,{error:error instanceof Error?error.message:'Invalid request',...(state?{state}:{}),...(error?.reviewOutcome?{reviewOutcome:error.reviewOutcome}:{})});
     }
   });
-  server.once('close',()=>{clients.clear();store.close();});
+  server.once('close',()=>{mcp.close();clients.clear();store.close();});
   server.once('error',()=>store.close());
   server.listen(port,host,()=>console.log(`GridKind household workspace: http://${host}:${server.address().port}\nSaved work: ${store.directory}`));
   return server;
