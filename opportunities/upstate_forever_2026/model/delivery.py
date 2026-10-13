@@ -729,44 +729,52 @@ def build(workspace, selection):
                 state["client_companion_edition"] = client_report.REPORT_EDITION
                 atomic_json(state_path, state)
             working = directory / "working" / "scientific-workspace.zip"
-            if "working_archive" not in state["files"]:
-                working.parent.mkdir(parents=True, exist_ok=True)
-                snapshot = {**state["files"], **{
-                    "map_" + name: item for name, item in state["maps"].items()}}
-                if working.exists():
-                    previous = portable.inspect_archive(working, verify=True)
-                    captured = previous.get("delivery", {})
-                    retained = captured.get("files", {})
-                    matches = (
-                        previous["project"] == workspace.project
-                        and captured.get("id") == state["id"]
-                        and captured.get("record", {}).get("selection") == state["selection"]
-                        and set(retained) == set(snapshot)
-                        and all(retained[name].get("path") == "delivery/" + item["path"]
-                                and all(retained[name].get(field) == item[field]
-                                        for field in ("bytes", "sha256"))
-                                for name, item in snapshot.items()))
-                    if not matches:
-                        label = "scientific-workspace-previous-" + digest(previous)
-                        retained_path = working.with_name(label + ".zip")
-                        suffix = 0
-                        while retained_path.exists():
-                            suffix += 1
-                            retained_path = working.with_name(label + "-" + str(suffix) + ".zip")
-                        working.rename(retained_path)
-                        state.setdefault("previous_working_archives", []).append({
-                            "path": retained_path.relative_to(directory).as_posix(),
-                            "project_id": previous["project"].get("id"),
-                            "delivery_id": captured.get("id"),
-                            "reason": "Retained capture selects different delivery assets",
-                            "retained_at": now()})
-                        atomic_json(state_path, state)
-                if not working.exists():
-                    portable.backup(workspace, working, include_intermediates=True,
-                        include_deliveries=False, delivery_root=directory,
-                        delivery_files=snapshot, delivery_state=state)
-                state["files"]["working_archive"] = describe_file(directory, working)
-                atomic_json(state_path, state)
+            working.parent.mkdir(parents=True, exist_ok=True)
+            archive_roles = {"working_archive", "manifest", "package_index", "delivery_archive"}
+            snapshot = {
+                **{name: item for name, item in state["files"].items()
+                   if name not in archive_roles},
+                **{"map_" + name: item for name, item in state["maps"].items()}}
+            registered = state["files"].get("working_archive")
+            if registered is not None:
+                retained_working = verify_file(directory, registered)
+                if retained_working.resolve() != working.resolve():
+                    raise ValueError("Registered working archive has a different original path")
+            if working.exists():
+                previous = portable.inspect_archive(working, verify=True)
+                captured = previous.get("delivery", {})
+                retained = captured.get("files", {})
+                matches = (
+                    previous["project"] == workspace.project
+                    and captured.get("id") == state["id"]
+                    and captured.get("record", {}).get("selection") == state["selection"]
+                    and set(retained) == set(snapshot)
+                    and all(retained[name].get("path") == "delivery/" + item["path"]
+                            and all(retained[name].get(field) == item[field]
+                                    for field in ("bytes", "sha256"))
+                            for name, item in snapshot.items()))
+                if not matches:
+                    label = "scientific-workspace-previous-" + digest(previous)
+                    retained_path = working.with_name(label + ".zip")
+                    suffix = 0
+                    while retained_path.exists():
+                        suffix += 1
+                        retained_path = working.with_name(label + "-" + str(suffix) + ".zip")
+                    working.rename(retained_path)
+                    state["files"].pop("working_archive", None)
+                    state.setdefault("previous_working_archives", []).append({
+                        "path": retained_path.relative_to(directory).as_posix(),
+                        "project_id": previous["project"].get("id"),
+                        "delivery_id": captured.get("id"),
+                        "reason": "Retained capture selects different delivery assets",
+                        "retained_at": now()})
+                    atomic_json(state_path, state)
+            if not working.exists():
+                portable.backup(workspace, working, include_intermediates=True,
+                    include_deliveries=False, delivery_root=directory,
+                    delivery_files=snapshot, delivery_state=state)
+            state["files"]["working_archive"] = describe_file(directory, working)
+            atomic_json(state_path, state)
             # Resolve the promised report link against the final actual inventory before
             # publication; neither its bytes nor its checksum were invented while rendering.
             working_descriptor = state["files"]["working_archive"]
