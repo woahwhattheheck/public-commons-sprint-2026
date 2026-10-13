@@ -8,6 +8,14 @@ The Evidence workspace turns retained parcel, flood-map, ordinance and site mate
 
 Continue the same directory and original requests after an interruption. The accepting operator must open and inspect the populated app, downloaded report, every PDF page, native map and reopened editable project. The receiving course retains these actual outputs for inspection.
 
+## Review original address cohorts
+
+Open **Evidence → Address QA** to analyze retained GeoJSON or Esri FeatureSet address sources in this same workspace. [ADDRESS_REVIEW.md](ADDRESS_REVIEW.md) covers the complete source selection, field mapping, explicit screening policy, original count/ID reconciliation, candidate-member inspection, named findings and editable handover.
+
+Address signatures include original building and unit fields. Exact-point comparisons preserve each source's declared CRS; municipality and postal city remain separate fields. Every analysis retains all selected rows, complete candidate membership, original file identities and full JSON/CSV outputs. Candidate interpretations use the existing Findings editor and source-edition history.
+
+The supplied `address-review-receiving.py` accepts the operator's complete original cohort manifest and source files. Continue its retained operation and workspace for original-request replay, frozen report, later-case review and complete project export/reopening. Customer-specific cohorts and terms stay with the original customer case. The maintained project archive includes the generic application module, guide and source course.
+
 ## Run the maintained application
 
 Use the existing Python and QGIS environment selected for this application. Start the complete maintained source with:
