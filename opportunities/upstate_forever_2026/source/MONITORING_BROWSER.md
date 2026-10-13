@@ -96,3 +96,11 @@ The maintained regional preparation is PR3278. The Monitoring browser consumes t
 When the receiving machine already has a working Chromium binary, add `--browser-executable /actual/installed/chromium`. The driver passes that explicit path to the existing Playwright launch. Choose either this option or `--browser-channel NAME`; omitting both retains Playwright’s bundled Chromium selection.
 
 The public journey records the requested browser kind, executable path or channel, and headless setting in `browser_runtime`. A resumed attempt preserves its previous runtime selection in the attempt history. This runtime choice is separate from the original scientific input and task fingerprints, so a repaired or newly available browser can continue the same retained requests with `--resume`.
+
+## Shared worker memory
+
+On a worker shared with other native jobs, `--browser-renderer-limit 2` asks Chromium to limit its renderer process count. The accepted range is 1–32; omitting it preserves Chromium’s normal choice. Combine it with the retained executable selection, for example `--browser-executable /tmp/chromium --browser-renderer-limit 2`.
+
+This launch setting is recorded as `browser_runtime.renderer_process_limit` and stays outside the scientific selection and original request identity. After an operating-system termination, reuse the same `--output` with `--resume`; the driver reopens its exact saved campaign and resumes any retained original tasks. The browser limit is a Chromium process hint, not a total worker memory cap, so schedule large source imports and archive operations sequentially on a constrained worker.
+
+`journey.json.current_step` is written atomically before browser launch, native opening, each export, fresh-browser reopening and complete receiving. A hard worker termination therefore leaves the last active operator stage alongside the existing exact request state, even if it occurs before the first screenshot.

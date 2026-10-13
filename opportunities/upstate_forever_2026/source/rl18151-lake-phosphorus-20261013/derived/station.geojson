@@ -1,0 +1,65 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RL-18151",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.903165,
+          34.841024
+        ]
+      },
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services  (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RL-18151",
+        "MonitoringLocationName": "RL-18151",
+        "MonitoringLocationTypeName": "Lake",
+        "MonitoringLocationDescriptionText": "LAKE KEOWEE APPROX 0.15 MILES SSW OF END OF POINT NORTH DRIVE",
+        "HUCEightDigitCode": "03060101",
+        "DrainageAreaMeasure/MeasureValue": "",
+        "DrainageAreaMeasure/MeasureUnitCode": "",
+        "ContributingDrainageAreaMeasure/MeasureValue": "",
+        "ContributingDrainageAreaMeasure/MeasureUnitCode": "",
+        "LatitudeMeasure": "34.8410240000",
+        "LongitudeMeasure": "-82.9031650000",
+        "SourceMapScaleNumeric": "",
+        "HorizontalAccuracyMeasure/MeasureValue": "",
+        "HorizontalAccuracyMeasure/MeasureUnitCode": "",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "VerticalMeasure/MeasureValue": "",
+        "VerticalMeasure/MeasureUnitCode": "",
+        "VerticalAccuracyMeasure/MeasureValue": "",
+        "VerticalAccuracyMeasure/MeasureUnitCode": "",
+        "VerticalCollectionMethodName": "",
+        "VerticalCoordinateReferenceSystemDatumName": "",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "AquiferName": "",
+        "LocalAqfrName": "",
+        "FormationTypeText": "",
+        "AquiferTypeName": "",
+        "ConstructionDateText": "",
+        "WellDepthMeasure/MeasureValue": "",
+        "WellDepthMeasure/MeasureUnitCode": "",
+        "WellHoleDepthMeasure/MeasureValue": "",
+        "WellHoleDepthMeasure/MeasureUnitCode": "",
+        "ProviderName": "STORET",
+        "longitude": -82.903165,
+        "latitude": 34.841024,
+        "original_station_source": "original/station.csv",
+        "original_station_sha256": "45829fab069ef23454a949aa2469ed947ade8cbee08387a9d23f56cf51931d50"
+      }
+    }
+  ]
+}

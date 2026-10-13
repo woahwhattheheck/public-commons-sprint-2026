@@ -49,6 +49,7 @@
     "/api/project-transfers/tasks",
     "/api/published-studies/catalog",
     "/api/published-studies/context",
+    "/api/published-studies/review",
     "/api/published-studies/study",
     "/api/receptors/network-plan",
     "/api/receptors/plan",

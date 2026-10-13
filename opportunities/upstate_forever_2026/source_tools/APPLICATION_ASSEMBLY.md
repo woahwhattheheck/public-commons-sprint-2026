@@ -123,6 +123,16 @@ Use this assembler to reopen maps containing binary members. All-text maps also 
 
 When the base is an installed application directory, the snapshot captures current root files and the `model`, `operator`, `source_tools`, `source`, `ecsa_runs`, `integration`, `integrations`, `tools`, `receiving` and `eco_intelligence` directories. Existing installer joins are preserved. The snapshot also reads the installed `model/portable.py` declaration of `APPLICATION_DIRECTORIES` as data and includes its current component roots, including literal declarations and ordered installer extensions. This keeps the application source archive aligned with the installed portable inventory as components are added. Declared nested component directories retain their relative paths, with the same alias checks on every parent directory. Observations are included among the standard roots. The application module is never imported or executed to discover these directories; generated caches and runtime environments remain excluded. Small binary assets of up to 8 MiB each are included directly; larger native inputs keep their full size, hash and retained local path in the existing external-source declarations. Application source is capped at 256 MiB. Keep the complete scientific workspace, its original inputs and model outputs on the established workspace backup/restore route.
 
+The selected catalogue's explicit `paths` and `source_manifests` also enter the
+snapshot wherever they live inside the application. This preserves selected
+scientific reports under `outputs/`, including the original watershed-connectivity
+report, complete CSV and manifests. Each selected native manifest brings its exact
+primary and companion files into the same source inventory. Explicitly selected
+binary members retain their complete bodies beyond the ordinary 8 MiB asset
+threshold, within the 256 MiB assembly limit. File and parent-directory aliases
+remain rejected, and repeated snapshotting compares the full selected inventory
+before publishing. Missing selected files remain named in the component report.
+
 ```sh
 python3 -B source_tools/application_assembly.py /owned/current-application \
   --edition upper-savannah-installed \

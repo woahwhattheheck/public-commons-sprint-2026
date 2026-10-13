@@ -85,7 +85,8 @@
     "observed-regional-source-edition",
     "observed-original-report-edition",
     "sampling-flow-coverage",
-    "annual-nlcd-native-source"
+    "annual-nlcd-native-source",
+    "community-report-context"
   ],
   "components": {
     "core": {
@@ -277,7 +278,8 @@
         "source/hydrology-huc05-07-20261013/source-manifest.json",
         "source_tools/NLDI_SPLIT_CAPTURE.md",
         "source_tools/calibration_assembly.py",
-        "source_tools/capture_nldi_split.py"
+        "source_tools/capture_nldi_split.py",
+        "model/calibration_execution.py"
       ],
       "requires": [
         "core"
@@ -3519,6 +3521,7 @@
         "model/client_economics.py",
         "model/client_report.py",
         "model/delivery_archive.py",
+        "model/native_process_figures.py",
         "model/native_process_report.py",
         "model/native_versions.py",
         "model/observations.py",
@@ -5385,6 +5388,21 @@
       ],
       "source_manifests": [
         "source/annual-nlcd-native-20261013/source/source-manifest.json"
+      ]
+    },
+    "community-report-context": {
+      "title": "Saved Community planning report in scientific reporting",
+      "paths": [
+        "model/community_report_context.py",
+        "operator/community_report_context.py",
+        "operator/extensions/community-report-context.json",
+        "operator/web/community.mjs",
+        "operator/web/app.mjs",
+        "model/COMMUNITY_REPORT_CONTEXT.md"
+      ],
+      "requires": [
+        "core",
+        "observed-context"
       ]
     }
   }

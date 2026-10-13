@@ -20,6 +20,8 @@ Python 3.10+ and its standard library suffice:
 python -B capture_rl18151.py /actual/retained/rl18151-lake-phosphorus-20261013
 ```
 
+The delivered source edition also retains three original narrowResult profiles containing native ResultIdentifiers. Their exact additional request URLs are in `supplemental-requests.json`; the original thirteen-query acquisition plan and authored capture script remain unchanged. Build and receive the complete retained sixteen-response edition directly.
+
 The capture writes exact response bodies into `original/`, query/HTTP/time/hash metadata into `capture-manifest.json`, and a byte-safe `source-transfer.json`. A successful original is reused only after its exact URI, length and hash match. A rate/access response stops further source requests in that pass. HTTP 204 is retained as an actual empty response. Other incomplete responses remain recorded with their original error bytes. Repeating the same command resumes only pending originals; choose a separate directory to retain a changed agency edition.
 
 The script has no GIS or scientific-model dependency. Do not strip qualifiers, blank measured values, activity dates, fractions, detection limits or laboratory metadata from its output.
@@ -51,7 +53,11 @@ Recognized left-censored records use the interval from zero to the published det
 
 Numeric min/max/median/mean describe only the reported numeric subset. An all-record mean interval is available only when every record in the exact source cohort has a comparable numeric interval. The cohort output retains whether each mean endpoint is open or closed. Records retain their original qualifiers and result status; the initial report excludes no quality code silently.
 
-The full requested nine-year span is not a claim of complete sampling. Returned sampling dates/months and exact annual record/activity counts describe actual coverage. The current 2026 observations cover only the query endpoint. The source analysis keeps depths and laboratory methods separate before temporal interpretation.
+When a censored result has both a blank measurement value and blank measurement unit, its explicitly published positive quantitation limit is retained with a separate `interval_unit` and `interval_unit_basis=original_quantitation_limit`. The original blank fields remain unchanged. A nonblank incompatible result unit is never overridden. Exact cohorts include these separate unit/basis fields.
+
+The complete retained edition contains 498 native ResultIdentifiers. The compiler matches each narrow profile to its original default-profile rows on every shared source field, then verifies the exact Activity and ResultIdentifier limit records. Where full-profile rows are identical, the record keeps their candidate positions as a set. No response-order guess or duplicate-ID collapse is used. The original 447 limit records and all original metadata stay inspectable; 51 physical results have no limit record and blank detection conditions.
+
+The full requested nine-year span is not a claim of complete sampling. Returned sampling dates/months and exact annual record/activity counts describe actual coverage. The actual 2026 records currently end on 11 June; phosphorus records end in April. The requested October endpoint does not imply later samples. The source analysis keeps depths and laboratory methods separate before temporal interpretation.
 
 ## Receive into the existing Workspace
 
@@ -75,8 +81,14 @@ For an existing capture from another authorized source host, retain its full res
 
 Operation: A73C-RL18151-PHOSPHORUS-20261013.
 
-Parent availability bank: 451,362 B, SHA256 c8e07035ae9ac68ff619ee3f48e128191eea2927d8055f34a76e1d2db2ce9836. Original acquisition-plan.json SHA256 d96c3e9340e66db4ddd93798ca50c8d9c0f0acac6a05c6bc248897cf0e9402cd.
+Parent availability bank: 451,362 B, SHA256 c8e07035ae9ac68ff619ee3f48e128191eea2927d8055f34a76e1d2db2ce9836. Original retained acquisition-plan.json SHA256 472cd98e720add432fd750ec69ab93c8540395bb527cd5abf5a30826fa36e3c4.
 
 Primary service documentation: https://www.waterqualitydata.us/webservices_documentation/
 
 The source capture/analysis is additive to the maintained Workspace and original agency-source operations. No shared observation, Published Studies, calibration or report engine is replaced.
+
+## Compact records and exact chemical basis
+
+The complete observed-records JSON uses `upstate.source-observed-records/v2`: scientific records are column/row arrays, and each original response appears once as its own exact source table. Logical record numbers retain the CSV header as record 1. `expandRecord(packet, entry)` in `analysis.mjs` reconstructs every original narrow/default/Activity/limit object and its file/hash/URI selectors. The offline inspector and selected-record export call this function only when needed. The original CSV response files are unchanged. Derived CSVs carry the scientific columns and exact source selectors without repeating every original wide row.
+
+The original narrow `MethodSpecificationName` becomes `method_specification` in scientific records, annual cohort keys, plot labels and native source evidence. It preserves `as P`, `as NH3`, `as N` and `as CaCO3` exactly. A common mg/L unit does not combine different chemical bases. Original analytical method names remain separate from this constituent basis.

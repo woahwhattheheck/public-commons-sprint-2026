@@ -1,3 +1,4 @@
+import type {DocumentAssemblyWorkspace} from './assembly-workspace.mjs';
 import type {DocumentAssemblyRequest,DocumentAssemblyView,DocumentAssemblyCounts,DocumentAssemblyDelivery} from './assembly.mjs';
 import type {JobWorkspace} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/index.mjs';
 import type {VerifiedDownload} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/resource-library/verified-downloads.mjs';
@@ -69,7 +70,7 @@ export interface DocumentCompositionWorkspaceOptions {
   intakeAccessToken?:string|null;deadlineMs?:number;pollMs?:number;
 }
 export interface DocumentCompositionWorkspace {
-  readonly workspace:JobWorkspace;readonly sourceRoot:string;
+  readonly workspace:JobWorkspace;readonly sourceRoot:string;readonly bundles:DocumentAssemblyWorkspace;
   status():DocumentCompositionWorkspaceStatus;
   list(options?:{offset?:number;limit?:number}):Promise<{
     total:number;offset:number;limit:number;items:Array<

@@ -1,10 +1,10 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.10.0",
+  "version": "2.1.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "2d8fe39c96ca83436896e439ca763f5d66097f54",
-  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe.",
+  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly.",
   "external_source_edition": {
     "files": 62,
     "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
@@ -53,8 +53,13 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 11993,
-      "sha256": "6b446c3b1df72a08f5e073eff84f1302e608b473550e9d08affc4ef0d130be5e"
+      "bytes": 12192,
+      "sha256": "8c3ec14a15512ab709237eaa752b42c3782c381413ecec092cb7573f0ee373bd"
+    },
+    {
+      "path": "integration/component_fragments/published-study-reviews.json",
+      "bytes": 3800,
+      "sha256": "78f7b873e4007e0bf3179906eb7fb21273468f5bf7b5e7abb1fc471cc64d7a1b"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -68,8 +73,8 @@
     },
     {
       "path": "measurement_workspace/published_studies.py",
-      "bytes": 102550,
-      "sha256": "c2133f1954b214ea36222a7da525f805de3b21dd6291fa52ab5548580ca32208"
+      "bytes": 103247,
+      "sha256": "3dc26da3cbbe039e500c35de35017f54056657ebb00eaadbfa447e8cafdf760e"
     },
     {
       "path": "measurement_workspace/source_observations.py",
@@ -87,6 +92,16 @@
       "sha256": "a58616563bab55818d79579cb706747b6be36bd35e6ec5f90944ac86ee2164db"
     },
     {
+      "path": "measurement_workspace/STUDY_REVIEWS.md",
+      "bytes": 8653,
+      "sha256": "6e121f425936b907dea3abe1dc47e4fdc8ead038b8f5268b9a429d3681b4049f"
+    },
+    {
+      "path": "measurement_workspace/study_reviews.py",
+      "bytes": 19638,
+      "sha256": "8817e1384471a501c22c1c46fb7507ac0c110aa3a686e4a84c686ba04544c3dd"
+    },
+    {
       "path": "measurement_workspace/SV833_OBSERVATIONS.md",
       "bytes": 9511,
       "sha256": "febb3f395b6dd388ec5e47b10b7bf77cfda40761d0397dd413cfd92f185e043a"
@@ -98,18 +113,18 @@
     },
     {
       "path": "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
-      "bytes": 7726,
-      "sha256": "20fd5f2ab93b57ba7e30df1c9516e33cc91a9b2d2b08fec537c9f97da8c6d03a"
+      "bytes": 10457,
+      "sha256": "eb56905a50771d539c27ef6b5a371c91a076f477c6c4d653386a726165eea1b3"
     },
     {
       "path": "measurement_workspace/utility_microbiology_context.py",
-      "bytes": 16066,
-      "sha256": "57e727ae4d3cc7828a49b0367a335a2219a80898a7d16067e3fb2e9305c02a3a"
+      "bytes": 17468,
+      "sha256": "e0a53f527f293d994f67b658be86cbac1dac7dd47bf256c5ed9add45e75e46c5"
     },
     {
       "path": "measurement_workspace/utility_microbiology.py",
-      "bytes": 23319,
-      "sha256": "f987e5e8a89aa9f372b8db7a96400b1fd8537df5f02ec74d0d39934d35685b2a"
+      "bytes": 24338,
+      "sha256": "042aed4b83e098ff08f16ba11a9ee8f940d0af6bff4e047abd7af902206adf53"
     },
     {
       "path": "measurement_workspace/wqp_profiles.py",
@@ -118,8 +133,8 @@
     },
     {
       "path": "microbial_temporal_observed_report.sources.json",
-      "bytes": 6407,
-      "sha256": "7142fd1776de0ec7028fa0235a9ecce457b04efe7bb2f82f3e2a9d0d8351271c"
+      "bytes": 9642,
+      "sha256": "99d4525c5e70346f3b79229601b55a41bec4050708ef8b8081fedd735983025f"
     },
     {
       "path": "model/UTILITY_MICROBIAL_STUDY.md",
@@ -180,6 +195,26 @@
       "path": "observations/eighteenmile_2023/continuous_monthly_ph.csv",
       "bytes": 2166,
       "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05"
+    },
+    {
+      "path": "observations/eighteenmile_2023/figures/vendor/d3-path.cjs",
+      "bytes": 2433,
+      "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+    },
+    {
+      "path": "observations/eighteenmile_2023/figures/vendor/d3-path.LICENSE.txt",
+      "bytes": 731,
+      "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+    },
+    {
+      "path": "observations/eighteenmile_2023/figures/vendor/d3-shape.cjs",
+      "bytes": 30898,
+      "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+    },
+    {
+      "path": "observations/eighteenmile_2023/figures/vendor/d3-shape.LICENSE.txt",
+      "bytes": 731,
+      "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
     },
     {
       "path": "observations/eighteenmile_2023/microcystin_reconciliation/build_report_reconciliation.mjs",
@@ -1068,23 +1103,28 @@
     },
     {
       "path": "operator/extensions/published-studies.json",
-      "bytes": 2477,
-      "sha256": "1d9091ac64717cd40763dda859032c579ff8c958920c9822621b2e9108d7f4ac"
+      "bytes": 2862,
+      "sha256": "eaa40e5262931d40ac0bceae9e0454f6fd519cc24fe02928493262e2e0adbfee"
     },
     {
       "path": "operator/published_study_operator.py",
-      "bytes": 21286,
-      "sha256": "c6154b6d0af2bc52ec6d7fa4434742c29d3fa0b66fe73834283debcfc117950e"
+      "bytes": 23757,
+      "sha256": "884d4fbb37f8d0542fafdb4577452b1a959e396432226d36607fb971b79fdb09"
+    },
+    {
+      "path": "operator/team_route_policy.json",
+      "bytes": 5973,
+      "sha256": "211e0dd1c91dbcc5ad09c27c17c042ad66278dfee767f405b997919e6b7db39a"
     },
     {
       "path": "operator/web/published_studies.css",
-      "bytes": 6429,
-      "sha256": "7f961d02db80b73cb3adb50ec668d1019b262dfde52ed3063a7a44754b9542ec"
+      "bytes": 7857,
+      "sha256": "3f0d405594a919bb868aea1801af4283ff73257bb2b5cced09e60a07c558777f"
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 45514,
-      "sha256": "b73a4e3892f7d26f10e1015d282ebfd823c2bb90fb031e0962215e70c3394405"
+      "bytes": 62523,
+      "sha256": "9abe5edb2282165dbf91a0691ab23ae7b44d3823b5e29b24e90daaf76c3a5298"
     },
     {
       "path": "PUBLISHED_STUDIES.md",
@@ -1125,6 +1165,11 @@
       "path": "source/ecoli_temporal_analysis/20261013/build-explorer.mjs",
       "bytes": 3065,
       "sha256": "f2e8657a2b91c538faafc438158f2045e7b3f0fd12ae7c11e4a1748892cdccba"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/build-publication-figures.mjs",
+      "bytes": 1680,
+      "sha256": "4c80b5a902d1ab0216d3a4758ad0ba5f27da21d3e15410320981a61c48916af0"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/CALENDAR_SUPPORT.md",
@@ -1172,6 +1217,26 @@
       "sha256": "9e922602ca20ddaeac8d4858c65404ba7bded9b71b8c43b1f09645562803b004"
     },
     {
+      "path": "source/ecoli_temporal_analysis/20261013/figure-gallery.mjs",
+      "bytes": 2023,
+      "sha256": "1c8a622da168865ef15b09842af9b3f1dac0b8279c2aeeaef3b876f2d38df595"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/figures/same-station-flow.svg",
+      "bytes": 70047,
+      "sha256": "1d042040776b1cb0d5d77f17e584ba374a289286e95df2e1fc0855214a35342c"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/figures/sampling-coverage.svg",
+      "bytes": 10486,
+      "sha256": "d091398e60dad9a8b46ecbbcf171375f3be291fd01db7f6e7c014f021f5165e1"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/figures/sv833-calendar-support.svg",
+      "bytes": 5513,
+      "sha256": "df663799579a5dfa610cea3b6f76e2dcbf8579bddc513d66d88a4a1cce2a7b46"
+    },
+    {
       "path": "source/ecoli_temporal_analysis/20261013/flagged-source-comments.csv",
       "bytes": 28893,
       "sha256": "a62b00d921d09b939a4ad67b746ba2b4afc392a1aa076477b450783d2e4eb384"
@@ -1193,8 +1258,33 @@
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/observed-report.json",
-      "bytes": 11453,
-      "sha256": "1eb83346c82d755bec698cd7259a076b97eba9406c1952aa9d0d99235a0c5f9a"
+      "bytes": 16122,
+      "sha256": "24fc6c3521a35e271a6a5d16077411196e1121a5963672f65fe4b82868afa125"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/PUBLICATION_FIGURES.md",
+      "bytes": 5459,
+      "sha256": "44ba5f106b0c4958a6dbf1bf10f7b092a95dec80bdaee1026c15f14eb7b9f2be"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/publication-figure-source-points.csv",
+      "bytes": 66758,
+      "sha256": "bcf377990d2d998d96712105b2217817a301d2f75d232e90abc8c0ead3692744"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/publication-figures.html",
+      "bytes": 228390,
+      "sha256": "abb1c8b9c474a6e8b1d779e588556ae01da370e3fa23bc4e435be4505d8e5592"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/publication-figures.json",
+      "bytes": 146323,
+      "sha256": "b793c4b7877be7c54fb3255c30477c823b76135b3d7f2bab7229ea4b3f92ab47"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/publication-figures.mjs",
+      "bytes": 8374,
+      "sha256": "f86d6421ee81839d694010778067984f8603dee77646f8f5cb121d7b71efa75e"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/README.md",
@@ -1205,6 +1295,16 @@
       "path": "source/ecoli_temporal_analysis/20261013/record-intervals.csv",
       "bytes": 227126,
       "sha256": "4ad3864e802385c038f4c9005ed72c79f93de6b930a5b66b061ac325143ddfa0"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/render-publication-figures.py",
+      "bytes": 2836,
+      "sha256": "007181b0e6daba918027c342f04a3b8997481728ce4fbbd5d86bbf5bf37670ae"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/render-publication-svg.mjs",
+      "bytes": 10117,
+      "sha256": "0248b9ea0a2e0b35b3ddfd1c0b5467622e55737c289760ebe7adf9c8c05b84ec"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/reproduce.mjs",
@@ -1711,10 +1811,16 @@
       "calendar_authored_commit": "3f164c39d4f58d2c9baeac9b557a7e4461a896a4",
       "explorer_merge_commit": "271b6313992e6d257edb6e4fbb1a5affc8ccd45f",
       "manifest": "microbial_temporal_observed_report.sources.json",
-      "manifest_sha256": "7142fd1776de0ec7028fa0235a9ecce457b04efe7bb2f82f3e2a9d0d8351271c",
-      "source_files": 30,
-      "source_bytes": 1343693,
-      "binding_module": "measurement_workspace/utility_microbiology_context.py"
+      "manifest_sha256": "99d4525c5e70346f3b79229601b55a41bec4050708ef8b8081fedd735983025f",
+      "source_files": 46,
+      "source_bytes": 1944396,
+      "binding_module": "measurement_workspace/utility_microbiology_context.py",
+      "figure_merge_commit": "79d29e9c546485ee941b5af095f75ee744763633",
+      "figure_authored_commit": "6ac5d729fef3a0607380d9f16c79e3f36e83c635",
+      "scientific_figures": 3,
+      "scientific_panels": 6,
+      "plotted_source_positions": 445,
+      "gallery_source": "source/ecoli_temporal_analysis/20261013/publication-figures.html"
     },
     "paired_sensitivity": {
       "commit": "da78bc3dcd9af746c2ac2af311fcdaee9c34a4e0",
@@ -1735,6 +1841,13 @@
       "manifest_sha256": "07b6237b0a81ed1776639d5d12e2d8c59cf021e7d34a711df0291c9fe74b0b9e",
       "source_files": 26,
       "original_result_rows": 610
+    },
+    "saved_reviews": {
+      "schema": "upstate.published-study-review/v1",
+      "source_binding": "study/version/native collection/original manifest and file inventory",
+      "portable_root": "published_studies/reviews",
+      "browser": "exact multivalue filters and per-workspace guarded drafts",
+      "team_read_route": "/api/published-studies/review"
     }
   }
 }

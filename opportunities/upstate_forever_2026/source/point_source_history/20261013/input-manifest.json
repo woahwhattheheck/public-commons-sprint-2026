@@ -1,0 +1,27 @@
+{
+  "schema": "upstate.point-source-history-inputs/v1",
+  "edition": "ECHO-POINT-SOURCE-HISTORY-20261013-r2",
+  "captured_at": "2026-10-13T01:22:10Z",
+  "inputs": {
+    "history": {
+      "path": "source/point_source_context/20261013/annual_history_map_index.csv",
+      "bytes": 1932889,
+      "sha256": "d6282e505adb63b73d875257629b0bd2c46d6eec9a5f9dc9765bd55886808894"
+    },
+    "periods": {
+      "path": "source/echo_dmr/20261013/tables/dmr_loads_monitoring_period_history_2007_2026.csv",
+      "bytes": 7525675,
+      "sha256": "a23fc47b3bbd57cd690a1667b2ee5d93298cec3633c0ecf6383fd3d58883e783"
+    },
+    "routing": {
+      "path": "observations/eighteenmile_2023/npdes/routing/derived/outfall_gauge_relations.csv",
+      "bytes": 3398,
+      "sha256": "6d76f4cc627de9acaa79de11af9df936e6ee3a941e19dceccc5c5d778ae501b2"
+    },
+    "capture": {
+      "path": "source/echo_dmr/20261013/capture-manifest.json",
+      "bytes": 43054,
+      "sha256": "1e7ce5caa13808b8e6ed9ba0a2c5be34f210434e050c5a69071cd592f9f7d73f"
+    }
+  }
+}

@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation-qc",
   "title": "Sample quality control",
-  "version": "1",
+  "version": "2",
   "order": 72,
   "assets": [
     "implementation_qc.mjs"
@@ -19,7 +19,10 @@
     "actions": [
       "implementation.qc.save",
       "implementation.qc.source",
-      "implementation.qc.export"
+      "implementation.qc.export",
+      "implementation.qc.actions.save",
+      "implementation.qc.actions.source",
+      "implementation.qc.actions.export"
     ],
     "invoke": {
       "handler": "invoke",
@@ -113,6 +116,97 @@
         "path": "/api/implementation-qc/export",
         "operation": "export",
         "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-qc/actions",
+        "operation": "actions",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-qc/actions-inspect",
+        "operation": "actions-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/actions-preview",
+        "operation": "actions-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/actions-save",
+        "operation": "actions-save",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/actions-source",
+        "operation": "actions-source",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/actions-export",
+        "operation": "actions-export",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/actions-validate",
+        "operation": "actions-validate",
+        "handler": "read",
         "args": [
           "workspace_key",
           "operation",

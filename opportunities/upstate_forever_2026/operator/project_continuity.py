@@ -443,14 +443,22 @@ class ProjectContinuity:
             if path.exists():
                 return ws.inspect_run(key)
         elif action == "run.compare":
-            key = digest({"runs": payload["run_ids"], "direction": "alternative minus baseline"})
-            path = ws.root / "comparisons" / key / "comparison.json"
-            if path.exists():
-                result = read_json(path)
-                if result.get("baseline_run_id") == payload["run_ids"][0] and \
-                        [x["run_id"] for x in result.get("alternatives", [])] == payload["run_ids"][1:]:
+            from model.native_versions import run_comparison_identity, validate_run_comparison
+            runs = [ws.inspect_run(key) for key in payload["run_ids"]]
+            if any(run.get("state") != "complete" for run in runs):
+                return None
+            identity = run_comparison_identity(runs)
+            keys = [digest(identity), digest({name: identity[name] for name in ("runs", "direction")})]
+            for key in keys:
+                path = ws.root / "comparisons" / key / "comparison.json"
+                if path.exists():
+                    result = read_json(path)
+                    validate_run_comparison(ws, result, expected_id=key)
+                    if (result["baseline_run_id"] != payload["run_ids"][0]
+                            or [x["run_id"] for x in result["alternatives"]] != payload["run_ids"][1:]):
+                        raise ValueError("The received comparison differs from its queued run selection")
                     for alternative in result["alternatives"]:
-                        for artifact in alternative.get("artifacts", {}).values():
+                        for artifact in alternative["artifacts"].values():
                             verify_file(path.parent, artifact)
                     return result
         elif action == "source.import":
