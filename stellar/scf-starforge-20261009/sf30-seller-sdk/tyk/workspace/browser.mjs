@@ -1,3 +1,5 @@
+import { createCommissioningBrowser } from './commissioning-browser.mjs';
+import { readTykBrowserRequest, saveTykBrowserRequest } from './browser-request-store.mjs';
 import { TYK_WORKSPACE_ACTIONS, TYK_MAX_JSON_BYTES } from './actions.mjs';
 const $=id=>document.getElementById(id), el=(name,text,className)=>{
   const node=document.createElement(name);if(text!==undefined)node.textContent=String(text);if(className)node.className=className;return node;
@@ -35,9 +37,17 @@ function tab(name){for(const section of document.querySelectorAll('.section'))se
   for(const node of document.querySelectorAll('[data-tab]')){if(node.dataset.tab===name)node.setAttribute('aria-current','page');else node.removeAttribute('aria-current');}}
 for(const node of document.querySelectorAll('[data-tab]'))node.addEventListener('click',()=>tab(node.dataset.tab));
 function pendingKey(){return 'tyk-original-request-'+state.workspace.workspaceId;}
-function readPending(){try{return JSON.parse(sessionStorage.getItem(pendingKey())??'null');}catch{return null;}}
-function showPending(){if(!state.workspace)return;const saved=readPending();$('pending').hidden=!saved;
-  if(saved)$('pending-description').textContent=saved.label+' · '+saved.args.requestId+' · '+saved.method;}
+async function readPending(){
+  let value=await readTykBrowserRequest(pendingKey());
+  if(!value){const old=sessionStorage.getItem(pendingKey());if(old){
+    value=JSON.parse(old);await saveTykBrowserRequest(pendingKey(),value);sessionStorage.removeItem(pendingKey());
+  }}return value;
+}
+async function showPending(){if(!state.workspace)return;
+  try{const saved=await readPending();$('pending').hidden=!saved;
+    if(saved)$('pending-description').textContent=saved.label+' · '+saved.args.requestId+' · '+saved.method;
+  }catch(error){notice('Original request journal: '+error.message);}
+}
 function setBusy(value){state.busy=value;for(const form of document.querySelectorAll('form'))form.inert=value;
   $('cancel-request').hidden=!value;document.querySelector('main').setAttribute('aria-busy',String(value));}
 async function http(path,{method='GET',body,headers={},signal}={}){
@@ -60,20 +70,23 @@ async function run(label,task){
 async function action(method,args,label,{original=false,signal}={}){
   const contract=TYK_WORKSPACE_ACTIONS[method];
   const input=contract.write?{...args,requestId:args.requestId??uuid()}:args;
-  if(contract.write){sessionStorage.setItem(pendingKey(),JSON.stringify({method,args:input,label,workspaceId:state.workspace.workspaceId}));showPending();}
+  if(contract.write){await readPending();await saveTykBrowserRequest(pendingKey(),{method,args:input,label,workspaceId:state.workspace.workspaceId});await showPending();}
   const result=await http('/api/action',{method:'POST',body:{method,args:input},signal});
-  if(contract.write){sessionStorage.removeItem(pendingKey());showPending();}
+  if(contract.write){await saveTykBrowserRequest(pendingKey(),null,input.requestId);await showPending();}
   return result;
 }
 const cancel=button('Stop current request',()=>state.controller?.abort());cancel.id='cancel-request';cancel.hidden=true;
 document.querySelector('.top').append(cancel);
 $('resume-request').addEventListener('click',()=>run('Recovering original request',async signal=>{
-  const pending=readPending();if(!pending)return;
+  const pending=await readPending();if(!pending)return;
   if(pending.workspaceId!==state.workspace.workspaceId)throw new Error('This saved request belongs to another workspace.');
   const result=await action(pending.method,pending.args,pending.label,{original:true,signal});
   await refresh();await showResult(result);notice('Original request recovered. '+stateName(result.value?.state??'Complete'));
 }));
-$('dismiss-request').addEventListener('click',()=>{sessionStorage.removeItem(pendingKey());showPending();notice('The local notice was cleared. Saved server records remain in their original history.');});
+$('dismiss-request').addEventListener('click',()=>run('Clearing the local request notice',async()=>{
+  await saveTykBrowserRequest(pendingKey(),null);sessionStorage.removeItem(pendingKey());await showPending();
+  notice('The local notice was cleared. Saved server records remain in their original history.');
+}));
 async function allRecords(kind){
   const items=[];let offset=0,snapshot;
   for(;;){const result=await read('listRecords',{kind,offset,limit:500,...(snapshot?{snapshot}:{})});
@@ -98,7 +111,8 @@ async function refresh(){
   [state.captures,state.cohorts]=await Promise.all([allRecords('capture'),allRecords('cohort')]);
   options($('capture-select'),state.captures,state.capture?.id,item=>item.label+' · '+stateName(item.state)+' · '+stamp(item.createdAt));
   options($('rollout-cohort'),state.cohorts,state.cohort?.id,item=>item.label);
-  await Promise.all(['cohort','rollout','delivery','receiving'].map(kind=>loadList(kind,0)));
+  await commissioning.updateCohorts(state.cohorts);
+  await Promise.all(['cohort','commissioning','rollout','delivery','receiving'].map(kind=>loadList(kind,0)));
   if($('capture-select').value)await loadCapture($('capture-select').value,state.capture?.id===$('capture-select').value?state.captureOffset:0);
   showPending();
 }
@@ -349,6 +363,8 @@ async function showRollout(input){
     const ref=record.response.reference;panel.append(link('Download complete original response','/api/source?sha256='+ref.sha256+'&bytes='+ref.bytes));
     if(record.response.json!==undefined||record.response.bodyText){const details=el('details');details.append(el('summary','Response preview'),
       el('pre',record.response.json!==undefined?fmt(record.response.json):record.response.bodyText));panel.append(details);}}
+  if(record.value.commissioning)panel.append(button('Return to cohort commissioning',
+    ()=>run('Opening complete cohort commissioning',()=>commissioning.open(record.value.commissioning.id))));
   if(record.value.activationReviews)panel.append(detail('Saved writes checked after reload',fmt(record.value.activationReviews)));
   tab('rollouts');panel.scrollIntoView({block:'start'});
 }
@@ -363,6 +379,7 @@ async function showReceiving(record){
   }),'primary'));
 }
 async function showResult(record){
+  if(record.kind==='commissioning')return commissioning.open(record.id);
   if(record.kind==='rollout')return showRollout(record);
   if(record.kind==='capture'){tab('portfolio');return loadCapture(record.id);}
   if(record.kind==='receiving')return showReceiving(record);
@@ -371,7 +388,12 @@ async function showResult(record){
       detail('Original capture',record.value.capture.id+' · revision '+record.value.capture.revision),
       detail('Review note',record.value.note),el('pre',record.value.apis.map(item=>item.apiId+' · '+item.kind+' · '+item.sha256).join('\n')));
     panel.append(button('Prepare migration',()=>{const form=$('rollout-form');field(form,'operation').value='migrate';field(form,'cohortId').value=record.id;
-      field(form,'connectionId').value=record.value.connectionId;field(form,'label').value=record.value.label+' migration';updateOperation();tab('rollouts');}));return;}
+      field(form,'connectionId').value=record.value.connectionId;field(form,'label').value=record.value.label+' migration';updateOperation();tab('rollouts');}));
+    const target=state.workspace.connections.find(item=>item.id===record.value.connectionId);
+    if(target?.connection.kind==='dashboard'&&record.value.apis.every(item=>item.kind==='classic'))
+      panel.append(button('Commission complete cohort',()=>{const form=$('commissioning-form');form.elements.cohortId.value=record.id;
+        form.elements.label.value=record.value.label.slice(0,280)+' commissioning';tab('commissioning');form.scrollIntoView({block:'start'});}));
+    return;}
   if(record.kind==='delivery'){tab('handover');notice(record.value.state==='EXPORTED'?
     'Complete delivery ready: '+bytes(record.value.file.bytes)+' · '+record.value.file.sha256:'Original export preparation is retained.');return;}
 }
@@ -385,5 +407,6 @@ $('delivery-file').addEventListener('change',event=>{const file=event.target.fil
   await refresh();await showReceiving(result);event.target.value='';notice('Complete handover inspected. Review its inventory before receiving.');
 });});
 $('refresh').addEventListener('click',()=>run('Refreshing original workspace',async()=>{await refresh();notice('Workspace refreshed.');}));
+const commissioning=createCommissioningBrowser({$,el,button,detail,table,read,action,run,refresh,notice,tab,showRollout,state});
 updateOperation();
 await run('Opening original workspace',async()=>{await refresh();notice('Workspace ready.');});
