@@ -52,9 +52,10 @@ def main():
 
     def queued(action, payload, suffix):
         operation_id = "ES9960-context-20261013-" + suffix
-        task = existing(suffix)
-        if task is None:
-            task = operator.submit(key, action, payload, operation_id)
+        task = operator.submit(key, action, payload, operation_id)
+        if task["state"] in {"failed", "interrupted"}:
+            operator.resume(task["id"])
+            task = operator.task(task["id"])
         if task["action"] != action or task["workspace"] != key:
             raise RuntimeError("Operation identity belongs to another request")
         if task["id"] not in progress["tasks"]:
@@ -129,23 +130,22 @@ def main():
         spatial = operator.spatial_reviews[key]
         catalog = spatial.catalog()
         layers = catalog["layers"]
-        def source_layer(source_id):
-            matches = [item for item in layers if item.get("source_id") == source_id]
+        def source_layer(source_id, source_collection_id):
+            matches = [item for item in layers
+                       if item.get("source_id") == source_id
+                       and item.get("source_collection_id") == source_collection_id]
             if len(matches) != 1:
                 raise RuntimeError("Expected one source layer: " + source_id + " " + str(len(matches)))
             return matches[0]
-        point = source_layer("assessment-physical-geography159-20261013")
+        point = source_layer("assessment-physical-geography159-20261013", context_task["result"]["id"])
         domain_candidates = [item for item in layers if item.get("source_id") == args.domain_source_id
                              and (not args.domain_collection or item.get("source_collection_id") == args.domain_collection)]
         if len(domain_candidates) != 1:
             raise ValueError("Choose one original domain collection and source ID.")
         domain = domain_candidates[0]
-        annual_manifest_document = next(item for item in annual_task["result"]["documents"]
-                                        if item["path"].endswith("/source-manifest.json"))
-        annual_manifest = read_json(workspace.root / annual_manifest_document["path"])
-        catchment_entry = next(entry for entry in annual_manifest["entries"]
-                               if entry.get("role") == "OBSERVATION_CATCHMENTS")
-        basin = source_layer(catchment_entry["id"])
+        catchment_binding = annual_task["result"]["binding"]["catchments"]
+        basin = source_layer(catchment_binding["source_id"],
+                             catchment_binding["source_collection_id"])
         progress["layers"] = {"assessment": point, "domain": domain, "annual_catchments": basin}
         write_progress()
 
