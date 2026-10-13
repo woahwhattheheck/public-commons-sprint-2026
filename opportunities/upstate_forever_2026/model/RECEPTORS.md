@@ -18,6 +18,42 @@ nutrient or sediment cohorts while the other regional inputs are prepared.
 Older complete inventory records can be consumed by deriving their pollutant
 names from `scenario_exports`.
 
+## Producing-model bindings and saved editions
+
+Install `model/receptor_execution.py` alongside the original receptor modules
+and the maintained `model/native_versions.py` and `model/model_selection.py`.
+The cumulative application and its normal portable archive retain these files.
+
+Every new inventory resolves the common outputs from the selected completed
+model scopes. An output left over from an unselected model is excluded. The
+shared execution contract then compares each producing model's version across
+the full cohort. A completed model stage takes precedence over the run's last
+observed runtime; observed-run and requested-legacy fallbacks retain their
+explicit source labels. NDR and SDR may have different versions when the NDR
+version is consistent across the selected runs and the SDR version is also
+consistent. An incompatible producing model stops that comparison before
+geographic aggregation.
+
+The source binding retains each original run selection, model scope, completed
+stage timestamp and reuse provenance, together with each compared raster's
+path, byte length, SHA-256 and physical mass units. `native-execution.json`,
+the readable report table and sixteen additional scenario CSV columns carry
+this information with the quantities.
+
+New result identities include the execution binding and product revision.
+Repeating an unchanged selection reopens its current edition. If the producing
+metadata or retained output descriptors change, the same selection creates a
+separate edition. Original saved inventories remain readable at their original
+IDs. Collecting a current edition re-aggregates the retained rasters and leaves
+native model execution with the existing run service. The optional seven-map
+delivery uses this same binding before its completed-result cache lookup.
+
+`comparison_pollutants` is an optional array in the direct CLI selection,
+restricted to outputs common to all selected completed runs. The experiment
+adapter supplies its complete cross-profile cohort through this field, so a
+group with extra model outputs uses the same pollutants as the other selected
+profiles. A direct selection without this field includes every common output.
+
 ## Use an existing native study
 
 Run from `opportunities/upstate_forever_2026` with the study's existing native runtime. Select a completed baseline and one or more completed alternative runs on the same grid. The CLI reads the retained original run artifacts; it does not repeat InVEST execution.
@@ -47,6 +83,7 @@ The result is retained at `<study>/receptor-inventories/<selection-id>/`. A repe
 | `scenario-exports.csv` | Per-area N/P/sediment quantities, common-pixel changes, and geographic coverage counts |
 | `network.json` | Original retained source attributes, downstream relationships, selected memberships, special hydrologic-unit types, and source binding |
 | `inventory.json` | Complete area definitions, physical quantities, source selection, and reusable file descriptors |
+| `native-execution.json` | Producing-model versions, fallback labels, stage reuse, original selections and exact native output descriptors |
 | `drinking_water-priority.tif` | Optional baseline combined-priority raster limited to the selected source-water contribution area |
 | `high_quality_waters-priority.tif` | Optional equivalent raster for selected high-quality-water contribution areas |
 
