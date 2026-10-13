@@ -1,4 +1,4 @@
-import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView} from './receiving_water_spatial.mjs';
+import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView, receivingWaterStateSignature} from './receiving_water_spatial.mjs';
 
 import {regionMarkup,regionFeatureButton,createRegionAnalysis} from './spatial_regions.mjs';
 
@@ -728,7 +728,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     }
   }
   function signature(state){
-    return JSON.stringify(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].map(kind=>(state.data?.[kind]||[]).map(row=>[row.id,row.state])));
+    return JSON.stringify([['sources','grids','runs','comparisons','deliveries','spatial_reviews'].map(kind=>(state.data?.[kind]||[]).map(row=>[row.id,row.state])),receivingWaterStateSignature(state)]);
   }
   function suspend(){
     if(!current)return;const c=current;c.disposed=true;
