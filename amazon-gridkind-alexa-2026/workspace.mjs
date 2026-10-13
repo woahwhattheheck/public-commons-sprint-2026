@@ -4,6 +4,7 @@ import {resolve,join} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {DEMO,inputs} from './engine.mjs';
 import {inspectWeek} from './weekly.mjs';
+import {createAssistantAccess} from './assistant-access.mjs';
 import {inspectRequestRecord,resolveReviewInput} from './week-review.mjs';
 
 const FORMAT='gridkind-household/v1';
@@ -56,10 +57,13 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
   requireValue(!schema||schema.value===FORMAT,'This workspace uses a different storage version.');
   db.prepare('INSERT OR IGNORE INTO metadata VALUES (?,?)').run('schema',FORMAT);
   let closed=false;
+  let transactionDepth=0;
   function transaction(fn){
     requireValue(!closed,'Workspace is closed.',503);
-    db.exec('BEGIN IMMEDIATE');
+    if(transactionDepth)return fn();
+    db.exec('BEGIN IMMEDIATE');transactionDepth++;
     try{const value=fn();db.exec('COMMIT');return value;}catch(error){db.exec('ROLLBACK');throw error;}
+    finally{transactionDepth--;}
   }
   function visitor(id){
     requireValue(UUID.test(id),'Invalid browser workspace.');
@@ -160,19 +164,21 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
       return result;
     });
   }
+  const assistant=createAssistantAccess({db,transaction,household,current,digest});
   function exportHousehold(id,householdId=visitor(id).selected_id){
     return transaction(()=>{
       const row=household(id,householdId);
       const records=db.prepare('SELECT data_json,sha256 FROM records WHERE household_id=? ORDER BY sequence').all(householdId).map(row=>{
         const data=parsed(row.data_json);requireValue(digest(data)===row.sha256,'Saved record integrity check failed.',409);return {...data,sha256:row.sha256};
       });
-      const payload={household:{id:row.id,name:row.name,scenario:parsed(row.scenario_json),createdAt:row.created_at,updatedAt:row.updated_at,origin:row.origin_json?parsed(row.origin_json):null},records};
+      const payload={household:{id:row.id,name:row.name,scenario:parsed(row.scenario_json),createdAt:row.created_at,updatedAt:row.updated_at,origin:row.origin_json?parsed(row.origin_json):null},records,assistantRequests:assistant.records(id,householdId)};
       return {schema:FORMAT,exportedAt:new Date().toISOString(),payload,sha256:digest(payload)};
     });
   }
   function inspectImport(bundle){
     requireValue(bundle&&bundle.schema===FORMAT&&bundle.payload&&digest(bundle.payload)===bundle.sha256,'The household file is incomplete or its content has changed.');
     const {household:home,records}=bundle.payload;
+    assistant.inspectRecords(bundle.payload.assistantRequests??[]);
     requireValue(home&&UUID.test(home.id)&&Array.isArray(records)&&records.length>0&&records.length<=5000,'Invalid household history.');
     label(home.name);inputs(home.scenario);
     const ids=new Set(),known=new Map(),reviewOutcomes=new Map(),responseKeys=new Set();let sequence=0;
@@ -238,10 +244,11 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
       const home=bundle.payload.household;
       const newId=create(id,name||home.name.slice(0,89)+' (restored)',home.scenario,{householdId:home.id,sha256:bundle.sha256,restoredAt:new Date().toISOString()});
       for(const row of bundle.payload.records){const {sha256,...data}=row;db.prepare('INSERT INTO records VALUES (?,?,?,?,?)').run(newId,data.id,data.sequence,JSON.stringify(data),sha256);}
+      assistant.importRecords(id,newId,bundle.payload.assistantRequests??[],home.id);
       db.prepare('UPDATE visitors SET revision=revision+1 WHERE id=?').run(id);
       return {...preview,householdId:newId};
     });
   }
   function close(){if(!closed){db.close();closed=true;}}
-  return {directory:root,ensure,current,view,record,history,mutate,assertRevision,weekReviewOutcome,exportHousehold,inspectImport,importHousehold,close};
+  return {directory:root,assistant,ensure,current,view,record,history,mutate,assertRevision,weekReviewOutcome,exportHousehold,inspectImport,importHousehold,close};
 }
