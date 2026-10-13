@@ -1,0 +1,6 @@
+{
+  "receiverPort": 8492,
+  "merchantPort": null,
+  "facilitator": null,
+  "allowLocalFacilitator": false
+}
