@@ -1,0 +1,104 @@
+{
+  "schema": "tjlabs.source-reuse.v1",
+  "source_repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+  "original_directory": "products/migration-acceptance/adaptations/twenty",
+  "original_commit": "7a4ed4c0a8b672e86ecd5740db0c5860434ea7ca",
+  "reuse": [
+    {
+      "path": "project.mjs",
+      "original": {
+        "bytes": 6779,
+        "sha256": "caae5db22a1866e09d91d3875e1f7f346c77f0d6f4132051daf3fbb56f5c1eca"
+      },
+      "current": {
+        "bytes": 6779,
+        "sha256": "caae5db22a1866e09d91d3875e1f7f346c77f0d6f4132051daf3fbb56f5c1eca"
+      },
+      "change": "Exact complete maintained reusable module."
+    },
+    {
+      "path": "native-intake.mjs",
+      "original": {
+        "bytes": 10158,
+        "sha256": "61eaff6d107b83b7176f517825c3f4bc595e2115d4b4990ba05718a12dc1d6b5"
+      },
+      "current": {
+        "bytes": 10158,
+        "sha256": "61eaff6d107b83b7176f517825c3f4bc595e2115d4b4990ba05718a12dc1d6b5"
+      },
+      "change": "Exact complete maintained reusable module."
+    },
+    {
+      "path": "acceptance.mjs",
+      "original": {
+        "bytes": 1754,
+        "sha256": "71226c0d14dc699296ffa5348265f29ddf065728f657b582cb960d73da02f472"
+      },
+      "current": {
+        "bytes": 1754,
+        "sha256": "905eb6f78fa82f1b2c67c0edad83b81a841146a1c67488847a1f1646b90a05f3"
+      },
+      "change": "Complete maintained source adapted to OTOBO's native capture, review and original comparison flow."
+    },
+    {
+      "path": "receive.mjs",
+      "original": {
+        "bytes": 22446,
+        "sha256": "ac52d6518acf61e4f27439e937835090495a2563e5e0df70d13f4dc038f6c95e"
+      },
+      "current": {
+        "bytes": 22546,
+        "sha256": "d1c13a18303a142fe875aba0337ddc5912c1b6e7785138dfb5f5f6df6af27f8c"
+      },
+      "change": "Complete maintained source adapted to OTOBO's native capture, review and original comparison flow."
+    },
+    {
+      "path": "build-review.mjs",
+      "original": {
+        "bytes": 9293,
+        "sha256": "3765a81e048c449ce9742af9f86b2710eaaa74ba8abc3aea93cea17f5d3d9f75"
+      },
+      "current": {
+        "bytes": 9367,
+        "sha256": "f599f1c40d07de437512b685881817661fc1d2a894c93c554b2c92f430db1112"
+      },
+      "change": "Complete maintained source adapted to OTOBO's native capture, review and original comparison flow."
+    },
+    {
+      "path": "browser-receive.mjs",
+      "original": {
+        "bytes": 12266,
+        "sha256": "fc03ad6219c7ae1541249d6a458f5ef0df414a4cff270511f757cf2a9cd7168a"
+      },
+      "current": {
+        "bytes": 11714,
+        "sha256": "9de07e61a6ff2c1c5784bb38a2669dfebb1399d158f7160adc4642012ece1de6"
+      },
+      "change": "Complete maintained source adapted to OTOBO's native capture, review and original comparison flow."
+    },
+    {
+      "path": "sha256.mjs",
+      "original": {
+        "bytes": 18412,
+        "sha256": "52a44d3fdb0c1e94282051fe073af67a9c1c57b16c9c94946bd5ebfdade394a6"
+      },
+      "current": {
+        "bytes": 18412,
+        "sha256": "52a44d3fdb0c1e94282051fe073af67a9c1c57b16c9c94946bd5ebfdade394a6"
+      },
+      "change": "Exact complete maintained reusable module."
+    }
+  ],
+  "upstream": {
+    "repository": "RotherOSS/otobo",
+    "ref": "rel-11_1",
+    "commit": "ed3cdf2b9b633fe3941ce15be16c5720006b1b38",
+    "license_path": "upstream/otobo/LICENSE",
+    "retention": "All 41 selected OTOBO upstream leaves and four YAML dependency source/license leaves retained byte-for-byte; NATIVE_CONTRACT.md records selected native semantics."
+  },
+  "workbench_manifest": {
+    "bytes": 38875,
+    "sha256": "fbabde0b35342409e652fab1514e1892876ad865591067ddd59b4d4eb7bd90a5"
+  },
+  "runtime_changes": "Original Workbench loaders, native engine, acceptance and request custody remain selected through their existing manifests."
+}

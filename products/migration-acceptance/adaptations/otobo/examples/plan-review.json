@@ -1,0 +1,1092 @@
+{
+  "schema": "otobo.plan-review.v1",
+  "ready": true,
+  "sourceCaptureId": "3ef3a143e226e52c7bd9afa1e2bc116db1c79de6de35d3f8ed3a816481b11c5c",
+  "beforeCaptureId": "b0bcf19baad4a82f34fc4a2ff94b829ab88950d089d2c923e5bcee4272c98314",
+  "planId": "20be2c28a18b8f0c898191e3243c2e8d644298bf2e791f0efe84c336780e1cfa",
+  "findings": [
+    {
+      "severity": "review",
+      "code": "shared-object-effect",
+      "message": "This queue overwrite can update its shared Salutation.",
+      "family": "Queues",
+      "name": "SupportQ",
+      "sharedKind": "Salutation",
+      "sharedName": "Support greeting",
+      "targetQueueScopeComplete": true
+    },
+    {
+      "severity": "review",
+      "code": "shared-object-effect",
+      "message": "This queue overwrite can update its shared Signature.",
+      "family": "Queues",
+      "name": "SupportQ",
+      "sharedKind": "Signature",
+      "sharedName": "Support signature",
+      "targetQueueScopeComplete": true
+    },
+    {
+      "severity": "review",
+      "code": "shared-object-effect",
+      "message": "This queue overwrite can update its shared SystemAddress.",
+      "family": "Queues",
+      "name": "SupportQ",
+      "sharedKind": "SystemAddress",
+      "sharedName": "support@example.invalid",
+      "targetQueueScopeComplete": true
+    },
+    {
+      "severity": "review",
+      "code": "permission-replacement",
+      "message": "Each mentioned role/group pair receives this complete permission set; unmentioned pairs remain unchanged.",
+      "family": "RoleGroups",
+      "name": "agents",
+      "pairs": [
+        {
+          "group": "support",
+          "permissions": [
+            "ro"
+          ]
+        }
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "family": "Groups",
+      "name": "support",
+      "action": "keep-target",
+      "sourceFileId": "file-Groups",
+      "reason": "Authored review of exact selected configuration",
+      "before": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "support",
+            "yamlToken": "--- \"support\"\n"
+          },
+          "Comment": {
+            "kind": "string",
+            "value": "Support operators",
+            "yamlToken": "--- \"Support operators\"\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          }
+        }
+      },
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "support",
+            "yamlToken": "--- \"support\"\n"
+          },
+          "Comment": {
+            "kind": "string",
+            "value": "Support operators",
+            "yamlToken": "--- \"Support operators\"\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          }
+        }
+      },
+      "dependencies": []
+    },
+    {
+      "family": "Roles",
+      "name": "agents",
+      "action": "keep-target",
+      "sourceFileId": "file-Roles",
+      "reason": "Authored review of exact selected configuration",
+      "before": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "agents",
+            "yamlToken": "--- \"agents\"\n"
+          },
+          "Comment": {
+            "kind": "string",
+            "value": "Service agents",
+            "yamlToken": "--- \"Service agents\"\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          }
+        }
+      },
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "agents",
+            "yamlToken": "--- \"agents\"\n"
+          },
+          "Comment": {
+            "kind": "string",
+            "value": "Service agents",
+            "yamlToken": "--- \"Service agents\"\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          }
+        }
+      },
+      "dependencies": []
+    },
+    {
+      "family": "Types",
+      "name": "Incident",
+      "action": "keep-target",
+      "sourceFileId": "file-Types",
+      "reason": "Authored review of exact selected configuration",
+      "before": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "Incident",
+            "yamlToken": "--- \"Incident\"\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          }
+        }
+      },
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "Incident",
+            "yamlToken": "--- \"Incident\"\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          }
+        }
+      },
+      "dependencies": []
+    },
+    {
+      "family": "Templates",
+      "name": "Reply",
+      "action": "keep-target",
+      "sourceFileId": "file-Templates",
+      "reason": "Authored review of exact selected configuration",
+      "before": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "Reply",
+            "yamlToken": "--- \"Reply\"\n"
+          },
+          "Comment": {
+            "kind": "string",
+            "value": "Retained response",
+            "yamlToken": "--- \"Retained response\"\n"
+          },
+          "Template": {
+            "kind": "string",
+            "value": "Hello",
+            "yamlToken": "--- \"Hello\"\n"
+          },
+          "ContentType": {
+            "kind": "string",
+            "value": "text/plain; charset=utf-8",
+            "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+          },
+          "TemplateType": {
+            "kind": "string",
+            "value": "Answer",
+            "yamlToken": "--- \"Answer\"\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          },
+          "PreSelectedTicketStateID": {
+            "kind": "null",
+            "value": null,
+            "yamlToken": "--- ~\n"
+          }
+        }
+      },
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "Reply",
+            "yamlToken": "--- \"Reply\"\n"
+          },
+          "Comment": {
+            "kind": "string",
+            "value": "Retained response",
+            "yamlToken": "--- \"Retained response\"\n"
+          },
+          "Template": {
+            "kind": "string",
+            "value": "Hello",
+            "yamlToken": "--- \"Hello\"\n"
+          },
+          "ContentType": {
+            "kind": "string",
+            "value": "text/plain; charset=utf-8",
+            "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+          },
+          "TemplateType": {
+            "kind": "string",
+            "value": "Answer",
+            "yamlToken": "--- \"Answer\"\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          },
+          "PreSelectedTicketStateID": {
+            "kind": "null",
+            "value": null,
+            "yamlToken": "--- ~\n"
+          }
+        }
+      },
+      "dependencies": []
+    },
+    {
+      "family": "Services",
+      "name": "Support",
+      "action": "keep-target",
+      "sourceFileId": "file-Services",
+      "reason": "Authored review of exact selected configuration",
+      "before": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "Support",
+            "yamlToken": "--- \"Support\"\n"
+          },
+          "NameShort": {
+            "kind": "string",
+            "value": "Support",
+            "yamlToken": "--- \"Support\"\n"
+          },
+          "Parent": {
+            "kind": "null",
+            "value": null,
+            "yamlToken": "--- ~\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          }
+        }
+      },
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "Support",
+            "yamlToken": "--- \"Support\"\n"
+          },
+          "NameShort": {
+            "kind": "string",
+            "value": "Support",
+            "yamlToken": "--- \"Support\"\n"
+          },
+          "Parent": {
+            "kind": "null",
+            "value": null,
+            "yamlToken": "--- ~\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          }
+        }
+      },
+      "dependencies": []
+    },
+    {
+      "family": "Services",
+      "name": "Support::Premium",
+      "action": "create",
+      "sourceFileId": "file-Services",
+      "reason": "Authored review of exact selected configuration",
+      "before": null,
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "Support::Premium",
+            "yamlToken": "--- \"Support::Premium\"\n"
+          },
+          "NameShort": {
+            "kind": "string",
+            "value": "Premium",
+            "yamlToken": "--- \"Premium\"\n"
+          },
+          "Parent": {
+            "kind": "string",
+            "value": "Support",
+            "yamlToken": "--- \"Support\"\n"
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          }
+        }
+      },
+      "dependencies": []
+    },
+    {
+      "family": "SLAs",
+      "name": "Gold",
+      "action": "create",
+      "sourceFileId": "file-SLAs",
+      "reason": "Authored review of exact selected configuration",
+      "before": null,
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "Gold",
+            "yamlToken": "--- \"Gold\"\n"
+          },
+          "Services": {
+            "kind": "array",
+            "value": [
+              {
+                "kind": "string",
+                "value": "Support::Premium",
+                "yamlToken": "--- \"Support::Premium\"\n"
+              }
+            ]
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          },
+          "FirstResponseTime": {
+            "kind": "integer",
+            "value": "30",
+            "yamlToken": "--- 30\n"
+          }
+        }
+      },
+      "dependencies": [
+        [
+          "Services",
+          "Support::Premium"
+        ]
+      ]
+    },
+    {
+      "family": "Queues",
+      "name": "SupportQ",
+      "action": "overwrite",
+      "sourceFileId": "file-Queues",
+      "reason": "Authored review of exact selected configuration",
+      "before": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "SupportQ",
+            "yamlToken": "--- \"SupportQ\"\n"
+          },
+          "RealName": {
+            "kind": "string",
+            "value": "Support team",
+            "yamlToken": "--- \"Support team\"\n"
+          },
+          "Group": {
+            "kind": "string",
+            "value": "support",
+            "yamlToken": "--- \"support\"\n"
+          },
+          "Calendar": {
+            "kind": "string",
+            "value": "",
+            "yamlToken": "--- \"\"\n"
+          },
+          "FirstResponseTime": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "FirstResponseNotify": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "UpdateTime": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "UpdateNotify": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "SolutionTime": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "SolutionNotify": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "UnlockTimeout": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "FollowUp": {
+            "kind": "string",
+            "value": "possible",
+            "yamlToken": "--- \"possible\"\n"
+          },
+          "FollowUpLock": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "DefaultSignKey": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "SystemAddress": {
+            "kind": "map",
+            "value": {
+              "Name": {
+                "kind": "string",
+                "value": "support@example.invalid",
+                "yamlToken": "--- \"support@example.invalid\"\n"
+              },
+              "Realname": {
+                "kind": "string",
+                "value": "Support team",
+                "yamlToken": "--- \"Support team\"\n"
+              },
+              "Queue": {
+                "kind": "string",
+                "value": "SupportQ",
+                "yamlToken": "--- \"SupportQ\"\n"
+              },
+              "Comment": {
+                "kind": "string",
+                "value": "Authored support address",
+                "yamlToken": "--- \"Authored support address\"\n"
+              },
+              "Valid": {
+                "kind": "string",
+                "value": "valid",
+                "yamlToken": "--- \"valid\"\n"
+              }
+            }
+          },
+          "Salutation": {
+            "kind": "map",
+            "value": {
+              "Name": {
+                "kind": "string",
+                "value": "Support greeting",
+                "yamlToken": "--- \"Support greeting\"\n"
+              },
+              "Text": {
+                "kind": "string",
+                "value": "Hello,\n",
+                "yamlToken": "--- \"Hello,\\n\"\n"
+              },
+              "ContentType": {
+                "kind": "string",
+                "value": "text/plain; charset=utf-8",
+                "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+              },
+              "Comment": {
+                "kind": "string",
+                "value": "Authored salutation",
+                "yamlToken": "--- \"Authored salutation\"\n"
+              },
+              "Valid": {
+                "kind": "string",
+                "value": "valid",
+                "yamlToken": "--- \"valid\"\n"
+              }
+            }
+          },
+          "Signature": {
+            "kind": "map",
+            "value": {
+              "Name": {
+                "kind": "string",
+                "value": "Support signature",
+                "yamlToken": "--- \"Support signature\"\n"
+              },
+              "Text": {
+                "kind": "string",
+                "value": "Support team\n",
+                "yamlToken": "--- \"Support team\\n\"\n"
+              },
+              "ContentType": {
+                "kind": "string",
+                "value": "text/plain; charset=utf-8",
+                "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+              },
+              "Comment": {
+                "kind": "string",
+                "value": "Authored signature",
+                "yamlToken": "--- \"Authored signature\"\n"
+              },
+              "Valid": {
+                "kind": "string",
+                "value": "valid",
+                "yamlToken": "--- \"valid\"\n"
+              }
+            }
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          },
+          "Comment": {
+            "kind": "string",
+            "value": "Earlier queue note",
+            "yamlToken": "--- \"Earlier queue note\"\n"
+          }
+        }
+      },
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "SupportQ",
+            "yamlToken": "--- \"SupportQ\"\n"
+          },
+          "RealName": {
+            "kind": "string",
+            "value": "Support team",
+            "yamlToken": "--- \"Support team\"\n"
+          },
+          "Group": {
+            "kind": "string",
+            "value": "support",
+            "yamlToken": "--- \"support\"\n"
+          },
+          "Calendar": {
+            "kind": "string",
+            "value": "",
+            "yamlToken": "--- \"\"\n"
+          },
+          "FirstResponseTime": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "FirstResponseNotify": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "UpdateTime": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "UpdateNotify": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "SolutionTime": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "SolutionNotify": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "UnlockTimeout": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "FollowUp": {
+            "kind": "string",
+            "value": "possible",
+            "yamlToken": "--- \"possible\"\n"
+          },
+          "FollowUpLock": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "DefaultSignKey": {
+            "kind": "integer",
+            "value": "0",
+            "yamlToken": "--- 0\n"
+          },
+          "SystemAddress": {
+            "kind": "map",
+            "value": {
+              "Name": {
+                "kind": "string",
+                "value": "support@example.invalid",
+                "yamlToken": "--- \"support@example.invalid\"\n"
+              },
+              "Realname": {
+                "kind": "string",
+                "value": "Support team",
+                "yamlToken": "--- \"Support team\"\n"
+              },
+              "Queue": {
+                "kind": "string",
+                "value": "SupportQ",
+                "yamlToken": "--- \"SupportQ\"\n"
+              },
+              "Comment": {
+                "kind": "string",
+                "value": "Authored support address",
+                "yamlToken": "--- \"Authored support address\"\n"
+              },
+              "Valid": {
+                "kind": "string",
+                "value": "valid",
+                "yamlToken": "--- \"valid\"\n"
+              }
+            }
+          },
+          "Salutation": {
+            "kind": "map",
+            "value": {
+              "Name": {
+                "kind": "string",
+                "value": "Support greeting",
+                "yamlToken": "--- \"Support greeting\"\n"
+              },
+              "Text": {
+                "kind": "string",
+                "value": "Hello,\n",
+                "yamlToken": "--- \"Hello,\\n\"\n"
+              },
+              "ContentType": {
+                "kind": "string",
+                "value": "text/plain; charset=utf-8",
+                "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+              },
+              "Comment": {
+                "kind": "string",
+                "value": "Authored salutation",
+                "yamlToken": "--- \"Authored salutation\"\n"
+              },
+              "Valid": {
+                "kind": "string",
+                "value": "valid",
+                "yamlToken": "--- \"valid\"\n"
+              }
+            }
+          },
+          "Signature": {
+            "kind": "map",
+            "value": {
+              "Name": {
+                "kind": "string",
+                "value": "Support signature",
+                "yamlToken": "--- \"Support signature\"\n"
+              },
+              "Text": {
+                "kind": "string",
+                "value": "Support team\n",
+                "yamlToken": "--- \"Support team\\n\"\n"
+              },
+              "ContentType": {
+                "kind": "string",
+                "value": "text/plain; charset=utf-8",
+                "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+              },
+              "Comment": {
+                "kind": "string",
+                "value": "Authored signature",
+                "yamlToken": "--- \"Authored signature\"\n"
+              },
+              "Valid": {
+                "kind": "string",
+                "value": "valid",
+                "yamlToken": "--- \"valid\"\n"
+              }
+            }
+          },
+          "Valid": {
+            "kind": "string",
+            "value": "valid",
+            "yamlToken": "--- \"valid\"\n"
+          },
+          "Comment": {
+            "kind": "string",
+            "value": "Reviewed support queue",
+            "yamlToken": "--- \"Reviewed support queue\"\n"
+          }
+        }
+      },
+      "dependencies": []
+    },
+    {
+      "family": "QueueTemplates",
+      "name": "SupportQ",
+      "action": "add-links",
+      "sourceFileId": "file-QueueTemplates",
+      "reason": "Authored review of exact selected configuration",
+      "before": {
+        "kind": "array",
+        "value": []
+      },
+      "proposed": {
+        "kind": "array",
+        "value": [
+          {
+            "kind": "string",
+            "value": "Reply",
+            "yamlToken": "--- \"Reply\"\n"
+          }
+        ]
+      },
+      "dependencies": [
+        [
+          "Queues",
+          "SupportQ"
+        ]
+      ]
+    },
+    {
+      "family": "RoleGroups",
+      "name": "agents",
+      "action": "replace-pair-permissions",
+      "sourceFileId": "file-RoleGroups",
+      "reason": "Authored review of exact selected configuration",
+      "before": {
+        "kind": "map",
+        "value": {
+          "ro": {
+            "kind": "array",
+            "value": [
+              {
+                "kind": "string",
+                "value": "support",
+                "yamlToken": "--- \"support\"\n"
+              }
+            ]
+          },
+          "rw": {
+            "kind": "array",
+            "value": [
+              {
+                "kind": "string",
+                "value": "support",
+                "yamlToken": "--- \"support\"\n"
+              }
+            ]
+          }
+        }
+      },
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "ro": {
+            "kind": "array",
+            "value": [
+              {
+                "kind": "string",
+                "value": "support",
+                "yamlToken": "--- \"support\"\n"
+              }
+            ]
+          },
+          "rw": {
+            "kind": "array",
+            "value": []
+          }
+        }
+      },
+      "dependencies": []
+    },
+    {
+      "family": "GenericAgents",
+      "name": "Weekly",
+      "action": "create",
+      "sourceFileId": "file-GenericAgents",
+      "reason": "Authored review of exact selected configuration",
+      "before": null,
+      "proposed": {
+        "kind": "map",
+        "value": {
+          "Name": {
+            "kind": "string",
+            "value": "Weekly",
+            "yamlToken": "--- \"Weekly\"\n"
+          },
+          "NewQueue": {
+            "kind": "string",
+            "value": "SupportQ",
+            "yamlToken": "--- \"SupportQ\"\n"
+          },
+          "Owners": {
+            "kind": "array",
+            "value": [
+              {
+                "kind": "string",
+                "value": "ops",
+                "yamlToken": "--- \"ops\"\n"
+              }
+            ]
+          },
+          "ScheduleDays": {
+            "kind": "array",
+            "value": [
+              {
+                "kind": "string",
+                "value": "1",
+                "yamlToken": "--- \"1\"\n"
+              }
+            ]
+          },
+          "Valid": {
+            "kind": "integer",
+            "value": "1",
+            "yamlToken": "--- 1\n"
+          }
+        }
+      },
+      "dependencies": [
+        [
+          "Queues",
+          "SupportQ"
+        ]
+      ]
+    }
+  ],
+  "expectedRows": [
+    {
+      "family": "GenericAgents",
+      "identity_json": "{\"name\":\"Weekly\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Weekly\"},\"NewQueue\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"Owners\":{\"kind\":\"array\",\"value\":[{\"kind\":\"string\",\"value\":\"ops\"}]},\"ScheduleDays\":{\"kind\":\"array\",\"value\":[{\"kind\":\"string\",\"value\":\"1\"}]},\"Valid\":{\"kind\":\"integer\",\"value\":\"1\"}}}"
+    },
+    {
+      "family": "Groups",
+      "identity_json": "{\"name\":\"support\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Support operators\"},\"Name\":{\"kind\":\"string\",\"value\":\"support\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "QueueTemplates",
+      "identity_json": "{\"queue\":\"SupportQ\",\"template\":\"Reply\"}",
+      "value_json": "true"
+    },
+    {
+      "family": "Queues",
+      "identity_json": "{\"name\":\"SupportQ\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Calendar\":{\"kind\":\"string\",\"value\":\"\"},\"Comment\":{\"kind\":\"string\",\"value\":\"Reviewed support queue\"},\"DefaultSignKey\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"FollowUp\":{\"kind\":\"string\",\"value\":\"possible\"},\"FollowUpLock\":{\"kind\":\"integer\",\"value\":\"0\"},\"Group\":{\"kind\":\"string\",\"value\":\"support\"},\"Name\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"RealName\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Salutation\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored salutation\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support greeting\"},\"Text\":{\"kind\":\"string\",\"value\":\"Hello,\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"Signature\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored signature\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support signature\"},\"Text\":{\"kind\":\"string\",\"value\":\"Support team\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"SolutionNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"SolutionTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"SystemAddress\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored support address\"},\"Name\":{\"kind\":\"string\",\"value\":\"support@example.invalid\"},\"Queue\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"Realname\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"UnlockTimeout\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "RoleGroups",
+      "identity_json": "{\"group\":\"support\",\"role\":\"agents\"}",
+      "value_json": "{\"kind\":\"permission-set\",\"permissions\":[\"ro\"]}"
+    },
+    {
+      "family": "Roles",
+      "identity_json": "{\"name\":\"agents\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Service agents\"},\"Name\":{\"kind\":\"string\",\"value\":\"agents\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "SLAs",
+      "identity_json": "{\"name\":\"Gold\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"FirstResponseTime\":{\"kind\":\"integer\",\"value\":\"30\"},\"Name\":{\"kind\":\"string\",\"value\":\"Gold\"},\"Services\":{\"kind\":\"array\",\"value\":[{\"kind\":\"string\",\"value\":\"Support::Premium\"}]},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Services",
+      "identity_json": "{\"name\":\"Support::Premium\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Support::Premium\"},\"NameShort\":{\"kind\":\"string\",\"value\":\"Premium\"},\"Parent\":{\"kind\":\"string\",\"value\":\"Support\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Services",
+      "identity_json": "{\"name\":\"Support\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Support\"},\"NameShort\":{\"kind\":\"string\",\"value\":\"Support\"},\"Parent\":{\"kind\":\"null\",\"value\":null},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Templates",
+      "identity_json": "{\"name\":\"Reply\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Retained response\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Reply\"},\"PreSelectedTicketStateID\":{\"kind\":\"null\",\"value\":null},\"Template\":{\"kind\":\"string\",\"value\":\"Hello\"},\"TemplateType\":{\"kind\":\"string\",\"value\":\"Answer\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Types",
+      "identity_json": "{\"name\":\"Incident\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Incident\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    }
+  ],
+  "comparisonScope": [
+    {
+      "family": "QueueTemplates",
+      "identity": {
+        "queue": "SupportQ",
+        "template": "Reply"
+      },
+      "sourceFileId": "file-QueueTemplates",
+      "action": "add-links"
+    },
+    {
+      "family": "RoleGroups",
+      "identity": {
+        "role": "agents",
+        "group": "support"
+      },
+      "sourceFileId": "file-RoleGroups",
+      "action": "replace-pair-permissions"
+    },
+    {
+      "family": "Groups",
+      "identity": {
+        "name": "support"
+      },
+      "sourceFileId": "file-Groups",
+      "action": "keep-target"
+    },
+    {
+      "family": "Roles",
+      "identity": {
+        "name": "agents"
+      },
+      "sourceFileId": "file-Roles",
+      "action": "keep-target"
+    },
+    {
+      "family": "Types",
+      "identity": {
+        "name": "Incident"
+      },
+      "sourceFileId": "file-Types",
+      "action": "keep-target"
+    },
+    {
+      "family": "Templates",
+      "identity": {
+        "name": "Reply"
+      },
+      "sourceFileId": "file-Templates",
+      "action": "keep-target"
+    },
+    {
+      "family": "Services",
+      "identity": {
+        "name": "Support"
+      },
+      "sourceFileId": "file-Services",
+      "action": "keep-target"
+    },
+    {
+      "family": "Services",
+      "identity": {
+        "name": "Support::Premium"
+      },
+      "sourceFileId": "file-Services",
+      "action": "create"
+    },
+    {
+      "family": "SLAs",
+      "identity": {
+        "name": "Gold"
+      },
+      "sourceFileId": "file-SLAs",
+      "action": "create"
+    },
+    {
+      "family": "Queues",
+      "identity": {
+        "name": "SupportQ"
+      },
+      "sourceFileId": "file-Queues",
+      "action": "overwrite"
+    },
+    {
+      "family": "GenericAgents",
+      "identity": {
+        "name": "Weekly"
+      },
+      "sourceFileId": "file-GenericAgents",
+      "action": "create"
+    }
+  ],
+  "importOrder": [
+    {
+      "family": "Services",
+      "name": "Support::Premium",
+      "sourceFileId": "file-Services",
+      "action": "create"
+    },
+    {
+      "family": "SLAs",
+      "name": "Gold",
+      "sourceFileId": "file-SLAs",
+      "action": "create"
+    },
+    {
+      "family": "Queues",
+      "name": "SupportQ",
+      "sourceFileId": "file-Queues",
+      "action": "overwrite"
+    },
+    {
+      "family": "QueueTemplates",
+      "name": "SupportQ",
+      "sourceFileId": "file-QueueTemplates",
+      "action": "add-links"
+    },
+    {
+      "family": "RoleGroups",
+      "name": "agents",
+      "sourceFileId": "file-RoleGroups",
+      "action": "replace-pair-permissions"
+    },
+    {
+      "family": "GenericAgents",
+      "name": "Weekly",
+      "sourceFileId": "file-GenericAgents",
+      "action": "create"
+    }
+  ]
+}
