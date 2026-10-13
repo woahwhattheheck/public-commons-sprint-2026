@@ -1,0 +1,346 @@
+Title: Civilian Labor Force Estimates, 2024 Annual Average
+
+URL Source: https://ohiolmi.com/_docs/LAUS/AnnualAverages/OhioCivilianLaborForceEstimates_2024.pdf
+
+Published Time: Thu, 01 Oct 2026 13:26:46 GMT
+
+Number of Pages: 3
+
+Markdown Content:
+Civilian Labor Force Estimates For Counties and Cities with Population Over 25,000: 2024 Annual Average (a) Unemployment Rates (c) Area Labor Force (b) Employment Unemployment 2024 2023 2022 
+
+State of Ohio .............  5,930,000  5,671,400  258,600  4.4  3.7  4.0 
+
+Adams County ..............  11,500  10,800  700  6.2  5.3  5.4 
+
+Allen County ..............  47,900  45,700  2,100  4.5  3.8  4.2 
+
+Lima City ...............  15,100  14,300  800  5.1  4.4  4.8 
+
+Ashland County ............  25,800  24,600  1,100  4.4  3.5  3.8 
+
+Ashtabula County ..........  44,200  42,300  1,900  4.3  3.9  4.8 
+
+Athens County .............  27,700  26,200  1,500  5.3  4.3  4.4 
+
+Athens City .............  11,800  11,200  600  5.1  4.0  3.8 
+
+Auglaize County ...........  24,300  23,400  900  3.7  2.8  3.2 
+
+Belmont County ............  27,900  26,400  1,500  5.4  4.5  5.0 
+
+Brown County ..............  20,500  19,500  1,000  5.1  4.1  4.4 
+
+Butler County .............  198,400  189,900  8,600  4.3  3.5  3.7 
+
+Fairfield City* .........  23,600  22,700  1,000  4.1  3.3  3.5 
+
+Hamilton City ...........  29,700  28,400  1,400  4.6  3.8  4.0 
+
+Middletown City* ........  24,900  23,700  1,200  4.8  3.9  4.1 
+
+Carroll County ............  12,200  11,600  600  4.9  4.2  4.5 
+
+Champaign County ..........  19,100  18,300  800  4.3  3.5  3.9 
+
+Clark County ..............  62,300  59,300  3,000  4.8  3.8  4.2 
+
+Springfield City ........  24,900  23,600  1,300  5.4  4.2  4.6 
+
+Clermont County ...........  111,100  106,500  4,700  4.2  3.4  3.6 
+
+Clinton County ............  21,700  20,800  900  4.2  3.5  3.7 
+
+Columbiana County .........  45,800  43,500  2,300  4.9  4.3  4.6 
+
+Coshocton County ..........  15,400  14,600  800  4.9  4.2  4.4 
+
+Crawford County ...........  19,100  18,200  900  4.9  4.2  4.5 
+
+Cuyahoga County ...........  626,400  601,900  24,400  3.9  3.8  4.6 
+
+Cleveland City ..........  164,900  157,400  7,500  4.6  4.5  5.4 
+
+Cleveland Heights City ..  23,100  22,200  900  3.7  3.6  4.3 
+
+Garfield Heights City ...  13,800  13,100  600  4.6  4.6  5.3 
+
+Lakewood City ...........  31,400  30,400  1,000  3.1  3.0  3.5 
+
+Maple Heights City ......  10,300  9,700  600  5.4  4.9  6.0 
+
+North Olmsted City ......  17,000  16,400  600  3.5  3.4  4.0 
+
+North Royalton City .....  16,900  16,300  600  3.5  3.4  4.3 
+
+Parma City ..............  43,500  41,900  1,600  3.6  3.5  4.4 
+
+Shaker Heights City .....  14,900  14,400  500  3.5  3.1  3.8 
+
+South Euclid City .......  11,500  11,000  400  3.9  3.7  4.6 
+
+Strongsville City .......  23,800  23,000  800  3.5  3.3  4.0 
+
+Westlake City ...........  17,200  16,700  600  3.4  3.2  4.0 
+
+Darke County ..............  25,700  24,700  1,000  4.0  3.3  3.6 
+
+Defiance County ...........  19,600  18,800  800  4.1  3.3  3.7 
+
+Delaware County ...........  128,200  123,500  4,700  3.7  2.9  3.0 
+
+Delaware City ...........  25,300  24,300  1,000  3.8  3.0  3.2 
+
+Erie County ...............  37,400  35,600  1,800  4.9  4.5  4.9 
+
+Sandusky City ...........  12,000  11,400  600  5.3  5.4  5.2 
+
+Fairfield County ..........  84,000  80,500  3,400  4.1  3.3  3.5 
+
+Lancaster City ..........  19,300  18,400  900  4.5  3.7  4.0 
+
+Pickerington City........  14,200  13,700  500  3.6  2.9  3.0 
+
+Fayette County ............  13,100  12,500  600  4.6  4.2  4.3 
+
+Franklin County ...........  729,600  699,300  30,300  4.2  3.3  3.5 
+
+Columbus City* ..........  511,300  489,900  21,400  4.2  3.4  3.5 
+
+Dublin City* ............  25,700  24,800  900  3.7  2.8  2.9 
+
+Gahanna City ............  19,200  18,400  700  3.9  2.9  3.0 
+
+Grove City ..............  23,600  22,800  900  3.8  3.1  3.3 
+
+Hilliard City ...........  22,000  21,200  800  3.5  2.8  2.9 
+
+Reynoldsburg City* ......  22,500  21,500  1,000  4.4  3.3  3.5 
+
+Upper Arlington City ....  18,200  17,600  700  3.8  3.0  3.1 
+
+Westerville City* .......  20,000  19,200  800  4.0  3.2  3.3 
+
+Fulton County .............  21,300  20,300  1,000  4.9  3.8  4.2 
+
+Gallia County .............  12,500  11,800  700  5.3  4.4  4.6 Civilian Labor Force Estimates (continued) For Counties and Cities with Population Over 25,000: 2024 Annual Average (a) Unemployment Rates (c) Area Labor Force (b) Employment Unemployment 2024 2023 2022 
+
+Geauga County .............  49,500  47,900  1,700  3.3  3.1  3.8 
+
+Greene County .............  84,300  80,800  3,500  4.1  3.4  3.6 
+
+Beavercreek City ........  24,000  23,100  900  3.8  3.1  3.3 
+
+Fairborn City ...........  18,100  17,400  700  4.1  3.3  3.6 
+
+Xenia City ..............  11,900  11,300  500  4.6  3.9  4.2 
+
+Guernsey County ...........  16,800  15,900  900  5.6  4.8  5.2 
+
+Hamilton County ...........  435,200  416,700  18,500  4.2  3.4  3.6 
+
+Cincinnati City .........  164,000  156,600  7,400  4.5  3.5  3.8 
+
+Hancock County ............  37,300  35,800  1,500  4.0  3.2  3.5 
+
+Findlay City ............  19,700  18,900  800  4.2  3.4  3.6 
+
+Hardin County .............  13,500  12,900  600  4.5  3.7  4.0 
+
+Harrison County ...........  6,000  5,700  300  5.1  4.6  5.4 
+
+Henry County ..............  13,800  13,100  700  4.8  4.2  4.3 
+
+Highland County ...........  19,900  19,000  900  4.7  4.2  4.4 
+
+Hocking County ............  12,700  12,100  600  4.8  4.0  4.2 
+
+Holmes County .............  21,400  20,700  700  3.3  3.0  2.9 
+
+Huron County ..............  28,900  27,400  1,500  5.3  4.5  4.9 
+
+Jackson County ............  14,200  13,500  800  5.3  4.2  4.4 
+
+Jefferson County ..........  28,800  27,100  1,700  5.9  4.9  5.0 
+
+Knox County ...............  30,800  29,500  1,300  4.2  3.5  3.6 
+
+Lake County ...............  125,800  121,200  4,500  3.6  3.4  4.2 
+
+Mentor City .............  25,700  24,800  900  3.3  3.2  4.0 
+
+Lawrence County ...........  24,200  23,000  1,200  5.0  4.1  4.4 
+
+Licking County ............  92,300  88,500  3,800  4.2  3.4  3.6 
+
+Newark City .............  24,300  23,200  1,100  4.4  3.6  3.8 
+
+Logan County ..............  22,900  22,000  900  4.1  3.2  3.5 
+
+Lorain County .............  157,600  151,300  6,200  4.0  3.9  4.9 
+
+Avon City ...............  13,400  13,000  400  3.0  2.8  3.4 
+
+Avon Lake City ..........  14,100  13,600  500  3.2  3.1  3.8 
+
+Elyria City .............  24,200  23,100  1,100  4.5  4.4  5.2 
+
+Lorain City .............  28,700  27,300  1,400  4.7  4.8  6.3 
+
+North Ridgeville City ...  19,500  18,800  700  3.4  3.4  4.1 
+
+Lucas County ..............  207,600  194,900  12,700  6.1  4.4  4.5 
+
+Toledo City .............  125,000  116,300  8,700  7.0  4.9  4.9 
+
+Madison County ............  21,200  20,400  800  3.9  3.2  3.4 
+
+Mahoning County ...........  104,900  99,600  5,300  5.0  4.2  4.6 
+
+Youngstown City .........  22,200  20,800  1,400  6.1  5.1  5.7 
+
+Marion County .............  27,000  25,700  1,200  4.5  3.6  4.5 
+
+Marion City .............  13,400  12,700  700  5.0  3.9  4.8 
+
+Medina County .............  100,200  97,000  3,300  3.3  3.2  3.9 
+
+Brunswick City ..........  19,900  19,300  700  3.3  3.1  3.7 
+
+Medina City .............  13,800  13,300  400  3.2  3.1  3.9 
+
+Meigs County ..............  8,500  7,900  600  6.9  5.6  5.9 
+
+Mercer County .............  22,800  22,000  800  3.3  2.5  2.8 
+
+Miami County ..............  56,100  53,800  2,200  4.0  3.4  3.6 
+
+Troy City ...............  13,500  13,000  500  4.0  3.4  3.7 
+
+Monroe County .............  5,500  5,200  300  6.3  5.2  5.8 
+
+Montgomery County .........  257,800  245,900  12,000  4.6  3.9  4.0 
+
+Centerville City ........  12,800  12,200  500  4.0  3.3  3.5 
+
+Dayton City .............  59,200  56,000  3,300  5.5  4.6  4.7 
+
+Kettering City* .........  29,300  28,000  1,200  4.1  3.4  3.5 
+
+Huber Heights City* .....  21,800  20,900  900  4.3  3.6  3.7 
+
+Riverside City ..........  11,300  10,800  500  4.6  3.9  4.1 
+
+Trotwood City ...........  10,500  9,900  600  5.6  4.9  4.9 
+
+Morgan County .............  6,500  6,100  400  5.6  4.9  5.7 
+
+Morrow County .............  17,600  16,900  800  4.3  3.6  3.9 Civilian Labor Force Estimates (continued) For Counties and Cities with Population Over 25,000: 2024 Annual Average (a) 
+
+Unemployment Rates (c) 
+
+Area  Labor Force (b)  Employment  Unemployment  2024  2023  2022 
+
+Muskingum County ..........  41,800  39,900  2,000  4.7  3.9  4.3 
+
+Zanesville City .........  10,700  10,100  600  5.1  4.4  4.7 
+
+Noble County ..............  4,400  4,100  300  6.6  5.5  6.5 
+
+Ottawa County .............  20,200  19,000  1,200  6.2  5.2  5.4 
+
+Paulding County ...........  9,000  8,600  400  4.1  3.2  3.5 
+
+Perry County ..............  15,900  15,100  800  5.2  4.3  4.5 
+
+Pickaway County ...........  28,800  27,500  1,200  4.2  3.4  3.7 
+
+Pike County ...............  11,500  10,900  600  5.6  4.7  4.9 
+
+Portage County ............  86,100  82,300  3,800  4.4  3.6  3.9 
+
+Kent City ...............  14,200  13,500  700  4.7  3.6  3.8 
+
+Preble County .............  21,500  20,600  900  4.0  3.3  3.5 
+
+Putnam County .............  18,600  18,000  700  3.6  2.9  3.2 
+
+Richland County ...........  53,800  51,100  2,700  5.0  4.2  4.5 
+
+Mansfield City ..........  18,000  16,900  1,100  5.9  4.9  5.1 
+
+Ross County ...............  33,300  31,700  1,600  4.7  3.8  4.2 
+
+Sandusky County ...........  28,400  27,000  1,400  4.8  3.9  5.0 
+
+Scioto County .............  29,800  28,100  1,800  5.9  5.0  5.1 
+
+Seneca County .............  26,900  25,700  1,200  4.5  3.7  4.1 
+
+Shelby County .............  24,400  23,400  1,000  4.0  3.1  3.4 
+
+Stark County ..............  183,400  175,000  8,500  4.6  3.9  4.1 
+
+Canton City .............  30,000  28,300  1,700  5.5  5.0  5.2 
+
+Massillon City ..........  16,400  15,600  800  4.6  4.0  4.2 
+
+Summit County .............  276,200  263,700  12,500  4.5  3.8  4.0 
+
+Akron City ..............  91,900  87,300  4,700  5.1  4.3  4.5 
+
+Barberton City ..........  11,200  10,600  600  5.3  4.7  4.7 
+
+Cuyahoga Falls City .....  28,900  27,700  1,200  4.0  3.4  3.5 
+
+Green City ..............  14,200  13,600  600  4.2  3.5  3.7 
+
+Stow City ...............  18,000  17,200  800  4.2  3.4  3.6 
+
+Trumbull County ...........  89,200  84,500  4,700  5.2  4.4  4.7 
+
+Warren City .............  13,800  12,900  900  6.4  5.3  5.8 
+
+Tuscarawas County .........  45,900  44,000  1,900  4.1  3.6  3.8 
+
+Union County ..............  38,400  37,100  1,300  3.4  2.7  2.8 
+
+Marysville City .........  15,500  14,900  500  3.5  2.7  2.8 
+
+Van Wert County ...........  14,800  14,200  600  3.9  3.0  3.4 
+
+Vinton County .............  5,700  5,400  300  5.2  4.6  4.6 
+
+Warren County .............  133,900  128,700  5,200  3.9  3.1  3.2 
+
+Mason City ..............  19,600  18,900  700  3.6  2.9  3.0 
+
+Washington County .........  27,800  26,400  1,400  5.1  4.2  4.5 
+
+Wayne County ..............  56,500  54,300  2,200  3.9  3.2  3.5 
+
+Wooster City ............  14,000  13,500  500  3.8  3.0  3.3 
+
+Williams County ...........  17,000  16,300  800  4.5  3.5  3.6 
+
+Wood County ...............  70,500  67,400  3,100  4.4  3.4  3.6 
+
+Bowling Green City ......  16,600  15,900  700  4.2  3.2  3.3 
+
+Perrysburg City .........  13,000  12,500  500  4.0  3.3  3.3 
+
+Wyandot County ............  11,900  11,400  500  4.0  3.0  3.3 
+
+[a]  These estimates, prepared in cooperation with the Bureau of Labor Statistics, U.S. Department of Labor, are by place of residence, NOT seasonally adjusted, and revised to 2025 benchmark. 
+
+[b]  Civilian labor force equals employment plus unemployment. The employment and unemployment totals shown may not add to the labor force figure shown because of rounding. Employment includes workers involved in labor-management disputes. 
+
+[c] Rate equals unrounded unemployment divided by unrounded labor force. 
+
+[*] City included in more than one county.  Ohio Department of Job and Family Services 
+
+Office of Workforce Development 
+
+Bureau of Labor Market Information 
+
+5-5-2026
