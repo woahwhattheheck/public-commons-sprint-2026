@@ -26,7 +26,7 @@ FILES = (
     "operator/EXTENSIONS.md",
 )
 OPTIONAL_FILES = ("operator/extensions/decisions.json",)
-PREVIOUS_EDITIONS = {"operator/extension_registry.py":["9363ac944ff29b0fa86747a2c10e83f45dc7ed8a745343652b197010028d6147","ae573df9f2ad99307f34b8638ffe430b215670caecf6ad8bd669859918acfe5e"],"operator/EXTENSIONS.md":["a321eb9d8066e057a87b307c1c800914e71620915a20843dc1e5a07da37ddc67","966adc778953dbf3a91f9bb80fe3d989b935c2c0da3eade48fbf7a555280dea0"],"operator/extensions/native-run-desk.json":["cde106b0e8178721c81e3e8db6746b620bf32ad69c66f9811fde602c8e72e9f6"],"operator/extensions/source-preparation.json":["7706d871baa05a4eb819e4b82de9fb0b564206b11fa4638d54c90796622fb3ae"],"operator/web/extension_host.mjs":["43aa37111364d21bff403cd62338a67340ee343d57b02e8047c851f9007a547b"]}
+PREVIOUS_EDITIONS = {"operator/extension_registry.py":["9363ac944ff29b0fa86747a2c10e83f45dc7ed8a745343652b197010028d6147","ae573df9f2ad99307f34b8638ffe430b215670caecf6ad8bd669859918acfe5e"],"operator/EXTENSIONS.md":["a321eb9d8066e057a87b307c1c800914e71620915a20843dc1e5a07da37ddc67","966adc778953dbf3a91f9bb80fe3d989b935c2c0da3eade48fbf7a555280dea0"],"operator/extensions/native-run-desk.json":["cde106b0e8178721c81e3e8db6746b620bf32ad69c66f9811fde602c8e72e9f6"],"operator/extensions/source-preparation.json":["7706d871baa05a4eb819e4b82de9fb0b564206b11fa4638d54c90796622fb3ae"],"operator/web/extension_host.mjs":["43aa37111364d21bff403cd62338a67340ee343d57b02e8047c851f9007a547b"],"operator/extensions/decisions.json":["ce48c74bf0d7a4dc2577dc037d36aee4810729a5c8ab9a4ab5a720b94e85b691"]}
 BASE_ROUTES = (
     ("GET", "/api/extensions"), ("GET", "/api/state"), ("GET", "/api/item"),
     ("GET", "/api/source-info"), ("GET", "/api/task"), ("GET", "/api/run-log"),
@@ -173,6 +173,53 @@ def patch_server(source):
     return source
 
 
+def patch_view_lifecycle(source):
+    """Run shared cleanup before any desk's original early-return render join."""
+    entry = "function render(){\n  if(!state)return;\n"
+    cleanup = (
+        "  if(!extensions.hasView(view))extensions.detach();\n"
+        "  if(typeof experiments!=='undefined'&&view!=='experiments')experiments.detach();\n"
+        "  if(typeof experimentDiagnostics!=='undefined'&&view!=='experiment-diagnostics')experimentDiagnostics.detach();\n"
+    )
+    source = add(source, entry, cleanup, "shared desk cleanup at render entry")
+    receiving_cleanup = (
+        "  if(typeof receivingWaters!=='undefined'&&view!=='receiving-waters')receivingWaters.detach();\n"
+    )
+    source = add(source, entry + cleanup, receiving_cleanup,
+                 "receiving-water desk cleanup before early returns")
+    previous = (
+        "  if(extensions.render(view,$('#content'),state)){"
+        "community.detach();customerReviews.detach();spatialWorkspace.suspend();"
+        "if(typeof programmes!=='undefined')programmes.detach();return;}\n"
+    )
+    dispatch = (
+        "  if(extensions.render(view,$('#content'),state)){"
+        "community.detach();customerReviews.detach();spatialWorkspace.suspend();"
+        "if(typeof programmes!=='undefined')programmes.detach();"
+        "if(typeof conservation!=='undefined')conservation.detach();return;}\n"
+    )
+    # A later desk installer can place an early return immediately after the
+    # global navigation loop. Move our exact join back to that loop on rerun.
+    # The render-entry detach also covers that install order before rerunning.
+    for join in (previous, dispatch):
+        if source.count(join) > 1:
+            raise ValueError("Ambiguous installed extension view dispatch")
+        source = source.replace(join, "", 1)
+    if "if(extensions.render(view,$('#content'),state))" in source:
+        raise ValueError("Compose the current authored extension view dispatch")
+    # Include the line boundary: Conservation has its own four-space loop.
+    navigation = (
+        "\n  for(const node of $$('[data-view]'))"
+        "node.setAttribute('aria-current',node.dataset.view===view?'page':'false');\n"
+    )
+    legacy_navigation = navigation.replace("$$(", "$(")
+    if navigation not in source:
+        source = replace(source, legacy_navigation, navigation,
+                         "global navigation collection")
+    return add(source, navigation, dispatch,
+               "registered dispatch before built-in early-return desks")
+
+
 def patch_app(source):
     source = add(source, "import {attachCustomerReviews} from './reviews.mjs';\n",
                  "import {createExtensionHost} from './extension_host.mjs';\n",
@@ -190,16 +237,22 @@ def patch_app(source):
     source = source.replace(
         " openProgramme:selection=>typeof programmes!=='undefined'?programmes.create({selection}):extensions.openExtension('programmes','create',{selection})});",
         " getProgramme:()=>typeof programmes==='undefined'?null:programmes});", 1)
-    source = add(source, "function toast(message){", registration, "extension browser instance", before=True)
+    first, last = registration.splitlines(keepends=True)[0], registration.splitlines(keepends=True)[-1]
+    if first not in source:
+        source = add(source, "function toast(message){", registration, "extension browser instance", before=True)
+    else:
+        if source.count(first) != 1 or source.count(last) != 1:
+            raise ValueError("Expected one complete current extension browser instance")
+        start, end = source.index(first), source.index(last, source.index(first)) + len(last)
+        current, cursor = source[start:end], 0
+        for original_line in registration.splitlines(keepends=True):
+            found = current.find(original_line, cursor)
+            if found < 0:
+                raise ValueError("Preserve and compose the current extension host capability: " + original_line.strip())
+            cursor = found + len(original_line)
     source = add(source, "    renderTasks();\n", "    extensions.update(state);\n",
                  "all task refreshes reach active desks")
-    render_anchor = "  if(view==='spatial'){"
-    render_join = (
-        "  if(extensions.render(view,$('#content'),state)){"
-        "community.detach();customerReviews.detach();spatialWorkspace.suspend();"
-        "if(typeof programmes!=='undefined')programmes.detach();return;}\n"
-    )
-    source = add(source, render_anchor, render_join, "extension view dispatch", before=True)
+    source = patch_view_lifecycle(source)
     source = replace(source, " if(!viewLabels[next])return;",
                      " if(!viewLabels[next]&&!extensions.hasView(next))return;",
                      "registered view navigation")

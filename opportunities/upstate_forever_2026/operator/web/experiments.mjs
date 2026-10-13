@@ -92,12 +92,40 @@ export function responseEnvelopes(rows) {
     percent_max:Number.isFinite(row.percent_max)?row.percent_max:null}));
 }
 
+
+export function ensembleGroups(report) {
+  if (report?.state !== 'complete') throw Error('Complete the experiment before building its ensemble maps.');
+  const groups=new Map();
+  for(const pair of report.pairs||[]) {
+    if(!pair||['profile_id','baseline_run_id','alternative_run_id','scenario_id'].some(key=>typeof pair[key]!=='string'||!pair[key]))
+      throw Error('A saved ensemble member is missing its original run selection.');
+    let group=groups.get(pair.scenario_id);
+    if(!group){group={scenario_id:pair.scenario_id,pairs:[],profiles:new Map()};groups.set(pair.scenario_id,group);}
+    const selected=Object.fromEntries(['profile_id','baseline_run_id','alternative_run_id','scenario_id'].map(key=>[key,pair[key]]));
+    const previous=group.profiles.get(pair.profile_id);
+    if(previous&&JSON.stringify(previous)!==JSON.stringify(selected))throw Error('A parameter profile has conflicting saved ensemble pairs.');
+    if(!previous){group.profiles.set(pair.profile_id,selected);group.pairs.push(selected);}
+  }
+  return [...groups.values()].map(({scenario_id,pairs})=>({scenario_id,pairs}));
+}
+export function ensembleQuantiles(text) {
+  const values=String(text).split(/[\s,;]+/).filter(Boolean);
+  if(!values.length)throw Error('Choose at least one member percentile.');
+  const parsed=values.map(value=>{
+    if(!/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value))throw Error('Enter percentiles as numbers from 0 to 100.');
+    const number=Number(value);if(!Number.isFinite(number)||number<0||number>100)throw Error('Enter percentiles from 0 to 100.');
+    return number/100;
+  });
+  return [...new Set(parsed)].sort((a,b)=>a-b);
+}
+
 export function attachExperiments(context) {
   const {getState,api,endpoint,openForm,submitAction,fileList,toast,openItem,showTask,navigate,closeDetail}=context;
   let root=null,workspace=null,selected=null,offset=0n,limit=100,jumpText=null;
   let summaryRevision=null,nativeByCase={},nativeRefresh=null;
   let details=null,summary=null,search='',metric='all',kind='all',axes={},methods=[],formModels=['ndr','sdr'];
   let generation=0,controller=null,previewGeneration=0,previewController=null;
+  let ensembleReport=null,ensemblePreviewKey=null,ensemblePreviewGeneration=0,ensemblePreviewController=null;
 
   const data=()=>getState()?.data || {};
   const experiments=()=>data().experiments || [];
@@ -254,7 +282,9 @@ export function attachExperiments(context) {
       '<div class="page-actions">'+status(d.state)+
       (active?btn('task','View running operation',active.id):
         d.state==='complete'?btn('report','Refresh report',d.id):btn('run',d.state==='prepared'?'Run experiment':'Resume experiment',d.id,'class="primary"'))+
-      btn('clone','Revise design',d.id)+'</div></header>'+
+      btn('clone','Revise design',d.id)+
+      (Array.isArray(data().paired_ensemble_products)&&summary?.id===d.id&&summary.state==='complete'&&summary.pairs?.length?
+        btn('ensemble','Build ensemble maps',d.id):'')+'</div></header>'+
       '<div class="section-body"><div class="experiment-counts">'+
       [['Completed',exact.complete??p.complete??0],['Pending',exact.pending??p.pending??0],['Failed',exact.failed??p.failed??0],['Planned cases',d.counts_exact?.cases??d.counts?.cases??0]].map(([label,value])=>
         '<div><span>'+label+'</span><strong>'+count(value)+'</strong></div>').join('')+'</div>'+
@@ -504,9 +534,100 @@ export function attachExperiments(context) {
       throw error;
     }
   }
+  function readEnsembleForm() {
+    if(!ensembleReport)throw Error('Open a completed experiment to select its ensemble members.');
+    const form=document.querySelector('#operation-form');
+    const field=name=>form.elements.namedItem(name);
+    const title=field('ensemble_title').value.trim(),purpose=field('ensemble_purpose').value.trim();
+    if(!title||!purpose)throw Error('Give the ensemble products a title and interpretation.');
+    const chosen=new Set([...form.querySelectorAll('[name="ensemble_scenario"]:checked')].map(node=>node.value));
+    const pollutants=[...form.querySelectorAll('[name="ensemble_pollutant"]:checked')].map(node=>node.value);
+    if(!chosen.size)throw Error('Choose at least one land-cover alternative.');
+    if(!pollutants.length)throw Error('Choose at least one available pollutant.');
+    const available=new Set(ensembleReport.pollutants||METRICS.map(([key])=>key));
+    if(pollutants.some(key=>!available.has(key)))throw Error('Choose the native outputs selected by this experiment.');
+    const quantiles=ensembleQuantiles(field('ensemble_quantiles').value);
+    return ensembleGroups(ensembleReport).filter(group=>chosen.has(group.scenario_id)).map(group=>({
+      title:title+' — '+name('scenarios',group.scenario_id),purpose,
+      pairs:group.pairs,pollutants,quantiles,support:'all_pairs',planned_member_count:group.pairs.length,
+    }));
+  }
+  function invalidateEnsemblePreview() {
+    ensemblePreviewKey=null;ensemblePreviewGeneration++;ensemblePreviewController?.abort();
+    const target=document.querySelector('#experiment-ensemble-preview');
+    if(target)target.textContent='Preview the selected members and their retained native inputs.';
+  }
+  async function previewEnsembles(selections=readEnsembleForm()) {
+    const forWorkspace=getState()?.workspace_key,current=++ensemblePreviewGeneration;
+    ensemblePreviewController?.abort();ensemblePreviewController=new AbortController();
+    const results=[],target=document.querySelector('#experiment-ensemble-preview');
+    try {
+    for(let index=0;index<selections.length;index++) {
+      if(target)target.textContent='Opening native inputs for alternative '+(index+1)+' of '+selections.length+'…';
+      const result=await api('/api/paired-ensemble/preview',{method:'POST',
+        body:{workspace:forWorkspace,selection:selections[index]},signal:ensemblePreviewController.signal});
+      if(current!==ensemblePreviewGeneration||getState()?.workspace_key!==forWorkspace)return null;
+      results.push(result);
+    }
+    ensemblePreviewKey=JSON.stringify(selections);
+    if(target&&target===document.querySelector('#experiment-ensemble-preview'))target.innerHTML=
+      table(['Alternative','Parameter members','Native outputs','Common support'],results.map((result,index)=>
+        '<tr><td>'+esc(name('scenarios',selections[index].pairs[0].scenario_id))+'</td><td>'+count(result.members)+
+        '</td><td>'+esc((result.pollutants||[]).map(key=>METRICS.find(([name])=>name===key)?.[1]||key).join(', '))+
+        '</td><td>Cells valid in every paired member</td></tr>'))+
+      '<p>'+count(results.length)+' ensemble products use the original native runs and reporting masks.</p>';
+    return results;
+    } catch(error) {
+      if(error.name==='AbortError')return null;
+      if(target&&target===document.querySelector('#experiment-ensemble-preview'))target.textContent=error.message||String(error);
+      throw error;
+    }
+  }
+  async function newEnsembleForm(id) {
+    const forWorkspace=getState()?.workspace_key;
+    if(!Array.isArray(data().paired_ensemble_products))throw Error('The paired ensemble view is unavailable in this workspace.');
+    const report=summary?.id===id&&summary.state==='complete'?summary:
+      await api(endpoint('/api/experiments/summary',{experiment_id:id}));
+    if(getState()?.workspace_key!==forWorkspace)return;
+    const groups=ensembleGroups(report);
+    if(!groups.length)throw Error('This experiment has no completed land-cover alternatives.');
+    ensembleReport=report;ensemblePreviewKey=null;ensemblePreviewGeneration++;
+    const available=new Set(report.pollutants||METRICS.map(([key])=>key));
+    const html='<div class="experiment-form" id="experiment-ensemble-form"><div class="experiment-form-grid">'+
+      '<label>Product title prefix<input name="ensemble_title" required value="'+esc(report.title||details?.title||'Scenario ensemble')+'"></label>'+
+      '<label>Member percentiles<input name="ensemble_quantiles" value="10, 50, 90" required><small>Percentiles across the selected parameter members.</small></label>'+
+      '<label class="full">Purpose and interpretation<textarea name="ensemble_purpose" rows="3" required>'+
+        esc(report.selection?.reason||details?.selection?.reason||'Compare the selected parameter members for each retained land-cover alternative.')+
+      '</textarea></label></div><fieldset><legend>Land-cover alternatives</legend>'+
+      '<p>Each alternative becomes a separate ensemble product with its same-profile baseline pairs.</p><div class="experiment-choices">'+
+      groups.map(group=>'<label class="experiment-choice"><input type="checkbox" name="ensemble_scenario" checked value="'+
+        esc(group.scenario_id)+'"><span><strong>'+esc(name('scenarios',group.scenario_id))+'</strong><small>'+
+        count(group.pairs.length)+' retained parameter members</small></span></label>').join('')+'</div></fieldset>'+
+      '<fieldset><legend>Native quantities</legend><div class="experiment-choices">'+METRICS.filter(([key])=>available.has(key)).map(([key,label])=>
+        '<label class="experiment-choice"><input type="checkbox" name="ensemble_pollutant" checked value="'+esc(key)+'"><span>'+
+        esc(label)+'</span></label>').join('')+'</div></fieldset>'+
+      '<p class="note">Each product summarizes per-cell response across the selected parameters on their shared valid area. '
+      +'Positive reduction means baseline export exceeds the alternative. The maps retain member counts, coverage and the original run references.</p>'+
+      '<div class="experiment-preview"><div class="page-actions">'+btn('ensemble-preview','Preview ensemble inputs')+'</div>'+
+      '<div id="experiment-ensemble-preview" role="status" aria-live="polite">Preview the selected members and their retained native inputs.</div></div></div>';
+    openForm('Build ensemble maps','Use the completed native experiment to compare spatial responses across parameter choices.',
+      html,'Build selected ensembles',async()=>{
+        const selections=readEnsembleForm();
+        if(ensemblePreviewKey!==JSON.stringify(selections)){
+          const ready=await previewEnsembles(selections);if(!ready)return;
+        }
+        for(const selection of selections){
+          if(getState()?.workspace_key!==forWorkspace)throw Error('Reopen this selection in its original workspace.');
+          await submitAction('paired_ensemble.build',selection);
+        }
+        toast(selections.length+' ensemble product'+(selections.length===1?'':'s')+' queued.');
+      },()=>document.querySelector('#experiment-ensemble-form').addEventListener('input',invalidateEnsemblePreview));
+  }
   async function dispatch(button) {
     const action=button.dataset.action.slice('experiment-'.length),id=button.dataset.id;
     if(action==='new')return newForm();
+    if(action==='ensemble')return newEnsembleForm(id);
+    if(action==='ensemble-preview')return previewEnsembles();
     if(action==='clone')return newForm(id);
     if(action==='axis-add'){
       document.querySelector('#experiment-axis-rows').insertAdjacentHTML('beforeend',axisRow());

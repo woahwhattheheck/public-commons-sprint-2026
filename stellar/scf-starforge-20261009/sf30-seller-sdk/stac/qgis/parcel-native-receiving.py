@@ -241,7 +241,7 @@ class Listener:
         while row["status"] != "COMPLETED":
             state = (row["status"], row.get("displayStatus"), (row.get("progress") or {}).get("phase"))
             if state != last:
-                self.operation.progress(name, status=row["status"], phase=state[-1])
+                self.operation.progress(name, status=row["status"], requestPhase=state[-1])
                 last = state
             if row["status"] == "FAILED":
                 self.operation.record("failed-" + self.label + "-" + name, row)
@@ -421,6 +421,55 @@ def original_source_receipt(workspace, edition):
                 "bytes": row["bytes"], "sha256": row["sha256"], "object": row["object"]} for row in value["inputs"]]}
 
 
+
+def receive_reviewed_domain(operation, primary, workspace, exported, archive, context):
+    """Reopen the actual complete source/review/portfolio project before native map work."""
+    with zipfile.ZipFile(archive) as source:
+        archived = json.loads(source.read("workspace-snapshot.json"))
+    captured_file = operation.root / "inputs" / "domain-receiving-snapshot.json"
+    if captured_file.exists():
+        ensure(read_json(captured_file) == archived,
+               "Continue from the original complete domain export.")
+    else:
+        current = workspace.snapshot()
+        for key in ("schema", "state", "events", "requests"):
+            ensure(archived.get(key) == current.get(key),
+                   "The original domain export changed its saved source, decisions or history.")
+        operation.original("domain-receiving-snapshot", archived)
+    destination = operation.root / "received-domain"
+    received = primary.call("receive-independent-domain", "project.receive", {
+        "file": str(archive), "destination": str(destination),
+        "expectedSha256": exported["result"]["sha256"]})["result"]
+    original_request = read_json(operation.root / "requests" / "primary-receive-independent-domain.json")
+    replay = primary.post("/api/operations", original_request)
+    ensure(replay["status"] == "COMPLETED" and replay["result"] == received,
+           "The same domain receiving request returned another receipt.")
+    recipient = QgisWorkspace(destination)
+    snapshot = recipient.snapshot()
+    for key in ("schema", "state", "events", "requests", "analystRequests"):
+        ensure(snapshot.get(key) == archived.get(key),
+               "Independent domain receiving changed original state or request history.")
+    for record in recipient.project_files(snapshot):
+        file_digest(destination / record["path"], expected=record)
+    with Listener(operation, "received-domain", destination, destination / "software", None) as listener:
+        browser = operation.browser("received-domain", listener, {
+            **context, "mode": "domain-receiving"})
+    after = recipient.snapshot()
+    for key in ("schema", "state", "events", "requests", "analystRequests"):
+        ensure(after.get(key) == archived.get(key),
+               "The recipient's read-only walkthrough changed the original parcel project.")
+    result = {"schema": "starforge.parcel-domain-receiving.v1", "status": "COMPLETED",
+        "completedAt": now(), "operationId": operation.config["operationId"],
+        "workspaceId": snapshot["state"]["id"], "revision": snapshot["state"]["revision"],
+        "originalRequestCount": len(archived.get("analystRequests", [])),
+        "receipt": received["receipt"], "archive": public_file(archive),
+        "receivedWorkspace": str(destination), "browser": browser}
+    operation.record("domain-receiving", result)
+    operation.progress("domain-receiving-complete", workspaceId=result["workspaceId"],
+                       revision=result["revision"], originalRequests=result["originalRequestCount"])
+    return result
+
+
 def run(args):
     source_directory = Path(args.source_directory).expanduser().absolute()
     intake = ParcelIntake(source_directory, args.expected_manifest_sha256)
@@ -496,8 +545,9 @@ def run(args):
                 review_context = operation.original("browser-review", {"editionId": full, "key": selected[0],
                     "ownerClaimId": selected[1], "reason":
                     "Select the original City eProperties owner assertion; retain the publisher's tax-agent observation separately."})
-                before_browser = workspace.snapshot()
-                operation.record("before-browser-history", before_browser)
+                before_browser_file = operation.root / "results" / "before-browser-history.json"
+                if not before_browser_file.exists():
+                    operation.record("before-browser-history", workspace.snapshot())
                 browser = operation.browser("primary", listener, {
                     "mode": "review", "editionId": full, "keys": keys, "review": review_context,
                     "sourceManifestSha256": intake.id, "portfolioId": county["id"]})
@@ -521,8 +571,25 @@ def run(args):
                     "directory": str(operation.root / "archives" / "core")})
                 listener.download("/download/operations/" + core_export["requestId"] + "/project",
                                   operation.root / "downloads" / "parcel-reviewed-project.zip", core_export["result"])
-                ensure(args.native_runtime_file,
-                       "The reviewed original project is retained; select its existing QGIS runtime for the same native continuation.")
+                domain_receiving = receive_reviewed_domain(operation, listener, workspace, core_export,
+                    operation.root / "downloads" / "parcel-reviewed-project.zip", {
+                        "editionId": full, "keys": keys, "review": review_context,
+                        "sourceManifestSha256": intake.id, "portfolioId": reviewed["id"]})
+                if not args.native_runtime_file:
+                    result = {"schema": SCHEMA, "status": "PARCEL_RECEIVING_COMPLETED",
+                        "completedAt": now(), "operationId": args.operation_id,
+                        "sourceManifestSha256": intake.id, "workspaceId": workspace.read()["id"],
+                        "revision": workspace.read()["revision"], "sourceSummary": prepared["summary"],
+                        "successor": successor, "browser": browser, "domainReceiving": domain_receiving,
+                        "files": [public_file(path) for path in sorted((operation.root / "downloads").rglob("*")) if path.is_file()],
+                        "sourceRoot": str(SOURCE_ROOT), "originalWorkspace": str(workspace.root),
+                        "receivedWorkspace": domain_receiving["receivedWorkspace"],
+                        "nativeContinuation": {"phase": "original-qgis-map",
+                            "portfolioId": reviewed["id"], "reviewedSourceId": mapped["source"]["id"],
+                            "layerId": mapped["layer"]["id"], "inputArchive": domain_receiving["archive"]}}
+                    operation.record("domain-completed", result)
+                    write_json(operation.root / "result.json", result)
+                    return result
                 asset = workspace.source(mapped["source"]["id"]).asset_rows()[0]
                 inspection = listener.call("inspect-native-parcels", "map.inspect", {
                     "sourceId": mapped["source"]["id"], "collection": asset["collection"],
@@ -595,6 +662,7 @@ def run(args):
                 "nativeInspection": inspection, "nativeProject": saved["id"],
                 "nativeFeatureCount": features["nativeFeatureCount"], "receiving": received["receipt"],
                 "nativeReopen": reopened, "browser": browser, "receivedBrowser": received_browser,
+                "domainReceiving": domain_receiving,
                 "files": [public_file(path) for path in sorted((operation.root / "downloads").rglob("*")) if path.is_file()],
                 "sourceRoot": str(SOURCE_ROOT), "originalWorkspace": str(workspace.root),
                 "receivedWorkspace": str(receive_dir)}

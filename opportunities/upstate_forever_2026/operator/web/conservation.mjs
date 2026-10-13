@@ -59,13 +59,17 @@ function freshStudy() {
     protected_source: "", protected_layer: "", protected_reference: "", protected_meaning: "",
     protected_relation: "Area intersection",
     water_source: "", water_layer: "", water_reference: "", water_meaning: "",
-    water_relation: "Area intersection with retained source-water geography",
+    water_relation: "Area intersection with retained water-context geography",
     quality_source: "", quality_layer: "", quality_reference: "", quality_meaning: "",
     quality_relation: "Intersection with the source-designated water features", quality_buffer: "0",
     minimum_coverage: "95", maximum_protected: "100", minimum_water: "0",
     minimum_area: "0", require_quality: false, excluded_ids: "",
     score_basis: "context", score_scale: "total", weight_n: "1", weight_p: "1", weight_s: "1",
     context_water_weight: "", context_unprotected_weight: "", context_quality_weight: "",
+    method_category: "land_protection", method_source: "", method_format: "json",
+    method_id_column: "id", method_native_classes: false, method_headwaters: "table31",
+    method_order_field: "stream_orders",
+    method_interpretation: "",
     cost_source: "", cost_id_column: "", cost_value_column: "", currency: "", cost_reference: "",
     advanced_use: false, advanced_text: "",
   };
@@ -116,6 +120,36 @@ export function attachConservation({
   };
   const runs = () => (getState?.()?.data?.runs || memory().overview?.available?.runs || [])
     .filter(run => run.state === "complete");
+  const publishedMethod = () => memory().overview?.published_methods || {};
+  const publishedCategories = () => publishedMethod().categories || [];
+  const methodCategory = id => publishedCategories().find(category => category.id === id);
+  const exportCategory = id => ["agricultural_bmps", "wetland_restoration", "riparian_restoration",
+    "shoreline_management", "stormwater_bmps"].includes(id);
+  const allNativeClasses = d => ["ndr", "sdr"].every(model =>
+    runModels(runs().find(run => run.id === d.baseline_run_id)).includes(model));
+  function runModels(run) {
+    if (!run) return [];
+    const selected = run.selection?.models;
+    return selected === undefined ? ["ndr", "sdr"] :
+      Array.isArray(selected) ? selected.filter(name => name === "ndr" || name === "sdr") : [];
+  }
+  function runQuantityLabel(run) {
+    const models = runModels(run);
+    return [models.includes("ndr") ? "nitrogen + phosphorus" : "",
+      models.includes("sdr") ? "sediment" : ""].filter(Boolean).join(" · ") || "No selected native outputs";
+  }
+  function scoreOutputs(draft = memory().draft) {
+    const available = runs();
+    const baseline = available.find(run => run.id === draft.baseline_run_id);
+    let models = runModels(baseline);
+    if (["scenario_reduction", "disturbance_increase"].includes(draft.score_basis)) {
+      const alternative = available.find(run => run.id === draft.score_alternative);
+      const comparison = new Set(runModels(alternative));
+      models = models.filter(model => comparison.has(model));
+    }
+    return new Set(POLLUTANTS.filter(([name]) =>
+      models.includes(name === "sediment_export" ? "sdr" : "ndr")).map(([name]) => name));
+  }
   function entry(raw) {
     return sources().find(item => sourceKey(item) === raw);
   }
@@ -140,6 +174,11 @@ export function attachConservation({
       (ref.layer ? " · layer " + h(ref.layer) : "") +
       ((ref.reference || item?.uri) ? " · " + link(ref.reference || item.uri, "Source reference") : "");
   }
+  function waterContextMeaning(study = memory().study) {
+    const reference = study?.spec?.contexts?.drinking_water;
+    return reference ? reference.meaning || reference.relation || "Retained water-context geography" :
+      "No water-context layer selected";
+  }
   function notify(message, kind = "status") {
     memory().notice = { message, kind };
     paint();
@@ -155,8 +194,11 @@ export function attachConservation({
     const tasks = Array.isArray(source) ? source : Array.isArray(source?.tasks) ? source.tasks :
       Array.isArray(source?.items) ? source.items : source && typeof source === "object" ?
         Object.values(source).filter(item => item && typeof item === "object" && item.action) : [];
-    return tasks.filter(task => String(task.action || "").startsWith("conservation."))
-      .map(task => [task.id, task.state || task.status].join(":"))
+    const experimentActions = new Set(["experiment.save", "experiment.run", "experiment.summarize"]);
+    return tasks.filter(task => String(task.action || "").startsWith("conservation.") ||
+      experimentActions.has(task.action))
+      .map(task => JSON.stringify([task.id, task.state || task.status,
+        task.updated_at || null, task.progress || null]))
       .sort().join("|");
   }
   async function refreshOverview(force = false) {
@@ -214,7 +256,7 @@ export function attachConservation({
     ui.page = Math.min(Math.max(1, ui.page), Math.max(1, Math.ceil(rows.length / ui.pageSize)));
     return rows.slice((ui.page - 1) * ui.pageSize, ui.page * ui.pageSize);
   }
-  function buildSpec() {
+  function buildSpec({ forCriteria = false } = {}) {
     const d = memory().draft;
     if (d.advanced_use) {
       let spec;
@@ -224,13 +266,29 @@ export function attachConservation({
       if (!spec || Array.isArray(spec) || typeof spec !== "object") {
         throw new Error("The advanced study specification must be one JSON object.");
       }
-      return spec;
+      return forCriteria ? { ...spec, score: { basis: "context", context_weights: {} } } : spec;
     }
     if (!d.title.trim()) throw new Error("Give the study a title.");
     const parcels = sourceRef(d.parcel_source, d.parcel_layer, "planning-unit");
     if (d.id_field.trim()) parcels.id_field = d.id_field.trim();
     if (d.label_field.trim()) parcels.label_field = d.label_field.trim();
-    if (d.parcel_where.trim()) parcels.where = d.parcel_where.trim();
+    if (d.parcel_where.trim()) {
+      let where;
+      try { where = JSON.parse(d.parcel_where); } catch (error) {
+        throw new Error("The exact unit selection must be valid JSON: " + error.message);
+      }
+      if (!where || Array.isArray(where) || typeof where !== "object") {
+        throw new Error("The exact unit selection must map native field names to typed values.");
+      }
+      for (const [field, value] of Object.entries(where)) {
+        if (!field.trim() || (value !== null && !["string", "number", "boolean"].includes(typeof value)) ||
+          (typeof value === "number" && (!Number.isFinite(value) ||
+            (Number.isInteger(value) && !Number.isSafeInteger(value))))) {
+          throw new Error("Each selected field needs its original name and a text, finite number, boolean or null value. Keep identifiers as quoted text.");
+        }
+      }
+      if (Object.keys(where).length) parcels.where = where;
+    }
     const spec = {
       title: d.title.trim(), mode: d.mode, purpose: d.purpose,
       unit_type: d.unit_type, planning_unit_label: d.planning_unit_label.trim() || "Planning unit",
@@ -238,7 +296,7 @@ export function attachConservation({
       rules: {
         minimum_coverage_fraction: numeric(d.minimum_coverage, "Minimum model coverage", { max: 100 }) / 100,
         maximum_protected_fraction: numeric(d.maximum_protected, "Maximum protected share", { max: 100 }) / 100,
-        minimum_source_water_fraction: numeric(d.minimum_water, "Minimum source-water share", { max: 100 }) / 100,
+        minimum_source_water_fraction: numeric(d.minimum_water, "Minimum water-context share", { max: 100 }) / 100,
         require_high_quality_context: !!d.require_quality,
         minimum_area_ha: numeric(d.minimum_area, "Minimum unit area"),
         excluded_ids: d.excluded_ids.split(/[\n,]+/).map(value => value.trim()).filter(Boolean),
@@ -247,6 +305,56 @@ export function attachConservation({
     if (d.mode === "source_context") {
       spec.reporting_area = sourceRef(d.reporting_source, d.reporting_layer, "reporting-area");
       spec.analysis_crs = d.analysis_crs.trim() || "EPSG:5070";
+    } else {
+      if (!d.baseline_run_id) throw new Error("Choose a completed baseline model run.");
+      if (!runs().some(run => run.id === d.baseline_run_id)) {
+        throw new Error("Choose a completed baseline from this workspace.");
+      }
+      spec.baseline_run_id = d.baseline_run_id;
+      spec.alternative_run_ids = [...new Set(d.alternative_run_ids)]
+        .filter(id => id !== d.baseline_run_id);
+    }
+    if (forCriteria) {
+      spec.score = { basis: "context", context_weights: {} };
+    } else if (d.score_basis === "published_method") {
+      const method = publishedMethod(), category = methodCategory(d.method_category);
+      if (!method.id || !category) throw new Error("Choose a published practice category.");
+      if (d.unit_type !== "parcel") {
+        throw new Error("Published practice scores require parcel geometry and Parcel as the source unit type.");
+      }
+      if (d.purpose !== "screening" && d.purpose !== category.purpose) {
+        throw new Error(category.title + " uses the " + category.purpose + " planning purpose.");
+      }
+      const idColumn = d.method_id_column.trim();
+      if (!idColumn) throw new Error("Record the parcel ID column in the criterion table.");
+      spec.score = {
+        basis: "published_method", scale: "total", method_id: method.id, category_id: category.id,
+        metrics: { ...sourceRef(d.method_source, "", "parcel-criterion table"),
+          format: d.method_format, id_column: idColumn },
+        bindings: {}, headwater_orders: category.id === "land_protection" && d.method_headwaters === "appendix_d" ? [1] : [1, 2],
+        interpretation: d.method_interpretation.trim() ||
+          "Published Lake Keowee practice points using the retained parcel criterion table.",
+      };
+      if (category.id === "land_protection" && d.method_headwaters === "appendix_d") {
+        const field = d.method_order_field.trim();
+        if (!field) throw new Error("Record the original stream-order column for the first-order variant.");
+        spec.score.bindings.headwater_stream = {
+          kind: "stream_order", input: "table", field,
+          reference: "Lake Keowee 2020 Appendix D protection: first-order streams; recomputed from retained stream orders.",
+        };
+      }
+      if (d.method_native_classes && d.mode === "native_model" && exportCategory(category.id)) {
+        if (!allNativeClasses(d)) throw new Error("Current export classes need a baseline containing nitrogen, phosphorus and sediment.");
+        for (const [pollutant] of POLLUTANTS) {
+          spec.score.bindings[pollutant.replace("_export", "_export_priority")] = {
+            kind: "native_export", pollutant, statistic: "parcel_mean_cell_mass",
+            band_method: "current_tertiles",
+            reference: "Current-study parcel-mean classification; Lake Keowee 2020 Appendix D p143 point weights.",
+          };
+        }
+        spec.score.interpretation += " Native export classes use current-study tertiles as an adaptation of the published point method.";
+      }
+    } else if (d.mode === "source_context") {
       const weights = {};
       for (const [field, name] of [
         ["context_water_weight", "source_water_fraction"],
@@ -258,21 +366,18 @@ export function attachConservation({
       }
       spec.score = { basis: "context", context_weights: weights };
     } else {
-      if (!d.baseline_run_id) throw new Error("Choose a completed baseline model run.");
-      spec.baseline_run_id = d.baseline_run_id;
-      spec.alternative_run_ids = [...new Set(d.alternative_run_ids)]
-        .filter(id => id !== d.baseline_run_id);
       spec.score = {
         basis: d.score_basis === "context" ? "current_export" : d.score_basis,
         scale: d.score_scale,
-        weights: {
-          nitrogen_export: numeric(d.weight_n, "Nitrogen weight"),
-          phosphorus_export: numeric(d.weight_p, "Phosphorus weight"),
-          sediment_export: numeric(d.weight_s, "Sediment weight"),
-        },
+        weights: Object.fromEntries([
+          ["nitrogen_export", "weight_n", "Nitrogen"],
+          ["phosphorus_export", "weight_p", "Phosphorus"],
+          ["sediment_export", "weight_s", "Sediment"],
+        ].map(([name, field, title]) => [name,
+          scoreOutputs(d).has(name) ? numeric(d[field], title + " weight") : 0])),
       };
       if (!Object.values(spec.score.weights).some(value => value > 0)) {
-        throw new Error("At least one pollutant weight must be greater than zero.");
+        throw new Error("Choose completed runs with a shared selected pollutant and give at least one available pollutant a positive weight.");
       }
       if (spec.score.basis !== "current_export") {
         if (!d.score_alternative) throw new Error("Choose the alternative that defines the scoring change.");
@@ -296,10 +401,10 @@ export function attachConservation({
       }
       spec.contexts[name] = ref;
     }
-    if (spec.mode === "source_context") {
+    if (spec.mode === "source_context" && spec.score.basis === "context") {
       const axes = spec.score.context_weights;
       if (axes.source_water_fraction && !spec.contexts.drinking_water) {
-        throw new Error("Source-water ranking needs a retained source-water context layer.");
+        throw new Error("Water-context ranking needs a retained water-context layer.");
       }
       if (axes.unprotected_fraction && !spec.contexts.protected_lands) {
         throw new Error("Unprotected-share ranking needs a retained protected-lands layer.");
@@ -320,6 +425,61 @@ export function attachConservation({
       };
     }
     return spec;
+  }
+  function draftFromStudy(spec, previous = freshStudy()) {
+    if (!spec || typeof spec !== "object" || !spec.parcels) {
+      throw new Error("The prepared criterion table needs its original retained parcel study.");
+    }
+    const d = freshStudy(), refKey = ref => ref?.source_collection_id && ref?.source_id ? sourceKey(ref) : "";
+    for (const name of ["title", "mode", "purpose", "unit_type", "planning_unit_label", "analysis_crs"]) {
+      if (spec[name] !== undefined) d[name] = String(spec[name]);
+    }
+    d.parcel_source = refKey(spec.parcels); d.parcel_layer = spec.parcels.layer || "";
+    d.id_field = spec.parcels.id_field || ""; d.label_field = spec.parcels.label_field || "";
+    d.parcel_where = spec.parcels.where ? JSON.stringify(spec.parcels.where, null, 2) : "";
+    d.reporting_source = refKey(spec.reporting_area); d.reporting_layer = spec.reporting_area?.layer || "";
+    d.baseline_run_id = spec.baseline_run_id || "";
+    d.alternative_run_ids = [...(spec.alternative_run_ids || [])];
+    const rules = spec.rules || {};
+    for (const [field, name] of [["minimum_coverage", "minimum_coverage_fraction"],
+      ["maximum_protected", "maximum_protected_fraction"], ["minimum_water", "minimum_source_water_fraction"]]) {
+      if (finite(rules[name])) d[field] = String(rules[name] * 100);
+    }
+    if (finite(rules.minimum_area_ha)) d.minimum_area = String(rules.minimum_area_ha);
+    d.require_quality = !!rules.require_high_quality_context;
+    d.excluded_ids = (rules.excluded_ids || []).join("\n");
+    for (const [prefix, role] of [["protected", "protected_lands"], ["water", "drinking_water"],
+      ["quality", "high_quality_waters"]]) {
+      const ref = spec.contexts?.[role]; if (!ref) continue;
+      d[prefix + "_source"] = refKey(ref); d[prefix + "_layer"] = ref.layer || "";
+      d[prefix + "_reference"] = ref.reference || ""; d[prefix + "_meaning"] = ref.meaning || "";
+      d[prefix + "_relation"] = ref.relation || d[prefix + "_relation"];
+      if (prefix === "quality" && finite(ref.buffer_m)) d.quality_buffer = String(ref.buffer_m);
+    }
+    if (spec.costs) {
+      d.cost_source = refKey(spec.costs);
+      for (const [field, key] of [["cost_id_column", "id_column"], ["cost_value_column", "value_column"],
+        ["currency", "currency"], ["cost_reference", "reference"]]) d[field] = spec.costs[key] || "";
+    }
+    for (const name of Object.keys(d).filter(key => key.startsWith("method_"))) {
+      if (previous[name] !== undefined) d[name] = previous[name];
+    }
+    d.score_basis = "published_method";
+    if (!allNativeClasses(d)) d.method_native_classes = false;
+    const category = methodCategory(d.method_category);
+    if (category && d.purpose !== "screening" && d.purpose !== category.purpose) {
+      d.method_category = publishedCategories().find(row => row.purpose === d.purpose)?.id || d.method_category;
+    }
+    return d;
+  }
+
+  function buildCriteriaSpec() {
+    const study = buildSpec({ forCriteria: true });
+    if (study.unit_type !== "parcel") {
+      throw new Error("Choose the original parcel geometry and Parcel as the source unit type.");
+    }
+    return { schema: "upstate.parcel-criteria-selection/v1",
+      title: study.title + " — parcel criteria", study };
   }
   function buildPlanSpec() {
     const ui = memory(), p = ui.portfolio;
@@ -364,7 +524,8 @@ export function attachConservation({
       }
       const present = new Set(candidates().map(candidate => String(candidate.id)));
       ui.selectedIds = new Set([...ui.selectedIds].filter(item => present.has(item)));
-      if (result.mode === "source_context" && ui.portfolio.objective === "score") {
+      if (result.mode === "source_context" && ui.portfolio.objective === "score" &&
+        !candidates().some(row => finite(row.score))) {
         ui.portfolio.objective = "area";
       }
       ui.detailId = null;
@@ -427,11 +588,109 @@ export function attachConservation({
       (prefix === "quality" ? input("quality_buffer", "Declared context buffer (metres)",
         d.quality_buffer, 'type="number" min="0" step="any"') : "") + "</div></details>";
   }
+  function publishedMethodFields(d) {
+    const method = publishedMethod(), category = methodCategory(d.method_category);
+    const categories = publishedCategories();
+    if (!categories.length) return '<p class="cons-help">Loading the published practice definitions.</p>';
+    const ranges = category?.priority || [];
+    return '<div class="cons-actions">' + button("prepare-criteria", "Build criteria from imported layers", "", memory().busy) +
+      '</div><p class="cons-help">Prepare the parcel criterion table from the selected geometry and the imported source layers. Use its completed task to attach the table here.</p><div class="cons-grid">' +
+      select("method_category", "Published practice category", d.method_category,
+        categories.map(item => [item.id, item.title + " · " + item.maximum + " points"])) +
+      sourceSelect("method_source", "Retained parcel criterion table", d.method_source) +
+      select("method_format", "Criterion table format", d.method_format, [["json", "JSON"], ["csv", "CSV"]]) +
+      input("method_id_column", "Parcel ID column", d.method_id_column) +
+      (d.method_category === "land_protection" ?
+        select("method_headwaters", "Headwater criterion", d.method_headwaters, [
+          ["table31", "Stream orders 1 and 2 · Table 31"],
+          ["appendix_d", "Stream order 1 · Appendix D wording"],
+        ]) + (d.method_headwaters === "appendix_d" ?
+          input("method_order_field", "Original stream-order column", d.method_order_field) : "") : "") +
+      "</div><p class=\"cons-help\">" + h(category?.title || "") +
+      (category ? " uses the " + h(category.purpose) + " purpose and a maximum of " + number(category.maximum) + " points." : "") +
+      " Select actual parcel geometry for these criteria.</p>" +
+      (ranges.length ? '<p class="cons-help">Published classes: ' +
+        ranges.map(range => h(human(range.label)) + " " + number(range.min) + "–" + number(range.max)).join(" · ") + ".</p>" : "") +
+      (d.mode === "native_model" && exportCategory(d.method_category) && allNativeClasses(d) ?
+        check("method_native_classes", "Use current model export classes", d.method_native_classes) +
+        '<p class="cons-help">This option groups the current study’s positive parcel-mean nitrogen, phosphorus and sediment exports into tertiles. ' +
+        "The saved cutoffs document this adaptation of the published point method.</p>" :
+        d.mode === "native_model" && exportCategory(d.method_category) ?
+          '<p class="cons-help">The retained criterion table supplies the published export classes. Choose a baseline containing NDR and SDR to derive all three classes from current model quantities.</p>' : "") +
+      '<label class="cons-field"><span>Study interpretation</span><textarea data-field="method_interpretation" rows="3" ' +
+      'placeholder="Record the source edition and any study-specific interpretation.">' +
+      h(d.method_interpretation) + "</textarea></label>" +
+      '<details class="cons-disclosure"><summary>Criteria and published source</summary>' +
+      '<p>' + h(method.title || "Lake Keowee practice points") + " · " +
+      link(method.source_uri || method.reference, "Published method") + "</p>" +
+      '<p class="cons-help">The table joins these criterion names to each parcel’s stable source ID. Criterion values and references travel with the saved study.</p>' +
+      '<ul class="cons-criterion-list">' + (category?.required_metrics || []).map(name =>
+        "<li><code>" + h(name) + "</code></li>").join("") + "</ul></details>";
+  }
+  function pointScore(candidate) {
+    const isPoints = memory().study?.spec?.score?.basis === "published_method";
+    if (!isPoints) return number(candidate.score);
+    return number(candidate.score) + " points" +
+      (candidate.point_priority ? '<span class="cons-metric-note">' + h(human(candidate.point_priority)) + " priority</span>" : "");
+  }
+  function criterionReference(reference) {
+    if (!reference) return "Reference not recorded";
+    if (typeof reference === "string") return link(reference);
+    const label = [
+      reference.table ? "Table " + reference.table : "",
+      reference.printed_page ? "printed page " + reference.printed_page : "",
+      reference.edition ? String(reference.edition) : "",
+    ].filter(Boolean).join(" · ") || "Original method reference";
+    return reference.source_uri ? link(reference.source_uri, label) : h(label);
+  }
+  function pointCriteria(candidate) {
+    if (!candidate.point_score) return "";
+    const score = candidate.point_score;
+    const valueText = value => value === null || value === undefined ? "Unresolved" :
+      typeof value === "boolean" ? value ? "Yes" : "No" :
+        typeof value === "object" ? JSON.stringify(value) : String(value);
+    const rows = (items, term = false) => items.map(item => {
+      const group = Array.isArray(item.terms) && item.terms.length;
+      const points = finite(item.points) ? number(item.points) :
+        number(item.known_points) + "–" + number(item.possible_points);
+      return '<tr' + (term ? ' class="cons-criterion-term"' : "") + '><th scope="row">' +
+        h(human(item.id || item.metric)) + (group ? '<span class="cons-metric-note">Combined criterion</span>' : "") +
+        "</th><td>" + (group ? "See contributing terms" : h(valueText(item.value))) +
+        "</td><td>" + points + (finite(item.points) ? "" : '<span class="cons-metric-note">Known–possible points</span>') +
+        "</td><td>" + criterionReference(item.reference) + "</td></tr>" +
+        (group ? rows(item.terms, true) : "");
+    }).join("");
+    const components = Object.values(candidate.score_components || {}).filter(row =>
+      row && typeof row === "object" && row.id);
+    return '<details class="cons-disclosure"><summary>Published point criteria</summary>' +
+      '<dl class="cons-definitions"><dt>Published practice score</dt><dd>' +
+      (finite(score.points) ? number(score.points) + " points" : "Awaiting a complete score and satisfied practice prerequisite") +
+      "</dd><dt>Practice prerequisite</dt><dd>" +
+      (score.prerequisite === true ? "Satisfied" : score.prerequisite === false ? "Absent in the selected source criteria" : "Unresolved") +
+      "</dd><dt>Known–possible contribution</dt><dd>" + number(score.known_points) + "–" +
+      number(score.possible_points) + " points</dd><dt>Category maximum</dt><dd>" +
+      number(score.maximum) + " points</dd></dl>" +
+      (components.length ? '<div class="cons-table-wrap"><table class="cons-table"><thead><tr>' +
+        '<th scope="col">Criterion</th><th scope="col">Retained value</th><th scope="col">Points</th>' +
+        '<th scope="col">Published reference</th></tr></thead><tbody>' + rows(components) +
+        '</tbody></table></div>' : "") +
+      '<details><summary>Complete retained input values</summary><div class="cons-table-wrap">' +
+      '<table class="cons-table"><thead><tr><th scope="col">Input</th><th scope="col">Value</th></tr></thead><tbody>' +
+      Object.entries(score.metric_values || {}).map(([name, value]) =>
+        "<tr><th scope=\"row\">" + h(human(name)) + "</th><td>" + h(valueText(value)) + "</td></tr>").join("") +
+      '</tbody></table></div></details><details><summary>Criterion source references</summary><pre>' +
+      h(JSON.stringify(score.metric_sources || {}, null, 2)) + "</pre></details></details>";
+  }
   function studyForm() {
     const ui = memory(), d = ui.draft, native = d.mode === "native_model";
-    const availableRuns = runs();
+    const availableRuns = runs(), activeOutputs = scoreOutputs(d);
+    const weightControl = (field, name, title) => input(field,
+      title + " weight" + (activeOutputs.has(name) ? "" : " (unavailable for this selection)"),
+      activeOutputs.has(name) ? d[field] : "0",
+      'type="number" min="0" step="any" aria-describedby="conservation-score-outputs"' +
+      (activeOutputs.has(name) ? "" : " disabled"));
     const runItems = [["", "Choose a completed run"], ...availableRuns.map(run =>
-      [run.id, (run.title || run.selection?.title || run.id) + " · " + run.id])];
+      [run.id, (run.title || run.selection?.title || run.id) + " · " + runQuantityLabel(run) + " · " + run.id])];
     const alternatives = availableRuns.filter(run => run.id !== d.baseline_run_id);
     return '<form class="cons-editor" data-cons-form="study"><div class="cons-section-title">' +
       "<h2>New conservation study</h2>" + button("close-form", "Close") + "</div>" +
@@ -451,8 +710,11 @@ export function attachConservation({
       input("parcel_layer", "Layer, when the source has several", d.parcel_layer) +
       input("id_field", "Stable unit ID field (blank uses source handling)", d.id_field) +
       input("label_field", "Unit name field, if available", d.label_field) +
-      input("parcel_where", "Source selection condition, if needed", d.parcel_where) +
-      "</div></fieldset>" +
+      input("parcel_where", "Exact native field selection (JSON, optional)", d.parcel_where,
+        'aria-describedby="conservation-where-help" placeholder="{&quot;HUC12&quot;:&quot;030601010703&quot;}"') +
+      '</div><p class="cons-help" id="conservation-where-help">Use original field names and exact values, ' +
+      'for example <code>{&quot;HUC12&quot;:&quot;030601010703&quot;}</code>. ' +
+      'Keep identifiers in quotes so their leading zeroes remain intact. Leave empty to use every source feature.</p></fieldset>' +
       (native ? '<fieldset><legend>Native model runs</legend><div class="cons-grid">' +
         select("baseline_run_id", "Baseline run", d.baseline_run_id, runItems) +
         '</div><p class="cons-help">Use the retained baseline and explicit alternatives from the same study domain.</p>' +
@@ -460,7 +722,7 @@ export function attachConservation({
         (alternatives.length ? alternatives.map(run =>
           '<label class="cons-check"><input type="checkbox" data-alt-id="' + h(run.id) + '"' +
           (d.alternative_run_ids.includes(run.id) ? " checked" : "") + "> <span>" +
-          h(run.title || run.selection?.title || run.id) + " · " + h(run.id) + "</span></label>").join("") :
+          h(run.title || run.selection?.title || run.id) + " · " + h(runQuantityLabel(run)) + " · " + h(run.id) + "</span></label>").join("") :
           "<p>No additional completed runs are available.</p>") + "</div></fieldset>" :
         '<fieldset><legend>Reporting area</legend><p class="cons-help">Area and overlap calculations use ' +
         "these retained boundaries. A reporting watershed becomes drinking-water context only when it has that documented role.</p>" +
@@ -471,37 +733,47 @@ export function attachConservation({
       "<fieldset><legend>Source-based context</legend>" +
       contextFields("protected", "Protected lands",
         "Retain the source designation and edition. Protection overlap is an optional criterion; the default leaves all protection shares eligible.") +
-      contextFields("water", "Drinking-water and source-water geography",
-        "Select actual source-water or intake-related geography and describe its relationship to the planning units.") +
+      contextFields("water", "Water-context geography",
+        "Choose retained geography and record whether it represents source-water areas, intake-related geography or utility-focus watersheds. Describe its actual relationship to the planning units.") +
       contextFields("quality", "High-quality waters",
         "Use the retained outstanding-resource, trout or other relevant source designation. Record the source meaning and any explicit spatial buffer.") +
       "</fieldset><fieldset><legend>Eligibility</legend><div class=\"cons-grid\">" +
       input("minimum_area", "Minimum reporting-area footprint (ha)", d.minimum_area, 'type="number" min="0" step="any"') +
       input("maximum_protected", "Maximum protected share (%)", d.maximum_protected, 'type="number" min="0" max="100" step="any"') +
-      input("minimum_water", "Minimum source-water share (%)", d.minimum_water, 'type="number" min="0" max="100" step="any"') +
+      input("minimum_water", "Minimum mapped water-context share (%)", d.minimum_water, 'type="number" min="0" max="100" step="any"') +
       input("minimum_coverage", "Minimum native model coverage (%)", d.minimum_coverage, 'type="number" min="0" max="100" step="any"') +
       '</div><p class="cons-help">Model coverage applies when a native run is bound. Missing required context stays visible in the eligibility reasons.</p>' +
       check("require_quality", "Require the retained high-quality-water context", d.require_quality) +
       '<label class="cons-field">Exclude specific unit IDs<textarea data-field="excluded_ids" rows="2" ' +
       'placeholder="One ID per line or comma-separated">' + h(d.excluded_ids) + "</textarea></label></fieldset>" +
-      '<fieldset><legend>Priority settings</legend>' +
-      (native ? '<div class="cons-grid">' +
-        select("score_basis", "What the priority represents", d.score_basis, [
+      '<fieldset><legend>Priority settings</legend><div class="cons-grid">' +
+      select("score_basis", "What the priority represents", d.score_basis,
+        (native ? [
           ["current_export", "Current modeled annual export"],
           ["scenario_reduction", "Reduction under a selected alternative"],
-          ["disturbance_increase", "Increase under a disturbance alternative"]]) +
+          ["disturbance_increase", "Increase under a disturbance alternative"],
+        ] : [["context", "Source geometry and context weights"]]).concat([
+          ["published_method", "Published practice points"],
+        ])) + "</div>" +
+      (d.score_basis === "published_method" ? publishedMethodFields(d) :
+        native ? '<div class="cons-grid">' +
         select("score_scale", "Quantity scale", d.score_scale, [
           ["total", "Total annual quantity"], ["per_hectare", "Annual quantity per reporting hectare"]]) +
         (d.score_basis !== "current_export" ? select("score_alternative", "Scoring alternative",
           d.score_alternative, [["", "Choose the scoring alternative"], ...alternatives.map(run =>
-            [run.id, (run.title || run.id) + " · " + run.id])]) : "") +
-        input("weight_n", "Nitrogen weight", d.weight_n, 'type="number" min="0" step="any"') +
-        input("weight_p", "Phosphorus weight", d.weight_p, 'type="number" min="0" step="any"') +
-        input("weight_s", "Sediment weight", d.weight_s, 'type="number" min="0" step="any"') +
-        '</div><p class="cons-help">Protection can use the increase under an explicit disturbance scenario. ' +
+            [run.id, (run.title || run.id) + " · " + runQuantityLabel(run) + " · " + run.id])]) : "") +
+        weightControl("weight_n", "nitrogen_export", "Nitrogen") +
+        weightControl("weight_p", "phosphorus_export", "Phosphorus") +
+        weightControl("weight_s", "sediment_export", "Sediment") +
+        '</div><p class="cons-help" id="conservation-score-outputs">Scoring uses ' +
+        (activeOutputs.size ? POLLUTANTS.filter(([name]) => activeOutputs.has(name)).map(([, title]) => h(title)).join(", ") :
+          "the pollutants shared by your selected completed baseline and scoring alternative") +
+        '. Unavailable pollutant weights are zero. Their physical quantities retain their recorded availability. ' +
+        'Your entered weights return when their native outputs are selected again.</p>' +
+        '<p class="cons-help">Protection can use the increase under an explicit disturbance scenario. ' +
         "Restoration can use current export or a reduction scenario. The saved priority score retains its component weights; annual pollutant quantities remain separate.</p>" :
         '<div class="cons-grid">' +
-        input("context_water_weight", "Source-water share weight", d.context_water_weight, 'type="number" min="0" step="any"') +
+        input("context_water_weight", "Mapped water-context share weight", d.context_water_weight, 'type="number" min="0" step="any"') +
         input("context_unprotected_weight", "Unprotected share weight", d.context_unprotected_weight, 'type="number" min="0" step="any"') +
         input("context_quality_weight", "High-quality-water context weight", d.context_quality_weight, 'type="number" min="0" step="any"') +
         '</div><p class="cons-help">Each active weight requires its corresponding retained source layer. ' +
@@ -550,11 +822,14 @@ export function attachConservation({
       '<div class="cons-actions">' + button("save-plan", "Create saved portfolio", "", ui.busy) + "</div></form>";
   }
   function metricCell(metric, alternativeId = "", compact = true) {
-    if (!metric || metric.availability === "unbound") {
+    if (!metric) return '<span class="cons-muted">Native quantity unavailable</span>';
+    if (metric.availability === "unbound") {
       return '<span class="cons-muted">Native run unbound</span>';
     }
     const quantity = finite(metric.baseline) ? number(metric.baseline) + " " + h(metric.unit || "") :
-      '<span class="cons-muted">No data</span>';
+      '<span class="cons-muted">' + h(metric.reason || metric.availability_reason ||
+        (metric.availability && metric.availability !== "modeled" ?
+          human(metric.availability) : "No data")) + '</span>';
     const coverage = finite(metric.coverage_fraction) ? percent(metric.coverage_fraction) + " coverage" :
       "Coverage unavailable";
     const alternative = metric.alternatives?.[alternativeId];
@@ -566,6 +841,10 @@ export function attachConservation({
       (finite(alternative.coverage_fraction) ? percent(alternative.coverage_fraction) : "unavailable") +
       " · shared support " + (finite(alternative.common_coverage_fraction) ?
         percent(alternative.common_coverage_fraction) : "unavailable") + "</span>" +
+      (alternative.reason || alternative.availability_reason ? '<span class="cons-metric-note">' +
+        h(alternative.reason || alternative.availability_reason) + "</span>" : "") +
+      (alternative.comparison_availability_reason ? '<span class="cons-metric-note">' +
+        h(alternative.comparison_availability_reason) + "</span>" : "") +
       (alternative.profile_changed ? '<span class="cons-metric-note">Model profile differs from baseline</span>' : "") : "";
     return '<span class="cons-quantity">' + quantity + '</span><span class="cons-metric-note">' +
       h(coverage) + "</span>" + change;
@@ -584,6 +863,10 @@ export function attachConservation({
             "Alternative support " + (finite(value.coverage_fraction) ? percent(value.coverage_fraction) : "unavailable") +
             " · shared support " + (finite(value.common_coverage_fraction) ?
               percent(value.common_coverage_fraction) : "unavailable") + "</span>" +
+            (value.reason || value.availability_reason ? '<span class="cons-metric-note">' +
+              h(value.reason || value.availability_reason) + "</span>" : "") +
+            (value.comparison_availability_reason ? '<span class="cons-metric-note">' +
+              h(value.comparison_availability_reason) + "</span>" : "") +
             (value.profile_changed ? '<span class="cons-metric-note">Model profile differs from baseline</span>' : "") + "</td>";
         }).join("") + "</tr>";
     }).join("");
@@ -603,10 +886,14 @@ export function attachConservation({
       ((spec.alternative_run_ids || []).length ? "<dt>Alternative runs</dt><dd>" +
         spec.alternative_run_ids.map(h).join(", ") + "</dd>" : "") +
       Object.entries(spec.contexts || {}).map(([name, ref]) =>
-        "<dt>" + h(human(name)) + "</dt><dd>" + lineForSource(ref) +
+        "<dt>" + h(name === "drinking_water" ? "Water-context geography" : human(name)) + "</dt><dd>" + lineForSource(ref) +
         (ref.meaning ? "<br>" + h(ref.meaning) : "") +
         (ref.relation ? "<br>" + h(ref.relation) : "") +
         (finite(ref.buffer_m) ? "<br>Declared buffer: " + number(ref.buffer_m) + " m" : "") + "</dd>").join("") +
+      (spec.score?.basis === "published_method" ? "<dt>Published practice</dt><dd>" +
+        h(human(spec.score.category_id)) + " · " + h(spec.score.method_id) + "</dd>" +
+        (spec.score.metrics ? "<dt>Parcel criteria</dt><dd>" + lineForSource(spec.score.metrics) + "</dd>" : "") +
+        "<dt>Study interpretation</dt><dd>" + h(spec.score.interpretation || "") + "</dd>" : "") +
       (spec.costs ? "<dt>Cost table</dt><dd>" + lineForSource(spec.costs) + " · " + h(spec.costs.currency) + "</dd>" : "") +
       "</dl><details><summary>Complete retained specification</summary><pre>" +
       h(JSON.stringify(spec, null, 2)) + "</pre></details></details>";
@@ -619,15 +906,17 @@ export function attachConservation({
       "</dd><dt>Full unit area</dt><dd>" + number(candidate.area_ha) + " ha</dd>" +
       "<dt>Within reporting area</dt><dd>" + number(candidate.reporting_area_ha) + " ha</dd>" +
       "<dt>Protected share</dt><dd>" + h(percent(candidate.protected_fraction)) + "</dd>" +
-      "<dt>Source-water share</dt><dd>" + h(percent(candidate.source_water_fraction)) + "</dd>" +
+      "<dt>Mapped water-context share</dt><dd>" + h(percent(candidate.source_water_fraction)) +
+      '<span class="cons-metric-note">' + h(waterContextMeaning()) + "</span></dd>" +
       "<dt>High-quality-water context</dt><dd>" +
       (candidate.high_quality_context === null || candidate.high_quality_context === undefined ? "Unmapped" :
         candidate.high_quality_context ? "Present" : "Absent in selected context") +
       "</dd><dt>Recorded cost</dt><dd>" + (finite(candidate.cost) ? number(candidate.cost) + " " +
         h(candidate.currency || "") : "No matching cost") + "</dd>" +
+      "<dt>Priority</dt><dd>" + pointScore(candidate) + "</dd>" +
       "<dt>Eligibility</dt><dd>" + (candidate.eligible ? "Eligible" :
         (candidate.exclusion_reasons || []).map(reason => h(human(reason))).join("; ") || "Excluded") +
-      "</dd></dl>" + metricTable(candidate.pollutants, ui.study?.spec?.alternative_run_ids || []) +
+      "</dd></dl>" + pointCriteria(candidate) + metricTable(candidate.pollutants, ui.study?.spec?.alternative_run_ids || []) +
       '<details><summary>Priority components</summary><pre>' +
       h(JSON.stringify(candidate.score_components || {}, null, 2)) + "</pre></details>" +
       '<details><summary>Original source attributes</summary><div class="cons-table-wrap"><table class="cons-table"><tbody>' +
@@ -648,7 +937,7 @@ export function attachConservation({
         '<th scope="row">' + button("candidate", candidate.label || id, 'data-candidate="' + h(id) +
           '" class="cons-text-button"') +
         '<span class="cons-metric-note">' + h(id) + "</span></th>" +
-        "<td>" + number(candidate.reporting_area_ha) + "</td><td>" + number(candidate.score) + "</td>" +
+        "<td>" + number(candidate.reporting_area_ha) + "</td><td>" + pointScore(candidate) + "</td>" +
         POLLUTANTS.map(([name]) => "<td>" + metricCell(candidate.pollutants?.[name],
           ui.displayAlternative || "") + "</td>").join("") +
         "<td>" + h(percent(candidate.protected_fraction)) + "</td><td>" +
@@ -682,7 +971,8 @@ export function attachConservation({
       h(ui.study?.spec?.planning_unit_label || "Planning unit") +
       '</caption><thead><tr><th scope="col">Select</th><th scope="col">Unit</th><th scope="col">Area (ha)</th>' +
       '<th scope="col">Score</th>' + POLLUTANTS.map(([, title]) => '<th scope="col">' + h(title) + "</th>").join("") +
-      '<th scope="col">Protected</th><th scope="col">Source water</th><th scope="col">High-quality context</th>' +
+      '<th scope="col">Protected</th><th scope="col">Water context<span class="cons-metric-note">' +
+      h(waterContextMeaning()) + '</span></th><th scope="col">High-quality context</th>' +
       '<th scope="col">Eligibility</th><th scope="col">Recorded cost</th></tr></thead><tbody>' +
       (body || '<tr><td colspan="12">No planning units match these filters.</td></tr>') +
       "</tbody></table></div><div class=\"cons-toolbar cons-pagination\">" +
@@ -707,8 +997,9 @@ export function attachConservation({
       "<div><span>Reporting overlap removed</span><strong>" + number(summary.overlap_area_ha) + " ha</strong></div>" +
       "<div><span>Recorded cost</span><strong>" + (finite(summary.cost_total) ?
         number(summary.cost_total) + " " + h(summary.currency || "") : "Unavailable") + "</strong></div></div>" +
-      '<dl class="cons-definitions"><dt>Source-water overlap</dt><dd>' + number(summary.source_water_area_ha) +
-      " ha</dd><dt>Protected overlap</dt><dd>" + number(summary.protected_area_ha) + " ha</dd>" +
+      '<dl class="cons-definitions"><dt>Mapped water-context overlap</dt><dd>' + number(summary.source_water_area_ha) +
+      ' ha<span class="cons-metric-note">' + h(waterContextMeaning(study)) +
+      "</span></dd><dt>Protected overlap</dt><dd>" + number(summary.protected_area_ha) + " ha</dd>" +
       "<dt>Selection method</dt><dd>" + h(human(plan.selection?.algorithm || plan.selection?.mode ||
         plan.algorithm || plan.mode || "Recorded selection")) + "</dd>" +
       "<dt>Area limit basis</dt><dd>" + (plan.selection?.limits?.area_basis === "reporting" ?
@@ -730,11 +1021,63 @@ export function attachConservation({
       button("edit-selection", "Use these units in a new portfolio",
         'data-plan-id="' + h(plan.id) + '"') + "</div></section>";
   }
+  function experimentButton(id, label = "Open paired experiment") {
+    return id ? '<button type="button" data-action="experiment-show" data-id="' + h(id) + '">' + h(label) + '</button>' : "";
+  }
+  function scenarioBridgesView(studyId = null) {
+    const ui = memory();
+    const bridges = (ui.overview?.scenario_bridges || []).filter(row => !studyId || row.study_id === studyId);
+    if (!bridges.length) return "";
+    return '<section class="cons-scenario-bridges"><h2>Saved conservation scenarios</h2>' +
+      '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Selected footprint</th>' +
+      '<th>Native models</th><th>Paired experiments</th><th>Open</th></tr></thead><tbody>' +
+      bridges.map(row => {
+        const experiments = row.experiments || [];
+        const models = row.models || row.prepare_run?.models || (row.prepare_run ? ["ndr", "sdr"] : []);
+        const actions = (row.scenario_id ? '<button type="button" data-action="item" data-kind="scenarios" data-id="' +
+          h(row.scenario_id) + '">Land-cover scenario</button>' : "") +
+          (row.run_id ? '<button type="button" data-action="item" data-kind="runs" data-id="' +
+            h(row.run_id) + '">Native run</button>' : "") +
+          (row.plan_id ? button("open-plan", "Source portfolio", 'data-plan-id="' + h(row.plan_id) + '"') : "") +
+          (row.state === "complete" ? button("new-experiment", experiments.length ? "Prepare another experiment" : "Prepare paired experiment",
+            'data-bridge-id="' + h(row.id) + '"', ui.busy) : "");
+        return '<tr><th scope="row">' + h(row.title || row.id) + '<span class="cons-metric-note">' +
+          h(row.id) + '</span></th><td>' + h(models.length ? models.map(model => model.toUpperCase()).join(" + ") :
+            "Choose a grid and profile from the portfolio") + '</td><td>' +
+          (experiments.length ? experiments.map(item => '<div class="cons-saved-experiment">' +
+            experimentButton(item.experiment_id, item.title || "Open paired experiment") +
+            '<span class="cons-metric-note">' + h(human(item.state || item.preparation_state || "prepared")) +
+            (finite(item.progress?.complete) ? " · " + number(item.progress.complete) + " completed cases" : "") +
+            '</span></div>').join("") : "No experiment prepared") +
+          '</td><td><div class="cons-actions">' + actions + '</div></td></tr>';
+      }).join("") + '</tbody></table></div></section>';
+  }
+
+  function criteriaOperationsView() {
+    const ui = memory(), operations = ui.overview?.criteria_operations || [];
+    if (!operations.length) return "";
+    return '<section class="cons-criteria-operations"><h2>Parcel criterion preparations</h2>' +
+      '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Original parcel study</th>' +
+      '<th>State</th><th>Parcels</th><th>Continue</th></tr></thead><tbody>' +
+      operations.map(row => {
+        const use = row.state === "complete" && row.source_collection_id && row.source_id;
+        const action = use ? button("use-criteria", "Use prepared criteria",
+          'data-source-collection="' + h(row.source_collection_id) + '" data-source-id="' + h(row.source_id) +
+          '" data-study-id="' + h(row.study_id) + '" data-table-format="json" data-id-column="id"', ui.busy) :
+          button("resume-criteria", "Resume preparation", 'data-operation-id="' + h(row.id) + '"', ui.busy);
+        return '<tr><th scope="row">' + h(row.title || row.id) + '<span class="cons-metric-note">' +
+          h(row.study_id || "") + '</span></th><td>' + h(human(row.state || "prepared")) +
+          '</td><td>' + (finite(row.progress?.completed) ? number(row.progress.completed) : "—") +
+          (finite(row.progress?.total) ? " / " + number(row.progress.total) : "") +
+          '</td><td>' + action + '</td></tr>';
+      }).join("") + '</tbody></table></div></section>';
+  }
+
   function overviewView() {
     const ui = memory(), overview = ui.overview || {};
     const studies = Array.isArray(overview.studies) ? overview.studies : [];
     const plans = Array.isArray(overview.plans) ? overview.plans : [];
-    return '<section class="cons-overview"><h2>Retained studies</h2>' +
+    return '<section class="cons-overview">' + criteriaOperationsView() + "<h2>Retained studies</h2>" +
       (studies.length ? '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Study</th>' +
         "<th>Mode</th><th>State</th><th>Open</th></tr></thead><tbody>" +
         studies.map(study => "<tr><th scope=\"row\">" + h(study.title || study.spec?.title || study.id) +
@@ -753,7 +1096,7 @@ export function attachConservation({
           h(plan.study_id || "") + "</td><td>" +
           button("open-plan", "Open", 'data-plan-id="' + h(plan.id) + '"', ui.busy) +
           "</td></tr>").join("") + "</tbody></table></div>" :
-        "<p>Saved portfolios will appear here with their original study and selection.</p>") + "</section>";
+        "<p>Saved portfolios will appear here with their original study and selection.</p>") + scenarioBridgesView() + "</section>";
   }
   function content() {
     const ui = memory(), study = ui.study;
@@ -768,6 +1111,7 @@ export function attachConservation({
         '" role="' + (ui.notice.kind === "error" ? "alert" : "status") + '">' +
         h(ui.notice.message) + "</div>" : "") +
       (ui.form === "study" ? studyForm() : "") +
+      (ui.form === "scenario" && ui.scenario?.conservation_scenario_id ? scenarioForm() : "") +
       (study ? '<section class="cons-study"><div class="cons-section-title"><div><h2>' +
         h(study.title || study.spec?.title || study.id) + '</h2><p class="cons-metric-note">' +
         h(study.id) + " · " + h(human(study.state || "")) + "</p></div><div class=\"cons-actions\">" +
@@ -784,54 +1128,195 @@ export function attachConservation({
           "</div>" : "") + studyLineage(study) +
         (ui.plan ? portfolioView(ui.plan) : "") +
         (ui.form === "portfolio" ? portfolioForm() : "") +
-        (ui.form === "scenario" ? scenarioForm() : "") +
+        (ui.form === "scenario" && !ui.scenario?.conservation_scenario_id ? scenarioForm() : "") +
         (selected ? candidateDetail(selected) : "") +
-        candidateTable() + "</section>" : overviewView());
+        candidateTable() + scenarioBridgesView(study.id) + "</section>" : overviewView());
   }
 
-  function scenarioForm() {
-    const ui = memory();
-    ui.scenario ||= { title: "", reason: "", from_codes: "", to_code: "",
-      prepare_run: false, grid_id: "", profile_id: "" };
+  function scenarioDraft(bridge = null) {
+    const ui = memory(), baseline = runs().find(run => run.id === ui.study?.spec?.baseline_run_id);
+    const prepared = bridge?.prepare_run || baseline?.selection || {};
+    const chosen = bridge?.models || prepared.models || (baseline ? runModels(baseline) : []);
+    return { for_plan_id: bridge?.plan_id || ui.plan?.id || null,
+      conservation_scenario_id: bridge?.id || "", title: bridge?.title || "",
+      reason: "", from_codes: "", to_code: "",
+      output: bridge || baseline ? "experiment" : "scenario",
+      grid_id: prepared.grid_id || "", profile_id: prepared.profile_id || "",
+      models: ["ndr", "sdr"].filter(model => chosen.includes(model)), models_explicit: false,
+      preferred_models: ["ndr", "sdr"].filter(model => chosen.includes(model)),
+      preferred_grid_id: prepared.grid_id || "", preferred_profile_id: prepared.profile_id || "",
+      baseline_run_id: "",
+      experiment_title: bridge?.title ? bridge.title + " — paired experiment" : "",
+      experiment_profile_ids: [], design: "one_at_a_time", axes_text: "" };
+  }
+  function scenarioNativeScope() {
+    const ui = memory(), data = { ...(ui.overview?.available || {}), ...(getState?.()?.data || {}) };
+    if (!ui.scenario || (!ui.scenario.conservation_scenario_id &&
+        (ui.scenario.for_plan_id || null) !== (ui.plan?.id || null))) ui.scenario = scenarioDraft();
     const d = ui.scenario;
-    const data = getState?.()?.data || ui.overview?.available || {};
-    const choices = (rows, noun) => [["", "Choose an existing " + noun], ...(rows || []).map(row =>
+    const grids = (data.grids || []).filter(row => row.state === "complete");
+    const profiles = data.profiles || [];
+    const grid = grids.find(row => row.id === d.grid_id);
+    const profile = profiles.find(row => row.id === d.profile_id);
+    const gridModels = grid ? runModels({ selection: grid.spec || {} }) : [];
+    const profileModels = new Set(profile ? runModels({ selection: profile }) : []);
+    const available = ["ndr", "sdr"].filter(model => gridModels.includes(model) && profileModels.has(model));
+    if (!d.models_explicit) {
+      const preferred = d.grid_id === d.preferred_grid_id && d.profile_id === d.preferred_profile_id &&
+        d.preferred_models.length ? d.preferred_models : available;
+      d.models = available.filter(model => preferred.includes(model));
+    } else d.models = available.filter(model => (d.models || []).includes(model));
+    return { draft: d, data, grids, profiles, grid, profile, available };
+  }
+  function experimentBaselines(scope) {
+    const { draft: d, data } = scope;
+    if (!scope.grid || !scope.profile || !d.models.length || !data.invest_version) return [];
+    const original = new Set((data.scenarios || []).filter(row => row.kind === "baseline").map(row => row.id));
+    return runs().filter(run => {
+      const value = run.selection || {};
+      return value.grid_id === d.grid_id && value.profile_id === d.profile_id &&
+        value.invest_version === data.invest_version && original.has(value.scenario_id) &&
+        runModels(run).join(",") === d.models.join(",");
+    });
+  }
+  function experimentFields(d, scope) {
+    const profiles = scope.profiles.filter(row => row.id !== d.profile_id);
+    const baselines = experimentBaselines(scope);
+    const missingBaseline = d.baseline_run_id && !baselines.some(run => run.id === d.baseline_run_id);
+    return '<details class="cons-disclosure" open><summary>Paired experiment</summary>' +
+      '<p>The baseline and the selected land-cover change use the same grid, native model choices and each profile. ' +
+      'The experiment runs and compares the original native outputs.</p><div class="cons-grid">' +
+      input("scenario.experiment_title", "Experiment title", d.experiment_title || "") +
+      select("scenario.baseline_run_id", "Original land-cover baseline", d.baseline_run_id, [
+        ["", "Reuse or prepare a matching original baseline"],
+        ...(missingBaseline ? [[d.baseline_run_id, "Choose again: this baseline does not match the current native scope"]] : []),
+        ...baselines.map(run => [run.id, (run.title || run.id) + " · " + runQuantityLabel(run)]),
+      ]) +
+      select("scenario.design", "Parameter design", d.design, [
+        ["one_at_a_time", "One parameter at a time"], ["factorial", "Every selected parameter combination"],
+      ]) + '</div>' +
+      '<p class="cons-help">Listed baselines use original land cover and the selected grid, profile, models and InVEST version. ' +
+      'Automatic preparation also reuses a matching retained baseline. Each additional profile receives its own matched original case.</p>' +
+      (profiles.length ? '<fieldset class="cons-profile-choices"><legend>Additional retained profiles</legend>' +
+        profiles.map(profile => {
+          const selected = d.experiment_profile_ids.includes(profile.id);
+          const supported = d.models.length && d.models.every(model =>
+            runModels({ selection: profile }).includes(model));
+          return '<label class="cons-check"><input type="checkbox" data-scenario-profile="' +
+            h(profile.id) + '"' + (selected ? " checked" : "") + (!supported && !selected ? " disabled" : "") +
+            '> <span>' + h(profile.title || profile.id) +
+            (supported ? "" : " — does not support the selected native model scope") + '</span></label>';
+        }).join("") + '</fieldset>' : "") +
+      '<p class="cons-help">Preparation checks every chosen profile’s original coefficient table against the grid’s land-cover classes ' +
+      'and the replacement class, then retains the exact source references.</p>' +
+      '<details class="cons-disclosure"><summary>Native parameter axes</summary>' +
+      '<p>Optional JSON array. Each axis records a native parameter path, its values, and the scientific source ' +
+      'or rationale. Existing profile values are used when this is empty.</p>' +
+      '<label class="cons-field" for="' + fieldId("scenario.axes_text") + '"><span>Parameter axes</span>' +
+      '<textarea id="' + fieldId("scenario.axes_text") + '" data-field="scenario.axes_text" rows="5" ' +
+      'spellcheck="false">' + h(d.axes_text || "") + '</textarea></label>' +
+      '<p class="cons-help">Fields: path, values, reference. The experiment validates each value against its selected native model.</p>' +
+      '</details></details>';
+  }
+  function scenarioForm() {
+    const ui = memory(), scope = scenarioNativeScope(), d = scope.draft;
+    const continuation = !!d.conservation_scenario_id;
+    const choices = (rows, noun) => [["", "Choose an existing " + noun], ...rows.map(row =>
       [row.id, (row.title || row.spec?.title || row.id) + " · " + row.id])];
+    const modelLabels = { ndr: "Nitrogen and phosphorus (NDR)", sdr: "Sediment (SDR)" };
     return '<form class="cons-editor" data-cons-form="scenario"><div class="cons-section-title">' +
-      "<h2>Create land-cover scenario</h2>" + button("close-form", "Close") + "</div>" +
-      "<p>Apply an explicit land-cover change inside the saved portfolio's unique selected footprint. " +
-      "The new scenario becomes available in the existing modeling workflow.</p>" +
+      "<h2>" + (continuation ? "Prepare a paired experiment" : "Create land-cover scenario") + "</h2>" +
+      button("close-form", "Close") + "</div>" +
+      (continuation ? "<p>Use the saved conservation scenario and its original selected footprint.</p>" :
+        "<p>Apply an explicit land-cover change inside the saved portfolio's unique selected footprint.</p>") +
       '<div class="cons-grid">' +
-      input("scenario.title", "Scenario title", d.title, 'required autocomplete="off"') +
-      input("scenario.reason", "Purpose of this land-cover change", d.reason, 'required') +
-      input("scenario.from_codes", "Source land-cover codes (comma-separated)", d.from_codes, 'required') +
-      input("scenario.to_code", "Destination land-cover code", d.to_code, 'type="number" min="0" step="1" required') +
-      "</div>" +
-      check("scenario.prepare_run", "Also prepare a native model run", d.prepare_run) +
-      (d.prepare_run ? '<div class="cons-grid">' +
-        select("scenario.grid_id", "Existing analysis grid", d.grid_id, choices(data.grids, "grid")) +
-        select("scenario.profile_id", "Existing model profile", d.profile_id, choices(data.profiles, "profile")) +
-        "</div><p class=\"cons-help\">The prepared run uses the chosen grid and profile. Execute it in Runs " +
-        "to measure this selected footprint's model effect.</p>" : "") +
-      '<div class="cons-actions">' + button("save-scenario", "Create scenario", "", ui.busy) + "</div></form>";
+      (continuation ? "" : input("scenario.title", "Scenario title", d.title, 'required autocomplete="off"')) +
+      input("scenario.reason", "Purpose of the scenario or experiment", d.reason, 'required') +
+      (continuation ? "" :
+        input("scenario.from_codes", "Source land-cover codes (comma-separated)", d.from_codes, 'required') +
+        input("scenario.to_code", "Destination land-cover code", d.to_code, 'type="number" min="0" step="1" required') +
+        select("scenario.output", "Continue with", d.output, [
+          ["scenario", "Save the land-cover scenario"],
+          ["run", "Prepare its native model run"],
+          ["experiment", "Prepare a paired baseline and alternative experiment"],
+        ])) + "</div>" +
+      (d.output !== "scenario" ? '<div class="cons-grid">' +
+        select("scenario.grid_id", "Complete analysis grid", d.grid_id, choices(scope.grids, "complete grid")) +
+        select("scenario.profile_id", "Existing model profile", d.profile_id, choices(scope.profiles, "profile")) +
+        '</div><fieldset><legend id="conservation-scenario-models">Native model scope</legend>' +
+        '<div role="group" aria-labelledby="conservation-scenario-models">' +
+        ["ndr", "sdr"].map(model => '<label class="cons-check"><input type="checkbox" data-scenario-model="' +
+          model + '"' + (d.models.includes(model) ? " checked" : "") +
+          (scope.available.includes(model) ? "" : " disabled") + "> <span>" + h(modelLabels[model]) +
+          (scope.available.includes(model) ? "" : " — unavailable for the selected grid and profile") +
+          "</span></label>").join("") + "</div>" +
+        '<p class="cons-help">' + (d.models.length ?
+          "The prepared cases will measure " + d.models.map(model => h(modelLabels[model])).join(" and ") +
+          " using the selected grid and profile." :
+          "Choose a complete grid and a compatible profile, then select at least one available native model.") +
+        " Start the prepared work in Runs or Paired experiments to calculate the selected footprint's model effect.</p></fieldset>" : "") +
+      (d.output === "experiment" ? experimentFields(d, scope) : "") +
+      '<div class="cons-actions">' + button("save-scenario",
+        continuation ? "Prepare experiment" : d.output === "experiment" ? "Create scenario and paired experiment" :
+          d.output === "run" ? "Create scenario and prepare run" : "Create scenario", "", ui.busy) +
+      "</div></form>";
+  }
+  function experimentSelection(d, scope) {
+    const value = { title: (d.experiment_title || d.title + " — paired experiment").trim(),
+      reason: String(d.reason || "").trim(), design: d.design || "one_at_a_time",
+      profile_ids: [...new Set(d.experiment_profile_ids || [])].filter(id => id !== d.profile_id) };
+    if (!value.title || !value.reason) throw new Error("Give the paired experiment a title and purpose.");
+    for (const id of value.profile_ids) {
+      const profile = scope.profiles.find(row => row.id === id);
+      if (!profile || !d.models.every(model => runModels({ selection: profile }).includes(model))) {
+        throw new Error("Additional profile " + id + " does not support the selected native models. Choose a compatible profile or remove it.");
+      }
+    }
+    if (d.baseline_run_id) {
+      if (!experimentBaselines(scope).some(run => run.id === d.baseline_run_id)) {
+        throw new Error("Choose a matching original-land-cover baseline, or use automatic baseline preparation.");
+      }
+      value.baseline_run_id = d.baseline_run_id;
+    }
+    if (d.axes_text?.trim()) {
+      try { value.axes = JSON.parse(d.axes_text); } catch (error) {
+        throw new Error("The native parameter axes are invalid JSON: " + error.message);
+      }
+      if (!Array.isArray(value.axes) || value.axes.some(axis => !axis || typeof axis !== "object" ||
+          Array.isArray(axis) || Object.keys(axis).sort().join(",") !== "path,reference,values" ||
+          typeof axis.path !== "string" || typeof axis.reference !== "string" || !axis.reference.trim() ||
+          !Array.isArray(axis.values) || !axis.values.length)) {
+        throw new Error("Each native parameter axis needs path, a nonempty values array, and its reference.");
+      }
+    }
+    return value;
   }
   function buildScenarioSpec() {
-    const ui = memory(), d = ui.scenario;
+    const ui = memory(), scope = scenarioNativeScope(), d = scope.draft;
+    const nativeSelection = () => {
+      if (!scope.grid || !scope.profile) throw new Error("Choose both a completed analysis grid and a retained model profile.");
+      if (!d.models.length) throw new Error("Choose a native model supported by both the selected grid and profile.");
+      const value = { grid_id: d.grid_id, profile_id: d.profile_id };
+      if (d.models.length !== 2) value.models = [...d.models];
+      return value;
+    };
+    if (d.conservation_scenario_id) {
+      return { conservation_scenario_id: d.conservation_scenario_id,
+        prepare_run: nativeSelection(), ...experimentSelection(d, scope) };
+    }
     if (!ui.plan?.id) throw new Error("Open the saved portfolio whose footprint defines this scenario.");
-    if (!d?.title?.trim() || !d.reason?.trim()) throw new Error("Give the scenario a title and purpose.");
+    if (!d.title?.trim() || !d.reason?.trim()) throw new Error("Give the scenario a title and purpose.");
     const tokens = d.from_codes.split(/[\s,]+/).filter(Boolean);
     if (!tokens.length || tokens.some(value => !/^\d+$/.test(value))) {
       throw new Error("Source land-cover codes must be comma-separated nonnegative integers.");
     }
     const from = [...new Set(tokens.map(value => numeric(value, "Source land-cover code", { integer: true })))];
     const to = numeric(d.to_code, "Destination land-cover code", { integer: true });
-    if (from.every(value => value === to)) throw new Error("Choose a destination that changes at least one source land-cover code.");
+    if (from.includes(to)) throw new Error("Exclude the destination class from the source land-cover codes.");
     const spec = { plan_id: ui.plan.id, title: d.title.trim(), reason: d.reason.trim(),
       from_codes: from, to_code: to };
-    if (d.prepare_run) {
-      if (!d.grid_id || !d.profile_id) throw new Error("Choose both an existing analysis grid and model profile.");
-      spec.prepare_run = { grid_id: d.grid_id, profile_id: d.profile_id };
-    }
+    if (d.output !== "scenario") spec.prepare_run = nativeSelection();
+    if (d.output === "experiment") spec.prepare_experiment = experimentSelection(d, scope);
     return spec;
   }
   function captureView() {
@@ -841,7 +1326,7 @@ export function attachConservation({
       node.querySelector(":scope > summary")?.textContent?.trim()).filter(Boolean));
     const active = document.activeElement;
     if (!active || !mounted.contains(active)) return null;
-    const key = ["data-field", "data-filter", "data-candidate-id"].find(name => active.hasAttribute?.(name));
+    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile"].find(name => active.hasAttribute?.(name));
     if (!key) return null;
     return { key, value: active.getAttribute(key),
       start: typeof active.selectionStart === "number" ? active.selectionStart : null,
@@ -855,7 +1340,7 @@ export function attachConservation({
       if (ui.openDetails?.has(title)) node.open = true;
     }
     if (!focus) return;
-    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id]")]
+    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile]")]
       .find(node => node.getAttribute(focus.key) === focus.value);
     if (target) {
       target.focus({ preventScroll: true });
@@ -888,6 +1373,23 @@ export function attachConservation({
       target.closest("tr")?.classList.toggle("cons-selected", target.checked);
       ui.selectionOrigin = null;
       updateSelectionCount();
+      return;
+    }
+    if (target.hasAttribute("data-scenario-model") && event.type === "change") {
+      const scope = scenarioNativeScope(), model = target.getAttribute("data-scenario-model");
+      const selected = new Set(scope.draft.models);
+      if (scope.available.includes(model) && target.checked) selected.add(model);
+      else selected.delete(model);
+      scope.draft.models = ["ndr", "sdr"].filter(name => selected.has(name));
+      scope.draft.models_explicit = true;
+      paint();
+      return;
+    }
+    if (target.hasAttribute("data-scenario-profile") && event.type === "change") {
+      const id = target.getAttribute("data-scenario-profile");
+      const selected = new Set(ui.scenario?.experiment_profile_ids || []);
+      if (target.checked) selected.add(id); else selected.delete(id);
+      if (ui.scenario) ui.scenario.experiment_profile_ids = [...selected];
       return;
     }
     if (target.hasAttribute("data-alt-id") && event.type === "change") {
@@ -925,19 +1427,29 @@ export function attachConservation({
       ui.scenario ||= {};
       ui.scenario[name.slice(9)] = value;
     } else ui.draft[name] = value;
-    if (event.type === "change" && name === "mode") {
+    if (event.type === "change" && name === "mode" && ui.draft.score_basis !== "published_method") {
       ui.draft.score_basis = value === "source_context" ? "context" :
         ui.draft.purpose === "protection" ? "disturbance_increase" : "current_export";
     }
-    if (event.type === "change" && name === "purpose" && ui.draft.mode === "native_model") {
+    if (event.type === "change" && name === "purpose" && ui.draft.mode === "native_model" &&
+      ui.draft.score_basis !== "published_method") {
       ui.draft.score_basis = value === "protection" ? "disturbance_increase" : "current_export";
+    }
+    if (event.type === "change" && name === "purpose" && ui.draft.score_basis === "published_method" &&
+        value !== "screening" && methodCategory(ui.draft.method_category)?.purpose !== value) {
+      ui.draft.method_category = publishedCategories().find(category => category.purpose === value)?.id || "";
+    }
+    if (event.type === "change" && name === "method_category" && ui.draft.purpose !== "screening") {
+      const category = methodCategory(value);
+      if (category) ui.draft.purpose = category.purpose;
     }
     if (event.type === "change" && name === "baseline_run_id") {
       ui.draft.alternative_run_ids = ui.draft.alternative_run_ids.filter(id => id !== value);
       if (ui.draft.score_alternative === value) ui.draft.score_alternative = "";
+      if (!allNativeClasses(ui.draft)) ui.draft.method_native_classes = false;
     }
-    if (event.type === "change" && ["mode", "purpose", "score_basis", "baseline_run_id",
-      "plan.mode", "scenario.prepare_run"].includes(name) ||
+    if (event.type === "change" && ["mode", "purpose", "score_basis", "baseline_run_id", "score_alternative",
+      "method_category", "method_native_classes", "method_headwaters", "plan.mode", "scenario.output", "scenario.grid_id", "scenario.profile_id"].includes(name) ||
       event.type === "change" && name.endsWith("_source")) paint();
   }
   async function dispatch(node) {
@@ -947,6 +1459,52 @@ export function attachConservation({
     try {
       if (!workspace()) throw new Error("Open a workspace before using conservation planning.");
       switch (name) {
+        case "prepare-criteria":
+          await queue("conservation.criteria.prepare", buildCriteriaSpec()); break;
+        case "resume-criteria":
+          if (!node.dataset.operationId) throw new Error("Choose the retained parcel criterion preparation.");
+          await queue("conservation.criteria.prepare", { operation_id: node.dataset.operationId }); break;
+        case "use-criteria": {
+          const key = workspace(), collection = node.dataset.sourceCollection, source = node.dataset.sourceId;
+          if (!collection || !source) throw new Error("Open the completed criterion preparation task.");
+          if (!ui.overview) await refreshOverview(true);
+          if (workspace() !== key) return true;
+          if (node.dataset.studyId) {
+            const retained = await read("study", { study_id: node.dataset.studyId });
+            if (!retained || workspace() !== key) return true;
+            ui.draft = draftFromStudy(retained.spec, ui.draft);
+          }
+          ui.draft.method_source = JSON.stringify({ source_collection_id: collection, source_id: source });
+          ui.draft.method_format = node.dataset.tableFormat || "json";
+          ui.draft.method_id_column = node.dataset.idColumn || "id";
+          ui.draft.score_basis = "published_method";
+          ui.form = "study"; ui.notice = { kind: "status", message: "The prepared parcel criterion table is selected." };
+          await refreshOverview(true); paint(); break;
+        }
+        case "new-parcel-study": {
+          const key = workspace(), collection = node.dataset.sourceCollection, source = node.dataset.sourceId;
+          if (!collection || !source) throw new Error("Choose the imported original parcel source.");
+          if (!ui.overview) await refreshOverview(true);
+          if (workspace() !== key) return true;
+          const selected = sourceKey({ source_collection_id: collection, source_id: source });
+          const declared = entry(selected);
+          if (!declared) throw new Error("Refresh this workspace's imported parcel source before opening the study.");
+          const draft = freshStudy();
+          draft.title = node.dataset.studyTitle || (declared.title || "Original parcels") + " — conservation study";
+          draft.unit_type = "parcel"; draft.planning_unit_label = "Parcels";
+          draft.parcel_source = selected;
+          draft.parcel_layer = node.dataset.layer || declared.layer || "";
+          draft.id_field = node.dataset.idField || declared.id_field || "";
+          draft.label_field = node.dataset.labelField || declared.label_field || "";
+          draft.parcel_where = node.dataset.where || "";
+          if (draft.parcel_where) {
+            const where = JSON.parse(draft.parcel_where);
+            if (!where || Array.isArray(where) || typeof where !== "object") {
+              throw new Error("The original parcel filter must be a JSON object with typed field values.");
+            }
+          }
+          ui.draft = draft; ui.form = "study"; ui.notice = null; paint(); break;
+        }
         case "new-study":
           ui.form = "study"; ui.notice = null; paint(); break;
         case "close-form":
@@ -1005,13 +1563,19 @@ export function attachConservation({
           ui.selectedIds = new Set((ui.plan.selected_ids || []).map(String));
           ui.selectionOrigin = ui.plan.id;
           ui.portfolio = { ...freshPortfolio(), title: (ui.plan.title || "Portfolio") + " revision",
-            objective: ui.study?.mode === "source_context" ? "area" : "score" };
+            objective: candidates().some(row => finite(row.score)) ? "score" : "area" };
           ui.form = "portfolio"; paint(); break;
         case "new-scenario":
           if (!ui.plan) throw new Error("Open a saved portfolio first.");
-          ui.form = "scenario"; paint(); break;
+          ui.scenario = scenarioDraft(); ui.form = "scenario"; paint(); break;
+        case "new-experiment": {
+          const bridge = (ui.overview?.scenario_bridges || []).find(row => row.id === node.dataset.bridgeId);
+          if (!bridge) throw new Error("Refresh the retained conservation scenarios and reopen this record.");
+          ui.scenario = scenarioDraft(bridge); ui.form = "scenario"; ui.notice = null; paint(); break;
+        }
         case "save-scenario":
-          await queue("conservation.scenario.create", buildScenarioSpec()); break;
+          await queue(ui.scenario?.conservation_scenario_id ? "conservation.experiment.prepare" :
+            "conservation.scenario.create", buildScenarioSpec()); break;
         case "show-task":
           if (showTask) await showTask(node.dataset.taskId); break;
         default:
@@ -1029,17 +1593,25 @@ export function attachConservation({
     if (!String(task?.action || "").startsWith("conservation.")) return "";
     const result = task.result || task.output || {};
     const meta = task._conservation || {};
+    if (task.action === "conservation.criteria.prepare" && result.state === "complete" &&
+        result.source_collection_id && result.source_id) {
+      return '<div class="cons-actions">' + button("use-criteria", "Use prepared parcel criteria",
+        'data-source-collection="' + h(result.source_collection_id) + '" data-source-id="' + h(result.source_id) +
+        '" data-study-id="' + h(result.study_id || "") + '" data-table-format="' + h(result.table?.format || "json") + '" data-id-column="' + h(result.table?.id_column || "id") + '"') +
+        '</div>' + (finite(result.coverage?.parcels) ? "<p>Criteria prepared for " + number(result.coverage.parcels) + " parcels.</p>" : "");
+    }
     const studyId = meta.study_id || result.study_id ||
       (["conservation.prepare", "conservation.build"].includes(task.action) ? result.id : null);
     const planId = meta.plan_id ||
       (task.action === "conservation.plan.save" ? result.id : result.plan_id);
     const scenarioId = result.scenario_id || result.scenario?.id;
-    const runId = result.run_id || result.run?.id;
+    const runId = result.run_id || result.run?.id || result.alternative_run_id;
+    const experimentId = result.experiment_id || result.experiment?.id;
     const nativeButtons = (scenarioId ? '<button type="button" data-action="item" data-kind="scenarios" data-id="' +
       h(scenarioId) + '">Open land-cover scenario</button>' : "") +
       (runId ? '<button type="button" data-action="item" data-kind="runs" data-id="' +
       h(runId) + '">Open native run</button>' : "");
-    return nativeButtons + (studyId ? button("open-study", "Open conservation study", 'data-study-id="' + h(studyId) + '"') : "") +
+    return experimentButton(experimentId) + nativeButtons + (studyId ? button("open-study", "Open conservation study", 'data-study-id="' + h(studyId) + '"') : "") +
       (planId ? button("open-plan", "Open saved portfolio", 'data-plan-id="' + h(planId) + '"') : "");
   }
   function ensureStyle() {

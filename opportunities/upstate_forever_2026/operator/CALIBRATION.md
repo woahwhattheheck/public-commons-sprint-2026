@@ -160,6 +160,28 @@ The native workspace archive already walks the retained scientific workspace and
 
 Use the existing **Create complete backup** and restore workflow. The original workspace identity, plan/result identifiers, completed comparison progress and exported files remain available after restoration. The extension registration lives in the backed-up application source, alongside the native scientific modules and other operator capabilities.
 
+## Open a retained annual-source binding
+
+The annual-source desk can open this existing form through the maintained extension host after its original Workspace import and state refresh:
+
+```javascript
+await extensions.openExtension('calibration', 'openForObservations', {
+  observation_id: binding.observation_id,
+  catchments: binding.catchments,
+  temporal_weighting: binding.recommended_temporal_weighting,
+  title: 'Annual-load calibration',
+  workspace_key: state.workspace_key,
+});
+```
+
+The optional `workspace_key` guards the selected operator workspace; it is the original operator key, not the internal project UUID. The method verifies that the actual observation edition is admitted in the current catalog and that the selected catchment source is a retained vector entry. The source desk refreshes the ordinary workspace state after its bind task completes, so that new source entry is available.
+
+This opens the normal calibration form with the original observation and catchment identities. It preserves the workspace draft's selected native grid, baseline, candidate run IDs, objective weights, title, notes and catchment-group choices. A new observation edition clears record filters and delivered external loads tied to the preceding observation IDs. Catchment filters come from the new binding. The normal preview resolves the actual spatial groups before a plan is saved.
+
+An explicit saved period-weighting choice remains the user's choice. Otherwise, the form initializes from the supplied binding's weighting or the selected observation metadata's `recommended_temporal_weighting`. Changing observations follows their actual recommendation until the user edits the period control. Saved plans and drafts from earlier editions keep their original weighting.
+
+The binding remains in the workspace draft even if no completed native baseline candidate exists yet. After a baseline finishes, **New calibration** reopens that original observation and catchment selection. Newer form requests supersede earlier pending catalog reads, candidate checkboxes restore by original run ID, and a previous task response leaves a subsequently opened draft intact.
+
 ## Operator API
 
 The descriptor registers these routes with the existing authenticated local operator and selected workspace. Its state contribution is `state.data.calibration`, containing `calibration_plans` and `calibrations`. The original `/api/item` route also accepts the registered kinds `calibration-plans` and `calibrations`.

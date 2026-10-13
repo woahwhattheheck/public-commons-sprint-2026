@@ -538,6 +538,39 @@ def _load_contribution(workspace, plan, receptor, crs):
     return rasters.polygon_union(rows)
 
 
+def _validate_analysis_grid(grid):
+    """Admit the actual retained projected grid and its physical cell area."""
+    from pyproj import CRS
+
+    resolution = finite(grid.get("resolution_m"), "original model resolution", positive=True)
+    values = grid.get("transform")
+    if not isinstance(values, (list, tuple)) or len(values) != 6:
+        raise ValueError("Retain the original six affine grid coefficients")
+    a, b, c, d, e, f = [
+        finite(value, "original grid affine coefficient") for value in values
+    ]
+    if (abs(b) > 1e-12 or abs(d) > 1e-12 or a <= 0 or e >= 0
+            or not math.isclose(a, resolution, rel_tol=1e-9, abs_tol=1e-12)
+            or not math.isclose(-e, resolution, rel_tol=1e-9, abs_tol=1e-12)):
+        raise ValueError("Use the original north-up square-cell grid at its declared resolution")
+    for name in ("width", "height"):
+        value = grid.get(name)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError("Retain the original positive integer grid " + name)
+    area = grid.get("pixel_area_ha")
+    if not isinstance(area, (int, float)) or isinstance(area, bool):
+        raise ValueError("Retain the original numeric pixel area in hectares")
+    area = finite(area, "original cell area", positive=True)
+    affine_area = abs(a * e - b * d) / 10000.0
+    if not math.isclose(area, affine_area, rel_tol=1e-9, abs_tol=1e-12):
+        raise ValueError("The original cell area differs from its affine determinant")
+    crs = CRS.from_user_input(grid["crs"])
+    if (not crs.is_projected or len(crs.axis_info) < 2
+            or any(not math.isclose(axis.unit_conversion_factor, 1.0, abs_tol=1e-12)
+                   for axis in crs.axis_info[:2])):
+        raise ValueError("Receiving-water physical areas require the retained projected metre CRS")
+
+
 def _aligned_source(stack, path, grid, *, factor, provenance):
     import rasterio
     from rasterio.transform import Affine
@@ -1046,8 +1079,7 @@ def analyze(workspace, selection, *, progress=None):
             raise ValueError("Selected original run " + run["id"] + " lacks quantities " + ", ".join(sorted(missing)))
     prepared_grid = workspace.get_grid(baseline["selection"]["grid_id"])
     grid = prepared_grid["grid"]
-    if grid.get("resolution_m") != 30 or not math.isclose(grid["pixel_area_ha"], 0.09, abs_tol=1e-12):
-        raise ValueError("Use the selected original 30 m analysis grid")
+    _validate_analysis_grid(grid)
     scope = selection.get("quantity_scope", "reporting")
     if scope not in ("reporting", "model_domain"):
         raise ValueError("Choose reporting or model_domain quantity scope")

@@ -57,6 +57,12 @@ Run `python -B -m source_tools.usgs_contract inspect --help` for original-member
 
 The compiler reads the actual ten-column data dictionary, resolves native variable definitions and unit meanings, joins model-review records without multiplying source rows, and preserves every original record. Its source contract feeds the existing station qualification and annualization tools. Import the resulting annual observations and catchment source manifest into the Workspace used by the original baseline runs.
 
+### Published 2012 annual estimates
+
+The [published annual-reference importer](source_tools/USGS_ANNUAL.md) adds the original national [USGS F7DN436B release](https://doi.org/10.5066/F7DN436B). It receives the small `load_est.zip` and `sitegage.zip` files, selects each station's publisher-chosen Beale or Fluxmaster estimate, and retains the exact annual rate, standard error, original station/flow-station identity and source periods. Nitrogen, phosphorus, suspended sediment and total suspended solids retain their original constituent codes.
+
+Run `source_tools.usgs_annual` through `receive`, `inventory`, `prepare` and `bind` to place the selected original annual rows and upstream catchments directly into the existing Workspace and Calibration catalog. The retained [Upper Savannah station and basin sources](source/usgs-nldi-upper-savannah-20261013/source-manifest.json) include full original NLDI responses and a source-component review, so the preparation can adopt those actual files directly. The importer guide contains the complete commands and station/geometry selection contract.
+
 ## Calibration in the existing application
 
 Calibration selects among actual completed native baseline runs using retained annual-load observations and their original catchments. It joins the scientific Workspace and the existing operator's queued tasks, run history, source selections, downloads and portable receiving.

@@ -26,7 +26,7 @@ export function createCalibrationDesk(host){return attachCalibration(host);}
 
 export function attachCalibration({getState,api,endpoint,openForm,submitAction,detail,fileList,openItem,showTask,toast}){
   let mounted=null,lastMarkup=null,generation=0,activeReport=null,activeTab='ranking',page=0,query='',sortKey='rank',sortDirection=1;
-  let activeDraft=null,previewResult=null,previewIdentity=null,formToken=null;
+  let activeDraft=null,previewResult=null,previewIdentity=null,formToken=null,formRequest=0;
   const current = () => getState()?.workspace_key;
   const sourceData = () => getState()?.data ?? {};
   const calibrationData = () => sourceData().calibration ?? sourceData();
@@ -253,22 +253,84 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(excluded.length)$('#calibration-group-body').insertAdjacentHTML('beforeend','<details class="technical"><summary>'+excluded.length+' retained exclusions</summary><pre class="json-view">'+esc(pretty(excluded))+'</pre></details>');
     captureDraft();
   }
-  async function newForm(planId=null){
+  function periodWeighting(value){
+    return value==='whole_years'||value==='elapsed_days'?value:null;
+  }
+  function observationWeighting(observation){
+    return periodWeighting(observation?.metadata?.recommended_temporal_weighting)||
+      periodWeighting(observation?.recommended_temporal_weighting)||'whole_years';
+  }
+  async function openForObservations(value){
+    if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Choose a retained annual-observation binding.');
     const workspace=current();
+    if(!workspace)throw Error('Open the original study before selecting its annual observations.');
+    if(value.workspace_key&&value.workspace_key!==workspace)throw Error('Open the study that owns this observation binding.');
+    const catchments=value.catchments;
+    if(typeof value.observation_id!=='string'||!value.observation_id.trim()||
+      !catchments||typeof catchments!=='object'||Array.isArray(catchments)||
+      ['source_collection_id','source_id','id_field'].some(key=>typeof catchments[key]!=='string'||!catchments[key].trim()))
+      throw Error('The saved annual binding needs its original observation and catchment source identities.');
+    if(value.temporal_weighting!==undefined&&!periodWeighting(value.temporal_weighting))
+      throw Error('Use the saved annual source’s whole_years or elapsed_days period weighting.');
+    if(activeDraft?.workspace===workspace)captureDraft();
+    const handoff=JSON.parse(JSON.stringify({observation_id:value.observation_id,catchments,
+      ...(value.temporal_weighting?{temporal_weighting:value.temporal_weighting}:{}),
+      ...(typeof value.title==='string'?{title:value.title.trim()}:{})}));
+    return newForm(null,handoff);
+  }
+  async function newForm(planId=null,handoff=null){
+    const workspace=current(),request=++formRequest;
     const catalog=await read('catalog');
-    if(current()!==workspace)return;
-    if(!catalog.candidate_groups?.length)throw Error('Complete a native baseline run before preparing a calibration.');
+    if(current()!==workspace||request!==formRequest)return;
     if(!catalog.observations?.some(row=>row.admitted_count>0))throw Error('Retain an original observation edition with admitted annual load records first.');
     let draft=planId?null:savedDraft();
     if(planId){
       const packet=await read('plan',{id:planId});
+      if(current()!==workspace||request!==formRequest)return;
       draft={workspace,selection:packet.plan.selection};
     }
+    const selection=JSON.parse(JSON.stringify(draft?.selection??{schema:'upstate.calibration-selection/v1',title:'',candidate_run_ids:[],
+      observation_id:'',catchments:{},objective:Object.fromEntries(pollutants.map(name=>[name,{weight:1}])),notes:[]}));
+    let retainedFields=draft?.raw??null;
+    const retainedPeriod=retainedFields?.find(row=>row.name==='calibration_temporal_weighting')?.value;
+    const temporalExplicit=draft?.temporal_weighting_explicit??
+      Boolean(planId||periodWeighting(retainedPeriod)||periodWeighting(selection.temporal_weighting));
+    if(temporalExplicit&&periodWeighting(retainedPeriod))selection.temporal_weighting=retainedPeriod;
+    if(handoff){
+      const observation=catalog.observations.find(row=>(row.id||row.observation_id)===handoff.observation_id&&row.admitted_count>0);
+      if(!observation)throw Error('This observation edition is not admitted in the current study.');
+      const collection=(sourceData().sources??[]).find(row=>row.id===handoff.catchments.source_collection_id);
+      if(!collection?.entries?.some(row=>row.id===handoff.catchments.source_id&&row.kind==='vector'))
+        throw Error('Refresh the study to load the original catchment source for this binding.');
+      const previousObservation=retainedFields?.find(row=>row.name==='calibration_observation')?.value||selection.observation_id;
+      const changedObservation=previousObservation!==handoff.observation_id;
+      selection.observation_id=handoff.observation_id;
+      selection.catchments=handoff.catchments;
+      const retainedTitle=retainedFields?.find(row=>row.name==='calibration_title')?.value;
+      if(!String(retainedTitle??selection.title??'').trim())selection.title=handoff.title||observation.title||'Annual-load calibration';
+      if(changedObservation){
+        delete selection.observation_record_ids;
+        delete selection.delivered_external_loads;
+      }
+      const rebound=new Set(['calibration_observation','calibration_collection','calibration_source',
+        'calibration_layer','calibration_id_field','calibration_temporal_weighting']);
+      retainedFields=retainedFields?.filter(row=>!rebound.has(row.name)&&
+        !row.name.startsWith('calibration_filter_')&&
+        !(changedObservation&&(row.name==='calibration_records'||row.name.startsWith('calibration_external_')))&&
+        !(row.name==='calibration_title'&&!String(row.value).trim()))??null;
+    }
+    const observation=catalog.observations.find(row=>(row.id||row.observation_id)===selection.observation_id);
+    if(!temporalExplicit)selection.temporal_weighting=handoff?.temporal_weighting||observationWeighting(observation);
+    draft={...draft,workspace,selection,raw:retainedFields,temporal_weighting_explicit:temporalExplicit,
+      remembered_weights:draft?.remembered_weights??{}};
+    if(!catalog.candidate_groups?.length){
+      if(handoff){try{sessionStorage.setItem('upstate-calibration-draft:'+workspace,JSON.stringify(draft));}catch{}}
+      throw Error(handoff?'Observation and catchment choices are saved. Complete a native baseline run before preparing a calibration.':
+        'Complete a native baseline run before preparing a calibration.');
+    }
     const first=catalog.candidate_groups[0];
-    const selection=draft?.selection??{schema:'upstate.calibration-selection/v1',title:'',candidate_run_ids:[],
-      observation_id:'',catchments:{},objective:Object.fromEntries(pollutants.map(name=>[name,{weight:1}])),notes:[]};
     const selectedGroup=catalog.candidate_groups.find(group=>group.runs.some(row=>selection.candidate_run_ids?.includes(row.id||row.run_id)));
-    draft={workspace,selection,group:draft?.group||groupKey(selectedGroup||first),raw:draft?.raw??null,remembered_weights:draft?.remembered_weights??{}};
+    draft.group=draft.group||groupKey(selectedGroup||first);
     activeDraft=draft;previewResult=null;previewIdentity=null;formToken=crypto.randomUUID();
     const token=formToken;
     const collections=(sourceData().sources??[]).filter(row=>row.entries.some(entry=>entry.kind==='vector'));
@@ -313,8 +375,10 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         const finalSelection=collectSelection({split:true});
         activeDraft.selection=finalSelection;retainDraft();
         const task=await submitAction('calibration.prepare',{selection:finalSelection});
-        try{sessionStorage.removeItem('upstate-calibration-draft:'+workspace);}catch{}
-        activeDraft=null;previewResult=null;previewIdentity=null;formToken=null;
+        if(activeDraft?.workspace===workspace&&formToken===token){
+          try{sessionStorage.removeItem('upstate-calibration-draft:'+workspace);}catch{}
+          activeDraft=null;previewResult=null;previewIdentity=null;formToken=null;
+        }
         return task;
       },()=>{
         const groupNode=$('[name="calibration_run_group"]',form());
@@ -359,7 +423,17 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
             'Choose candidates with a shared modeled pollutant and an original observation edition containing that annual load.';
           invalidatePreview();
         };
-        observationNode.addEventListener('change',updateObjective);
+        const temporalNode=$('[name="calibration_temporal_weighting"]',form());
+        const updatePeriod=()=>{
+          if(activeDraft.temporal_weighting_explicit)return;
+          const observation=catalog.observations.find(row=>(row.id||row.observation_id)===observationNode.value);
+          temporalNode.value=observationNode.value===handoff?.observation_id&&handoff?.temporal_weighting?
+            handoff.temporal_weighting:observationWeighting(observation);
+        };
+        const retainUserPeriod=()=>{activeDraft.temporal_weighting_explicit=true;};
+        temporalNode.addEventListener('input',retainUserPeriod);
+        temporalNode.addEventListener('change',retainUserPeriod);
+        observationNode.addEventListener('change',()=>{updatePeriod();updateObjective();});
         $('#calibration-candidates').addEventListener('change',updateObjective);
         form().addEventListener('input',draftInput);
         form().addEventListener('change',draftChange);
@@ -375,10 +449,13 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
           for(const value of retainedRaw){
             const nodes=$$('[name="'+CSS.escape(value.name)+'"]',form());
             const position=positions[value.name]??0;positions[value.name]=position+1;
-            const node=nodes[position];if(!node)continue;
+            const node=value.name==='calibration_candidates'?
+              nodes.find(candidate=>candidate.value===value.value):nodes[position];
+            if(!node)continue;
             if(value.type==='checkbox')node.checked=value.checked;else node.value=value.value;
           }
         }
+        updatePeriod();
         updateObjective();
         retainDraft();
       });
@@ -555,5 +632,5 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       return;
     }
   }
-  return {render,mount,update,detach,dispatch,taskActions};
+  return {render,mount,update,detach,dispatch,taskActions,openForObservations};
 }
