@@ -1,0 +1,466 @@
+{
+  "schema": "upstate.sc-parcel-providers/v1",
+  "title": "South Carolina county parcel sources for original Upper Savannah reporting selection",
+  "reviewed_at": "2026-10-13T01:44:23Z",
+  "county_boundary": {
+    "title": "SC RFA Geodetic Survey county boundary polygons",
+    "url": "https://services9.arcgis.com/RvqSyw3diI7dTKo5/ArcGIS/rest/services/County_Polygons_CBApp/FeatureServer/4",
+    "county_field": "CountyName",
+    "fips_field": "FIPS",
+    "native_oid_field": "OBJECTID",
+    "native_crs": {
+      "wkid": 103146,
+      "latestWkid": 6570
+    },
+    "authority_url": "https://www.rfa.sc.gov/resources/geodetic/county-boundary-clarifications",
+    "source_date_fields": [
+      "DateUpdate",
+      "BoundaryComplete"
+    ],
+    "provenance": "SC RFA Geodetic Survey published county boundary app; preserve the actual captured edition and individual boundary status",
+    "notes": [
+      "Layer description contains Last update5/3/23; live directory metadata showed data edit2026-03-12. Capture keeps both declarations; boundary effective dates are separate."
+    ]
+  },
+  "counties": [
+    {
+      "fips": "45001",
+      "name": "Abbeville",
+      "preferred_provider": "abbeville-taxparcel",
+      "providers": [
+        {
+          "id": "abbeville-taxparcel",
+          "title": "Abbeville County native Taxparcel polygons",
+          "url": "https://wfs.schneidercorp.com/arcgis/rest/services/AbbevilleCountySC_WFS/MapServer/15",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "PIN",
+            "QPID",
+            "Map_Number"
+          ],
+          "provenance": "county_published_service",
+          "authority_url": "https://abbevillecountysc.com/assessor/",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "OBJECTID",
+          "native_crs": {
+            "wkid": 2273
+          },
+          "classification": {
+            "field": "PolyType",
+            "parcel_values": [
+              1,
+              7
+            ],
+            "context_values": {
+              "0": "unclassified_cadastral",
+              "2": "road",
+              "3": "railroad",
+              "4": "railroad_crossing",
+              "6": "water"
+            },
+            "excluded_values": {
+              "5": "outside_county"
+            }
+          },
+          "source_date_fields": [
+            "RevisionDate"
+          ],
+          "notes": [
+            "The county's qPublic link identifies AppID613/LayerID10508; original Taxparcel REST layer15 retains all PolyType codes."
+          ]
+        }
+      ]
+    },
+    {
+      "fips": "45003",
+      "name": "Aiken",
+      "preferred_provider": "aiken-scfc-coastal-stewardship-copy",
+      "providers": [
+        {
+          "id": "aiken-scfc-coastal-stewardship-copy",
+          "title": "Aiken County original parcels in SCFC Coastal stewardship source",
+          "url": "https://services9.arcgis.com/MvVEDRWecTZBD2xl/arcgis/rest/services/Parcels_Coastal/FeatureServer/0",
+          "where": "County = 'Aiken County'",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "T_Map_Number"
+          ],
+          "provenance": "state_forestry_stewardship_copy",
+          "authority_url": "https://www.scfc.gov/management/stewardship/forest-stewardship-application/",
+          "reviewed_at": "2026-10-13T03:29:40Z",
+          "native_oid_field": "OBJECTID",
+          "native_county_field": "County",
+          "native_county_value": "Aiken County",
+          "native_crs": {
+            "wkid": 103146,
+            "latestWkid": 6570
+          },
+          "observed_metadata_data_edit": 1776791197075,
+          "observed_metadata_data_edit_iso": "2026-04-21T17:06:37.075Z",
+          "observed_native_feature_count": 101173,
+          "observed_native_parcel_reference_nonnull_count": 101173,
+          "observed_native_oid_minimum": 1,
+          "observed_native_oid_maximum": 101173,
+          "source_date_fields": [],
+          "notes": [
+            "Official SCFC StoryMap8cbb85193ed94a3eb14c34260c894c46 Coastal button opens appf9340b121b1e4f1cb19e2b50e284a417. Its original Coastal web map027939b0a770497ba274604133c92982 names this exact Parcel Boundary layer.",
+            "The original service contains13 counties. Preserve the literal County = 'Aiken County' predicate through original count/OID queries, selected geometry requests, retained selection/capture metadata and reuse matching.",
+            "SCFC's stewardship parcel copy is a separate edition from the current county assessor. Its observed service data edit is not a per-parcel effective date.",
+            "Original native geometry is in103146/latest6570 with esriFeet units. Aiken-only returnedWGS84extent is[-82.014916373263887,33.196613421676339,-81.187129906507721,33.878601166090831].",
+            "OBJECTID is the source feature identity; keep T_Map_Number exactly as a string, including separators and leading zeros. A non-null reference is not an assertion of unique parcel references.",
+            "Retain all original Aiken polygons selected by the actual reporting masks. PriorityAcres,ForestAcres,PriorityPercent,ForestPercent and Acreage are separate SCFC source attributes and do not filter cadastral coverage.",
+            "Source originals, count/statistics/extent and one complete native polygon response are retained in the existing internal source operation. Actual acquisition retains full original HTTP response bodies and hashes."
+          ]
+        }
+      ],
+      "notes": [
+        "A source is selected only if actual positive-area original reporting/county intersection includes Aiken.",
+        "The complete SCFC county selection is now available. A changed provider or selector requires a new source-bound plan; only an exactly matching original capture can be reused."
+      ]
+    },
+    {
+      "fips": "45007",
+      "name": "Anderson",
+      "preferred_provider": "anderson-newpropertyviewer",
+      "providers": [
+        {
+          "id": "anderson-newpropertyviewer",
+          "title": "Anderson County native parcels",
+          "url": "https://propertyviewer.andersoncountysc.org/arcgis/rest/services/NewPropertyViewer/MapServer/5",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "TMS"
+          ],
+          "provenance": "county_published_service",
+          "authority_url": "https://propertyviewer.andersoncountysc.org/arcgis/rest/services/NewPropertyViewer/MapServer",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "OBJECTID",
+          "native_crs": {
+            "wkid": 102733
+          },
+          "notes": [
+            "Retains established original source. Current service metadata is captured at execution."
+          ]
+        },
+        {
+          "id": "anderson-querymap",
+          "title": "Anderson County QueryMap parcel service",
+          "url": "https://propertyviewer.andersoncountysc.org/arcgis/rest/services/QueryMap/MapServer/8",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "TMS"
+          ],
+          "provenance": "county_published_alternate",
+          "authority_url": "https://propertyviewer.andersoncountysc.org/arcgis/rest/services/QueryMap/MapServer",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "OBJECTID",
+          "native_crs": {
+            "wkid": 102733
+          },
+          "notes": [
+            "Verified alternate service; select explicitly in a new plan to preserve edition identity."
+          ]
+        }
+      ]
+    },
+    {
+      "fips": "45037",
+      "name": "Edgefield",
+      "preferred_provider": "edgefield-rfa-boundary-copy",
+      "providers": [
+        {
+          "id": "edgefield-rfa-boundary-copy",
+          "title": "Edgefield County full parcels retained by SC RFA",
+          "url": "https://services9.arcgis.com/RvqSyw3diI7dTKo5/ArcGIS/rest/services/Edgefield_McCormick_Greenwood_Web_Map_WFL1/FeatureServer/9",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "PIN",
+            "Map_Number",
+            "T_Map_Number"
+          ],
+          "provenance": "state_boundary_project_copy",
+          "authority_url": "https://www.rfa.sc.gov/resources/geodetic/county-boundary-clarifications",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "OBJECTID_1",
+          "native_crs": {
+            "wkid": 102100,
+            "latestWkid": 3857
+          },
+          "source_date_fields": [
+            "LastUpdate",
+            "last_edited_date"
+          ],
+          "observed_metadata_data_edit": "2025-11-04 18:32:07 (provider directory display)",
+          "notes": [
+            "Full Edgefield Parcels layer9, distinct from Affected Parcels layer3. County current viewer is qpublic.net/sc/edgefield/. Parcel edition and July2026 boundary clarification are separate."
+          ]
+        }
+      ]
+    },
+    {
+      "fips": "45045",
+      "name": "Greenville",
+      "preferred_provider": "greenville-gcgia-taxparcel",
+      "providers": [
+        {
+          "id": "greenville-gcgia-taxparcel",
+          "title": "Greenville County GCGIA tax parcel layer",
+          "url": "https://www.gcgis.org/arcgis3/rest/services/GCGIA/GCGIA_FeatureAccess/MapServer/10",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "PIN"
+          ],
+          "provenance": "county_published_service",
+          "authority_url": "https://www.gcgis.org/",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "OBJECTID",
+          "native_crs": {
+            "wkid": 6570
+          },
+          "source_date_fields": [
+            "VERDATE"
+          ],
+          "notes": [
+            "The county parcel viewer uses /arcgis3. Preserve the tax-joined layer10 identity separately from the maintenance parcel polygons layer43."
+          ]
+        }
+      ],
+      "notes": [
+        "Selected only by an actual positive-area reporting intersection."
+      ]
+    },
+    {
+      "fips": "45047",
+      "name": "Greenwood",
+      "preferred_provider": "greenwood-county-citizenserv-parcels",
+      "providers": [
+        {
+          "id": "greenwood-county-citizenserv-parcels",
+          "title": "Greenwood County original maintenance parcel polygons",
+          "url": "https://www.greenwoodsc.gov/arcgis/rest/services/Other_Services/CitizenServ/MapServer/11",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "PIN",
+            "OLDPIN"
+          ],
+          "provenance": "county_published_service",
+          "authority_url": "https://www.greenwoodsc.gov/greenwoodnj/index.html",
+          "reviewed_at": "2026-10-13T01:20:33.104Z",
+          "native_oid_field": "OBJECTID",
+          "native_crs": {
+            "wkid": 3361,
+            "latestWkid": 3361
+          },
+          "native_source_crs": {
+            "wkid": 3361,
+            "latestWkid": 3361
+          },
+          "source_date_fields": [
+            "REVISION"
+          ],
+          "native_classification_field": "TAXPARCELTYPE",
+          "observed_metadata_data_edit": null,
+          "observed_record_revision_maximum": 1791763200000,
+          "observed_record_revision_maximum_iso": "2026-10-12T00:00:00Z",
+          "observed_native_feature_count": 40302,
+          "notes": [
+            "The original collector now requests outSR=3361 explicitly in both true-curve and provider-linear queries. Both actual requests returned native CRS3361 for original OBJECTID312542.",
+            "Original unjoined county cadastral polygons; separate source identity from operational CAMA joins and the SC RFA 2025 copy.",
+            "The source metadata exposes service CRS102100/latest3857 and original sourceSpatialReference3361. Preserve the actual returned geometry CRS and original source declaration.",
+            "REVISION is a per-record source revision, not a dataset-wide effective date. The observed maximum is2026-10-12 across40,251 dated records;51 records have no REVISION.",
+            "Native TAXPARCELTYPE values and all geometry remain in the retained original capture. Observed counts:0=70,1=39149,2=917,3=108,4=58.",
+            "The published service has no coded-value domain or subtype labels for TAXPARCELTYPE. Source capture retains its codes; category meanings from another county do not apply.",
+            "Operational Parcels_Search_and_Select/MapServer/0 separately returns40302 records; CAMA/FeatureServer/9 returns39555. Those joined services remain separate from this unjoined source.",
+            "Use the current collector's complete original exact-OID capture and its reporting-area intersection. Original HTTP response bytes and their SHA256 are retained by that receiver."
+          ],
+          "map_crs": {
+            "wkid": 102100,
+            "latestWkid": 3857
+          }
+        },
+        {
+          "id": "greenwood-rfa-boundary-copy",
+          "title": "Greenwood County full parcels retained by SC RFA",
+          "url": "https://services9.arcgis.com/RvqSyw3diI7dTKo5/ArcGIS/rest/services/Greenwood_McCormick_Web_Map_Feature_Layers/FeatureServer/7",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "PIN",
+            "OLDPIN"
+          ],
+          "provenance": "state_boundary_project_copy",
+          "authority_url": "https://rfa.sc.gov/resources/geodetic/county-boundary-clarifications/greenwood-mccormick-county-boundary",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "FID",
+          "native_crs": {
+            "wkid": 102100,
+            "latestWkid": 3857
+          },
+          "source_date_fields": [
+            "REVISION"
+          ],
+          "observed_metadata_data_edit": "2025-10-30 18:18:40 (provider directory display)",
+          "notes": [
+            "Full Greenwood Parcels layer7, distinct from Affected Parcels layer4. Current county viewer is greenwoodsc.gov/greenwoodnj/index.html."
+          ]
+        }
+      ]
+    },
+    {
+      "fips": "45059",
+      "name": "Laurens",
+      "preferred_provider": "laurens-aug2025-parcel",
+      "providers": [
+        {
+          "id": "laurens-aug2025-parcel",
+          "title": "Laurens County published parcel layer",
+          "url": "https://www.laurenscountygis.org/arcgis/rest/services/Pebble/LaurensCountyDataAug2025/MapServer/4",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "TMS"
+          ],
+          "provenance": "county_published_service",
+          "authority_url": "https://www.laurenscountygis.org/arcgis/rest/services/Pebble/LaurensCountyDataAug2025/MapServer",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "OBJECTID",
+          "native_crs": {
+            "wkid": 103146,
+            "latestWkid": 6570
+          },
+          "source_date_fields": [
+            "Test_Date"
+          ],
+          "notes": [
+            "The service name contains Aug2025; the actual captured metadata and source record dates define the observed edition."
+          ]
+        }
+      ]
+    },
+    {
+      "fips": "45065",
+      "name": "McCormick",
+      "preferred_provider": "mccormick-rfa-boundary-copy",
+      "providers": [
+        {
+          "id": "mccormick-rfa-boundary-copy",
+          "title": "McCormick County full parcels retained by SC RFA",
+          "url": "https://services9.arcgis.com/RvqSyw3diI7dTKo5/ArcGIS/rest/services/Greenwood_McCormick_Web_Map_Feature_Layers/FeatureServer/8",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "PIN",
+            "taxMapNumb",
+            "T_Map_Numb"
+          ],
+          "provenance": "state_boundary_project_copy",
+          "authority_url": "https://rfa.sc.gov/resources/geodetic/county-boundary-clarifications/greenwood-mccormick-county-boundary",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "FID",
+          "native_crs": {
+            "wkid": 102100,
+            "latestWkid": 3857
+          },
+          "observed_metadata_data_edit": "2025-10-30 18:18:54 (provider directory display)",
+          "notes": [
+            "Full McCormick Parcels layer8, distinct from Affected Parcels layer5. Current county-published viewer is mccormicksc.wthgis.com."
+          ]
+        }
+      ]
+    },
+    {
+      "fips": "45073",
+      "name": "Oconee",
+      "preferred_provider": "oconee-parceldata",
+      "providers": [
+        {
+          "id": "oconee-parceldata",
+          "title": "Oconee County native parcels",
+          "url": "https://arcserver2.oconeesc.com/arcgis/rest/services/PARCELDATA/MapServer/1",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "TMS_NUMBER",
+            "GPIN_TEXT",
+            "GPIN"
+          ],
+          "provenance": "county_published_service",
+          "authority_url": "https://arcserver2.oconeesc.com/arcgis/rest/services/PARCELDATA/MapServer",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "OBJECTID",
+          "native_crs": {
+            "wkid": 2273,
+            "vcsWkid": 5703
+          },
+          "source_date_fields": [
+            "EDITDATE"
+          ],
+          "notes": [
+            "Original native CRS includes published vertical reference5703; original flags/coordinates are retained."
+          ]
+        }
+      ]
+    },
+    {
+      "fips": "45077",
+      "name": "Pickens",
+      "preferred_provider": "pickens-arcreaderdata",
+      "providers": [
+        {
+          "id": "pickens-arcreaderdata",
+          "title": "Pickens County ArcReaderData parcels",
+          "url": "https://services1.arcgis.com/59960rq18IxUcAVI/ArcGIS/rest/services/ArcReaderData/FeatureServer/2",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "PIN",
+            "PINEXT",
+            "ACCTNO"
+          ],
+          "provenance": "county_published_service",
+          "authority_url": "https://www.co.pickens.sc.us/departments/gis/index.php",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "OBJECTID",
+          "native_crs": {
+            "wkid": 102100,
+            "latestWkid": 3857
+          },
+          "source_date_fields": [
+            "TAXYEAR"
+          ],
+          "observed_metadata_data_edit": "2026-10-07 11:09:10 (provider directory display)",
+          "notes": [
+            "Provider description identifies daily updates by Pickens County GIS from recorded surveys/deeds."
+          ]
+        }
+      ]
+    },
+    {
+      "fips": "45081",
+      "name": "Saluda",
+      "preferred_provider": "saluda-publicwebsite",
+      "providers": [
+        {
+          "id": "saluda-publicwebsite",
+          "title": "Saluda County public parcel layer",
+          "url": "https://saludacountysc.net/arcgis/rest/services/ParcelViewers/PublicWebsite_Pro/MapServer/4",
+          "page_size": 200,
+          "parcel_id_fields": [
+            "SDE.DBO.Parcels.TaxMapNumber"
+          ],
+          "provenance": "county_published_service",
+          "authority_url": "https://saludacountysc.net/arcgis/rest/services/ParcelViewers/PublicWebsite_Pro/MapServer",
+          "reviewed_at": "2026-10-13T00:55:00Z",
+          "native_oid_field": "SDE.DBO.Parcels.OBJECTID",
+          "native_crs": {
+            "wkid": 2273
+          },
+          "notes": [
+            "Keep fully qualified original parcel field names. SDE.DBO.AssessorData.OBJECTID is a joined ordinary integer, not the native parcel OID."
+          ]
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "County selection is derived from actual positive-area intersection with original PlanningBasins2023 Upper Savannah record5. The publisher's10-county context is not substituted for the reporting area.",
+    "Preferred providers are explicit. A different source or changed county geometry requires a new source-bound plan; unchanged complete source bodies can be reused with matching acquisition masks.",
+    "Source-native attributes and original geometries are retained. Prepared parcel keys qualify native OIDs by county and provider. Classification-specific road/water/outside categories remain context, while eligible tax and government parcel polygons feed the parcel reducer.",
+    "Only code and provider metadata belong in the public source repository. Captured parcel bodies and prepared project inventories stay with the existing internal source workspace."
+  ]
+}

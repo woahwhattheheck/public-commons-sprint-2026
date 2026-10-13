@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // MIT. Authenticated local operator UI for the original native facilitator.
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -8,8 +8,8 @@ import { pathToFileURL } from 'node:url';
 import { openProfileStore, requireValue, fail } from './store.mjs';
 import { createFacilitatorController } from './controller.mjs';
 
-const assets = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/catalog-browser.mjs','catalog-browser.mjs'],['/style.css','style.css']]);
-const mime = {'index.html':'text/html; charset=utf-8','browser.mjs':'text/javascript; charset=utf-8','catalog-browser.mjs':'text/javascript; charset=utf-8','style.css':'text/css; charset=utf-8'};
+const assets = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/catalog-browser.mjs','catalog-browser.mjs'],['/catalog-receiving.mjs','catalog-receiving.mjs'],['/style.css','style.css']]);
+const mime = {'index.html':'text/html; charset=utf-8','browser.mjs':'text/javascript; charset=utf-8','catalog-browser.mjs':'text/javascript; charset=utf-8','catalog-receiving.mjs':'text/javascript; charset=utf-8','style.css':'text/css; charset=utf-8'};
 const headers = {'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer',
   'cross-origin-resource-policy':'same-origin','content-security-policy':"default-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"};
 function fields(value, allowed) {
@@ -34,8 +34,11 @@ export async function startWorkspace({directory, ownershipDirectory, create = fa
   const store = await openProfileStore({directory, ownershipDirectory, create});
   const controller = createFacilitatorController(store, {environment});
   const token = randomBytes(32).toString('hex');
+  const identity = Object.freeze({schema:'stellar-forge.native-operator-launch.v1',
+    instanceId:randomUUID(), directory, ownershipDirectory, pid:process.pid, ppid:process.ppid,
+    startedAt:new Date().toISOString()});
   let origin, closing = false, closePromise;
-  const snapshot = () => ({workspace:{directory, ownershipDirectory}, ...controller.view()});
+  const snapshot = () => ({workspace:{...identity}, ...controller.view()});
   const server = createServer(async (req, res) => {
     const send = (status, value, extra = {}) => {
       if (res.destroyed || res.writableEnded) return;
@@ -68,7 +71,8 @@ export async function startWorkspace({directory, ownershipDirectory, create = fa
           return send(200, controller.catalog({runtimeId,query:params.toString(),
             expectedVersion:version === null ? null : Number(version)}));
         }
-        if (path === '/api/profiles') return send(200, await store.list({after:url.searchParams.get('after') ?? ''}));
+        if (path === '/api/profiles') return send(200, await store.list({after:url.searchParams.get('after') ?? '',
+          limit:url.searchParams.has('limit') ? Number(url.searchParams.get('limit')) : 30}));
         if (path === '/api/profile' || path === '/api/download') {
           const profile = await store.read(url.searchParams.get('name'));
           if (path === '/api/profile') return send(200, profile);
@@ -112,7 +116,7 @@ export async function startWorkspace({directory, ownershipDirectory, create = fa
     try{await Promise.all([stopped,controller.close()]);}finally{clearTimeout(timer);}
     return snapshot();
   })();
-  return {url:origin,operatorUrl:origin+'/#token='+token,store,controller,close};
+  return {url:origin,operatorUrl:origin+'/#token='+token,identity,store,controller,close};
 }
 
 async function main(args) {
@@ -127,8 +131,8 @@ async function main(args) {
   }
   requireValue(options.directory&&options.ownershipDirectory,'FACILITATOR_WORKSPACE_PATHS_REQUIRED');
   const running=await startWorkspace(options);
-  process.stdout.write(JSON.stringify({mode:'NATIVE_FACILITATOR_OPERATOR',operatorUrl:running.operatorUrl,
-    directory:options.directory,ownershipDirectory:options.ownershipDirectory})+'\n');
+  process.stdout.write(JSON.stringify({mode:'NATIVE_FACILITATOR_OPERATOR',...running.identity,
+    operatorUrl:running.operatorUrl})+'\n');
   const stop=()=>running.close().catch(error=>{process.stderr.write(JSON.stringify({error:error.code??'FACILITATOR_WORKSPACE_SHUTDOWN_FAILED'})+'\n');process.exitCode=1;});
   process.once('SIGINT',stop);process.once('SIGTERM',stop);
 }

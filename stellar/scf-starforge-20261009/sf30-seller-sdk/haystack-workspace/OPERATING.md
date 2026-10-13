@@ -528,3 +528,9 @@ Open the received application, read the saved edition's register and diagnostics
 ## Corrective work and returning operator changes
 
 Open **Work items** to capture findings from the native register or diagnostics, assign work, retain completed evidence, submit a material snapshot and review its disposition. The [complete corrective-work guide](CORRECTIVE_WORK.md) covers the queue, review rounds, downloadable evidence, full reports and original-operator acceptance of returned project changes.
+
+## Point-list modelling, native standard validation and returned models
+
+The **Point-list modelling** link opens the full source intake, mapping, model editor, standard catalogue, native validation, reporting, returned-work and request-history views in this same workspace. [SEMANTIC_MODELLING.md](SEMANTIC_MODELLING.md) provides the complete workflow and operator commands. It retains every original source row and stable entity identity, complete model versions, exact-version reviews and all native report bytes.
+
+Install the explicitly selected offline standard runtime only when needed, using [SEMANTIC_NATIVE.md](SEMANTIC_NATIVE.md). Physical or live-site observations are recorded with their own author and evidence; successful standard validation does not supply those observations. The complete v3 workspace package receives the original v1 and corrective v2 package inventories as well.

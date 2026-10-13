@@ -1,0 +1,167 @@
+{
+  "version": "1.2.0",
+  "owner": "ASTRA-MONITOR12",
+  "package": "source",
+  "files": [
+    {
+      "path": "API.md",
+      "bytes": 7070,
+      "sha256": "2bbe83b1a7e3349e0cfbe19f32b881a6eac9fac67df9d7ac1981d2bfe087ffb5"
+    },
+    {
+      "path": "HANDOFF.md",
+      "bytes": 2434,
+      "sha256": "5552f8afea3d61e274512022637177f3fb26b06caa5913cd93758fc484112da9"
+    },
+    {
+      "path": "PREDECESSORS.json",
+      "bytes": 3442,
+      "sha256": "a1ee4509f3079ee8480572d402583aab2ef326411b4113d0609693739918f65c"
+    },
+    {
+      "path": "README.md",
+      "bytes": 15870,
+      "sha256": "473986c5a439276ee406b1cf426693e486ca2447e84fbbebc28f47cb2a107e14"
+    },
+    {
+      "path": "install_monitoring.py",
+      "bytes": 8350,
+      "sha256": "502d1b8fbcbaa50fbc4d5c69b98f91e91197101d775fe1f2de3049bb078acc55"
+    },
+    {
+      "path": "install_native_monitoring.py",
+      "bytes": 6256,
+      "sha256": "fba4efc487ba27aa9271273e1e8841b2f66641903887734523d40036d5e537b5"
+    },
+    {
+      "path": "requirements-monitoring.txt",
+      "bytes": 181,
+      "sha256": "01b1d14a98a0e180a062ccaa19ea6d45bb9f70fa84c991eafbdf534427e8764d"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/model/MONITORING.md",
+      "bytes": 15870,
+      "sha256": "473986c5a439276ee406b1cf426693e486ca2447e84fbbebc28f47cb2a107e14"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/model/monitoring_actions.py",
+      "bytes": 2595,
+      "sha256": "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/model/monitoring_campaign.py",
+      "bytes": 8179,
+      "sha256": "9e6ad6d5590c6200236211e59b6098c3fafb5db93ec1fbeb12061fe7ea89ac36"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/model/monitoring_cli.py",
+      "bytes": 1694,
+      "sha256": "a6849dfdc19121a0b49fcd127dbe4bb1c9b2500c27db63c04aa67dfa6f89633f"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/model/monitoring_common.py",
+      "bytes": 626,
+      "sha256": "a25fce18c6f7da1c0db7f1e3ec926610b86206348b83e4be3813e14ef027ba2f"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/model/monitoring_design.py",
+      "bytes": 15170,
+      "sha256": "ff755941cf4529874fa954278d0143c774069e23a362c4cc9d35f14e69694a18"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/model/monitoring_network.py",
+      "bytes": 11729,
+      "sha256": "9e4e57f104a805a939c96f93984c5245c2a5b3e4ddddb234f927a92d5f7da122"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/model/monitoring_sources.py",
+      "bytes": 5912,
+      "sha256": "16f988793211baee79f69de0e46c3e8b3a30cdac752ff7e4c8cbc957225c3ddb"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/model/monitoring_workspace.py",
+      "bytes": 31904,
+      "sha256": "bd5946b4f758bbe6ad1ecafb45bd0c04273092178451c16c9dbd3f529f790cbc"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/operator/MONITORING_API.md",
+      "bytes": 7070,
+      "sha256": "2bbe83b1a7e3349e0cfbe19f32b881a6eac9fac67df9d7ac1981d2bfe087ffb5"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/operator/extensions/monitoring.json",
+      "bytes": 1567,
+      "sha256": "6f126ec8362be17ee17f70780f6d2b8ebc98b5f22fa03118f8100ff4cae0d3bf"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/operator/monitoring.py",
+      "bytes": 216,
+      "sha256": "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/operator/monitoring_native.py",
+      "bytes": 3317,
+      "sha256": "6f5ce1a12ee537c5963c198b99f3142055c7778f96df8d5b6aceae726e7a96c9"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/operator/monitoring_receiving.py",
+      "bytes": 5296,
+      "sha256": "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/operator/static/monitoring.js",
+      "bytes": 27040,
+      "sha256": "eb3c4684e9de66b6dd448ca08ccf0277f28aa27def9e6f1983569838ddeb0b41"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/operator/web/monitoring-component.mjs",
+      "bytes": 23470,
+      "sha256": "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/operator/web/monitoring.css",
+      "bytes": 3592,
+      "sha256": "a2bc999bad6bee6f9f6c6c849c3e39f617b8e5344529f5f17a509b3d5bc2cd93"
+    },
+    {
+      "path": "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs",
+      "bytes": 4274,
+      "sha256": "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895"
+    },
+    {
+      "path": "tests/browser_journey.py",
+      "bytes": 9576,
+      "sha256": "9a9649f5ce6f50cd3b899f3c0f830babe3254ec032dd5e2cfcd42c6e3eab8f35"
+    },
+    {
+      "path": "tests/contract_support.py",
+      "bytes": 5432,
+      "sha256": "ca02b967bd4ac05725a0c7ec534044d65fe0b24cc04e8669333cdbc2d8cca095"
+    },
+    {
+      "path": "tests/native_browser_journey.py",
+      "bytes": 10951,
+      "sha256": "3cca07ddc44fee32efb4484fae9a942d0a1e5343187a438f8be22fcec9fe4e45"
+    },
+    {
+      "path": "tests/native_contract_support.py",
+      "bytes": 6725,
+      "sha256": "65bfb15279ce08a7594bcccb707843affb42abbc222a0218bd50accac5318d75"
+    },
+    {
+      "path": "tests/shared_registry_journey.py",
+      "bytes": 4239,
+      "sha256": "c6b817129ad064597f9499b640f1d38bb0f4d2a04b05767f65c72cab29c2ac77"
+    },
+    {
+      "path": "tests/test_monitoring.py",
+      "bytes": 11793,
+      "sha256": "ff8c34aca5a1163e13274e29990b55bab53b85ed3e08b0482cae25214833c123"
+    },
+    {
+      "path": "tests/test_native_contract.py",
+      "bytes": 13180,
+      "sha256": "564028816824f9a79392e6cb061fab5a4a232ac6c9be2805ac030088262b9072"
+    }
+  ]
+}

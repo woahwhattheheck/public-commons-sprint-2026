@@ -58,7 +58,14 @@ def _text(value, label, maximum=10000, required=False):
 def _definition(workspace, db, questionnaire_id):
     row = workspace._row(db, "questionnaires", questionnaire_id)
     result = db.execute("SELECT definition FROM definitions WHERE questionnaire_id=? AND version=?", (questionnaire_id, row["version"])).fetchone()
-    return json.loads(result[0])
+    return _source_display(workspace, json.loads(result[0]))
+
+
+def _source_display(workspace, definition):
+    if (definition.get("source_intake") or {}).get("schema") == "atssc.original-family-definition.v1":
+        from workbook_intake import source_display_definition
+        return source_display_definition(workspace, definition)
+    return definition
 
 
 def _definition_disclosures(questions):
@@ -499,6 +506,7 @@ def _attach_analysis(editions, layout):
 
 def _compose(workspace, db, params, report_id):
     publication, definition = workspace._definition(db, params["publication_id"])
+    definition = _source_display(workspace, definition)
     saved = _saved_row(db, "template", params["template_id"], params.get("template_version")) if params.get("template_id") else None
     if saved and saved["questionnaire_id"] != publication["questionnaire_id"]:
         raise OperationError("REPORT_SELECTION", "Choose a template from the publication's original questionnaire")
@@ -507,7 +515,7 @@ def _compose(workspace, db, params, report_id):
     layout = _template(saved["definition"] if saved else params.get("template", {}), definition, projected)
     _view_bindings(db, layout, questions, projected)
     if saved: layout.update(template_id=saved["id"], template_version=saved["version"])
-    editions = workspace.compose_report(db, {"publication_id": publication["id"], "question_ids": layout["question_ids"],
+    editions = workspace.compose_report(db, {"publication_id": publication["id"], "question_ids": layout["question_ids"], "refresh_source_context": True,
                                              **({"respondent_ids": params["respondent_ids"]} if params.get("respondent_ids") is not None else {})}, report_id)
     return _attach_analysis(editions, layout)
 

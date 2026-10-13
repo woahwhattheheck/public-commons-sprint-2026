@@ -1,0 +1,46 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah: complete published water-quality assessment banks",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "model_domain_huc_count": 217,
+    "normalized_assessments": "complete_statewide_publisher_editions",
+    "nrcs_context": "complete_selected_model_domain"
+  },
+  "notes": "Both complete publisher editions are normalized and retain original source identity. Select format=normalized in the Water-quality context operator. The 2024 source representation is explicitly the retained publisher PDF table text. Companion files preserve that text and the complete original native TMDL bank.",
+  "entries": [
+    {
+      "id": "scdes-303d-published-2024-pdf-table-normalized",
+      "title": "Published 2024 impairment listing — complete normalized PDF-table edition",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf",
+      "vintage": "2024",
+      "kind": "table",
+      "path": "inputs/303d-2024-pdf-table-normalized.json",
+      "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c",
+      "role": "WATER_QUALITY_ASSESSMENTS",
+      "format": "normalized",
+      "evidence_kind": "303d_listing",
+      "publication_status": "published",
+      "source_representation": "publisher_pdf_table_text",
+      "companions": [
+        {
+          "path": "inputs/303d-2024-publisher-pdf-table-text.json",
+          "sha256": "9be7679b79ca2a8a4d4d21227ad57371b88fd6082e8b29c7efc6d9a18ab0edce"
+        }
+      ]
+    },
+    {
+      "id": "scdes-tmdl-attainment-native-20260728",
+      "title": "July28 2026 TMDL attainment — complete native normalized edition",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf",
+      "vintage": "2026-07-28",
+      "kind": "table",
+      "path": "inputs/tmdl-attainment-native-20260728.json",
+      "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522",
+      "role": "WATER_QUALITY_ASSESSMENTS",
+      "format": "normalized",
+      "evidence_kind": "tmdl_attainment",
+      "publication_status": "published"
+    }
+  ]
+}

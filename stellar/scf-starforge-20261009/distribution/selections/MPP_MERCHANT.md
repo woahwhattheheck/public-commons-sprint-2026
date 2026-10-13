@@ -1,6 +1,6 @@
 # Native MPP merchant and customer installation
 
-The `mpp-merchant` selection delivers the original native MPP console, merchant and customer workbench, managed Applications launcher, merchant MCP, generated customer clients and complete file receiving. Its source archive carries the selected recipe and the original Git identities of its implementation.
+The `mpp-merchant` selection delivers the original native MPP console, complete Charge and recurring Channel product, merchant and customer workbench, managed Applications launcher, merchant MCP, generated customer clients and complete operating receiving. Its source archive carries the selected recipe and the original Git identities of its implementation.
 
 ## Receive one selected release
 
@@ -159,12 +159,94 @@ Use **Stop application** to drain the original console jobs and merchant listene
 
 Preserve the full private native workspace, selected native dependency directory, original governor policy/ledger and its host-held keys, merchant resource files and any handler modules still referenced by unfinished deliveries. Retain the actual selected source manifest, archive SHA, installation ID, profile ID and original Applications workspace/run identifiers in the operator handover.
 
+
+## Operate the complete recurring Channel product
+
+This same selection now carries the complete maintained `products/mpp-workspace` application and `mpp-channel` source. The existing Charge console remains available through `mpp`. The product command, browser, typed JavaScript/Python clients and merchant MCP share the same original native workspace, jobs and complete operating history.
+
+After the source and native SDK runtime above are received, initialize the product around the selected native workspace, or reopen its existing product directory:
+
+```sh
+starforge mpp-workspace init --dir /absolute/private/mpp-product \
+  --runtime /absolute/private/mpp-native-runtime \
+  --workspace /absolute/private/mpp-workspace --name "MPP customer work"
+starforge mpp-workspace open --dir /absolute/private/mpp-product
+```
+
+The product publishes its actual private browser and merchant MCP endpoints. Retain its product directory, source/runtime identities and original private workspace together. For an already initialized product, continue with `open`; `inspect` and `inspect-launch` reopen its current setup and launch records.
+
+### Open and initially fund the selected channel
+
+The complete Channel application now carries first-use channel setup. Open **Channel work → Open a channel** and choose the actual network, token, funder, merchant recipient, commitment public key, initial deposit, refund waiting period and compiled contract edition. Select code already present on that network, or receive the actual compiled WASM file for native upload.
+
+Preparation retains the complete code bytes and derives one channel address from the original funder and saved salt. The product terminal reviews the exact source, parties, deposit and total fee limit. Optional code upload and channel creation retain their own signed envelopes and original transaction hashes under the same opening ID. The original native SDK creates the contract directly with the selected code hash and constructor.
+
+```sh
+starforge mpp-workspace channel opening-template --dir "$MPP_PRODUCT"
+starforge mpp-workspace channel opening-prepare --dir "$MPP_PRODUCT" \
+  --input "$COMPLETE_OPENING_INPUT"
+starforge mpp-workspace channel opening-execute --dir "$MPP_PRODUCT" \
+  --input "$ORIGINAL_OPENING_ID_INPUT"
+starforge mpp-workspace channel openings --dir "$MPP_PRODUCT" --id "$ORIGINAL_OPENING_ID"
+```
+
+Continue the same ID with `opening-resume`; reconcile its original signed transaction with `opening-reconcile`. Download the opened channel's actual identity for merchant setup and recurring work. Prepared and interrupted openings can be selected in the existing full operating handover, including the exact WASM, salt, profile, original authority and both transaction stages. The receiving product uses its actual native runtime while preserving that original setup.
+
+The maintained browser, installed commands, JavaScript/TypeScript, Python client and merchant MCP expose all 41 Channel operations. The complete channel guide in the retained source table below contains the opening profile and every recovery state.
+
+### Recurring useful work
+
+Open **Channel work** and receive the actual merchant contract or retained contract file. Select the useful priced route, authorized source edition, original channel, token and parties. Create the accountable task with its total and per-purchase cap, purchase count and expiry. The controlling terminal presents the original task edition for operator authorization.
+
+Each item in the customer's real work list retains a stable purchase ID and complete request. Execute or resume the original purchase and receive its exact paid output. The browser, installed commands, typed clients and MCP all operate these same task and delivery records.
+
+```sh
+starforge mpp-workspace channel state --dir /absolute/private/mpp-product
+starforge mpp-workspace channel run --dir /absolute/private/mpp-product \
+  --input /absolute/private/selected-work.json --out /absolute/private/work-result.json
+```
+
+The selected work document uses `stellar-forge.mpp-channel-work.v1` and contains the actual `taskId`, `purchaseId` and complete `request` for every item. Repeating the same input continues its retained work and outputs.
+
+### Funding, collection and remaining balance
+
+**Channel funds** selects the actual original channel and accountable funder profile, including the host signer environment-variable name and maximum transaction fee. **Add funds** authorizes the contract's exact `top_up` transfer. It preserves every task's separately selected budget and expiry.
+
+The merchant's **Collect earned amount and keep open** operation calls the original `settle` method and finishes as **COLLECTED**. Later useful purchases continue in the same channel. **Collect and close channel** retains the separate original close path. The funder can **Start refund waiting period** and, after its actual ledger deadline, **Return remaining balance** to the original funder.
+
+The product observes balance and withdrawn cumulative at the same ledger. New unpaid commitments must cover their authenticated purchase amount and fit the remaining balance while the native SDK checks the increase from its current cumulative record. Financial records retain their original action, operation ID, fee authority, signed transaction, hash and finality. Resume and archival reconciliation use that same signed transaction.
+
+The [complete Channel guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/dae458763d417d6f1adae65b3bd35f68656c9b34/stellar/scf-starforge-20261009/mpp-channel/README.md) includes all 41 supported operations, exact input shapes, fee review, original transaction recovery and contract sources.
+
+### Receive the whole operated product
+
+Use the original complete-channel export and receiving flow to carry the actual task/customer history, merchant records, paid output files, funding, collection/refund records, signed transactions, coherent observations and native SDK state. Its source closure includes the complete Python customer application and original product.
+
+The [product receiving guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/dae458763d417d6f1adae65b3bd35f68656c9b34/products/mpp-workspace/RECEIVING.md) covers the original workspace identity and operating transfer. The [Python customer guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/dae458763d417d6f1adae65b3bd35f68656c9b34/stellar/scf-starforge-20261009/mpp-channel/python/README.md) provides the complete work-list runner and `receive_channel.py`. Their existing operation IDs and immutable response/handover files continue across process interruption and receiving.
+
+In Runtime **Applications**, this selection also exposes **Native MPP merchant and customer** from provider `mpp-product`. Select the initialized product and its original native SDK/runtime, review the application and start it through the existing managed terminal. The original **MPP merchant and customer** provider continues to operate its existing native console registrations.
+
+| Interface | Complete maintained entry |
+| --- | --- |
+| Product setup and original lifecycle | `starforge mpp-workspace` |
+| Live product Channel work | `starforge mpp-workspace channel` |
+| Direct stopped native workspace | `starforge mpp-channel` |
+| Typed product and Channel clients | `./products/mpp-workspace/client`, `./products/mpp-workspace/channel` |
+| Merchant agent | `merchant_mpp_channel_status`, `merchant_mpp_channel_record`, `merchant_mpp_channel_operate`, `merchant_mpp_channel_file` |
+| Python customer work | `stellar/scf-starforge-20261009/mpp-channel/python/run_work.py` |
+
+Receive a new complete source archive for this following edition and keep its original source manifest and installed runtime identity. An already running application continues from its selected archive and saved records; its receiving operation chooses the complete following source.
+
 ## Retained operating sources
 
 These paths are below the installed package's `source/` directory:
 
 | Workflow | Maintained source guide |
 | --- | --- |
+| Complete product operation | `products/mpp-workspace/OPERATING.md` |
+| Recurring Channel work, funding, collection and refunds | `stellar/scf-starforge-20261009/mpp-channel/README.md` |
+| Whole operating Channel receiving | `products/mpp-workspace/RECEIVING.md` |
+| Python customer work and receiving | `stellar/scf-starforge-20261009/mpp-channel/python/README.md` |
 | Native merchant, buyer and recovery | `stellar/scf-starforge-20261009/mpp-charge/README.md` |
 | Complete customer package | `stellar/scf-starforge-20261009/mpp-charge/customer/README.md` |
 | Customer workbench | `stellar/scf-starforge-20261009/mpp-charge/customer/workbench-guide.md` |

@@ -1,0 +1,124 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "annual-reference",
+  "title": "Annual load observations",
+  "version": "2",
+  "order": 62,
+  "assets": [
+    "annual_reference.mjs",
+    "annual_reference.css"
+  ],
+  "backend": {
+    "module": "annual_reference",
+    "factory": {
+      "handler": "AnnualReferences",
+      "args": [
+        "operator",
+        "fault",
+        "source_roots"
+      ]
+    },
+    "actions": [
+      "annual-reference.inventory",
+      "annual-reference.import"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/annual-references/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/annual-references/files",
+        "operation": "files",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/annual-references/inventory",
+        "operation": "inventory",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/annual-references/operation",
+        "operation": "operation",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "annual_references",
+      "handler": "state",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/annual_reference.mjs",
+    "factory": "createAnnualReferences",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "submitAction",
+      "showTask",
+      "openExtension"
+    ],
+    "styles": [
+      "/web/annual_reference.css"
+    ],
+    "view": {
+      "id": "annual-reference",
+      "title": "Annual load observations",
+      "after": "observations"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

@@ -40,8 +40,17 @@ module Starforge
             @application.initialize!
             @application.routes.draw do
               resources :dataset_imports,controller: "starforge/dataset_operator/commission",only: [:index,:show,:create] do
-                collection { get :stylesheet }
+                collection do
+                  get :stylesheet
+                  post :create_source
+                end
                 member do
+                  get :mapping
+                  post :save_mapping
+                  post :prepare_source
+                  get :source_rows
+                  get :source_export
+                  get :mapping_export
                   post :prepare
                   post :refresh
                   post :commit
@@ -65,6 +74,7 @@ module Starforge
           Rails.application = @application
           # Commissioning performs the actual jobs in this process. Production
           # installations use their application's configured durable queue.
+          SourcePrepareJob.queue_adapter = :inline
           PrepareJob.queue_adapter = :inline
           ImportJob.queue_adapter = :inline
           DataCaptureJob.queue_adapter = :inline

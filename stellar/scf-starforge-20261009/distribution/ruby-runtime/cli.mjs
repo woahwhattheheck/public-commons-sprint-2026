@@ -16,7 +16,7 @@ const HELP = `Managed Ruby runtime
     --bundler-version VERSION --request-id UUID [--project-directory DIR --gemfile Gemfile]
   ruby-runtime install|verify --directory DIR --id ENV --operation-id UUID [--offline] [--wait]
   ruby-runtime run --directory DIR --id ENV --operation-id UUID
-    --entry native-dataset-lifecycle|baserow-customer-lifecycle|dataset-records|dataset-records-lifecycle [--wait] -- ORIGINAL_ARGS
+    --entry native-dataset-lifecycle|baserow-customer-lifecycle|dataset-records|dataset-records-lifecycle|dataset-source|dataset-mapping-lifecycle [--wait] -- ORIGINAL_ARGS
   ruby-runtime inspect --directory DIR
   ruby-runtime operation|resume|cancel --directory DIR --operation-id UUID [--wait]
   ruby-runtime log --directory DIR --operation-id UUID [--offset BYTES --limit BYTES]

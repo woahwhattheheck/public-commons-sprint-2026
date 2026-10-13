@@ -10,6 +10,9 @@ import uuid
 from directory_runtime import (InputError,ConflictError,original_server,source,atomic_json,safe_read)
 from directory_workspace import Workspace
 from directory_receiving import MAX_PACKET
+from directory_operating_plans import MAX_REQUEST as OPERATING_PLAN_REQUEST
+from directory_operating_returns import MAX_REQUEST as OPERATING_RETURN_REQUEST
+from directory_corrections_schema import MAX_INPUT as CORRECTION_REQUEST, KINDS as CORRECTION_KINDS
 from referral_server import Handler as BaseHandler
 import directory_schema as schema
 
@@ -56,6 +59,29 @@ class Handler(BaseHandler):
         target=self._gate(api=False)
         if not target.path.startswith("/api/directory"):return super()._get()
         self._gate();p=self._parts(target.path);ws=self.server.workspace;t=p[2:]
+        if len(t)==3 and t[0]=="operatingPlanReturns"and t[2]in {"review","comparison","input","rows"}:
+            if t[2]=="rows":
+                q,offset,limit=self._page_args(target,("kind","conflict","unresolved"))
+                flags={}
+                for key in ("conflict","unresolved"):
+                    if key in q:
+                        if q[key]not in {"true","false"}:raise InputError(key+" must be true or false")
+                        flags[key]=q[key]=="true"
+                return self._json(ws.directory_operating_return_rows(t[1],offset,limit,q.get("kind"),**flags))
+            self._query(target,())
+            method={"review":ws.directory_operating_return_review,"comparison":ws.directory_operating_return_comparison,"input":ws.directory_operating_return_input}[t[2]]
+            return self._json(method(t[1]))
+        if len(t)==4 and t[0]=="operatingPlanReturns"and t[2]=="files":
+            self._query(target,());return self._native_download(ws.directory_operating_return_file(t[1],t[3]))
+        if t==["operating-plans","catalog"]:
+            self._query(target,());return self._json(ws.directory_operating_catalogue())
+        if len(t)==3 and t[0]=="operatingPlans"and t[2]in {"document","draft","input","basis"}:
+            if t[2]=="draft":
+                q=self._query(target,("revision",));revision=self._integer(q["revision"],"revision",1)if "revision"in q else None
+                return self._json(ws.directory_operating_plan_draft(t[1],revision))
+            self._query(target,())
+            method={"document":ws.directory_operating_plan_document,"input":ws.directory_operating_plan_input,"basis":ws.directory_operating_plan_basis}[t[2]]
+            return self._json(method(t[1]))
         if t==["catalogue"]:
             self._query(target,());return self._json(ws.directory_catalogue())
         if t==["state"]:
@@ -115,6 +141,36 @@ class Handler(BaseHandler):
             q,offset,limit=self._page_args(target,("group",));return self._json(ws.directory_preview_page(t[1],q.get("group","findings"),offset,limit))
         if len(t)==3 and t[0]=="selections"and t[2]=="candidates":
             q,offset,limit=self._page_args(target,("query",));return self._json(ws.directory_selection_page(t[1],offset,limit,q.get("query","")))
+        if len(t)>=4 and t[:2]==["conformance","assessments"]:
+            if len(t)==4 and t[3]=="foreign-keys":
+                q,offset,limit=self._page_args(target,("table","state","ruleId","sourceId","recordId"))
+                return self._json(ws.directory_conformance_foreign_keys(t[2],offset,limit,
+                    q.get("table"),q.get("state"),q.get("ruleId"),q.get("sourceId"),q.get("recordId")))
+            if len(t)==4 and t[3]=="foreign-key-candidates":
+                q,offset,limit=self._page_args(target,("table","state","groupId","sourceId","recordId"))
+                return self._json(ws.directory_conformance_foreign_key_candidates(t[2],offset,limit,
+                    q.get("table"),q.get("state"),q.get("groupId"),q.get("sourceId"),q.get("recordId")))
+            if len(t)==4 and t[3]=="foreign-key-matches":
+                q,offset,limit=self._page_args(target,("outcomeId","candidateId"))
+                return self._json(ws.directory_conformance_foreign_key_matches(t[2],offset,limit,
+                    q.get("outcomeId"),q.get("candidateId")))
+            if len(t)==4 and t[3]in {"findings","rows"}:
+                if t[3]=="findings":
+                    q,offset,limit=self._page_args(target,("severity","table","code","sourceId","recordId"))
+                    return self._json(ws.directory_conformance_findings(t[2],offset,limit,q.get("severity"),q.get("table"),q.get("code"),q.get("sourceId"),q.get("recordId")))
+                q,offset,limit=self._page_args(target,("table",))
+                return self._json(ws.directory_conformance_rows(t[2],offset,limit,q.get("table")))
+            if len(t)==5 and t[3]=="findings":
+                self._query(target,());return self._json(ws.directory_conformance_finding(t[2],t[4]))
+        if len(t)==5 and t[0]=="conformance"and t[3]=="files":
+            collections={"assessments":"conformanceAssessments","reviews":"conformanceReviews","comparisons":"conformanceComparisons"}
+            if t[1]in collections:
+                self._query(target,());return self._native_download(ws.directory_conformance_file(collections[t[1]],t[2],t[4]))
+        if len(t)==3 and t[0]in CORRECTION_KINDS and t[2]=="rows":
+            _,offset,limit=self._page_args(target)
+            return self._json(ws.directory_correction_rows(t[0],t[1],offset,limit))
+        if len(t)==4 and t[0]in CORRECTION_KINDS and t[2]=="files":
+            self._query(target,());return self._native_download(ws.directory_correction_file(t[0],t[1],t[3]))
         if len(t)in {1,2}:
             kind="acquisitions"if t[0]=="operations"else t[0]
             if kind in schema.KINDS:
@@ -144,7 +200,18 @@ class Handler(BaseHandler):
         routes={tuple(a["path"].split("/")[3:]):getattr(ws,a["python"])for a in schema.catalogue()["actions"]}
         routes.update({("connections",):ws.directory_connection,("requests",):ws.directory_request,
             ("editions",):ws.directory_edition,("comparisons",):ws.directory_compare,("imports",):ws.save_directory_import})
-        if tuple(t)in routes:return self._json(routes[tuple(t)](self._json_body()),201)
+        if tuple(t)in routes:
+            if t and t[0]=="corrections":
+                value=source.json_value(self._body(CORRECTION_REQUEST).read())
+                if not isinstance(value,dict):raise InputError("Expected one complete original correction JSON object")
+            elif t and t[0]=="operating-returns":
+                value=source.json_value(self._body(OPERATING_RETURN_REQUEST).read())
+                if not isinstance(value,dict):raise InputError("Expected one complete returned-procedure JSON object")
+            elif t and t[0]=="operating-plans":
+                value=source.json_value(self._body(OPERATING_PLAN_REQUEST).read())
+                if not isinstance(value,dict):raise InputError("Expected one complete Operating Plans JSON object")
+            else:value=self._json_body()
+            return self._json(routes[tuple(t)](value),201)
         if t==["discover"]:
             v=self._json_body(("connectionId","operationId"),("connectionId","operationId"))
             return self._json(ws.directory_discover(v["connectionId"],v["operationId"]),201)

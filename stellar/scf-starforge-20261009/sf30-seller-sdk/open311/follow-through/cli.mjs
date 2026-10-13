@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // MIT. Saved municipal request and work-order follow-through commands.
-import { readFile, writeFile, rename, unlink } from 'node:fs/promises';
+import { readFile, open, mkdir, link, unlink } from 'node:fs/promises';
 import { resolve, dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -28,6 +28,7 @@ export const HELP='Municipal request and work-order follow-through\n\n'+
 'open311-follow-through operation --workspace DIR --request-id ORIGINAL_ID\n\n'+
 'Mutations accept --request-id ID and --expected-revision N. Preserve the original ID and file on retry.\n'+
 'serve also accepts --expected-workspace-id UUID --expected-binding-sha256 SHA; it prints one compact LISTENING line.\n'+
+'Exports create a new complete file; an existing output is never replaced.\n'+
 'Source status and original closing dates stay separate from internal work and action approval.\n';
 function argumentsOf(argv){
   const [command='help',...tokens]=argv,args={command};const allowed=new Set(['workspace','host','port','expected-workspace-id','expected-binding-sha256','file','metadata','capture-ids','kind','role','series','observed-at','name','source-url','id','q','offset','limit','edition','key','before','after','source','file-id','return','dispatch','out','request-id','expected-revision','discrepancy','assignee','work-status','approval','status','target-edition','entity']);
@@ -38,8 +39,24 @@ async function original(path){if(!path)fail('FILE_REQUIRED','Select the complete
 const numeric=(value,name)=>{if(value===undefined)return undefined;const number=Number(value);if(!Number.isSafeInteger(number)||number<0)fail('INVALID_ARGUMENT',name+' must be a nonnegative integer.');return number;};
 function paging(args){return {q:args.q??'',...(args.offset!==undefined?{offset:numeric(args.offset,'offset')}:{ }),...(args.limit!==undefined?{limit:numeric(args.limit,'limit')}:{ })};}
 async function saveFile(path,body){
-  if(!path)fail('OUTPUT_REQUIRED','Choose --out for the complete export file.');const target=resolve(path),temporary=join(dirname(target),'.'+basename(target)+'.'+randomUUID()+'.tmp');
-  try{await writeFile(temporary,body,{flag:'wx',mode:0o600});await rename(temporary,target);}finally{await unlink(temporary).catch(()=>{});}return target;
+  if(!path)fail('OUTPUT_REQUIRED','Choose --out for the complete export file.');
+  const target=resolve(path),directory=dirname(target);
+  await mkdir(directory,{recursive:true,mode:0o700});
+  const temporary=join(directory,'.'+basename(target)+'.'+randomUUID()+'.tmp');
+  let handle,temporaryCreated=false;
+  try{
+    handle=await open(temporary,'wx',0o600);temporaryCreated=true;
+    await handle.writeFile(body);
+    await handle.sync();
+    await handle.close();handle=undefined;
+    // A same-directory hard link publishes the complete fsynced inode atomically
+    // and fails with EEXIST instead of replacing an existing file or symlink.
+    await link(temporary,target);
+    return target;
+  }finally{
+    if(handle)await handle.close();
+    if(temporaryCreated)await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});
+  }
 }
 export async function run(argv=process.argv.slice(2),{stdout=process.stdout}={}){
   const args=argumentsOf(argv),command=args.command;const print=value=>stdout.write(JSON.stringify(value,null,2)+'\n');

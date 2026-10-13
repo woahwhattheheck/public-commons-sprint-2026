@@ -1,0 +1,63 @@
+{
+  "schema": "upstate.terrain-source-distribution/v1",
+  "version": "1.0.0",
+  "authoring_seat": "ASTRA-TERRAIN12",
+  "canonical_product_root": "opportunities/upstate_forever_2026",
+  "files": [
+    {
+      "path": "TERRAIN_STATIC.md",
+      "bytes": 14929,
+      "sha256": "0829690e2578cdd5679b97bc17e90d3c0a8403399a8e494f7c7ddb16fe727e26"
+    },
+    {
+      "path": "install_terrain.py",
+      "bytes": 3737,
+      "sha256": "aaef6b3f79a37c7e2d7080d719b40a5d79e591f48e6c36d0256dc6aa293ce644"
+    },
+    {
+      "path": "requirements-terrain.txt",
+      "bytes": 92,
+      "sha256": "15187eaeebc132168d0f82d2d77709453ed91c88c478f3f5f3549555626c8d97"
+    },
+    {
+      "path": "source_tools/terrain_catalog.py",
+      "bytes": 20025,
+      "sha256": "37d6302074cc4b50ea56f77f519ec71dc18caa32ed6cd73796fe874adaa7a2db"
+    },
+    {
+      "path": "source_tools/terrain_cli.py",
+      "bytes": 11909,
+      "sha256": "272518aeb160a606026038d8609496815defa67cbcd4590d14365baad09b8860"
+    },
+    {
+      "path": "source_tools/terrain_io.py",
+      "bytes": 18550,
+      "sha256": "c6c2536dc187c76fbb45324cca872ea58ae028c5cf5a53f27e8ca0af61a60b02"
+    },
+    {
+      "path": "source_tools/terrain_portable.py",
+      "bytes": 9173,
+      "sha256": "8521a3e8825a091706ee7ef2bd4276129176a0bc5d069ce8437ccfedad14b3d2"
+    },
+    {
+      "path": "source_tools/terrain_prepare.py",
+      "bytes": 29007,
+      "sha256": "c2f6e5f31d72bf2f0f914f6fe12c37f324395cfe9909371ccf846fd7bc932fc5"
+    },
+    {
+      "path": "source_tools/terrain_report.py",
+      "bytes": 12972,
+      "sha256": "fc978fe4c3f5bca1bf4a8a19ca2aad06c8cd8f794974ae3b0820c4bb4e61c4c8"
+    },
+    {
+      "path": "source_tools/terrain_workspace.py",
+      "bytes": 3560,
+      "sha256": "41d0fb908c456033f3d544e2086b06fcf690bea3076e109a64ac96d03c259d2a"
+    },
+    {
+      "path": "tools/terrain_native_journey.py",
+      "bytes": 13048,
+      "sha256": "cf51fbb7bbf8077199d015e1b83745e33268a22bd1cf0be146066ed143b8484f"
+    }
+  ]
+}

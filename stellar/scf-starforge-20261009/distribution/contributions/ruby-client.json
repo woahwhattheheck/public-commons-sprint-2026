@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "ruby-client",
-  "description": "Complete Ruby and Rails customer packages, transactional dataset editions, authenticated operator review, full committed-data browsing and original-file receiving",
+  "description": "Complete Ruby and Rails customer packages, original source profiling and mapping, transactional dataset editions, authenticated operator review, full committed-data browsing and original-file receiving",
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/seller_client.rb",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/rails_receiving.rb",
@@ -47,7 +47,13 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/records.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/records_example.rb",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/views/starforge_dataset_operator/records.html.erb",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/views/starforge_dataset_operator/record.html.erb"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/views/starforge_dataset_operator/record.html.erb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/source.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/mapping.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/source_cli.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/mapping_example.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/views/starforge_dataset_operator/mapping.html.erb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/operator/views/starforge_dataset_operator/source_rows.html.erb"
   ],
   "exports": {
     "./seller/client-ruby": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/export.mjs"

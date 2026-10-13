@@ -14,6 +14,13 @@ no existing `node_modules` entry. Supply the complete compatible installed
 dependency roots already held by your worker. The runner creates symlinks in
 its own runtime and checkout; it neither changes nor removes donor packages.
 It checks the declared package versions before downloading native packages.
+It also launches the selected PostgreSQL owner with the same ordinary user/group
+arguments used by `initdb` and `pg_ctl`, and checks that owner can traverse the
+selected runtime's parent. This occurs before the 79,509,178 bytes of native
+package downloads, extraction or creation of a new runtime. The result includes
+the actual child UID/GID, runtime-parent access and available UID/GID mappings;
+a failed child preserves its native error category and errno in the original
+foreground output. Successful setup retains the result in `host.json`.
 If GraphQL16.14.2 alone is missing, it can retrieve that one official npm archive,
 verify the registry SHA-512, and unpack it without npm installation or scripts.
 
@@ -46,7 +53,13 @@ checkout. The receiving path is relative to the selected repository. The source
 root, operation directory and each declared donor must already exist. The
 runtime directory must be new. A normal Ubuntu user runs its own PostgreSQL
 server under that same account. When the bootstrap is already running as root,
-it starts PostgreSQL as uid65534 instead. The private server binds loopback with
+it starts PostgreSQL as uid65534 instead. That account must be mapped and the
+host must permit the ordinary child identity change. An account name in
+`/etc/passwd` alone does not establish either condition. Select a task-owned
+runtime location whose existing parent is searchable by that owner; the runner
+keeps other directories and system mappings unchanged. A completed original
+checkpoint can still be received without starting a PostgreSQL owner again.
+The private server binds loopback with
 an ephemeral port, SCRAM authentication and a generated private password. It creates no system
 service and starts no GitHub Action.
 

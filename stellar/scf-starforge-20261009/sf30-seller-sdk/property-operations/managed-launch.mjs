@@ -78,7 +78,7 @@ export async function startManagedPropertyApplication({directory,connectionFile,
     owner=await openSocrataOperator({directory:binding.directory,propertyHost:host});
     const state=await owner.state();
     need(state.createdAt===binding.createdAt,'PROPERTY_APPLICATION_WORKSPACE_CHANGED');
-    listener=await startSocrataWorkspace({operator:owner,port});
+    listener=await startSocrataWorkspace({directory:binding.directory,operator:owner,port});
     announcement={schema:PROPERTY_STARTUP_SCHEMA,directory:binding.directory,createdAt:binding.createdAt,
       propertyId:state.property?.id??null,instanceId,applicationRequestId,pid:process.pid,
       sourceRoot,source:binding.source,node:binding.node,host:binding.host,

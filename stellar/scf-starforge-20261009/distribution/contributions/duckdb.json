@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "duckdb",
-  "description": "DuckDB and Parquet data products with complete Timescale intake, reviewed unit/time normalization and numeric reconciliation, engineer decisions and native customer handover",
+  "description": "DuckDB and Parquet data products with complete Timescale intake, reviewed unit/time normalization, numeric reconciliation and explicit prior-decision carry-forward with full native customer handover",
   "commands": {
     "duckdb": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/start.mjs",
     "duckdb-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/inspect.mjs",
@@ -95,7 +95,13 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/timescale_intake/browser-receiving.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/comparison_rules.py",
     "stellar-forge/mcp-paid-agent/duckdb-reconciliation-client.d.mts",
-    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/normalization.py"
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/normalization.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/decision_carry.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/PRIOR_DECISIONS.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/carry-forward.html",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/carry-forward.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/carry-forward.css",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/native-receiving/decision-carry-browser.mjs"
   ],
   "merchantProviders": {
     "coinmetrics-cloud-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/cloud-delivery/merchant-provider.mjs"

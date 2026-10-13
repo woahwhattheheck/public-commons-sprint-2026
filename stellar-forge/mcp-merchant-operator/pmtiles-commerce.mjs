@@ -9,11 +9,13 @@ import {need,identifier,clone,digest,hash,plain} from '../../stellar/scf-starfor
 import {retainJson} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/files.mjs';
 import {PMTilesOutputController} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/controller.mjs';
 import {prepareOutputPurchase,inspectOutputPurchase,runOutputPurchase,recoverOutputPurchase,
-  adoptPurchasedMapResource,receivePurchasedMapOperations,selectOutputCatalog}
+  adoptPurchasedMapResource,receivePurchasedMapOperations,selectOutputCatalog,
+  inspectOutputPurchaseAccounting,finalizeOutputPurchaseAccounting,recoverOutputPurchaseAccounting}
   from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/buyer.mjs';
 import {fields,outputHash,OUTPUT_METADATA_BYTES}
   from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/model.mjs';
 import {normalizeReleaseRuntime} from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
+import {readPMTilesCommerceWorkbench} from './pmtiles-commerce-workbench.mjs';
 
 const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(value??{},key)).map(key=>[key,value[key]]));
 function separate(a,b){need(a!==b&&!a.startsWith(b+sep)&&!b.startsWith(a+sep),'PMTILES_COMMERCE_SEPARATE_PATHS_REQUIRED');}
@@ -45,7 +47,7 @@ export async function readPMTilesCommerceConfiguration(input,{base,directory,exp
   }
   need(plain(input.buyers??{})&&Object.keys(input.buyers??{}).length<=32,'PMTILES_COMMERCE_BUYER_LIMIT');
   for(const [name,value]of Object.entries(input.buyers??{})){
-    identifier(name);fields(value,['stateDirectory','runtimeDirectory','configuration','operatorProfile'],
+    identifier(name);fields(value,['stateDirectory','runtimeDirectory','configuration','operatorProfile','operatorWorkspace'],
       ['stateDirectory','runtimeDirectory','configuration']);
     const stateDirectory=await canonicalDirectory(hostPath(value.stateDirectory,base),{privateState:true});
     const runtimeDirectory=await canonicalDirectory(hostPath(value.runtimeDirectory,base));
@@ -54,6 +56,7 @@ export async function readPMTilesCommerceConfiguration(input,{base,directory,exp
     const configuration=hostPath(value.configuration,base);await privateConfig(configuration);
     const buyer={stateDirectory,runtimeDirectory,configuration};
     if(value.operatorProfile!==undefined){buyer.operatorProfile=hostPath(value.operatorProfile,base);await privateConfig(buyer.operatorProfile);}
+    if(value.operatorWorkspace!==undefined)buyer.operatorWorkspace=await canonicalDirectory(hostPath(value.operatorWorkspace,base),{privateState:true});
     buyers[name]=buyer;
   }
   return {runtimes,buyers};
@@ -74,13 +77,13 @@ function selectedConfiguration(base,catalog,objectId,requestId){
     expect:{...op.expect,maxAtomic:row.pricing.atomicPerRequest}}};
 }
 export class MerchantPMTilesCommerce{
-  #alias;#entry;#controller;#output;#directory;#packageSelection;#shutdown;
+  #alias;#entry;#controller;#output;#directory;#packageSelection;#packagesDirectory;#shutdown;
   constructor({alias,entry,controller,exportsDirectory,releaseStore,packageSelection,signal}){
     this.#alias=alias;this.#entry=clone(entry);this.#controller=controller;
     this.#directory=join(resolve(exportsDirectory),'pmtiles-output',identifier(alias));
     this.#output=new PMTilesOutputController({workspace:controller.workspace,directory:join(this.#directory,'merchant'),
       releaseStore,runtimes:entry.commerce?.runtimes??{}});
-    this.#packageSelection=packageSelection;this.#shutdown=signal;
+    this.#packageSelection=packageSelection;this.#packagesDirectory=join(resolve(exportsDirectory),'pmtiles',identifier(alias));this.#shutdown=signal;
   }
   requestClose(){this.#output.requestClose();}
   close(){return this.#output.close();}
@@ -121,6 +124,9 @@ export class MerchantPMTilesCommerce{
     args=clone(args);const scope={expectedWorkspaceId:this.#entry.expectedWorkspaceId};
     const output=(action,input)=>this.#output.execute(action,{...input,...scope},{signal:this.#shutdown});
     const suffix=name.replace(/^merchant_pmtiles_/,'');
+    if(suffix==='output_workbench')return readPMTilesCommerceWorkbench({alias:this.#alias,entry:this.#entry,
+      controller:this.#controller,output:this.#output,directory:this.#directory,packagesDirectory:this.#packagesDirectory,
+      packageSelection:this.#packageSelection,readBuyerConfiguration:privateConfig,input:args,signal:this.#shutdown});
     if(suffix==='output_prepare'){
       const input=pick(args,['requestId','releaseId','releaseManifestSha256','offerId','title','origin','payment','chunkBytes']);
       need(Array.isArray(args.objects),'PMTILES_COMMERCE_OBJECTS_REQUIRED');input.objects=[];
@@ -150,13 +156,19 @@ export class MerchantPMTilesCommerce{
       return output(action,pick(args,selections[action]));
     }
     if(suffix==='purchase_prepare')return this.#preparePurchase(args);
-    const {buyer}=await this.#buyer(args.buyer);
+    const {buyer,selected}=await this.#buyer(args.buyer);
     const purchaseRequestId=identifier(args.purchaseRequestId);
     const directory=join(this.#purchaseDirectory(purchaseRequestId),'native-purchase');
     const common={buyer,directory,requestId:purchaseRequestId,signal:this.#shutdown};
     if(suffix==='purchase_status')return inspectOutputPurchase(common);
     if(suffix==='purchase_run')return runOutputPurchase(common);
     if(suffix==='purchase_recover')return recoverOutputPurchase(common);
+    if(suffix==='purchase_accounting'||suffix==='purchase_finalize'){
+      need(selected.operatorWorkspace,'PMTILES_COMMERCE_ORIGINAL_OPERATOR_WORKSPACE_REQUIRED');
+      const input={workspaceDirectory:selected.operatorWorkspace,...pick(args,['offset','limit'])};
+      return (suffix==='purchase_finalize'?finalizeOutputPurchaseAccounting:inspectOutputPurchaseAccounting)({...common,input});
+    }
+    if(suffix==='purchase_accounting_recover')return recoverOutputPurchaseAccounting({...common,input:pick(args,['commandId'])});
     if(suffix==='purchase_adopt')return adoptPurchasedMapResource({buyer,directory,purchaseRequestId,
       workspace:this.#controller.workspace,input:{...scope,requestId:identifier(args.requestId)},signal:this.#shutdown});
     if(suffix==='purchase_receive'){

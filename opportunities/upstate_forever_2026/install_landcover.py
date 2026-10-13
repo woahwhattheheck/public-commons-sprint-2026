@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""Install the original operator extension; upgrade only this author's known files."""
+from __future__ import annotations
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import tempfile
+
+FILES = (
+    'model/landcover_ledger.py', 'model/landcover_exports.py',
+    'model/landcover_cli.py', 'model/landcover_report.html',
+    'model/landcover_workspace.py', 'operator/landcover_operator.py',
+    'operator/extensions/landcover-ledger.json',
+    'operator/web/landcover_ledger.mjs', 'operator/web/landcover_ledger.css',
+    'LANDCOVER_LEDGER.md', 'requirements-landcover.txt',
+)
+PREVIOUS = {'LANDCOVER_LEDGER.md': ['28a3ab97562d7a458a3ce282cd94106be0ba5d1f820d478319ebfed94915903f', '9165f370cbd5a1740a664606511bf7812da55c15c5c0fe08cf35122b2e0534ae'], 'model/landcover_cli.py': ['4fc00002e79544af7ab67a33495b4beb9ac62f1699cc89f2367d04ca6fd3fb56'], 'model/landcover_exports.py': ['30ea2cb7a6f519413c36ba50ac59739ace469657d6e4138a969e63bee1f046a1'], 'model/landcover_ledger.py': ['9379ffcc02a5f06d6c5821fba0a8f29212016d24353d679e09f3a045571db3af'], 'model/landcover_report.html': ['aa226597d6602b42dc56d25ec3ebace42d85204281deffcd54c86e12c42f2a7b', '30c76c87e101ded466d9f28ddf84ea17fa2ef01861e6b0265db8f57bde38cde7'], 'requirements-landcover.txt': ['c35ffccd091d801f55a9a28b281bb58ad44882beb5cfd79b57e1e473677a5556', '133147dea55de8a73167c74d703f5273766f7aecb0ae1c4458bb21dfe7da5547'], 'operator/landcover_operator.py': ['654396195c27f25cd8e9910f0cc3f5d593c34f6012bb6899b41ef4e8b34caef8'], 'model/landcover_workspace.py': ['1ce0eef5826263224b1032a3727d40c777879a24a7dcb0f3c07b25e9bb0ba389'], 'operator/web/landcover_ledger.mjs': ['6ee795a115b43adf32e77e4cc1fc0aea7d644f13aa4a68caf653c9eb7f446921'], 'operator/web/landcover_ledger.css': ['f6670c1788f33df0ee1c9f53d97539f581a25c265cb4dc92220f1c6bacc54453'], 'operator/extensions/landcover-ledger.json': ['649977914a5eb508e8daf82990065847ef04552a7c64e6b6f23cedffbb48cd5d']}
+
+
+def install(destination: Path) -> dict:
+    root = destination.expanduser().resolve(strict=True)
+    if not (root / 'model').is_dir():
+        raise ValueError('Destination must be the existing application with a model/ directory')
+    bundle = Path(__file__).resolve().parent
+    with (root / '.landcover-install.lock').open('a') as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        pending, existing, inventory = [], [], []
+        for name in FILES:
+            target = root / name
+            if not target.resolve().is_relative_to(root) or target.is_symlink():
+                raise ValueError(f'Target escapes the original application: {name}')
+            data = (bundle / name).read_bytes()
+            previous = None
+            if target.exists():
+                previous = target.read_bytes()
+                if previous == data:
+                    existing.append(name)
+                elif hashlib.sha256(previous).hexdigest() in PREVIOUS.get(name, ()):
+                    pending.append((target, data, previous))
+                else:
+                    raise ValueError(f'Differing existing source: {name}; reconcile the actual current file')
+            else:
+                pending.append((target, data, None))
+            inventory.append({'path': name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+        for target, data, previous in pending:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if not target.parent.resolve().is_relative_to(root) or target.is_symlink():
+                raise ValueError('Concurrent target directory changed')
+            temporary = None
+            try:
+                with tempfile.NamedTemporaryFile(dir=target.parent, prefix='.landcover-source-', delete=False) as out:
+                    temporary = Path(out.name)
+                    out.write(data); out.flush(); os.fsync(out.fileno())
+                if previous is None:
+                    try:
+                        os.link(temporary, target)
+                    except FileExistsError:
+                        if target.read_bytes() != data:
+                            raise ValueError(f'Concurrent differing publication: {target.relative_to(root)}')
+                else:
+                    if target.read_bytes() != previous:
+                        raise ValueError(f'Concurrent differing publication: {target.relative_to(root)}')
+                    os.replace(temporary, target)
+            finally:
+                if temporary is not None:
+                    temporary.unlink(missing_ok=True)
+        return {'application': str(root), 'version': '1.1.1',
+                'added': [str(p.relative_to(root)) for p, _, old in pending if old is None],
+                'upgraded': [str(p.relative_to(root)) for p, _, old in pending if old is not None],
+                'reused': existing, 'files': inventory}
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('application', type=Path)
+    args = parser.parse_args()
+    try:
+        print(json.dumps(install(args.application), indent=2))
+    except (ValueError, OSError) as exc:
+        parser.exit(2, f'Land-cover installation: {exc}\n')

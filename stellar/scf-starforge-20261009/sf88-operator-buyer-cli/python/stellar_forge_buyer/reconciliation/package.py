@@ -11,11 +11,12 @@ from ..duckdb_dataset import DuckDBWorkspace, _descriptor, _hex, _json, _new_des
 from ..storage import parse, private_directory, read, sync_directory, write
 from .contracts import SCHEMA, fail, request_id, sha
 from .model import Reconciliation
+from . import decision_carry
 
 EXPORT_SCHEMA = SCHEMA + ".export"
 MAX_MANIFEST = 16 * 1024 * 1024
 MAX_FILE = 8 * 1024 * 1024 * 1024
-_KINDS = {"rows", "groups", "decisions", "changes", "fields", "normalizations"}
+_KINDS = {"rows", "groups", "decisions", "changes", "fields", "normalizations", "decision_carry"}
 
 
 def _path(value):
@@ -65,6 +66,8 @@ def _retain(path, payload):
     if path.exists():
         if read(path, max(len(payload), 1)) != payload:
             fail("ORIGINAL_PACKAGE_CHANGED")
+        with path.open("rb") as stream:
+            os.fsync(stream.fileno())
         sync_directory(path.parent)
     else:
         write(path, payload, exclusive=True)
@@ -118,6 +121,16 @@ def _verify_manifest(root, manifest):
         fail("PACKAGE_COMPARISON_RULES_CHANGED")
     if manifest.get("normalizations") != report.get("review", {}).get("normalizations"):
         fail("PACKAGE_NORMALIZATIONS_CHANGED")
+    if manifest.get("decision_carry_forward") != report.get("decision_carry_forward"):
+        fail("PACKAGE_DECISION_CARRY_CHANGED")
+    if report.get("decision_carry_forward") is not None:
+        if "PRIOR_DECISIONS.md" not in names:
+            fail("PACKAGE_DECISION_CARRY_INCOMPLETE")
+        def retained_lineage(name):
+            if name not in names:
+                fail("PACKAGE_DECISION_CARRY_INCOMPLETE")
+            return parse(read(root / name, MAX_MANIFEST))
+        decision_carry.validate_lineage_files(report, retained_lineage)
     expected_queries = report.get("queries")
     if not isinstance(expected_queries, list) or not all(isinstance(x, dict) for x in expected_queries):
         fail("PACKAGE_QUERY_SET_INVALID")
@@ -129,6 +142,8 @@ def _verify_manifest(root, manifest):
         required_kinds.add("normalizations")
     if report.get("before_run_id") is not None:
         required_kinds.add("changes")
+    if report.get("decision_carry_forward") is not None:
+        required_kinds.add("decision_carry")
     if kinds != required_kinds or len(kinds) != len(expected_queries):
         fail("PACKAGE_QUERY_SET_INVALID")
     summaries = manifest.get("queries")
@@ -148,7 +163,7 @@ def _verify_manifest(root, manifest):
                 or native.get("query") != query or native.get("views") != original.get("views")
                 or native.get("rows") != summary.get("rows")):
             fail("ORIGINAL_QUERY_CHANGED")
-    expected_editions = {report["source_edition"], report["target_edition"]}
+    expected_editions = decision_carry.source_editions(report)
     sources = manifest.get("sources")
     if (not isinstance(sources, list) or len(sources) != len(expected_editions)
             or {x.get("edition_id") for x in sources} != expected_editions):
@@ -229,11 +244,37 @@ def export_report(workspace, body, directory):
                     "report": report, "workspace_id": workspace.identity()["workspace_id"],
                     "workspace": str(workspace.directory), "directory": str(root),
                     "views": workspace.views(), "guide": guide, "created_at": _now()}
+        if report.get("decision_carry_forward") is not None:
+            original["carry_guide"] = read(Path(__file__).with_name("PRIOR_DECISIONS.md"), MAX_MANIFEST).decode("utf-8")
         original["export_id"] = sha(original)
         _retain(control, _json_bytes(original))
     _retain(root / "report.json", _json_bytes(original["report"]))
     _retain(root / "OPERATING.md", original["guide"].encode("utf-8"))
     files = [_file(root, name) for name in ("reconciliation-request.json", "report.json", "OPERATING.md")]
+    if report.get("decision_carry_forward") is not None:
+        if not isinstance(original.get("carry_guide"), str):
+            fail("ORIGINAL_CARRY_GUIDE_CHANGED")
+        _retain(root / "PRIOR_DECISIONS.md", original["carry_guide"].encode("utf-8"))
+        files.append(_file(root, "PRIOR_DECISIONS.md"))
+        model = Reconciliation(workspace)
+        with workspace._guard(), workspace._connection() as db:
+            db.execute("BEGIN")
+            try:
+                parents = {root}
+                for name, value in decision_carry.lineage_records(model, db, report):
+                    path = root / name
+                    private_directory(path.parent)
+                    parents.update((path.parent, path.parent.parent))
+                    _retain(path, _json_bytes(value))
+                    files.append(_file(root, name))
+                # Commit directory entries as well as exact retained file bytes,
+                # including recovery after a previous failed parent flush.
+                for parent in sorted(parents, key=lambda item: len(item.parts), reverse=True):
+                    sync_directory(parent)
+                db.commit()
+            except BaseException:
+                db.rollback()
+                raise
     queries, sources = [], []
     private_directory(root / "queries")
     private_directory(root / "sources")
@@ -257,7 +298,7 @@ def export_report(workspace, body, directory):
         include(prefix, native)
         queries.append({"kind": kind, "query_id": query["query_id"], "revision": query["revision"],
                         "export_id": native["export_id"], "rows": native["rows"], "directory": prefix})
-    for edition_id in sorted({report["source_edition"], report["target_edition"]}):
+    for edition_id in sorted(decision_carry.source_editions(report)):
         prefix = "sources/" + edition_id
         native = workspace.export_source(edition_id, root / prefix)
         include(prefix, native)
@@ -284,6 +325,8 @@ def export_report(workspace, body, directory):
         manifest["comparison_rules"] = report["review"]["comparison_rules"]
     if report.get("review", {}).get("normalizations"):
         manifest["normalizations"] = report["review"]["normalizations"]
+    if report.get("decision_carry_forward") is not None:
+        manifest["decision_carry_forward"] = report["decision_carry_forward"]
     _retain(complete, _json_bytes(manifest))
     return _record(workspace, root, inspect_package(root))
 
