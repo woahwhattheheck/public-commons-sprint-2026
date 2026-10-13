@@ -1,4 +1,5 @@
 import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';
+import {receivedPublishedReviewsHTML,openReceivedPublishedReview} from './received_published_reviews.mjs';
 import {retainedStudyControl,openRetainedStudyRecord,receivedReviewHTML,reportComparisonHTML} from './study_report_navigation.mjs';
 import {receivedGaugeHTML,openReceivedGauge} from './gauge_received_studies.mjs';
 import {receivedNativeEnsembleHTML,openReceivedNativeEnsemble} from './ensemble_received_studies.mjs';
@@ -124,6 +125,7 @@ export function attachReceivedStudies(host) {
     html+=receivedComparabilityHTML(value,!!disabled);
     html+=receivedEconomicComparisonsHTML(value,!!disabled);
     html+=receivedObservedLandcoverHTML(value,!!disabled);
+    html+=receivedPublishedReviewsHTML(value,!!disabled);
     return html+'</section>';
   }
   async function loadPage(offset=0) {
@@ -167,6 +169,14 @@ export function attachReceivedStudies(host) {
           workspace_key:ws,current:stillCurrent,
         });
       }catch(reason){if(!stillCurrent())return;throw reason;}
+    }
+    if(action?.startsWith('published-review-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      return await openReceivedPublishedReview(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
     }
     if(action?.startsWith('cohort-')){
       const ws=workspace,e=epoch,value=opened;
