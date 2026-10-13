@@ -21,7 +21,7 @@ def main():
     manifest_path = manifest_path.resolve(strict=True)
     if not (root / "model" / "workspace.py").is_file():
         raise ValueError("Select the maintained application directory containing model/workspace.py")
-    for name in ("observed_context.py", "scientific_figures.py"):
+    for name in ("observed_context.py", "scientific_figures.py", "observed_report_render.py"):
         path = root / "model" / name
         compile(path.read_text(encoding="utf-8"), str(path), "exec")
     path = root / "operator" / "web" / "app.mjs"

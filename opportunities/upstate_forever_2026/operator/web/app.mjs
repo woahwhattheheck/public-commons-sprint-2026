@@ -96,6 +96,12 @@ const journeyForm=async open=>{await open();return {operation_id:formContext?.op
 const extensions=createExtensionHost({
  openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),
  openNativeProgramme:options=>experiments.openForInvestigation(options),
+ openScientificReport:async selection=>{
+   if(selection?.workspace_key!==workspace)throw Error('Open scientific report sources in their original Workspace.');
+   detailDialog.close();detailContext=null;
+   navigate('sources');
+   return sourceReports.openForSources(selection,$('#content'));
+ },
 getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,
  openForm,submitAction,detail,fileList,uploadFile,sourceForm,
@@ -120,7 +126,8 @@ getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  getProgramme:()=>typeof programmes==='undefined'?null:programmes});
 const sourceReports=attachSourceReports({
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,openItem,navigate,
- hasView:id=>extensions.hasView(id),openSourceImport:options=>sourceForm(options)
+ hasView:id=>extensions.hasView(id),openSourceImport:options=>sourceForm(options),
+ showTask,refresh,openBackup:()=>backupForm()
 });
 const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle,mapFamilies,mapTitles,section,pageHeader,table,
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,detail,refresh,showTask,revise:deliveryForm,
