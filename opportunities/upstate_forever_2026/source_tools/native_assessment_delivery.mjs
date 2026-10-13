@@ -1,6 +1,7 @@
 // Deliver completed native assessment geography through the existing report workflow.
 import { createArchiveCodec } from "./archive_codec.mjs";
 import { buildAnnualReferenceMaps } from "./annual_reference_maps.mjs";
+import { prepareAnnualStationReport, annualStationScientificSections } from "./annual_station_report.mjs";
 import { buildAssociationReport } from "./assessment_association_report.mjs";
 import { zipReportFiles } from "./assessment_association_package.mjs";
 import { annualReferenceInterpretation } from "./native_assessment_reviewer.mjs";
@@ -404,7 +405,7 @@ function scientificSections(context, annual, report) {
     ]],
   ];
 }
-export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, originalAssessmentFiles, stationSourceFiles, annualSourceFiles, microbialFiles, microbialOriginalFiles}) {
+export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, originalAssessmentFiles, stationSourceFiles, annualSourceFiles, microbialFiles, microbialOriginalFiles, nationalInventory, nationalOriginalFiles}) {
   const retained=retainNativeFiles(nativeFiles);
   const context=JSON.parse(text(retained.files["assessment-native-huc-context.json"]));
   const annual=JSON.parse(text(retained.files["annual-reference-assessment-summary.json"]));
@@ -413,12 +414,17 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
   const annualSources=retainAnnualSources(annualSourceFiles);
   const annualYields=annualReferenceInterpretation(annual);
   verifyAnnualTargetSources(annualYields,annualSources);
+  if ((nationalInventory === undefined) !== (nationalOriginalFiles === undefined))
+    throw Error("Retain both the original national inventory and its complete source files.");
+  const national=nationalInventory===undefined?null:prepareAnnualStationReport({
+    regional:annualYields,inventoryText:nationalInventory,originalFiles:nationalOriginalFiles});
   const annualMaps=buildAnnualReferenceMaps({annual,annualSourceText:text(retained.files["annual-reference-assessment-summary.json"]),originalFiles:annualSources});
   if ((microbialFiles === undefined) !== (microbialOriginalFiles === undefined))
     throw Error("Retain both the measured source edition and its complete original provenance.");
   const microbial=microbialFiles===undefined?null:retainMicrobialSources(microbialFiles,microbialOriginalFiles,context);
   const report=buildAssociationReport({...assessmentInputs,geography:text(retained.files["assessment-native-huc-context.json"]),
     nativeAnnualContext:text(retained.files["annual-reference-assessment-summary.json"]),nativeAnnualMaps:annualMaps,
+    ...(national?{nationalStationReport:national}:{}),
     ...(microbial?{nativeMicrobialContext:microbial.files["microbial-assessment-overlap.json"],
       nativeMicrobialObservations:microbial.files["microbial-assessment-observations.csv"]}:{})});
   const files={};
@@ -442,7 +448,8 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
   const sections=scientificSections(context,annual,report);
   const yieldPosition=sections.findIndex(section=>section[0]==="Complete native results, original records and existing application use");
   if(yieldPosition<0)throw Error("Retain the current native report source section.");
-  sections.splice(yieldPosition,0,...annualYieldSections(annualYields));
+  sections.splice(yieldPosition,0,...annualYieldSections(annualYields),
+    ...(national?annualStationScientificSections(national):[]));
   const mapSvg=identity("association/annual-reference-basins.svg",annualMaps.files["annual-reference-basins.svg"]);
   const componentSvg=identity("association/annual-reference-original-components.svg",annualMaps.files["annual-reference-original-components.svg"]);
   const mapIndex=sections.findIndex(row=>row[0]==="Annual-reference catchments and assessment coverage");
@@ -468,7 +475,8 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
     sections[sections.length-1][1][0]="Import the included 17-entry source manifest to retain four original native vector/table entries, seven original station/assessment entries, four original measured microbial entries, the interactive assessment report and this scientific report recipe. Existing Spatial Review opens the original-point layers; Annual load observations retains the target/catchment intake and calibration actions.";
   }
   const reportId="native-assessment-observed-"+RESULT_HASHES["assessment-native-huc-context.json"].slice(0,20)+
-    (microbial?"-microbial-"+microbial.bound.source.context_sha256.slice(0,12):"")+"-annual-yields-basin-maps-v1";
+    (microbial?"-microbial-"+microbial.bound.source.context_sha256.slice(0,12):"")+"-annual-yields-basin-maps-v1"+
+    (national?"-national-"+national.binding.context.sha256.slice(0,16):"");
   const inputs=Object.entries(files).map(([path,body])=>identity(path,body));
   const recipe={schema:"upstate.observed-report/v1",title:microbial?"Physical assessment coverage, measured E. coli and annual references":"Physical assessment coverage, utility selection and annual references",
     edition:microbial?"original-native-assessment-microbial-context-20261013-v3-annual-basin-maps":"original-native-assessment-context-20261013-v3-annual-basin-maps",vintage:"2026-10-13",
@@ -477,6 +485,11 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
       nativePath("annual-reference-assessment-summary.json"),"association/sources.json","association/OPEN_ASSESSMENT_ASSOCIATIONS.html",
       "association/annual-reference-yields.csv","association/annual-reference-yields.json","association/annual-reference-relations.csv",
       ...Object.keys(annualMaps.files).map(path=>"association/"+path)]};
+  if (national) {
+    recipe.national_annual_station_context=national.binding;
+    recipe.edition+="-national-station-context-v1";
+    recipe.source_links.push(...Object.keys(national.files).map(path=>"association/"+path),...Object.keys(national.originalFiles).map(path=>"association/"+path));
+  }
   if (microbial) {
     recipe.measured_source_context=microbial.bound.source;
     recipe.source_links.push(nativePath("microbial-assessment-sources.json"),nativePath("MICROBIAL_COVERAGE.md"),
