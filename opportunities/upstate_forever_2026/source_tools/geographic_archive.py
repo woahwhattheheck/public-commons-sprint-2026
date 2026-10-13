@@ -198,6 +198,54 @@ def reference_snapshot(workspace, prepared, reference_basis):
             "comparison": comparison, "members": members, "paired_products": paired}
 
 
+def retained_execution_prepared(workspace, output, selection_bytes, normalized_selection):
+    """Adopt a new executor for the same prepared course without preparing or running it."""
+    from source_tools.headwaters_parameter_course import _load, _reference_member
+    from model.model_selection import run_models
+
+    original, state, prepared = _retained_preparation(
+        workspace, output, selection_bytes, normalized_selection)
+    record, plan, _ = _load(workspace, prepared["ensemble_id"])
+    reference = _reference_member(workspace, plan)
+    expected = {"grid_id": prepared["grid_id"],
+                "base_profile_id": prepared["profile_id"],
+                "baseline_scenario_id": prepared["baseline_scenario_id"],
+                "alternative_scenario_ids": prepared["alternative_scenario_ids"]}
+    selected = [prepared["baseline_run_id"], *prepared["alternative_run_ids"]]
+    _require(prepared.get("schema") == "upstate.geographic-headwaters-prepared/v1"
+             and record["selection"] == expected
+             and record["input_source_collection_id"] == prepared["source_collection_id"]
+             and record["input_classification"] == prepared["classification"]
+             and reference["profile_id"] == prepared["profile_id"]
+             and [item["run_id"] for item in reference["runs"]] == selected
+             and len(selected) == 3 and len(set(selected)) == 3,
+             "Adopt only the original geographic preparation and native reference selection")
+    collection = workspace._get("sources", prepared["source_collection_id"])
+    grid = workspace.get_grid(prepared["grid_id"])
+    _require(grid["spec"]["source_collection_id"] == collection["id"]
+             and record["input_manifest_sha256"] == collection["original_manifest"]["sha256"],
+             "The prepared native course changed its original source edition")
+    scenarios = [prepared["baseline_scenario_id"], *prepared["alternative_scenario_ids"]]
+    seen = set()
+    for member in plan["members"]:
+        profile = workspace._get("profiles", member["profile_id"])
+        _require(profile["source_collection_id"] == collection["id"]
+                 and [item["scenario_id"] for item in member["runs"]] == scenarios,
+                 "The prepared native member changed its source or scenario order")
+        for item in member["runs"]:
+            key = identifier(item["run_id"])
+            run = workspace.inspect_run(key)
+            expected_run = {"grid_id": prepared["grid_id"], "profile_id": member["profile_id"],
+                            "scenario_id": item["scenario_id"]}
+            _require(key not in seen
+                     and all(run["selection"].get(name) == value
+                             for name, value in expected_run.items())
+                     and tuple(run_models(run)) == ("ndr", "sdr"),
+                     "Adopt the exact original native run selections without duplicating members")
+            seen.add(key)
+    return original, state, prepared
+
+
 def retained_prepared(workspace, output, selection_bytes, normalized_selection):
     """Resume full handover only after every original native run completes."""
     original, state, prepared = _retained_preparation(
