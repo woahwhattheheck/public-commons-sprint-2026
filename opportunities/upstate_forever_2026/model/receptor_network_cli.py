@@ -19,9 +19,10 @@ import zipfile
 from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
                      held, now, read_json, verify_file)
 from .receptor_network import upstream_memberships
+from . import receptor_accounting
 
 SCHEMA = "upstate.receptor-network-product/v1"
-PRESENTATION_VERSION = "original-watershed-geography-v1"
+PRESENTATION_VERSION = "original-watershed-geography-accounting-v2"
 
 
 def _read_source(path, member=None):
@@ -176,7 +177,7 @@ def _geography(path, rows, network, source):
             "tabindex": "0", "role": "button", "aria-label": huc + " " + name,
             "d": "".join(paths),
         }
-        units.append("<path " + " ".join(key + '="' + escape(value, quote=True) + '"'
+        units.append("<path " + " ".join(key + '=\"' + escape(value, quote=True) + '\"'
                      for key, value in attributes.items()) + "><title>" +
                      escape(huc + " · " + name) + "</title></path>")
     svg = (
@@ -229,6 +230,8 @@ def _report(path, product, network, memberships, svg=None):
            if re.match(r"^https?://", area["reference"]["uri"]) else text(area["reference"]["uri"]))
         + "</li>" for area in network["areas"])
     source = product["source_binding"]
+    accounting_link = ('<p><a href="accounting/index.html">Total, incremental and utility-union accounting</a></p>'
+                       if product.get("accounting") else "")
     geographic = ""
     if svg is not None:
         reference = source.get("spatial_reference") or {}
@@ -275,7 +278,7 @@ def _report(path, product, network, memberships, svg=None):
         '<a href="network.csv">Original link table</a> · <a href="network.json">Complete network and selections</a> · '
         '<a href="source-profile.json">Saved source profile</a> · <a href="'
         + escape(product["source_body_filename"], quote=True) + '">Original source geometry and attributes</a></p>'
-        "<section><h2>Selected areas</h2><table><thead><tr><th>Area</th><th>Purpose</th><th>Contributing units</th>"
+        + accounting_link + "<section><h2>Selected areas</h2><table><thead><tr><th>Area</th><th>Purpose</th><th>Contributing units</th>"
         "<th>Shared with another area</th><th>Original anchors</th></tr></thead><tbody>"
         + overview + "</tbody></table></section>"
         '<h2>Watershed explorer</h2><div class="filters"><label>Receiving area<select id="area">'
@@ -364,6 +367,15 @@ def build(source, receptor_spec, output, *, member=None, expected_decoded_sha256
         if geography is not None:
             result["geography"] = geography
             result["files"]["geography"] = describe_file(directory, directory / "watersheds.svg")
+        accounting = receptor_accounting.write_product(directory / "accounting", network,
+            parent_network_id=key, source_binding=binding, svg=svg)
+        result["accounting"] = {"schema": accounting["schema"], "method": accounting["method"],
+            "anchor_count": accounting["anchor_count"],
+            "union_huc12_count": accounting["union_huc12_count"],
+            "repeated_source_area_ha": accounting["repeated_source_area_ha"]}
+        for item in sorted((directory / "accounting").iterdir()):
+            if item.is_file():
+                result["files"]["accounting_" + item.name] = describe_file(directory, item)
         _report(directory / "index.html", result, network, memberships, svg=svg)
         for name, filename in (("source_body", source_name), ("profile", "source-profile.json"),
                                ("network", "network.json"), ("memberships", "memberships.csv"),
