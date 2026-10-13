@@ -340,10 +340,14 @@ async function inspectCompletedRun(run,index){
   }
  }
  await shot(restoredSelection?'03-records-'+index:'03-original-result-records');
- for(const ext of ['.html','.csv','.json']){
-  const ticket=(run._downloads||[]).find(row=>row.filename?.endsWith(ext));if(!ticket)continue;
+ const tickets=restoredSelection?(run._downloads||[]):['.html','.csv','.json'].map(ext=>(run._downloads||[]).find(row=>row.filename?.endsWith(ext))).filter(Boolean);
+ if(restoredSelection)required(tickets.length>=run.artifacts.length,'The original result view omitted retained analysis file tickets.');
+ for(let n=0;n<tickets.length;n++){
+  const ticket=tickets[n];
   const link=page.locator('[data-chemistry-result] a[download][href="'+ticket.url+'?download=1"]');await link.waitFor();
-  await saveDownload(link,restoredSelection?'chemistry-'+run.id+ext:'chemistry-result'+ext,ticket);
+  const name=restoredSelection?'chemistry-'+run.id+'-'+n+'-'+basename(ticket.filename):
+   'chemistry-result'+['.html','.csv','.json'].find(ext=>ticket.filename.endsWith(ext));
+  await saveDownload(link,name,ticket);
  }
 
  await record('Inspected original completed analysis',{run_id:run.id,mode:run.mode,selection:run.selection,artifacts:run.artifacts});
