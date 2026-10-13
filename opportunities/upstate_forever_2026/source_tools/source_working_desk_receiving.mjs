@@ -19,7 +19,38 @@ export async function operateSourceWorkingDesk({
   return (await page.locator('[data-sp-message]').textContent()).includes(label);
  },label);
  const importFile=async(file,label='Complete working desk reopened')=>{
-  await openWorking();await page.locator('[data-sp-desk-file]').setInputFiles(file);await expectMessage(label);
+  await openWorking();
+  const expected=await readJSON(file),input=page.locator('[data-sp-desk-file]');
+  // Listen before selection. A previous success/error message cannot acknowledge
+  // this file's asynchronous hash, import validation and durable state write.
+  const completion=await input.evaluateHandle(element=>{
+   const ancestors=new Set();for(let node=element.parentNode;node;node=node.parentNode)ancestors.add(node);
+   const state={complete:false,method:null};
+   const receive=event=>{
+    if(event.detail?.complete_desk!==true||!ancestors.has(event.target))return;
+    state.complete=true;state.method=event.detail.method;
+    document.removeEventListener('source-selection-replaced',receive);
+   };
+   document.addEventListener('source-selection-replaced',receive);
+   state.stop=()=>document.removeEventListener('source-selection-replaced',receive);
+   return state;
+  });
+  try{
+   await input.setInputFiles(file);
+   await waitFor(()=>completion.evaluate(state=>state.complete),'new complete working-desk import');
+   requireValue(await completion.evaluate(state=>state.method)===expected.state.method,'The completed import selected a different original method');
+   await expectMessage(label);
+  }catch(error){
+   const failure=page.locator('[data-sp-error]');
+   if(await failure.isVisible().catch(()=>false)){
+    const message=await failure.textContent().catch(()=>null);
+    if(message)throw new Error(error.message+'; current working-desk error: '+message);
+   }
+   throw error;
+  }finally{
+   await completion.evaluate(state=>state.stop()).catch(()=>{});
+   await completion.dispose().catch(()=>{});
+  }
  };
  const original=await readCurrent('complete-source-desk-original');
  requireValue(original.document.state.method,'The original receiving desk has no selected method');
