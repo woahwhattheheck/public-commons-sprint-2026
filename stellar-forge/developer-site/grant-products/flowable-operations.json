@@ -919,6 +919,227 @@
           "sha256": "d2d6fc07e764b7f9641e5d09329beea688a21460cefa844c60971ad7e3a36efc"
         }
       ]
+    },
+    {
+      "id": "flowable-source-review-core",
+      "label": "Complete issued, current and returned source comparison with explicit adoption history",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "4e107642edc0262a1ba6ec55d07c711a87c182f2",
+          "bytes": 21910,
+          "sha256": "86795755169bb3c1e84f7746b219bb88098e7884e63dae8327eb9d1e53a4c60d"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-store",
+      "label": "Atomic original authoring draft and complete review persistence",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-authoring-store.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "51fee61fc861b999426f115139cab10723f3cf5f",
+          "bytes": 3102,
+          "sha256": "c825a7df23b7c507e2ff5f4f5932526345b63067bbe1b40c605e4cc6183d2c8f"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-browser",
+      "label": "Complete colleague source issue, comparison and historical-branch controls",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-browser.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "3fb0f33bb0016871a62c3f2593119a4460c260ba",
+          "bytes": 20227,
+          "sha256": "befbfa0fa447558029e82b523d57ff9f379a961bf474edef2ca9901fcd4c40c4"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-layout",
+      "label": "Responsive complete-source comparison layout",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review.css",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "e4c9f0b4003b6fbaf2b5172b8ff66f1657e1f97d",
+          "bytes": 1966,
+          "sha256": "d06d92a59ed194191a68dc28f347c2504290644e3994b1f60053d294e229602c"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-operating",
+      "label": "Full colleague source review and independent working-copy course",
+      "path": "products/flowable-merchant/SOURCE_REVIEW.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "7350314b8d536599748db8855a929e13f26381fd",
+          "bytes": 9780,
+          "sha256": "754b86f2aba587d8c3ede106e8496a7ccbe5909f97d6ea175f92136e4603507d"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-server",
+      "label": "Original Flowable server with complete review source routes",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/server.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "8041e3735d42dc4266eae5ca7a18f624a696186e",
+          "bytes": 15886,
+          "sha256": "5b7591b7a8da925402d0aa4d20a16fc8220ee0fae7c2e54123be5ed9aabf730e"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-assets",
+      "label": "Maintained browser source and review asset selection",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/browser-assets.json",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "26d0487c3c2b7412db91b0848a375525a098e60a",
+          "bytes": 3134,
+          "sha256": "9d824b85e293cd21129896ff8543b995d0335df67c74ce35d3237d336d71d51e"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-cli",
+      "label": "Complete original source-review file commands and publication recovery",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "783bd6385986789ad25f43c8556c0cce11fbbcf4",
+          "bytes": 12595,
+          "sha256": "b1828f2c76098c39f102abd481aa8f753b61778cd5eb9a992051ce15963757b6"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-types",
+      "label": "Typed pure source-review and full exchange contract",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review.d.mts",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "19a44e654a2d95216aa4de1c9af07d24fab07ccc",
+          "bytes": 6320,
+          "sha256": "726fcb104f728f825f052327a5ff9d77ad83c878d4e0ce3560cfea541ef4dd5d"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-cli-types",
+      "label": "Typed local source-review command interface",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.d.mts",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "b4468749d8f5e32918db51f1f72fffcf2035133c",
+          "bytes": 2052,
+          "sha256": "e495af1bad217904162041c506da8fbf81e982ee0871bf0dee08e493c9065683"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-review-cli-operating",
+      "label": "Complete CLI source, recovery and receiving course",
+      "path": "products/flowable-merchant/SOURCE_REVIEW_CLI.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "5a105c79b2f26d3658248e526981f4c2c44acb8e",
+          "bytes": 18309,
+          "sha256": "2a822fee1a08fe047c8a015315becaec51346cce4cae8cadb9bb3c28d7b7fdbd"
+        }
+      ]
+    },
+    {
+      "id": "flowable-colleague-review-authoring-browser",
+      "label": "Original source-authoring desk joined to complete colleague review",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-authoring-browser.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "3bcb94cdccc79fadfa3bcb3af892e33326ce75ab",
+          "bytes": 22935,
+          "sha256": "03fe86592d26c12624f9a5cb2a8b225fcbea4b02193c0fb06ac5a7d89ff6046a"
+        }
+      ]
+    },
+    {
+      "id": "flowable-colleague-review-distribution",
+      "label": "Maintained installation of the complete colleague source-review capability",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/flowable-workspaces.json",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "editions": [
+        {
+          "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+          "git_blob": "28d565c7a43f81fac5d252156d2ad0b3a7c801ee",
+          "bytes": 17037,
+          "sha256": "e4b29b47449c8612c4543f4767173b1d336929acc4b215a21a0614b1d76c9bbf"
+        }
+      ]
     }
   ]
 }
