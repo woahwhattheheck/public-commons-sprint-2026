@@ -104,6 +104,13 @@ def run_request(request_path):
         if checked != study_context:
             raise ValueError("The native worker differs from its original saved parameter case")
 
+    ensemble_context = request.get("ensemble_context")
+    if ensemble_context:
+        from .ensemble_native import native_case_context
+        checked = native_case_context(workspace, identifier(ensemble_context["ensemble_id"]), run_id)
+        if checked != ensemble_context:
+            raise ValueError("The native worker differs from its original saved ensemble case")
+
     stopped = threading.Event()
     identity = process_identity()
     if not identity or identity["process_group"] != os.getpid():

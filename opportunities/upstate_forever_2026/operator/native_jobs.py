@@ -65,7 +65,7 @@ class NativeJobs:
 
     @staticmethod
     def supports(task):
-        return (task.get("action") in {"run.start", "compute.programme.run", "parameter-study.run"}
+        return (task.get("action") in {"run.start", "compute.programme.run", "parameter-study.run", "ensemble.run"}
                 or (task.get("action") == "compute.programme.pair-completion"
                     and task.get("payload", {}).get("run") is True))
 
@@ -73,6 +73,15 @@ class NativeJobs:
         ws = self.operator.ws(task["workspace"])
         if task.get("action") == "run.start":
             run_id = identifier(task["payload"].get("run_id"))
+        elif task.get("action") == "ensemble.run":
+            from ensemble_jobs import bound_task, select_task
+            if "_native_ensemble_context" not in task:
+                task.update(select_task(task, ws))
+            context = task["_native_ensemble_context"]
+            checked = bound_task(task, ws, context["ensemble_id"], context["run_id"])
+            if checked["_native_ensemble_context"] != context:
+                raise NativeJobError("ENSEMBLE_SELECTION", "The original ensemble case binding changed.")
+            run_id = context["run_id"]
         elif task.get("action") == "parameter-study.run":
             from parameter_study_jobs import bound_task, select_task
             if "_native_study_context" not in task:
@@ -103,8 +112,11 @@ class NativeJobs:
                 request = _read(path)
                 if not request:
                     continue
-                context = task.get("_native_study_context") or task.get("_native_context")
-                context_field = "study_context" if task.get("_native_study_context") else "programme_context"
+                context = (task.get("_native_ensemble_context") or
+                           task.get("_native_study_context") or task.get("_native_context"))
+                context_field = ("ensemble_context" if task.get("_native_ensemble_context")
+                                 else "study_context" if task.get("_native_study_context")
+                                 else "programme_context")
                 if context:
                     if request.get(context_field) != context:
                         continue
@@ -150,7 +162,7 @@ class NativeJobs:
         return record
 
     def request_stop(self, task):
-        if task.get("action") == "parameter-study.run":
+        if task.get("action") in {"parameter-study.run", "ensemble.run"}:
             # Retain Stop at the case boundary as well as on the active child.
             with self.lock:
                 self.pending_stops.add(task["id"])
@@ -194,6 +206,11 @@ class NativeJobs:
             request["study_context"] = task["_native_study_context"]
             request["task_action"] = task["action"]
             for name in ("model/parameter_studies.py", "operator/parameter_study_jobs.py"):
+                source[name] = file_digest(APPLICATION / name)
+        if task.get("_native_ensemble_context"):
+            request["ensemble_context"] = task["_native_ensemble_context"]
+            request["task_action"] = task["action"]
+            for name in ("model/ensembles.py", "model/ensemble_native.py", "operator/ensemble_jobs.py"):
                 source[name] = file_digest(APPLICATION / name)
         request["execution_id"] = digest(request)
         request["request_sha256"] = digest(request)
@@ -280,6 +297,11 @@ class NativeJobs:
         return create_pair_completion(self, task, manager, key, expected_preview_id=expected_preview_id)
 
     @verified_operation
+    def execute_ensemble(self, task, workspace, key, *, continue_on_error=True):
+        from ensemble_jobs import execute_ensemble
+        return execute_ensemble(self, task, workspace, key,
+                                continue_on_error=continue_on_error)
+
     def execute_parameter_study(self, task, workspace, key):
         from parameter_study_jobs import execute_study
         return execute_study(self, task, workspace, key)
@@ -601,6 +623,8 @@ class NativeJobs:
             value["programme_context"] = task["_native_context"]
         if task.get("_native_study_context"):
             value["study_context"] = task["_native_study_context"]
+        if task.get("_native_ensemble_context"):
+            value["ensemble_context"] = task["_native_ensemble_context"]
         if not execution:
             with self.lock:
                 value["stop_requested"] = task["id"] in self.pending_stops

@@ -340,7 +340,8 @@ class EnsembleService:
             keep_going = payload.get("continue_on_error", True)
             if not isinstance(keep_going, bool):
                 raise self.Fault("ENSEMBLE_OPTION", "Continue-on-error must be true or false.")
-            result = manager.run(key, continue_on_error=keep_going)
+            result = self.operator.native_jobs.execute_ensemble(
+                task, ws, key, continue_on_error=keep_going)
             if result.get("state") in {"failed", "partial"}:
                 raise self.Fault("ENSEMBLE_INCOMPLETE",
                     "The ensemble retained its completed runs. Open the ensemble to inspect "
