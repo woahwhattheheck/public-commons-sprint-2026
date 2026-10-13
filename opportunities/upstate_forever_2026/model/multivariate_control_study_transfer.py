@@ -2,18 +2,19 @@
 from __future__ import annotations
 
 from .common import digest, identifier
+from . import multivariate_control_outcome_transfer as outcomes
 
 KIND = "multivariate-controls"
-ROOT_KINDS = (KIND,)
-DOCUMENTS = {KIND: "design.json"}
-LOCKS = {KIND: ".design.lock"}
-LABELS = {KIND: "Matched-control designs"}
+ROOT_KINDS = (KIND, *outcomes.ROOT_KINDS)
+DOCUMENTS = {KIND: "design.json", **outcomes.DOCUMENTS}
+LOCKS = {KIND: ".design.lock", **outcomes.LOCKS}
+LABELS = {KIND: "Matched-control designs", **outcomes.LABELS}
 URI = "urn:upstate:multivariate-control:"
 
 
 def visit(closure, kind, key, value):
     if kind != KIND:
-        return False
+        return outcomes.visit(closure, kind, key, value)
     from . import multivariate_control as controls
     from . import geographic_study_transfer as geographic
     checked = controls.inspect(closure.workspace, key)
@@ -39,6 +40,7 @@ def visit(closure, kind, key, value):
 
 
 def lock_paths(closure):
+    yield from outcomes.lock_paths(closure)
     for kind, key in sorted(closure.nodes):
         if kind == KIND:
             yield KIND + "/" + key + "/.design.lock"
@@ -48,7 +50,7 @@ def lock_paths(closure):
 def include_source(closure, collection_id, entry):
     uri = entry.get("uri", "")
     if not isinstance(uri, str) or not uri.startswith(URI):
-        return False
+        return outcomes.include_source(closure, collection_id, entry)
     key = identifier(uri[len(URI):])
     metadata = entry.get("metadata") or {}
     if (entry.get("kind") != "document" or entry.get("role") != "OBSERVED_CONTEXT"
