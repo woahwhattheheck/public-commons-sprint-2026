@@ -350,7 +350,14 @@ process interruption after native completion but before the Course wrote its res
 An unfinished worker still verifies the original manifest path and hash through that
 same saved preview. Once import has completed, its retained collection reopens without depending on the
 temporary staged manifest. Omitting the explicit option on a retry reuses the saved
-intake; supplying it again must match the same saved request. Use the existing
+intake. Repeating the same `--source-manifest` and analysis choice after the
+original import phase was journaled compares the retained resolved path and selected
+analysis, then reconciles that same native preview/task without reading temporary
+staging first. It retains the admitted manifest bytes/SHA from the saved request;
+changing the path, analysis or intake mode is rejected. A new or not-yet-admitted
+intake still requires the actual original manifest and exact bytes/SHA, even when a
+source-intake choice was already saved before its import phase. Existing-collection
+retries retain the same collection identity. Use the existing
 `--resume-failed --reviewed-source-revision` repair controls when applying this corrected
 receiver to an incomplete course that already recorded an earlier application edition.
 

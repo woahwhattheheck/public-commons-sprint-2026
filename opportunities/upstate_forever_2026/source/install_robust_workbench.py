@@ -21,6 +21,8 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/geographic_siting_contrasts.py",
+    "model/GEOGRAPHIC_SITING_CONTRASTS.md",
     "source_tools/high_quality_water_preparation.py",
     "source_tools/nlcd_range_preparation.py",
     "source_tools/nlcd_remote_window.py",
@@ -278,6 +280,8 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/geographic_siting_contrasts.py",
+    "model/GEOGRAPHIC_SITING_CONTRASTS.md",
     "source_tools/high_quality_water_preparation.py",
     "source_tools/nlcd_range_preparation.py",
     "source_tools/nlcd_remote_window.py",
@@ -909,6 +913,9 @@ def verify_geographic_allocation_dependencies(application, pending):
         "model/ensembles.py", "model/ensemble_operations.py", "model/ensemble_report.py",
     }
     optional_modules = (
+        ("geographic_siting_contrasts", kernel, (
+            "model/geographic_siting_contrasts.py",
+            "model/GEOGRAPHIC_SITING_CONTRASTS.md")),
         ("geographic_scenario_contrasts", kernel, (
             "model/geographic_scenario_contrasts.py",
             "model/GEOGRAPHIC_PHYSICAL_CONTRASTS.md")),

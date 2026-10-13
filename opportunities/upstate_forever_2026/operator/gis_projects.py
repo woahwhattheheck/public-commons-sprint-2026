@@ -183,8 +183,13 @@ class GISProjects:
                 'selection': record['selection'], 'layers': layers, 'downloads': downloads}
 
     def catalogue(self, workspace, native_study_collection=None, native_study_source=None,
-                  scientific_report_id=None, execution_history_id=None):
+                  scientific_report_id=None, execution_history_id=None, run_revision_id=None):
         ws = self.operator.ws(workspace)
+        if run_revision_id:
+            from model import gis_revision_context
+            import run_revision
+            original = run_revision.read(self.operator, workspace, 'export', {'id': identity(run_revision_id)})['review']
+            return {'workspace_key': workspace, 'run_revision': gis_revision_context.preview(ws, original, execution_history_id)}
         if native_study_collection:
             from model import gis_native_study
             return {'workspace_key': workspace, 'native_study': gis_native_study.preview(ws, {
@@ -225,7 +230,25 @@ class GISProjects:
             from model import gis_edition_review
             return gis_edition_review.review(ws, task['payload'])
         if task['action'] == 'gis.project.export':
-            return gis_workspace.export(ws, task['payload'])
+            payload = task['payload']
+            if 'run_revision' in payload:
+                if set(payload) - {'run_revision', 'title', 'project_crs', 'notes'}:
+                    raise ValueError('Keep the original revision pair and comparison frozen for this handover')
+                from copy import deepcopy
+                from model import gis_revision_context
+                import run_revision
+                context = gis_revision_context.resolve(ws, payload['run_revision'],
+                    lambda key: run_revision.read(self.operator, task['workspace'], 'export', {'id': key})['review'])
+                selection = deepcopy(context['selection'])
+                for name in ('title', 'project_crs'):
+                    if name in payload:
+                        selection[name] = payload[name]
+                notes = payload.get('notes', [])
+                if not isinstance(notes, list) or any(not isinstance(note, str) for note in notes):
+                    raise ValueError('Use a list of original handover notes')
+                selection['notes'].extend(notes)
+                return gis_workspace.export(ws, selection)
+            return gis_workspace.export(ws, payload)
         if task['action'] == 'gis.project.adopt-sources':
             return gis_workspace.adopt_sources(ws, task['payload'])
         if task['action'] != 'gis.project.receive':
@@ -264,7 +287,7 @@ def read(operator, workspace_key, operation, payload):
     if operation == 'catalogue':
         return adapter.catalogue(workspace_key, payload.get('native_study_collection'),
                                  payload.get('native_study_source'), payload.get('scientific_report_id'),
-                                 payload.get('execution_history_id'))
+                                 payload.get('execution_history_id'), payload.get('run_revision_id'))
     raise ValueError('Choose the GIS catalogue operation')
 
 
@@ -304,7 +327,14 @@ def verify_workspace(workspace):
         if state.get('state') == 'complete':
             _, value = gis_edition_review.read(workspace, path.parents[2].name, path.parent.name)
             reviews.append(value['id'])
-    return {'schema': 'upstate.gis-workspace-readback/v1', 'projects': rows, 'reviews': reviews}
+    contexts = []
+    from model import gis_revision_context
+    for path in sorted((workspace.root / gis_revision_context.ROOT).glob('*/context.json')):
+        record = gis.load(path)
+        gis_revision_context._frozen(workspace, path.parent, gis_revision_context.binding(record['binding']))
+        contexts.append(record['id'])
+    return {'schema': 'upstate.gis-workspace-readback/v1', 'projects': rows, 'reviews': reviews,
+            'revision_contexts': contexts}
 
 
 def member(operator, workspace_key, kind, project_id, member_path):

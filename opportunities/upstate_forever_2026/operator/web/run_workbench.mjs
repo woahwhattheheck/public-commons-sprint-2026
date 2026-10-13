@@ -315,7 +315,7 @@ export function runDeskProgrammes(snapshot, draft, rows = null, index = runDeskI
 export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, openForm, submitAction, openDesk, toast}) {
   let host = null, current = null, workspaceKey = null, draft = null;
   let busy = false, notice = '', page = 0, filter = 'all', search = '';
-  let storageMessage = '', submission = null;
+  let storageMessage = '', submission = null, intakeGeneration = 0;
   let programmeStatuses = [], programmeRead = null, programmeCache = null, programmeEpoch = 0, programmeMessage = '';
   let assemblyCapability = null, assemblyRead = null, assemblyEpoch = 0;
   const assemblyForm = typeof openForm === 'function' && typeof submitAction === 'function' ?
@@ -811,6 +811,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     update(snapshot);
   }
   function detach() {
+    intakeGeneration++;
     runHistory.detach();
     if (host) { host.removeEventListener('change', change); host.removeEventListener('input', input); }
     host = null;
@@ -924,6 +925,71 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = name;
     document.body.append(anchor); anchor.click(); anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  async function createForRuns(value) {
+    const requested = JSON.parse(JSON.stringify(value || {}));
+    const target = getState()?.workspace_key, element = host;
+    if (!element || !target || requested.workspace_key !== target)
+      throw Error('Open these original runs in their selected scientific workspace.');
+    if (busy || submission) throw Error('Finish the current native queue request before opening another run selection.');
+    const ids = requested.run_ids;
+    if (!Array.isArray(ids) || !ids.length || ids.length > 1000 ||
+        ids.some(id => typeof id !== 'string' || !idPattern.test(id)) || new Set(ids).size !== ids.length)
+      throw Error('Choose between 1 and 1000 distinct retained native run IDs.');
+    const historyTitle = requested.title === undefined ? 'Native execution history' : requested.title;
+    if (typeof historyTitle !== 'string' || !historyTitle.trim() || historyTitle.length > 240)
+      throw Error('Name the execution history in at most 240 characters.');
+    const beforeHistory = runHistory.intakeState();
+    if (!beforeHistory || beforeHistory.workspace !== target || beforeHistory.busy)
+      throw Error('Finish the current history request in this original run desk.');
+    const beforeDraft = canonical(draft), beforeRevision = selectionRevision, generation = ++intakeGeneration;
+    const snapshot = await api('/api/state?workspace=' + encodeURIComponent(target));
+    if (generation !== intakeGeneration || host !== element || getState()?.workspace_key !== target ||
+        busy || submission || selectionRevision !== beforeRevision || canonical(draft) !== beforeDraft ||
+        canonical(runHistory.intakeState()) !== canonical(beforeHistory))
+      throw Error('The workspace, run selection or history draft changed while opening these runs.');
+    if (snapshot?.workspace_key !== target || !snapshot.data?.project?.id ||
+        snapshot.data.project.id !== getState()?.data?.project?.id)
+      throw Error('The retained native runs belong to another scientific project.');
+    const data = snapshot.data, originals = new Map((data.runs || []).map(run => [run.id, run]));
+    const selectedRuns = ids.map(id => originals.get(id));
+    if (selectedRuns.some(run => !run)) throw Error('A selected native run is absent from this original workspace.');
+    for (const run of selectedRuns) {
+      if (!run.selection || ['grid_id', 'profile_id', 'scenario_id'].some(key => !idPattern.test(run.selection[key] || '')))
+        throw Error('A selected native run has incomplete original input bindings.');
+    }
+    const gridId = selectedRuns[0].selection.grid_id;
+    if (selectedRuns.some(run => run.selection.grid_id !== gridId))
+      throw Error('Open a native history selection from one original model grid in this run desk.');
+    const profileIds = [...new Set(selectedRuns.map(run => run.selection.profile_id))];
+    const scenarioIds = [...new Set(selectedRuns.map(run => run.selection.scenario_id))];
+    if (!(data.grids || []).some(row => row.id === gridId) ||
+        profileIds.some(id => !(data.profiles || []).some(row => row.id === id)) ||
+        scenarioIds.some(id => !(data.scenarios || []).some(row => row.id === id)))
+      throw Error('Restore the selected runs with their complete original grid, profiles and scenarios.');
+    const firstScenario = (data.scenarios || []).find(row => row.id === selectedRuns[0].selection.scenario_id);
+    const candidate = parseDraft({schema: 'upstate.operator-run-desk/v1', project_id: data.project.id,
+      grid_id: gridId, profile_ids: profileIds, scenario_ids: scenarioIds,
+      baseline_scenario_id: firstScenario?.kind === 'baseline' ? firstScenario.id : '',
+      models: modelsOf(selectedRuns[0].selection), included: [], excluded: []}, snapshot);
+    const index = runDeskIndex(snapshot), wanted = new Set(ids);
+    const rows = runDeskRows(snapshot, candidate, [], index);
+    candidate.included = rows.filter(row => row.run && wanted.has(row.run.id)).map(row => row.key);
+    candidate.excluded = rows.filter(row => !row.run || !wanted.has(row.run.id)).map(row => row.key);
+    const checked = runDeskRows(snapshot, candidate, [], index).filter(row => row.selected);
+    if (checked.some(row => !row.compatible || !row.run || !wanted.has(row.run.id)) ||
+        checked.length !== ids.length || new Set(checked.map(row => row.run.id)).size !== ids.length)
+      throw Error('The current matrix cannot identify exactly these retained runs and native model scopes. The previous selection is unchanged.');
+    // No asynchronous work remains between the last guard and this paired commit.
+    runHistory.setTitle(historyTitle);
+    sourceIndex = null; rowCache = null;
+    synchronize(snapshot);draft = candidate;persist();page = 0;filter = 'all';search = '';
+    notice = 'Opened exactly ' + ids.length + ' retained native run' + (ids.length === 1 ? '' : 's') +
+      '. Review and save the selected execution history below; no model has been queued.';
+    runHistory.update(snapshot);paint();
+    host.querySelector('[data-native-history]')?.scrollIntoView({block: 'start'});
+    return {workspace_key: target, project_id: data.project.id,
+      run_ids: checked.map(row => row.run.id), title: historyTitle.trim()};
   }
   function downloadSelection() {
     const snapshot = getState();
@@ -1079,5 +1145,5 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     }
     persist(); page = 0; paint();
   }
-  return {mount, update, detach, dispatch};
+  return {mount, update, detach, dispatch, createForRuns};
 }
