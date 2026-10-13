@@ -84,7 +84,7 @@ export function buildNorthCarolinaSavannah(files, sha256Text) {
   const registry={
     schema:"upstate.classified-water-registry/v2",
     edition:{id:"nc-savannah-published-schedule-20160303-captured-20261013",jurisdiction:"NC",classification_system:"NC-15A-NCAC-02B",
-      title:"North Carolina Savannah river-basin classification schedule",status:"source-published",
+      title:"North Carolina Savannah river-basin classification schedule",regulation:"15A NCAC 02B .0303 — Savannah classification schedule",status:"source-published",
       publisher:"North Carolina Department of Environmental Quality",source_url:hydro.source_url,
       printed_at_source:"2016/03/03 9:26:10",capture_date:"2026-10-13",native_data_last_edit_date:metadata.editingInfo.dataLastEditDate,
       legal_rule:"15A NCAC 02B .0303",scope:"Complete 103 named Savannah schedule records, independently reconciled to the publisher Savannah-labelled native GIS cohort"},

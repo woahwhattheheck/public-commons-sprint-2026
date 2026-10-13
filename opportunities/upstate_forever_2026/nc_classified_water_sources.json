@@ -8,7 +8,7 @@
       "title": "NC Savannah legal schedule and complete original native classified streams",
       "kind": "document",
       "path": "source/water_classifications/north_carolina/20261013/derived/classification-registry.json",
-      "sha256": "08ee53d0c525f327dcf182536277a610b00bbe66afedb10fb0aec3d0e5c67b11",
+      "sha256": "6136e64bc720adb89f9e81fa360e74c6bbe99fee548f9b8df7791ab15fc59c5a",
       "uri": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0",
       "vintage": "Source-published schedule printed2016-03-03; native capture2026-10-13",
       "metadata": {
@@ -164,7 +164,7 @@
         },
         {
           "path": "source/water_classifications/north_carolina/20261013/build-registry.mjs",
-          "sha256": "a90c552b7d87ddcb78ed69e3e20057967c08695a29b999b7a9cb3ddcf73bc3ab"
+          "sha256": "0ee775c72294e4f7e736c66fed92aed401ddccd863bc795a7fa46578b0082df5"
         },
         {
           "path": "source/water_classifications/north_carolina/20261013/build-nc-source.mjs",
