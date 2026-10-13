@@ -18,8 +18,9 @@ The complete additive module is `model/implementation_report_transfer.py`. The s
 Inside its existing `_source(closure, choice, expected_source)`, after raw source validation and the other producer-specific resolvers:
 
 ```python
-from . import implementation_report_transfer
-implementation_report_transfer.include_source(closure, collection_id, entry)
+if getattr(closure, "implementation_lineage_enabled", True):
+    from . import implementation_report_transfer
+    implementation_report_transfer.include_source(closure, collection_id, entry)
 ```
 
 The helper recognizes the explicit whole-plan `metadata.report_context_kind == "implementation-plan-report"`, the Outcomes `metadata.implementation_outcome` identity, and the original `field-observed-report-*` recipe identity. It validates each original producer schema, source ID and URI; unrelated source documents keep their existing dispatcher behavior. It validates the original CAS recipe, complete inputs, native report manifest SHA, historical plan digest, report date and attached-original inventory. It does not call source-view, rendering or source-import helpers.
@@ -35,7 +36,9 @@ This uses the original native Implementation file-lock implementation. It first 
 For explicit original-plan receiving information, retain:
 
 ```python
-identity["implementation_report_sources"] = implementation_report_transfer.receipt(closure)
+originals = implementation_report_transfer.receipt(closure)
+if originals:
+    identity["implementation_report_sources"] = originals
 ```
 
 and after the existing received Workspace closure is rebuilt:
@@ -44,6 +47,8 @@ and after the existing received Workspace closure is rebuilt:
 implementation_report_transfer.verify_receipt(
     closure, identity.get("implementation_report_sources", []))
 ```
+
+The maintained `_Closure` accepts `implementation_lineage=True` for new previews and captures. When reopening a retained receipt, set `implementation_lineage="implementation_report_sources" in identity`. Archives captured before this field existed keep their original dependency requirements; new original Implementation sources carry the complete explicit family. The preview and verified receiving result expose `implementation_report_sources` so the existing receiving desk can open its original plan revisions and report files.
 
 The source, selected historical revision and report identity must remain exact. Later legitimate native edits or added deployment packets may coexist; original retained deployment IDs must remain present.
 
