@@ -13,6 +13,7 @@ function lock(){
   const blocked=busy||!!pending||brokenPending||!state;
   $('source-fields').disabled=blocked;$('apply-fields').disabled=blocked;
   document.querySelectorAll('[data-control]').forEach(n=>n.disabled=blocked);
+  document.querySelectorAll('[data-row-nav]').forEach(n=>n.disabled=blocked||n.dataset.edge==='true');
   $('save-source').disabled=blocked||!sourcePreview;
   $('apply').disabled=blocked||!applyPreview?.complete;
   $('retry').disabled=busy||!pending;$('preserve').disabled=busy||!pending||!rejected;
@@ -50,7 +51,7 @@ function rowView(edition){
   table(out,['Row / line','Original date','Hour','Original price','USD/kWh','Issues'],rows.map(r=>[r.sourceRow+' / '+r.sourceLine,r.tokens.date,r.tokens.hour,r.tokens.price,r.exactUsdPerKwh,r.issues.join('; ')||'Valid']));
   const nav=el('div');nav.className='controls';
   for(const [label,offset,disabled] of [['Previous rows',rowOffset-100,rowOffset===0],['Next rows',rowOffset+100,rowOffset+100>=edition.rows.length]]){
-    const b=el('button',label);b.type='button';b.disabled=busy||!!pending||disabled;b.onclick=()=>{if(busy||pending)return;rowOffset=offset;rowView(edition);};nav.append(b);
+    const b=el('button',label);b.type='button';b.dataset.rowNav='true';b.dataset.edge=String(disabled);b.disabled=busy||!!pending||disabled;b.onclick=()=>{if(busy||pending)return;rowOffset=offset;rowView(edition);};nav.append(b);
   }out.append(nav);
 }
 function sourceFields(){
