@@ -93,3 +93,76 @@ Use `--accounting-config /absolute/selected-original-case.json` for the selected
 - `plan`: an optional complete native schedule-generation selection against an already-issued original invoice for that same customer, including invoiceId, balanceDate, firstDueDate, count and one of intervalMonths/intervalDays.
 
 The caller links the actual customer, saves a revised carbon statement while preserving the issued customer-file versions, creates or recovers the original invoice draft, exports its whole HTML/JSON/CSV preview, and reads all existing schedules and retained schedule files for that customer. A selected original issued invoice can receive a new schedule draft and its original review. Invoice issuance, payment entry and schedule activation stay with the actual case's native operation and source events. The run records the accounting source/case selection state explicitly alongside the two application results.
+
+
+## Continue a preserved native run
+
+Use the complete current source packet for the same operation. Its manifest declares
+`capabilities.resumeFrom: "preserved-output-v1"`; the installed launcher checks that
+capability before accepting `--resume-from`. The original 151-file and 158-file callers
+do not implement this option.
+
+```sh
+node CURRENT_SOURCE_ROOT/receiving/receive-native.mjs \
+  --source-root CURRENT_SOURCE_ROOT \
+  --resume-from RESTORED_ORIGINAL_OUTPUT \
+  --output NEW_PRIVATE_CONTINUATION_OUTPUT \
+  --capture-options ORIGINAL_CAPTURE_OPTIONS_JSON \
+  --sdk-module EXISTING_NATIVE_SDK_MODULE \
+  --chromium EXISTING_CHROMIUM_EXECUTABLE \
+  --accounting-directory ORIGINAL_MAINTAINED_ACCOUNTING_DIRECTORY
+
+```
+
+Use absolute native paths. The preserved directory contains the original
+`receiving.json` and its whole operated output; it can have a different location
+after restoring the native archive. The current source, original output and new
+continuation output are separate directories. The final archive and its descriptor
+remain outside all three. Keep the native host's actual accounting directory and
+binding selected. Its completed draft stage is carried forward without invoking
+the draft-preparation helper again.
+
+The caller verifies every recorded original artifact, copies the whole saved output,
+and preserves the original receipt verbatim beneath `recovery/`. The new receipt
+records the original receipt digest and paths, current source manifest and process
+identity. Original completed source, export and receiving stages are reused. Their
+workspace directories are rebased to the copied output; expired local URLs remain
+historical metadata. The complete copied workspaces are opened through the original
+private-store controllers before use.
+
+An unfinished GiveCredit intake keeps its saved original capture options and
+checkpoint. For a restored older run, pass the original complete capture-options
+file from that archive explicitly: it contains both original May 2024 ledger
+responses and the frozen source selection. `--capture-checkpoint` can select the
+same operation's exact retained checkpoint; otherwise a valid checkpoint already
+present in the copied output is reused. A completed source edition is imported once
+and reused by its original digest. Existing native statements and receiving edits
+keep their identities. New mutation request IDs are saved before dispatch.
+
+The actual 379A recovery archive is
+`SCF_Carbon_GiveCredit_Native_Recovery_379A_20261013.tar.gz`,
+11,798,686 bytes, SHA256
+`786f890601e3213c47e2fb8b952b27f23a98100217699782a1c439ffaf09be89`.
+Its preserved run completed both Carbon editions, November and July exports, the
+original accounting draft and independent Carbon receiving before the GiveCredit
+intake process exited with signal 9. Continue that saved output. The historical
+source selection has 914 decoded original envelopes and two selected transactions;
+the ongoing E42D historical interval remains its separate source-acquisition arm.
+
+The caller checkpoints a running stage before starting it and saves each completed
+artifact and capture checkpoint atomically. `native-resources.jsonl` retains actual
+process memory, native resource usage and available cgroup memory counters at stage
+and capture boundaries. A process signal alone does not determine its cause; these
+observations join the original native log and host diagnostics.
+
+If the interrupted stage was already editing the browser workspaces, its complete
+partial files and edits remain in the copied output. A fresh browser attempt starts
+from the retained pre-browser handovers in its own `browser-attempts/` directory.
+It performs the full original form, download, receiving and edit workflow. A
+completed browser stage instead recovers its original customer, project, assignment,
+statement and received-workspace identities from the saved action records.
+
+After continuation, the caller closes all services and reopens both independent
+receiving workspaces, the browser receiving workspaces and the retained original
+accounting draft. The final archive contains the whole copied recovery history,
+completed new output, source, exact browser downloads and editable workspaces.
