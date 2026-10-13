@@ -34,6 +34,16 @@ PREDECESSORS = {
     "operator/GUIDED_JOURNEY.md": "76235bf1375bc11ab96f52dbb165a63c0bd15881344f82fc829fb02e6387e013",
     "operator/Guided_Journey_Source.json": "778c3a9ee83be0640326b555450b5da7c864d61e40de6c09107110286cb8f566"
 }
+# Exact maintained source edition accepted beside the original predecessor.
+CURRENT_PREDECESSORS = {
+    "operator/install_guided_journey.py": "9f48a87fa421dcc1340f889aedc6c5ca7c02622dec033426fdad2729c8ef8fb9",
+    "operator/Guided_Journey_Integration.json": "6e65a9f432d86b16176161a47c15455f79354da5604cafcf100d5ad6c5ca103b",
+    "operator/extensions/guided-journey.json": "2755b6dcd057097d980d85fa186fdc7d560a8bcf45678d56052bb9fe7f448734",
+    "operator/web/journey.mjs": "50104cfae414b8cb68fc8d380f7f7898939b376fa761a48969efba148c45c059",
+    "operator/web/journey.css": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a",
+    "operator/GUIDED_JOURNEY.md": "3a7dc94ad9e9cf575e21b71d4d07e53d6594e9fe24ec22ae70327d3d70d70ae5",
+    "operator/Guided_Journey_Source.json": "fa263a69cf8b0e5590bfcbef01d37a27c4dd20d07e813f55847ed6e623147aa2"
+}
 SHARED = ("operator/server.py", "operator/web/app.mjs")
 OPTIONAL_SHARED = ("install_extensions.py", "operator/web/index.html")
 
@@ -116,9 +126,19 @@ def patch_text(text, patches):
         if len(present) > 1:
             raise ValueError("Ambiguous compatible source join: " + patch["id"])
         if present:
-            if patch["after"] in text or patch["marker"] in text:
+            # A compatible complete form may retain the original marker.
+            # Reject another occurrence outside that exact selected form.
+            remaining = text.replace(present[0]["after"], "", 1)
+            if patch["after"] in remaining or patch["marker"] in remaining:
                 raise ValueError("Multiple current source forms at: " + patch["id"])
             patch.update(present[0])
+        elif patch["after"] not in text:
+            previous = [variant for variant in patch.get("compatible_before", [])
+                        if variant["before"] in text]
+            if len(previous) > 1:
+                raise ValueError("Ambiguous previous source join: " + patch["id"])
+            if previous:
+                patch.update(previous[0])
         selected.append(patch)
     patches = selected
     for patch in patches:
@@ -158,10 +178,18 @@ def prepare(application, files, integration):
         path = safe_path(application, name)
         before = read(path)
         if (before is not None and before != incoming
-                and hashlib.sha256(before).hexdigest() != PREDECESSORS.get(name)):
+                and hashlib.sha256(before).hexdigest() not in {PREDECESSORS.get(name), CURRENT_PREDECESSORS.get(name)}):
             raise ValueError("Preserve and compose the other installed journey edition at " + name)
         original[name], proposed[name] = before, incoming
         modes[name] = path.stat().st_mode & 0o777 if before is not None else 0o644
+    community = application / "operator/web/community.mjs"
+    if not community.is_file():
+        raise ValueError("Receive the current Community controller with this guided journey.")
+    community_source = community.read_text(encoding="utf-8")
+    for capability in ("export function validateCommunityView(", "function capture(",
+                       "function validateView(", "function restoreView("):
+        if capability not in community_source:
+            raise ValueError("Receive the current Community view source before installing this journey: " + capability)
     app = safe_path(application, "operator/web/app.mjs").read_text()
     server = safe_path(application, "operator/server.py").read_text()
     if "const extensions=createExtensionHost(" not in app or "extensions.update(state)" not in app:

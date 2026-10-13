@@ -425,3 +425,11 @@ support data, guide and installer introduced with the observation-support
 workflow. Its existing design diagnostics remain part of the same calibration
 form. Current source manifests record the full updated browser, guide and
 installer bodies.
+
+## Reopen the Community view with the project
+
+In **Communities**, choose the retained table, utility and watershed, search and sort order, and the block groups to compare. Opening a plan or report retains its original table and selection.
+
+Use **Guided journey → Save project view** to keep that Community context with the operating notes. **Open saved project view** restores it and keeps the previous browser view available to reopen. **Open Community view** returns to the selected Community tab.
+
+A complete workspace backup carries the saved view into its restored copy and delivered application. The original Community receiving workflow saves the selected table, filters, compared GEOIDs, plan, report and notes, then reopens them through that same backup and restore path.
