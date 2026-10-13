@@ -35,7 +35,12 @@
         "measurement_workspace/__init__.py",
         "integration/component_fragments/report-changes-study-transfer.json",
         "model/scientific_report_editions.py",
-        "model/scientific_report_study_transfer.py"
+        "model/scientific_report_study_transfer.py",
+        "model/study_receiving.py",
+        "operator/study_receiving.py",
+        "operator/web/study_report_navigation.mjs",
+        "operator/web/received_studies.mjs",
+        "operator/web/extensions/study_transfer.mjs"
       ],
       "requires": [
         "scientific-report-rendering"
