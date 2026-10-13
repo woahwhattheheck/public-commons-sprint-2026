@@ -247,7 +247,7 @@ def report(result):
         + "</title><style>body{font:14px system-ui;color:#171717;background:white;margin:28px;max-width:1100px}"
           "h1{font-size:24px}h2{font-size:19px;margin-top:28px}h3{font-size:16px;margin-top:22px}"
           ".table-scroll{overflow:auto}table{border-collapse:collapse;font-size:12px;width:100%;margin:12px 0}"
-          "th,td{border:1px solid #bbb;padding:8px;text-align:left;vertical-align:top;font-variant-numeric:tabular-nums}"
+          "th,td{border:1px solid #bbb;padding:8px;text-align:left;vertical-align:top;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}"
           "th{background:#eee}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin:16px 0}"
           "summary{cursor:pointer;font-weight:600}section{border-top:1px solid #bbb;margin-top:24px}"
           "@media print{body{margin:0;max-width:none}tr{break-inside:avoid}.table-scroll{overflow:visible}h2,h3{break-after:avoid}}</style></head><body><h1>" + esc(title)
