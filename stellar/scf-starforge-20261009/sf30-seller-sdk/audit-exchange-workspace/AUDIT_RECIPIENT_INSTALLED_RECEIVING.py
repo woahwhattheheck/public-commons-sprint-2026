@@ -199,11 +199,21 @@ def main(argv=None):
                             "installed_custody", "A complete custody member differs.")
                 require(archive.read("recipient-return.zip") == raw
                         and manifest["workspaceId"] == state["workspaceId"], "installed_custody", "The native custody selected another source.")
-            after = snapshot(author)
+            current_after = snapshot(author)
             old_reviews = {row["id"]: row for row in before["records"] if row["kind"] == "review"}
-            new_reviews = {row["id"]: row for row in after["records"] if row["kind"] == "review"}
+            new_reviews = {row["id"]: row for row in current_after["records"] if row["kind"] == "review"}
             require(old_reviews == new_reviews, "installed_replay", "Reusing original accepted reviews changed their identities or content.")
-            original.put(root / "AUTHOR_AFTER.json", after)
+            after_path = root / "AUTHOR_AFTER.json"
+            if not after_path.exists(): original.put(after_path, current_after)
+            after = original.read_json(after_path)
+            retained_reviews = {row["id"]: row for row in after["records"] if row["kind"] == "review"}
+            retained_ops = {row["id"]: row for row in after["operations"]}
+            current_ops = {row["id"]: row for row in current_after["operations"]}
+            require(after["workspace"]["workspaceId"] == selected["workspaceId"]
+                    and retained_reviews == old_reviews
+                    and all(retained_ops.get(k) == v for k, v in before_ops.items())
+                    and all(current_ops.get(k) == v for k, v in retained_ops.items()),
+                    "installed_history", "The frozen original author outcome lost its review or accepted-request ancestry.")
             export = original.native(author, root, "installed-complete-application", "export.create",
                 {"kind": "application", "actor": selected["operator"], "note": "Complete original Audit with installed recipient requests and custody."})
             exported, body = author.download(export["id"])
