@@ -38,6 +38,9 @@ from analyst.binding import inspect_binding, STARTUP_SCHEMA
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/parcels.js": ("parcels.js", "text/javascript; charset=utf-8"),
+          "/evidence.js": ("evidence.js", "text/javascript; charset=utf-8"),
+          "/evidence-store.js": ("evidence-store.js", "text/javascript; charset=utf-8"),
+          "/evidence.css": ("evidence.css", "text/css; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 SECURITY = {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
             "Referrer-Policy": "no-referrer",
@@ -49,7 +52,9 @@ EXTERNAL_ACTIONS = frozenset(("source.inspect", "source.import", "project.export
 
 def external_input(original):
     return original["action"] in EXTERNAL_ACTIONS or (original["action"] == "parcel.command" and
-        original["payload"].get("action") in ("source.preview", "source.import"))
+        original["payload"].get("action") in ("source.preview", "source.import")) or (
+        original["action"] == "evidence.command" and
+        original["payload"].get("action") in ("source.inspect", "source.save"))
 
 
 def page(query, allowed=()):
@@ -357,7 +362,19 @@ class Handler(BaseHTTPRequestHandler):
                     "directory": str(workspace.root), "workerActive": active(workspace),
                     "capabilities": {"nativeRuntimeSelected": bool(self.app.runtime),
                                      "field": (CORE_ROOT / "field.py").is_file(),
-                                     "parcels": (CORE_ROOT / "parcels" / "operator.py").is_file()}})
+                                     "parcels": (CORE_ROOT / "parcels" / "operator.py").is_file(),
+                                     "evidence": (CORE_ROOT / "parcel_evidence_operator.py").is_file()}})
+            if path == "/api/evidence" or path.startswith("/api/evidence/"):
+                from starforge_stac.parcel_evidence_operator import read_route
+                value = read_route(workspace, path, query)
+                require(value is not None, "ANALYST_ROUTE_NOT_FOUND", "Choose an original evidence route.")
+                return self.json(200, value)
+            if path.startswith("/download/evidence/"):
+                from starforge_stac.parcel_evidence_operator import download_route
+                value = download_route(workspace, path, query)
+                require(value is not None, "ANALYST_ROUTE_NOT_FOUND", "Choose an original evidence file.")
+                return self.download(member(workspace.root, value["record"]["path"]),
+                                     value["record"], value["name"], value["type"])
             if path == "/api/parcels" or path.startswith("/api/parcels/"):
                 from starforge_stac.parcels.operator import read_route
                 value = read_route(workspace, path, query)

@@ -15,7 +15,7 @@ from starforge_stac.model import (QgisReceivingError, QgisWorkspace, HASH, REQUE
     open_receiving_source, receive_package, read_package_manifest, opened_package_archive, CHUNK, MAX_JSON)
 from starforge_stac import qgis_project
 
-NATIVE_ACTIONS = frozenset(("map.inspect", "map.save", "map.reopen", "map.render", "map.features", "postgis.check", "postgis.layers"))
+NATIVE_ACTIONS = frozenset(("map.inspect", "map.save", "map.reopen", "map.render", "map.features", "postgis.check", "postgis.layers", "evidence.spatial"))
 FIELD_ACTIONS = frozenset(("field.state", "field.inventory", "field.copy", "field.review",
     "field.inspect", "field.reopen", "field.commission", "field.export", "field.receive",
     "field.accept", "field.close", "field.note"))
@@ -72,6 +72,8 @@ def normalize_payload(action, raw, workspace):
         "project.receive": {"file", "destination", "expectedSha256"},
         "field.command": {"action", "payload"},
         "parcel.command": {"action", "payload"},
+        "evidence.command": {"action", "payload"},
+        "evidence.spatial": {"caseId", "caseVersionId", "leftSubjectId", "rightSubjectId", "measurementCrs", "purpose"},
         "parcel.capture": {"action", "payload"},
         "postgis.select": {"sourceId", "layerId", "connection", "label"},
         "postgis.check": {"sourceId", "layerIds", "connection"},
@@ -158,6 +160,14 @@ def normalize_payload(action, raw, workspace):
         require(set(value) == {"action", "payload"}, "PARCEL_CAPTURE_ACTION",
                 "Use the complete named capture action and payload.")
         value["payload"] = normalize(value["action"], value["payload"])
+    if action == "evidence.command":
+        from starforge_stac.parcel_evidence_operator import normalize
+        require(set(value) == {"action", "payload"}, "EVIDENCE_ACTION_INPUT",
+                "Use the complete original evidence action and payload.")
+        value["payload"] = normalize(value["action"], value["payload"])
+    if action == "evidence.spatial":
+        from starforge_stac.parcel_evidence_native import normalize
+        value = normalize(value)
     if action == "parcel.command":
         from starforge_stac.parcels.operator import normalize
         require(set(value) == {"action", "payload"}, "PARCEL_ACTION_INPUT",
@@ -414,6 +424,12 @@ def execute(workspace, record, progress):
             return capture_execute(workspace, payload["action"], payload["payload"], common, progress=progress)
         except CaptureError as error:
             require(False, error.code, str(error), **error.detail)
+    if action == "evidence.command":
+        from starforge_stac.parcel_evidence_operator import execute as evidence_execute
+        return evidence_execute(workspace, payload["action"], payload["payload"], common, progress=progress), []
+    if action == "evidence.spatial":
+        from starforge_stac.parcel_evidence_native import observe
+        return observe(workspace, payload, common, progress=progress), []
     if action == "parcel.command":
         from starforge_stac.parcels.operator import execute as parcel_execute
         return parcel_execute(workspace, payload["action"], payload["payload"], common, progress=progress), []
