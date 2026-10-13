@@ -1,6 +1,6 @@
 // MIT. Exact selected-version comparison over the maintained Alfresco capture contract.
 import {createHash} from 'node:crypto';
-import {inspectAlfrescoDocument,documentMember,documentBytes,documentLosslessJSON} from './alfresco-document.mjs';
+import {inspectAlfrescoDocument,documentMember,documentBytes,documentLosslessJSON,normalizeAlfrescoRepository} from './alfresco-document.mjs';
 import {parseInterfaceJSON} from './interface-contract-v2.mjs';
 import {readFlowableLosslessJSON} from '../native.mjs';
 export const DOCUMENT_COMPARISON_SCHEMA='stellar-forge.document-comparison-source.v1';
@@ -20,6 +20,10 @@ function pointer(root,path){
  return{present:true,value};
 }
 function selectedIdentity(c){return{repositoryId:c.repository.id,repositoryBaseUrl:c.repository.baseUrl,nodeId:c.selection.nodeId,versionId:c.selection.versionId};}
+function physicalIdentity(v){
+ const repository=normalizeAlfrescoRepository({id:v.repositoryId,baseUrl:v.repositoryBaseUrl,usernameEnv:'SELECTED_USER',passwordEnv:'SELECTED_PASSWORD'});
+ return canonical([repository.baseUrl,v.nodeId,v.versionId]);
+}
 function validateIdentity(v,label){exact(v,['repositoryId','repositoryBaseUrl','nodeId','versionId'],label);for(const k of Object.keys(v))need(text(v[k]),label+' '+k+' must be explicit');need(Object.keys(v).length===4,label+' requires all four original identity fields');}
 function readValue(capture,path,type){
  const raw=pointer(capture.raw,path);if(!raw.present)return{present:false};
@@ -43,7 +47,7 @@ function inspectSelection(selectionText){
   exact(p,['key','label','source','target','sourceMember','targetMember'],'pair');
   need(/^[A-Za-z][A-Za-z0-9_.-]{0,99}$/.test(p.key??'')&&!pairKeys.has(p.key)&&text(p.label,250),'Invalid unique pair');pairKeys.add(p.key);
   validateIdentity(p.source,'source identity');validateIdentity(p.target,'target identity');
-  const a=canonical(p.source),b=canonical(p.target);need(a!==b,'Source and target must be separately selected original versions');need(!sources.has(a)&&!targets.has(b),'A native version cannot be silently mapped to multiple pairs');sources.add(a);targets.add(b);
+  const a=physicalIdentity(p.source),b=physicalIdentity(p.target);need(a!==b,'Source and target must be separately selected original versions');need(!sources.has(a)&&!targets.has(b),'A native version cannot be silently mapped to multiple pairs');sources.add(a);targets.add(b);
   for(const key of ['sourceMember','targetMember'])need(p[key]===null||typeof p[key]==='string'&&/^[A-Za-z][A-Za-z0-9_.-]{0,119}\.json$/.test(p[key]),'Capture member is a portable JSON name or explicit null');
  }
  return s;
