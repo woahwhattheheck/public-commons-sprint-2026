@@ -425,6 +425,41 @@ def decode_complete_transport(text):
     return decoded
 
 
+def decode_application_transport(parts, transports):
+    """Join lean source parts to their separately retained transport identity."""
+    if len(transports) != 1:
+        raise ValueError("Choose one complete application transport identity")
+    transport = transports[0]
+    if (transport.get("encoding") != "gzip+base64"
+            or type(transport.get("parts")) is not int
+            or not 0 < transport["parts"] <= MAX_FILES):
+        raise ValueError("Invalid application source transport")
+    fields = {
+        "schema": PART_SCHEMA,
+        "parts": transport["parts"],
+        "encoding": transport["encoding"],
+        "payload_bytes": transport.get("decoded_bytes"),
+        "payload_sha256": transport.get("decoded_sha256"),
+        "compressed_bytes": transport.get("compressed_bytes"),
+        "compressed_sha256": transport.get("compressed_sha256"),
+    }
+    for key in ("edition", "operation_id"):
+        if key in transport:
+            fields[key] = transport[key]
+    normalized = []
+    for part in parts:
+        for key, expected in fields.items():
+            if key in part and part[key] != expected:
+                raise ValueError("Application source part differs from its transport: " + key)
+        data = part.get("data", part.get("data_base64"))
+        if "data" in part and "data_base64" in part and part["data"] != part["data_base64"]:
+            raise ValueError("Application source part has conflicting encoded bodies")
+        if not isinstance(data, str):
+            raise ValueError("Application source part requires its complete encoded body")
+        normalized.append({**part, **fields, "data": data})
+    return decode_parts(normalized)
+
+
 def decode_carrier(data, _depth=0):
     """Return the complete decoded JSON bytes from a published source carrier."""
     if _depth > 12:
@@ -449,6 +484,7 @@ def decode_carrier(data, _depth=0):
                         text, re.S)
     parts, addon_parts, plain_parts, documents, encoded = [], [], [], [], []
     original_transports = []
+    application_transports = []
     for language, body in blocks:
         if language.lower() == "base64":
             encoded.append(body)
@@ -456,6 +492,8 @@ def decode_carrier(data, _depth=0):
             item = transport_json(body)
             if isinstance(item, dict) and item.get("schema") == "upstate.original-source-transport/v1":
                 original_transports.append(item)
+            elif isinstance(item, dict) and item.get("schema") == "upstate.application-source-transport/v1":
+                application_transports.append(item)
             elif isinstance(item, dict) and item.get("schema") == PART_SCHEMA:
                 parts.append(item)
             elif isinstance(item, dict) and item.get("schema") in CONSERVATION_PART_SCHEMAS:
@@ -466,8 +504,11 @@ def decode_carrier(data, _depth=0):
                 documents.append(body.encode("utf-8"))
     if sum(bool(group) for group in (parts, addon_parts, plain_parts, documents, encoded)) != 1:
         raise ValueError("Choose one complete source carrier per input")
+    if application_transports and not parts:
+        raise ValueError("Application source transport has no complete parts")
     if parts:
-        return decode_parts(parts)
+        return (decode_application_transport(parts, application_transports)
+                if application_transports else decode_parts(parts))
     if addon_parts:
         return decode_addon_parts(addon_parts)
     if plain_parts:
@@ -768,6 +809,7 @@ def layer_from_document(document, receipt=None):
     raw = document.get("files")
     metadata = document.get("file_metadata", {})
     files, checked = {}, {}
+    text_repairs = []
     if isinstance(raw, dict):
         if raw and all(isinstance(value, dict) for value in raw.values()):
             if metadata:
@@ -810,6 +852,21 @@ def layer_from_document(document, receipt=None):
             if not isinstance(content, str):
                 raise ValueError("Source member requires its complete body: " + name)
             body = content.encode("utf-8")
+            if (len(body) != entry.get("bytes") or sha256(body) != entry.get("sha256")):
+                # Canvas can replace indentation inside a JSON source string.
+                # Recover only the exact source already identified by its publisher.
+                restored = content.replace("\u00a0", " ")
+                restored_body = restored.encode("utf-8")
+                if (restored != content and len(restored_body) == entry.get("bytes")
+                        and sha256(restored_body) == entry.get("sha256")):
+                    text_repairs.append({
+                        "path": name, "operation": "restore_published_ascii_spaces",
+                        "incoming_bytes": len(body), "incoming_sha256": sha256(body),
+                        "source_bytes": len(restored_body),
+                        "source_sha256": sha256(restored_body),
+                        "replaced_characters": content.count("\u00a0"),
+                    })
+                    content, body = restored, restored_body
         try:
             content = body.decode("utf-8")
         except UnicodeError:
@@ -852,6 +909,8 @@ def layer_from_document(document, receipt=None):
         receipt.update(payload_sha256=sha256(payload), payload_bytes=len(payload))
     receipt.update(schema=document_schema(document), files=len(files),
                    source_bytes=sum(record["bytes"] for record in checked.values()))
+    if text_repairs:
+        receipt["source_text_repairs"] = [*receipt.get("source_text_repairs", []), *text_repairs]
     for key in ("edition", "source_ref", "merge_ref", "repository", "operation_id",
                 "installation", "native_consumers", "component"):
         if key in document:

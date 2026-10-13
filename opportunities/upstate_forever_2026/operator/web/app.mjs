@@ -1,4 +1,3 @@
-import {attachConservationWithOptimization} from './conservation_optimization_bridge.mjs';
 import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
 import {attachCommunity} from './community.mjs';
@@ -53,9 +52,6 @@ async function api(path,{method='GET',body,raw,filename,signal}={}){
   return value;
 }
 const endpoint = (path, values={}) => path+'?'+new URLSearchParams({...(workspace?{workspace}:{}),...values});
-const conservation=attachConservationWithOptimization({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,
- closeDetail:()=>{detailDialog.close();detailContext=null;},
- closeForm:()=>{formDialog.close();formContext=null;}});
 async function rehearsalOpenControl(control){
  if(control.type==='view')return navigate(control.view);
  if(control.type==='item')return openItem(control.kind,control.id);
@@ -68,7 +64,7 @@ async function rehearsalOpenControl(control){
 const rehearsal=attachRehearsal({getState:()=>state,api,endpoint,openItem,showTask,fileList,toast,refreshState:()=>refresh({force:true}),navigate,openControl:rehearsalOpenControl});
 const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem});
 const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;}});
-const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast});
+const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,openDelivery:selection=>deliveryForm(undefined,selection)});
 const experiments=attachExperiments({navigate,closeDetail:()=>{detailDialog.close();detailContext=null;},getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,toast,openItem,showTask});
 const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,openItem,refreshState:refresh,navigate,closeDetail:()=>{detailDialog.close();detailContext=null;}});
 let operatingJourney=null;
@@ -78,6 +74,7 @@ const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>worksp
  openForm,submitAction,detail,fileList,uploadFile,
  closeDetail:()=>{detailDialog.close();detailContext=null;},
  openDelivery:selection=>deliveryForm(undefined,selection),
+ openReceivingPlan:id=>receivingWaters.openPlan(id),
  getView:()=>view,reportError:globalError,selectWorkspace,
  setJourneyController:controller=>{operatingJourney=controller;},
  openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},
@@ -139,29 +136,11 @@ function sourceName(collection,id){const entry=state?.data.sources.find(x=>x.id=
 function sumCell(artifact){return artifact?number(artifact.sum)+' <small>'+esc(artifact.sum_units||artifact.units||'')+'</small>':'—';}
 function render(){
   if(!state)return;
-  if(view==='conservation'){
-    if(typeof extensions!=='undefined')extensions.detach();
-    if(typeof experiments!=='undefined')experiments.detach();
-    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();
-    if(typeof programmes!=='undefined')programmes.detach();
-    if(typeof receivingWaters!=='undefined')receivingWaters.detach();
-    if(typeof rehearsal!=='undefined')rehearsal.detach();
-    if(typeof journey!=='undefined'){journey.detach();journey.updateRail(view);}
-    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();
-    for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
-    if(typeof spatialWorkspace!=='undefined')spatialWorkspace.suspend();
-    if(typeof community!=='undefined')community.detach();
-    if(typeof customerReviews!=='undefined')customerReviews.detach();
-    $('#content').innerHTML=conservation.render(state);
-    conservation.mount($('#content'),state);return;
-  }
-  conservation.detach();
   if(view==='rehearsal'){
     for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
     if(typeof spatialWorkspace!=='undefined')spatialWorkspace.suspend();
     if(typeof community!=='undefined')community.detach();
     if(typeof customerReviews!=='undefined')customerReviews.detach();
-    if(typeof conservation!=='undefined')conservation.detach();
     if(typeof programmes!=='undefined')programmes.detach();
     if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();
     if(typeof experiments!=='undefined')experiments.detach();
@@ -176,7 +155,18 @@ function render(){
   if(typeof experimentDiagnostics!=='undefined'&&view!=='experiment-diagnostics')experimentDiagnostics.detach();
   if(typeof receivingWaters!=='undefined'&&view!=='receiving-waters')receivingWaters.detach();
   for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
-  if(extensions.render(view,$('#content'),state)){community.detach();customerReviews.detach();spatialWorkspace.suspend();if(typeof programmes!=='undefined')programmes.detach();if(typeof conservation!=='undefined')conservation.detach();return;}
+  // Registered desks retain sole ownership of their controller and actions.
+  if(extensions.hasView(view)){
+    community.detach();customerReviews.detach();spatialWorkspace.suspend();
+    if(typeof programmes!=='undefined')programmes.detach();
+    if(typeof experiments!=='undefined')experiments.detach();
+    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();
+    if(typeof receivingWaters!=='undefined')receivingWaters.detach();
+    if(typeof rehearsal!=='undefined')rehearsal.detach();
+    if(typeof journey!=='undefined'){journey.detach();journey.updateRail(view);}
+    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();
+    extensions.render(view,$('#content'),state);return;
+  }
   if(view==='experiments'){extensions.detach();programmes.detach();spatialWorkspace.suspend();community.detach();customerReviews.detach();experiments.mount($('#content'),state);return;}
   experiments.detach();
   if(view==='spatial'){receivingWaters.detach();programmes.detach();community.detach();customerReviews.detach();spatialWorkspace.mount($('#content'),state);return;}
@@ -373,7 +363,7 @@ async function showTask(id,focus=true){
   const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
-  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+programmes.taskActions(row)+receivingWaters.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+registeredActions+conservation.taskActions(row)+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
+  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+programmes.taskActions(row)+receivingWaters.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+registeredActions+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
   detail(actionLabels[row.action]||row.action,body,{kind:'task',id,state:row.state});detailContext.files=row._downloads||[];
   if(focus)$('#detail-body').scrollTop=0;
 }
@@ -384,7 +374,7 @@ const field=(label,control,note='',wide=false)=>'<label class="'+(wide?'full':''
 const select=(name,rows,value='',required=true)=>'<select name="'+esc(name)+'" '+(required?'required':'')+'><option value="">Choose…</option>'+rows.map(x=>{const pair=Array.isArray(x)?x:[x.id,x.id==='GURA_NLCD'?sourceDisplayTitle(x):x.title||x.name||short(x.id)];return '<option value="'+esc(pair[0])+'" '+(String(pair[0])===String(value??'')?'selected':'')+'>'+esc(pair[1])+'</option>';}).join('')+'</select>';
 const checks=(name,rows,chosen=[])=>'<div class="checkbox-list">'+rows.map(row=>'<label class="check"><input type="checkbox" name="'+esc(name)+'" value="'+esc(row.id)+'" '+(chosen.includes(row.id)?'checked':'')+'><span>'+esc(row.title||runTitle(row.id)||short(row.id))+'</span></label>').join('')+'</div>';
 const val=(name,root=form)=>root.querySelector('[name="'+name+'"]')?.value??'';
-const chosen=(name,root=form)=>$('[name="'+name+'"]:checked',root).map(x=>x.value);
+const chosen=(name,root=form)=>$$('[name="'+name+'"]:checked',root).map(x=>x.value);
 const num=(name,root=form,optional=false)=>{const text=val(name,root).trim();if(!text&&optional)return undefined;const n=Number(text);if(!text||!Number.isFinite(n))throw Error('Enter a finite value for '+human(name)+'.');return n;};
 const lines=text=>text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
 const sources=()=>state.data.sources;
@@ -573,10 +563,10 @@ async function gridForm(id){
  openForm(row?'Extend or revise native grid':'Prepare native model grid','Choose the native models and their original sources, reporting area and upstream context. A completed grid can supply its exact common inputs when the remaining model sources arrive.',
  '<div class="form-grid">'+field('Grid title',input('title','text',row?.title?row.title+' · revision':'','required'))+field('Source edition',select('collection',sources(),collection))+
  field('Native models',select('models',nativeModelOptions(),nativeModels(row).join(',')),'NDR requires elevation, land cover and precipitation. SDR requires elevation, land cover, rainfall erosivity and soil erodibility.',true)+
- field('Native cell size',input('resolution','number',row?.resolution_m??originalResolution,'required min="0" step="any"'),'Metres per square cell, matching the original projected land-cover grid. The Upper Savannah production maps require 30 × 30 m cells (RFP p. 2). The original Gura demonstration retains its separate 300 m grid.')+
+ field('Native cell size',input('resolution','number',row?.resolution_m??originalResolution,'required min="0" step="any"'),'Metres per square cell, matching the original projected land-cover grid. The Upper Savannah production maps require 30 × 30 m cells (RFP p. 2). Gura source editions retain their original grids: the legacy demonstration uses 300 m cells and the 3.20.0 release-data receiver uses 15 m cells.')+
  (canReuse?'<label class="full"><span>Reuse original grid preparation</span><span><input name="reuse_original_grid" type="checkbox" checked> Carry completed common files from '+esc(short(original.id))+'</span><small>Keep the original cell size, geometry, source selections and context buffer to reuse them. Clear this choice when changing the physical grid. New input roles are prepared in the new grid.</small></label>':'')+
  rasterRoles.map(([key,label,models])=>field(label,select('raster_'+key,sourceRows(collection,'raster'),row?.input_sources?.[key])).replace('<label','<label data-native-models="'+models+'"')).join('')+
- field('Upstream context buffer',input('buffer','number',row?.upstream_buffer_m??'','required min="0.01" max="999999" step="any"'),'Metres of upstream context beyond the reporting area. Select the buffer for the catchment and retain its rationale; the RFP requires an external modeling buffer without fixing its distance.')+
+ field('Upstream context buffer',input('buffer','number',row?.upstream_buffer_m??'','required min="0" max="999999" step="any"'),'Metres of upstream context beyond the reporting area. Zero retains the selected model domain unchanged; a positive value adds context. Retain the catchment-specific rationale. Upper Savannah production requires an external modeling buffer without fixing its distance.')+
  vectorSelection('reporting','Reporting boundary',collection,row?.reporting_area)+vectorSelection('domain','Hydrologic model domain',collection,row?.model_domain)+'</div>',
  'Prepare original grid',()=>{
   const modelFields=nativeModelFields(),active=nativeModels(modelFields),input_sources={},resolution=num('resolution');
@@ -784,7 +774,7 @@ function observationForm(){
    if(!file||context.observationCSVFile!==file)throw Error('Choose the original CSV and wait for its column mapping.');
    const columns={},parameter_mapping={};
    for(const key of keys)if(val('column_'+key))columns[key]=val('column_'+key);
-   for(const node of $('[data-parameter-row]',form)){
+   for(const node of $$('[data-parameter-row]',form)){
     const key=val('parameter_from',node).trim();if(Object.hasOwn(parameter_mapping,key))throw Error('An original parameter label is mapped twice.');parameter_mapping[key]=val('parameter_to',node);
    }
    const metadata={...(context.observationMetadata||{}),title:val('title'),source_uri:val('source_uri'),value_basis:val('basis'),annualization_method:val('annualization_method'),columns,parameter_mapping,accepted_qualifiers:[...(form.elements.namedItem('blank_qualifier').checked?['']:[]),...lines(val('qualifiers'))]};
@@ -887,6 +877,14 @@ function readDeliverySource(name,requiredField=true,withFilters=false,retained=n
  }
  return {...retained,...row};
 }
+function retainedDeliveryCohort(selection,baseline,alternatives){
+ if(!selection?.source_scenario_analysis_id)return alternatives;
+ const original=selection.scenario_run_ids||[];
+ if(baseline!==selection.baseline_run_id||alternatives.length!==original.length||
+    original.some(id=>!alternatives.includes(id))||new Set(alternatives).size!==alternatives.length)
+  throw Error('Keep the attached analysis’s original baseline and alternatives. Start a separate delivery to choose another native cohort.');
+ return [...original];
+}
 async function deliveryForm(id,initialSelection){
  requireSources();const saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null,row=saved?.selection||initialSelection;
  const complete=state.data.runs.filter(fullNativeRun);
@@ -894,8 +892,9 @@ async function deliveryForm(id,initialSelection){
  const roles=[['PROTECTED_LANDS','Protected-lands source'],['PARCEL','Original parcel source'],['NHD','National Hydrography Dataset source'],['NWI','National Wetlands Inventory source']];
  const overlays=[['drinking_water','Critical drinking-water source boundaries',true],['high_quality_waters','Designated high-quality waters',true],['protected_lands','Protected-lands cartographic overlay',false],['parcels','Parcel priority inventory and GIS export',false]];
  const settings=row?.map_settings||{},weights=settings.weights||{};
+ const attachedAnalysis=row?.source_scenario_analysis_id?{id:row.source_scenario_analysis_id,sha256:row.source_scenario_analysis_sha256,title:row.source_scenario_analysis_title||row.title||'Saved scenario analysis'}:null;
  openForm(saved?'Revise complete map delivery':'Build complete seven-map delivery','Join the completed native baseline and alternatives with original water designations and supporting source data. The existing delivery engine writes the physical rasters, PDFs, report, metadata, parcel inventory when selected, and a restorable scientific workspace.',
- '<div class="form-grid">'+field('Delivery title',input('title','text',row?.title||'','required'),'',true)+
+ '<div class="form-grid">'+(attachedAnalysis?'<fieldset class="full"><legend>Saved analysis attached</legend><p>'+esc(attachedAnalysis.title)+'</p><p class="note">Original analysis '+esc(attachedAnalysis.id)+'. The delivery retains its exact source areas, native cohort, settings and result files. Map settings below describe this delivery; the attached saved analysis preserves its original calculations.</p></fieldset>':'')+field('Delivery title',input('title','text',row?.title||'','required'),'',true)+
  field('Completed baseline run',select('baseline',complete.map(x=>[x.id,runTitle(x.id)]),row?.baseline_run_id),'',true)+
  '<fieldset class="full"><legend>Completed alternatives on the same grid</legend><div id="delivery-alternatives"></div></fieldset>'+
  receivingWaters.deliveryFields(row||{})+
@@ -905,7 +904,7 @@ async function deliveryForm(id,initialSelection){
  overlays.map(([key,label,requiredField])=>deliverySource('overlay_'+key,label,row?.overlays?.[key],requiredField,true)).join('')+
  '<h3 class="subheading full">Combined export priority</h3><p class="note full">The original engine normalizes actual export values against each pollutant’s positive-cell 95th percentile unless an explicit cap is supplied. Weights are recorded in the retained delivery.</p>'+
  ['nitrogen_export','phosphorus_export','sediment_export'].map(key=>field(human(key)+' weight',input('weight_'+key,'number',weights[key]??1,'required min="0" step="any"'))).join('')+
- ['nitrogen_export','phosphorus_export','sediment_export'].map(key=>field(human(key)+' cap',input('cap_'+key,'number',settings.caps?.[key]??'','min="0" step="any"'),'Optional positive cap in the actual export raster units.')).join('')+
+ ['nitrogen_export','phosphorus_export','sediment_export'].map(key=>field(human(key)+' cap',input('cap_'+key,'number',settings.caps?.[key]??'','min="0" step="any"'),'Optional nonnegative cap in the actual export raster units; zero preserves an all-zero native reference.')).join('')+
  field('Map resolution',input('dpi','number',settings.dpi??200,'required min="72" max="600" step="1"'),'PDF rendering DPI; native analytical grids are unchanged.')+
  field('Map title',input('map_title','text',settings.title||''),'Optional title for the original map layouts.')+
  '<fieldset class="full"><legend>Retained observed-load comparisons</legend>'+checks('observation_comparisons',(state.data.observation_comparisons||[]).map(x=>({id:x.id,title:named('observations',x.observation_id)+' · '+runTitle(x.run_id)})),row?.observation_comparison_ids||[])+'</fieldset>'+
@@ -915,22 +914,23 @@ async function deliveryForm(id,initialSelection){
  field('Organization',input('contact_organization','text',row?.contact?.organization||'','required'))+field('Email',input('contact_email','email',row?.contact?.email||'','required'))+
  field('Delivery notes',area('notes',(row?.notes||[]).join('\n')),'One original interpretation or delivery note per line.',true)+'</div>',
  'Build complete original delivery',()=>{
-  const alternatives=chosen('alternatives');if(!alternatives.length)throw Error('Select at least one completed alternative on the baseline grid.');
-  const source_roles={...(row?.source_roles||{})},selectedOverlays={},weights={},caps={};
+  const alternatives=retainedDeliveryCohort(row,val('baseline'),chosen('alternatives'));if(!alternatives.length)throw Error('Select at least one completed alternative on the baseline grid.');
+  const source_roles={...(row?.source_roles||{})},selectedOverlays={...(row?.overlays||{})},weights={},caps={};
   for(const [key]of roles)source_roles[key]=readDeliverySource('role_'+key,true,false,row?.source_roles?.[key]);
   for(const [key,,requiredField]of overlays){
    const x=readDeliverySource('overlay_'+key,requiredField,true,row?.overlays?.[key]);
-   if(x)selectedOverlays[key]=x;
+   if(x)selectedOverlays[key]=x;else delete selectedOverlays[key];
   }
   for(const [key,role]of [['high_quality_waters','HIGH_QUALITY_WATERS'],['drinking_water','SOURCE_WATER_PROTECTION_AREAS'],['protected_lands','PROTECTED_LANDS_OVERLAY']]){
    if(selectedOverlays[key])source_roles[role]=selectedOverlays[key];else delete source_roles[role];
   }
   for(const key of ['nitrogen_export','phosphorus_export','sediment_export']){
-   weights[key]=num('weight_'+key);const cap=num('cap_'+key,form,true);if(cap!==undefined){if(cap<=0)throw Error('A priority cap must be positive.');caps[key]=cap;}
+   weights[key]=num('weight_'+key);const cap=num('cap_'+key,form,true);if(cap!==undefined){if(cap<0)throw Error('A priority cap must be nonnegative.');caps[key]=cap;}
   }
   if(Object.values(weights).every(x=>x===0))throw Error('At least one pollutant weight must be positive.');
-  const map_settings={weights,dpi:num('dpi')};if(Object.keys(caps).length)map_settings.caps=caps;if(val('map_title').trim())map_settings.title=val('map_title').trim();
-  return submitAction('delivery.build',{...receivingWaters.deliverySelection({baseline_run_id:val('baseline'),scenario_run_ids:alternatives}),title:val('title'),baseline_run_id:val('baseline'),scenario_run_ids:alternatives,source_roles,overlays:selectedOverlays,map_settings,observation_comparison_ids:chosen('observation_comparisons'),spatial_review_ids:chosen('spatial_reviews'),spatial_export_ids:chosen('spatial_exports'),contact:{name:val('contact_name'),organization:val('contact_organization'),email:val('contact_email')},notes:lines(val('notes'))});
+  const map_settings={...(row?.map_settings||{}),weights,dpi:num('dpi')};delete map_settings.caps;delete map_settings.title;if(Object.keys(caps).length)map_settings.caps=caps;if(val('map_title').trim())map_settings.title=val('map_title').trim();
+  const sourceBinding={...(row?.economic_edition_id?{economic_edition_id:row.economic_edition_id,...(row.economic_edition_sha256?{economic_edition_sha256:row.economic_edition_sha256}:{})}:{}),...(row?.source_report_id?{source_report_id:row.source_report_id,...(row.source_report_sha256?{source_report_sha256:row.source_report_sha256}:{})}:{}),...(attachedAnalysis?{source_scenario_analysis_id:attachedAnalysis.id,...(attachedAnalysis.sha256?{source_scenario_analysis_sha256:attachedAnalysis.sha256}:{})}:{})};
+  return submitAction('delivery.build',{...sourceBinding,...receivingWaters.deliverySelection({baseline_run_id:val('baseline'),scenario_run_ids:alternatives},row||{}),title:val('title'),baseline_run_id:val('baseline'),scenario_run_ids:alternatives,source_roles,overlays:selectedOverlays,map_settings,observation_comparison_ids:chosen('observation_comparisons'),spatial_review_ids:chosen('spatial_reviews'),spatial_export_ids:chosen('spatial_exports'),contact:{name:val('contact_name'),organization:val('contact_organization'),email:val('contact_email')},notes:lines(val('notes'))});
  },()=>{
   for(const [key]of roles)bindDeliverySource('role_'+key,true,false);
   for(const [key,,requiredField]of overlays)bindDeliverySource('overlay_'+key,requiredField,true);
@@ -938,6 +938,7 @@ async function deliveryForm(id,initialSelection){
   const update=()=>{
    const baseline=complete.find(x=>x.id===val('baseline'));
    $('#delivery-alternatives').innerHTML=baseline?checks('alternatives',complete.filter(x=>x.id!==baseline.id&&x.selection.grid_id===baseline.selection.grid_id).map(x=>({id:x.id,title:runTitle(x.id)})),initial):'<p class="note">Choose the original baseline first.</p>';initial=[];
+   if(attachedAnalysis){form.elements.namedItem('baseline').disabled=true;for(const control of form.querySelectorAll('[name="alternatives"]'))control.disabled=true;}
   };
   form.elements.namedItem('baseline').addEventListener('change',update);update();
  });
@@ -1004,19 +1005,12 @@ async function navigate(next){
 async function selectWorkspace(id){
  if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
- conservation.detach();
  rehearsal.detach();
  extensions.detach();
  spatialWorkspace.suspend();programmes.detach();community.detach();customerReviews.detach();experiments.detach();receivingWaters.detach();workspace=id;state=null;sessionStorage.setItem('upstate-selected-workspace',id);
  detailDialog.close();detailContext=null;lastRendered='';$('#content').innerHTML='<div class="empty"><h2>Opening selected workspace…</h2></div>';await refresh({force:true});
 }
 async function dispatch(button){
- if(button.dataset.action?.startsWith('conservation-')||button.dataset.action?.startsWith('portfolio-optimization-')){
-  if(['conservation-open-study','conservation-open-plan','conservation-use-criteria','conservation-new-parcel-study'].includes(button.dataset.action)){
-   detailDialog.close(); detailContext=null; await navigate('conservation');
-  }
-  return conservation.dispatch(button);
- }
  const action=button.dataset.action,id=button.dataset.id;
  if(await extensions.dispatch(button))return;
  if(action?.startsWith('experiment-'))return experiments.dispatch(button);
