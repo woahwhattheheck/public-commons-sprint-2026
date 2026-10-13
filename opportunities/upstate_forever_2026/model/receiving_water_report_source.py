@@ -6,6 +6,7 @@ quantities remain authoritative. This producer never prepares or analyzes a stud
 from __future__ import annotations
 
 import copy
+import csv
 import json
 import math
 import os
@@ -17,7 +18,7 @@ from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, now, read_json, relative_file, verify_file)
 
 SCHEMA = "upstate.receiving-water-report-source/v1"
-EDITION = "receiving-water-report-source/4"
+EDITION = "receiving-water-report-source/5-source-origin"
 FOLDER = "receiving-water-report-sources"
 SOURCE_ID = "receiving-water-scientific-report"
 LOCK = ".receiving-water-report-source.lock"
@@ -158,6 +159,80 @@ def _retain_study(workspace, directory, plan, analysis):
     for item in inventory["files"].values():
         verify_file(native, item)
     return inventory
+
+
+
+def _quantity_context(directory, inventory):
+    """Annotate a verified original CSV, preserving every original field string."""
+    from .client_receiving_waters import quantity_interpretation
+    native = directory / "native"
+    descriptor = inventory["files"]["analysis_quantities_csv"]
+    original = verify_file(native, descriptor)
+    meaning = quantity_interpretation(inventory["quantity_scope"])
+    metadata = {
+        "schema": "upstate.receiving-water-quantity-interpretation/v1",
+        "identity": copy.deepcopy(inventory["identity"]),
+        "baseline_run_id": inventory["baseline_run_id"],
+        "alternative_run_ids": list(inventory["alternative_run_ids"]),
+        "original_csv": {**descriptor, "path": "native/" + descriptor["path"]},
+        "interpretation": meaning,
+        "original_measurement": copy.deepcopy(inventory.get("measurement", {})),
+        "original_fields": {
+            "sum": "Original annual value for this row's quantity, statistic and valid support.",
+            "quantity_scope": "Original reporting or model_domain selection; it selects source pixels.",
+            "contribution_area_ha": "Whole original contribution geometry, before the quantity-scope intersection.",
+            "selected_pixel_area_ha": "Selected raster cells times original affine-derived cell area.",
+            "selected_cells": "Original selected mask-cell count, including cells without a valid quantity.",
+            "valid_cells": "Cells valid for this quantity/statistic; scenario changes require the original pair.",
+            "coverage_fraction": "Original valid_cells divided by selected_cells, not treatment coverage.",
+            "relationship": "Original HUC association, source polygon or geometric relationship.",
+            "accounting_role": "Retained partition key, grouping source pixels rather than routing river loads.",
+            "statistic": (
+                "current_export and alternative_export use each run's own valid support. "
+                "alternative_minus_baseline is signed; positive_increased_export and "
+                "positive_avoided_export retain the original positive components."
+            ),
+        },
+        "annotated_csv": "water-quantities-with-context.csv",
+        "annotation": "Original CSV field order and every original field string are preserved; explanatory columns are appended.",
+    }
+    extra = ("quantity_basis", "quantity_scope_meaning", "quantity_boundary_meaning")
+    target = directory / metadata["annotated_csv"]
+    with original.open("r", encoding="utf-8", newline="") as source:
+        reader = csv.DictReader(source)
+        original_fields = reader.fieldnames
+        if (not original_fields or len(original_fields) != len(set(original_fields))
+                or set(extra) & set(original_fields)):
+            raise ValueError("Original Receiving CSV needs unique original columns")
+        with target.open("w", encoding="utf-8", newline="") as output:
+            writer = csv.DictWriter(output, fieldnames=original_fields + list(extra))
+            writer.writeheader()
+            for row in reader:
+                if None in row or any(value is None for value in row.values()):
+                    raise ValueError("Original Receiving CSV row differs from its header")
+                if row.get("quantity_scope") != inventory["quantity_scope"]:
+                    raise ValueError("Original Receiving CSV scope differs from the saved analysis")
+                writer.writerow({**row, "quantity_basis": meaning["quantity_basis"],
+                                 "quantity_scope_meaning": meaning["scope_meaning"],
+                                 "quantity_boundary_meaning": meaning["physical"]})
+    # The copied original is immutable and remains the numerical authority.
+    verify_file(native, descriptor)
+    metadata["original_columns"] = original_fields
+    metadata["annotated_file"] = describe_file(directory, target)
+    atomic_json(directory / "water-quantity-interpretation.json", metadata, immutable=True)
+    return [
+        "The contextual CSV appends source-origin explanations to every original row. "
+        "Its original columns and numeric strings are unchanged; the original native CSV "
+        "remains included separately.",
+        {"kind": "links", "items": [
+            {"title": "Annual source-export quantities with scope metadata (CSV)",
+             "path": metadata["annotated_csv"]},
+            {"title": "Quantity definitions, original identities and method references",
+             "path": "water-quantity-interpretation.json"},
+            {"title": "Unchanged original annual quantities (CSV)",
+             "path": metadata["original_csv"]["path"]},
+        ]},
+    ]
 
 
 def _source_references(value, location):
@@ -662,7 +737,8 @@ def _capture_members(directory, plan, analysis, sources, modules):
     names.update("native/plan/" + _member(item["path"]).as_posix()
                  for item in plan["files"].values())
     if analysis is not None:
-        names.update({"native/analysis/analysis.json", "native/receiving-water-delivery.json"})
+        names.update({"native/analysis/analysis.json", "native/receiving-water-delivery.json",
+                      "water-quantity-interpretation.json", "water-quantities-with-context.csv"})
         names.update("native/analysis/" + _member(item["path"]).as_posix()
                      for item in analysis["files"].values())
     for source in sources:
@@ -730,6 +806,8 @@ def prepare(workspace, selection, *, progress=None):
                 # Keep the maintained formatter's units, signed changes, fixed
                 # normalization, family deduplication and valid-support tables.
                 sections.extend(receiving_sections({"inventory": inventory}))
+                sections.append(["Source-export quantities and download definitions",
+                                 _quantity_context(directory, inventory)])
             sections.append(["Retained scientific study", [
                 "This report preserves the selected immutable study. The linked original records "
                 "carry its complete feature attributes, source selectors, geographic methods and "
@@ -740,7 +818,8 @@ def prepare(workspace, selection, *, progress=None):
             companions.sort(key=lambda item: item["path"])
             source_links = ["native/plan/plan.json", "original-source-index.json"]
             if analysis is not None:
-                source_links += ["native/analysis/analysis.json", "native/receiving-water-delivery.json"]
+                source_links += ["native/analysis/analysis.json", "native/receiving-water-delivery.json",
+                                 "water-quantity-interpretation.json", "water-quantities-with-context.csv"]
             source_links += [row["original_manifest_path"] for row in sources]
             # Keep the report link list concise. The source index and full retained
             # archive carry every geometry, raster, native input and capture member.
@@ -762,7 +841,8 @@ def prepare(workspace, selection, *, progress=None):
                                   "project_id": workspace.project["id"],
                                   "mode": "completed_analysis" if analysis else "source_plan",
                                   "plan_id": plan["id"], "analysis_id": analysis["id"] if analysis else None,
-                                  "new_native_calculation": False}}
+                                  "new_native_calculation": False,
+                                  "quantity_basis": "modeled_source_pixel_export_to_streams" if analysis else None}}
             atomic_json(directory / "sources.json", {"schema": "upstate.sources/v1", "title": title,
                         "captured_at": intent["created_at"], "entries": [entry]}, immutable=True)
             prepared_files = companions + [describe_file(directory, directory / name)

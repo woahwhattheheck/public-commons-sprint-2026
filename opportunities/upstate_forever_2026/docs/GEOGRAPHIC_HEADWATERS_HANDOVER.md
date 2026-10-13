@@ -36,7 +36,7 @@ portable.backup(
 
 Use the exact current receiver\'s archive-edition and recovery implementation. Retain the full registered native stage artifacts required for editable reuse; current ECO12/C57E receiving review calls for `include_intermediates=True`. Source locks and transient cache exclusions remain with portable. The helper's directory is named with its actual 64-character identity, as the maintained portable API requires. It supplies original named descriptors and uses a generic delivery snapshot; it does not replace the native mapped-delivery record.
 
-Handover version 2 also publishes `delivery/geographic-operator-choices.json` as the declared `operator_choices` delivery member. Its `upstate.geographic-operator-selection/v1` envelope is accepted by the existing Geographic model case desk's **Reopen choices** control. It carries the original project and geographic edition IDs plus the complete existing operator payload. The immutable handover record contains that same envelope; the handover identity and full portable manifest bind its bytes. Older handovers retain their original files and identity.
+Handover version 3 also publishes `delivery/geographic-operator-choices.json` as the declared `operator_choices` delivery member. Its `upstate.geographic-operator-selection/v1` envelope is accepted by the existing Geographic model case desk's **Reopen choices** control. It carries the original project and geographic edition IDs plus the complete existing operator payload. The immutable handover record contains that same envelope; the handover identity and full portable manifest bind its bytes. Older handovers retain their original files and identity.
 
 The final native ZIP includes `delivery/START_HERE.html`. Its scientific report, figures, maps, source documents and assumed input links point to existing `../workspace/...` members. The complete original customer-review directory is retained under `delivery/customer-review`, including every original artifact and response template. The existing archive captures the whole application and Workspace once; no outer wrapper ZIP or copied scientific raster tree is required. Local review files use verified hardlinks when the filesystem permits, with ordinary copies across filesystems. Portable capture verifies their expected bytes while writing.
 
@@ -61,6 +61,16 @@ No donor browser workspace key, session capability or cached numerical preview i
 The production-time table uses the first completed timestamps and intervals captured by the actual receiver. It does not add overlapping phases into a fabricated total or substitute recording duration for modeling time. The page is prepared before final archive/reopening; it presents that actual phase history without claiming later steps have already happened.
 
 Scientific rendering may advance to a new presentation edition while retaining original quantities. The handover identity binds the exact scientific file descriptors, map delivery, review generation, source helper and shared style. Operational `updated_at`/latest-pointer metadata is excluded so a same-result retry does not create a new handover merely because it was reopened.
+
+## First completed reference edition
+
+The same native handover can deliver the original completed baseline, riparian alternative and matched control while later parameter profiles remain pending. Use the current geographic receiver's explicit reference-report mode at a returned or stopped native boundary. Its saved scientific source remains a rendered report with the actual partial native-course state.
+
+Pass the unchanged dictionary returned by `reference_report_basis(workspace, ensemble_id, course)` to this helper as `reference_basis=basis`, and pass that same basis to the existing reference archive binding and cold-reopen calls. The helper reads the original saved course and verifies the supplied basis, original ordered run selection and scientific progress before writing its immutable edition. The default call continues to require the complete parameter course.
+
+The opening page labels the reference edition, shows every saved profile's actual baseline/restoration/control states, and links the original all-alternative decision reports and complete decision packages. Each native profile is visible with its original parameter assignments and run IDs. The original pairwise comparison table remains available with its own finite support. Scientific values stay in their existing producers.
+
+The handover record keeps the exact `reference_basis` plus a read-only `course_snapshot`. Pending native records and the complete source design stay in the editable Workspace; subsequent native continuation uses the original saved ensemble and completed runs. A later completed sensitivity study creates its own scientific/handover edition. Use the maintained geographic receiver for continuation and archive recovery, preserving earlier downloaded editions.
 
 ## Recipient workflow
 

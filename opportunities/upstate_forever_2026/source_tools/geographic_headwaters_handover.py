@@ -21,7 +21,7 @@ from model.common import (atomic_bytes, atomic_json, describe_file, digest,
 from source_tools.simulated_headwaters_handover import STYLE, _name, _number, _text
 
 SCHEMA = "upstate.geographic-headwaters-handover/v1"
-VERSION = 2
+VERSION = 3
 
 
 def _url(namespace, relative):
@@ -79,6 +79,7 @@ def _first_elapsed(state):
             if row.get("state") == "complete" and row.get("first_completed_at")
             and name not in ("archive", "independent_restore", "resume_independent_restore",
                              "independent_reopen", "independent_cold_reopen", "handover")}
+
 
 
 def _operator_choices(prepared):
@@ -142,14 +143,110 @@ def _operator_choices(prepared):
     }
 
 
+def _course_snapshot(workspace, prepared, scientific, reference_basis):
+    """Read the saved native course and its original all-alternative reports."""
+    from model.ensembles import Ensembles
+    from source_tools.headwaters_parameter_course import reference_report_basis
+
+    plan = Ensembles(workspace).inspect(prepared["ensemble_id"])
+    course = read_json(workspace.root / "ensemble_results" / prepared["ensemble_id"]
+                       / "headwaters-results.json")
+    actual_basis = reference_report_basis(workspace, prepared["ensemble_id"], course)
+    if (plan["grid_id"] != prepared["grid_id"]
+            or actual_basis["baseline_run_id"] != prepared["baseline_run_id"]
+            or actual_basis["alternative_run_ids"] != prepared["alternative_run_ids"]
+            or scientific.get("progress") != plan["progress"]):
+        raise ValueError("Keep the actual selected geographic course and scientific progress")
+    if reference_basis is not None:
+        if (reference_basis != actual_basis or not actual_basis["reference_ready"]
+                or actual_basis["state"] != "reference_complete"):
+            raise ValueError("The reference handover must retain its exact completed native basis")
+    elif course["state"] != "complete":
+        raise ValueError("Pass the explicit reference basis for a partial native course")
+    members = []
+    for member in plan["members"]:
+        members.append({
+            "member_id": member["id"], "profile_id": member["profile_id"],
+            "label": member.get("label") or member["profile_id"],
+            "assignments": deepcopy(member["assignments"]),
+            "parameters": deepcopy(member["parameters"]),
+            "runs": [{"run_id": run["run_id"], "scenario_id": run["scenario_id"],
+                      "state": run["state"]} for run in member["runs"]],
+        })
+    reports = []
+    for product in course.get("joint_decisions", {}).get("support_group_reports", []):
+        archive = _descriptor(workspace.root, product["archive_identity"])
+        index = Path(product["index"]).resolve(strict=True)
+        relative = index.relative_to(workspace.root.resolve()).as_posix()
+        _regular(workspace.root, relative)
+        reports.append({
+            "report_id": product["report_id"],
+            "comparison_id": product["reference_comparison_id"],
+            "profile_id": product["reference_profile_id"],
+            "index": describe_file(workspace.root, index), "archive": archive,
+        })
+    return {
+        "schema": "upstate.geographic-course-presentation/v1",
+        "edition_kind": "reference" if reference_basis is not None else "complete_course",
+        "state": course["state"], "native_progress": deepcopy(plan["progress"]),
+        "planned_profile_count": len(members),
+        "completed_comparison_profile_count": actual_basis["completed_comparison_profile_count"],
+        "members": members, "joint_reports": reports,
+    }
+
+
+def _course_section(data):
+    course = data["course_snapshot"]
+    progress = course["native_progress"]
+    reference = data.get("reference_basis")
+    heading = ("Completed reference scenarios" if reference is not None
+               else "Completed parameter study")
+    explanation = (
+        "This edition contains the completed original baseline, riparian alternative and matched control. "
+        "The wider parameter study retains the run states below; its pending members remain available "
+        "in this editable project for continuation."
+        if reference is not None else
+        "This edition includes the original reference scenarios and the completed parameter choices. "
+        "Each profile retains its own baseline and both alternatives."
+    )
+    rows = []
+    for member in course["members"]:
+        assignments = (json.dumps(member["assignments"], ensure_ascii=False, sort_keys=True)
+                       if member["assignments"] else "Original working profile")
+        states = [run["state"] for run in member["runs"]]
+        rows.append([member["label"], assignments, *states])
+    table = _table(["Profile", "Changed parameter choices", "Baseline", "Riparian alternative",
+                    "Matched control"], rows)
+    reports = _list([
+        _link("workspace", item["index"]["path"],
+              "All-alternative decision report " + str(index + 1))
+        + " · " + _link("workspace", item["archive"]["path"], "Complete decision files")
+        for index, item in enumerate(course["joint_reports"])
+    ])
+    source = ('<details><summary>Original parameters and native run identities</summary><pre>'
+              + _text(json.dumps(course["members"], indent=2, ensure_ascii=False))
+              + "</pre></details>")
+    return ('<section id="course"><h2>' + heading + "</h2><p>" + explanation
+            + "</p><p><strong>" + _text(str(progress.get("complete", 0))) + " / "
+            + _text(str(progress.get("total", 0))) + " native runs complete</strong> · "
+            + _text(str(course["completed_comparison_profile_count"])) + " / "
+            + _text(str(course["planned_profile_count"])) + " profiles have all-alternative comparisons.</p>"
+            + table + "<h3>Compare the alternatives together</h3><p>The original decision reports "
+            "compare baseline, restoration and control on their actual common finite cells. "
+            "Different support groups retain separate reports. Parameter ranges describe the saved "
+            "choices; they are not confidence intervals.</p>" + reports + source + "</section>")
+
+
 def _render(data):
     prepared, scientific = data["prepared"], data["scientific"]
+    reference = data.get("reference_basis")
     selection, geo = prepared["selection"], prepared["geography"]
     grid, summary = geo["grid"], prepared["input_summary"]
     links, report = data["links"], data["native_report"]
     scientific_files = links["scientific"]
     report_html = scientific_files["report.html"]["path"]
     report_pdf = scientific_files["report.pdf"]["path"]
+    edition = ("Reference scenario edition" if reference is not None else "Complete parameter study")
     buttons = [
         _link("workspace", report_html, "Read scientific report", button=True, primary=True),
         _link("workspace", report_pdf, "Open report PDF", button=True),
@@ -264,7 +361,7 @@ filter();
     return ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1"><title>'
         + _text(selection["title"]) + '</title><style>' + style + '</style></head><body>'
-        '<header><div class="eyebrow">Upper Savannah · Native scientific working package</div><h1>'
+        '<header><div class="eyebrow">Upper Savannah · ' + _text(edition) + '</div><h1>'
         + _text(selection["title"]) + '</h1><p class="lead">' + _text(selection["question"])
         + '</p><p>Original geographic sources, explicit simulated physical inputs and completed native NDR/SDR results.</p>'
         '<nav aria-label="Primary documents">' + "".join(buttons) + '</nav></header><main>'
@@ -275,7 +372,7 @@ filter();
         + _text(", ".join(geo["reporting_huc12s"])) + '</p><p><strong>Additional upstream:</strong> '
         + _text(", ".join(geo["upstream_huc12s"]) or "None in this retained topology")
         + '</p></details></section>'
-        '<section id="results"><h2>Native scenario comparisons</h2><p>' + cases
+        + _course_section(data) + '<section id="results"><h2>Native scenario comparisons</h2><p>' + cases
         + ' · ' + _text(str(scientific.get("figure_count", 0))) + ' scientific figures.</p>'
         '<p>Nitrogen and phosphorus are annual mass delivered to streams in kg/year; sediment is tonnes/year. '
         'Each row keeps its own common finite cells. Signed change is alternative minus baseline; a negative value is a reduction. '
@@ -324,7 +421,7 @@ filter();
         'Original native calculations and editable source</footer><script>' + script + '</script></body></html>\n')
 
 
-def prepare(workspace, output, state, prepared, scientific, delivery, exported):
+def prepare(workspace, output, state, prepared, scientific, delivery, exported, *, reference_basis=None):
     """Return delivery_root/files for the caller's one ordinary portable.backup."""
     output = Path(output).resolve(strict=True)
     if (output.is_relative_to(workspace.root.resolve())
@@ -345,6 +442,7 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported):
     if (selection["baseline_run_id"] != prepared["baseline_run_id"]
             or selection["scenario_run_ids"] != prepared["alternative_run_ids"]):
         raise ValueError("The geographic maps select different native scenarios")
+    course_snapshot = _course_snapshot(workspace, prepared, scientific, reference_basis)
     root = workspace.root
     inputs = root / _name(prepared["directory"]) / "inputs"
     original = read_json(_regular(inputs, "input-receipt.json"))
@@ -405,7 +503,10 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported):
             "review": {key: exported[key] for key in ("project_id", "review_id", "package_sha256", "latest_response_id")},
             "links": links, "assumptions": selected_inputs["assumptions"][0],
             "native_report": report_data, "first_elapsed": _first_elapsed(state),
+            "course_snapshot": course_snapshot,
             "operator_choices": _operator_choices(prepared)}
+    if reference_basis is not None:
+        data["reference_basis"] = deepcopy(reference_basis)
     identity = {"schema": SCHEMA, "version": VERSION, "project_id": workspace.project["id"],
                 "content_sha256": digest(data), "helper_sha256": file_digest(Path(__file__)),
                 "style_sha256": hashlib.sha256(STYLE.encode("utf-8")).hexdigest()}

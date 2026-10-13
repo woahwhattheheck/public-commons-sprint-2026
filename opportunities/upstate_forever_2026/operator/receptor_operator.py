@@ -25,7 +25,7 @@ FOLDERS = {"network": "receptor-networks", "inventory": "receptor-inventories",
            "comparison": "receptor-experiments", "source-areas": "receptor-scenario-areas",
            "programme": "receptor-programmes", "report-source": "receptor-report-sources"}
 PREVIEW_POLICY = image_policy(
-    "sandbox allow-downloads; default-src 'none'; style-src 'unsafe-inline'; "
+    "sandbox allow-same-origin allow-downloads; default-src 'none'; style-src 'unsafe-inline'; "
     "base-uri 'none'; form-action 'none'; frame-ancestors 'self'")
 
 

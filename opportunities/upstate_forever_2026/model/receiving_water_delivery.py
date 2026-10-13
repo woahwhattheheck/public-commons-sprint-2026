@@ -232,7 +232,7 @@ def apply_map_specs(specifications, product):
         own_overlay = product["overlays"].get(family)
         specifications[family] = (
             [{**previous, "path": verify_file(directory, artifact),
-              "label": "Current export priority in selected receiving-water land",
+              "label": "Source-to-stream export priority in selected land",
               "units": units, "signed": False,
               "scale": {"minimum": 0.0, "maximum": 1.0, "signed": False,
                         "units": units,
@@ -247,8 +247,12 @@ def report_section(product):
         return []
     inventory = product["inventory"]
     paragraphs = [
-        "Receiving-water physical quantities use the " + inventory["quantity_scope"].replace("_", " ")
-        + " scope. Each family uses its actual selected contribution footprint.",
+        "Annual modeled export is attributed to land-source pixels in the selected receiving-area "
+        "mask and " + inventory["quantity_scope"].replace("_", " ") + " support. It represents "
+        "delivery to streams, not load crossing a boundary or arriving at an intake.",
+        "The scenario-placement mask identifies potential land-cover changes; the reporting mask "
+        "selects source contributions. Downstream changes can alter upstream NDR source export "
+        "outside the reporting area. Keep the complementary model-domain view and its own valid support.",
         "Fixed pollutant normalization: " + json.dumps(inventory["normalization"], sort_keys=True),
         inventory["measurement"]["physical"],
         inventory["measurement"]["coverage"],
