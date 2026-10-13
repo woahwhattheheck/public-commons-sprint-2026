@@ -105,9 +105,9 @@ After applying a component, run its maintained installer against the receiving a
 
 ## Transfer complete source through native documents
 
-The existing JavaScript codec now prepares and reads the same complete-text transport used by `source_tools/receive_drive_source.py`. It runs without Node, filesystem, browser or network APIs. `decodeNativeSourceDocuments(texts)` accepts a complete original document or an array of exported parts. It validates part membership and order, each whitespace-free Base64 fragment, the complete gzip and JSON, every UTF-8 source body and every original binary companion. Google Docs UTF-8 BOM, CRLF and paragraph whitespace remain compatible with the native receiver.
+The existing JavaScript codec prepares and reads complete native source documents accepted by the maintained `source_tools/application_assembly.py`. The original exported documents also retain their historical `source_tools/receive_drive_source.py` bootstrap. It runs without Node, filesystem, browser or network APIs. `decodeNativeSourceDocuments(texts)` accepts a complete original document or an array of exported parts. It validates part membership and order, each whitespace-free Base64 fragment, the complete gzip and JSON, every UTF-8 source body and every original binary companion. Google Docs UTF-8 BOM, CRLF and paragraph whitespace remain compatible with the native receiver.
 
-`encodeNativeSourceDocuments(source, options)` accepts those retained document strings, a decoded `upstate.complete-application-transport/v1` bank, or a complete `commons.source-map/1` with kind `upstate.complete-application-source/v1`. When its input is an existing transport, it reuses the exact original compressed payload and JSON bytes. A decoded bank or source map creates a newly declared transport with its own complete payload hashes; source-map provenance and every original member identity remain retained. Base64 members from a complete source map become the native receiver's `binary_files` records.
+`encodeNativeSourceDocuments(source, options)` accepts those retained document strings, a decoded `upstate.complete-application-transport/v1` bank, or a complete `commons.source-map/1` with kind `upstate.complete-application-source/v1`. When its input is an existing transport, it reuses the exact original compressed payload and JSON bytes. A decoded bank or source map creates a newly declared transport with its own complete payload hashes; source-map provenance and every original member identity remain retained. Base64 members from a complete source map become the native receiver's `binary_files` records. Installed application snapshots declare `edition` and `source_ref`; if the map has no `operation_id`, conversion uses its retained `source_ref` as the new transport operation identity. Supply `operationId` to name that new transfer explicitly. Existing complete native banks and original document transports retain their own operation and edition identities.
 
 ```js
 import {decodeNativeSourceDocuments, encodeNativeSourceDocuments} from "./carrier_codec.mjs";
@@ -124,22 +124,34 @@ if (received.metadata.json_sha256 !== original.metadata.json_sha256)
   throw new Error("The received application differs from its original source");
 ```
 
-The default document budget is 900,000 UTF-16 characters, including metadata and the complete native bootstrap. The encoder calculates a fitting fragment size, wraps Base64 at 120 columns and emits as many numbered parts as needed. `maxBase64Chars`, `lineWidth`, `title` and `sourceReference` are configurable. By default each part includes the exact `source_tools/receive_drive_source.py` body already retained in the bank. Set `includeBootstrap: false` only when the receiving actor already has that exact maintained receiver.
+The default document budget is 900,000 UTF-16 characters, including metadata and any retained bootstrap. The encoder calculates a fitting fragment size, wraps Base64 at 120 columns and emits as many numbered parts as needed. `maxBase64Chars`, `lineWidth`, `title` and `sourceReference` are configurable. When the bank contains the original `source_tools/receive_drive_source.py`, each part includes that exact body by default. Current installed application snapshots can omit that historical receiver and use the maintained assembler directly. Set `includeBootstrap: true` to require and include the retained receiver, or `false` to omit it.
 
 Use the existing authorized source documents as the receiving surface. Read their actual tab IDs and current revision IDs, reconcile any existing content, then write each complete `text` with a native Google Docs `insertText` request and `write_control.requiredRevisionId`. Keep writes sequential. A timeout requires reading that same document before retrying; a revision conflict requires composing with the current content. Read back the completed documents and pass their entire text through `decodeNativeSourceDocuments`.
 
 Export each completed native document as `text/plain`. Pass the returned opaque `file_uri` unchanged to the connected Drive uploader; this moves the actual provider export into an ordinary downloadable file. Fetch that complete file back and verify its fragment and full transport. Exported text may carry a BOM, CRLF and extra paragraph whitespace, so its file hash is recorded separately from the original fragment, gzip and JSON hashes. Verify the receiving account's permission on every part. Keep the completed exported files and their IDs as the stable inputs while source successors are applied to the installed application.
 
-On the equipped receiving host, mount every complete source file. Decode the bootstrap JSON row's `content_base64`, verify its declared byte length and SHA256, and use the host's actual Python:
+On the equipped receiving host, mount every complete source file and use the maintained assembler from the current public application. Join the unchanged exported parts in their original order:
 
 ```sh
-"$UPSTATE_PYTHON" -B receive_drive_source.py \
+cat -- "$UPSTATE_SOURCE_PART1" "$UPSTATE_SOURCE_PART2" > "$UPSTATE_JOINED_SOURCE"
+"$UPSTATE_PYTHON" -B source_tools/application_assembly.py "$UPSTATE_JOINED_SOURCE" \
+  --edition "$UPSTATE_RECEIVING_EDITION" \
+  --output "$UPSTATE_NEW_APPLICATION" \
+  --source-map "$UPSTATE_RECEIVED_SOURCE_MAP"
+```
+
+Include every exported part in the join. The assembler validates the numbered transport, full gzip/JSON and every member before accepting the complete native bank as its base. Its `model/workspace.py` and `operator/server.py` core members establish that complete application boundary; selected component overlays retain their ordinary predecessor checks. Continue the current component installers and the same scientific Workspace from the received application.
+
+For an original document whose embedded receiver is already the chosen receiving route, decode the bootstrap JSON row's `content_base64` into an actual local `receive_drive_source.py` and verify its declared byte length and SHA256. That historical file is supplied inside the document, rather than installed at that path in current public source. Then invoke the saved file with repeated `--document` arguments:
+
+```sh
+"$UPSTATE_PYTHON" -B "$UPSTATE_SAVED_RECEIVER" \
   --document "$UPSTATE_SOURCE_PART1" \
   --document "$UPSTATE_SOURCE_PART2" \
   --application "$UPSTATE_NEW_APPLICATION"
 ```
 
-Repeat `--document` for all parts returned by the encoder. The receiver verifies the complete source, installs the maintained Conservation component and retains `source-receiving.json` under the new application. Continue with the current component installers and the same scientific Workspace. For the generic assembler, concatenate the unchanged exported text files into one carrier as described above.
+This retained receiver verifies the complete original bank, installs its Conservation component and writes `source-receiving.json`. Choose this route for its matched original source bank and embedded bootstrap; use the maintained assembler for current installed source maps.
 
 This path was exercised with the actual two native Google Docs exports, each 903,205 bytes. The codec decoded, re-encoded and reopened all 257 original members, including the 1,906-byte Oconee binary, without changing the original 4,214,540-byte JSON (`1e941a72de169958428af36667f0106eaac9f8a1b91fe418ac7916e17bf7dbeb`) or 1,308,402-byte gzip (`26360fd3941d817b4a437d2a165106416c2e12a0aeb1b2f361bb272bfe4bcd95`).
 
