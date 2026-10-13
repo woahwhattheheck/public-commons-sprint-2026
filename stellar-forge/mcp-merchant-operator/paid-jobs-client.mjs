@@ -1,5 +1,9 @@
 // MIT. Receive complete original paid-job exports through the maintained file transport.
-import { join } from 'node:path';
+import { join, resolve, relative, isAbsolute, dirname } from 'node:path';
+import { realpath } from 'node:fs/promises';
+import { RESULT_PACKAGE_TYPE } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/outputs/contract.mjs';
+import { readResultPackage } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/outputs/archive.mjs';
+import { receiveResultPackage } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/outputs/receive.mjs';
 import { createHash } from 'node:crypto';
 import { openMerchantFileClient, createRetainedDownload } from './retained-download.mjs';
 import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-contracts.mjs';
@@ -127,7 +131,7 @@ async function localRecords(transfer, context, { signal, verifyFiles }) {
   return records(context.manifest, bytes);
 }
 async function completedDirectory({ directory, workspace, exportId, expectedManifestSha256,
-  signal, verifyFiles = true, endpoint } = {}) {
+  signal, verifyFiles = true, endpoint, outputDirectory } = {}) {
   if (workspace !== undefined) identifier(workspace, 'Workspace alias');
   if (exportId !== undefined) digest(exportId, 'export ID');
   expectedDigest(expectedManifestSha256);
@@ -152,13 +156,32 @@ async function completedDirectory({ directory, workspace, exportId, expectedMani
     need(endpoint === undefined || checkpoint.endpoint === endpoint, 'JOB_AGENT_DOWNLOAD_BINDING',
       'This directory belongs to another original MCP endpoint.');
     await transfer.loadContext(context, manifestBytes, manifest.exportId, checkpoint.endpoint);
-    await localRecords(transfer, context, { signal, verifyFiles });
+    const original = await localRecords(transfer, context, { signal, verifyFiles });
+    let outputs = null;
+    if (manifest.job.result?.contentType === RESULT_PACKAGE_TYPE) {
+      const job = original.job, attempt = job.attempts?.at(-1);
+      need(attempt?.state === 'COMPLETED' && attempt.resultSha256 === job.result.sha256 && job.settlement,
+        'JOB_AGENT_OUTPUT_BINDING', 'Retain the original completed attempt and native settlement for this package.');
+      const selected = { expected: manifest.job.result, signal, job: {
+        id: job.id, functionId: job.functionId, inputSha256: job.inputSha256,
+        configSha256: job.source.configSha256, applicationSha256: job.source.applicationSha256,
+        publicOrigin: job.source.publicOrigin, attemptId: attempt.id,
+        nativeSettlement: { id: job.settlement.id, at: job.settlement.at }
+      } };
+      const source = join(context.root, 'result.bin');
+      if (outputDirectory !== undefined) {
+        const destination = await outputDestination(outputDirectory, context.root);
+        context.lease.assertHeld();
+        outputs = await receiveResultPackage({ source, directory: destination, ...selected });
+      } else outputs = (await readResultPackage(source, selected)).describe();
+    } else need(outputDirectory === undefined, 'JOB_AGENT_OUTPUT_PACKAGE_REQUIRED',
+      'This original job has a single JSON or byte result rather than declared output files.');
     return {
       schema: PAID_JOB_RECEIVING_SCHEMA, state: 'REOPENED', directory: context.root,
       workspace: source.workspace, endpoint: source.endpoint, exportId: manifest.exportId,
       manifestSha256, manifestPath: join(context.root, JOB_EXPORT_MANIFEST),
       ...selection(manifest), files: manifest.files.length, bytes: manifest.totalBytes,
-      documentsVerified: true,
+      documentsVerified: true, outputs,
       artifacts: manifest.files.map(file => ({ ...file, path: join(context.root, file.name) }))
     };
   });
@@ -196,7 +219,43 @@ export async function downloadPaidJobExport(options = {}) {
 }
 
 /** Reopen all retained bytes and original identities entirely offline. */
-export async function reopenPaidJobExport(options = {}) {
+export async function reopenPaidJobExport({ directory, workspace, exportId, expectedManifestSha256, signal } = {}) {
+  return completedDirectory({ directory, workspace, exportId, expectedManifestSha256, signal, verifyFiles: true });
+}
+
+async function outputDestination(value, source) {
+  need(typeof value === 'string' && isAbsolute(value) && !value.includes('\0'),
+    'JOB_AGENT_OUTPUT_DIRECTORY', 'Choose an absolute private output receiving directory.');
+  const destination = resolve(value);
+  const nested = (parent, child) => {
+    const name = relative(parent, child);
+    return name === '' || !isAbsolute(name) && name !== '..' && !name.startsWith('..' + (process.platform === 'win32' ? '\\' : '/'));
+  };
+  need(!nested(source, destination) && !nested(destination, source), 'JOB_AGENT_OUTPUT_DIRECTORY',
+    'Keep the original export and the output receiving directory in separate nonoverlapping locations.');
+  // Resolve any existing ancestor before creating a directory so a filesystem
+  // alias cannot write a new member inside the original download's strict layout.
+  let ancestor = destination;
+  for (;;) {
+    try {
+      const actual = await realpath(ancestor);
+      need(resolve(actual, relative(ancestor, destination)) === destination,
+        'JOB_AGENT_OUTPUT_DIRECTORY', 'Choose the canonical private destination path.');
+      break;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      const parent = dirname(ancestor);
+      need(parent !== ancestor, 'JOB_AGENT_OUTPUT_DIRECTORY', 'Choose an existing private parent.');
+      ancestor = parent;
+    }
+  }
+  return destination;
+}
+
+/** Receive declared named files beside a complete original export, entirely offline. */
+export async function receivePaidJobOutputs(options = {}) {
+  need(typeof options.outputDirectory === 'string', 'JOB_AGENT_OUTPUT_DIRECTORY',
+    'Select the private outputDirectory for the original named files.');
   return completedDirectory({ ...options, verifyFiles: true });
 }
 

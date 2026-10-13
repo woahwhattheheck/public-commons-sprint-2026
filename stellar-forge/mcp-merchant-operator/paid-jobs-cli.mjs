@@ -3,10 +3,10 @@
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
-  inspectPaidJobExport, downloadPaidJobExport, reopenPaidJobExport
+  inspectPaidJobExport, downloadPaidJobExport, reopenPaidJobExport, receivePaidJobOutputs
 } from './paid-jobs-client.mjs';
 
-const COMMANDS = new Set(['inspect', 'download', 'reopen']);
+const COMMANDS = new Set(['inspect', 'download', 'reopen', 'outputs']);
 const VALUE_FLAGS = new Set(['url', 'workspace', 'export-id', 'out', 'dir', 'manifest-sha256', 'token-env']);
 export const PAID_JOB_CLIENT_HELP = [
   'Receive original paid-job exports',
@@ -14,9 +14,12 @@ export const PAID_JOB_CLIENT_HELP = [
   'merchant-paid-jobs inspect --url URL --workspace ALIAS --export-id SHA [--manifest-sha256 SHA]',
   'merchant-paid-jobs download --url URL --workspace ALIAS --export-id SHA --out DIRECTORY [--manifest-sha256 SHA]',
   'merchant-paid-jobs reopen --dir DIRECTORY [--workspace ALIAS] [--export-id SHA] [--manifest-sha256 SHA]',
+  'merchant-paid-jobs outputs --dir EXPORT_DIRECTORY --out OUTPUT_DIRECTORY [--manifest-sha256 SHA]',
   '',
-  'The same commands are available as merchant-mcp jobs inspect|download|reopen.',
-  '--out and --dir select the same private download directory; use either once.',
+  'The same commands are available as merchant-mcp jobs inspect|download|reopen|outputs.',
+  'For download/reopen, --out and --dir select the same private directory; use either once.',
+  'outputs verifies the whole original export and receives its named result files offline.',
+  'Keep output and export directories separate; repeat outputs to resume the same selection.',
   '--token-env NAME selects the MCP bearer token environment variable (default MCP_ACCESS_TOKEN).',
   'Repeat download with the same endpoint, alias, export and directory to resume.',
   'Keep download-state with the received files for an offline reopen.'
@@ -35,8 +38,6 @@ function parse(argv) {
       throw usage('Supply each selected option exactly once with its value.');
     flags[name] = value;
   }
-  if (flags.out !== undefined && flags.dir !== undefined)
-    throw usage('Choose one directory with --out or --dir.');
   return flags;
 }
 function required(flags, names) {
@@ -68,7 +69,7 @@ export async function runPaidJobClientCommand(argv, {
   const command = args.shift();
   if (!COMMANDS.has(command)) {
     if (!prefixed) return false;
-    throw usage('Choose jobs inspect, download or reopen.');
+    throw usage('Choose jobs inspect, download, reopen or outputs.');
   }
   if (args.length === 1 && ['--help', '-h'].includes(args[0])) {
     await print(PAID_JOB_CLIENT_HELP); return true;
@@ -76,7 +77,14 @@ export async function runPaidJobClientCommand(argv, {
   const flags = parse(args), expectedManifestSha256 = flags['manifest-sha256'];
   signal?.throwIfAborted();
   let result;
-  if (command === 'reopen') {
+  if (command !== 'outputs' && flags.out !== undefined && flags.dir !== undefined)
+    throw usage('Choose one directory with --out or --dir.');
+  if (command === 'outputs') {
+    allowed(flags, ['out', 'dir', 'workspace', 'export-id', 'manifest-sha256']);
+    required(flags, ['dir', 'out']);
+    result = await receivePaidJobOutputs({ directory: flags.dir, outputDirectory: flags.out,
+      workspace: flags.workspace, exportId: flags['export-id'], expectedManifestSha256, signal });
+  } else if (command === 'reopen') {
     allowed(flags, ['out', 'dir', 'workspace', 'export-id', 'manifest-sha256']);
     const directory = flags.out ?? flags.dir;
     if (!directory) throw usage('Supply the retained directory with --dir.');
