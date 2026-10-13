@@ -17,11 +17,27 @@ content_base64 so Canvas formatting leaves the original bytes intact.
 | robust-browser.json | Complete browser module, scoped stylesheet and real-experiment browser journey |
 | robust-receiving.json | Installer, transfer driver, receiving guide and operator guides |
 
-Together these packets contain all fourteen authored files. Each file includes
+The complete diagnostics-enabled successor contains sixteen authored files,
+including the native diagnostic receiver and maintained command line. A joined
+source packet can supply all sixteen files through one --packet argument;
+otherwise pass the complete source layers in order. Each file includes
 its exact byte count and SHA-256. Known original and earlier published postimages
 are declared using before_sha256, base_sha256 and replaces_sha256 so the guarded
 installer can upgrade the prior component or reuse an identical installed file.
-Unknown newer authored files remain available for explicit composition.
+Unknown newer authored files remain available for explicit composition. A
+preimage field accepts one validated SHA-256 or an explicit nonempty list of
+validated earlier editions; each incoming full body still requires its own
+exact declared byte count and SHA-256.
+
+The complete report-to-Decision navigation edition can also include the two
+original registered host leaves, operator/web/retained_desks.mjs and
+operator/web/experiment_diagnostics.mjs. These optional full postimages join
+Scientific interpretation's action to the registered Workbench's
+openForDiagnostic method with the exact workspace, diagnostic ID and report
+SHA. The installer applies the same known-preimage check to these shared
+leaves and preserves an unknown newer version for composition. The sixteen
+core leaves remain installable without either optional host replacement;
+that mode exposes diagnostic selection within the Decision desk.
 
 The earlier source carriers remain usable as an alternative layer set:
 backend R3 F0C8KE96PM3, UI base F0C8UCL45FE, UI R2 F0C8JG72V43,
@@ -85,7 +101,8 @@ owners of any robust.* action are reported before mutation.
 
 Reopen the original operator after installation, using its existing
 workspace and operator state. The installed registry has one robust-workbench
-owner, its five read routes, twelve original actions and both browser assets.
+owner, its six read routes, the original actions plus diagnostic preparation,
+and both browser assets.
 
 ## Transfer an editable study with its scientific context
 
@@ -98,6 +115,17 @@ handover to continue with the original study and scientific identities. Save
 working input edits as a revision before transferring them. **Export complete
 project** remains the original decision-project JSON workflow, whose receive
 operation assigns local study and calculation IDs.
+
+## Receive saved common-support diagnostics
+
+The maintained Decision desk now accepts a saved Scientific interpretation
+report through its diagnostic selector. The exact report SHA, original common
+support and native run identities travel with each prepared study; complete
+local report revisions are verified during workspace receiving. Use the native
+`diagnostic-preview` and `prepare-diagnostic` commands documented in
+operator/ROBUST_WORKBENCH.md when continuing the same workflow from a batch
+receiver. The selected-study transfer component includes this typed diagnostic
+revision and its scientific dependencies through its existing closure.
 
 ## Run the retained native workflows
 
@@ -125,15 +153,43 @@ ecological experiment:
       --output NEW_BROWSER_DIRECTORY \
       --video
 
-The configuration names that experiment's actual candidate/profile/metric
-IDs and explicitly supplies costs, capacity use, cost units, fixed scales
-and weights. Physical outcome cells come from the original retained summary.
+For a saved scientific diagnostic, use the same native journey with the exact
+report SHA returned by diagnostic-preview:
+
+    node source/run_robust_workbench_browser.mjs \
+      --url-file PRIVATE_OPERATOR_URL_FILE \
+      --diagnostic RETAINED_DIAGNOSTIC_ID \
+      --report-sha256 EXACT_REPORT_SHA256 \
+      --configuration DECISION_CONFIG_JSON \
+      --workspace OPERATOR_WORKSPACE_KEY \
+      --output NEW_BROWSER_DIRECTORY \
+      --video
+
+Choose exactly one source mode. The configuration names actual included
+candidate/profile/metric IDs and explicitly supplies costs, capacity use,
+cost units, fixed scales and weights. Physical outcome cells come from the
+original retained source. Diagnostic mode carries source.diagnostic_design
+with its explicit structural mode and reason, checks the preview and queued
+request against the selected report SHA, and verifies the created study's
+typed immutable report binding. An advanced live report requires a new
+reviewed configuration and its current SHA.
+
 The browser journey uses the visible desk and native task/file transport,
-then receives and reopens its exported study. The operator URL remains in
-the private local file; the journey report redacts its capability.
+then receives and reopens its exported study. It also captures the actual
+reopened result at a 390-pixel viewport. The operator URL remains in the
+private local file; the journey report redacts its capability.
 
 Retain the installation result, decision-transfer.json, native exported
 bytes, screenshots, optional video and browser journey.json alongside the
 working application. Publish the working source through the existing shared
 application integration and attach actual task/study/run identities to the
 original #sales sprint thread.
+
+The cumulative twenty-one-file edition also includes the original selected-study
+closure leaves, model/decision_study_transfer.py, model/study_transfer.py and
+operator/STUDY_TRANSFER.md. These are optional to the sixteen-file core and
+use the same exact incoming-body and known-preimage checks. Install the complete
+edition on the maintained application to carry pinned diagnostic revisions,
+their full common-support source roster and original Decision SQLite history
+through selected editable study transfer. The original project archive,
+transfer transport and receiving registration remain the maintained services.

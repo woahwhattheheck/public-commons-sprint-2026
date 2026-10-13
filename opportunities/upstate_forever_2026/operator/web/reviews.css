@@ -52,3 +52,14 @@
 #review-response-preview .json-view{max-height:22rem}
 @media(max-width:900px){.review-choice-grid{grid-template-columns:1fr}.review-choices{max-height:18rem}.review-requirement-heading{grid-template-columns:1fr}.review-filters,.review-comparison-head{grid-template-columns:1fr}.review-requirement-section>header{display:block}}
 @media print{.review-tabs,.review-filters,.review-file-picker,.customer-review-detail .page-actions{display:none}.customer-review-detail .table-scroll{overflow:visible}.review-status{background:white;color:black}.customer-review-detail tr{break-inside:avoid}}
+
+.handback-item{border:1px solid #bdbdbd;background:#fafafa;margin:1rem 0;padding:1rem}
+.handback-item>header{display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap}
+.handback-item h3{margin:.1rem 0 .5rem;font-size:1rem}
+.handback-item h4{margin:.4rem 0}
+.handback-item .form-grid{margin:1rem 0}
+.handback-replacements{max-height:18rem;overflow:auto;border:1px solid #d4d4d4;background:#fff;padding:.6rem}
+.handback-replacements .check{display:flex;align-items:flex-start;gap:.5rem;padding:.4rem 0;font-weight:400}
+.handback-replacements small{display:block;color:#555;font-size:.75rem;overflow-wrap:anywhere}
+.handback-replacements input{width:auto;flex:none;margin-top:.2rem}
+#handback-edit-state{font-size:.85rem;white-space:pre-wrap}

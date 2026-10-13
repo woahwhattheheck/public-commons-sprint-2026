@@ -115,3 +115,22 @@ When source/hydrology-huc05-07-20261013/model-sources.json is installed, the sam
 ## Matched lake observation report
 
 When eighteenmile_lake_paired_analysis.sources.json is installed, the same receiver imports its seven original native source entries. The retained paired-observations-report.html opens alongside the lake report from the original-source index. The scientific report links to the matched-pair report, cross-analyte links and paired microcystin/chlorophyll summaries with their original retained companions. Earlier complete reports retain their own source bindings.
+
+## Complete intake with ordinary Python
+
+Use the same receiver on an ordinary Python host to finish the entire original-source and observation phase before geographic processing:
+
+```sh
+"$PYTHON" -B -m source_tools.receive_observed_context \
+  --workspace "$WORKSPACE" \
+  --domain-manifest "$ORIGINAL_DOMAIN_MANIFEST" \
+  --sources-only
+```
+
+This imports every selected native source collection and its original companions, registers the published study, creates the fourteen dated context views and the two nutrient endpoint views when that source is present, and writes the source inventory plus a browsable original-source index. No raster or vector calculation is needed for this intake. An existing retained domain collection can be used later; omit --domain-manifest when the selected Workspace already owns that source.
+
+The same receiving.json records state sources_complete, the actual published-study and observation IDs, and the source_phase file hashes. A completed observation/source phase stays recorded if later geographic processing returns an exception. The index links only to files already produced.
+
+On the equipped geographic host, resume the same command with --sources-only removed and the same source selections, map settings and Workspace. The execution flag is excluded from operation identity, so it continues the same output directory. Native source and observation imports reuse their identical IDs before the original public-water and station/map workflow proceeds. If a later command adds or changes a source manifest or scientific selection, that choice retains its own receiving identity.
+
+Running --sources-only against an already complete geographic operation verifies its completed file hashes and returns that complete record unchanged. The existing native backup carries the same source phase, original objects, source views, observation records and receiving directory.

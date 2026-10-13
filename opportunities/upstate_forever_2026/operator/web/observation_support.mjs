@@ -7,7 +7,8 @@ const table=(headers,rows)=>'<div class="table-wrap"><table><thead><tr>'+headers
 export const supportFields=['measurement_support','species','facility_id','facility_name','outfall_id','reporting_feature','monitoring_location','parameter_code','gauge_id','gauge_relation','relation_method','quantity_basis','coverage_days','expected_days','coverage_complete','coverage_detail','source_quantity'];
 export const supportOptions=[['catchment_export','Receiving-water catchment export'],['point_source_discharge','Facility / outfall discharge'],['concentration','Receiving-water concentration'],['other_context','Other original context']];
 export function observationSupportMarkup(row,metadata={}){
- const support=row.measurement_support||metadata.measurement_support||(metadata.value_basis==='annual_mass_rate'?'catchment_export':'other_context');
+ const declaredKind={reported_effluent_source_amount:'point_source_discharge',complete_reported_effluent_source_amount:'point_source_discharge',receiving_water_measurement:'concentration',receiving_water_derived_concentration:'concentration'}[metadata.observation_kind];
+ const support=row.measurement_support||metadata.measurement_support||declaredKind||(metadata.value_basis==='annual_mass_rate'?'catchment_export':'other_context');
  const facility=metadata.facility_registry?.[row.facility_id||row.station_id]||{};
  const days=row.coverage_days,expected=row.expected_days??metadata.expected_days;
  return '<strong>'+esc(labels[support]||support)+'</strong>'+

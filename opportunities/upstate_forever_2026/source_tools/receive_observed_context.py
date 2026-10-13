@@ -35,6 +35,7 @@ def _selection(args, application):
             ("nutrient_flow", "eighteenmile_routine_nutrient_flow.sources.json"),
             ("calibration_hydrology", "source/hydrology-huc05-07-20261013/model-sources.json"),
             ("calibration_basins", "source/hydrology-huc05-07-20261013/nldi/model-sources.json"),
+            ("calibration_geographic_support", "source/hydrology-huc05-07-20261013/nldi/geographic-support-sources.json"),
             ("study_figures", "eighteenmile_scientific_figures.sources.json"),
             ("flow_report", "observed_hydrology_context.sources.json")):
         context_manifest = application / relative
