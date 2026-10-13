@@ -28,6 +28,8 @@ class ProjectTransfers:
     def __init__(self, operator, fault):
         self.operator, self.Fault = operator, fault
         self.stores = {}
+        # The maintained descriptor and continuity use this same original provider.
+        operator.project_transfers = self
 
     def store(self, workspace_key):
         key = digest_id(workspace_key)
