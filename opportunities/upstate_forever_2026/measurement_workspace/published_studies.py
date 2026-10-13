@@ -24,6 +24,11 @@ import tempfile
 from typing import Any
 import zipfile
 
+if __package__:
+    from .observation_support import enrich_observation_context, report_html as support_report_html
+else:
+    from observation_support import enrich_observation_context, report_html as support_report_html
+
 STORE_SCHEMA = "upstate.published-study-record/v1"
 EXPORT_SCHEMA = "upstate.published-study-export/v1"
 COMPANION_SCHEMA = "upstate.published-study-files/v1"
@@ -994,6 +999,7 @@ class PublishedStudyStore:
             complete["observation_rows"], selected.get("seasonal", []), complete["study"],
             sites, parameter_set, stratum_set,
         )
+        observation_context = enrich_observation_context(observation_context)
         return {
             "schema": "upstate.published-study-context/v1",
             "record": complete["record"],
@@ -1321,6 +1327,7 @@ class PublishedStudyStore:
                     ". " + esc(evidence["timezone_interpretation"]) + "</p>"
                 )
             observed += "</section>"
+        observed += support_report_html(context)
         dated = context.get("dated_context", {})
         observed += table("Retained WQP source coverage", dated.get("coverage", []), [
             ("site_id", "Station"), ("project_id", "Source project"), ("characteristic", "Original characteristic"),
