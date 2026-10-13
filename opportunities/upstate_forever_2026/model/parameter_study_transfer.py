@@ -83,7 +83,7 @@ def _captured(closure, entry):
     key = identifier(selection.get("experiment_id"))
     result_sha = identifier(selection.get("expected_artifact_sha256"))
     project = selection.get("workspace_id")
-    if (type(selection.get("edition")) is not int or selection["edition"] not in (1, 2, 3, 4)
+    if (type(selection.get("edition")) is not int or selection["edition"] not in (1, 2, 3, 4, 5)
             or not isinstance(project, str) or not project
             or metadata.get("experiment_id") != key or recipe.get("edition") != result_sha
             or entry.get("uri") != "urn:upstate:parameter-study:" + key + ":" + result_sha):
@@ -179,6 +179,14 @@ def _captured(closure, entry):
                     "grid_id": grid["id"], "run_selection": checkpoint["baseline_selection"]}
         if basis["reference"] != expected:
             raise ValueError("The Parameter source changed its fixed comparison reference")
+    working_origin = checkpoint["selection"].get("working_origin")
+    if working_origin:
+        from .parameter_working import inspect_package
+        history = inspect_package(None, original("working-origin/complete-history.json"))
+        if (history["revision_id"] != working_origin["revision_id"]
+                or basis.get("working_origin") != working_origin
+                or history["records"][-1]["bindings"]["baseline"]["selection"] != checkpoint["baseline_selection"]):
+            raise ValueError("The captured Parameter source changed its original working history")
     origin = checkpoint["selection"].get("calibration_origin")
     if origin:
         def verify_catchment_source(source_plan):
@@ -327,6 +335,13 @@ def native_record(closure, key, *, reason="Original editable Parameter study"):
             raise ValueError("The editable Parameter study changed its original calibration lineage.")
         required.extend([{"kind": "calibrations", "id": report["id"]},
                          {"kind": "calibration-plans", "id": plan["id"]}])
+    if state["selection"].get("working_origin"):
+        from .parameter_working_transfer import capture
+        from .parameter_working import origin as verify_working_origin
+        original_working = state["selection"]["working_origin"]
+        verify_working_origin(closure.workspace, original_working, state["selection"])
+        capture(closure, original_working["revision_id"])
+        required.append({"kind": "parameter-working", "id": original_working["revision_id"]})
     closure._native_selection(state["baseline_selection"], "Original Parameter comparison reference")
     closure._source_refs(state["selection"], "Original Parameter reporting-area sources")
     closure.tree(prefix)

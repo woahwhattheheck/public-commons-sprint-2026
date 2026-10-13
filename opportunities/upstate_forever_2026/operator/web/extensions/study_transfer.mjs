@@ -9,6 +9,7 @@ const ROOTS = [
   ['experiment-diagnostics', 'Scientific analyses'],
   ['experiments', 'Experiment programmes'],
   ['parameter-studies', 'Parameter studies'],
+  ['parameter-working', 'Parameter working designs'],
   ['multivariate-controls', 'Matched-control designs'],
   ['multivariate-control-outcomes', 'Matched-control native outcomes'],
   ['climate-forcing-studies', 'Climate forcing studies'],
@@ -378,8 +379,8 @@ export function attachStudyTransfer(host) {
               ?button('open-sampling','Open sampling priorities','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
-            (row.state!=='unreadable'&&row.kind==='parameter-studies'&&typeof host.openParameterStudy==='function'
-              ?button('open-parameter','Open Parameter study','data-study-open="'+escapeHTML(key)+'"'):'')+
+            (row.state!=='unreadable'&&['parameter-studies','parameter-working'].includes(row.kind)&&typeof host.openParameterStudy==='function'
+              ?button('open-parameter',row.kind==='parameter-working'?'Open working design':'Open Parameter study','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
               ?button('open-paired','Open paired analysis','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
@@ -652,11 +653,12 @@ export function attachStudyTransfer(host) {
       else if(action==='open-spatial'){await openSpatial(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-parameter'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
-        if(!row||row.state==='unreadable'||row.kind!=='parameter-studies')
+        if(!row||row.state==='unreadable'||!['parameter-studies','parameter-working'].includes(row.kind))
           throw new Error('Choose an original saved Parameter study.');
         if(typeof host.openParameterStudy!=='function')throw new Error('Use the maintained Parameter studies desk.');
         const captured=stamp(),serial=++retainedRecordRequest;
-        await host.openParameterStudy({workspace_key:captured.workspace,experiment_id:row.id},
+        await host.openParameterStudy({workspace_key:captured.workspace,
+          ...(row.kind==='parameter-working'?{working_revision_id:row.id}:{experiment_id:row.id})},
           {current:()=>current(captured)&&serial===retainedRecordRequest});
       }
       else if(action==='open-paired'){

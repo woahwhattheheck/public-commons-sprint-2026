@@ -1,3 +1,4 @@
+import {createParameterWorking,captureParameterWorking,applyParameterWorking,validateParameterWorking} from './parameter_working.mjs';
 import {attachParameterCaseConsole} from './parameter_case_console.mjs';
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const format = value => value === null || value === undefined ? '—' : typeof value === 'number' ? value.toLocaleString(undefined, {maximumFractionDigits: 7}) : escapeHTML(value);
@@ -153,6 +154,9 @@ export function parseParameterStudyValues(text) {
 
 export function attachParameterStudies(host) {
   const caseConsole = attachParameterCaseConsole(host);
+  const working = createParameterWorking(host, {workspace:()=>workspace(),formRequest,
+    open:packet=>newStudy(null,null,null,packet),
+    getFrame:()=>({capture:()=>captureParameterWorking(draftRoot,draftCalibration)})});
   let root = null, controller = null, selected = null, currentWorkspace = null, pendingOpen = null;
   let study = null, results = null, resultFilters = {area_id: '', pollutant: '', offset: 0, range_offset: 0};
   let caseFilter = '', caseState = 'all', caseOffset = 0, caseSequence = 0, caseController = null, caseTimer = null, draftCatalog = null, draftRoot = null;
@@ -261,7 +265,7 @@ export function attachParameterStudies(host) {
         button('revise', 'Use as draft', 'data-id="' + escapeHTML(row.id) + '"') + '</td></tr>';
     });
     return '<div class="parameter-study-workbench"><header class="page-header"><div><p class="eyebrow">SCIENTIFIC WORKBENCH</p><h1>Parameter studies</h1><p>Evaluate explicit model assumptions on the retained grid and land-cover scenario. Review the selected nutrient model, sediment model, or both against the same baseline.</p></div><div class="page-actions">' +
-      button('new', 'New parameter study', '', true) + '</div></header>' +
+      button('new', 'New parameter study', '', true) + button('working-browse', 'Working designs and recovery') + '</div></header>' +
       (rows.length ? '<section class="section"><header class="section-header"><div><h2>Saved studies</h2><p>Each study retains its case selections, native runs, progress, and comparison files.</p></div></header>' +
         gridTable(['Study', 'State', 'Design', 'Complete cases', ''], rows) + '</section>' :
         '<section class="empty"><h2>Define the model assumptions to investigate</h2><p>Start from a prepared or completed native run, select parameter axes, and enter the values and scientific references for each axis.</p>' +
@@ -541,6 +545,7 @@ export function attachParameterStudies(host) {
     const selectedSource = select.value || select.dataset.selected || '';
     const edition = (data().sources || []).find(row => row.id === collection);
     select.innerHTML = option('', 'Choose polygon source') + (edition?.entries || []).filter(row => row.kind === 'vector').map(row => option(row.id, row.title || row.id, row.id === selectedSource)).join('');
+    if(selectedSource&&![...select.options].some(row=>row.value===selectedSource))select.add(new Option('Retained source: '+selectedSource,selectedSource,true,true));
     select.dataset.selected = '';
   }
 
@@ -550,6 +555,7 @@ export function attachParameterStudies(host) {
     const initial = chosen.length ? chosen : JSON.parse(select.dataset.selected || '[]');
     select.innerHTML = (draftCatalog?.parameters || []).map(row => option(row.parameter,
       row.model.toUpperCase() + ' · ' + row.label + ' (' + row.units + ')', initial.includes(row.parameter))).join('');
+    for(const path of initial)if(![...select.options].some(row=>row.value===path))select.add(new Option('Retained parameter: '+path,path,true,true));
     select.dataset.selected = '';
     describeAxis(node);
   }
@@ -585,6 +591,7 @@ export function attachParameterStudies(host) {
         provenance(result.selection) + '</dl>' + baselineExecution(result) + '<p class="note">Baseline ' + escapeHTML(result.baseline_state) + ' · ' +
         escapeHTML(result.profile_title) + ' · ' + (result.pollutants || []).map(value => escapeHTML(label(value))).join(', ') + '</p>';
       current.querySelectorAll('.parameter-study-axis').forEach(fillParameters);
+      working.capture();
     } catch (error) {
       if (session.current() && current === draftRoot && sequence === catalogSequence && selectedWorkspace === workspace()) current.querySelector('[data-baseline-description]').textContent = error.message;
     }
@@ -613,6 +620,8 @@ export function attachParameterStudies(host) {
       }),
       difference_maps: draftRoot.querySelector('[name="difference_maps"]').checked};
     if (draftCalibration) selection.calibration_origin = JSON.parse(JSON.stringify(draftCalibration));
+    const workingOrigin=working.origin(captureParameterWorking(draftRoot,draftCalibration));
+    if(workingOrigin)selection.working_origin=workingOrigin;
     return selection;
   }
 
@@ -678,8 +687,7 @@ export function attachParameterStudies(host) {
     return newStudy(null, packet.baseline_run_id, packet);
   }
 
-  async function newStudy(id, baselineId, calibration = null) {
-    if (!(data().runs || []).length && !calibration) throw new Error('Prepare a native run before creating a parameter study.');
+  async function newStudy(id, baselineId, calibration = null, workingPacket = null) {
     const opening = formRequest(), originalWorkspace = opening.workspace;
     let initial = {}, editor = null;
     if (id) {
@@ -689,6 +697,13 @@ export function attachParameterStudies(host) {
       if (retained?.id !== id) throw new Error('The saved study response belongs to another original study.');
       initial = retained.selection;
     }
+    const rawWorking = workingPacket ? validateParameterWorking(workingPacket.recovery?.raw || workingPacket.record?.draft) : null;
+    if (rawWorking) initial = {title: rawWorking.fields.experiment_title, purpose: rawWorking.fields.experiment_purpose,
+      baseline_run_id: rawWorking.fields.baseline_run_id, design: rawWorking.fields.experiment_design,
+      axes: rawWorking.axes.map(row=>({parameters:row.axis_parameters})),
+      reporting_areas: rawWorking.areas.map(row=>({source_collection_id:row.area_collection,source_id:row.area_source})),
+      difference_maps: rawWorking.difference_maps,
+      ...(rawWorking.calibration_origin ? {calibration_origin:rawWorking.calibration_origin} : {})};
     if (calibration) initial = {title: calibration.title, purpose: calibration.purpose,
       baseline_run_id: calibration.baseline_run_id, calibration_origin: calibration.calibration_origin};
     if (initial.calibration_origin && !calibration) {
@@ -713,7 +728,12 @@ export function attachParameterStudies(host) {
       baselineRuns.push({id: calibration.baseline_run_id, selection: calibration.catalog.selection,
         state: calibration.catalog.baseline_state});
     }
-    const html = '<div class="parameter-study-draft"><div class="form-grid">' +
+    if (workingPacket?.baseline_catalog && !baselineRuns.some(row=>row.id===initial.baseline_run_id)) {
+      const retained=workingPacket.baseline_catalog;
+      if(retained.baseline_run_id!==initial.baseline_run_id)throw Error('The working baseline catalogue changed.');
+      baselineRuns.push({id:retained.baseline_run_id,selection:retained.selection,state:retained.baseline_state});
+    }
+    const html = '<div class="parameter-study-draft">' + working.toolbar() + '<div class="form-grid">' +
       field('experiment_title', 'Study title', initial.title ? initial.title + (id ? ' — revision' : '') : '', 'required') +
       '<label>Design<select name="experiment_design">' + option('one-at-a-time', 'One parameter axis at a time', initial.design !== 'factorial') +
       option('factorial', 'Every combination of axis values', initial.design === 'factorial') + '</select></label>' +
@@ -725,7 +745,7 @@ export function attachParameterStudies(host) {
       calibrationOriginPanel(initial.calibration_origin, calibration?.context) +
       '<div data-baseline-description class="parameter-study-baseline"></div><div class="subheading"><h3>Parameter axes</h3>' +
       button('axis-add', 'Add parameter axis') + '</div><div data-parameter-study-axes>' +
-      (initial.axes?.length ? initial.axes : [{}]).map(axisEditor).join('') + '</div>' +
+      (rawWorking ? initial.axes : initial.axes?.length ? initial.axes : [{}]).map(axisEditor).join('') + '</div>' +
       '<details class="technical"' + (initial.reporting_areas?.length ? ' open' : '') + '><summary>Additional geographic reporting areas</summary>' +
       '<p class="note">The full original reporting area is always included. Add retained polygon sources for local summaries.</p>' +
       '<div data-parameter-study-areas>' + (initial.reporting_areas || []).map(areaEditor).join('') + '</div>' + button('area-add', 'Add reporting area') +
@@ -757,6 +777,8 @@ export function attachParameterStudies(host) {
           if (event.target.name === 'area_collection') setAreaSources(event.target.closest('.parameter-study-area'));
         });
         draftRoot.querySelectorAll('.parameter-study-area').forEach(setAreaSources);
+        if (rawWorking) applyParameterWorking(draftRoot, rawWorking);
+        working.attach(draftRoot, ()=>editor.current(), workingPacket);
         loadCatalog();
       });
   }
@@ -923,6 +945,7 @@ export function attachParameterStudies(host) {
   }
 
   async function dispatch(node) {
+    if(node.dataset.action?.startsWith('parameter-study-working-'))return working.dispatch(node);
     const action = node.dataset.action.slice('parameter-study-'.length), id = node.dataset.id;
     if (node.dataset.workspace && node.dataset.workspace !== workspace()) {
       throw new Error('Open this task in its original Workspace before opening its parameter study.');
@@ -951,19 +974,19 @@ export function attachParameterStudies(host) {
       draftCalibration = null;
       draftRoot.querySelector('[name="baseline_run_id"]').disabled = false;
       draftRoot.querySelector('[data-parameter-calibration-origin]')?.remove();
-      invalidatePreview(); return;
+      invalidatePreview(); working.capture(); return;
     }
     if (action === 'preview') return previewDesign();
     if (action === 'axis-add') {
       draftRoot.querySelector('[data-parameter-study-axes]').insertAdjacentHTML('beforeend', axisEditor());
-      fillParameters(draftRoot.querySelector('.parameter-study-axis:last-child')); invalidatePreview(); return;
+      fillParameters(draftRoot.querySelector('.parameter-study-axis:last-child')); invalidatePreview(); working.capture(); return;
     }
-    if (action === 'axis-remove') { node.closest('.parameter-study-axis').remove(); invalidatePreview(); return; }
+    if (action === 'axis-remove') { node.closest('.parameter-study-axis').remove(); invalidatePreview(); working.capture(); return; }
     if (action === 'area-add') {
       draftRoot.querySelector('[data-parameter-study-areas]').insertAdjacentHTML('beforeend', areaEditor());
-      setAreaSources(draftRoot.querySelector('.parameter-study-area:last-child')); invalidatePreview(); return;
+      setAreaSources(draftRoot.querySelector('.parameter-study-area:last-child')); invalidatePreview(); working.capture(); return;
     }
-    if (action === 'area-remove') { node.closest('.parameter-study-area').remove(); invalidatePreview(); return; }
+    if (action === 'area-remove') { node.closest('.parameter-study-area').remove(); invalidatePreview(); working.capture(); return; }
     if (action === 'cases-prev' || action === 'cases-next') {
       caseOffset = Math.max(0, caseOffset + (action === 'cases-prev' ? -50 : 50));
       return refreshCases();
@@ -994,6 +1017,10 @@ export function attachParameterStudies(host) {
 
   async function openSavedStudy(selection, {current=()=>true}={}) {
     if(!current())return null;
+    if(selection?.working_revision_id){
+      if(selection.workspace_key!==workspace())throw Error('Open this working history in its received Workspace.');
+      return working.openRevision(selection.working_revision_id,{current});
+    }
     const selectedWorkspace=workspace(), id=selection?.experiment_id;
     if(!selection||selection.workspace_key!==selectedWorkspace||!/^[0-9a-f]{64}$/.test(id||'')) {
       throw new Error('Open a retained parameter study in its original workspace.');
@@ -1014,6 +1041,10 @@ export function attachParameterStudies(host) {
   }
 
   function taskActions(task) {
+    if(task.action==='parameter-study.working.save'&&task.result?.record?.id&&task.workspace){
+      return '<div class="page-actions">'+button('working-open','Open saved working revision','data-id="'+escapeHTML(task.result.record.id)+'" data-workspace="'+escapeHTML(task.workspace)+'"')+'</div>';
+    }
+    if(task.action==='parameter-study.working.export')return host.fileList(task.result?.downloads||[]);
     if (task.action === 'parameter-study.ensemble.continue' && task.workspace) {
       return (task.result?.studies || []).map(row => {
         const attrs = 'data-id="' + escapeHTML(row.experiment_id) +

@@ -20,6 +20,7 @@ def summary(identity):
             if row.get("report_context_kind") == transfer.CONTEXT]
     direct = identity.get("parameter_studies", [])
     return {
+        "parameter_working_count": len(identity.get("parameter_working", [])),
         "direct_parameter_study_count": len(direct),
         "parameter_study_source_count": len(rows),
         "editable_parameter_study_count": len({
@@ -57,6 +58,8 @@ def _state(state):
 def augment(closure, retained, result):
     """Use the same verified source resolver and exact original source members."""
     identity = retained["identity"]
+    from .parameter_working_transfer import augment as augment_working
+    augment_working(closure, identity, result)
     rows = [row for row in identity.get("scientific_report_sources", [])
             if row.get("report_context_kind") == transfer.CONTEXT]
     result.update(summary(identity))
