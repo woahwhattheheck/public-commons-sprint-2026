@@ -19,6 +19,11 @@ def install(application):
     for name in ('operator/source_report_editions.py','operator/extension_registry.py','model/common.py',
                  'model/workspace.py','model/reviews.py','model/scientific_report_editions.py'):
         if not (target/name).is_file():raise ValueError('The original application is missing '+name)
+    for name in ('operator/web/app.mjs','operator/web/reviews.mjs'):
+        path=target/name
+        if not path.is_file() or 'prepareReportComparisonReview' not in path.read_text(encoding='utf-8'):
+            raise ValueError('Install the current complete original application before this component; '
+                             'the report comparison review host port is missing from '+name)
     pending=[]
     for name in MEMBERS:
         original=source/name

@@ -47,8 +47,8 @@
     },
     {
       "path": "install_report_changes.py",
-      "bytes": 2715,
-      "sha256": "335a4f6574e8225b0263b351b82306d0896b5352eb6a6d10edd30e0e39843d58",
+      "bytes": 3113,
+      "sha256": "cb7a10e61395131020051d8626fed2c765d57dec16e93918b143841c5f61e22b",
       "preimage": {
         "git_blob": "77d9e17cfbfb305d89d1738519b3e4dbc5d607c2",
         "sha256": "50bd053fcb99ed7d69e1acc04666ba90ab68859bdb508a5cd4468a0e5d1b76b1"
@@ -132,6 +132,10 @@
       {
         "before": "'version':'1.0.0'",
         "after": "'version':'1.2.0'"
+      },
+      {
+        "before": "    pending=[]\n",
+        "after": "    for name in ('operator/web/app.mjs','operator/web/reviews.mjs'):\n        path=target/name\n        if not path.is_file() or 'prepareReportComparisonReview' not in path.read_text(encoding='utf-8'):\n            raise ValueError('Install the current complete original application before this component; '\n                             'the report comparison review host port is missing from '+name)\n    pending=[]\n"
       }
     ]
   },
