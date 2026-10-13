@@ -70,7 +70,7 @@ function normalizePolicy(value){
 
 const b64Alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 function decodeBase64(value){
- need(typeof value==='string'&&value.length<=Math.ceil(LIMITS.supportingBytes/3)*4&&/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value),'INVALID_BASE64','Retain complete canonical Base64 bytes without whitespace.');
+ need(typeof value==='string'&&value.length<=Math.ceil(LIMITS.supportingBytes/3)*4&&value.length%4===0&&!/[^A-Za-z0-9+/=]/.test(value)&&(!value.includes('=')||value.indexOf('=')>=value.length-2&&/^={1,2}$/.test(value.slice(value.indexOf('=')))),'INVALID_BASE64','Retain complete canonical Base64 bytes without whitespace.');
  const size=value.length/4*3-(value.endsWith('==')?2:value.endsWith('=')?1:0);need(size<=LIMITS.supportingBytes,'SUPPORTING_FILE_TOO_LARGE','Choose a complete supporting file within32 MiB.');
  const out=new Uint8Array(size);let at=0;
  for(let i=0;i<value.length;i+=4){
