@@ -34,6 +34,8 @@ Each receptors item contains:
 
 The source feature_ids refer to native vector feature identities, while source where compares exact original attribute values. They are separate selectors and can be used together.
 
+A plan reads each retained source body and layer once. It indexes native feature IDs and reuses each selected geometry transformation across receptors. Exact source filters run before geometry validation, so an unselected source feature cannot change a selected receptor's behavior. The cache belongs to one preparation call; subsequent calls verify their original source bodies again.
+
 | Relationship | Contribution geometry and interpretation |
 | --- | --- |
 | upstream_huc | Receiving HUC units and their original upstream ToHUC ancestors |
