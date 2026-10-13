@@ -112,7 +112,7 @@ async function validateTree(root,receipt){
 }
 
 async function reconcileTemporaries(root,receipt,intent){
- const permitted=[{filename:path.join(root,'archive.zip'),bytes:receipt.archive.bytes,sha256:receipt.archive.sha256},
+ const permitted=[{filename:path.join(root,receipt.archive.filename),bytes:receipt.archive.bytes,sha256:receipt.archive.sha256},
   {filename:path.join(root,'intent.json'),bytes:intent.length,sha256:sha(intent)},
   {filename:path.join(root,'RECEIVING.json'),bytes:Buffer.byteLength(receiptText(receipt)),sha256:sha(Buffer.from(receiptText(receipt)))},
   ...receipt.entries.filter(x=>x.kind==='file').map(x=>({filename:path.join(root,'members',x.path),bytes:x.bytes,sha256:x.sha256}))];
@@ -134,42 +134,46 @@ async function reconcileTemporaries(root,receipt,intent){
  }
 }
 
-async function verifyZipReceiving({directory,expectedSha256}={}){
+const ZIP_CODEC=Object.freeze({schema:SCHEMA,filename:'archive.zip',
+ parse:async(raw,selected)=>({receipt:describeArchive(raw,selected),entries:zip.readZipArchive(raw,selected).entries})});
+async function verifyZipReceiving(options={}){return verifyArchiveReceiving(options,ZIP_CODEC);}
+async function verifyArchiveReceiving({directory,expectedSha256}={},codec){
  const root=path.resolve(directory??'');need(directory,'Supply the original receiving directory');
  await privateDirectory(root);
  const manifestBytes=await readOriginal(path.join(root,'RECEIVING.json'),64*1024*1024);
  const manifest=JSON.parse(manifestBytes.toString('utf8'));
- need(manifest.schema===SCHEMA,'Select an original complete ZIP receiving receipt');
- const selected=limits(manifest.limits),archive=await readOriginal(path.join(root,'archive.zip'),selected.maxBytes);
+ need(manifest.schema===codec.schema,'Select the original complete archive receiving receipt');
+ const selected=limits(manifest.limits),archive=await readOriginal(path.join(root,codec.filename),selected.maxBytes);
  const digest=expectedDigest(expectedSha256??manifest.archive?.sha256);
  need(sha(archive)===digest,'Retained original ZIP SHA-256 differs');
- const rebuilt=describeArchive(archive,selected);
+ const rebuilt=(await codec.parse(archive,selected)).receipt;
  need(receiptText(rebuilt)===manifestBytes.toString('utf8'),'Retained receipt differs from its complete original archive');
- const intent=Buffer.from(JSON.stringify({schema:SCHEMA,archiveSha256:digest,archiveBytes:archive.length,limits:selected})+'\n');
+ const intent=Buffer.from(JSON.stringify({schema:codec.schema,archiveSha256:digest,archiveBytes:archive.length,limits:selected})+'\n');
  await exactFile(path.join(root,'intent.json'),intent);
  await reconcileTemporaries(root,rebuilt,intent);
  await validateTree(path.join(root,'members'),rebuilt);
  for(const name of await fs.readdir(root)){
-  if(['archive.zip','intent.json','RECEIVING.json','members'].includes(name))continue;
+  if([codec.filename,'intent.json','RECEIVING.json','members'].includes(name))continue;
   if(name==='.incoming'){await privateDirectory(path.join(root,name));for(const temporary of await fs.readdir(path.join(root,name))){
    const st=await fs.lstat(path.join(root,name,temporary));need(/^\.zip-receive-[a-f0-9-]{36}\.part$/.test(temporary)&&st.isFile()&&!st.isSymbolicLink()&&st.nlink===1,'Unrecognized retained receiving temporary');}continue;}
   const stat=await fs.lstat(path.join(root,name));
   need(/^\.zip-receive-[a-f0-9-]{36}\.part$/.test(name)&&stat.isFile()&&!stat.isSymbolicLink()&&stat.nlink===1,
    'Receiving root contains an unlisted item');
  }
- return {schema:SCHEMA,state:'VERIFIED',directory:root,archiveSha256:digest,archiveBytes:archive.length,
+ return {schema:codec.schema,state:'VERIFIED',directory:root,archiveSha256:digest,archiveBytes:archive.length,
   entries:rebuilt.entries.length,files:rebuilt.entries.filter(x=>x.kind==='file').length,
   uncompressedBytes:rebuilt.archive.uncompressedBytes,receipt:path.join(root,'RECEIVING.json'),members:path.join(root,'members')};
 }
-async function receiveZipArchive({archive:filename,directory,expectedSha256,...selected}={}){
+async function receiveZipArchive(options={}){return receiveArchive(options,ZIP_CODEC);}
+async function receiveArchive({archive:filename,directory,expectedSha256,...selected}={},codec){
  need(typeof filename==='string'&&filename&&typeof directory==='string'&&directory,'Supply archive and receiving directory paths');
  const options=limits(selected),digest=expectedDigest(expectedSha256),bytes=await readOriginal(filename,options.maxBytes);
  need(sha(bytes)===digest,'Original ZIP differs from the independently retained SHA-256');
- const receipt=describeArchive(bytes,options),parsed=zip.readZipArchive(bytes,options),root=path.resolve(directory);
+ const parsed=await codec.parse(bytes,options),receipt=parsed.receipt,root=path.resolve(directory);
  const prior=await exists(root);let created=false;
  if(!prior){try{await fs.mkdir(root,{mode:0o700});created=true;await syncDirectory(path.dirname(root));}catch(error){if(error.code!=='EEXIST')throw error;}}
  await privateDirectory(root);
- const intent=Buffer.from(JSON.stringify({schema:SCHEMA,archiveSha256:digest,archiveBytes:bytes.length,limits:options})+'\n');
+ const intent=Buffer.from(JSON.stringify({schema:codec.schema,archiveSha256:digest,archiveBytes:bytes.length,limits:options})+'\n');
  if(!created&&!await exists(path.join(root,'intent.json'))){
   // Only an explicitly selected empty private directory, or exact original
   // exact intent prefixes left by a partial write, can finish first publication.
@@ -183,8 +187,8 @@ async function receiveZipArchive({archive:filename,directory,expectedSha256,...s
  await publishFile(root,'intent.json',intent);
  // Same-source concurrent callers publish identical immutable files. Exclusive
  // hard links never replace another file; the final receipt is written last.
- if(await exists(path.join(root,'RECEIVING.json')))return verifyZipReceiving({directory:root,expectedSha256:digest});
- await publishFile(root,'archive.zip',bytes);
+ if(await exists(path.join(root,'RECEIVING.json')))return verifyArchiveReceiving({directory:root,expectedSha256:digest},codec);
+ await publishFile(root,codec.filename,bytes);
  const members=path.join(root,'members'),incoming=path.join(root,'.incoming');await privateDirectory(members,true);await privateDirectory(incoming,true);
  for(const entry of parsed.entries){
   const parent=await ensureMemberParents(members,entry.path),name=path.basename(entry.path);
@@ -194,7 +198,7 @@ async function receiveZipArchive({archive:filename,directory,expectedSha256,...s
  await validateTree(members,receipt);
  await publishFile(root,'RECEIVING.json',Buffer.from(receiptText(receipt)));
  await syncDirectory(root);
- return verifyZipReceiving({directory:root,expectedSha256:digest});
+ return verifyArchiveReceiving({directory:root,expectedSha256:digest},codec);
 }
 async function main(argv){
  const command=argv.shift(),args={};
@@ -222,6 +226,7 @@ async function main(argv){
  process.stdout.write(JSON.stringify(result,null,2)+'\n');
 }
 module.exports={describeArchive,receiveZipArchive,verifyZipReceiving,main,
+ archiveReceiving:Object.freeze({receive:receiveArchive,verify:verifyArchiveReceiving}),
  receivingIO:Object.freeze({readOriginal,privateDirectory,syncDirectory,publishFile})};
 if(require.main===module)main(process.argv.slice(2)).catch(error=>{
  process.stderr.write(JSON.stringify({code:error.code??'ZIP_SOURCE_RECEIVING_FAILED',message:String(error.message??error)})+'\n');process.exitCode=1;

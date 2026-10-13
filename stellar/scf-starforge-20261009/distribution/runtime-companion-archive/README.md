@@ -1,19 +1,19 @@
 # Installed Runtime Companion archive receiving
 
-This source-owned capability makes the complete reviewed archive/source consumer available through the installed `starforge` catalogue. It keeps the original ZIP readers, mixed Python/JavaScript collectors, Acorn parser, receiving journals, Runtime Files, Companion file sets and working-copy preparation. It creates no application, workspace, native controller or replacement parser.
+This source-owned capability makes the complete reviewed archive/source consumer available through the installed `starforge` catalogue. It keeps the original ZIP readers, adds Python standard-library TAR intake, and retains the mixed Python/JavaScript collectors, Acorn parser, receiving journals, Runtime Files, Companion file sets and working-copy preparation. It creates no application, workspace, native controller or replacement parser.
 
 The two commands are registered by `contributions/runtime-companion-archive.json`:
 
 | Command | Original operation |
 | --- | --- |
-| `starforge runtime-companion-source` | Collect an ordinary ZIP into the complete source packet; inspect or receive the same packet using the unchanged collectors. |
+| `starforge runtime-companion-source` | Collect an ordinary ZIP, TAR or tar.gz into the complete source packet; inspect or receive the same packet using the unchanged collectors. |
 | `starforge runtime-companion-archive` | Receive into an existing Runtime, review its saved originals, prepare one retained working copy, or export complete original source for independent receiving. |
 
 `starforge registrations --source runtime-companion-archive` displays the complete registration. `starforge registrations --command runtime-companion-archive` identifies its exact installed entrypoint. Both commands appear in ordinary `starforge --help`. The direct package exports `./runtime-workspace/companion-archive` and `./runtime-workspace/application-archive-source` expose the original CommonJS APIs; direct API consumers continue to supply explicit trusted Runtime source and existing workspace identities.
 
 ## Complete source and installation
 
-The `toolkit/` directory preserves all **28 original files byte-for-byte** from public source PR4612, merge `9a5740b818554831faea42eda679efa923391169`. Their original paths remain relative to that directory. `SOURCE_EDITION.json` lists every retained member's length, SHA-256 and Git blob identity, plus the original ordinary ZIP identity. The installed wrappers do not alter those bodies.
+The `toolkit/` directory contains the complete original 28-file source family plus three TAR source/guide members. Five original consumer/receiving bodies are advanced coherently; the mixed collectors, parser engine, strict ZIP codec, Runtime API and installed wrappers stay at their original source. `SOURCE_EDITION.json` lists all 31 complete current members and the exact original 28-file edition. Its historical ZIP identity describes that predecessor, not the current TAR toolkit.
 
 The contribution declares the complete directory and every original toolkit member explicitly. This includes Python modules, CommonJS helpers, original examples, Acorn source and its MIT license, so source collection does not depend on inferring CommonJS or Python imports. The dedicated recipe also selects the maintained Runtime workspace and its existing `runtime-application-inputs` contribution. Its original browser declarations, import closure and runtime dependencies are resolved by the maintained builder.
 
@@ -34,9 +34,13 @@ Use the Node version required by the installed release (the current Runtime uses
 
 The installed consumer derives its trusted Runtime source from the adjacent `distribution/runtime-workspace` inside the same source installation. It refuses a `--runtime-source` override. The original direct toolkit command remains available for an operator intentionally selecting a different trusted source. Neither command reads executable authority from the incoming packet or receiving receipt.
 
+## TAR and tar.gz source
+
+The same `runtime-companion-source collect` command accepts `--archive-format tar` or `--archive-format tar.gz`, preserving the complete original bytes. Read [the full TAR source/receiving guide](toolkit/host/TAR_APPLICATION_SOURCE.md) for exact commands, standard-library parsing, format bounds, complete original member mapping and cold verification. `inspect` and `receive` read the explicit packet format. No wrapper or Runtime path changes are needed.
+
 ## 1. Retain the complete original source packet
 
-If the complete `commons.application-archive-source.v1` packet is already retained, preserve its exact bytes and SHA-256 and proceed to receiving. Otherwise choose the original ZIP, its independently retained SHA-256, the actual source root inside that ZIP, and the complete mixed-source selection. The selection names the real Python/JavaScript entrypoints and explicit resources; it must not invent launch roots or application behavior.
+If the complete original ZIP v1 or explicit TAR v2 archive-source packet is already retained, preserve its exact bytes and SHA-256 and proceed to receiving. Otherwise choose the original ZIP, its independently retained SHA-256, the actual source root inside that ZIP, and the complete mixed-source selection. The selection names the real Python/JavaScript entrypoints and explicit resources; it must not invent launch roots or application behavior.
 
 ```sh
 starforge runtime-companion-source collect \

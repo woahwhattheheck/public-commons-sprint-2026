@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "runtime-companion-archive",
-  "description": "Receive complete original ZIP and mixed application source into existing Runtime Files and Companion sets, prepare retained working copies, and independently export and reopen the originals.",
+  "description": "Receive complete original ZIP/TAR/tar.gz and mixed application source into existing Runtime Files and Companion sets, prepare retained working copies, and independently export and reopen the originals.",
   "components": [
     "stellar/scf-starforge-20261009/distribution/runtime-companion-archive"
   ],
@@ -33,7 +33,10 @@
     "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/AGENTS.md",
     "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/runtime_companion_archive.cjs",
     "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/RUNTIME_COMPANION_ARCHIVE.md",
-    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/README.md"
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/README.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/application_tar_source.py",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/connected_tar_archive.cjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/TAR_APPLICATION_SOURCE.md"
   ],
   "commands": {
     "runtime-companion-archive": "stellar/scf-starforge-20261009/distribution/runtime-companion-archive/cli.mjs",
@@ -41,7 +44,7 @@
   },
   "commandDescriptions": {
     "runtime-companion-archive": "Receive, review, prepare and independently export complete source through existing Runtime Companion",
-    "runtime-companion-source": "Collect, inspect and receive complete ZIP/Python/JavaScript application source without executing the application"
+    "runtime-companion-source": "Collect, inspect and receive complete ZIP/TAR/Python/JavaScript application source without executing the application"
   },
   "exports": {
     "./runtime-workspace/companion-archive": "./source/stellar/scf-starforge-20261009/distribution/runtime-companion-archive/toolkit/host/runtime_companion_archive.cjs",
