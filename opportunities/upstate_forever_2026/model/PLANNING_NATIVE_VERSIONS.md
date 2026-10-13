@@ -46,6 +46,18 @@ A compatible historical inventory remains usable without rebuilding rasters or r
 
 A new bound inventory must have complete matching version metadata in its native input identity, inventory JSON and saved record. Partial bindings or changed provenance fail inspection. Original source bodies, feature identities, grid/profile, artifacts and annual units continue through their existing checks.
 
+## Reuse completed reductions during the version upgrade
+
+An explicit build first looks for an already completed inventory under the new bound identity. If none exists, it checks the exact pre-binding input identity for a completed original inventory.
+
+The engine uses the original inspect path to verify that historical record, its complete CSV and inventory files, current source/artifact identities, and the version compatibility of its retained runs. Every original identity field must match the new request after removing only the added native_versions binding.
+
+When that complete match exists, the engine writes a new immutable inventory metadata edition and Workspace record. The new edition retains the exact original CSV descriptor and bytes, original feature metadata, support and physical quantities. Its derived_from field carries the original inventory ID, selection ID and both file descriptors. Original files and records remain unchanged. The ordinary full Workspace archive includes both editions and their shared original CSV.
+
+This path performs no polygon/raster reduction and does not create a second CSV. Geographic libraries are imported only when the ordinary reduction begins, so reopening or binding a verified completed inventory can use the application's standard Python metadata/source path. Its separate read-processing.json records mode retained_inventory_version_binding, reused_from_inventory_id and zero raster-cache read calls. It still verifies the original files; file hashing is distinct from native Rasterio cell reads.
+
+A different polygon/source selection, run/artifact identity, grid, profile or original method has a different pre-binding identity and follows the ordinary calculation. An existing but inconsistent original record fails verification rather than being relabeled. The new record is published under the existing inventory lock and completed pointer; a retry reopens the same complete version-bound edition.
+
 ## Through the current workflow
 
 The ordinary planning inventory build/inspect paths enforce this binding. Portfolio selection and native evaluation continue through the maintained portfolio engine and its separately owned paired-baseline resolver.
