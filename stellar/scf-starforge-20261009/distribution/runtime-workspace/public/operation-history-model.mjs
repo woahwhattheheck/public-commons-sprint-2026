@@ -20,15 +20,17 @@ const FIELDS = [
   'startedAt', 'updatedAt', 'completedAt', 'attempt', 'pythonStage', 'sourceBuildStage', 'resultSource',
 ];
 export const OPERATION_HISTORY_FILTERS = ['all', 'active', 'attention', 'completed'];
+function originalError(value) {
+  return { code: String(value.code ?? ''), message: String(value.message ?? ''),
+    ...(plain(value.flock) ? { flock: JSON.parse(JSON.stringify(value.flock)) } : {}) };
+}
 export function operationSummary(job) {
   const value = {};
   for (const key of FIELDS) if (Object.hasOwn(job, key) &&
       (job[key] === null || ['string', 'number', 'boolean'].includes(typeof job[key]))) value[key] = job[key];
-  if (job.error) value.error = { code: String(job.error.code ?? ''), message: String(job.error.message ?? '') };
+  if (job.error) value.error = originalError(job.error);
   if (job.observation) value.observation = { status: job.observation.status, source: job.observation.source,
-    checkedAt: job.observation.checkedAt, ...(job.observation.error ? { error: {
-      code: String(job.observation.error.code ?? ''), message: String(job.observation.error.message ?? ''),
-    } } : {}) };
+    checkedAt: job.observation.checkedAt, ...(job.observation.error ? { error: originalError(job.observation.error) } : {}) };
   value.resultAvailable = typeof job.resultAvailable === 'boolean' ? job.resultAvailable : job.result !== undefined && job.result !== null;
   value.commandResultAvailable = typeof job.commandResultAvailable === 'boolean' ? job.commandResultAvailable : job.commandResult !== undefined && job.commandResult !== null;
   return value;
