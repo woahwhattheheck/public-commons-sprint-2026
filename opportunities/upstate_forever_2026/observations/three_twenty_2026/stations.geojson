@@ -1,0 +1,85 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.636966,
+          34.704792
+        ]
+      },
+      "properties": {
+        "station": "SV-833",
+        "identifier": "21SC60WQ_WQX-SV-833",
+        "description": "THREE AND TWENTY CREEK AND HWY 88",
+        "latitude": 34.704792,
+        "longitude": -82.636966,
+        "crs": "WGS84",
+        "source_path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+        "source_sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.70322019,
+          34.64971302
+        ]
+      },
+      "properties": {
+        "station": "RS-26250",
+        "identifier": "21SC60WQ_WQX-RS-26250",
+        "description": "Three and Twenty Creek at HWY 178/ Liberty HWY",
+        "latitude": 34.64971302,
+        "longitude": -82.70322019,
+        "crs": "WGS84",
+        "source_path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-station-2026-original.csv",
+        "source_sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.746416,
+          34.627544
+        ]
+      },
+      "properties": {
+        "station": "SV-735",
+        "identifier": "21SC60WQ_WQX-SV-735",
+        "description": "THREE AND TWENTY CREEK AT SR 29",
+        "latitude": 34.627544,
+        "longitude": -82.746416,
+        "crs": "WGS84",
+        "source_path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+        "source_sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.77229111,
+          34.59978497
+        ]
+      },
+      "properties": {
+        "station": "SV-111",
+        "identifier": "21SC60WQ_WQX-SV-111",
+        "description": "THREE AND TWENTY CREEK AT S-04-280",
+        "latitude": 34.59978497,
+        "longitude": -82.77229111,
+        "crs": "WGS84",
+        "source_path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+        "source_sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+      }
+    }
+  ]
+}
