@@ -16,6 +16,7 @@ from . import implementation_report_transfer as fieldwork
 from .portable_implementation import report_edition
 from . import gauge_study_receiving
 from . import ensemble_study_receiving
+from . import observation_comparability_study_transfer as comparability_transfer
 
 HEX = re.compile(r"[0-9a-f]{64}")
 SCHEMA = "upstate.study-receiving-view/v1"
@@ -51,6 +52,7 @@ def _summary(value):
         "selection": deepcopy(identity["selection"]),
         **gauge_study_receiving.summary(identity),
         **ensemble_study_receiving.summary(identity),
+        **comparability_transfer.summary(identity),
     }
 
 
@@ -144,6 +146,7 @@ def detail(workspace, key):
         result["field_sources"].append(row)
     gauge_study_receiving.augment(closure, retained, result)
     ensemble_study_receiving.augment(closure, retained, result)
+    comparability_transfer.augment(closure, retained, result)
     # Validate the resolved file identities again after constructing this read.
     # The existing ticket service verifies actual member bytes when downloaded.
     closure.assert_unchanged()
