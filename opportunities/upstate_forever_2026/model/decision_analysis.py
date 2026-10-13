@@ -1213,6 +1213,14 @@ def _parcels(inventory, run_id, top_n, metrics=METRICS):
             "interpretation": "Original parcel records are ranked independently within each physical pollutant; overlapping records and their benefits are never added into a combined management result"}
 
 
+def _lifecycle_module():
+    if __package__:
+        from . import lifecycle_economics
+    else:
+        import lifecycle_economics
+    return lifecycle_economics
+
+
 def analyze_packet(packet, selection):
     """Turn source-bound physical results into economics and scenario choices."""
     packet = _scoped_packet(packet, selection)
@@ -1293,6 +1301,11 @@ def analyze_packet(packet, selection):
         report["physical_source"] = packet["physical_source"]
         report["scope"]["reporting_unit"] = packet["physical_source"]["zone"]
         report["methodology"].append("Native zone intake uses the original producer\'s all-run common annual masses. Its exact source report, geographic selection, original coverage and pairwise details travel with the decision edition.")
+    if selection.get("lifecycle") is not None:
+        try:
+            report["lifecycle"] = _lifecycle_module().analyze(report, selection["lifecycle"])
+        except ValueError as error:
+            raise DecisionError(str(error)) from error
     _canonical(report)
     return report
 
@@ -1408,6 +1421,9 @@ def export_report(report, destination, *, template=None, input_packet=None):
              "discount_rate", "present_value", "annualized", "source_title", "source_uri",
              "source_as_of", "note"], costs)
         _write_csv(stage / "sources.csv", ["role", "path", "sha256", "bytes"], report["sources"])
+        if report.get("lifecycle") is not None:
+            for filename, (fields, rows) in _lifecycle_module().csv_tables(report["lifecycle"]).items():
+                _write_csv(stage / filename, fields, rows)
         application = stage / "application"
         application.mkdir()
         for name in ("decision_analysis.py", "decision_cli.py"):
@@ -1415,11 +1431,16 @@ def export_report(report, destination, *, template=None, input_packet=None):
             if not source.is_file():
                 raise DecisionError("Complete source companion is missing: " + name)
             shutil.copyfile(source, application / name)
+        lifecycle_source = Path(__file__).with_name("lifecycle_economics.py")
+        if lifecycle_source.is_file():
+            shutil.copyfile(lifecycle_source, application / lifecycle_source.name)
+        elif report.get("lifecycle") is not None:
+            raise DecisionError("Complete lifecycle source companion is missing")
         shutil.copyfile(template_path, application / "decision_desk.html")
         receiver = Path(__file__).with_name("decision_receive.py")
         if receiver.is_file():
             shutil.copyfile(receiver, application / receiver.name)
-        for name in ("DECISION_METHODS.md", "DECISION_WALKTHROUGH.md", "DECISION_INTEGRATION.md", "COST_SOURCE_INTAKE.md"):
+        for name in ("DECISION_METHODS.md", "DECISION_WALKTHROUGH.md", "DECISION_INTEGRATION.md", "COST_SOURCE_INTAKE.md", "LIFECYCLE_ECONOMICS.md"):
             source = Path(__file__).with_name(name)
             if source.is_file():
                 shutil.copyfile(source, application / name)
