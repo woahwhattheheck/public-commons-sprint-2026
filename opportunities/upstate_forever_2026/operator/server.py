@@ -1049,7 +1049,10 @@ class Operator:
         if task["action"] in PARAMETER_STUDY_ACTIONS and task["state"] == "complete" and result.get("id"):
             if task["action"] == "parameter-study.source.prepare":
                 task["_item"] = {"kind": "parameter-studies", "id": result["experiment_id"]}
-                task["_downloads"] = result.get("downloads", [])
+                prepared = self.parameter_studies.read(task["workspace"], "scientific-source",
+                    {"source_id": result["id"]})
+                task["result"] = {**result, **prepared}
+                task["_downloads"] = prepared.get("downloads", [])
             else:
                 task["_item"] = {"kind": "parameter-studies", "id": result["id"]}
                 task["_downloads"] = self.item(task["workspace"], "parameter-studies", result["id"])["_downloads"]
