@@ -16,7 +16,7 @@ from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, now, read_json, relative_file, verify_file)
 
 SCHEMA = "upstate.receiving-water-report-source/v1"
-EDITION = "receiving-water-report-source/1"
+EDITION = "receiving-water-report-source/2"
 FOLDER = "receiving-water-report-sources"
 SOURCE_ID = "receiving-water-scientific-report"
 LOCK = ".receiving-water-report-source.lock"
@@ -116,7 +116,11 @@ def _study_identity(plan, analysis):
 
 def _implementation(analysis):
     from . import receiving_waters
-    modules = {"producer": Path(__file__), "plan_reader": Path(receiving_waters.__file__)}
+    from . import receiving_water_report_maps, scientific_map_figures, scientific_figures
+    modules = {"producer": Path(__file__), "plan_reader": Path(receiving_waters.__file__),
+               "map_capture": Path(receiving_water_report_maps.__file__),
+               "map_renderer": Path(scientific_map_figures.__file__),
+               "scientific_figures": Path(scientific_figures.__file__)}
     if analysis is not None:
         from . import receiving_water_delivery, scientific_report
         modules.update(exporter=Path(receiving_water_delivery.__file__),
@@ -501,6 +505,9 @@ def prepare(workspace, selection, *, progress=None):
                 _copy_file(source, target)
                 if file_digest(target) != identity["capture_implementation"][name]:
                     raise ValueError("Report implementation changed during capture")
+            from . import receiving_water_report_maps
+            maps = receiving_water_report_maps.prepare(directory, plan,
+                progress=(lambda value: progress({**value, "report_source_id": key})) if progress else None)
             sections = _plan_sections(plan, analysis, views)
             if inventory is not None:
                 from .scientific_report import receiving_sections
@@ -513,7 +520,8 @@ def prepare(workspace, selection, *, progress=None):
                 "capture identities; the accompanying files retain the complete original sources.",
             ]])
             title = selected.get("title") or (analysis["title"] if analysis else plan["title"])
-            companions = _capture_members(directory, plan, analysis, sources, modules)
+            companions = _capture_members(directory, plan, analysis, sources, modules) + maps["files"]
+            companions.sort(key=lambda item: item["path"])
             source_links = ["native/plan/plan.json", "original-source-index.json"]
             if analysis is not None:
                 source_links += ["native/analysis/analysis.json", "native/receiving-water-delivery.json"]
@@ -524,7 +532,8 @@ def prepare(workspace, selection, *, progress=None):
             recipe = {"schema": observed_context.SCHEMA, "title": title, "edition": EDITION,
                       "report_context_kind": "receiving-water-scientific-study",
                       "project_id": workspace.project["id"], "inputs": companions,
-                      "sections": sections, "figures": [], "source_links": source_links}
+                      "sections": sections, "figure_spec": maps["figure_spec"],
+                      "figures": maps["figures"], "source_links": source_links + [maps["figure_spec"]]}
             atomic_json(directory / "report-source.json", recipe, immutable=True)
             entry = {"id": SOURCE_ID, "kind": "document", "title": title,
                      "uri": "urn:upstate:receiving-water-report:" + workspace.project["id"] + ":" + key,
