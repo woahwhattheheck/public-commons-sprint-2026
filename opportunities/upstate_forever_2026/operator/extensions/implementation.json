@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "12",
+  "version": "13",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -253,7 +253,8 @@
       },
       {
         "methods": [
-          "GET"
+          "GET",
+          "POST"
         ],
         "path": "/api/implementation/observations-preview",
         "operation": "observations-preview",

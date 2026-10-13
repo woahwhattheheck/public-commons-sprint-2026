@@ -96,3 +96,13 @@ Use the existing utility Monitoring Workspace and actual reviewed programme/fron
 Prepare the existing comparison scientific source and append it to the current ordered report through the maintained workflow. The original complete Workspace backup/restore remains the editable receiving path.
 
 This extension needs no new receiver, source download or model run. It preserves the source editions and actual plan results already operated by the existing course.
+
+## Original-source work across larger comparisons
+
+A comparison loads its matching completed utility preparations and original report inventories once. Every feasible plan derives its area, station and calendar interpretation from that same operation-local snapshot. Infeasible choices retain their original unavailable values.
+
+Per-plan metadata generation does not reopen or hash the shared original report files. At packet assembly, each original source export is reopened once, its descriptor inventory is compared with the retained snapshot, and each ordinary member is verified and streamed once into the shared utility-sources directory. The maintained packet writer independently verifies the actual streamed byte count and SHA-256.
+
+The source snapshot belongs to one export operation; it is not a persistent cache and is never reused across another Workspace or a later invocation. The saved context still includes original preparation record identities and original source descriptors. A changed source inventory fails assembly before the new complete archive is published. Existing single-plan and campaign exports retain their normal full original-source checks.
+
+This makes original-source loading and archive assembly scale with the distinct source editions rather than with the number of budget choices. Per-plan calculations and metadata still scale with the actual plans, catchments, stations and calendars. No measured runtime is implied.

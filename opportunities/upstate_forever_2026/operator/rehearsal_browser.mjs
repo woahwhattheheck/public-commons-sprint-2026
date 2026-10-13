@@ -24,10 +24,10 @@ async function rehearsalBrowserMain(argv) {
   const fail = (code, message) => { const error = new Error(message); error.publicCode = code; throw error; };
   const exists = async path => { try { await fs.access(path); return true; } catch(error) { if(error.code === 'ENOENT') return false; throw error; } };
   const readJSON = async path => JSON.parse(await fs.readFile(path,'utf8'));
-  const pause = ms => new Promise(resolve => setTimeout(resolve,ms));
+  const pause = async ms => { await new Promise(resolve => setTimeout(resolve,ms)); checkRunning(); };
   const waitFor = async (condition, code, timeout=30000) => {
     const end = Date.now()+timeout;
-    while(Date.now()<end) { const value=await condition(); if(value) return value; await pause(150); }
+    while(Date.now()<end) { checkRunning(); const value=await condition(); checkRunning(); if(value) return value; await pause(150); }
     fail(code,'The original browser step is still incomplete; resume this same input.');
   };
   async function atomic(path, bytes) {
@@ -49,9 +49,32 @@ async function rehearsalBrowserMain(argv) {
   function validId(value) { if(typeof value!=='string'||!ID.test(value)) fail('ORIGINAL_ID_REQUIRED','Choose the complete original case and workspace identities.'); return value; }
   let context=null,page=null,settings=null,connection=null,output=null,privateDirectory=null,progress=null,lockHandle=null,lockPath=null;
   let uiErrors=[];
+  let stopRequested=null,contextClosing=null,activeRecording=null,retainInterruptedRecording=null;
+  const activeRequests=new Set();
+  function checkRunning() {
+    if(stopRequested) fail('BROWSER_INTERRUPTED','The original browser received '+stopRequested.signal+'.');
+  }
+  async function closeActiveContext() {
+    if(context) {
+      const closing=context;context=null;page=null;
+      const pending=closing.close();contextClosing=pending;
+      try { await pending; }
+      finally { if(contextClosing===pending)contextClosing=null; }
+    } else if(contextClosing) await contextClosing;
+  }
+  function requestStop(signal) {
+    if(stopRequested)return;
+    stopRequested={signal,requested_at:now()};
+    for(const request of activeRequests)
+      request.destroy(Object.assign(new Error('Original browser stop requested.'),{publicCode:'BROWSER_INTERRUPTED'}));
+    void closeActiveContext().catch(error=>{stopRequested.close_error=String(error.message||error);});
+  }
+  const stopHandlers=new Map(['SIGTERM','SIGINT'].map(signal=>[signal,()=>requestStop(signal)]));
+  for(const [signal,handler]of stopHandlers)process.on(signal,handler);
   try {
     if(argv.length!==1||!isAbsolute(argv[0])) fail('INPUT_REQUIRED','Pass one absolute path to the complete browser input JSON.');
     settings=await readJSON(argv[0]);
+    checkRunning();
     const fields=['schema','operation_id','connection_file','rehearsal_id','sender_workspace','receiver_workspace','output_directory','playwright_module','executable'];
     if(!settings||!equal(Object.keys(settings).sort(),fields.sort())||settings.schema!=='upstate.rehearsal-browser-input/v1'||
        !/^[A-Za-z0-9_-]{16,100}$/.test(settings.operation_id||'')) fail('INPUT_SCHEMA','Select the original browser receiving input.');
@@ -126,7 +149,21 @@ async function rehearsalBrowserMain(argv) {
       }
       return {path:publicPath(destination),filename:basename(destination),...actual};
     }
+    retainInterruptedRecording=async()=>{
+      if(!activeRecording||activeRecording.attempt.state==='complete')return;
+      const {video,attempt}=activeRecording;
+      attempt.state=stopRequested?'interrupted':'failed';attempt.ended_at=now();
+      attempt.interruption=copy(stopRequested||{reason:'browser_error',requested_at:now()});
+      try {
+        const path=await video.path();
+        attempt.file=await publicFile(path,'interrupted-operator-walkthrough','.webm');
+      } catch(error) {
+        attempt.finalization_error=String(error.message||error);
+      }
+      activeRecording=null;
+    };
     function api(route,parameters={}) {
+      checkRunning();
       const path=route+'?'+new URLSearchParams(parameters);
       if(!route.startsWith('/api/')||/[\r\n]/.test(path)) fail('ORIGINAL_API','Choose an original operator read.');
       return new Promise((resolveRead,reject)=>{
@@ -140,6 +177,7 @@ async function rehearsalBrowserMain(argv) {
             resolveRead(JSON.parse(Buffer.concat(chunks).toString('utf8')));
           }catch(error){reject(error);}});
         });
+        activeRequests.add(request);request.once('close',()=>activeRequests.delete(request));
         request.setTimeout(60000,()=>request.destroy(Object.assign(new Error('Original operator read timed out.'),{publicCode:'OPERATOR_READ_TIMEOUT'})));
         request.on('error',reject);request.end();
       });
@@ -187,13 +225,16 @@ async function rehearsalBrowserMain(argv) {
     const chromium=imported.chromium||imported.default?.chromium;
     if(!chromium?.launchPersistentContext) fail('PLAYWRIGHT_RUNTIME','Use the existing Playwright module with Chromium support.');
     const profile=join(privateDirectory,'profile');
-    async function launch(recordingDirectory=null) {
+    async function launch(recordingDirectory=null,recordingAttempt=null) {
+      checkRunning();
       context=await chromium.launchPersistentContext(profile,{
         executablePath:settings.executable,headless:true,acceptDownloads:true,viewport:{width:1440,height:1000},
         ...(recordingDirectory?{recordVideo:{dir:recordingDirectory,size:{width:1440,height:1000}}}:{})
       });
+      checkRunning();
       context.setDefaultTimeout(30000);context.setDefaultNavigationTimeout(60000);
       page=context.pages()[0]||await context.newPage();
+      if(recordingAttempt){const video=page.video();if(video)activeRecording={video,attempt:recordingAttempt};}
       // Other retained pages are closed only within this caller-owned private profile.
       for(const other of context.pages())if(other!==page)await other.close();
       page.on('pageerror',error=>uiErrors.push({observed_at:now(),message:String(error.stack||error)}));
@@ -202,15 +243,15 @@ async function rehearsalBrowserMain(argv) {
       await selectWorkspace(settings.sender_workspace);
     }
     async function closeBrowser() {
-      if(context) { const closingContext=context;context=null;page=null;await closingContext.close(); }
+      await closeActiveContext();
       if(uiErrors.length) {await writeJSON(join(privateDirectory,'browser-errors.json'),uiErrors);}
     }
-    const locator=selector=>page.locator(selector);
+    const locator=selector=>{checkRunning();return page.locator(selector);};
     async function click(selector) {
       const target=locator(selector).first();
       await target.waitFor({state:'visible'});
       await waitFor(()=>target.isEnabled(),'CONTROL_DISABLED');
-      await target.click();
+      checkRunning();await target.click();
     }
     async function closeDialogs() {
       for(const [dialog,button] of [['#form-dialog','[data-action="form-close"]'],['#detail-dialog','[data-action="detail-close"]']])
@@ -288,6 +329,7 @@ async function rehearsalBrowserMain(argv) {
       if(entry.task_id&&entry.task_id!==task.id)fail('TASK_CHANGED','The native task identity changed during receiving.');
     }
     async function mutate(label,action,prepare,arm) {
+      checkRunning();
       let entry=progress.actions[label];
       if(entry?.state==='complete') {
         const task=await readJSON(await verifyArtifact(entry.receipt));checkTask(task,entry);return task;
@@ -304,6 +346,7 @@ async function rehearsalBrowserMain(argv) {
       let reconciliationUsed=false,resumeUsed=false,clicked=false;
       const end=Date.now()+10*60*1000;
       while(Date.now()<end) {
+        checkRunning();
         const state=await browserState();
         const all=[...(state?.receipts||[]),...(state?.pending?[state.pending]:[])];
         const candidates=all.filter(row=>row.request?.workspace===settings.sender_workspace&&row.request.action===entry.action&&equal(row.request.payload,entry.payload)&&
@@ -460,7 +503,8 @@ async function rehearsalBrowserMain(argv) {
       await closeBrowser();
       const attempt={id:randomUUID(),started_at:now(),state:'started',frames:[]};progress.recordings.push(attempt);await checkpoint();
       const directory=join(privateDirectory,'recordings',attempt.id);await fs.mkdir(directory,{recursive:true,mode:0o700});
-      await launch(directory);const video=page.video();if(!video)fail('VIDEO_UNAVAILABLE','The existing Chromium context did not start its actual video recording.');
+      await launch(directory,attempt);const video=page.video();if(!video)fail('VIDEO_UNAVAILABLE','The existing Chromium context did not start its actual video recording.');
+      activeRecording={video,attempt};
       for(const view of ['sources','profiles','runs','spatial','comparisons','deliveries']) {
         await closeDialogs();await click('[data-view="'+view+'"]');
         await waitFor(()=>locator('[data-view="'+view+'"]').getAttribute('aria-current').then(value=>value==='page'),'VIDEO_VIEW');
@@ -471,7 +515,7 @@ async function rehearsalBrowserMain(argv) {
       await closeBrowser();const path=await video.path();const member=await publicFile(path,'operator-walkthrough','.webm');
       attempt.state='complete';attempt.ended_at=now();attempt.file=member;
       progress.phases.recording={state:'complete',...member,started_at:attempt.started_at,ended_at:attempt.ended_at,frames:copy(attempt.frames)};
-      await checkpoint();await launch();
+      await checkpoint();activeRecording=null;await launch();
     }
     async function uploadMedia(member,stepId) {
       const path=await verifyArtifact(member),key=member.sha256;
@@ -589,11 +633,12 @@ async function rehearsalBrowserMain(argv) {
     const files=[recordReceipt,progress.initial.sender,progress.initial.receiver,...Object.values(progress.captures).map(x=>({path:x.path,bytes:x.bytes,sha256:x.sha256})),
       {path:progress.phases.recording.path,bytes:progress.phases.recording.bytes,sha256:progress.phases.recording.sha256},progress.phases.download.file,
       ...Object.values(progress.actions).map(x=>x.receipt),...Object.values(progress.controls).filter(x=>x.original).map(x=>x.original),
-      ...['saved_edits','changed_case','restored_case','receiver'].map(x=>progress.phases[x].record)];
+      ...['saved_edits','changed_case','restored_case','receiver'].map(x=>progress.phases[x].record),
+      ...progress.recordings.filter(x=>x.file).map(x=>({path:x.file.path,bytes:x.file.bytes,sha256:x.file.sha256}))];
     const unique=[...new Map(files.map(x=>[x.path,x])).values()];
     for(const member of unique)await verifyArtifact(member);
     await closeBrowser();
-    progress.status='COMPLETE';progress.completed_at=now();await checkpoint();
+    checkRunning();progress.status='COMPLETE';progress.completed_at=now();await checkpoint();
     const result={schema:'upstate.rehearsal-browser-result/v1',state:'COMPLETE',binding,operation_id:settings.operation_id,rehearsal_id:settings.rehearsal_id,
       started_at:progress.started_at,completed_at:progress.completed_at,
       sender:{workspace:settings.sender_workspace,revision:final.record.revision,record_sha256:final.record.record_sha256},
@@ -605,17 +650,29 @@ async function rehearsalBrowserMain(argv) {
       revision:final.record.revision,media_files:Object.keys(progress.captures).length+1,inspected_controls:Object.keys(progress.controls).length})+'\n');
     return result;
   } catch(error) {
+    try { await closeActiveContext(); } catch(closeError) {
+      if(stopRequested)stopRequested.close_error=String(closeError.message||closeError);
+    }
+    if(retainInterruptedRecording)try{await retainInterruptedRecording();}catch{}
+    if(stopRequested) {
+      error.publicCode='BROWSER_INTERRUPTED';
+      if(progress) {
+        progress.interruptions=progress.interruptions||[];
+        progress.interruptions.push(copy(stopRequested));
+      }
+    }
     // Full diagnostics stay with the caller-owned private profile and connection.
     if(privateDirectory) {
       try {await writeJSON(join(privateDirectory,'last-error.json'),{observed_at:now(),message:String(error.message||error),stack:String(error.stack||''),browser_errors:uiErrors});}catch{}
-      if(progress&&output)try{progress.status='INCOMPLETE';progress.last_error={code:error.publicCode||'BROWSER_CALLER_ERROR',observed_at:now()};
+      if(progress&&output)try{progress.status=stopRequested?'INTERRUPTED':'INCOMPLETE';progress.last_error={code:error.publicCode||'BROWSER_CALLER_ERROR',observed_at:now()};
         await writeJSON(join(output,'results','browser-progress.json'),progress);}catch{}
     }
-    process.stderr.write(canonical({state:'INCOMPLETE',operation_id:/^[A-Za-z0-9_-]{16,100}$/.test(settings?.operation_id||'')?settings.operation_id:null,rehearsal_id:ID.test(settings?.rehearsal_id||'')?settings.rehearsal_id:null,
+    process.stderr.write(canonical({state:stopRequested?'INTERRUPTED':'INCOMPLETE',operation_id:/^[A-Za-z0-9_-]{16,100}$/.test(settings?.operation_id||'')?settings.operation_id:null,rehearsal_id:ID.test(settings?.rehearsal_id||'')?settings.rehearsal_id:null,
       code:error.publicCode||'BROWSER_CALLER_ERROR',message:'The complete original browser state is retained. Continue with this same receiving input.'})+'\n');
-    process.exitCode=1;return null;
+    process.exitCode=stopRequested?130:1;return null;
   } finally {
-    if(context)try{await context.close();}catch{}
+    try{await closeActiveContext();}catch{}
+    for(const [signal,handler]of stopHandlers)process.off(signal,handler);
     if(lockHandle){try{await lockHandle.close();}catch{}try{await fs.unlink(lockPath);}catch{}}
   }
 }

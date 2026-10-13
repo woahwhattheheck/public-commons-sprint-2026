@@ -114,6 +114,34 @@ python -B operator/rehearsal_receiving.py \
 
 When the model executes on a different host, first receive its completed scientific archive on the browser host and bind the receipt to that receiving Workspace. The teaching run opens those saved native results; it does not recalculate the models. Reuse the original source and actual receiving identity when selecting the Workspace.
 
+## Explore the saved parameter study and siting decision
+
+After opening the three original runs, open their retained parameter study, **Simulated headwaters: routing and slope-length sensitivity**. Read its actual ensemble ID from the case receipt. This is the existing `routing-lmax-v1` study; the driver prepares it from the same grid, original profile, baseline, riparian restoration and matched-area control.
+
+| Selected setting | Retained choices | Interpretation |
+| --- | --- | --- |
+| Native flow routing | `mfd` and `d8`, linked in NDR and SDR for each member | Compare the two supported ways of routing flow through the same retained terrain. |
+| SDR maximum L factor | 122 and 333 | Compare the catalogue's declared dimensionless cap values. These are separate from cell size and the restoration distance. |
+| Original working profile | Retained as the reference member | Keep its actual source table, grid and original run selections visible beside the explored choices. |
+
+Open the study's saved specification and source references before its summary. The source catalogue states the meaning and provenance of these choices. The actual member inventory shows which unique profile/run selections were materialized and which original completed stages were reused. The displayed planned and completed counts explain the current scope.
+
+Each parameter member compares its own unchanged baseline with both restoration alternatives. This keeps the selected model assumptions aligned within that comparison. Open the retained profile assignments, original native logs and outputs from a member whose result differs visibly from the reference. Read the physical units and actual shared valid area beside the numbers.
+
+The L-factor cap is used by SDR. Changing only that setting can therefore repeat nutrient outputs while changing sediment outputs. Show that relationship using the saved assignments and actual results. A range across these explicitly chosen settings describes this study's explored cases; it has no probability or confidence level attached to it.
+
+### Read the paired maps and joint decision
+
+Open the study's paired raster product for the selected pollutant and alternative. It retains its original support, case IDs and printed difference direction. Then open the saved joint siting decision from the course result. Its complete output is recorded in `ensemble_results/<ensemble_id>/headwaters-results.json`; `joint_decisions.support_group_reports` lists the retained report indexes, native package paths and reference comparison/profile for each supported group.
+
+The decision compares both restoration alternatives on actual common finite cells. If the available support differs among parameter members, the course retains separate support-group reports. Open each relevant group and its reported pending-member count before summarizing whether the preferred alternative changes. The saved decision selection starts with empty costs and targets, so its physical comparison should be explained through the actual exported quantities and selected support. Enter any later project costs or targets as their own explicit sourced inputs in the maintained application.
+
+The mapped scientific report also includes the retained treatment response. Read its net final changed area, annual mass difference, and supported benefit per treated hectare. The two restoration cases both select 57.15 hectares, while their locations and terrain differ. Explain any reported eligibility reason or unequal common support beside the normalized value. Follow the underlying scenario summary and source tables when a result needs explanation.
+
+For this chapter, say: “These are the same two siting choices under the displayed model settings. Each has a matching baseline. We can see whether their ordering changes, where the supported map comparison applies, and which original outputs support that judgment.”
+
+Retain one actual screen showing profile assignments, member progress and paired physical results, plus one of the selected joint decision's support and source links. Record the native parameter-course interval separately from the three initial case runs; the course keeps its own start, completion and interrupted-state records. Continue an unfinished course through its saved ensemble ID rather than creating another study.
+
 ## Continue into the same field and laboratory case
 
 Open **Implementation & fieldwork** and select the original plan named by `fieldwork.plan_id` in `demo-receiving.json`. The continuation uses the same scientific Workspace and final recipe. Its three planned sampling locations are retained with original projected cell coordinates, transformed latitude/longitude and the recipe hash: the lowest source-DEM cell in each upstream half at 40% of grid height, plus the lowest downstream cell at 85%. Show those locations against the actual computed drainage map. They are planned sampling sites selected from the input terrain.

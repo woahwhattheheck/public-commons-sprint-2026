@@ -341,6 +341,7 @@ export function georgiaReportSection(bank, {basin='Savannah', requireGeography=f
     requireGeography ?
       'Selected reaches intersect the original study-domain polygons. A reach can cross multiple HUCs; row counts and HUC counts measure different things.' :
       'Selection is the publisher Savannah River Basin. Study-domain membership is reported separately when original reach geometry is joined.',
+    'Original source format: '+(bank.source.source_format||'original_workbook_rows')+'. GIS capture and workbook editions retain separate source identities.',
     'The overall row assessment can summarize different designated uses and pollutants. Categories, causes, uses and original notes remain together; a mixed row does not mean every use fails.',
     'Bacteria can retain an earlier fecal-coliform impairment while indicator-specific assessment is pending. These listing rows are separate from the current captured E. coli monitoring cohort.'
   ];
@@ -377,13 +378,173 @@ export function georgiaReportSection(bank, {basin='Savannah', requireGeography=f
   return ['Georgia approved 2024 assessed reaches',blocks];
 }
 
+/** Normalize original ArcGIS feature responses as their own publisher edition. */
+export function normalizeGeorgiaFeatureSources(selection, captureBodies, identity) {
+  if(selection.schema!=='upstate.georgia-feature-selection/v1')
+    throw new Error('Select original Georgia feature-response captures');
+  if(typeof identity!=='function') throw new Error('Supply SHA-256 identity function');
+  const edition=selection.source;
+  if(!edition?.id || !edition?.uri || !Array.isArray(selection.captures) || !selection.captures.length)
+    throw new Error('Retain source identity and original capture selection');
+  if(edition?.assessment_cycle!==2024 || edition?.publication_status!=='EPA-approved' ||
+     edition?.approval_date!=='2024-09-03')
+    throw new Error('Select the approved Georgia2024 publisher edition');
+  const columns={reach_id:'ReachID',reach_name:'Name',reach_location:'Location',
+    county:'County',basin:'Basin',uses:'Uses',assessment:'Assessment',category:'Category',
+    causes:'Cause',sources:'Source',data_provider:'DataSource',size:'Size',unit:'SizeUnit',
+    priority:'Priority',notes:'Notes',...(selection.columns||{})};
+  const manifestBody=JSON.stringify(selection), source={...clone(edition),
+    source_format:'arcgis_feature_response',identity_basis:'ordered_original_capture_manifest',
+    sha256:identity(manifestBody),bytes:unescape(encodeURIComponent(manifestBody)).length,
+    captures:clone(selection.captures)};
+  const bank={schema:'upstate.georgia-assessments/v1',source,method:clone(GEORGIA_METHOD),
+    records:[],non_assessment_rows:[],issues:[],original_capture_inventory:[]};
+  const seenCapture=new Set(),seenFeature=new Set(),idsByLayer=new Map();
+  for(const capture of selection.captures) {
+    if(!capture.id || seenCapture.has(capture.id)) throw new Error('Capture IDs must be distinct');
+    seenCapture.add(capture.id);
+    const text=captureBodies[capture.path];
+    if(typeof text!=='string') throw new Error('Missing complete original response '+capture.path);
+    if(identity(text)!==capture.sha256 || unescape(encodeURIComponent(text)).length!==capture.bytes)
+      throw new Error('Original feature response differs: '+capture.path);
+    const original=JSON.parse(text);
+    if(original.error || original.exceededTransferLimit) throw new Error('Original feature capture is incomplete');
+    if(!Array.isArray(original.features) || !Array.isArray(original.fields))
+      throw new Error('Complete original fields and features are required');
+    const oid=capture.object_id_field||original.objectIdFieldName;
+    if(!oid || original.objectIdFieldName!==oid ||
+       !original.fields.some(f=>f.name===oid && f.type==='esriFieldTypeOID'))
+      throw new Error('Use the original declared OID field');
+    const layer=capture.layer_uri;
+    if(!layer) throw new Error('Retain the original layer URI for feature identity');
+    const layerIds=idsByLayer.get(layer)||new Set();
+    for(const feature of original.features) {
+      const featureId=feature.attributes?.[oid], key=JSON.stringify([layer,featureId]);
+      if(featureId===null || featureId===undefined || seenFeature.has(key))
+        throw new Error('Missing or repeated original feature identity');
+      seenFeature.add(key);layerIds.add(featureId);
+    }
+    idsByLayer.set(layer,layerIds);
+    const rowSource={...source,id:capture.id,uri:capture.uri,sha256:capture.sha256,bytes:capture.bytes};
+    const rows=original.features.map((feature,index)=>({row_number:index+2,values:feature.attributes}));
+    if(rows.some(r=>!r.values || typeof r.values!=='object'))
+      throw new Error('Original feature lacks its attribute object');
+    const normalized=normalizeSheet({name:capture.id,header_row:1,
+      columns:original.fields.map(f=>f.name),rows},
+      {columns,header_row:1},rowSource,identity);
+    const changedIds=new Map();
+    for(const record of normalized.records) {
+      const index=record.source_locator.source_row-2, feature=original.features[index],
+        featureId=feature.attributes[oid];
+      const locator={source_id:capture.id,source_sha256:capture.sha256,
+        source_path:capture.path,source_uri:capture.uri,layer_uri:layer,
+        native_feature_id:featureId,native_feature_id_field:oid,
+        feature_index:index,json_pointer:'/features/'+index+'/attributes'};
+      const id='ga-'+identity(JSON.stringify([capture.sha256,locator.json_pointer,record.native_reach_id]));
+      changedIds.set(record.id,{id,locator});
+      record.id=id;record.source_locator=locator;
+      record.native_feature_id=featureId;record.native_feature_id_field=oid;
+      record.source_format='arcgis_feature_response';
+      record.water_type_raw=feature.attributes.WaterType??null;
+      bank.records.push(record);
+    }
+    for(const row of normalized.nonAssessmentRows) bank.non_assessment_rows.push({
+      source_id:capture.id,source_sha256:capture.sha256,
+      json_pointer:'/features/'+(row.source_row-2)+'/attributes',raw:row.raw});
+    for(const issue of normalized.issues) {
+      const mapped=changedIds.get(issue.record_id);
+      const {worksheet,source_row,...rest}=issue;
+      bank.issues.push({...rest,record_id:mapped?.id,...mapped?.locator});
+    }
+    bank.original_capture_inventory.push({id:capture.id,path:capture.path,uri:capture.uri,
+      layer_uri:layer,bytes:capture.bytes,sha256:capture.sha256,
+      object_id_field:oid,original_feature_count:original.features.length,
+      geometry_type:original.geometryType??null,spatial_reference:clone(original.spatialReference??null),
+      fields:clone(original.fields)});
+  }
+  for(const inventory of selection.feature_inventories||[]) {
+    const text=captureBodies[inventory.path];
+    if(typeof text!=='string' || identity(text)!==inventory.sha256 ||
+       unescape(encodeURIComponent(text)).length!==inventory.bytes)
+      throw new Error('Retain the complete original ID inventory');
+    const original=JSON.parse(text), actual=idsByLayer.get(inventory.layer_uri)||new Set();
+    if(original.error || !Array.isArray(original.objectIds) ||
+       original.objectIdFieldName!==inventory.object_id_field)
+      throw new Error('Original ID inventory lacks the declared field');
+    const expected=new Set(original.objectIds);
+    if(expected.size!==original.objectIds.length || expected.size!==actual.size ||
+       [...expected].some(id=>!actual.has(id)))
+      throw new Error('Feature responses differ from the original selected ID inventory');
+  }
+  const tally=key=>bank.records.reduce((counts,row)=>(counts[row[key]]=(counts[row[key]]||0)+1,counts),{});
+  bank.summary={record_count:bank.records.length,
+    unique_reach_count:new Set(bank.records.map(r=>r.native_reach_id)).size,
+    original_feature_count:seenFeature.size,source_format:'arcgis_feature_response',
+    by_basin:tally('basin_raw'),by_assessment:tally('overall_assessment'),
+    on_303d_record_count:bank.records.filter(r=>r.on_303d_list===true).length,
+    unknown_303d_status_count:bank.records.filter(r=>r.on_303d_list===null).length,
+    issues_count:bank.issues.length,non_assessment_row_count:bank.non_assessment_rows.length,
+    geography_basis:'publisher feature attributes; original study-domain geometry is joined separately'};
+  return bank;
+}
+
+async function emitGeorgiaFeatureSources(args,inputDocument,input) {
+  const sha=value=>createHash('sha256').update(value).digest('hex');
+  const root=dirname(resolve(args.input)), output=resolve(args.output), bodies={}, retained=[];
+  await mkdir(output,{recursive:true});
+  for(const item of [...inputDocument.captures,...(inputDocument.companions||[])]) {
+    const path=resolve(root,item.path);
+    if(!path.startsWith(root+'/')) throw new Error('Original source path escapes selection directory');
+    const body=await readFile(path);
+    if(body.length!==item.bytes || sha(body)!==item.sha256)
+      throw new Error('Original source changed: '+item.path);
+    if(bodies[item.path]!==undefined) throw new Error('Repeated original source path');
+    bodies[item.path]=body.toString('utf8');
+    const relative='originals/'+item.path,target=resolve(output,relative);
+    if(!target.startsWith(output+'/')) throw new Error('Original source path escapes output');
+    await mkdir(dirname(target),{recursive:true});await writeFile(target,body);
+    retained.push({path:relative,bytes:body.length,sha256:sha(body)});
+  }
+  let bank=normalizeGeorgiaFeatureSources(inputDocument,bodies,sha);
+  if(Boolean(args.relations)!==Boolean(args['domain-hucs']))
+    throw new Error('Supply both original relations and domain HUCs');
+  if(args.relations) bank=attachGeorgiaGeography(bank,
+    JSON.parse(await readFile(args.relations,'utf8')),JSON.parse(await readFile(args['domain-hucs'],'utf8')));
+  await writeFile(join(output,'original-feature-selection.json'),input);
+  retained.push({path:'original-feature-selection.json',bytes:input.length,sha256:sha(input)});
+  const entries=[];
+  for(const [path,value,kind,role,title] of [
+    ['assessments.json',bank,'table','GEORGIA_ASSESSMENT_REACHES','Georgia2024 original GIS reach assessments'],
+    ['report-section.json',georgiaReportSection(bank,{requireGeography:Boolean(args.relations)}),
+      'document','REPORT_SECTION','Georgia2024 original GIS assessment context']]) {
+    const body=JSON.stringify(value,null,2)+'\n';await writeFile(join(output,path),body);
+    entries.push({id:'ga2024-gis-'+path.replace(/[^a-z0-9]+/gi,'-'),title,uri:bank.source.uri,
+      vintage:'Georgia2024 approved list; captured GIS publisher edition',kind,role,path,
+      bytes:Buffer.byteLength(body),sha256:sha(body),jurisdiction:'GA',assessment_cycle:2024,
+      publication_status:'EPA-approved',source_format:'arcgis_feature_response',
+      companions:retained});
+  }
+  await writeFile(join(output,'sources.json'),JSON.stringify({schema:'upstate.sources/v1',
+    title:'Georgia2024 original GIS assessment context',captured_at:bank.source.captured_at,
+    scope:inputDocument.scope||'Original publisher-selected feature responses',
+    notes:'Original publisher GIS captures remain separate from the original workbook edition.',
+    entries},null,2)+'\n');
+  process.stdout.write(JSON.stringify({output,summary:bank.summary,
+    geographic_summary:bank.geographic_summary,manifest:join(output,'sources.json')})+'\n');
+}
+
 async function main(argv) {
   const args={};
   for(let i=0;i<argv.length;i+=2) {
     if(!argv[i]?.startsWith('--') || argv[i+1]===undefined) throw new Error('Arguments require --name value');
     args[argv[i].slice(2)]=argv[i+1];
   }
-  for(const key of ['input','configuration','original-workbook','output'])
+  for(const key of ['input','output'])
+    if(!args[key]) throw new Error('Required --'+key);
+  const originalInput=await readFile(args.input), selectedInput=JSON.parse(originalInput.toString('utf8'));
+  if(selectedInput.schema==='upstate.georgia-feature-selection/v1')
+    return emitGeorgiaFeatureSources(args,selectedInput,originalInput);
+  for(const key of ['configuration','original-workbook'])
     if(!args[key]) throw new Error('Required --'+key);
   const sha=value=>createHash('sha256').update(value).digest('hex');
   const configuration=JSON.parse(await readFile(args.configuration,'utf8'));

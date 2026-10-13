@@ -119,6 +119,16 @@ export class ImplementationWorkbench {
     }
   }
 
+  closeCostReview(){this.costReviewEditor?.close();this.costReviewEditor=null;}
+  async openCostReview(){
+    if(!this.native||!this.nativePlan?.revision)throw Error('Save or reopen the original native plan before reviewing Economic costs.');
+    if(this.pending)throw Error('Finish the retained plan operation before opening its cost review.');
+    if(this.root.querySelector('dialog[open]'))throw Error('Finish the current field editor before opening its cost review.');
+    const turn=this.generation,selected=this.plan.id,revision=this.nativePlan.revision,workspace=this.workspace;
+    if(!this.costReviewModule)this.costReviewModule=await import('./implementation_cost_review.mjs');
+    if(this.gone||turn!==this.generation||this.plan?.id!==selected||this.nativePlan?.revision!==revision||this.workspace!==workspace||this.host.getState?.()?.workspace_key!==workspace)return;
+    await this.costReviewModule.openImplementationCostReview(this);
+  }
   closeSampleQC(){if(this.qcModule)this.qcModule.detachImplementationQC(this);else{this.qcEditor?.close();this.qcEditor=null;}}
   async openSampleQC(){
     if(!this.native||!this.nativePlan?.revision)throw Error('Save or reopen the original native plan before reviewing sample quality control.');
@@ -162,34 +172,56 @@ export class ImplementationWorkbench {
   observationBindingCurrent(flow=this.observationFlow){
     return !!flow?.preview && flow.preview.workspace_key===this.workspace &&
       flow.preview.plan_id===this.plan?.id && flow.preview.revision===this.plan?.revision &&
+      docEqual(flow.reviewed_selection??null,flow.existing_report_selection??null) &&
       !this.dirty && !!this.nativePlan && docEqual(this.plan,this.nativePlan);
   }
+  async chooseFieldReportSelection(useCurrent){
+    if(!this.native||this.gone||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the field plan in its original native Workspace.');
+    if(this.pending||['saving','previewing','importing'].includes(this.observationFlow?.stage))throw Error('Finish the retained field-source operation first.');
+    const turn=this.generation,id=this.plan.id,flow={stage:'idle',plan_id:id,existing_report_selection:null,selection_label:''};
+    this.observationFlow=flow;this.cache();this.render();
+    if(!useCurrent)return;
+    this.observationSelectionRead=flow;this.render();
+    const current=()=>!this.gone&&this.generation===turn&&this.plan?.id===id&&this.observationFlow===flow&&flow.stage==='idle'&&!this.pending&&this.host.getState?.()?.workspace_key===this.workspace;
+    try{
+      const module=await import('./implementation_source_reports.mjs');
+      if(!current())return;
+      const selection=await module.captureImplementationReportSelection(this);
+      if(!current()||selection===null)return;
+      flow.existing_report_selection=selection;flow.selection_label='Current Report desk selection, in its original source order';this.cache();this.render();
+    }catch(error){if(current())throw error;}
+    finally{if(this.observationSelectionRead===flow){this.observationSelectionRead=null;if(current())this.render();}}
+  }
   async reviewFieldObservations(){
+    if(this.observationSelectionRead&&this.observationSelectionRead===this.observationFlow)throw Error('Wait for the original Report desk selection to finish loading.');
     if(!this.native||this.gone||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the original native workspace to register field observations.');
     if(this.pending)throw Error('Finish the retained plan operation first.');
     if(this.root.querySelector('dialog[open]'))throw Error('Finish the current field editor first.');
+    const selection=clone(this.observationFlow?.existing_report_selection??null),label=this.observationFlow?.selection_label||'';
     if(this.dirty||!this.nativePlan){
-      this.observationFlow={stage:'saving',plan_id:this.plan.id,operation_id:null};
+      this.observationFlow={stage:'saving',plan_id:this.plan.id,operation_id:null,existing_report_selection:selection,selection_label:label};
       this.cache();
       try{
         const kind=this.importedFile?'implementation.plan.import':this.nativePlan?'implementation.plan.save':'implementation.plan.create';
         await this.queue(kind,{document:this.plan,expected_revision:this.plan.revision});
-      }catch(error){if(!this.pending){this.observationFlow=null;this.cache();}throw error;}
+      }catch(error){if(!this.pending){this.observationFlow.stage='idle';this.cache();}throw error;}
       return;
     }
     const turn=this.generation,selected=clone(this.plan);
-    this.observationFlow={stage:'previewing',plan_id:selected.id};this.cache();this.render();
+    const flow={stage:'previewing',plan_id:selected.id,existing_report_selection:selection,selection_label:label};
+    this.observationFlow=flow;this.cache();this.render();
+    const current=()=>!this.gone&&turn===this.generation&&this.observationFlow===flow&&this.host.getState?.()?.workspace_key===this.workspace;
     try{
-      const result=await this.read('/api/implementation/observations-preview',{plan_id:selected.id,revision:selected.revision});
-      if(this.gone||turn!==this.generation||this.host.getState?.()?.workspace_key!==this.workspace)return;
-      if(!docEqual(this.plan,selected)||this.dirty)throw Error('Field records changed while the preview opened. Save and review their new revision.');
+      const result=await this.host.api('/api/implementation/observations-preview',{method:'POST',body:{workspace:this.workspace,plan_id:selected.id,revision:selected.revision,existing_report_selection:selection}});
+      if(!current())return;
+      if(!docEqual(this.plan,selected)||this.dirty||!docEqual(flow.existing_report_selection,selection))throw Error('Field records or the report selection changed while the preview opened. Save and review their new selection.');
       if(result.schema!=='upstate.implementation-observation-context/v1'||result.workspace_key!==this.workspace||
         result.plan_id!==selected.id||result.revision!==selected.revision||!result.document_digest||!result.operation_id||
         result.plan?.id!==selected.id||result.plan?.revision!==selected.revision)throw Error('The observation preview does not match this saved plan revision.');
-      this.observationFlow={stage:'review',plan_id:selected.id,preview:result};this.tab='field';this.cache();this.render();
+      flow.stage='review';flow.preview=result;flow.reviewed_selection=clone(selection);this.tab='field';this.cache();this.render();
     }catch(error){
-      if(this.gone||turn!==this.generation)return;
-      this.observationFlow=null;this.cache();
+      if(!current())return;
+      flow.stage='idle';flow.preview=null;this.cache();
       throw error;
     }
   }
@@ -202,15 +234,16 @@ export class ImplementationWorkbench {
     try{
       await this.queue('implementation.observations.import',{
         plan_id:flow.preview.plan_id,revision:flow.preview.revision,
-        document_digest:flow.preview.document_digest,observation_operation_id:flow.preview.operation_id
+        document_digest:flow.preview.document_digest,observation_operation_id:flow.preview.operation_id,
+        existing_report_selection:clone(flow.reviewed_selection??null)
       });
     }catch(error){if(!this.pending&&!flow.operation_id){flow.stage='review';this.cache();}throw error;}
   }
   async finishObservationSave(pending){
     const flow=this.observationFlow;
     if(!flow||flow.stage!=='saving'||flow.operation_id!==pending.operation_id||flow.plan_id!==pending.plan_id)return;
-    this.observationFlow=null;this.cache();
-    if(this.dirty){this.message='The field revision is saved. Later browser edits remain available; save and review them when ready.';this.render();return;}
+    flow.stage='idle';flow.operation_id=null;this.cache();
+    if(this.dirty){this.message='The field revision is saved. Later browser edits and the original report selection remain available; save and review them when ready.';this.render();return;}
     await this.reviewFieldObservations();
   }
   completeObservationImport(pending,result){
@@ -255,19 +288,24 @@ export class ImplementationWorkbench {
     const turn=this.generation,planId=this.plan.id;
     const module=await import('./implementation_source_reports.mjs');
     if(this.gone||turn!==this.generation||this.plan?.id!==planId||this.host.getState?.()?.workspace_key!==this.workspace)return;
-    await module.openImplementationSourceReport(this,[source],{title:'Field observations · saved revision '+receipt.revision});
+    await module.openImplementationSourceReport(this,[source],{title:'Field observations · saved revision '+receipt.revision,selection:source.delivery_selection});
   }
   fieldObservationPanel(){
     if(!this.native)return '';
     const flow=this.observationFlow,receipt=(this.observationReceipts||[]).at(-1);
-    const summary=flow?.preview?.summary,working=['saving','previewing','importing'].includes(flow?.stage);
+    const summary=flow?.preview?.summary,reading=!!flow&&this.observationSelectionRead===flow,working=reading||['saving','previewing','importing'].includes(flow?.stage);
     const counts=summary?'<dl>'+[['Original records',summary.row_count],['Numeric',summary.numeric_count],['Censored',summary.censored_count],['Text',summary.text_count],['Missing',summary.missing_count],['Sites',summary.site_count],['Activities',summary.activity_count],['Records without collection time',summary.collection_time_missing_count],['Sites without coordinates',summary.coordinate_missing_site_count]].map(([label,value])=>'<dt>'+esc(label)+'</dt><dd>'+esc(value??'')+'</dd>').join('')+'</dl>':'';
+    const selectedReport=flow?.existing_report_selection;
+    const selectedSources=selectedReport?.observed_context_sources||(selectedReport?.source_roles?.OBSERVED_CONTEXT?[selectedReport.source_roles.OBSERVED_CONTEXT]:[]);
+    const reportSelection='<details><summary>Preserve an existing report selection</summary><p>Use the current Report desk selection to keep its complete source order, earlier sections and figures, and model/geography settings. Registration retains this snapshot; it does not replace the current Report desk draft.</p>'+
+      (typeof this.host.openExtension==='function'?button('observations-use-current','Use current Report desk selection',working||this.pending?'disabled':''):'')+
+      (selectedReport?'<p>'+esc(flow.selection_label||'Original report selection retained')+' · '+esc(selectedSources.length)+' observed '+(selectedSources.length===1?'source':'sources')+'.</p>'+button('observations-clear-selection','Register without preceding report selection',working||this.pending?'disabled':''):'<p>No preceding report selection chosen.</p>')+'</details>';
     const review=flow?.stage==='review'?'<p>Saved revision '+esc(flow.preview.revision)+'. Review the original records and their coverage before registering this edition.</p>'+counts+
       '<div class="iw-actions">'+button('observations-import','Register saved field observations','',this.observationBindingCurrent(flow)&&summary?.row_count>0?'iw-primary':'iw-disabled')+button('observations-dismiss','Dismiss preview')+'</div>':'';
     const ready=receipt?'<section><h4>Registered field revision '+esc(receipt.revision)+'</h4><p>'+esc(receipt.summary?.row_count??'')+' original records. This edition remains tied to its saved plan revision even after later field edits.</p><div class="iw-actions">'+receipt.observation_ids.map((id,index)=>button('observations-open','Open observed data'+(receipt.observation_ids.length>1?' '+(index+1):''),'data-index="'+index+'"')).join('')+button('observations-source','Open retained source and report')+(receipt.report_source?.delivery_selection&&typeof this.host.openDelivery==='function'?button('observations-report','Prepare client report'):'')+(receipt.report_source?.source_id&&typeof this.host.openScientificReport==='function'?button('observations-publish','Prepare standalone scientific report'):'')+button('observations-details','Inspect observation edition')+'</div></section>':'';
     return '<section class="iw-notice" aria-label="Field observations in the scientific workspace"><h3>Use saved field records in Observed water quality</h3><p>Register the actual observations with their sites, collection times, sample relationships, methods and original qualifiers. Censored, text and missing results retain their original meaning. The same saved revision also supplies its field-observation report source.</p>'+
-      (working?'<p>'+esc(flow.stage==='saving'?'Saving the field revision before review.':flow.stage==='previewing'?'Reading the original saved field revision.':'Registering the retained field revision through its original native operation.')+'</p>':
-      '<div class="iw-actions">'+button('observations-review',this.dirty||!this.nativePlan?'Save and review field observations':'Review saved field observations','','iw-primary')+'</div>')+review+ready+'</section>';
+      (working?'<p>'+esc(reading?'Reading the current Report desk selection.':flow.stage==='saving'?'Saving the field revision before review.':flow.stage==='previewing'?'Reading the original saved field revision.':'Registering the retained field revision through its original native operation.')+'</p>':
+      '<div class="iw-actions">'+button('observations-review',this.dirty||!this.nativePlan?'Save and review field observations':'Review saved field observations','','iw-primary')+'</div>')+reportSelection+review+ready+'</section>';
   }
 
   readLocal(){try{const data=JSON.parse(localStorage.getItem(this.storageKey)||'{"plans":{}}');this.offlineCopies=data.plans||{};}catch(e){this.message='Browser storage could not be read. Export JSON to retain your work.';}}
@@ -296,7 +334,7 @@ export class ImplementationWorkbench {
   async read(path,args={}){return this.host.api(this.host.endpoint?this.host.endpoint(path,args):path+'?'+new URLSearchParams({workspace:this.workspace,...args}));}
   async reloadList(){if(this.native){const r=await this.read('/api/implementation/list');if(this.gone)return;this.planList=r.plans||r.implementation_plans||[];}else this.planList=Object.values(this.offlineCopies).map(x=>x.document);}
   async openPlan(id,preferNative=false,revision=null){
-    detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();
+    detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.closeCostReview();
     const turn=++this.generation;this.cache();let remote=null,history=[],downloads=[],reports=[];
     if(this.native){try{const r=await this.read('/api/implementation/detail',{id,...(revision===null?{}:{revision})});remote=r.plan||r.document||null;history=r.history||[];downloads=r._downloads||[];reports=r.reports||[];}catch(e){if(preferNative||!this.offlineCopies[id])throw e;}}
     if(this.gone||turn!==this.generation)return;
@@ -490,9 +528,9 @@ export class ImplementationWorkbench {
       if(current()){this.error=e?.message||String(e);this.message='The completed native operation remains retained. Retry reopening its saved result.';this.cache();if(!this.root.querySelector('dialog[open]'))this.render();}
     }finally{if(this.resolvingOperation===pending.operation_id)this.resolvingOperation=null;}
   }
-  detach(){if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.evidence?.detach();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('input',this.onInput);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
+  detach(){if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.closeCostReview();this.evidence?.detach();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('input',this.onInput);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
   render(){
-    if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.evidence?.beforeRender();const p=this.plan;
+    if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.closeCostReview();this.evidence?.beforeRender();const p=this.plan;
     if(!p){this.root.innerHTML='<section class="iw"><h2>Implementation & fieldwork</h2><p>Opening retained plans…</p>'+(this.error?'<pre role="alert">'+esc(this.error)+'</pre>':'')+'</section>';return;}
     let stats=null,validation=validatePlan(p);try{if(!validation.length)stats=summarize(p,this.asOf);}catch(e){validation=[{path:'calendar',message:e.message}];}
     const plans=new Map([...this.planList.map(x=>[x.id,x]),...Object.values(this.offlineCopies).map(x=>[x.document.id,x.document]),[p.id,p]]);
@@ -514,7 +552,7 @@ export class ImplementationWorkbench {
       return '<div class="iw-section-head"><h3>Assigned work and dependencies</h3><div class="iw-actions">'+this.addButton('tasks')+button('method','Add method workflow')+button('csv','Export tasks','data-collection="tasks"')+'</div></div><p class="iw-muted">Durations are working days on this plan’s calendar. Enter zero for a milestone. A blank duration stays open until estimated.</p>'+this.table(['Task / candidate','Phase','Owner','Status','Days','Scheduled dates','Progress',''],p.tasks.map(t=>{const s=schedule.get(t.id);return ['<b>'+esc(t.title)+'</b><small>'+esc(p.candidates.find(c=>c.id===t.candidate_id)?.label||'')+'</small>',esc(t.phase||''),esc(t.assignee||'Unassigned'),'<span class="iw-state">'+esc(t.status.replaceAll('_',' '))+'</span>',esc(t.duration_days??'Estimate'),s?.start?esc(s.start)+(s.last_work_date&&s.last_work_date!==s.start?'<br>'+esc(s.last_work_date):'')+(s.overdue?'<small>Overdue</small>':''):esc('Awaiting predecessor dates'),'<progress max="100" value="'+t.progress_pct+'"></progress><small>'+t.progress_pct+'%</small>',this.editButton('tasks',t.id)+this.evidence.recordButton('tasks',t.id)];}));
     }
     if(this.tab==='budget'){
-      return '<div class="iw-section-head"><h3>Cost ledger · USD</h3><div class="iw-actions">'+this.addButton('budget_lines')+button('csv','Export costs','data-collection="budget_lines"')+'</div></div><p class="iw-muted">Record budget estimates, contractual commitments and actual costs in separate ledger rows. Amounts are preserved as exact cents.</p>'+(stats?'<div class="iw-stats">'+[['Budget',money(stats.budget.budget)],['Committed',money(stats.budget.commitment)],['Actual cost',money(stats.budget.actual)],['Budget less actual',money(stats.budget.remaining)]].map(([l,v])=>'<div><span>'+l+'</span><strong>'+v+'</strong></div>').join('')+'</div>':'')+this.table(['Kind','Description','Task','Amount','Date','Reference',''],p.budget_lines.map(b=>[esc(b.kind),esc(b.label),esc(p.tasks.find(t=>t.id===b.task_id)?.title||''),money(b.amount_minor),esc(b.date||''),esc(b.reference||''),this.editButton('budget_lines',b.id)]));
+      return '<div class="iw-section-head"><h3>Cost ledger · USD</h3><div class="iw-actions">'+this.addButton('budget_lines')+button('csv','Export costs','data-collection="budget_lines"')+(this.native?button('cost-review','Review economic costs'):'')+'</div></div><p class="iw-muted">Record budget estimates, contractual commitments and actual costs in separate ledger rows. Amounts are preserved as exact cents.</p>'+(stats?'<div class="iw-stats">'+[['Budget',money(stats.budget.budget)],['Committed',money(stats.budget.commitment)],['Actual cost',money(stats.budget.actual)],['Budget less actual',money(stats.budget.remaining)]].map(([l,v])=>'<div><span>'+l+'</span><strong>'+v+'</strong></div>').join('')+'</div>':'')+this.table(['Kind','Description','Task','Amount','Date','Reference',''],p.budget_lines.map(b=>[esc(b.kind),esc(b.label),esc(p.tasks.find(t=>t.id===b.task_id)?.title||''),money(b.amount_minor),esc(b.date||''),esc(b.reference||''),this.editButton('budget_lines',b.id)]));
     }
     if(this.tab==='sites'){
       return '<div class="iw-section-head"><h3>Sites</h3><div class="iw-actions">'+button('site-visit-import','Import sites / visits CSV')+this.addButton('sites')+'</div>'+'</div>'+this.table(['Site','Coordinates','Candidate',''],p.sites.map(s=>[esc(s.label),esc(s.latitude===null||s.latitude===undefined?'':s.latitude+', '+s.longitude+' · '+(s.coordinate_reference_system||'Source datum unstated')),esc(p.candidates.find(c=>c.id===s.candidate_id)?.label||''),this.editButton('sites',s.id)]))+'<div class="iw-section-head"><h3>Monitoring questions</h3>'+this.addButton('monitoring_plans')+'</div>'+this.table(['Plan','Objective','Sites','Parameters','Frequency',''],p.monitoring_plans.map(m=>[esc(m.title),esc(m.objective),(m.site_ids||[]).map(id=>esc(p.sites.find(s=>s.id===id)?.label||id)).join('<br>'),esc((m.parameters||[]).join(', ')),esc(m.frequency||''),this.editButton('monitoring_plans',m.id)]));
@@ -544,6 +582,7 @@ export class ImplementationWorkbench {
     if(action==='plan-report-register'){await this.registerPlanReportSource();return;}
     if(action==='plan-report-open'){await this.openPlanReportSource();return;}
     if(action==='plan-report-dismiss'){if(this.pending)throw Error('Finish the retained report operation first.');this.planReportSource=null;this.cache();this.render();return;}
+    if(action==='cost-review'){await this.openCostReview();return;}
     if(action==='sample-qc'){await this.openSampleQC();return;}
     if(action==='return-review'){await this.openReturnReview();return;}
     if(action.startsWith('outcomes-')){const controller=await this.outcomeCapability();if(!this.gone)await controller.act(b);return;}
@@ -555,6 +594,8 @@ export class ImplementationWorkbench {
     if(action==='results-json'){download(this.plan.id+'-matching-results-and-sources.json',JSON.stringify(matchingResultsDocument(this.plan,this.resultView,this.dirty?'browser_draft':this.native?'saved_native_revision':'portable_plan'),null,2)+'\n','application/json');return;}
     if(action.startsWith('dispatch-')){const turn=this.generation,selected=this.plan?.id;const dispatch=await this.dispatchCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await dispatch.act(this,b);return;}
     if(action.startsWith('lab-')){const lab=await this.labCapability();if(!this.gone)await lab.act(this,b);return;}
+    if(action==='observations-use-current'){await this.chooseFieldReportSelection(true);return;}
+    if(action==='observations-clear-selection'){await this.chooseFieldReportSelection(false);return;}
     if(action==='observations-review'){await this.reviewFieldObservations();return;}
     if(action==='observations-import'){await this.registerFieldObservations();return;}
     if(action==='observations-dismiss'){if(this.pending)throw Error('Finish the retained operation before dismissing its preview.');this.observationFlow=null;this.cache();this.render();return;}

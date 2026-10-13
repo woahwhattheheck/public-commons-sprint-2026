@@ -24,20 +24,6 @@ def implementation():
             "comparison_exporter_sha256": file_digest(monitoring_frontier_comparison.__file__)}
 
 
-def _source(workspace, prepared):
-    if prepared["method"]["target_units"] != "ha":
-        raise ValueError("Use the original utility overlap-hectare preparation for this report")
-    directory, export, selection, utility, _ = utility_monitoring.export_selection(
-        workspace, prepared["export_id"])
-    for descriptor in export["files"].values():
-        verify_file(directory, descriptor)
-    return {
-        "export_id": export["id"], "preparation": deepcopy(prepared),
-        "utility": deepcopy(utility), "observations": deepcopy(selection.get("observed_context")),
-        "original_files": deepcopy(export["files"]),
-    }
-
-
 def prepare(workspace, comparison, network, plans):
     """Present already saved plans without solving or assigning a station."""
     if (comparison["network_id"] != network["id"]
@@ -45,19 +31,17 @@ def prepare(workspace, comparison, network, plans):
             or [plan["id"] for plan in plans] != comparison["plan_ids"]
             or any(plan["network_id"] != network["id"] for plan in plans)):
         raise ValueError("Utility budget context needs the original comparison/network/ordered plans")
-    originals = {}
-    for row in utility_monitoring.catalog(workspace):
-        if row["network_id"] == network["id"]:
-            prepared = utility_monitoring.inspect(workspace, row["id"])
-            original = _source(workspace, prepared)
-            originals[prepared["id"]] = original
+    originals = {original["preparation"]["id"]: original
+                 for original in single.source_snapshot(workspace, network)}
     if not originals:
         return None
     contexts, by_plan, rows = [], {}, []
     comparison_rows = {row["plan_id"]: row for row in comparison["rows"]}
     for plan in plans:
         available = plan["status"] in FEASIBLE
-        found = single.contexts(workspace, plan, network, plan["calendar"]["visits"]) if available else []
+        found = [single._context_from_source(
+            workspace, plan, network, plan["calendar"]["visits"], original)
+            for original in originals.values()] if available else []
         if available and {row["binding"]["utility_preparation_id"] for row in found} != set(originals):
             raise ValueError("Utility preparation inventory changed during comparison export")
         contexts.extend(found)
@@ -131,18 +115,23 @@ def members(workspace, prepared):
     # Plan metadata remains separate; shared original source bytes are streamed once.
     for context in contexts:
         prefix = "utility-context/" + context["id"] + "/"
-        for name, member in single.export_members(workspace, [context]):
-            if name.startswith(prefix + "original-report/"):
-                continue
+        original = record["sources"][context["binding"]["utility_preparation_id"]]
+        for name, member in single._context_members(context, original["preparation"]):
             if name == prefix + "report.html":
-                original = member["content"].decode("utf-8")
-                original = original.replace('href="original-report/',
-                                            'href="../../' + _original_prefix(context))
-                member = bytes_member(original.encode("utf-8"))
+                report = member["content"].decode("utf-8")
+                report = report.replace('href="original-report/',
+                                        'href="../../' + _original_prefix(context))
+                member = bytes_member(report.encode("utf-8"))
             yield name, member
-    seen = {}
+    seen, exports = {}, {}
     for original in record["sources"].values():
-        directory, export, _, _, _ = utility_monitoring.export_selection(workspace, original["export_id"])
+        export_id = original["export_id"]
+        if export_id in exports:
+            if exports[export_id] != original["original_files"]:
+                raise ValueError("Original utility preparations disagree on their shared source export")
+            continue
+        exports[export_id] = original["original_files"]
+        directory, export, _, _, _ = utility_monitoring.export_selection(workspace, export_id)
         if export["files"] != original["original_files"]:
             raise ValueError("Original utility source files changed during comparison export")
         for name, descriptor in export["files"].items():

@@ -6,6 +6,7 @@ const ROOTS = [
   ['experiment-diagnostics', 'Scientific analyses'],
   ['experiments', 'Experiment programmes'],
   ['runs', 'Native runs'],
+  ['ensemble-products', 'Paired raster analyses'],
   ['robust-decisions', 'Decision studies'],
   ['scientific-report-editions', 'Saved scientific reports'],
   ['reviews', 'Customer reviews'],
@@ -173,7 +174,7 @@ export function attachStudyTransfer(host) {
     root.querySelector('[data-study-action="preview"]').textContent=busy==='preview'?'Reading contents…':'Preview contents';
     for(const field of root.querySelectorAll('[data-study-field]'))field.disabled=Boolean(busy);
     for(const field of root.querySelectorAll('[data-study-root]'))field.disabled=Boolean(busy)||field.dataset.studyUnavailable==='true';
-    for(const field of root.querySelectorAll('[data-study-action="open-monitoring"]'))field.disabled=Boolean(busy);
+    for(const field of root.querySelectorAll('[data-study-action="open-monitoring"],[data-study-action="open-paired"]'))field.disabled=Boolean(busy);
   }
 
   function sourceWaterControl(row){
@@ -238,6 +239,8 @@ export function attachStudyTransfer(host) {
             (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+sourceWaterControl(row)+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
+            (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
+              ?button('open-paired','Open paired analysis','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
             '<td><span class="st-state">'+escapeHTML(row.state||'Saved')+'</span></td>'+
             '<td>'+escapeHTML(when(row.updated_at))+'</td></tr>';
@@ -475,6 +478,13 @@ export function attachStudyTransfer(host) {
     try{
       if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
+      else if(action==='open-paired'){
+        const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
+        if(!row||row.state==='unreadable'||row.kind!=='ensemble-products')
+          throw new Error('Choose an original saved paired raster analysis.');
+        if(typeof host.openDesk!=='function')throw new Error('Open the maintained paired raster desk.');
+        await host.openDesk('paired-ensemble','openForStudy',{workspace_key:workspace,id:row.id});
+      }
       else if(action==='open-monitoring'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
         if(!row||row.state==='unreadable'||!monitoringOpenKinds.has(row.kind))
