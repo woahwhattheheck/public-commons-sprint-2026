@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "runtime-output-search",
+  "description": "Complete fixed-end original output search, resumable literal match cursors, exact byte context and whole streamed search export in the existing Runtime reader.",
+  "components": [
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-output.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/runtime-output.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/model.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/server.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/output-search-cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/browser-assets.json",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/output-search.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/output-search.css",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/application-output.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/runtime-output.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/output-search-core.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/receiving/OUTPUT_SEARCH_RECEIVE.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/OUTPUT_SEARCH.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/OUTPUT.md"
+  ]
+}
