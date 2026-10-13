@@ -24,7 +24,7 @@ class ParameterStudyAPI:
             return experiments.prepare(workspace, payload)
         experiment_id = identifier(payload.get("experiment_id"))
         if task["action"] == "parameter-study.run":
-            return experiments.execute(workspace, experiment_id)
+            return self.operator.native_jobs.execute_parameter_study(task, workspace, experiment_id)
         if task["action"] == "parameter-study.summarize":
             experiments.summarize(workspace, experiment_id)
             return experiments.inspect(workspace, experiment_id)
