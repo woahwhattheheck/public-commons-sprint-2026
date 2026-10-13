@@ -50,14 +50,16 @@
         "observed-context",
         "scientific-report-editions"
       ]
-    },
+    }
+  },
+  "required_components": [
+    "original-landcover-change-context"
+  ],
+  "extend_components": {
     "observed-watershed-change": {
       "paths": [
         "operator/web/observed_landcover_selection.mjs"
       ]
     }
-  },
-  "required_components": [
-    "original-landcover-change-context"
-  ]
+  }
 }
