@@ -32,11 +32,31 @@ def main(argv=None):
     revise.add_argument("csv_file", type=Path, help="Edited original interventions.csv in UTF-8")
     revise.add_argument("--title", help="Revised plan title; defaults to the original title")
     revise.add_argument("--purpose", help="Revised purpose; defaults to the original purpose")
+    attach = commands.add_parser(
+        "plan-attach-watershed", help="Save the next plan revision with its completed regional watershed context")
+    attach.add_argument("plan_id")
+    attach.add_argument("report_id", help="Saved watershed-<20 hex> report from the existing regional registry")
+    attach.add_argument("--title", help="Revised plan title; defaults to the original title")
     args = parser.parse_args(argv)
     try:
         workspace = Workspace(args.workspace)
         if args.command == "overview":
             result = communities.overview(workspace)
+        elif args.command == "plan-attach-watershed":
+            previous = communities.get_plan(workspace, args.plan_id)
+            context = {name: previous["context"].get(name) for name in (
+                "source_collection_ids", "grid_id", "baseline_run_id", "scenario_run_ids", "delivery_id")}
+            context["watershed_context_id"] = args.report_id
+            selected = {
+                "table_id": previous["table_id"], "previous_plan_id": previous["id"],
+                "title": args.title if args.title is not None else previous["title"],
+                "purpose": previous["purpose"], "selection": previous["selection"],
+                "context": context, "notes": previous["notes"],
+                "interventions": previous["interventions"],
+            }
+            if previous.get("intervention_import") is not None:
+                selected["intervention_import"] = previous["intervention_import"]
+            result = communities.save_plan(workspace, selected)
         elif args.command == "plan-revise-csv":
             previous = communities.get_plan(workspace, args.plan_id)
             original = args.csv_file.read_bytes()
@@ -48,7 +68,8 @@ def main(argv=None):
                            "text": original.decode("utf-8")},
             }
             context = {name: previous["context"].get(name) for name in (
-                "source_collection_ids", "grid_id", "baseline_run_id", "scenario_run_ids", "delivery_id")}
+                "source_collection_ids", "grid_id", "baseline_run_id", "scenario_run_ids", "delivery_id",
+                "watershed_context_id")}
             result = communities.save_plan(workspace, {
                 "table_id": previous["table_id"], "previous_plan_id": previous["id"],
                 "title": args.title if args.title is not None else previous["title"],

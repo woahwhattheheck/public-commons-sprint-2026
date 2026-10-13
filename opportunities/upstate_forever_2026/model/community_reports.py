@@ -14,7 +14,7 @@ from .common import atomic_bytes, canonical, describe_file, digest, held, verify
 from .communities import (PLAN_KIND, TABLE_KIND, REPORT_KIND, PHYSICAL_NAMES,
                           get_plan, get_table, text, verify_plan_context)
 
-FORMAT_VERSION = 3
+FORMAT_VERSION = 4
 
 SCIENTIFIC_SCOPE_NOTES = (
     "Community summaries describe the selected whole source block groups. "
@@ -147,11 +147,60 @@ def _physical_rows(plan):
         rows.append(value)
     return rows
 
+WATERSHED_SCOPE_NOTES = (
+    "Watershed areas are the original NRCS huc12_ac values, counted once per HUC12. "
+    "State areas retain each original st_ac value and its FY26 designation; published rounding "
+    "differences between whole-HUC and state totals remain visible.",
+    "Ground, Surface and Both are the original NRCS programme labels on state-HUC records. "
+    "Use the separate state rows when planning work across a state boundary.",
+    "Class counts are matches for the named South Carolina target classes under the publisher's "
+    "HUC12 assignment. A complete query with zero matches describes those target classes. "
+    "Use water-quality assessment sources for condition and impairment decisions.",
+    "Whole-watershed planning units and whole census block groups keep their respective source "
+    "boundaries. The selected regional source accompanies the intervention work programme.",
+)
+
+
+def _regional_rows(plan):
+    context = plan["context"]["snapshots"].get("watershed_context")
+    rows, states = [], []
+    if context is None:
+        return None, rows, states
+    utilities = {}
+    for group in plan["selected_groups"]:
+        for member in group["memberships"]:
+            utilities.setdefault(member["watershed_id"], set()).add(member["utility_id"])
+    for original in context["hucs"]:
+        huc12 = original["huc12"]
+        shared = {"regional_report_id": context["report_id"], "huc12": huc12,
+                  "watershed_name": original["name"],
+                  "utility_ids": ";".join(sorted(utilities.get(huc12, set())))}
+        rows.append({
+            **shared, **{key: original.get(key) for key in (
+                "area_acres", "area_km2", "state_portion_acres",
+                "state_area_minus_huc_area_acres", "states", "priority",
+                "priority_states", "priority_statuses", "priority_state_portion_acres",
+                "system_types", "resource_concerns", "nrcs_edition",
+                "selected_classification_count", "class_counts",
+                "classification_assignment", "classification_coverage",
+                "classification_query_coverage", "classification_scope",
+            )},
+        })
+        for state in original.get("nrcs_state_rows", []):
+            states.append({**shared, **state})
+    return context, rows, states
+
+
+def _area(value):
+    return "Unspecified" if value is None else format(Decimal(str(value)), ",.2f")
+
+
 def _contents(plan, table, title):
     aggregate = plan["summaries"]["all"]
     communities = _community_rows(plan)
     interventions = _intervention_rows(plan)
     physical = _physical_rows(plan)
+    regional, regional_rows, regional_states = _regional_rows(plan)
     utility_metadata = {row["id"]: row for row in plan["metadata"]["utilities"]}
     utility_rows = []
     for row in plan["summaries"]["utilities"]:
@@ -179,6 +228,8 @@ def _contents(plan, table, title):
                "plan": plan, "original_table": table, "communities": communities,
                "utility_summaries": utility_rows, "watershed_summaries": plan["summaries"]["watersheds"],
                "interventions": interventions, "physical_context": physical,
+               "regional_watershed_context": regional,
+               "watershed_scope_notes": list(WATERSHED_SCOPE_NOTES) if regional else [],
                "scientific_scope_notes": list(SCIENTIFIC_SCOPE_NOTES) if physical else [],
                "csv_text_handling": "Formula-like free text is prefixed with an apostrophe in derived CSV; JSON preserves original text."}
     summary_headings = ["Utility", "Block groups", "Block-group population", "Households",
@@ -236,6 +287,29 @@ def _contents(plan, table, title):
         ("Original run exports on their reporting areas", physical_headings, physical_display),
         ("Native changes on common valid cells", change_headings, change_display),
     ]
+    if regional:
+        regional_heads = ["Utility / HUC12", "Watershed", "Whole-HUC acres",
+                          "State-portion acres", "FY26 priority states",
+                          "Selected SC class records", "Query coverage / jurisdiction"]
+        regional_display = [
+            [row["utility_ids"] + " / " + row["huc12"], row["watershed_name"],
+             _area(row["area_acres"]), _area(row["state_portion_acres"]),
+             ", ".join(row["priority_states"] or []) or "; ".join(row["priority_statuses"] or []) or "Unspecified",
+             _number(row["selected_classification_count"]),
+             str(row["classification_query_coverage"] or "Unspecified").replace("_", " ")
+             + " / " + str(row["classification_scope"] or "Unspecified").replace("_", " ")]
+            for row in regional_rows]
+        state_heads = ["HUC12", "State", "State acres", "FY26 designation",
+                       "Programme type", "Resource concern"]
+        state_display = [
+            [row["huc12"], row["st_usps"], _area(row.get("st_ac")),
+             row.get("fy26_status") or "Unspecified", row.get("system_type") or "Unspecified",
+             row.get("resource_concern") or "Unspecified"]
+            for row in regional_states]
+        sections[2:2] = [
+            ("Watershed planning evidence", regional_heads, regional_display),
+            ("NRCS state portions", state_heads, state_display),
+        ]
     imported = plan.get("intervention_import")
     if imported:
         revision = imported["summary"]
@@ -252,6 +326,8 @@ def _contents(plan, table, title):
         + _number(estimate["known_estimate_total"]) + " USD. Unspecified costs remain open planning inputs."
         if estimate["known_estimate_count"] else "Intervention cost estimates are open planning inputs.")
     notes = plan["metadata"].get("limitations", []) + plan["notes"]
+    if regional:
+        notes.extend(WATERSHED_SCOPE_NOTES)
     for source_note in table.get("source_notes", []):
         label = ("Block group " + source_note["geoid"] + ": ") if source_note.get("geoid") else ""
         notes.extend(label + note for note in source_note.get("notes", []))
@@ -261,9 +337,27 @@ def _contents(plan, table, title):
         + "\nSaved plan: " + plan["id"] + " (revision " + str(plan["revision_number"]) + ")"
         + "\nScientific context: " + plan["context"]["snapshot_sha256"]
     )
+    if regional:
+        source_line += (
+            "\nRegional source: " + regional["title"] + " / " + regional["report_id"]
+            + "\nOriginal regional JSON SHA-256: " + regional["report_file"]["sha256"]
+            + "\nSelected HUC12s: " + ", ".join(regional["selected_huc12s"]))
     html_sections = []
     markdown_sections = []
     for heading, heads, rows in sections:
+        if heading == "Watershed planning evidence":
+            coverage = regional.get("classification_coverage") or {}
+            codes = ", ".join(coverage.get("selected_classes") or [])
+            explanation = (
+                "Selected regional context: " + str(regional["summary"]["huc_count"])
+                + " whole HUC12 watersheds, "
+                + _area(regional["summary"]["area_acres"]) + " acres; "
+                + str(regional["summary"]["priority_huc_count"]) + " with an NRCS FY26 priority state record. "
+                + ("The source query covers target classes " + codes + ". " if codes else "")
+                + " ".join(WATERSHED_SCOPE_NOTES))
+            html_sections.append("<section><h2>Reading the watershed evidence</h2><p>"
+                                 + escape(explanation) + "</p></section>")
+            markdown_sections.append("## Reading the watershed evidence\n\n" + explanation)
         if heading == "Original run exports on their reporting areas" and physical:
             scope = " ".join(SCIENTIFIC_SCOPE_NOTES)
             baseline_id = plan["context"].get("baseline_run_id")
@@ -321,6 +415,21 @@ def _contents(plan, table, title):
         "scientific-context.csv": csv_text(physical_columns, physical),
         "plan.json": json.dumps(plan, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n",
     }
+    if regional:
+        regional_columns = [
+            "regional_report_id", "utility_ids", "huc12", "watershed_name",
+            "area_acres", "area_km2", "state_portion_acres", "state_area_minus_huc_area_acres",
+            "states", "priority", "priority_states", "priority_statuses",
+            "priority_state_portion_acres", "system_types", "resource_concerns", "nrcs_edition",
+            "selected_classification_count", "class_counts", "classification_assignment",
+            "classification_coverage", "classification_query_coverage", "classification_scope"]
+        state_columns = ["regional_report_id", "utility_ids", "huc12", "watershed_name"]
+        state_columns.extend(sorted({key for row in regional_states for key in row}
+                                    - set(state_columns)))
+        outputs["watershed-planning-context.csv"] = csv_text(regional_columns, regional_rows)
+        outputs["watershed-state-portions.csv"] = csv_text(state_columns, regional_states)
+        outputs["selected-watershed-context.json"] = json.dumps(
+            regional, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
     if imported:
         outputs["received-interventions.csv"] = imported["source"]["text"]
         import_record = {**imported, "source": {
@@ -354,6 +463,14 @@ def build(workspace, selection):
         atomic_bytes(source_path, original.read_bytes(), immutable=True)
         records[source_path.name] = describe_file(workspace.root, source_path,
                                                    title="Original community table", media_type="text/csv")
+        regional = plan["context"]["snapshots"].get("watershed_context")
+        if regional:
+            original_regional = verify_file(workspace.root, regional["report_file"])
+            regional_path = directory / "original-watershed-context.json"
+            atomic_bytes(regional_path, original_regional.read_bytes(), immutable=True)
+            records[regional_path.name] = describe_file(
+                workspace.root, regional_path, title="Original completed regional watershed context",
+                media_type="application/json")
         packet = {"schema": "upstate.community-report-files/v1", "plan_id": plan["id"],
                   "table_id": table["id"], "title": title, "files": records}
         packet_path = directory / "REPORT.json"
