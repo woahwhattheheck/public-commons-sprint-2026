@@ -13,6 +13,7 @@ FILES = (
     "model/observed_station_studies.py",
     "model/observed_station_studies.json",
     "observations/station_context.sources.json",
+    "calibration_station_geography.sources.json",
     "operator/OBSERVED_STATION_STUDIES.md",
     "operator/install_observed_station_studies.py",
 )
