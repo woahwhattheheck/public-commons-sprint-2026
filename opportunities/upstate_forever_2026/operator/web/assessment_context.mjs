@@ -30,6 +30,37 @@ const empty=()=>({title:'Assessment geographic context',station_geography_id:'',
   assessment:{title:'',status:'',vintage:'',reference:''}});
 const opts=(rows,value,label,id='id')=>'<option value="">Choose…</option>'+list(rows).map(r=>'<option value="'+esc(r[id])+'" '+(r[id]===value?'selected':'')+'>'+esc(label(r))+'</option>').join('');
 
+export function comparedAssessmentMemberships(row,selection){
+ const source=selection?.watershed_source;
+ if(!source?.collection_id||!source?.source_id)return [];
+ return list(row?.computed_memberships).filter(member=>member.source_ref?.collection_id===source.collection_id&&member.source_ref?.source_id===source.source_id);
+}
+export function assessmentMembershipLabels(members){
+ return list(members).map(member=>{
+  const native=member.watershed_id;
+  let label=native==null||native===''?'Not recorded':String(native);
+  if(list(members).filter(other=>other.watershed_id===native).length>1){
+   const reference=member.source_ref||{};
+   label+=' [feature '+(reference.native_feature_id??('index '+String(reference.source_feature_index??'Not recorded')))+']';
+  }
+  return label+' ('+String(member.relation??'Not recorded')+')';
+ });
+}
+export function assessmentComparisonCounts(rows){
+ const values={agree:0,differ:0,unresolved:0};
+ for(const row of list(rows))values[row.association_agreement===true?'agree':row.association_agreement===false?'differ':'unresolved']++;
+ return values;
+}
+export function assessmentContextFilteredCSV(rows,selection){
+ const headers=['station_id','row_number','assessment_row_id','cause','impaired_use','county','use_support','original_watershed_value','location_status','watershed_status','geographic_status','association_agreement','association_status',
+  'compared_watershed_source','compared_watershed_ids','compared_memberships','published_polygon_ids','computed_polygon_ids','selected_polygon_ids','computed_memberships','assessment','assessment_edition','assessment_record_id','original_edition_source','source_ref','original'];
+ const cell=v=>{let t=v==null?'':typeof v==='object'?JSON.stringify(v):String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
+ return [headers.join(','),...list(rows).map(row=>{
+  const memberships=comparedAssessmentMemberships(row,selection),record={...row,compared_watershed_source:selection?.watershed_source??null,compared_watershed_ids:memberships.map(member=>member.watershed_id),compared_memberships:memberships};
+  return headers.map(name=>cell(record[name])).join(',');
+ })].join('\r\n')+'\r\n';
+}
+
 export function attachAssessmentContext(host){
  let node=null,workspace=null,state=null,catalog=null,options=null,edition=null,draft=empty();
  let controller=null,epoch=0,busy=false,error='',message='',requests=[],currentTask=null,selectedEdition=null;
@@ -156,7 +187,7 @@ export function attachAssessmentContext(host){
   target.innerHTML='<div class="ac-toolbar"><span>'+filtered.length+' original assessment rows</span>'+btn('export-rows','Download filtered CSV')+'</div>'+
    '<div class="ac-table-wrap"><table><thead><tr><th>Station / original row</th><th>Original cause / use / edition</th><th>Published watershed</th><th>Computed membership</th><th>Source detail</th></tr></thead><tbody>'+
    shown.map(r=>'<tr><td>'+esc(r.station_id)+'<small>row '+r.row_number+' · '+esc(r.location_status)+'</small></td><td>'+esc(r.cause)+' / '+esc(r.impaired_use)+
-    '<small>'+esc(r.use_support??'not reported')+' · '+esc(r.assessment_edition??'')+' · '+esc(r.assessment?.status)+' · '+esc(r.assessment?.vintage)+'</small></td><td>'+esc(r.original_watershed_value)+'<small>'+esc(r.geographic_status)+'</small></td><td>'+list(r.computed_memberships).map(m=>esc(m.watershed_id)+' ('+esc(m.relation)+')').join('<br>')+
+    '<small>'+esc(r.use_support??'not reported')+' · '+esc(r.assessment_edition??'')+' · '+esc(r.assessment?.status)+' · '+esc(r.assessment?.vintage)+'</small></td><td>'+esc(r.original_watershed_value)+'<small>'+esc(r.geographic_status)+'</small></td><td>'+(assessmentMembershipLabels(comparedAssessmentMemberships(r,edition.selection)).map(esc).join('<br>')||'No retained membership in compared source')+
     '<small>'+(r.association_agreement===true?'Associations agree':r.association_agreement===false?'Associations differ':'Comparison unresolved')+'</small></td><td><details><summary>Original fields and references</summary><pre>'+esc(JSON.stringify({assessment:r.assessment,edition:r.assessment_edition,original_edition_source:r.original_edition_source,assessment_record_id:r.assessment_record_id,original:r.original,source:r.source_ref,computed:r.computed_memberships},null,2))+'</pre></details></td></tr>').join('')+
    '</tbody></table></div><div class="ac-toolbar">'+btn('previous','Previous',page===0?'disabled':'')+'<span>Page '+(page+1)+' of '+Math.max(1,Math.ceil(filtered.length/40))+'</span>'+
    btn('next','Next',(page+1)*40>=filtered.length?'disabled':'')+'</div>';
@@ -246,11 +277,11 @@ export function attachAssessmentContext(host){
  function renderResult(){
   const result=node?.querySelector('[data-ac-result]');if(!result)return;
   if(!edition){result.innerHTML='<p>Prepare a context from a retained station study or receive a complete context package.</p>';return;}
-  const r=edition.result,s=edition.summary,a=r.assessment;
+  const r=edition.result,s=edition.summary,a=r.assessment,comparisons=assessmentComparisonCounts(r.rows);
   result.innerHTML='<h2>'+esc(edition.title)+'</h2><p><strong>'+esc(a.title)+' · '+esc(a.status)+' · '+esc(a.vintage)+'</strong></p>'+
    '<p>'+esc(r.relation)+'</p><div class="ac-toolbar">'+btn('use-context','Use this saved selection for a new context')+'</div><div class="ac-summary">'+[['Inventories',s.inventory_count??1],['Stations',s.station_count],['Assessment rows',s.assessment_row_count],['Watersheds',s.watershed_count],
-    ['Unmatched rows',s.unmatched_row_count],['Multiple associations',s.multiple_association_row_count],['Different associations',s.differing_association_row_count],['Unresolved comparisons',s.unresolved_comparison_row_count]].map(([k,v])=>'<div><strong>'+v+'</strong><span>'+esc(k)+'</span></div>').join('')+'</div>'+
-   '<p>Association basis: '+esc(r.relationship_basis)+'. Original records: '+sourceLinks(r)+'</p>'+
+    ['Unmatched rows',s.unmatched_row_count],['Multiple associations',s.multiple_association_row_count],['Agreeing assessments',comparisons.agree],['Different assessments',comparisons.differ],['Unresolved comparisons',comparisons.unresolved]].map(([k,v])=>'<div><strong>'+v+'</strong><span>'+esc(k)+'</span></div>').join('')+'</div>'+
+   '<p>Association basis: '+esc(r.relationship_basis)+'. Compared watershed source: '+esc(edition.selection?.watershed_source?.source_id)+' / '+esc(edition.selection?.watershed_source?.collection_id)+'. Original records: '+sourceLinks(r)+'</p>'+
    '<details><summary>Original assessment editions and cause/use groups</summary><pre>'+esc(JSON.stringify(r.assessment_groups,null,2))+'</pre></details><div data-ac-map class="ac-map"></div><label class="ac-search">Find original station, cause, watershed or source text<input data-ac-search value="'+esc(query)+'"></label>'+
    '<div data-ac-rows></div><section data-ac-parcels></section><h3>Complete source and editable package</h3><div class="ac-downloads">'+
    list(edition._downloads).filter(f=>f.filename!=='started.json'&&f.filename!=='original-station-geography.zip').map(f=>'<a href="'+esc(f.url)+'" download="'+esc(f.filename)+'">'+esc(f.filename)+'</a>').join('')+'</div>';
@@ -258,10 +289,7 @@ export function attachAssessmentContext(host){
   renderMap();renderRows();renderParcels();
  }
  function exportRows(){
-  const headers=['station_id','row_number','assessment_row_id','cause','impaired_use','county','use_support','original_watershed_value','location_status','watershed_status','geographic_status','association_agreement','association_status',
-    'published_polygon_ids','computed_polygon_ids','selected_polygon_ids','assessment','assessment_edition','assessment_record_id','original_edition_source','source_ref','original'];
-  const cell=v=>{let t=v==null?'':typeof v==='object'?JSON.stringify(v):String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
-  const text=[headers.join(','),...rows().map(r=>headers.map(k=>cell(r[k])).join(','))].join('\r\n')+'\r\n';
+  const text=assessmentContextFilteredCSV(rows(),edition.selection);
   const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');
   a.href=url;a.download='assessment-context-filtered.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }
