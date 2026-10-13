@@ -494,7 +494,7 @@ async function openPlanPair(referenceId, candidateId) {
   await page.locator('#water-selected [name="plan_compare_reference"]').selectOption(referenceId);
   await page.locator('#water-selected [name="plan_compare_candidate"]').selectOption(candidateId);
   await page.locator('#water-selected [data-action="water-compare-apply"]').click();
-  const root = page.locator('#water-selected [data-water-plan-comparison]' +
+  const root = page.locator('#water-selected[aria-busy="false"][data-water-record-kind="plan-comparison"] [data-water-plan-comparison]' +
     attr('data-reference', referenceId) + attr('data-candidate', candidateId) + '[aria-busy="false"]');
   await root.waitFor();
   assert.equal(await page.locator('#form-dialog').evaluate(node => node.open), false,
@@ -538,7 +538,7 @@ async function operatePlanComparison(plan, analysis) {
   await root.locator('[data-water-compare-search]').fill('');
   await root.locator('[data-water-compare-status]').selectOption('');
   await root.locator('[data-action="water-compare-swap"]').click();
-  await page.locator('#water-selected [data-water-plan-comparison]' +
+  await page.locator('#water-selected[aria-busy="false"][data-water-record-kind="plan-comparison"] [data-water-plan-comparison]' +
     attr('data-reference', candidateId) + attr('data-candidate', plan.id) + '[aria-busy="false"]').waitFor();
   root = await openPlanPair(plan.id, candidateId);
   const result = {reference_id: plan.id, candidate_id: candidateId,
