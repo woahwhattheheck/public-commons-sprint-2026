@@ -1,7 +1,7 @@
 """Prepare a scalable, class-matched control on an original regional raster grid.
 
 Original geographic masks and simulated physical inputs remain declared sources.
-This module performs deterministic local precipitation matching; native NDR/SDR
+This module performs explicitly selected local or exact precipitation matching; native NDR/SDR
 and the existing regional producer retain calculation and execution ownership.
 """
 from __future__ import annotations
@@ -25,6 +25,7 @@ if str(APP) not in sys.path:
 ROLES = ("NLCD", "PRECIPITATION", "RESTORATION_MASK", "MODEL_DOMAIN_MASK")
 OPTIONAL_ROLES = ("RESTORED_NLCD", "REPORTING_MASK")
 METHOD = "class-stratified-ascending-target-nearest-available-precipitation/v1"
+EXACT_METHOD = "class-stratified-exact-monge-L1-dyadic/v1"
 RECORD = struct.Struct("<dQ")
 PAIR_FIELDS = ("from_code", "target_index", "target_row", "target_col",
                "control_index", "control_row", "control_col",
@@ -220,11 +221,137 @@ def _match_class(targets, candidates, directory, code, width, emit):
     return saved
 
 
+
+def _match_class_exact(targets, candidates, directory, code, width, emit, max_working_bytes):
+    """Compose the original exact Monge kernel on retained disk records."""
+    import numpy as np
+    from model.common import atomic_json
+    from source_tools.precipitation_matching import match_precipitation, _binary_unit, METHOD as KERNEL_METHOD
+    if KERNEL_METHOD != EXACT_METHOD:
+        raise ValueError("Receive the original declared exact-kernel edition before matching")
+    directory.mkdir(parents=True, exist_ok=True)
+    completed = directory / "complete.json"
+    binding = {"targets": _identity(targets), "candidates": _identity(candidates),
+               "class": code, "width": width, "method": EXACT_METHOD}
+    if completed.exists():
+        saved = _json(completed)
+        if saved["binding"] != binding:
+            raise ValueError("Retained exact matching belongs to another original support")
+        for item in saved["files"]:
+            _check(directory / item["path"], item)
+        return saved
+    n = binding["targets"]["bytes"] // RECORD.size
+    m = binding["candidates"]["bytes"] // RECORD.size
+    if m < n:
+        raise ValueError("Insufficient original same-class candidates for exact matching")
+    # Covers retained-record pages, dtype/ID conversions, sorting and vectorized
+    # separator temporaries conservatively. This is an admission estimate, not
+    # a claim that the process/OS enforces an allocation ceiling.
+    estimated = 256 * n + 96 * m + 256 * 1024 * 1024 if n else 0
+    emit("exact_admission", from_code=code, targets=n, candidates=m,
+         estimated_working_bytes=estimated, admitted_working_bytes=max_working_bytes)
+    if estimated > max_working_bytes:
+        raise ValueError("Exact class %s needs an estimated %s working bytes; admitted %s. "
+                         "Choose sufficient native capacity or explicitly select the separate greedy method."
+                         % (code, estimated, max_working_bytes))
+    if not n:
+        pair_path, selected_path = directory / "pairs.csv", directory / "selected.bin"
+        with pair_path.open("w", newline="", encoding="utf-8") as pairs:
+            csv.writer(pairs).writerow(PAIR_FIELDS)
+            pairs.flush()
+            os.fsync(pairs.fileno())
+        with selected_path.open("wb") as selected:
+            selected.flush()
+            os.fsync(selected.fileno())
+        saved = {"binding": binding, "from_code": code, "target_cells": 0,
+                 "control_cells": 0, "eligible_off_corridor_cells": m,
+                 "target_precipitation_sum_mm_year": 0.0, "control_precipitation_sum_mm_year": 0.0,
+                 "precipitation_sum_residual_mm_year": 0.0,
+                 "mean_absolute_paired_precipitation_residual_mm_year": None,
+                 "max_absolute_paired_precipitation_residual_mm_year": None,
+                 "sum_absolute_paired_precipitation_residual_mm_year": 0.0,
+                 "exact_matching": {"method": EXACT_METHOD, "target_cells": 0,
+                     "eligible_candidate_cells": m,
+                     "exact_objective": {"integer": "0", "binary_exponent": 0},
+                     "optimization": "Empty target population has exact zero objective"},
+                 "estimated_working_bytes": 0, "admitted_working_bytes": max_working_bytes,
+                 "files": [_descriptor(directory, path) for path in (pair_path, selected_path)]}
+        atomic_json(completed, saved)
+        return saved
+    dtype = np.dtype([("rain", "<f8"), ("index", "<u8")])
+    a = np.memmap(targets, dtype=dtype, mode="r") if n else np.empty(0, dtype=dtype)
+    b = np.memmap(candidates, dtype=dtype, mode="r") if m else np.empty(0, dtype=dtype)
+    unit = _binary_unit((a["rain"], b["rain"]), None)
+    maximum = max(float(a["rain"].max(initial=0)), float(b["rain"].max(initial=0)))
+    try:
+        scaled = math.ldexp(maximum, -unit)
+    except OverflowError:
+        scaled = math.inf
+    if scaled > 1 << 61:
+        raise ValueError("These exact precipitation exponents require the kernel's Python-integer path. "
+                         "This numeric-array memory admission does not cover that allocation; retain the inputs "
+                         "and arrange an explicit native capacity plan before running exact matching.")
+    ticks = 0
+    def check_running():
+        nonlocal ticks
+        ticks += 1
+        emit("exact_matching", from_code=code, targets=n, candidates=m, kernel_check=ticks)
+    result = match_precipitation(a["rain"], b["rain"], target_ids=a["index"],
+                                candidate_ids=b["index"], check_running=check_running)
+    if result.target_count != n or result.candidate_count != m:
+        raise ValueError("Exact kernel changed the retained input populations")
+    pair_path, selected_path = directory / "pairs.csv", directory / "selected.bin"
+    residual_sum = absolute_sum = target_sum = control_sum = max_absolute = 0.0
+    with pair_path.open("w", newline="", encoding="utf-8") as pairs, selected_path.open("wb") as selected:
+        writer = csv.writer(pairs)
+        writer.writerow(PAIR_FIELDS)
+        for start in range(0, n, 65536):
+            stop = min(n, start + 65536)
+            positions = result.candidate_positions[start:stop]
+            if np.any(positions < 0) or np.any(positions >= m):
+                raise ValueError("Exact kernel returned a candidate outside its original population")
+            chosen = b[positions]
+            indices = chosen["index"].astype("<u8", copy=False)
+            indices.tofile(selected)
+            target_block = a[start:stop]
+            residual = chosen["rain"] - target_block["rain"]
+            target_sum += float(target_block["rain"].sum(dtype="float64"))
+            control_sum += float(chosen["rain"].sum(dtype="float64"))
+            residual_sum += float(residual.sum(dtype="float64"))
+            absolute_sum += float(np.abs(residual).sum(dtype="float64"))
+            max_absolute = max(max_absolute, float(np.abs(residual).max(initial=0)))
+            writer.writerows((code, int(t["index"]), int(t["index"]) // width, int(t["index"]) % width,
+                              int(c["index"]), int(c["index"]) // width, int(c["index"]) % width,
+                              repr(float(t["rain"])), repr(float(c["rain"])), repr(float(d)))
+                             for t, c, d in zip(target_block, chosen, residual))
+            emit("exact_pairs", from_code=code, matched=stop, targets=n)
+        for stream in (pairs, selected):
+            stream.flush()
+            os.fsync(stream.fileno())
+    _check(targets, binding["targets"])
+    _check(candidates, binding["candidates"])
+    saved = {"binding": binding, "from_code": code, "target_cells": n,
+             "control_cells": n, "eligible_off_corridor_cells": m,
+             "target_precipitation_sum_mm_year": target_sum,
+             "control_precipitation_sum_mm_year": control_sum,
+             "precipitation_sum_residual_mm_year": residual_sum,
+             "mean_absolute_paired_precipitation_residual_mm_year": absolute_sum / n if n else None,
+             "max_absolute_paired_precipitation_residual_mm_year": max_absolute if n else None,
+             "sum_absolute_paired_precipitation_residual_mm_year": absolute_sum,
+             "exact_matching": result.metadata(), "estimated_working_bytes": estimated,
+             "admitted_working_bytes": max_working_bytes,
+             "files": [_descriptor(directory, path) for path in (pair_path, selected_path)]}
+    atomic_json(completed, saved)
+    return saved
+
+
 def _implementation_snapshot():
     retained = {"regional_matched_control.py": Path(__file__).read_bytes()}
     for name, source in (("REGIONAL_MATCHED_CONTROL.md", Path(__file__).with_name("REGIONAL_MATCHED_CONTROL.md")),
                          ("CURRENT_OWNER_DIRECTION.md", APP / "CURRENT_OWNER_DIRECTION.md"),
-                         ("geographic_matched_control.py", Path(__file__).with_name("geographic_matched_control.py"))):
+                         ("geographic_matched_control.py", Path(__file__).with_name("geographic_matched_control.py")),
+                         ("precipitation_matching.py", Path(__file__).with_name("precipitation_matching.py")),
+                         ("MATCHED_CONTROL_MATCHING.md", Path(__file__).with_name("MATCHED_CONTROL_MATCHING.md"))):
         if source.is_file():
             retained[name] = source.read_bytes()
     return retained
@@ -249,6 +376,13 @@ def prepare(configuration, configuration_directory, output, *, progress=None, _r
 
     if configuration.get("schema") != "upstate.regional-matched-control-input/v1":
         raise ValueError("Use the explicit regional matched-control input schema")
+    method_option = configuration.get("matching_method", "greedy")
+    if method_option not in ("greedy", "exact_monge"):
+        raise ValueError("Choose an explicit greedy or exact_monge matching method")
+    method = EXACT_METHOD if method_option == "exact_monge" else METHOD
+    max_working_bytes = configuration.get("max_working_bytes", 1024 * 1024 * 1024)
+    if type(max_working_bytes) is not int or max_working_bytes <= 0:
+        raise ValueError("Declare positive integer admitted working bytes")
     codes = configuration.get("from_codes", [81, 82])
     to_code = configuration.get("to_code", 41)
     if (not isinstance(codes, list) or not codes or any(type(x) is not int for x in codes)
@@ -276,7 +410,7 @@ def prepare(configuration, configuration_directory, output, *, progress=None, _r
     binding = {"schema": "upstate.regional-matched-control-binding/v1",
                "configuration": configuration, "sources": sources,
                "implementation": retained_code_identity["regional_matched_control.py"],
-               "retained_implementation": retained_code_identity, "method": METHOD}
+               "retained_implementation": retained_code_identity, "method": method}
     key = digest(binding)
     root = Path(output).resolve() / key
     # Never place an original input inside the owned output tree.
@@ -404,8 +538,9 @@ def prepare(configuration, configuration_directory, output, *, progress=None, _r
                 for kind in ("target", "candidate"):
                     sorted_paths[kind] = _sorted_records(work / ("%s-%s.bin" % (code, kind)),
                         work / ("%s-%s-sort" % (code, kind)), sort_records, emit)
-                classes.append(_match_class(sorted_paths["target"], sorted_paths["candidate"],
-                    work / ("%s-matching" % code), code, width, emit))
+                matcher = _match_class_exact if method_option == "exact_monge" else _match_class
+                args = (sorted_paths["target"], sorted_paths["candidate"], work / ("%s-matching" % code), code, width, emit)
+                classes.append(matcher(*args, max_working_bytes) if method_option == "exact_monge" else matcher(*args))
             # One byte per original cell lives on ordinary disk; no full-grid RAM array.
             mask_path = work / "control-mask.bin"
             mask = np.memmap(mask_path, mode="w+", dtype="uint8", shape=(height, width))
@@ -452,7 +587,7 @@ def prepare(configuration, configuration_directory, output, *, progress=None, _r
                             selected_counts[code] += int((selected & (lulc == code)).sum())
                         target.write(block, 1, window=win)
                 target.update_tags(classification="SIMULATED", role="MATCHED_CONTROL_MASK",
-                                   matching_method=METHOD, source_binding=key, units="mask")
+                                   matching_method=method, source_binding=key, units="mask")
             for item in classes:
                 if selected_counts[item["from_code"]] != item["target_cells"]:
                     raise ValueError("Actual final raster differs from the exact class-matched target")
@@ -472,7 +607,8 @@ def prepare(configuration, configuration_directory, output, *, progress=None, _r
                         raise ValueError("Retained pair columns changed")
                     writer.writerows(reader)
         changed = sum(item["target_cells"] for item in classes)
-        summary = {"schema": "upstate.regional-matched-control-summary/v1", "method": METHOD,
+        summary = {"schema": "upstate.regional-matched-control-summary/v1", "method": method,
+                   "matching_method_option": method_option,
                    "classification": "SIMULATED physical inputs / retained original geographic masks",
                    "grid": grid, "changed_cells": changed, "changed_area_ha": changed * grid["pixel_area_ha"],
                    "overlap_with_restoration_corridor_cells": 0,
@@ -484,7 +620,10 @@ def prepare(configuration, configuration_directory, output, *, progress=None, _r
                    "by_original_class": [{k: v for k, v in item.items() if k not in ("binding", "files")}
                                          | {"changed_area_ha": item["target_cells"] * grid["pixel_area_ha"],
                                             "to_code": to_code} for item in classes],
-                   "interpretation": INTERPRETATION,
+                   "interpretation": ([INTERPRETATION[0], INTERPRETATION[1],
+                       "The retained exact Monge kernel minimizes total absolute precipitation residual within each original class using exact original IEEE-754 dyadic values.",
+                       "Deterministic symbolic secondary ties choose among equal primary objectives; completed historical editions remain unchanged.",
+                       *INTERPRETATION[5:]] if method_option == "exact_monge" else INTERPRETATION),
                    "source_binding": configuration.get("source_binding", {}),
                    "owner_direction": "CURRENT_OWNER_DIRECTION.md v2026-10-13.3"}
         atomic_json(root / "matching-summary.json", summary, immutable=True)
@@ -516,7 +655,7 @@ def prepare(configuration, configuration_directory, output, *, progress=None, _r
                 os.replace(pending, destination)
         source_id = "SIM_REGIONAL_MATCHED_CONTROL_MASK"
         scenario = {"title": configuration.get("title", "Simulated regional matched-area off-riparian restoration"),
-                    "kind": "landcover", "reason": "Same original class and changed area outside the entire retained restoration corridor; inspect retained local precipitation-matching residuals.",
+                    "kind": "landcover", "reason": "Same original class and changed area outside the entire retained restoration corridor; inspect retained declared-method precipitation-matching residuals.",
                     "patches": [{"mask_source_id": source_id, "from_codes": codes,
                                  "to_code": to_code, "reason": "Explicit deterministic regional matched-area control"}]}
         atomic_json(root / "scenario-selection.json", scenario, immutable=True)

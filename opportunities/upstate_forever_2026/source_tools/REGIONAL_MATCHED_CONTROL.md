@@ -1,6 +1,6 @@
 # Regional matched control on the original geographic grid
 
-This source preparation supports the current Upper Savannah geographic headwaters producer. It retains the original computational domain, South Carolina reporting mask and the actual treatment raster, then chooses a disjoint control with exactly the same changed area in each original land-cover class. The physical input fields remain explicitly simulated. The existing geographic producer, native NDR/SDR queue and completed original square case keep their identities.
+This source preparation supports the current Upper Savannah geographic headwaters producer. It retains the original computational domain, South Carolina reporting mask and the actual treatment raster, then chooses a disjoint control with exactly the same changed area in each original land-cover class. Matching can use the original bounded local method or an explicitly selected exact global L1 method. The physical input fields remain explicitly simulated. The existing geographic producer, native NDR/SDR queue and completed original square case keep their identities.
 
 The controlling owner direction is `CURRENT_OWNER_DIRECTION.md`, edition `2026-10-13.3`. The actual 217-catchment geographic course and the completed 120×120-cell square are separate studies.
 
@@ -19,6 +19,8 @@ control = prepare_control(
     original_precipitation_path,
     ordinary_disk_output_directory,
     seed=original_recipe_seed,
+    matching_method="exact_monge",
+    max_working_bytes=actual_host_admitted_bytes,
     progress=existing_progress_callback,
 )
 control_mask_path = control["mask_path"]
@@ -46,6 +48,8 @@ The returned object includes:
 | `preparation` | Full core result for optional existing-Workspace adoption |
 
 Output mask value 1 selects the control, 0 is unchanged computational-domain support, and 255 is outside the domain. Use equality to 1 when reading the mask.
+
+The `matching_method` option is `greedy` or `exact_monge`; the default remains `greedy` for existing callers. New geographic editions should select `exact_monge` when their actual per-class populations fit the accepted native host. `max_working_bytes` is an explicit positive integer capacity admission. It defaults to 1 GiB for a caller that omits it; select the real accepted allocation for the host and concurrent work. The code never silently downgrades an exact request.
 
 The seed is retained as a producer-recipe identity. Matching uses no random draw. Equal input bytes, configuration and implementation snapshots produce the same preparation key and selection.
 
@@ -85,6 +89,8 @@ Use the actual saved recipe seed and original physical paths. The example paths 
   "to_code": 41,
   "window_size": 256,
   "sort_records": 262144,
+  "matching_method": "exact_monge",
+  "max_working_bytes": 1073741824,
   "title": "Original geographic headwaters: simulated matched control",
   "source_binding": {
     "producer": "model.geographic_headwaters",
@@ -99,7 +105,23 @@ Do not pass the reporting mask as `MODEL_DOMAIN_MASK`. These scopes differ scien
 
 The configuration is snapshotted before work. Each original file is checked against its declared bytes and SHA-256 before calculation and again before retention. Code, guide, adapter and owner-direction bytes are snapshotted before the long calculation and included in the binding. A concurrently published successor cannot change the code retained under an earlier preparation identity.
 
-## Matching method, resources and interpretation
+## Matching methods, resources and interpretation
+
+### Exact global L1 method
+
+`matching_method="exact_monge"` uses the unchanged maintained `source_tools/precipitation_matching.py` kernel, method `class-stratified-exact-monge-L1-dyadic/v1`. It minimizes the sum of absolute original rainfall differences independently within each original class, subject to distinct eligible control cells. The geography, target counts, exclusions and original source identities are identical to the windowed preparer.
+
+The algorithm uses the bitonic Monge diagonal-separation recurrence described in Aggarwal et al., CS-TR-3199, section 4: https://hdl.handle.net/1903/610 . It sorts the original populations and applies a vectorized prefix-minimum separator in O(n log(m−n+1)) separator work with O(n+m) storage. It preserves the exact dyadic values of the original IEEE-754 float64 inputs; original values are neither binned nor perturbed. Symbolic secondary coordinates only resolve equal primary objectives. The exact objective is retained as an integer and binary exponent alongside readable rainfall residuals.
+
+The retained 16-byte target/candidate records are read through memory maps. The array kernel also needs linear working arrays; it is not the bounded-stack implementation. Before each nonempty class, admission estimates `256*n + 96*m + 256 MiB` bytes, covering mapped record pages, sorting/conversion and separator temporaries conservatively. The estimate is explicitly recorded, not represented as an operating-system memory limit. On the source owner’s actual native run, 1,000,000 targets and 4,000,000 candidates took about 1.73 seconds and about 492 MiB peak RSS for matching; the preparer’s admission estimate for those counts is 908,435,456 bytes. Full raster preparation and CSV retention have their own elapsed time and disk cost.
+
+If the estimate exceeds the caller’s admitted capacity, the original counts and required bytes are reported before kernel execution. The operator can choose sufficient capacity or explicitly select the separately labelled greedy method. An empty target class produces a complete zero-objective result without allocating a candidate working set. Input values whose exponent range would require the kernel’s arbitrary-precision object path are reported for an explicit capacity plan; the numeric-array estimate is not silently applied to that different allocation model.
+
+The source owner’s native original-case run reproduced both completed 635-cell objective totals exactly. Deterministic ties can still select different equally optimal spatial cells in other datasets. Keep existing completed editions and their native results; a new source/method/implementation binding creates a new preparation edition.
+
+The exact kernel and its guide are snapshotted with the core/adapter/owner-direction source and retained as companions. Its full objective metadata, chosen candidate positions mapped back to original cell IDs, all per-pair CSV rows, class sums and final footprint checks remain in the same ordinary source family.
+
+### Bounded local nearest-available method
 
 Method: `class-stratified-ascending-target-nearest-available-precipitation/v1`.
 
@@ -110,11 +132,11 @@ Method: `class-stratified-ascending-target-nearest-available-precipitation/v1`.
 5. Write every pair and signed rainfall residual to CSV. Write selected indices to disk.
 6. Build the final control mask through a disk-backed byte array and windowed GeoTIFF writes. Recount every class and verify exclusion against the original corridor, actual restoration and reporting support.
 
-Sorting costs O(N log N); the matching pass costs O(N). The algorithm does not allocate the original quadratic target-by-candidate matrix. Working arrays are bounded by the raster window and sort chunk. The default sort payload is about 4 MiB before NumPy sorting overhead. Merge fan-in has bounded small read buffers. A full-grid byte array is memory-mapped on ordinary disk; its virtual size is one byte per cell, not a full in-memory raster stack. The operating system can cache mapped pages; use ordinary disk and the existing host's real memory/capacity admission.
+For the `greedy` method, sorting costs O(N log N); the matching pass costs O(N). The algorithm does not allocate the original quadratic target-by-candidate matrix. Working arrays are bounded by the raster window and sort chunk. The default sort payload is about 4 MiB before NumPy sorting overhead. Merge fan-in has bounded small read buffers. A full-grid byte array is memory-mapped on ordinary disk; its virtual size is one byte per cell, not a full in-memory raster stack. The operating system can cache mapped pages; use ordinary disk and the existing host's real memory/capacity admission.
 
 Working disk contains the original raster copies, records, sorted streams, complete pair CSV, byte mask and completed output. Pair CSV is deliberately complete and can be substantial. Interrupted stages reuse completed receipts and do not duplicate the native solver. The owned `work/` intermediates are retained for continuation; they are excluded from the imported source manifest. Never use shared-memory storage for this regional working directory.
 
-This is deterministic local nearest-available matching. It does not claim the completed small-square algorithm's global minimum-L1 optimum. Equal lower/upper distances choose the lower side; equal-valued lower-stack candidates use the last original index, while upper candidates retain ascending original index. Every choice remains inspectable in the complete pair CSV.
+The `greedy` option is deterministic local nearest-available matching. It does not claim the completed small-square algorithm's global minimum-L1 optimum. Equal lower/upper distances choose the lower side; equal-valued lower-stack candidates use the last original index, while upper candidates retain ascending original index. Every choice remains inspectable in the complete pair CSV.
 
 Rainfall proximity does not match slope, flow path, erodibility, erosivity, shape or contributing area. Differences in native delivery therefore remain a comparison of the explicitly declared scenarios. Source-input load changes are distinct from modelled annual delivery to streams. Native N/P exports use kg/year; native sediment export uses metric tonnes/year.
 
@@ -122,14 +144,14 @@ The report retains per-class precipitation target/control sums, signed sum resid
 
 ### Existing original-case numerical comparison
 
-The maintained original 120×120 input generator and all 635 original pair records were independently read. The new ordering was exercised on those actual original simulated fields, preserving all original class/rainfall values:
+The maintained original 120×120 input generator and all 635 original pair records were independently read. The local nearest-available ordering was exercised on those actual original simulated fields, preserving all original class/rainfall values:
 
 | Original class | Targets | Eligible candidates | New local sum absolute rainfall residual | Original global minimum-L1 residual |
 | --- | ---: | ---: | ---: | ---: |
 | 81 | 236 | 2,359 | 9.833285 mm/year | 9.624952 mm/year |
 | 82 | 399 | 3,474 | 22.333247 mm/year | 21.249913 mm/year |
 
-Class counts, changed area and corridor exclusion matched exactly. This comparison concerns source matching, not a new NDR/SDR model result. The original completed square, its exact optimal pair records and its receiver are unchanged. The regional helper is a separate, explicitly identified method.
+Class counts, changed area and corridor exclusion matched exactly. This comparison concerns source matching, not a new NDR/SDR model result. The original completed square, its exact optimal pair records and its receiver are unchanged. The regional local helper is a separate, explicitly identified method; the optional exact method retains its own exact-objective metadata.
 
 ## Retention and recovery
 
