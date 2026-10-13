@@ -36,9 +36,14 @@ CASE = re.compile(r"operation-[a-f0-9]{32}")
 UUID = re.compile(r"[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}")
 SHA = re.compile(r"[a-f0-9]{64}")
 ROUTE = re.compile(r"^/api/operations/(operation-[a-f0-9]{32})/flowable-sources(?:/(.*))?$")
-ACTIONS = {"catalogue", "inspect", "template", "prepare"}
+ACTIONS = {"catalogue", "inspect", "template", "prepare", "following-compare", "following-prepare"}
+FOLLOWING_ACTIONS = {"following-compare", "following-prepare"}
+FOLLOWING_FIELDS = {"installationId", "baseRevision", "expectedBaseSha256", "expectedRevision",
+                    "expectedInstallationSha256", "expectedVersion"}
 KINDS = {"archive", "seed", "bindings", "commissioning", "attachment"}
 FIELDS = {
+    "following-compare": FOLLOWING_FIELDS | {"requestId", "priorPreparationId", "laterPreparationId"},
+    "following-prepare": FOLLOWING_FIELDS | {"requestId", "comparisonId", "basisSha256", "choices", "reviewer", "note"},
     "catalogue": {"requestId", "archiveId"},
     "inspect": {"requestId", "archiveId", "programmeId", "programmeRevision",
                 "expectedProgrammeSha256", "expectedBasisSha256"},
@@ -333,6 +338,80 @@ def _seed(ops, case_id, body):
         return installations._source(context)
 
 
+
+def _following_native(ops, case_id, body, requests):
+    """Freeze actual saved editions, never caller-provided native records."""
+    require(isinstance(body.get("installationId"), str) and
+            re.fullmatch(r"installation-[a-f0-9]{32}", body["installationId"]),
+            "Select the original saved Installation identity.")
+    for key in ("baseRevision", "expectedRevision"):
+        require(isinstance(body.get(key), int) and not isinstance(body[key], bool) and
+                1 <= body[key] <= installations.MAX_EDITIONS,
+                "Select an actual retained Installation revision.")
+    require(body["baseRevision"] <= body["expectedRevision"],
+            "The historical base cannot follow the selected current revision.")
+    for key in ("expectedBaseSha256", "expectedInstallationSha256"):
+        require(isinstance(body.get(key), str) and SHA.fullmatch(body[key]),
+                "Retain each exact original Installation SHA256.")
+    path = requests / (body["requestId"] + ".native.json")
+    try:
+        retained = _json(_read(path))
+    except FileNotFoundError:
+        retained = None
+    prior_id = body.get("priorPreparationId")
+    if prior_id is None:
+        compared = _engine(ops, case_id, "get", {"requestId": body.get("comparisonId")})
+        require(isinstance(compared, dict) and compared.get("status") == "COMPLETE" and
+                compared.get("type") == "following-compare",
+                "Reopen the complete original following comparison.", "FLOWABLE_SOURCE_NOT_PREPARED", 409)
+        compared_request = compared.get("request", {})
+        require(all(compared_request.get(key) == body.get(key) for key in
+                    ("installationId", "baseRevision", "expectedBaseSha256", "expectedRevision",
+                     "expectedInstallationSha256")),
+                "The following request differs from its original compared Installation.",
+                "FLOWABLE_SOURCE_INSTALLATION_CHANGED", 409)
+        prior_id = compared_request.get("priorPreparationId")
+    require(isinstance(prior_id, str) and UUID.fullmatch(prior_id),
+            "Select the original completed preparation UUID.")
+    prior = _engine(ops, case_id, "get", {"requestId": prior_id})
+    require(isinstance(prior, dict) and prior.get("status") == "COMPLETE" and
+            prior.get("type") in ("prepare", "following-prepare") and
+            isinstance(prior.get("installation"), dict) and
+            isinstance(prior.get("preparationSha256"), str) and SHA.fullmatch(prior["preparationSha256"]),
+            "Reopen the complete original case-bound preparation.", "FLOWABLE_SOURCE_NOT_PREPARED", 409)
+    with ops._snapshot():
+        context = ops._context(case_id)
+        installations._current(context, body.get("expectedVersion"))
+        baseline = installations.get(ops, case_id, body["installationId"], body["baseRevision"])
+        current = installations.get(ops, case_id, body["installationId"])
+        require(baseline["sha256"] == body["expectedBaseSha256"] and
+                current["revision"] == body["expectedRevision"] and
+                current["sha256"] == body["expectedInstallationSha256"],
+                "The original Installation changed. Preserve this request and review its current edition.",
+                "FLOWABLE_SOURCE_INSTALLATION_CHANGED", 409)
+        document = installations.normalized(context, current["preview"]["document"])
+        require(document == current["preview"]["document"] and bool(document.get("workshare")),
+                "Retain the exact current Installation and its original Workshare.")
+        workshares.verify_document(ops, context, document)
+        original_document = installations.normalized(baseline["preview"]["snapshot"],
+                                                     prior["installation"].get("document"))
+        require(original_document == baseline["preview"]["document"] and
+                prior["installation"].get("source", {}).get("caseId") == case_id,
+                "The complete original preparation does not match this historical Installation.",
+                "FLOWABLE_SOURCE_BASELINE_CHANGED", 409)
+        native = {"source": installations._source(context),
+                  "baseline": deepcopy(baseline), "current": deepcopy(current),
+                  "baselinePreparation": {"requestId": prior_id,
+                    "preparationSha256": prior["preparationSha256"],
+                    "document": original_document}}
+    if retained is not None:
+        require(retained == native, "The retained original native comparison basis changed.",
+                "FLOWABLE_SOURCE_INSTALLATION_CHANGED", 409)
+    else:
+        _publish(path, (canonical(native) + "\n").encode())
+    return native
+
+
 def perform(ops, case_id, action, body):
     require(action in ACTIONS and isinstance(body, dict) and not set(body) - FIELDS[action],
             "Use the complete declared Flowable source request.")
@@ -350,7 +429,17 @@ def perform(ops, case_id, action, body):
         result = None
     if result is not None:
         return result
-    request = {key: deepcopy(value) for key, value in body.items() if key != "expectedVersion"}
+    request = {key: deepcopy(value) for key, value in body.items()
+               if key != "expectedVersion" or action in FOLLOWING_ACTIONS}
+    native = None
+    if action in FOLLOWING_ACTIONS:
+        require(set(body) == FIELDS[action], "Retain every complete following-edition field.")
+        try:
+            native = _json(_read(requests / (request_id + ".native.json")))
+        except FileNotFoundError:
+            pass
+        if native is not None:
+            request["native"] = native
     prior = _engine(ops, case_id, "get", {"requestId": request_id})
     recovered = isinstance(prior, dict) and prior.get("status") == "COMPLETE"
     if recovered:
@@ -360,12 +449,24 @@ def perform(ops, case_id, action, body):
         result = prior
         source = (result.get("installation", {}).get("source") if action == "prepare" else
                   result.get("seed", {}).get("source") if action == "template" else None)
+        if action in FOLLOWING_ACTIONS:
+            require(native is not None, "Retain the original case-bound native snapshot.",
+                    "FLOWABLE_SOURCE_REQUEST_CHANGED", 409)
+            source = native["source"]
+            require(result.get("native", native) == native,
+                    "The recovered following result changed its original native snapshot.",
+                    "FLOWABLE_SOURCE_REQUEST_CHANGED", 409)
         if action in ("template", "prepare"):
             require(isinstance(source, dict) and source.get("caseId") == case_id and
                     source.get("version") == body.get("expectedVersion"),
                     "The recovered preparation differs from the original case edition.", "FLOWABLE_SOURCE_CHANGED", 409)
     else:
-        source = _seed(ops, case_id, body) if action in ("template", "prepare") else None
+        if action in FOLLOWING_ACTIONS:
+            native = _following_native(ops, case_id, body, requests)
+            request["native"] = native
+            source = native["source"]
+        else:
+            source = _seed(ops, case_id, body) if action in ("template", "prepare") else None
         result = _engine(ops, case_id, action, request)
     require(isinstance(result, dict) and result.get("schema") == SERVICE_SCHEMA and
             result.get("requestId") == request_id, "Keep the complete same-request native result.",
@@ -376,14 +477,22 @@ def perform(ops, case_id, action, body):
     result["request"] = deepcopy(body)
     if source is not None:
         result["nativeSource"] = source
-    if action == "prepare":
+    if action in ("prepare", "following-prepare"):
         prepared = result.get("installation")
         require(isinstance(prepared, dict) and prepared.get("source") == source,
                 "The native preparation differs from the selected original case source.",
                 "FLOWABLE_SOURCE_CHANGED", 409)
+        if action == "following-prepare":
+            require(prepared.get("preview", {}).get("installationId") == body["installationId"] and
+                    prepared["preview"].get("expectedRevision") == body["expectedRevision"] and
+                    prepared["preview"].get("expectedVersion") == body["expectedVersion"],
+                    "The following preview must retain the same original Installation and reviewed revision.",
+                    "FLOWABLE_SOURCE_INSTALLATION_CHANGED", 409)
         with ops._snapshot():
             context = ops._context(case_id)
-            if recovered and context["program"]["version"] != body["expectedVersion"]:
+            if recovered and (context["program"]["version"] != body["expectedVersion"] or
+                              (action == "following-prepare" and
+                               installations.get(ops, case_id, body["installationId"])["revision"] != body["expectedRevision"])):
                 result["nativePreview"] = None
                 result["requiresCurrentPreview"] = True
             else:
@@ -544,6 +653,7 @@ def _download(handler, ops, case_id, descriptor, describe=False):
 
 
 def register_static(static):
+    static["/operations_flowable_following.mjs"] = ("operations_flowable_following.mjs", "text/javascript; charset=utf-8")
     static["/operations_flowable_sources.mjs"] = ("operations_flowable_sources.mjs", "text/javascript; charset=utf-8")
     static["/operations_flowable_sources.css"] = ("operations_flowable_sources.css", "text/css; charset=utf-8")
     static["/FLOWABLE_SOURCE_DESK.md"] = ("FLOWABLE_SOURCE_DESK.md", "text/markdown; charset=utf-8")
@@ -675,7 +785,7 @@ def preparation_archive(ops, case_id, request_id):
     """Bundle the same full original preparation; the existing receiver adopts it."""
     require(isinstance(request_id, str) and UUID.fullmatch(request_id), "Keep the original preparation UUID.")
     result = lookup(ops, case_id, request_id)
-    require(result.get("schema") == SERVICE_SCHEMA and result.get("type") == "prepare" and
+    require(result.get("schema") == SERVICE_SCHEMA and result.get("type") in ("prepare", "following-prepare") and
             isinstance(result.get("files"), list) and result["files"],
             "Complete the original full preparation before downloading it.", "FLOWABLE_SOURCE_NOT_PREPARED", 409)
     root = _root(ops, case_id)

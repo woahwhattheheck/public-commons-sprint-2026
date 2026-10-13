@@ -8,7 +8,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {pipeline} from 'node:stream/promises';
-import {reopenFlowableInstallation} from './flowable-installation.mjs';
+import {reopenFlowableInstallationPreparation} from './flowable-installation-following.mjs';
 import {openFlowableWorkspace} from '../../../scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/model.mjs';
 import {regular,operationLease} from '../../../scf-starforge-20261009/distribution/runtime-workspace/storage.mjs';
 import {hashPrivate,privateDirectory,syncDirectory} from '../../../scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/files.mjs';
@@ -113,6 +113,26 @@ async function copyOriginal(from,to,identity,signal){
  await settlePublished(to,{bytes:identity.bytes,sha256:identity.sha256},identity.bytes);
  return{path:to,bytes:identity.bytes,sha256:identity.sha256};
 }
+
+async function preparationSources(prepared,directory,signal,prefix='',depth=0){
+ need(depth<=100,'Retain the bounded original following-edition history.');
+ const rows=[];
+ if(prepared.following){
+  const before=prepared.following.priorPreparation,later=prepared.following.laterPreparation;
+  need(before?.directory==='prior'&&later?.directory==='later'&&HASH.test(before.preparationSha256)&&
+   HASH.test(later.preparationSha256),'Keep both exact complete nested preparations.');
+  const prior=await reopenFlowableInstallationPreparation({directory:join(directory,'prior'),signal});
+  need(prior.preparationSha256===before.preparationSha256,'The complete earlier preparation changed.');
+  rows.push(...await preparationSources(prior,join(directory,'prior'),signal,prefix+'prior/',depth+1));
+  const next=await reopenFlowableInstallationPreparation({directory:join(directory,'later'),signal});
+  need(next.preparationSha256===later.preparationSha256&&same(next.source,prepared.source)&&
+   next.archive.sha256===prepared.archive.sha256,'The selected later source differs from its complete preparation.');
+ }
+ rows.push({prefix,source:prepared.source,archive:{...prepared.archive,name:prefix+prepared.archive.name},
+  preparationSha256:prepared.preparationSha256});
+ return rows;
+}
+
 function selectedOptions(input){
  need(input&&typeof input==='object'&&!Array.isArray(input),'Supply the complete original receiving selection.');
  const names=['preparationDirectory','expectedPreparationSha256','operationsWorkspace','caseId','receivingOperationsDirectory','receivingFlowableDirectory','outputDirectory','actor','python'];
@@ -208,22 +228,44 @@ export async function runFlowableInstallationReceiving(input,{signal}={}){
   await saved('Original_Receiving_Source.json',{schema:SCHEMA+'.source',root:originalRoot,
    cli:await sourceIdentity(originalCli),archiveHelper:await sourceIdentity(archiveHelper),
    receiver:await sourceIdentity(fileURLToPath(import.meta.url)),python:await sourceIdentity(options.python)});
-  const prepared=await reopenFlowableInstallation({directory:options.preparationDirectory});
+  const prepared=await reopenFlowableInstallationPreparation({directory:options.preparationDirectory,signal});
+  const following=prepared.following??null,sourcePrefix=following?'later/':'';
   need(prepared.preparationSha256===options.expectedPreparationSha256,'Select the unchanged complete original preparation.');
   const source=prepared.source,document=prepared.document,preview=prepared.preview;
   need(source?.schema==='stellar-forge.flowable-customer-installation.v1.source'&&source.programme?.record?.kind==='programme'&&
    HASH.test(source.programme.record.sha256)&&HASH.test(source.programme.programmeSha256)&&HASH.test(source.programme.basisSha256),
    'Retain the full selected original programme, source and frozen review basis.');
   need(document?.workshare?.caseId===prepared.workshareCaseId&&preview?.expectedVersion&&
-   preview.installationId===null&&preview.expectedRevision===0&&same(preview.document,document)&&
+   (following?preview.installationId===following.currentInstallation?.id&&
+    preview.expectedRevision===following.currentInstallation.revision:
+    preview.installationId===null&&preview.expectedRevision===0)&&same(preview.document,document)&&
    prepared.installationSource?.caseId===options.caseId,
    'Use the complete original planned customer Workshare and case preparation.');
-  need(prepared.archive?.name==='source/flowable-workspace.ndjson'&&
+  need(prepared.archive?.name===sourcePrefix+'source/flowable-workspace.ndjson'&&
    prepared.archive.sha256===source.archive?.sha256&&prepared.archive.bytes===source.archive?.bytes,
    'The complete mandatory Flowable archive differs from the selected source.');
   await saved('Original_Preparation.json',prepared);
-  const transferred=[],byName=new Map();
-  for(const row of [...prepared.inputs,...prepared.outputs]){
+  const allSourceEditions=await preparationSources(prepared,options.preparationDirectory,signal);
+  if(following){
+   need(following.baselineInstallation?.id===following.currentInstallation.id&&
+    following.baselineInstallation.revision<=following.currentInstallation.revision,
+    'Retain the same original historical and current Installation.');
+   for(const [name,ref] of [['baseline',following.baselineInstallation],['current',following.currentInstallation]]){
+    const row=await native('following-'+name,['installation-show','--case',options.caseId,
+     '--installation',ref.id,'--revision',String(ref.revision)]);
+    need(row.id===ref.id&&row.revision===ref.revision&&row.sha256===ref.sha256,
+     'The selected original '+name+' Installation changed.');
+    await saved('Following_'+name+'_Installation.json',row);
+   }
+  }
+  const transferred=[],byName=new Map(),metadataFiles=[];
+  for(const name of ['prepare-request.json','preparation.json']){
+   const raw=await readRetained(join(options.preparationDirectory,name),JSON_MAX);
+   metadataFiles.push({name,bytes:raw.length,sha256:digest(raw)});
+  }
+  need(metadataFiles[1].sha256===prepared.preparationSha256,
+   'Retain the exact complete preparation metadata bytes.');
+  for(const row of [...prepared.inputs,...prepared.outputs,...metadataFiles]){
    need(ordinary(row.name),'Use complete ordinary retained preparation file paths.');
    const prior=byName.get(row.name);
    if(prior){need(same(prior,row),'Repeated preparation files differ.');continue;}
@@ -231,7 +273,7 @@ export async function runFlowableInstallationReceiving(input,{signal}={}){
    const file=await copyOriginal(join(options.preparationDirectory,row.name),join(out,'preparation',row.name),row,signal);
    transferred.push({name:row.name,...file});
   }
-  need(byName.has('source/flowable-workspace.ndjson')&&byName.has('FLOWABLE_CUSTOMER_SOURCE.json')&&
+  need(byName.has(prepared.archive.name)&&byName.has('FLOWABLE_CUSTOMER_SOURCE.json')&&
    byName.has('installation-input.json')&&byName.has('installation-preview-input.json'),
    'Transfer the full archive, source report and original native preparation together.');
   const report=parsed(await regular(join(out,'preparation','FLOWABLE_CUSTOMER_SOURCE.json'),64*1024*1024));
@@ -240,29 +282,38 @@ export async function runFlowableInstallationReceiving(input,{signal}={}){
    'The complete retained report or native preparation changed.');
   for(const file of source.files){
    need(ordinary(file.name),'Retain every emitted original source file.');
-   const retained=byName.get('delivery/files/'+file.name);
+   const retained=byName.get(sourcePrefix+'delivery/files/'+file.name);
    need(retained&&retained.bytes===file.bytes&&retained.sha256===file.sha256,'The complete selected source file was not transferred: '+file.name);
   }
-  const flowableArchive=join(out,'preparation','source','flowable-workspace.ndjson');
+  const flowableArchive=join(out,'preparation',prepared.archive.name);
+  for(const edition of allSourceEditions){
+   const retained=byName.get(edition.archive.name);
+   need(retained&&retained.bytes===edition.archive.bytes&&retained.sha256===edition.archive.sha256,
+    'Retain every complete prior and later source archive, unchanged.');
+  }
   let installation;
   if(options.save){
    // This full original request is durably retained before the first native write.
    const intent=await phase('Original_Save_Intent',async()=>{
     const actual=await native('installation-preview',['installation-preview','--case',options.caseId,
-     '--expected-version',String(preview.expectedVersion),'--expected-revision','0',
+     '--expected-version',String(preview.expectedVersion),'--expected-revision',String(preview.expectedRevision),
+     ...(preview.installationId?['--installation',preview.installationId]:[]),
      '--document',join(out,'preparation','installation-input.json')]);
-    need(same(actual.document,document)&&actual.installationId===null&&actual.expectedRevision===0&&
+    need(same(actual.document,document)&&actual.installationId===preview.installationId&&actual.expectedRevision===preview.expectedRevision&&
      HASH.test(actual.previewSha256),'Original native preview differs from this preparation.');
     return{requestId:options.save.requestId,actor:options.actor,note:options.save.note,expectedVersion:preview.expectedVersion,
-     expectedRevision:0,expectedPreviewSha256:actual.previewSha256,documentFile:'preparation/installation-input.json',preview:actual};
+     installationId:preview.installationId,expectedRevision:preview.expectedRevision,expectedPreviewSha256:actual.previewSha256,documentFile:'preparation/installation-input.json',preview:actual};
    });
    const receipt=await phase('Original_Save_Result',()=>native('installation-save',['installation-save','--case',options.caseId,
-    '--expected-version',String(intent.expectedVersion),'--expected-revision','0','--document',join(out,intent.documentFile),
+    '--expected-version',String(intent.expectedVersion),'--expected-revision',String(intent.expectedRevision),
+    ...(intent.installationId?['--installation',intent.installationId]:[]),'--document',join(out,intent.documentFile),
     '--expected-preview-sha256',intent.expectedPreviewSha256,'--request-id',intent.requestId,'--actor',intent.actor,'--note',intent.note]));
-   need(typeof receipt.recordId==='string'&&receipt.recordId&&Number.isSafeInteger(receipt.revision)&&receipt.revision===1,
-    'Retain the original saved Installation identity and first revision.');
+   need(typeof receipt.recordId==='string'&&receipt.recordId&&Number.isSafeInteger(receipt.revision)&&receipt.revision===preview.expectedRevision+1&&(!preview.installationId||receipt.recordId===preview.installationId),
+    'Retain the same saved Installation identity and exact next revision.');
    installation={id:receipt.recordId,revision:receipt.revision};
   }else installation={id:options.installationId,revision:options.installationRevision};
+  if(following)need(installation.id===preview.installationId&&installation.revision===preview.expectedRevision+1,
+   'Select the exact same-ID following Installation edition.');
   const original=await native('installation-selected',['installation-show','--case',options.caseId,
    '--installation',installation.id,'--revision',String(installation.revision)]);
   need(original.id===installation.id&&original.revision===installation.revision&&HASH.test(original.sha256)&&
@@ -273,7 +324,8 @@ export async function runFlowableInstallationReceiving(input,{signal}={}){
    ...(document.payment?.termsSourceIds??[]),document.workshare.sourceId,document.workshare.packetSourceId].filter(Boolean))];
   const sources=sourceIds.map(id=>{const row=originalCase.sources.find(x=>x.id===id);need(row,'Missing original selected case source.');return{id:row.id,bytes:row.bytes,sha256:row.sha256};});
   const originalSelection={schema:SCHEMA+'.archive-selection',caseId:options.caseId,
-   installation:{...installation,sha256:original.sha256},document,sources};
+   installation:{...installation,sha256:original.sha256},document,sources,
+   ...(following?{following:{baseline:following.baselineInstallation,current:following.currentInstallation}}:{})};
   await saved('Original_Archive_Selection.json',originalSelection);
   const casePath=join(out,'Complete_Original_Installation.zip');
   const exported=await phase('Installation_Export',async()=>{
@@ -287,40 +339,74 @@ export async function runFlowableInstallationReceiving(input,{signal}={}){
   need(same(inspected.archive,{bytes:exported.bytes,sha256:exported.sha256}),'Original case archive inspection selected different bytes.');
   await phase('Installation_Archive_Inspection',async()=>inspected);
 
-  // Receive the mandatory full sidecar through the original native Flowable parser/adopter.
+  // Every earlier and later source uses the original native parser/adopter.
+  // One receiving workspace retains their complete immutable history together.
   model=await openFlowableWorkspace({directory:options.receivingFlowableDirectory,signal});
-  need(typeof source.workspaceId==='string'&&source.workspaceId&&model.workspaceId!==source.workspaceId,
-   'Select an independent Flowable receiving workspace, not the original producing workspace.');
-  const flowIntent=await phase('Original_Flowable_Intent',async()=>({
-   requestId:randomUUID(),adoptRequestId:randomUUID(),archiveSha256:source.archive.sha256,
-   bytes:source.archive.bytes,workspaceId:model.workspaceId}));
-  need(flowIntent.workspaceId===model.workspaceId&&flowIntent.archiveSha256===source.archive.sha256&&
-   flowIntent.bytes===source.archive.bytes,'Continue the same independent original Flowable workspace.');
-  const receiving=await model.inspectDelivery({requestId:flowIntent.requestId,path:flowableArchive,label:'Complete customer Installation source'});
-  need(receiving.value.sourceWorkspace?.workspaceId===source.workspaceId&&receiving.value.original.sha256===source.archive.sha256,
-   'Original native archive authority differs from the selected complete source.');
-  const manifest=(await model.readSource({reference:receiving.value.manifest})).value;
-  const adoptIntent=await phase('Original_Flowable_Adopt_Intent',async()=>({requestId:flowIntent.adoptRequestId,id:receiving.id,
-   expectedRevision:receiving.revision,manifestSha256:receiving.value.manifestSha256}));
-  const adopted=await model.adoptDelivery(adoptIntent);
-  need(adopted.value.state==='ADOPTED','Complete original Flowable adoption is unfinished.');
-  await phase('Flowable_Adoption',async()=>({id:adopted.id,sha256:adopted.sha256,sourceWorkspace:source.workspaceId,workspaceId:model.workspaceId}));
-  const verifyFlowable=async()=>{
-   for(const record of manifest.records){
-    signal?.throwIfAborted();const actual=await model.getRecord({kind:record.kind,id:record.id,revision:record.revision});
-    need(actual.sha256===record.sha256&&actual.bytes===record.bytes,'An imported immutable Flowable record differs.');
+  const adoptedArchives=new Map(),editions=[];
+  for(const edition of allSourceEditions){
+   const selectedSource=edition.source,archive=edition.archive;
+   need(typeof selectedSource.workspaceId==='string'&&selectedSource.workspaceId&&
+    model.workspaceId!==selectedSource.workspaceId,
+    'Select an independent Flowable receiving workspace, not an original producer.');
+   const cached=adoptedArchives.get(archive.sha256);
+   if(cached){
+    need(cached.source.workspaceId===selectedSource.workspaceId&&cached.archive.bytes===archive.bytes,
+     'One exact archive cannot acquire a different original authority.');
+    editions.push({...cached,source:selectedSource,archive});
+    continue;
    }
-   const chosen=source.programme.record,actual=await model.getRecord({kind:'programme',id:chosen.id,revision:chosen.revision});
-   need(actual.sha256===chosen.sha256&&actual.value.programmeSha256===source.programme.programmeSha256,
-    'The selected immutable programme/source differs after receiving.');
-   return{workspaceId:model.workspaceId,sourceWorkspace:source.workspaceId,programme:chosen,
-    programmeSha256:source.programme.programmeSha256,retainedBasisSha256:source.programme.basisSha256,
-    records:manifest.records.length,receivingId:adopted.id,manifestSha256:adopted.value.manifestSha256};
+   const tag=following?'-'+archive.sha256:'',path=join(out,'preparation',archive.name);
+   const flowIntent=await phase('Original_Flowable_Intent'+tag,async()=>({
+    requestId:randomUUID(),adoptRequestId:randomUUID(),archiveSha256:archive.sha256,
+    bytes:archive.bytes,workspaceId:model.workspaceId}));
+   need(flowIntent.workspaceId===model.workspaceId&&flowIntent.archiveSha256===archive.sha256&&
+    flowIntent.bytes===archive.bytes,'Continue the same independent original Flowable workspace.');
+   const receiving=await model.inspectDelivery({requestId:flowIntent.requestId,path,
+    label:'Complete customer Installation source'});
+   need(receiving.value.sourceWorkspace?.workspaceId===selectedSource.workspaceId&&
+    receiving.value.original.sha256===archive.sha256,
+    'Original archive authority differs from the selected complete source.');
+   const manifest=(await model.readSource({reference:receiving.value.manifest})).value;
+   const adoptIntent=await phase('Original_Flowable_Adopt_Intent'+tag,async()=>({
+    requestId:flowIntent.adoptRequestId,id:receiving.id,expectedRevision:receiving.revision,
+    manifestSha256:receiving.value.manifestSha256}));
+   const adopted=await model.adoptDelivery(adoptIntent);
+   need(adopted.value.state==='ADOPTED','Complete original Flowable adoption is unfinished.');
+   await phase('Flowable_Adoption'+tag,async()=>({id:adopted.id,sha256:adopted.sha256,
+    sourceWorkspace:selectedSource.workspaceId,workspaceId:model.workspaceId}));
+   const retainedEdition={source:selectedSource,archive,manifest,adopted,flowIntent};
+   adoptedArchives.set(archive.sha256,retainedEdition);editions.push(retainedEdition);
+  }
+  const verifyFlowable=async()=>{
+   const reports=[];
+   for(const edition of editions){
+    const {source:selectedSource,manifest,adopted}=edition;
+    for(const record of manifest.records){
+     signal?.throwIfAborted();
+     const actual=await model.getRecord({kind:record.kind,id:record.id,revision:record.revision});
+     need(actual.sha256===record.sha256&&actual.bytes===record.bytes,
+      'An imported immutable earlier or later Flowable record differs.');
+    }
+    const chosen=selectedSource.programme.record;
+    const actual=await model.getRecord({kind:'programme',id:chosen.id,revision:chosen.revision});
+    need(actual.sha256===chosen.sha256&&actual.value.programmeSha256===selectedSource.programme.programmeSha256,
+     'The selected immutable programme/source differs after receiving.');
+    reports.push({workspaceId:model.workspaceId,sourceWorkspace:selectedSource.workspaceId,programme:chosen,
+     programmeSha256:selectedSource.programme.programmeSha256,retainedBasisSha256:selectedSource.programme.basisSha256,
+     records:manifest.records.length,receivingId:adopted.id,manifestSha256:adopted.value.manifestSha256});
+   }
+   return reports;
   };
   const first=await verifyFlowable();await model.close();model=null;
   model=await openFlowableWorkspace({directory:options.receivingFlowableDirectory,signal});
-  const cold=await verifyFlowable();need(same(first,cold),'Original immutable Flowable source changed on cold reopen.');
-  await saved('Flowable_Cold_Reopen.json',cold);await model.close();model=null;
+  const coldEditions=await verifyFlowable();need(same(first,coldEditions),
+   'Original immutable earlier or later source changed on cold reopen.');
+  const selectedIndex=editions.findLastIndex(e=>e.archive.sha256===prepared.archive.sha256&&same(e.source,source));
+  need(selectedIndex>=0,'Retain the selected later source in the complete receiving census.');
+  const cold=coldEditions[selectedIndex],flowIntent=editions[selectedIndex].flowIntent;
+  await saved('Flowable_Cold_Reopen.json',cold);
+  if(following)await saved('Following_Flowable_Cold_Reopen.json',coldEditions);
+  await model.close();model=null;
 
   const importIntent=await phase('Original_Installation_Import_Intent',async()=>({
    requestId:'flowable-installation-'+digest(encoded({archive:exported.sha256,workspace:options.receivingOperationsDirectory,actor:options.actor})).slice(0,32),
@@ -353,6 +439,9 @@ export async function runFlowableInstallationReceiving(input,{signal}={}){
    received:{caseId:imported.id,operationsDirectory:options.receivingOperationsDirectory,flowableDirectory:options.receivingFlowableDirectory,
     flowableWorkspaceId:cold.workspaceId,installation:coldCase},
    completeCase:exported,mandatoryFlowableArchive:{path:flowableArchive,bytes:source.archive.bytes,sha256:source.archive.sha256},
+   ...(following?{following:{...following,sourceEditions:coldEditions,
+    completeSourceArchives:editions.map(e=>({path:join(out,'preparation',e.archive.name),
+     bytes:e.archive.bytes,sha256:e.archive.sha256}))}}:{}),
    files:transferred,requestIds:{save:options.save?.requestId??null,caseImport:importIntent.requestId,
     flowableInspect:flowIntent.requestId,flowableAdopt:flowIntent.adoptRequestId},
    renderedUse:{performed:false,viewedByOperator:false,
