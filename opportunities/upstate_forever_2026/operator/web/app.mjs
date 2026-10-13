@@ -16,6 +16,7 @@ import {attachExperiments} from './experiments.mjs';
 import {attachParameterStudies} from './parameter_studies.mjs';
 import {attachPortfolio} from './portfolio.mjs';
 import {attachProgrammes} from './programmes.mjs';
+import {attachSourceReports} from './source_reports.mjs';
 
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
@@ -107,6 +108,10 @@ getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  openBackup:()=>journeyForm(()=>backupForm()),
  openRestore:()=>journeyForm(()=>restoreForm()),
  getProgramme:()=>typeof programmes==='undefined'?null:programmes});
+const sourceReports=attachSourceReports({
+ getState:()=>state,getWorkspace:()=>workspace,api,endpoint,openItem,navigate,
+ hasView:id=>extensions.hasView(id),openSourceImport:options=>sourceForm(options)
+});
 const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle,mapFamilies,mapTitles,section,pageHeader,table,
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,detail,refresh,showTask,revise:deliveryForm,
  setDetailFiles:files=>{if(detailContext)detailContext.files=files;},
@@ -164,6 +169,7 @@ function mountPortfolioDetail(){
 }
 function render(){
   if(!state)return;
+  if(view!=='sources')sourceReports.detach();
   if(view!=='portfolios')portfolio.detach();
   mountPortfolioDetail();
   if(view!=='parameter-studies')parameterStudies.detach();
@@ -224,7 +230,7 @@ function render(){
     section('Workspace custody','Original identity is preserved by native backup and restore.','<div class="section-body">'+defs({project_id:d.project.id,created:when(d.project.created_at),source_editions:d.sources.length,observation_editions:d.observations.length,retained_comparisons:(d.comparisons||[]).length+(d.observation_comparisons||[]).length})+'<div class="page-actions">'+button('backup','Create complete backup')+button('restore','Restore an archive')+'</div></div>')+'</div>';
   }
   if(view==='sources'){
-    html=pageHeader('Original sources','Retain the source URI, edition, units, exact bytes and native sidecars before selecting data for analysis.',button('source-open','Import source edition','','primary'));
+    html=pageHeader('Original sources','Retain the source URI, edition, units, exact bytes and native sidecars before selecting data for analysis.',button('source-open','Import source edition','','primary')+button('source-reports-open','Review retained reports'));
     html+=d.sources.length?section('Retained source editions','Select an edition to inspect its original files and native schema.',table(['Edition','Captured','Sources','Scope',''],d.sources.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.title)+'</strong>'+metaId(row)+'</td><td>'+esc(row.captured_at||'Not supplied')+'</td><td>'+row.entries.length+'</td><td>'+esc(typeof row.scope==='string'?row.scope:JSON.stringify(row.scope))+'</td><td class="actions-cell">'+itemButton('sources',row.id)+'</td></tr>'))):noRows('Import the original source data','A source edition retains its actual manifest and file bytes, including raster units and the biophysical CSV.','source-open','Import sources');
   }
   if(view==='profiles'){
@@ -263,6 +269,7 @@ function render(){
   if(view==='customer-reviews')html=customerReviews.render();
   if(view==='receiving-waters')html=receivingWaters.render();
   $('#content').innerHTML=html;
+  if(view==='sources')sourceReports.mount($('#content')).catch(globalError);else sourceReports.detach();
   if(view==='receiving-waters')receivingWaters.mount($('#content'));else receivingWaters.detach();
   if(view==='runs'){const actions=$('.page-actions',$('#content'));if(actions)actions.insertAdjacentHTML('beforeend',button('programme-open','Run programmes'));}
   if(view==='parameter-studies')parameterStudies.mount($('#content'));else parameterStudies.detach();
@@ -486,11 +493,11 @@ function bindCollection(name,targets,chosenValues={}){
  const update=()=>{const collection=node.value;for(const [target,kind] of targets){const el=form.elements.namedItem(target);if(el)setOptions(el,sourceRows(collection,kind),chosenValues[target]??el.value);}chosenValues={};};
  node.addEventListener('change',update);update();
 }
-function sourceForm(){
+function sourceForm(options={}){
  sourcePreview=null;
  const registered=state.registered_sources||[];
  openForm('Import original source data','Preview the original metadata and file selection, then retain the edition in the native workspace.',
- '<div class="form-grid">'+field('Source selection',select('source_mode',[...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],registered.length?'registered':'archive'))+
+ '<div class="form-grid">'+field('Source selection',select('source_mode',[...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],options.mode==='archive'?'archive':registered.length?'registered':'archive'))+
  '<div id="source-selection-body" class="full"></div><div id="source-preview" class="full"></div></div>','Preview source',
  async()=>{
   if(sourcePreview)return submitAction('source.import',{preview_id:sourcePreview.id});
@@ -521,7 +528,7 @@ function sourceForm(){
    const mode=val('source_mode');
    $('#source-selection-body').innerHTML=mode==='registered'?field('Registered manifest',select('registered_id',registered.map(x=>[x.id,x.title+' · '+x.entries+' sources'])),'',true):
     '<div class="form-grid">'+field(mode==='archive'?'Original source ZIP':'Original source file',input('source_file','file','','required '+(mode==='archive'?'accept=".zip"':'')),'Files are uploaded as their original bytes.',true)+
-    (mode==='archive'?field('Manifest entry, when the ZIP has several manifests',input('manifest_member'),'Optional. Use the exact original relative path.',true):
+    (mode==='archive'?field('Manifest entry, when the ZIP has several manifests',input('manifest_member','text',options.manifestMember||''),'Optional. Use the exact original relative path.',true):
      field('Title',input('source_title','text','','required'))+field('Original source URI',input('source_uri','url','','required'))+field('Source vintage',input('source_vintage','text','','required'),'Edition, release date or actual observation period.')+field('Kind',select('source_kind',[['table','Table'],['raster','Raster'],['vector','Vector'],['document','Document']],'table'))+field('Units',input('source_units'))+field('Role',input('source_role'),'Optional original source role.')+field('Layer',input('source_layer'))+field('Source notes',area('source_notes'),'One note per line.',true))+'</div>';
   };
   form.elements.namedItem('source_mode').addEventListener('change',renderSource);renderSource();
@@ -1092,6 +1099,7 @@ async function selectWorkspace(id){
  nativeJobs.detach();
  if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
+ sourceReports.reset();
  rehearsal.detach();
  extensions.detach();
  spatialWorkspace.suspend();programmes.detach();community.detach();customerReviews.detach();experiments.detach();receivingWaters.detach();portfolio.detach();parameterStudies.detach();workspace=id;state=null;sessionStorage.setItem('upstate-selected-workspace',id);
@@ -1119,6 +1127,7 @@ async function dispatch(button){
  }
  if(action==='item')return openItem(button.dataset.kind,id);
  if(action==='source-open')return sourceForm();
+ if(action==='source-reports-open'){sourceReports.focus();return;}
  if(action==='source-inspect')return inspectSource(button.dataset.collection,button.dataset.source);
  if(action==='profile-new'||action==='profile-clone')return profileForm(id);
  if(action==='grid-new'||action==='grid-clone')return gridForm(id);
