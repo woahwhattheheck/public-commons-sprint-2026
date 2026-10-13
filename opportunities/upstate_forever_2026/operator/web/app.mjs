@@ -898,7 +898,7 @@ async function deliveryForm(id,initialSelection){
    const x=readDeliverySource('overlay_'+key,requiredField,true,row?.overlays?.[key]);
    if(x)selectedOverlays[key]=x;
   }
-  for(const [key,role]of [['high_quality_waters','HIGH_QUALITY_WATERS'],['drinking_water','SOURCE_WATER_PROTECTION_AREAS']]){
+  for(const [key,role]of [['high_quality_waters','HIGH_QUALITY_WATERS'],['drinking_water','SOURCE_WATER_PROTECTION_AREAS'],['protected_lands','PROTECTED_LANDS_OVERLAY']]){
    if(selectedOverlays[key])source_roles[role]=selectedOverlays[key];else delete source_roles[role];
   }
   for(const key of ['nitrogen_export','phosphorus_export','sediment_export']){

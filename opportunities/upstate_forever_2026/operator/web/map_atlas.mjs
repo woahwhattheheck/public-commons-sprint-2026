@@ -18,6 +18,15 @@ const MASS = ['nitrogen_export','phosphorus_export','sediment_export'];
 const STEPS = ['Native runs','Source context','Map settings','Review and build'];
 const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone = v => JSON.parse(JSON.stringify(v));
+function syncWaterOverlayRoles(selection) {
+ const sourceRoles={...(selection.source_roles||{})},overlays=selection.overlays||{};
+ for(const [name,role] of [['high_quality_waters','HIGH_QUALITY_WATERS'],['drinking_water','SOURCE_WATER_PROTECTION_AREAS'],['protected_lands','PROTECTED_LANDS_OVERLAY']]){
+  const choice=overlays[name];
+  if(choice&&typeof choice==='object'&&!Array.isArray(choice))sourceRoles[role]=clone(choice);
+  else delete sourceRoles[role];
+ }
+ return {...selection,source_roles:sourceRoles};
+}
 const short = v => String(v || '').slice(0,12);
 const titleOf = r => r?.title || r?.selection?.title || r?.spec?.title || r?.metadata?.title || short(r?.id);
 const modelNames = r => r?.selection?.models || ['ndr','sdr'];
@@ -120,6 +129,7 @@ export function attachMapAtlas(host) {
   draft=clone(saved?.selection||defaultSelection(data()));step=saved?.step||0;operationId=saved?.operation_id||null;mode='prepare';
  }
  function persist() {
+  draft=syncWaterOverlayRoles(draft);
   const saved={selection:clone(draft),step,operation_id:operationId};drafts.set(workspace,saved);
   try{sessionStorage.setItem('upstate-atlas-draft:'+workspace,JSON.stringify(saved));}
   catch{if(!storageWarned){storageWarned=true;host.toast?.('Use Download selection to preserve this draft outside the tab.');}}
