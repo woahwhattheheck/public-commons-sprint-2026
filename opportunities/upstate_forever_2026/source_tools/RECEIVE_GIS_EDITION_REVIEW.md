@@ -77,13 +77,54 @@ a discovery mode; the same owner proceeds to the ordinary full command after
 selecting the existing case. A missing compatible pair is reported with that
 actual catalogue instead of creating a substitute scientific case.
 
+## Continue a completed study that has no managed GIS pair yet
+
+If the actual Workspace has completed sources, runs or a delivery but no
+compatible GIS export/receipt, use the existing **Editable GIS projects**
+selection for that same study. Save the real selection JSON and pass it:
+
+~~~sh
+"$NATIVE_PYTHON" -B source_tools/receive_gis_edition_review.py \
+  --application "$APPLICATION" \
+  --workspace "$ACTUAL_WORKSPACE" \
+  --output "$RECEIVING_OUTPUT" \
+  --gis-selection "$ACTUAL_GIS_SELECTION_JSON" \
+  --require-raster \
+  --node "$BROWSER_NODE"
+~~~
+
+The selection has the same complete shape used by the existing GIS desk and
+\`workspace-export\` CLI: actual \`delivery_id\`, or retained source/grid/run/
+comparison selections, with the chosen title and actual project CRS. Use the
+completed record IDs from that Workspace; preserve its simulated or original
+case label, actual native resolution and support. Clear unrelated default
+sources for a delivery-only selection. No synthetic raster or fabricated
+managed ID is introduced.
+
+For this explicit selection, the receiver first reuses an existing compatible
+pair for the installed builder's exact request, preferring an already edited
+received edition. If absent, it invokes maintained \`gis_workspace.export\`
+and \`gis_workspace.receive\` on that actual export's checked original archive.
+The true returned IDs are pinned before the ordinary edition review. These are
+the same APIs behind \`workspace-export\` and \`workspace-receive\`; scientific
+model calculations remain untouched. The input selection, source hash and
+actual export/receive elapsed history are retained in \`gis-intake.json\`.
+
+Receiving an unchanged original archive legitimately produces zero data
+changes. This still exercises the actual full native raster/support/report
+handover. Existing edited pairs remain available and are never modified.
+Explicit export/receipt flags select the original pair directly; do not combine
+those flags with a new GIS selection file.
+
 ## Native review, complete package and original operator
 
 The command invokes the installed
 \`model.gis_edition_review.review\` with the exact pair and current producer
 version. It uses the original per-review execution lock and layer checkpoints.
 It does not launch an InVEST model, change a GIS edition, seal desktop edits,
-create a new export or alter an adopted source selection.
+or alter an adopted source selection. Only the explicitly supplied
+`--gis-selection` continuation uses the existing export/receive APIs described
+above.
 
 The completed native state supplies every original report file. The receiver
 verifies the complete ZIP's member names, lengths and SHA-256 values while
