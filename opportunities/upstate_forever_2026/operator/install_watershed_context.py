@@ -17,6 +17,8 @@ FILES = (
     "model/watershed_briefing.py",
     "model/utility_monitoring.py",
     "docs/UTILITY_MONITORING.md",
+    "source_tools/receive_utility_monitoring.py",
+    "docs/UTILITY_MONITORING_RECEIVING.md",
     "model/utility_microbial_study.py",
     "model/receiving_water_monitoring.py",
     "model/monitoring_sources.py",
