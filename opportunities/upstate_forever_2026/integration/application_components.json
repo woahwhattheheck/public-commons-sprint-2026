@@ -5462,7 +5462,10 @@
         "docs/SCIENTIFIC_REPORT_BRIEFING.md",
         "docs/OBSERVED_REPORT_RENDERING.md",
         "source_tools/receive_scientific_report_review.py",
-        "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md"
+        "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
+        "source_tools/receive_observed_scientific_review.py",
+        "source_tools/RECEIVE_OBSERVED_SCIENTIFIC_REVIEW.md",
+        "observations/eighteenmile_2023/scientific-review.request.json"
       ],
       "requires": [
         "eco13",
