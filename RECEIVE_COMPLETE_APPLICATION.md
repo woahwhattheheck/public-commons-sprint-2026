@@ -1,26 +1,65 @@
-# Complete application source — merged course 3781
+# Complete current application — canonical source edition 97fdd7ab
 
-This distribution retains every application file from canonical commit `132133d2034c6ae18c9a380ddbab4c85541d69dc`, plus the two-file completed-Programme artifact verification correction recorded in `SOURCE_OVERLAY.json`. Original scientific source data, source manifests, component fragments, receiving tools and owner instructions are included.
+This application-only distribution contains every canonical application file at `97fdd7ab82676b8ca1c52bd311186c541eb94d44`, including the completed field/QC recording join from PR3938 and the current-source compatibility and capacity corrections. Its original source and policy inventory is in `SOURCE_OVERLAY.json`. No source overlay remains to be applied.
 
-## Source and installed application
+This is the complete application source for the existing Upper Savannah case and its retained scientific inputs. The source directory directly contains `model/`, `operator/`, `source_tools/`, `source/`, `observations/` and `integration/`. Strip only the Git ZIP's enclosing directory. An application-only ZIP does not contain an extra `opportunities/upstate_forever_2026/` prefix.
 
-Strip the Git ZIP's one enclosing directory. That directory directly contains `model/`, `operator/`, `source_tools/`, `source/`, `observations/` and `integration/`. There is no additional `opportunities/upstate_forever_2026/` directory inside this application-only archive.
+## Continue the original calculation first
 
-This archive is complete source. It is not a claim that the Operator has already been installed or visually accepted on the receiving host. Keep it independently of the installed application. Use the existing cumulative installer to compose maintained component registrations, shared Operator lifecycle and original source inputs:
+Use the already-owned runtime, Workspace and output directory for operation `UPSTATE-DEMO-SIMULATED-INPUTS-20261013T140000Z`. Reuse an actually installed current application when one is available. The complete canonical source can also run the preparation CLI directly: the driver adds its own application root to Python's import path and calls the maintained Workspace, scenario-footprint and parameter-course APIs.
 
-```bash
-"$NATIVE_PYTHON" -B "$SOURCE_ROOT/source_tools/install_cumulative_application.py" \
-  --source "$SOURCE_ROOT" \
-  --output "$INSTALLED_APPLICATION" \
-  --archive "$APPLICATION_ARCHIVE"
+`--prepare-only` does not import or invoke an Operator installer, open a browser, or execute an InVEST model. It retains the original inputs, source collection, profile, grid, three scenarios, prepared run IDs, actual scenario footprints and parameter plan. The existing GIS-capable Python is required for writing and preparing the raster/vector inputs.
+
+Set `APPLICATION`, `NATIVE_PYTHON`, `WORKSPACE` and `DEMO_OUTPUT` to the current operation's real paths. Workspace and output must be separate sibling directories. Then issue the original command:
+
+```sh
+"$NATIVE_PYTHON" -B "$APPLICATION/source_tools/simulated_headwaters.py" \
+  --workspace "$WORKSPACE" --output "$DEMO_OUTPUT" --prepare-only
 ```
 
-Set these paths to the already-owned runtime and new independent source/application/archive destinations. The archive must be outside both source and installed application directories. The installer defaults its retained scientific source to `--source`; if the existing receiving owner has selected an independent canonical scientific-source edition, preserve that selection with the maintained `--scientific-source` argument. Inspect the actual installation result or its retained `CUMULATIVE_INSTALLATION_FAILURE.json`; repair the first concrete failure in that same installation. Do not substitute arbitrary legacy shared-module postimages.
+The first `demo_process_started` line identifies the actual host, PID, interpreter, application, driver hash, paths and mode. Preserve the returned stdout, original `demo-receiving.json` and any actual exception. Continue that same case through its field and customer-review chapter:
 
-Continue the existing SOL61 5156 preparation/native operation on its original Workspace and output directory. Preparation already in progress does not wait for this distribution. An active native child keeps its original application source until its normal process boundary. The existing course then resumes the retained cases through the installed application. This handoff creates no new scientific project or duplicate model operation. The owner cutoff is October 13, 2026 at 14:00 UTC.
+```sh
+"$NATIVE_PYTHON" -B "$APPLICATION/source_tools/simulated_headwaters.py" \
+  --workspace "$WORKSPACE" --output "$DEMO_OUTPUT" --field-only
+```
 
-## Retained identity and presentation
+Remove only the mode flag to continue the same retained calculation and reporting course. Run one writer per actual Workspace. Independent hosts may execute the same original recipe in their own isolated Workspaces, retaining their actual IDs and runtime. A running native child retains its application edition until its ordinary process boundary. The retained recipe, profile, grid and original run identities remain authoritative. The operation cutoff is October 13, 2026 at 14:00 UTC.
 
-`SOURCE_OVERLAY.json` records every original application member's Git blob SHA and byte length, with exact canonical-source and overlay provenance. The installer records actual transformed postimages in `CUMULATIVE_INSTALLATION.json`. Retain both with the received application and use the existing archive/restore workflow.
+## Open the maintained current Operator
 
-Read the included owner instruction files. The producing worker must open the exact populated outgoing Operator, report and export; LOOK at the actual pixels at screenshare and narrow widths; operate important controls, downloads, and save/reopen; and repair defects. Screenshots that have not been viewed, DOM counts and HTTP success do not replace seeing and operating the actual product. Keep plain industrial presentation and the original scientific quantities and source lineage.
+This source edition already includes the current server, registered provider descriptors and shared browser host. The current-source compatibility and complete-source capacity changes are already included in this edition; no separate overlay is required. Use the original current-source startup route. Replaying an older cumulative installer's direct-host patch list over already registered providers is not part of this route.
+
+Before the browser handoff, inspect the selected application through the existing source assembler. It follows the current component catalogue, fragments, native manifests, imports, web assets and source identities. The selected component count comes from that edition; the earlier verified 97-component application is a predecessor, not a fixed count for newer source.
+
+```sh
+"$NATIVE_PYTHON" -B "$APPLICATION/source_tools/application_assembly.py" \
+  "$APPLICATION" --edition upstate-current-application --inspect
+```
+
+Resolve the actual missing source or incompatible declaration in the same edition. Retain its inspection output. This inspection is independent of the preparation command above and must not delay an already-issued calculation.
+
+Use the existing rehearsal's live Operator when it is running. Otherwise reopen the same prepared Workspace through the maintained server and persistent Operator state:
+
+```sh
+"$NATIVE_PYTHON" -B "$APPLICATION/operator/server.py" \
+  --workspace "$WORKSPACE" --operator-state "$OPERATOR_STATE"
+```
+
+Open the full loopback URL printed by that server, including its session fragment. Keep application, Workspace, demo output and Operator state separate. Existing projects reopen without `--create`. Preserve any runtime-owned dependency supplement through its original `PYTHONPATH`; do not replace the verified native interpreter.
+
+## Source compatibility and receiving identity
+
+The current-source compatibility composition retains the original installed-owner fixes from source baseline `a986973c69abd74e3f0e34c1b58e6e24468b187c` and applies only their missing deltas to the fresh canonical source. It preserves the newer conditional scenario-state reader, Chemistry registrations, application fragments, portable restore handling and original source-method interpretation.
+
+The cumulative installer remains available for older source editions that need their maintained component transforms. Its compatibility fixes cover the registered Scientific interpretation provider, current task-confirmation lifecycle, distinct original Decision retirement records and conditional scenario state. A successful full installation must still return its own `CUMULATIVE_INSTALLATION.json`; a retained failure is not an installed-application receipt. The current-source route above uses the already-composed ordinary application rather than making that older replay a prerequisite.
+
+Retain the complete source inventory, exact overlay identities and actual receiving output with the application. Whole-project and selected-study archives use the existing portable producers. The source handoff itself does not claim native computation, browser acceptance or completed output.
+
+## Inspect the outgoing product
+
+Read the current included owner instructions. The producing worker must open the exact populated outgoing Operator, report and export, look at the actual pixels at screenshare and narrow widths, operate important controls and downloads, exercise save/reopen, and repair defects. Capturing an unviewed screenshot, counting DOM nodes or receiving HTTP success does not substitute for operating and viewing the product. Preserve the plain industrial interface, original scientific values, units and source lineage.
+ 
+## Included source and actual receiving
+
+The inventory binds 5,248 original source/policy files totaling 465,412,317 bytes by original Git blob identity and mode; this root guide and the inventory are distribution metadata. The application source is complete at the pinned commit. Its scientific calculation, installed runtime, populated browser operation and final attachments must be received and used on the actual executing host. Preserve the actual command/output and any precise exception; source publication alone does not establish execution or acceptance.

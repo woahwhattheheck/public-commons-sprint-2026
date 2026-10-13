@@ -165,11 +165,19 @@ python -B source/observed-report-20261013/render.py \
   --receive-directory "$OPERATION/observed-science-received"
 ```
 
-For a report already completed with an earlier application edition, keep its original
-`--app-root` and formatter version while invoking this updated renderer script.
-The immutable selection includes `scientific_report.REPORT_VERSION`; switching to
-a newer application requires a separate output edition. This permits an existing
-31d report to complete archive receiving without regenerating its PDF.
+For an already completed report, this CLI first recovers its original
+`selection.json` and complete `operation.json`, checks the unchanged source order,
+title/contact and all output identities, then reopens that original operation.
+Installing newer formatting or receiving code does not regenerate the completed
+PDF or change its operation identity. The same `--workspace`, manifests, title,
+contact, `--output`, archive and receiving paths continue the original report.
+
+For unfinished rendering, the original saved preview is retained before work
+starts. A retry must retain the original formatter version and, when captured,
+the exact rendering-source bodies. An older unfinished `selection.json` without
+those source descriptors still requires its original report version. Use the
+retained original application to finish that edition, or choose a new
+`--output` for a new rendering edition. The existing output is preserved.
 
 For a new observed-source Workspace, add `--create-workspace`. For a composed
 report, repeat every original `--manifest` in its saved order and retain the same
@@ -199,8 +207,13 @@ and source links retain their relative layout.
 Both archive and receiving paths must be outside the original Workspace,
 application and report directory. Keep the archive outside its receiving
 directory. A repeat verifies and reuses the same archive. If a process stops
-after native restoration publishes its destination, a repeated invocation
-reconciles every original archive member before completing that same receive.
+after native restoration publishes its destination, a repeated invocation uses
+`portable.resume_restore` with the exact original archive SHA256. The maintained
+receiving-completion record reconstructs the full original result while retaining
+legitimate receiver-only edits and native delivery/navigation registration. Older
+receiving directories use its original-source compatibility validation. The
+report continuation then checks the original project, selection, operation and
+every captured report/source asset again.
 
 The archive receipt is saved beside the ZIP as
 `<archive-name>.observed-report.json`; the restored directory retains
@@ -214,3 +227,16 @@ option to complete independent reopening.
 ## Saved standalone reports in the operator
 
 The existing Sources desk now selects retained typed scientific sources in reading order, previews their original bindings and prepares PDF, HTML, Markdown and source data through the original task queue. Saved editions reopen with the complete Workspace after receiving. See [Scientific report editions](../../operator/SCIENTIFIC_REPORT_EDITIONS.md). This native command delegates its original rendering and archive implementation to `model/observed_report_render.py`; receive that module with the command and the existing observed-context family. All current CLI arguments and the historical default single-report identity are preserved.
+
+## Inspect the exact outgoing report and received project
+
+The producing peer opens and looks at the actual populated PDF, HTML and retained
+source explorer before presenting the product. Operate its important source,
+download and reopening controls at the intended screenshare size and a narrow
+390-pixel viewport. Check table and identity wrapping, complete figure panels,
+source links and exported files, then independently open the received project
+and the same original report. Repair visible clipping, unreadable labels or
+broken controls in the maintained source and continue the same saved operation.
+Source inspection and a successful command do not replace this rendered-product
+review. Preserve the actual report/archive IDs and accessible screenshots or
+report frames with the existing native receiving result.

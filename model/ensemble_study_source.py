@@ -11,6 +11,8 @@ from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
 import json
+import textwrap
+from xml.etree import ElementTree as ET
 
 from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
                      held, identifier, now, read_json, verify_file)
@@ -18,7 +20,7 @@ from .ensembles import Ensembles
 from . import ensemble_report, ensemble_scientific_source as shared
 from . import ensemble_scientific_figures as drawing
 
-VERSION = 1
+VERSION = 2
 DIRECTORY = "ensemble-study-sources"
 SOURCE_ID = "saved-native-ensemble-study"
 SPEC = "study-figure-spec.json"
@@ -40,6 +42,75 @@ def _plain(value):
 def _table(columns, rows):
     return {"kind": "table", "columns": columns,
             "rows": [[_plain(value) for value in row] for row in rows]}
+
+
+def _case_key(field, index):
+    """A display key for one unchanged row of the retained report edition."""
+    return ("LC" if field == "paired_rows" else "PS") + format(index + 1, "04d")
+
+
+def _percentage(row):
+    value = row["percent_change"]
+    if value is not None:
+        return _plain(value)
+    if not row["common_cells"]:
+        return "Undefined: no common valid cells"
+    if row["baseline_common"] == 0:
+        return "Undefined: zero common-valid baseline"
+    return "Undefined in original report"
+
+
+def _mask_agreement(row):
+    if not row["common_cells"]:
+        return "No common valid cells"
+    return "Yes" if not row["baseline_only_cells"] and not row["alternative_only_cells"] else "No"
+
+
+def _case_tables(field, rows):
+    identities = _table(
+        ["Pair", "Parameter case", "Original profile", "Reference case / profile"],
+        [[_case_key(field, index), row["member_label"], row["profile_id"],
+          (str(row.get("reference_member_label") or "Reference") + "\n"
+           + str(row.get("reference_profile_id") or "Unspecified"))
+          if field == "parameter_rows" else "Same profile as this alternative"]
+         for index, row in rows])
+    identities["caption"] = "Figure case key — original report rows and selected profiles"
+    coverage = _table(
+        ["Pair", "Baseline valid", "Alternative valid", "Common", "Baseline only", "Alternative only"],
+        [[_case_key(field, index), row["baseline_valid_cells"], row["alternative_valid_cells"],
+          row["common_cells"], row["baseline_only_cells"], row["alternative_only_cells"]]
+         for index, row in rows])
+    coverage["caption"] = (
+        "Original cell counts inside the reporting mask. Only-cells are excluded from this paired "
+        "contrast. Cells invalid in both runs and cells outside the reporting mask are not counted.")
+    return [identities, coverage]
+
+
+def _study_svg(figure):
+    """Add the visible case key to the existing monochrome standalone drawing."""
+    original = ET.fromstring(drawing._svg(figure))
+    namespace = "http://www.w3.org/2000/svg"
+    ET.register_namespace("", namespace)
+    width, height = 960, int(original.attrib["height"])
+    lines = []
+    for note in figure["case_legend"]:
+        lines.extend(textwrap.wrap(note, width=64, break_long_words=True,
+                                   break_on_hyphens=False) or [""])
+    footer_height = 48 + 17 * len(lines)
+    original.set("height", str(height + footer_height))
+    original.set("viewBox", "0 0 " + str(width) + " " + str(height + footer_height))
+    group = ET.SubElement(original, "{" + namespace + "}g")
+    ET.SubElement(group, "{" + namespace + "}line",
+                  x1="62", x2="922", y1=str(height + 8), y2=str(height + 8),
+                  stroke="#777", **{"stroke-width": "1"})
+    label = ET.SubElement(group, "{" + namespace + "}text", x="62", y=str(height + 29),
+                          **{"font-size": "13", "font-weight": "bold"})
+    label.text = "Case key and original geographic support"
+    for index, line in enumerate(lines):
+        label = ET.SubElement(group, "{" + namespace + "}text", x="62",
+                              y=str(height + 49 + index * 17), **{"font-size": "12"})
+        label.text = line
+    return ET.tostring(original, encoding="unicode") + "\n"
 
 
 def _snapshot(workspace, ensemble_id):
@@ -189,23 +260,25 @@ def _figures(directory, content):
                 deltas = [row["delta_common"] for unused, row in subset]
                 if any(drawing._number(value) is None for value in y_values + deltas):
                     raise ValueError("A retained native figure contrast lacks finite original quantities")
-                x = drawing._axis("Selected parameter case number", "",
+                x = drawing._axis("Original report pair key", "",
                     [start + .4, start + len(subset) + .6],
-                    [{"value": start + j + 1, "label": str(start + j + 1)}
-                     for j in range(len(subset))])
+                    [{"value": start + j + 1, "label": _case_key(field, index)}
+                     for j, (index, row) in enumerate(subset)])
                 mass_series, delta_series = [], []
                 fields = (("baseline_common", "Reference baseline" if kind == "parameter" else "Same-profile baseline", "circle"),
                           ("alternative_common", "Varied-profile baseline" if kind == "parameter" else "Land-cover alternative", "square-open"))
                 for name, label, marker in fields:
                     points = []
                     for j, (index, row) in enumerate(subset):
-                        point = {"x": start + j + 1, "y": row[name],
+                        point = {"x": start + j + 1, "y": row[name], "case_key": _case_key(field, index),
                                  "source": {"path": "numeric/report.json",
                                             "json_pointer": "/" + field + "/" + str(index) + "/" + name},
                                  "original_field": name, **{key: deepcopy(row.get(key)) for key in (
                                      "member_id", "member_label", "profile_id", "reference_profile_id",
                                      "scenario_id", "scenario_label", "baseline_run_id", "alternative_run_id",
-                                     "common_support_sha256", "common_cells", "total_units")}}
+                                     "common_support_sha256", "common_cells", "total_units", "comparison_id",
+                                     "baseline_valid_cells", "alternative_valid_cells",
+                                     "baseline_only_cells", "alternative_only_cells")}}
                         points.append(point)
                         coordinates.append({"kind": kind, "figure_group": group_index + 1,
                                             "page": page + 1, "case": start + j + 1,
@@ -213,13 +286,15 @@ def _figures(directory, content):
                     mass_series.append({"geometry": "scatter", "label": label, "marker": marker, "points": points})
                 points = []
                 for j, (index, row) in enumerate(subset):
-                    point = {"x": start + j + 1, "y": row["delta_common"],
+                    point = {"x": start + j + 1, "y": row["delta_common"], "case_key": _case_key(field, index),
                              "source": {"path": "numeric/report.json",
                                         "json_pointer": "/" + field + "/" + str(index) + "/delta_common"},
                              "original_field": "delta_common", **{key: deepcopy(row.get(key)) for key in (
                                  "member_id", "member_label", "profile_id", "reference_profile_id",
                                  "scenario_id", "scenario_label", "baseline_run_id", "alternative_run_id",
-                                 "common_support_sha256", "common_cells", "total_units")}}
+                                 "common_support_sha256", "common_cells", "total_units", "comparison_id",
+                                     "baseline_valid_cells", "alternative_valid_cells",
+                                     "baseline_only_cells", "alternative_only_cells")}}
                     points.append(point)
                     coordinates.append({"kind": kind, "figure_group": group_index + 1,
                                         "page": page + 1, "case": start + j + 1,
@@ -237,17 +312,35 @@ def _figures(directory, content):
                 figure = {"id": key, "title": POLLUTANT_LABELS[pollutant] + " — " +
                           ("baseline parameter sensitivity" if kind == "parameter" else subset[0][1]["scenario_label"]),
                     "caption": (
-                        "Each position is an explicitly selected parameter case. Original mass and change "
-                        "values are copied from the retained paired report, using the exact common-valid "
-                        "mask " + support + ". Negative change means lower export. This panel is one "
-                        "geographic support group; other groups remain separate. The ordinate and "
-                        "coefficient mapping are retained in the full coordinate CSV. "
+                        str(len(subset)) + " original report pairs on " + str(subset[0][1]["common_cells"])
+                        + " common-valid cells; exact support SHA256 " + support + ". "
+                        "The visible pair keys identify the original case rows in the accompanying "
+                        "case and coverage tables. Annual mass and change are copied from the "
+                        "original common-support report; negative change means lower export. "
                         + ("Land cover is held fixed; the first selected profile is the reference. "
                            if kind == "parameter" else
                            "Each land-cover alternative uses its own same-profile baseline. ")
-                        + "Selected cases describe a sensitivity set, not a probability distribution or confidence interval."),
+                        + "Other support masks remain separate. Selected cases describe a sensitivity "
+                        "set, not a probability distribution or confidence interval."),
                     "panels": panels, "source_record_count": len(subset),
-                    "omitted_records": [], "common_support_sha256": support}
+                    "omitted_records": [], "common_support_sha256": support,
+                    "detail_tables": _case_tables(field, subset),
+                    "case_legend": [
+                        "Exact support SHA256: " + support,
+                        "Common valid cells: " + str(subset[0][1]["common_cells"])
+                        + ". Negative change means lower annual export.",
+                    ] + [
+                        _case_key(field, index) + ": " + row["member_label"]
+                        + "; profile " + row["profile_id"][:12]
+                        + (("; reference " + str(row.get("reference_member_label") or "Reference")
+                            + " / " + str(row.get("reference_profile_id") or "Unspecified")[:12])
+                           if kind == "parameter" else "")
+                        + "; baseline valid/only " + str(row["baseline_valid_cells"]) + "/"
+                        + str(row["baseline_only_cells"]) + "; alternative valid/only "
+                        + str(row["alternative_valid_cells"]) + "/" + str(row["alternative_only_cells"])
+                        for index, row in subset
+                    ] + ["Profile IDs are abbreviated here; complete case identities and original "
+                         "quantities remain in the report tables, numeric/report.json and coordinate CSV."]}
                 drawing._validate_figure(figure)
                 figures.append(figure)
     spec = {"schema": "upstate.scientific-figure-spec/v1", "version": VERSION,
@@ -257,17 +350,20 @@ def _figures(directory, content):
                          "omitted_records": omissions},
             "methods": ["Every plotted physical value is copied from numeric/report.json.",
                         "Cases, pollutants, units and exact common-support masks remain distinct.",
+                        "LC/PS keys preserve the original row index across support groups and pages.",
                         "Ordinal case positions and axis bounds are presentation metadata."]}
     atomic_json(directory / SPEC, spec, immutable=True)
     choices = []
     for figure in figures:
         path = "figures/" + figure["id"] + ".svg"
-        atomic_bytes(directory / path, drawing._svg(figure).encode("utf-8"), immutable=True)
+        atomic_bytes(directory / path, _study_svg(figure).encode("utf-8"), immutable=True)
         choices.append({"id": figure["id"], "path": path})
     shared._csv(directory, COORDINATES, coordinates,
-        ["kind", "figure_group", "page", "case", "field", "value", "x", "y", "member_id", "member_label",
+        ["kind", "figure_group", "page", "case", "case_key", "field", "value", "x", "y", "member_id", "member_label",
          "profile_id", "reference_profile_id", "scenario_id", "scenario_label",
-         "baseline_run_id", "alternative_run_id", "common_support_sha256", "common_cells", "total_units", "source"])
+         "baseline_run_id", "alternative_run_id", "comparison_id", "common_support_sha256", "common_cells",
+         "baseline_valid_cells", "alternative_valid_cells", "baseline_only_cells", "alternative_only_cells",
+         "total_units", "source"])
     return {"figure_spec": SPEC, "figures": choices, "coverage": spec["coverage"]}
 
 
@@ -292,8 +388,9 @@ def _sections(plan, content, profiles, scenarios):
             "Land-cover change is alternative minus baseline using the same profile and cells valid "
             "in both runs. Negative change means reduced modeled annual export. Parameter sensitivity "
             "holds the original land cover fixed and compares each varied profile with the first "
-            "selected reference profile. Full-coverage totals remain separate in pairs.csv and "
-            "sensitivity.csv; subtracting them cannot replace a paired common-support contrast.",
+            "selected reference profile. Each full-valid total uses that run\'s own finite cells "
+            "inside the reporting mask. These totals appear separately below; subtracting them "
+            "cannot replace a paired common-support contrast.",
             "Nitrogen and phosphorus retain kg/year; sediment retains metric tonnes/year, displayed "
             "as t/year by the original paired report. No cross-constituent conversion or weighting is introduced.",
             "Percentage change uses the common-valid baseline; a zero baseline leaves percentage "
@@ -303,15 +400,45 @@ def _sections(plan, content, profiles, scenarios):
     ]
     for field, heading in (("paired_rows", "Land-cover contrasts on common valid cells"),
                            ("parameter_rows", "Parameter sensitivity with land cover held fixed")):
-        rows = content[field]
+        rows = list(enumerate(content[field]))
         sections.append([heading, [
-            _table(["Case", "Scenario", "Constituent / unit", "Baseline", "Alternative", "Change", "Common cells"],
-                   [[row["member_label"], row["scenario_label"],
-                     POLLUTANT_LABELS[row["pollutant"]] + " / " + row["total_units"],
-                     row["baseline_common"], row["alternative_common"], row["delta_common"], row["common_cells"]]
-                    for row in rows]),
-            "All original run IDs, profile IDs, full totals, valid-only totals, undefined percentages "
-            "and full support hashes are retained in the numeric CSV and JSON companions.",
+            "Pair keys identify unchanged rows of this original report edition: LC for land-cover "
+            "pairs and PS for baseline parameter contrasts. The same key appears in the plots, "
+            "case tables and exact coordinate CSV.",
+            _table(["Pair", "Parameter case", "Scenario", "Constituent / unit"],
+                   [[_case_key(field, index), row["member_label"], row["scenario_label"],
+                     POLLUTANT_LABELS[row["pollutant"]] + " / " + row["total_units"]]
+                    for index, row in rows]),
+            _table(["Pair", "Unit", "Baseline on common cells", "Alternative on common cells",
+                    "Signed change", "Change %"],
+                   [[_case_key(field, index), row["total_units"], row["baseline_common"],
+                     row["alternative_common"], row["delta_common"], _percentage(row)]
+                    for index, row in rows]),
+            "The signed change and percentage above are the original alternative-minus-baseline "
+            "quantities on common-valid cells. A zero common baseline leaves percentage undefined "
+            "even when a mass change exists. A legacy pair with no common cells has no defined "
+            "paired mass or percentage result.",
+        ]])
+        coverage = _case_tables(field, rows)
+        coverage[0]["caption"] = "Original case and reference identities"
+        sections.append([heading + " — coverage and full-valid totals", [
+            *coverage,
+            _table(["Pair", "Unit", "Baseline own-valid total", "Alternative own-valid total",
+                    "Pair masks identical"],
+                   [[_case_key(field, index), row["total_units"], row["baseline_total"],
+                     row["alternative_total"], _mask_agreement(row)] for index, row in rows]),
+            "Full-valid totals each use their own run's finite, non-NoData cells inside the "
+            "retained reporting mask. Baseline-only and alternative-only cells are excluded from "
+            "the paired contrast. Those counts do not include cells invalid in both runs or cells "
+            "outside the reporting mask. Identical pair masks do not establish complete catchment "
+            "or reporting-area coverage.",
+            _table(["Pair", "Exact common-support SHA256", "Grouped figure"],
+                   [[_case_key(field, index), row.get("common_support_sha256") or "Not retained",
+                     ("Omitted: no common valid cells" if not row["common_cells"] else
+                      "Omitted: exact support identity not retained" if not row.get("common_support_sha256")
+                      else "Included; use this pair key")] for index, row in rows]),
+            "Every original row, full native run/comparison/profile identity and physical value "
+            "remains in numeric/report.json and the original numeric CSV companions.",
         ]])
     sections.append(["Explored parameter ranges on matching support", [
         "The following minimum and maximum summarize only completed selected cases sharing the exact "
@@ -322,6 +449,14 @@ def _sections(plan, content, profiles, scenarios):
                [[row["scenario_label"], POLLUTANT_LABELS[row["pollutant"]] + " / " + row["total_units"],
                  row["members"], row["minimum_delta"], row["maximum_delta"], row["direction"],
                  row["common_support_sha256"]] for row in content["support_groups"]]),
+        _table(["Scenario / constituent", "Common cells", "Exact support SHA256", "Pair masks identical"],
+               [[row["scenario_label"] + " / " + POLLUTANT_LABELS[row["pollutant"]],
+                 row["common_cells"], row["common_support_sha256"],
+                 "Yes" if row["coverage_complete"] else "No"] for row in content["support_groups"]]),
+        "Pair masks identical means the original baseline-only and alternative-only counts are "
+        "both zero for every completed pair in that group. It does not describe cells missing "
+        "in both runs or establish whole-catchment coverage. Undefined percentages are omitted "
+        "from the producer's percentage ranges while their defined mass changes remain included.",
     ]])
     profile_rows, parameter_rows, reference_rows, run_rows = [], [], [], []
     for member in plan["members"]:

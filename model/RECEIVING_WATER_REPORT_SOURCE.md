@@ -104,11 +104,16 @@ the original analysis supports.
 2. Select an existing complete source plan or completed analysis.
 3. Prepare its scientific report source using the existing queued operator
    action. The task retains the actual request, Workspace and saved result.
-4. Open the prepared source in the **standalone scientific report composer**.
-   The host receives the exact source selector through
-   `openScientificReport({workspace_key, sources: [record.source], title})`.
-   The original composer controls the retained report title, ordered sources,
-   rendering and export.
+4. Choose **Open this report only** to replace the standalone scientific
+   composer's draft source selection with this exact retained source and use
+   its title. Choose **Add to current report** to keep the current draft's
+   ordered sources and append this source once. The existing nonempty draft
+   title remains when adding; an empty title uses the saved source title.
+   These controls are available in the saved-source inventory, source details
+   and completed task. Both pass the exact source selector through
+   `openScientificReport({workspace_key, sources: [record.source], title,
+   selection_mode: "replace" | "append"})`. The composer performs the
+   selection change before its original rendering and export steps.
 5. To include the same study in a mapped client report, choose **Open mapped
    report form**. That route uses the returned `delivery_selection` and
    preserves the saved delivery's original inputs and ordered source choices.
@@ -310,4 +315,28 @@ external recipient.
 
 ## Retained task-result controls
 
-The registered Receiving waters desk supplies its original `taskActions` method for queued plan, source and analysis results. The report provider decorates a completed source task with `_extension_task_actions: {"extension_id": "receiving-waters"}`. The shared host resolves this hint only to an already registered desk with an explicit `client.task_actions` method; it never imports a module supplied by a task payload. The original controller generates the Inspect source and Use in scientific report controls, which retain the exact captured Workspace and source identity. The installer removes the legacy mounted controller and admits the published version 6 descriptor when applying version 7.
+The registered Receiving waters desk supplies its original `taskActions` method for queued plan, source and analysis results. The report provider decorates a completed source task with `_extension_task_actions: {"extension_id": "receiving-waters"}`. The shared host resolves this hint only to an already registered desk with an explicit `client.task_actions` method; it never imports a module supplied by a task payload. The original controller generates the Inspect source, Open this report only and Add to current report controls, which retain the exact captured Workspace and source identity. The installer removes the legacy mounted controller and admits the published version 6 descriptor when applying version 7.
+
+## Receiving the explicit report choices
+
+Use the current browser helper with the existing host `openScientificReport`
+and scientific composer's `selection_mode` contract. Both actions operate on a
+saved source edition; opening or adding it does not queue source preparation or
+publish another immutable report. Replacing changes the current composer draft,
+including its title, while existing saved editions remain unchanged. Adding
+preserves the current source order and title and ignores sources already selected.
+
+In the actual received application, start with a different saved source in the
+composer. From Receiving waters, use **Open this report only** and inspect the
+resulting source list and title. Return to the saved source and use **Add to
+current report** with another source already selected; inspect the order and
+repeat the action to check that no source is duplicated. Exercise the saved
+inventory, details and completed-task controls in the original Workspace.
+
+Open and inspect every outgoing artifact: HTML, PDF, each map, and archive
+contents. Open the received project and use its relevant controls. Capture and
+look at real rendered screenshots at desktop and narrow widths, including both
+report choices and the resulting source lists. The native producing owner
+inspects the actual outgoing product and repairs visible errors. Retain the
+actual source selectors, resulting edition IDs and original operation outputs
+with the existing receiving course.

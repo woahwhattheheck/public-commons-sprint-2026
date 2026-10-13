@@ -87,3 +87,121 @@ Record a review through Record review when its actual reviewer and reference are
 ## Current source composition
 
 Maintained cumulative source: ECD1 F0C8JNZTURK; current cumulative successor F0C8J16HPGT; current operator F0C9JNCF2JC. Original sourced profile engine: F0C8HR43RS7. Profile backend R2: F0C8NF1E4H4. Interface base: F0C8K3ZCYFP with R2 F0C9JT49N8G. Browser journey: F0C895G8PQF. The four ordered carriers above provide all profile-owned postimages and the opening/installation route. Final receiving source F0C8NMAGZ6J supersedes the earlier individual launcher, installer and browser journey carriers.
+
+## Coefficient evidence in the actual populated product
+
+This is the maintained receiving course for the coefficient evidence, original-table population and delivery-report controls. Use the complete current application containing PR3703 (evidence and selected ranges), PR3760 (original-source population) and the current coefficient-report continuation. The older four-carrier staging route above describes the original desk; it does not supply these later components. The current `install_profile_workbench.py` includes the evidence backend, browser controller, source population receiver and all four matching citation CSVs. Keep the receiving worker on its already accepted project and operation.
+
+### Producing worker: operate and inspect the outgoing version
+
+Owner instruction of October 13, 2026, repository version `2026-10-13.1`, applies to this course. Before calling the application, report or export ready, the producing worker must open/run/render the exact outgoing populated version, LOOK at its actual screen or real screenshots, and operate its important controls. Check the actual screenshare width and a narrow/mobile width where relevant; populated, empty, loading and error states; downloads, exports and reopening. Capturing screenshots without viewing them does not complete this work. Fix unstyled, cramped, clipped, overflowing, unreadable or otherwise broken output in the authorized source and reopen the corrected output. Code review, source parsing, HTTP success, DOM counts or another worker's approval do not replace seeing the product.
+
+Use the existing industrial presentation: readable tables, plain controls, clear hierarchy, consistent typography and spacing. Review the actual saved scientific workspace and completed reports. Preserve current engineering ownership and the original operation rather than launching a second native study. Include this instruction in every delegated receiving assignment. It does not extend the Ecosystem sprint beyond October 13, 2026, 10:00 America/Kentucky/Louisville (14:00 UTC).
+
+### Bind to the actual saved profile
+
+Open the existing operator and choose the exact project and Profile workbench profile already used by the native run. Retain the actual project ID, operator workspace key, profile ID and original coefficient-table SHA-256 from its saved records. Compare the displayed model selection and coefficient values with that table before attaching evidence. A different profile or table requires its own evidence record.
+
+For the simulated headwaters operation, use `profile_id` and `source_collection_id` from its actual `demo-receiving.json`. The original `--prepare-only` command already creates that saved profile. The same accepted native worker proceeds through `--field-only` and then the original full command; evidence population does not require an additional native run.
+
+The retained `source_tools/simulated_headwaters.py` defines these explicit demonstration assumptions:
+
+| Original code | load_n (kg/ha/year) | load_p (kg/ha/year) | eff_n (ratio) | eff_p (ratio) | usle_c (dimensionless) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 21 | 8 | 0.9 | 0.05 | 0.05 | 0.05 |
+| 41 | 2 | 0.12 | 0.8 | 0.8 | 0.003 |
+| 81 | 10 | 0.7 | 0.35 | 0.35 | 0.025 |
+| 82 | 22 | 1.8 | 0.15 | 0.15 | 0.18 |
+
+For every row, `crit_len_n` and `crit_len_p` are 100 m, `proportion_subsurface_n` is 0 (ratio), and `usle_p` is 1 (dimensionless). Both load types are `measured-runoff`. Its four rows and nine numeric coefficient columns produce **36 cells** in the both-model evidence template. The native input grid is 120 by 120 cells at 30 m in EPSG:26917. These values remain labeled **SIMULATED DEMONSTRATION INPUTS** in the original source and reports. Cite that supplied assumption table; the regional Albright and Upper Flint CSVs below belong to their own matching original profiles.
+
+Use the current saved table and selected model scope for any other project. For example, a single-model profile has fewer eligible cells than its both-model counterpart. Never replace actual record counts with a fixed expected total from another study.
+
+### Populate the original table and inspect its provenance
+
+1. In the saved profile's coefficient evidence pane, choose **Cite original table**. Keep the same queued operation if the transport response is delayed. Open the saved evidence returned by the completed task.
+2. Read the populated coefficient table. Check the original code, parameter, numeric value, exact unit and load type, along with the supplied table's title, URI, row/column locator and date or source period where available. Confirm that the original profile ID and table SHA-256 are unchanged.
+3. Download the evidence CSV through the original file ticket and open the downloaded file. Compare its rows with the displayed saved evidence and the exact original table. Unsupported lower/upper/range-basis cells stay blank. A supplied table documents where the number came from; it does not make a local measurement, a calibrated parameter or an uncertainty interval.
+4. Leave and reopen the profile and saved evidence. Confirm that the same record and source are shown, including after a page reload. The saved evidence is an immutable sidecar; an ordinary later profile revision remains a separate profile.
+
+The maintained command is useful to the same receiving worker when operating a saved profile before opening the browser:
+
+```sh
+cd /actual/current/Upper-Savannah-application
+/actual/equipped/python -B source_tools/receive_biophysical_evidence.py \
+  --workspace /actual/retained-workspace \
+  --profile ACTUAL_SAVED_PROFILE_ID \
+  --output /actual/receiving/original-profile-evidence
+```
+
+The output contains `biophysical-evidence.csv`, `source-manifest.json`, `evidence-selection.json` and `operation-result.json`. Read the actual saved evidence ID and attribution counts from the result. Resume that same selection and output with `--resume`; the receiver validates its retained selection before continuing. The equivalent operator action is `profile.biophysical.evidence.populate`, using the selected profile and an optional retained citation-source collection/source pair.
+
+### Add published citations only to matching original profiles
+
+Use the original source-profile materialization and its actual saved profile ID. The matching CSV overlays the supplied-table provenance without changing central coefficient bytes. The receiver validates every original value, unit and load type; it also rejects duplicate cell identities. Fully unattributed rows may use original-table provenance, while partial citation or range details require a complete actual citation.
+
+| Retained original profile/source | Matching CSV under the application | Published-source cells | Remaining original-table cells for a fifteen-row both-model profile |
+| --- | --- | ---: | ---: |
+| Albright et al. (2023), Appendix 1 | `source/regional-studies-20261013/albright-2023-biophysical-evidence.csv` | 120 | 15 |
+| Upper Flint 2024 combined source profile | `source/upper-flint-2024/biophysical-evidence-combined.csv` | 81 | 54 |
+| Upper Flint NDR source profile | `source/upper-flint-2024/biophysical-evidence-ndr.csv` | 63 in the NDR coefficient scope | Read the actual saved scope |
+| Upper Flint SDR source profile | `source/upper-flint-2024/biophysical-evidence-sdr.csv` | 18 in the SDR coefficient scope | Read the actual saved scope |
+
+Albright's original paper is [Patterns of land use change, land governance, and the supply of ecosystem services in a multifunctional landscape: A case study from Upstate SC, USA](https://doi.org/10.1080/1747423X.2023.2234903). Appendix 1 supplies eight columns for fifteen land-cover codes. Its original study used InVEST 3.9; preserving those supplied loads under the 3.20 `measured-runoff` entry convention does not assert that the two complete model versions have identical outputs. The remaining subsurface fractions retain their supplied-table source. Native 3.20 handles the distinct `application-rate` transformation internally; this workflow never pre-reduces a load or changes its load type.
+
+The [Upper Flint 2024 source](https://doi.org/10.3390/land13060893) uses the retained original supplement transcription, Tables S2 and S3, plus the explicit nine-code NLCD mapping in `source/upper-flint-2024/nlcd-mapping.json`. Its unmatched water/developed rows remain from the original baseline table. Source title and notes preserve that transcription and mapping context. Neither published CSV supplies uncertainty ranges.
+
+Import the matching CSV through the existing source flow and preview it in the selected profile's evidence pane. Inspect the supplied citations and any still-unattributed cells. Choose **Fill remaining table provenance** to save complete source coverage using the original table for those remaining cells. Open the actual returned saved record and inspect its two attribution counts; “documented” is source coverage, not confidence in the modeled result.
+
+The equivalent continuation adds the original matching CSV to the receiver:
+
+```sh
+/actual/equipped/python -B source_tools/receive_biophysical_evidence.py \
+  --workspace /actual/retained-workspace \
+  --profile ACTUAL_MATCHING_SOURCE_PROFILE_ID \
+  --evidence-csv source/regional-studies-20261013/albright-2023-biophysical-evidence.csv \
+  --output /actual/receiving/albright-profile-evidence
+```
+
+For genuine sourced ranges, choose only the intended code/parameter cells and inspect the existing native materializer's lower and upper endpoint previews. Unselected cells stay central. Endpoint profiles are parameter choices; they are not confidence limits or automatically the best/worst pollutant outcomes. The existing experiment uses every selected profile with every selected scenario and compares each alternative with its matching-profile baseline.
+
+### Carry the saved sources into the real delivery
+
+In **Map atlas and delivery**, keep the actual native baseline and ordered alternatives. Use their existing delivery mode, geography, source selections and maps. Proceed to **Review and build**, then **Coefficient sources and selected ranges**.
+
+1. Choose **Refresh coefficient choices**. Confirm the displayed native profile is the baseline run's saved profile.
+2. Select the intended **Saved coefficient citations** and any actual **Selected coefficient ranges**. Read their cell coverage, source title and saved ID. A selected range carries its original central-profile citations. Retained selections remain visible when a source is unavailable; restore the original matching record or explicitly remove the selection.
+3. Use **Download selection**, open the JSON, and confirm `selection.coefficient_evidence.evidence_ids` and `range_ids` contain those exact saved IDs alongside the original baseline and scenario IDs.
+4. Choose **Build atlas and complete GIS delivery**. Continue its original `delivery.build` task. Open the completed delivery's scientific report (`report.html` / `report.pdf`), customer report (`client-report.html` / `client-report.pdf`) and coefficient-source downloads. Inspect the actual original coefficients, source references, coverage and any explicitly selected endpoint interpretation. The retained `coefficient-evidence/` directory carries `coefficient-evidence.json`, `selected-coefficient-evidence.csv`, original `sources/<sha>.csv` bodies and exact profile/evidence/range record JSON files. The ordinary delivery file registry carries these assets into the working archive.
+5. Open the exported HTML locally and the actual PDF pages. Inspect their tables, citations, links and source labels. In the restored project, reopen the same delivery and confirm its saved evidence/range selection and original profile/table binding.
+
+Selection and citation controls use the existing authenticated operator and queue. If the workspace or baseline changes while choices are loading, reopen that original selection and refresh its matching catalog. Do not attach another profile's citations to make an empty catalog appear populated.
+
+### Inspect the complete outgoing journey
+
+Operate the populated desk and release at the intended screenshare width and a narrow viewport. View the real screenshots yourself. Check that long profile names, source URLs, IDs, all coefficient rows, coverage text and unit/load-type labels remain readable; horizontal table scrolling must remain usable without clipping the surrounding controls. Exercise the refresh/loading state, a genuinely unavailable saved choice or transport error when encountered, selected checkboxes, back/forward steps, download/import selection, queued build and reopening. Preserve the actual saved scientific choices while doing this.
+
+Inspect the complete scientific and customer HTML/PDF outputs, coefficient CSVs and restored workspace, not only the original five-screen edition driver. Retain the actual workspace/profile/evidence/range/delivery IDs, outgoing artifact paths, rendered screenshots and any repaired source edition with the existing receiving operation. Keep capability URLs and credentials out of screenshots and shareable notes. If a worker discovers a visible defect, patch the responsible current source and inspect the corrected outgoing product before declaring that product ready.
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+<!-- bryce-rendered-product-inspection:end -->

@@ -199,7 +199,7 @@ def cold_inspect(workspace_path, expectation_path):
 
 def continue_report(workspace, output, state, state_path, specification):
     from model.common import atomic_json, digest, held, read_json, file_digest
-    from model.portable import restore
+    from model.portable import restore, resume_restore
     from model import published_review_report_source, study_transfer, observed_context
     from measurement_workspace.published_studies import PublishedStudyStore
     from measurement_workspace.study_reviews import PublishedStudyReviews
@@ -400,6 +400,7 @@ def continue_report(workspace, output, state, state_path, specification):
             "model/published_review_report_source.py",
             "model/published_review_study_transfer.py",
             "model/scientific_report_study_transfer.py",
+            "model/portable.py",
         ):
             item = members.get("application/" + name)
             _check(item is not None, "The editable Study omitted required application source " + name)
@@ -412,22 +413,42 @@ def continue_report(workspace, output, state, state_path, specification):
                                    for row in reports],
                        "required_application": required_application}
         expectation_path = root / "cold-reopen-expectation.json"
+        if expectation_path.exists():
+            retained_expectation = read_json(expectation_path)
+            if "model/portable.py" not in retained_expectation.get("required_application", {}):
+                # Preserve an already-started course's exact immutable input.
+                # The archived portable implementation is also checked below,
+                # so legacy expectations retain the same complete source check.
+                legacy_expectation = deepcopy(expectation)
+                legacy_expectation["required_application"].pop("model/portable.py")
+                _check(retained_expectation == legacy_expectation,
+                       "Resume the exact original cold receiving expectation.")
+                expectation = retained_expectation
         atomic_json(expectation_path, expectation, immutable=True)
         checkpoint("editable_study", {"id": exported["id"], "path": str(archive),
                                      **identity(archive), "members": len(members),
                                      "selection": inspected["study"]["identity"]["selection"]})
         receiving = root / "cold-reopened-study"
         if receiving.exists():
-            # Reusing a receiving directory verifies all original archive members,
-            # not just its Workspace identifier.
-            for name, expected in members.items():
-                _check(identity(receiving / name) == {field: expected[field] for field in ("bytes", "sha256")},
-                       "An original received member differs: " + name)
-            restored = {"application": str(receiving / "application"),
-                        "workspace": str(receiving / "workspace")}
+            # Native restore can register delivery roles and derived navigation.
+            # Reconcile the original receive through that maintained producer;
+            # cold_inspect below still verifies our selected scientific records.
+            restored = resume_restore(
+                archive, receiving, expected_archive_sha256=identity(archive)["sha256"])
         else:
             restored = restore(archive, receiving)
+        checkpoint("editable_study_receiving", restored)
         restored_app = Path(restored["application"]).resolve(strict=True)
+        # The original archive defines the received implementation, including
+        # legacy courses whose frozen cold expectation predates this dependency.
+        for name, item in required_application.items():
+            _check(identity(restored_app / name) == item,
+                   "The received application changed archived source " + name)
+        checkpoint("received_application", {
+            "application": str(restored_app),
+            "archive_sha256": phases["editable_study"]["sha256"],
+            "files": required_application,
+        })
         child = restored_app / "source_tools/continue_study_report.py"
         child_result = root / "cold-reopen.json"
         command = [sys.executable, "-B", str(child), "--cold-inspect", str(expectation_path),

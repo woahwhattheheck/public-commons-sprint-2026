@@ -4,20 +4,46 @@
   "source_reference": "https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/blobs/42b71a24d30431f2666be2c8b31da6e16982f08e",
   "components": {
     "observation-comparability": {
-      "title": "Original-source comparable-period observation desk and native report receiving",
+      "title": "Retained cohort selection, comparable-period desk and complete scientific receiving",
       "paths": [
         "measurement_workspace/OBSERVATION_COMPARABILITY.md",
         "measurement_workspace/observation_comparability.html",
         "measurement_workspace/observation_comparability.py",
-        "measurement_workspace/observation_comparability_delivery.py"
+        "measurement_workspace/observation_comparability_delivery.py",
+        "model/observation_comparability_store.py",
+        "operator/observation_comparability_operator.py",
+        "operator/extensions/observation-comparability.json",
+        "operator/web/observation_comparability.mjs",
+        "operator/web/observation_comparability.css",
+        "model/observation_comparability_study_transfer.py",
+        "operator/web/comparability_received_studies.mjs"
       ],
       "requires": [
         "observed-context",
-        "scientific-report-rendering"
+        "scientific-report-rendering",
+        "extension-startup",
+        "scientific-report-editions"
       ]
     }
   },
   "required_components": [
     "observation-comparability"
-  ]
+  ],
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "measurement_workspace/OBSERVATION_COMPARABILITY.md",
+        "measurement_workspace/observation_comparability.html",
+        "measurement_workspace/observation_comparability.py",
+        "measurement_workspace/observation_comparability_delivery.py",
+        "model/observation_comparability_store.py",
+        "operator/observation_comparability_operator.py",
+        "operator/extensions/observation-comparability.json",
+        "operator/web/observation_comparability.mjs",
+        "operator/web/observation_comparability.css",
+        "model/observation_comparability_study_transfer.py",
+        "operator/web/comparability_received_studies.mjs"
+      ]
+    }
+  }
 }

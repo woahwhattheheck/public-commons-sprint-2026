@@ -13,9 +13,11 @@ from pathlib import Path
 from .common import (atomic_bytes, atomic_json, describe_file, digest, finite, held,
                      identifier, read_json, verify_file)
 from . import calibration_uncertainty as uncertainty
+from . import catchment_interpretation
 
 VERSION = 1
 RESULT_KIND = "calibration-maps"
+PRESENTATION_EDITION = "whole-catchment-yields-v1"
 UNITS = {"nitrogen": "kg/year", "phosphorus": "kg/year",
          "sediment": "metric_tonnes/year"}
 FIELDS = (
@@ -31,6 +33,8 @@ FIELDS = (
     "source_record_ids", "source_periods", "source_methods",
     "source_qualifiers", "source_uncertainty", "native_support_issues",
 )
+YIELD_FIELDS = tuple(key for key in catchment_interpretation.FIELDS if key not in FIELDS)
+FIELDS = FIELDS + YIELD_FIELDS
 MEANING = (
     "Each feature is the exact selected original upstream catchment, transformed "
     "only for its declared display CRS. Its attributes come from one saved "
@@ -88,7 +92,8 @@ def _csv(rows):
     return out.getvalue().encode("utf-8")
 
 
-def _selection(workspace, calibration_id, uncertainty_id, candidate_run_ids):
+def _selection(workspace, calibration_id, uncertainty_id, candidate_run_ids, *,
+               presentation_edition=PRESENTATION_EDITION):
     report, plan, observed = uncertainty._retained(workspace, identifier(calibration_id))
     by_run = {row["run_id"]: row for row in report["ranked_candidates"]}
     ids = [report["selected_run_id"]] if candidate_run_ids is None else list(candidate_run_ids)
@@ -116,6 +121,8 @@ def _selection(workspace, calibration_id, uncertainty_id, candidate_run_ids):
         "output_coordinates": "EPSG:4326", "atlas_coordinates": "original selected model grid",
         "validation_scope": "originally selected candidate only",
     }
+    if presentation_edition is not None:
+        selected["presentation_edition"] = presentation_edition
     return selected, report, plan, observed, detail
 
 
@@ -184,7 +191,9 @@ def _geometry(workspace, selection, plan, report):
     }
 
 
-def _rows(report, plan, observed, detail, geometry, selected_runs):
+def _rows(report, plan, observed, detail, geometry, selected_runs, catchment_context=None):
+    yields = {(row["run_id"], row["unit_id"]): row
+              for row in (catchment_context or {}).get("rows", [])}
     observations = {row["id"]: row for row in observed["rows"]}
     refs = {row["id"]: row for row in plan["units"]}
     bands = {row["unit_id"]: row for row in detail["reference_units"]} if detail else {}
@@ -249,6 +258,10 @@ def _rows(report, plan, observed, detail, geometry, selected_runs):
                     "source_uncertainty": _json(unit["reference_uncertainty"]),
                     "native_support_issues": _json(native.get("issues", []) if native else ["Original comparison has no retained prediction row"]),
                 }
+                yield_row = yields.get((candidate["run_id"], unit["id"]), {})
+                for name in YIELD_FIELDS:
+                    value = yield_row.get(name)
+                    row[name] = _json(value) if isinstance(value, (dict, list)) else value
                 if unit["units"] != UNITS[parameter]:
                     raise ValueError("Original calibration pollutant units differ")
                 for name, value in row.items():
@@ -322,10 +335,12 @@ def _atlas_svg(group, rows, geometry, context, cap, page, pages):
             "Native " + _display(row["native_annual_mass"]) + " · external " + _display(row["delivered_external_annual_mass"]),
             "Residual " + _display(row["residual"]) + " " + row["units"],
             "Source range " + _display(row["reference_lower"]) + " to " + _display(row["reference_upper"]),
+            "Whole area " + _display(row.get("catchment_area_ha")) + " ha; yield " + str(row.get("yield_units") or "unavailable"),
+            "Yield ref " + _display(row.get("reference_annual_yield")) + " / prediction " + _display(row.get("predicted_annual_yield")),
             "Map span " + _display((bounds[2]-bounds[0])/1000) + " × " + _display((bounds[3]-bounds[1])/1000) + " km · original projected grid",
         ]
         for offset, label in enumerate(labels):
-            parts.append('<text x="' + str(x+14) + '" y="' + str(y+302+23*offset) + '" font-size="13">' + _text(label) + "</text>")
+            parts.append('<text x="' + str(x+14) + '" y="' + str(y+285+19*offset) + '" font-size="12">' + _text(label) + "</text>")
     parts.extend([
         '<text x="48" y="1580" font-size="13">Solid frame: calibration. Dashed frame: held-out selected-candidate evaluation.</text>',
         '<text x="48" y="1603" font-size="13">Panels have their own extent; exact span is shown. North follows the original projected grid.</text>',
@@ -385,14 +400,16 @@ def _pdf_atlas(path, group, geometry, context, cap):
                             "Observed " + _display(row["observed_annual_mass"]) + " · predicted " + _display(row["predicted_annual_mass"])
                             + "\nResidual " + _display(row["residual"]) + " " + row["units"]
                             + "\nNative " + _display(row["native_annual_mass"]) + " · external " + _display(row["delivered_external_annual_mass"])
-                            + "\nSource range " + _display(row["reference_lower"]) + " to " + _display(row["reference_upper"]),
+                            + "\nSource range " + _display(row["reference_lower"]) + " to " + _display(row["reference_upper"])
+                            + "\nArea " + _display(row.get("catchment_area_ha")) + " ha; yield " + str(row.get("yield_units") or "unavailable")
+                            + "\nYield ref " + _display(row.get("reference_annual_yield")) + " / prediction " + _display(row.get("predicted_annual_yield")),
                             fontsize=7)
                     fig.text(.05, .028, "Residual = predicted − observed; grayscale = absolute residual up to "
                              + _display(cap) + " " + group["units"] + ".\n"
                              "Complete original polygons; each panel has its own extent. Dashed frame: held-out selected candidate.\n"
                              "Original projected grid " + context["atlas_crs_name"] + " · no regional summation of nested catchments.",
                              fontsize=6.5)
-                    fig.subplots_adjust(top=.9, bottom=.095, hspace=.85, wspace=.18)
+                    fig.subplots_adjust(top=.9, bottom=.14, hspace=.95, wspace=.18)
                     pdf.savefig(fig)
                 finally:
                     plt.close(fig)
@@ -418,7 +435,7 @@ def _page_html(layers, interpretation):
             'section{border-top:1px solid #aaa;padding-top:20px}@media print{body{padding:0}figure{break-after:page}h1,p{orphans:3}}</style>'
             '</head><body><h1>Original catchment calibration maps</h1><p>' + _text(interpretation) +
             '</p><p>Separate pollutant units are retained. The complete source bindings, original periods and native coverage are in '
-            '<a href="provenance.json">provenance.json</a>.</p>' + "".join(sections) + "</body></html>").encode("utf-8")
+            '<a href="provenance.json">provenance.json</a>. Whole-polygon area, per-hectare annual yields and the original grouping relations are retained in <a href="catchment-interpretation.json">catchment-interpretation.json</a> and every numeric table. Yield normalization preserves source analytical and temporal distinctions.</p>' + "".join(sections) + "</body></html>").encode("utf-8")
 
 
 def prepare(workspace, calibration_id, *, uncertainty_id=None, candidate_run_ids=None):
@@ -435,7 +452,10 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, candidate_run_ids
             return inspect(workspace, previous["map_id"])
         atomic_json(directory / "selection.json", selection, immutable=True)
         geometry, context = _geometry(workspace, selection, plan, report)
-        groups = _rows(report, plan, observed, detail, geometry, selection["candidate_run_ids"])
+        catchment_context = catchment_interpretation.collect(workspace, report, plan, observed)
+        atomic_json(directory / "catchment-interpretation.json", catchment_context, immutable=True)
+        groups = _rows(report, plan, observed, detail, geometry,
+                       selection["candidate_run_ids"], catchment_context)
         caps = {parameter: max((abs(row["residual"]) for group in groups if group["parameter"] == parameter
                                 for row in group["rows"] if row["residual"] is not None), default=0.0)
                 for parameter in report["objective"]}
@@ -520,7 +540,8 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, candidate_run_ids
                                 "profile_id": group["profile_id"], "uncertainty_id": selection["uncertainty_id"]},
             })
         atomic_bytes(directory / "index.html", _page_html(layers, MEANING), immutable=True)
-        context_names = ["selection.json", "provenance.json", "index.html", *originals]
+        context_names = ["selection.json", "provenance.json", "index.html",
+                         "catchment-interpretation.json", *originals]
         context_names.extend(layer["geojson"]["path"] for layer in layers)
         context_names.extend(layer["csv"]["path"] for layer in layers)
         context_names.extend(layer["pdf"]["path"] for layer in layers)
@@ -580,7 +601,8 @@ def inspect(workspace, map_id):
     if result.get("version") != VERSION or result.get("workspace_id") != workspace.project["id"]:
         raise ValueError("Select this workspace's retained calibration map edition")
     selected, report, plan, observed, detail = _selection(
-        workspace, result["calibration_id"], result["uncertainty_id"], result["selection"]["candidate_run_ids"])
+        workspace, result["calibration_id"], result["uncertainty_id"], result["selection"]["candidate_run_ids"],
+        presentation_edition=result["selection"].get("presentation_edition"))
     _same(selected, result["selection"], "Calibration map selection")
     if digest(selected) != result["selection_id"]:
         raise ValueError("The retained calibration map selection ID changed")

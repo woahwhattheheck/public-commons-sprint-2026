@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "simulated-field-recording",
+  "extend_components": {
+    "simulated-customer-recording": {
+      "paths": [
+        "source_tools/simulated_fieldwork_recording.py",
+        "source/implementation/run_sample_qc_browser.mjs",
+        "docs/SIMULATED_FIELDWORK_BROWSER.md",
+        "integration/component_fragments/simulated-field-recording.json",
+        "source_tools/simulated_headwaters_narration.py"
+      ]
+    }
+  },
+  "required_components": [
+    "simulated-customer-recording"
+  ],
+  "source_reference": "Same original completed simulated field plan, native QC/action reports and retained laboratory inputs on the existing headwaters Operator recording; source IDs and complete exported files remain part of the recording edition."
+}

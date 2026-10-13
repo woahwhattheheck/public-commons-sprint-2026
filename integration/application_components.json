@@ -777,7 +777,11 @@
         "model/gis_edition_review.py",
         "operator/gis_projects.py",
         "model/gis_project_cli.py",
-        "install_gis_projects.py"
+        "install_gis_projects.py",
+        "model/gis_vector_review.py",
+        "operator/gis_vector_reviews.py",
+        "operator/extensions/gis-vector-reviews.json",
+        "AGENTS.md"
       ],
       "requires": [
         "core",
@@ -1386,6 +1390,7 @@
         "source/ecoli_temporal_analysis/20261013/station-summary.csv",
         "source/ecoli_temporal_analysis/20261013/station-year-summary.csv",
         "source/ecoli_utility_context/20261013/README.md",
+        "source/ecoli_utility_context/20261013/SEASONAL_COMPARISON.md",
         "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
         "source/ecoli_utility_context/20261013/index.html",
         "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
@@ -1401,6 +1406,11 @@
         "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
         "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
         "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+        "source/ecoli_utility_context/20261013/seasonal-comparison.csv",
+        "source/ecoli_utility_context/20261013/seasonal-comparison.json",
+        "source/ecoli_utility_context/20261013/seasonal-comparison.recipe.json",
+        "source/ecoli_utility_context/20261013/seasonal-comparison.sources.json",
+        "source/ecoli_utility_context/20261013/seasonal_comparison.mjs",
         "source/ecoli_utility_context/20261013/selected-stations.geojson",
         "source/ecoli_utility_context/20261013/source-inputs.json",
         "source/ecoli_utility_context/20261013/source-manifest.json",

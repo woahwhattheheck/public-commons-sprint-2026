@@ -27,5 +27,11 @@ def read(operator, workspace_key, operation, value):
             report["_downloads"] = tickets(report["members"])
         for packet in source["deployments"]:
             packet["_downloads"] = tickets(packet["members"])
+    import gauge_receiving
+    gauge_receiving.decorate(operator, workspace_key, result)
+    import ensemble_receiving
+    ensemble_receiving.decorate(operator, workspace_key, result)
+    import observed_landcover_receiving
+    observed_landcover_receiving.decorate(operator, workspace_key, result)
     result["workspace_key"] = workspace_key
     return result

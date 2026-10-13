@@ -1,13 +1,18 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "gauge-study-transfer",
-  "source_reference": "Gauge editable Study continuation1791877746.989079 above merged3506/31320e6f0c96a2aab94caee2cf2d47cabf6644ae; same maintained selected scientific report and original source/station/regional receiving closure. Current native Gauge receiving prepares the saved scientific edition and exports its selected editable Study before independent cold reopening; explicit Study dependency preserves that receiving closure.",
+  "source_reference": "Gauge editable Study continuation1791877746.989079 above merged3506/31320e6f0c96a2aab94caee2cf2d47cabf6644ae; same maintained selected scientific report and original source/station/regional receiving closure. Current native Gauge receiving prepares the saved scientific edition and exports its selected editable Study before independent cold reopening; explicit Study dependency preserves that receiving closure. Received-Study Gauge navigation continues operation1791881484.237389 with the existing shared receiving owner; original saved report/source/build/Station/regional identities and all3739 native receiving behavior are preserved.",
   "extend_components": {
     "gauge-support": {
       "paths": [
         "integration/component_fragments/gauge-study-transfer.json",
         "model/GAUGE_STUDY_TRANSFER.md",
-        "model/gauge_study_transfer.py"
+        "model/gauge_study_transfer.py",
+        "model/gauge_study_receiving.py",
+        "operator/gauge_receiving.py",
+        "operator/web/gauge_received_studies.mjs",
+        "model/GAUGE_STUDY_RECEIVING.md",
+        "operator/web/gauge_support.mjs"
       ],
       "requires": [
         "study-transfer"
@@ -17,7 +22,16 @@
       "paths": [
         "integration/component_fragments/gauge-study-transfer.json",
         "model/GAUGE_STUDY_TRANSFER.md",
-        "model/gauge_study_transfer.py"
+        "model/gauge_study_transfer.py",
+        "model/gauge_study_receiving.py",
+        "operator/gauge_receiving.py",
+        "operator/web/gauge_received_studies.mjs",
+        "model/GAUGE_STUDY_RECEIVING.md",
+        "model/study_receiving.py",
+        "operator/study_receiving.py",
+        "operator/web/received_studies.mjs",
+        "operator/web/extensions/study_transfer.mjs",
+        "operator/extensions/study-transfer.json"
       ]
     },
     "scientific-report-editions": {

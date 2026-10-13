@@ -76,7 +76,8 @@ async function rehearsalBrowserMain(argv) {
     settings=await readJSON(argv[0]);
     checkRunning();
     const fields=['schema','operation_id','connection_file','rehearsal_id','sender_workspace','receiver_workspace','output_directory','playwright_module','executable'];
-    if(!settings||!equal(Object.keys(settings).sort(),fields.sort())||settings.schema!=='upstate.rehearsal-browser-input/v1'||
+    const acceptedFields=[...fields,...['customer_review','fieldwork_receiving'].filter(key=>settings?.[key])];
+    if(!settings||!equal(Object.keys(settings).sort(),acceptedFields.sort())||settings.schema!=='upstate.rehearsal-browser-input/v1'||
        !/^[A-Za-z0-9_-]{16,100}$/.test(settings.operation_id||'')) fail('INPUT_SCHEMA','Select the original browser receiving input.');
     for(const key of ['rehearsal_id','sender_workspace','receiver_workspace']) validId(settings[key]);
     if(settings.sender_workspace===settings.receiver_workspace) fail('DISTINCT_RECEIVER','Select the independently restored original workspace.');
@@ -116,7 +117,9 @@ async function rehearsalBrowserMain(argv) {
     }
     await lockHandle.writeFile(canonical(lockValue)+'\n'); await lockHandle.sync();
     const binding={schema:settings.schema,operation_id:settings.operation_id,rehearsal_id:settings.rehearsal_id,
-      sender_workspace:settings.sender_workspace,receiver_workspace:settings.receiver_workspace};
+      sender_workspace:settings.sender_workspace,receiver_workspace:settings.receiver_workspace,
+      ...(settings.customer_review?{customer_review:{manifest:settings.customer_review.manifest,selected:settings.customer_review.selected}}:{}),
+      ...(settings.fieldwork_receiving?{fieldwork_receiving:Object.fromEntries(['bytes','sha256','operation_id','plan_id','project_id'].map(key=>[key,settings.fieldwork_receiving[key]]))}:{})};
     const progressPath=join(output,'results','browser-progress.json');
     progress=await exists(progressPath)?await readJSON(progressPath):{
       schema:'upstate.rehearsal-browser-progress/v1',binding,started_at:now(),actions:{},captures:{},controls:{},phases:{},uploads:{},recordings:[],status:'RUNNING'
@@ -510,8 +513,91 @@ async function rehearsalBrowserMain(argv) {
         await waitFor(()=>locator('[data-view="'+view+'"]').getAttribute('aria-current').then(value=>value==='page'),'VIDEO_VIEW');
         await page.evaluate(()=>document.fonts.ready);await pause(1800);attempt.frames.push({view,displayed_at:now()});
       }
-      await openRehearsal();await step('calculation');await pause(1800);attempt.frames.push({view:'rehearsal',step_id:'calculation',displayed_at:now()});
+      const recordedCase=await openRehearsal();
+      for(const lesson of recordedCase.record.steps) {
+        checkRunning();await step(lesson.id);await page.evaluate(()=>document.fonts.ready);
+        const displayedAt=now();
+        await pause(1800);
+        attempt.frames.push({view:'rehearsal',step_id:lesson.id,scene_id:lesson.id,
+          displayed_at:displayedAt,ended_at:now(),meaning:'Actual original saved lesson shown in this recording'});
+        await checkpoint();
+      }
       await tab('evidence');await pause(1800);attempt.frames.push({view:'rehearsal',tab:'evidence',displayed_at:now()});
+      if(settings.fieldwork_receiving) {
+        const choice=settings.fieldwork_receiving;
+        const actual=await hashFile(choice.path);
+        if(actual.bytes!==choice.bytes||actual.sha256!==choice.sha256)
+          fail('FIELDWORK_INPUT_CHANGED','The frozen original field inspection changed.');
+        const fieldwork=await readJSON(choice.path);
+        if(fieldwork.operation_id!==choice.operation_id||fieldwork.plan_id!==choice.plan_id||
+           fieldwork.original_project_id!==choice.project_id||fieldwork.phase!=='closeout')
+          fail('FIELDWORK_IDENTITY','The recorded field chapter belongs to a different original case.');
+        const {runSampleQCCourse}=await import('../source/implementation/run_sample_qc_browser.mjs');
+        const fieldOutput=join(output,'field-qc');
+        const fieldStartedAt=now();
+        const result=await runSampleQCCourse({
+          page,context:page.context(),operatorURL:connection.operator_url,
+          workspace:settings.sender_workspace,fieldwork,output:fieldOutput,
+          resume:await exists(fieldOutput),checkRunning,taskTimeoutSeconds:900});
+        if(result.status!=='course_complete'||result.operation_id!==choice.operation_id||
+           result.plan_id!==choice.plan_id||
+           !equal(result.qc_report_ids,fieldwork.qc_reports.map(row=>row.report_id))||
+           !equal(result.action_report_ids,fieldwork.action_reports.map(row=>row.action_report_id)))
+          fail('FIELDWORK_COURSE_CHANGED','The field browser result differs from the retained original QC and decision editions.');
+        const members=[];
+        const collectField=async directory=>{
+          for(const name of (await fs.readdir(directory)).sort()){
+            const path=join(directory,name),st=await fs.lstat(path);
+            if(st.isSymbolicLink())fail('FIELDWORK_ARTIFACT_ALIAS','A retained field course member became an alias.');
+            if(st.isDirectory())await collectField(path);
+            else if(st.isFile())members.push({path:publicPath(path),...await hashFile(path)});
+            else fail('FIELDWORK_ARTIFACT_TYPE','A retained field course member is not an original regular file.');
+          }
+        };
+        await collectField(fieldOutput);
+        for(const item of result.screenshots){
+          const relativeName=item.path;
+          if(typeof relativeName!=='string'||isAbsolute(relativeName)||relativeName.includes('\\')||
+             relativeName.split('/').some(part=>!part||part==='.'||part==='..'||part==='private'))
+            fail('FIELDWORK_SCREENSHOT_PATH','The original field screenshot path differs.');
+          const path=join(fieldOutput,relativeName),identity=await hashFile(path);
+          if(identity.bytes!==item.bytes||identity.sha256!==item.sha256)
+            fail('FIELDWORK_SCREENSHOT_CHANGED','The retained original field screenshot changed.');
+          const label='field-qc-'+item.sha256,member=await publicFile(path,label,'.png');
+          progress.captures[label]={...member,viewport:item.viewport,fieldwork_operation_id:choice.operation_id,
+            fieldwork_plan_id:choice.plan_id,workspace:settings.sender_workspace,rehearsal_id:settings.rehearsal_id,
+            source_path:publicPath(path),captured_at:now(),meaning:'Actual original field/QC control or exported report; producing-peer pixel inspection remains required.'};
+        }
+        progress.phases.fieldwork={state:'complete',operation_id:choice.operation_id,plan_id:choice.plan_id,
+          qc_report_ids:result.qc_report_ids,action_report_ids:result.action_report_ids,
+          task_ids:result.task_ids,visual_review:result.visual_review,files:members,completed_at:now()};
+        attempt.frames.push({view:'field_qc',scene_id:'field_qc',operation_id:choice.operation_id,plan_id:choice.plan_id,displayed_at:fieldStartedAt,ended_at:now()});
+        await checkpoint();
+        await page.goto(connection.operator_url,{waitUntil:'domcontentloaded'});
+        await waitFor(async()=>await page.locator('#workspace-select option[value="'+settings.sender_workspace+'"]').count(),'OPERATOR_FIELD_RETURN');
+        await openRehearsal();await tab('evidence');
+      }
+      if(settings.customer_review) {
+        const {runCustomerReviewChapter}=await import('../source_tools/simulated_customer_review_browser.mjs');
+        const captureCustomer=async(label,metadata)=>{
+          if(progress.captures[label]){await verifyArtifact(progress.captures[label]);return progress.captures[label];}
+          await page.evaluate(()=>document.fonts.ready);checkRunning();
+          const temporary=join(privateDirectory,label+'-'+randomUUID()+'.png');
+          await page.screenshot({path:temporary,fullPage:true,animations:'disabled'});
+          const member=await publicFile(temporary,label,'.png');await fs.unlink(temporary);
+          const metrics=await page.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight},document:{width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight},heading:document.querySelector('h1')?.textContent||''}));
+          progress.captures[label]={...member,...metrics,...metadata,captured_at:now(),workspace:settings.sender_workspace,rehearsal_id:settings.rehearsal_id};
+          await checkpoint();return progress.captures[label];
+        };
+        const customerStartedAt=now();
+        progress.phases.customer_review=await runCustomerReviewChapter({
+          page,choice:settings.customer_review,output,checkRunning,capture:captureCustomer,checkpoint,progress,pause});
+        await checkpoint();
+        await page.goto(connection.operator_url,{waitUntil:'domcontentloaded'});
+        await waitFor(async()=>await page.locator('#workspace-select option[value="'+settings.sender_workspace+'"]').count(),'OPERATOR_RETURN');
+        await openRehearsal();await tab('evidence');
+        attempt.frames.push({view:'customer_review_handback',scene_id:'customer_review',customer_ids:settings.customer_review.selected,displayed_at:customerStartedAt,ended_at:now()});
+      }
       await closeBrowser();const path=await video.path();const member=await publicFile(path,'operator-walkthrough','.webm');
       attempt.state='complete';attempt.ended_at=now();attempt.file=member;
       progress.phases.recording={state:'complete',...member,started_at:attempt.started_at,ended_at:attempt.ended_at,frames:copy(attempt.frames)};
@@ -634,7 +720,8 @@ async function rehearsalBrowserMain(argv) {
       {path:progress.phases.recording.path,bytes:progress.phases.recording.bytes,sha256:progress.phases.recording.sha256},progress.phases.download.file,
       ...Object.values(progress.actions).map(x=>x.receipt),...Object.values(progress.controls).filter(x=>x.original).map(x=>x.original),
       ...['saved_edits','changed_case','restored_case','receiver'].map(x=>progress.phases[x].record),
-      ...progress.recordings.filter(x=>x.file).map(x=>({path:x.file.path,bytes:x.file.bytes,sha256:x.file.sha256}))];
+      ...progress.recordings.filter(x=>x.file).map(x=>({path:x.file.path,bytes:x.file.bytes,sha256:x.file.sha256})),
+      ...(progress.customer_review?.downloads||[]),...(progress.phases.fieldwork?.files||[])];
     const unique=[...new Map(files.map(x=>[x.path,x])).values()];
     for(const member of unique)await verifyArtifact(member);
     await closeBrowser();

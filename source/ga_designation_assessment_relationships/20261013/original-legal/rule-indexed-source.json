@@ -1,0 +1,2819 @@
+{
+  "schema": "upstate.indexed-original-pdf-text/v1",
+  "source_url": "https://epd.georgia.gov/document/document/georgia-water-quality-standardsaug-2022pdf/download",
+  "source_index": {
+    "kind": "Retained search-service PDF text extraction",
+    "line_number_origin": "Zero-based extraction line index; not printed statutory line numbers",
+    "page_number_origin": "One-based PDF page",
+    "captured_at": "2026-10-13",
+    "original_pdf_bytes": 514565,
+    "original_pdf_retained_upload": "3f8dd772-3100-81b5-9d7e-00b2bc93bf93"
+  },
+  "lines": [
+    {
+      "line": 776,
+      "page": 19,
+      "text": "(14) Specific Designated Uses. Beneficial water uses assigned by the State to all surface"
+    },
+    {
+      "line": 777,
+      "page": 19,
+      "text": "waters. These designations are scientifically determined to be the best utilization of the"
+    },
+    {
+      "line": 778,
+      "page": 19,
+      "text": "surface water from an environmental and economic standpoint. Streams and stream Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 779,
+      "page": 20,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 20"
+    },
+    {
+      "line": 780,
+      "page": 20,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 781,
+      "page": 20,
+      "text": "reaches not specifically listed are classified as Fishing. The specific designated uses are"
+    },
+    {
+      "line": 782,
+      "page": 20,
+      "text": "as follows:"
+    },
+    {
+      "line": 1189,
+      "page": 26,
+      "text": "SAVANNAH RIVER"
+    },
+    {
+      "line": 1190,
+      "page": 26,
+      "text": "BASIN"
+    },
+    {
+      "line": 1191,
+      "page": 26,
+      "text": "DESIGNATED USE"
+    },
+    {
+      "line": 1192,
+      "page": 26,
+      "text": "Abercorn Creek Confluence with Little Abercorn Creek"
+    },
+    {
+      "line": 1193,
+      "page": 26,
+      "text": "to Savannah River"
+    },
+    {
+      "line": 1194,
+      "page": 26,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1195,
+      "page": 26,
+      "text": "Beaverdam Creek Confluence with Little Beaverdam Creek"
+    },
+    {
+      "line": 1196,
+      "page": 26,
+      "text": "to Carters Creek"
+    },
+    {
+      "line": 1197,
+      "page": 26,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1198,
+      "page": 26,
+      "text": "Beaverdam Creek (Lake"
+    },
+    {
+      "line": 1199,
+      "page": 26,
+      "text": "Boline)"
+    },
+    {
+      "line": 1200,
+      "page": 26,
+      "text": "Headwaters to confluence with Little"
+    },
+    {
+      "line": 1201,
+      "page": 26,
+      "text": "Beaverdam Creek (including Lake"
+    },
+    {
+      "line": 1202,
+      "page": 26,
+      "text": "Boline)"
+    },
+    {
+      "line": 1203,
+      "page": 26,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1204,
+      "page": 26,
+      "text": "Brier Creek Walnut Branch to Fitz Creek Drinking Water"
+    },
+    {
+      "line": 1205,
+      "page": 26,
+      "text": "Broad River Comer Carlton Rd. (Athens Hwy) to Mill"
+    },
+    {
+      "line": 1206,
+      "page": 26,
+      "text": "Branch"
+    },
+    {
+      "line": 1207,
+      "page": 26,
+      "text": "Recreation"
+    },
+    {
+      "line": 1208,
+      "page": 26,
+      "text": "Broad River Wildcat Bridge Rd. to Scull Shoal Creek Recreation"
+    },
+    {
+      "line": 1209,
+      "page": 26,
+      "text": "Chattooga River Georgia-North Carolina State Line to"
+    },
+    {
+      "line": 1210,
+      "page": 26,
+      "text": "confluence with West Fork Chattooga"
+    },
+    {
+      "line": 1211,
+      "page": 26,
+      "text": "River"
+    },
+    {
+      "line": 1212,
+      "page": 26,
+      "text": "Wild and Scenic"
+    },
+    {
+      "line": 1213,
+      "page": 26,
+      "text": "Chattooga River Confluence with West Fork Chattooga"
+    },
+    {
+      "line": 1214,
+      "page": 26,
+      "text": "River to Tugaloo Reservoir"
+    },
+    {
+      "line": 1215,
+      "page": 26,
+      "text": "Recreation and"
+    },
+    {
+      "line": 1216,
+      "page": 26,
+      "text": "Wild and Scenic"
+    },
+    {
+      "line": 1217,
+      "page": 26,
+      "text": "Chattooga River/Tugaloo"
+    },
+    {
+      "line": 1218,
+      "page": 26,
+      "text": "Reservoir"
+    },
+    {
+      "line": 1219,
+      "page": 26,
+      "text": "Tugaloo Reservoir to confluence with"
+    },
+    {
+      "line": 1220,
+      "page": 26,
+      "text": "Tallulah River"
+    },
+    {
+      "line": 1221,
+      "page": 26,
+      "text": "Recreation"
+    },
+    {
+      "line": 1222,
+      "page": 26,
+      "text": "Cedar Creek Headwaters to confluence with Little"
+    },
+    {
+      "line": 1223,
+      "page": 26,
+      "text": "Toccoa Creek (including Toccoa"
+    },
+    {
+      "line": 1224,
+      "page": 26,
+      "text": "Reservoir)"
+    },
+    {
+      "line": 1225,
+      "page": 26,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1226,
+      "page": 26,
+      "text": "Grove Creek Headwaters to confluence with Hickory"
+    },
+    {
+      "line": 1227,
+      "page": 26,
+      "text": "Level Creek"
+    },
+    {
+      "line": 1228,
+      "page": 26,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1229,
+      "page": 26,
+      "text": "Unnamed Tributary to"
+    },
+    {
+      "line": 1230,
+      "page": 26,
+      "text": "Lick Creek"
+    },
+    {
+      "line": 1231,
+      "page": 26,
+      "text": "Lake Liberty, A.H. Stephens State Park"
+    },
+    {
+      "line": 1232,
+      "page": 26,
+      "text": "Beach"
+    },
+    {
+      "line": 1233,
+      "page": 26,
+      "text": "Recreation"
+    },
+    {
+      "line": 1234,
+      "page": 26,
+      "text": "Little Beaverdam Creek Headwaters to confluence with"
+    },
+    {
+      "line": 1235,
+      "page": 26,
+      "text": "Beaverdam Creek"
+    },
+    {
+      "line": 1236,
+      "page": 26,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1237,
+      "page": 26,
+      "text": "Mountain Creek Headwaters to Little Nails Creek Drinking WaterChapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1238,
+      "page": 27,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 27"
+    },
+    {
+      "line": 1239,
+      "page": 27,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1240,
+      "page": 27,
+      "text": "North Fork Broad River Confluence with Double Branch to"
+    },
+    {
+      "line": 1241,
+      "page": 27,
+      "text": "confluence with Middle Fork Broad"
+    },
+    {
+      "line": 1242,
+      "page": 27,
+      "text": "River"
+    },
+    {
+      "line": 1243,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1244,
+      "page": 27,
+      "text": "Savannah River/Lake"
+    },
+    {
+      "line": 1245,
+      "page": 27,
+      "text": "Russell and Clarks Hill"
+    },
+    {
+      "line": 1246,
+      "page": 27,
+      "text": "Lake"
+    },
+    {
+      "line": 1247,
+      "page": 27,
+      "text": "GA Highway 368/SC Highway 184 to"
+    },
+    {
+      "line": 1248,
+      "page": 27,
+      "text": "Clarks Hill Dam (Mile 238)"
+    },
+    {
+      "line": 1249,
+      "page": 27,
+      "text": "Recreation and"
+    },
+    {
+      "line": 1250,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1251,
+      "page": 27,
+      "text": "Savannah River Clarks Hill Dam (Mile 238) to Horse"
+    },
+    {
+      "line": 1252,
+      "page": 27,
+      "text": "Creek including Stevens Creek Reservoir"
+    },
+    {
+      "line": 1253,
+      "page": 27,
+      "text": "and Augusta Canal"
+    },
+    {
+      "line": 1254,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1255,
+      "page": 27,
+      "text": "Savannah River US Hwy. 301 Bridge (Mile 129) to"
+    },
+    {
+      "line": 1256,
+      "page": 27,
+      "text": "Seaboard Coastline RR Bridge (Mile"
+    },
+    {
+      "line": 1257,
+      "page": 27,
+      "text": "27.4)"
+    },
+    {
+      "line": 1258,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1259,
+      "page": 27,
+      "text": "Savannah River Seaboard Coastline RR Bridge (Mile"
+    },
+    {
+      "line": 1260,
+      "page": 27,
+      "text": "27.4) to Fort Pulaski (Mile 0)"
+    },
+    {
+      "line": 1261,
+      "page": 27,
+      "text": "Coastal Fishing"
+    },
+    {
+      "line": 1262,
+      "page": 27,
+      "text": "Savannah River Fort Pulaski (Mile 0) to open sea and all"
+    },
+    {
+      "line": 1263,
+      "page": 27,
+      "text": "littoral waters including those on the"
+    },
+    {
+      "line": 1264,
+      "page": 27,
+      "text": "ocean side of Tybee Island"
+    },
+    {
+      "line": 1265,
+      "page": 27,
+      "text": "Recreation"
+    },
+    {
+      "line": 1266,
+      "page": 27,
+      "text": "Sherrills Creek Headwaters to confluence with South"
+    },
+    {
+      "line": 1267,
+      "page": 27,
+      "text": "Fork Little River (including Sherrills"
+    },
+    {
+      "line": 1268,
+      "page": 27,
+      "text": "Reservoir)"
+    },
+    {
+      "line": 1269,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1270,
+      "page": 27,
+      "text": "Sweetwater Creek Headwaters to confluence with Brier"
+    },
+    {
+      "line": 1271,
+      "page": 27,
+      "text": "Creek (including Usry Lake)"
+    },
+    {
+      "line": 1272,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1273,
+      "page": 27,
+      "text": "Tallulah River Headwaters, including Lakes Burton and"
+    },
+    {
+      "line": 1274,
+      "page": 27,
+      "text": "Seed, to confluence with Flat Creek"
+    },
+    {
+      "line": 1275,
+      "page": 27,
+      "text": "Recreation"
+    },
+    {
+      "line": 1276,
+      "page": 27,
+      "text": "Tallulah River/ Lake"
+    },
+    {
+      "line": 1277,
+      "page": 27,
+      "text": "Rabun"
+    },
+    {
+      "line": 1278,
+      "page": 27,
+      "text": "Confluence of Flat Creek, including Lake"
+    },
+    {
+      "line": 1279,
+      "page": 27,
+      "text": "Rabun, to Rabun Dam"
+    },
+    {
+      "line": 1280,
+      "page": 27,
+      "text": "Recreation and"
+    },
+    {
+      "line": 1281,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1282,
+      "page": 27,
+      "text": "Tallulah River Lake Rabun Dam to confluence with"
+    },
+    {
+      "line": 1283,
+      "page": 27,
+      "text": "Chattooga River"
+    },
+    {
+      "line": 1284,
+      "page": 27,
+      "text": "Recreation"
+    },
+    {
+      "line": 1285,
+      "page": 27,
+      "text": "Town Creek (Tributary to"
+    },
+    {
+      "line": 1286,
+      "page": 27,
+      "text": "Long Creek)"
+    },
+    {
+      "line": 1287,
+      "page": 27,
+      "text": "Headwaters to confluence with Brooks"
+    },
+    {
+      "line": 1288,
+      "page": 27,
+      "text": "Creek"
+    },
+    {
+      "line": 1289,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1290,
+      "page": 27,
+      "text": "Tributary to Crawford"
+    },
+    {
+      "line": 1291,
+      "page": 27,
+      "text": "Creek"
+    },
+    {
+      "line": 1292,
+      "page": 27,
+      "text": "Headwaters to confluence with Crawford"
+    },
+    {
+      "line": 1293,
+      "page": 27,
+      "text": "Creek (including Water Works"
+    },
+    {
+      "line": 1294,
+      "page": 27,
+      "text": "Reservoir)"
+    },
+    {
+      "line": 1295,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1296,
+      "page": 27,
+      "text": "Tugaloo River Confluence of Tallulah and Chattooga"
+    },
+    {
+      "line": 1297,
+      "page": 27,
+      "text": "Rivers to Yonah Lake Dam"
+    },
+    {
+      "line": 1298,
+      "page": 27,
+      "text": "Recreation and"
+    },
+    {
+      "line": 1299,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1300,
+      "page": 27,
+      "text": "Tugaloo River/Lake"
+    },
+    {
+      "line": 1301,
+      "page": 27,
+      "text": "Hartwell"
+    },
+    {
+      "line": 1302,
+      "page": 27,
+      "text": "Confluence with Prather Creek (near GA"
+    },
+    {
+      "line": 1303,
+      "page": 27,
+      "text": "SR 184) to Lake Hartwell Dam"
+    },
+    {
+      "line": 1304,
+      "page": 27,
+      "text": "Recreation and"
+    },
+    {
+      "line": 1305,
+      "page": 27,
+      "text": "Drinking Water"
+    },
+    {
+      "line": 1306,
+      "page": 27,
+      "text": "West Fork Chattooga Confluence of Overflow Creek and Clear"
+    },
+    {
+      "line": 1307,
+      "page": 27,
+      "text": "Creek to confluence with Chattooga"
+    },
+    {
+      "line": 1308,
+      "page": 27,
+      "text": "River (7.3 mi.)"
+    },
+    {
+      "line": 1309,
+      "page": 27,
+      "text": "Wild and Scenic"
+    },
+    {
+      "line": 1402,
+      "page": 29,
+      "text": "(15) Trout Streams. Streams designated as Primary Trout Waters are waters supporting a"
+    },
+    {
+      "line": 1403,
+      "page": 29,
+      "text": "self-sustaining population of Rainbow, Brown or Brook Trout. Streams designated as"
+    },
+    {
+      "line": 1404,
+      "page": 29,
+      "text": "Secondary Trout Streams are those with no evidence of natural trout reproduction, but are"
+    },
+    {
+      "line": 1405,
+      "page": 29,
+      "text": "capable of supporting trout throughout the year. Trout streams are classified in"
+    },
+    {
+      "line": 1406,
+      "page": 29,
+      "text": "accordance with the designations and criteria as follows:"
+    },
+    {
+      "line": 1407,
+      "page": 29,
+      "text": "(a) Criteria."
+    },
+    {
+      "line": 1408,
+      "page": 29,
+      "text": "(i) There shall be no elevation of natural stream temperatures for Primary Trout Waters; 2F"
+    },
+    {
+      "line": 1409,
+      "page": 29,
+      "text": "or less elevation for Secondary Trout Waters."
+    },
+    {
+      "line": 1410,
+      "page": 29,
+      "text": "(ii) No person shall construct an impoundment on Primary Trout Waters, except on streams"
+    },
+    {
+      "line": 1411,
+      "page": 29,
+      "text": "with drainage basins less than 50 acres upstream of the impoundment. Impoundments on"
+    },
+    {
+      "line": 1412,
+      "page": 29,
+      "text": "streams with drainage basins less than 50 acres must be approved by the Division."
+    },
+    {
+      "line": 1413,
+      "page": 29,
+      "text": "(iii) No person shall construct an impoundment on Secondary Trout Waters without the"
+    },
+    {
+      "line": 1414,
+      "page": 29,
+      "text": "approval of the Division."
+    },
+    {
+      "line": 1415,
+      "page": 29,
+      "text": "(b) Designations by County."
+    },
+    {
+      "line": 1416,
+      "page": 29,
+      "text": "BARTOW COUNTY"
+    },
+    {
+      "line": 1417,
+      "page": 29,
+      "text": "Primary:"
+    },
+    {
+      "line": 1418,
+      "page": 29,
+      "text": "None."
+    },
+    {
+      "line": 1419,
+      "page": 29,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1420,
+      "page": 29,
+      "text": "1. Boston Creek watershed upstream from Georgia Hwy. 20."
+    },
+    {
+      "line": 1421,
+      "page": 29,
+      "text": "2. Connesena Creek watershed."
+    },
+    {
+      "line": 1422,
+      "page": 29,
+      "text": "3. Dykes Creek watershed."
+    },
+    {
+      "line": 1423,
+      "page": 29,
+      "text": "4. Pine Log Creek watershed."
+    },
+    {
+      "line": 1424,
+      "page": 29,
+      "text": "5. Pyle Creek watershed."
+    },
+    {
+      "line": 1425,
+      "page": 29,
+      "text": "6. Salacoa Creek watershed.Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1426,
+      "page": 30,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 30"
+    },
+    {
+      "line": 1427,
+      "page": 30,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1428,
+      "page": 30,
+      "text": "7. Spring Creek watershed."
+    },
+    {
+      "line": 1429,
+      "page": 30,
+      "text": "8. Stamp Creek watershed upstream from Bartow County Road 269."
+    },
+    {
+      "line": 1430,
+      "page": 30,
+      "text": "9. Toms Creek watershed upstream from Bartow County Road 82."
+    },
+    {
+      "line": 1431,
+      "page": 30,
+      "text": "10. Two Run Creek watershed."
+    },
+    {
+      "line": 1432,
+      "page": 30,
+      "text": "11. Ward Creek watershed."
+    },
+    {
+      "line": 1433,
+      "page": 30,
+      "text": "CARROLL COUNTY"
+    },
+    {
+      "line": 1434,
+      "page": 30,
+      "text": "Primary:"
+    },
+    {
+      "line": 1435,
+      "page": 30,
+      "text": "None."
+    },
+    {
+      "line": 1436,
+      "page": 30,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1437,
+      "page": 30,
+      "text": "1. Brooks Creek watershed."
+    },
+    {
+      "line": 1438,
+      "page": 30,
+      "text": "2. Mud Creek watershed."
+    },
+    {
+      "line": 1439,
+      "page": 30,
+      "text": "3. Tallapoosa River."
+    },
+    {
+      "line": 1440,
+      "page": 30,
+      "text": "CATOOSA COUNTY"
+    },
+    {
+      "line": 1441,
+      "page": 30,
+      "text": "Primary:"
+    },
+    {
+      "line": 1442,
+      "page": 30,
+      "text": "None."
+    },
+    {
+      "line": 1443,
+      "page": 30,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1444,
+      "page": 30,
+      "text": "1. Dry Creek watershed upstream from Catoosa County Road 257 (East Chickamauga Creek"
+    },
+    {
+      "line": 1445,
+      "page": 30,
+      "text": "Watershed)."
+    },
+    {
+      "line": 1446,
+      "page": 30,
+      "text": "2. Hurricane Creek watershed upstream from Peters Branch."
+    },
+    {
+      "line": 1447,
+      "page": 30,
+      "text": "3. Little Chickamauga Creek watershed upstream from Catoosa County Road 387."
+    },
+    {
+      "line": 1448,
+      "page": 30,
+      "text": "4. Tiger Creek watershed upstream from Georgia Hwy. 2."
+    },
+    {
+      "line": 1449,
+      "page": 30,
+      "text": "CHATTOOGA COUNTY"
+    },
+    {
+      "line": 1450,
+      "page": 30,
+      "text": "Primary:"
+    },
+    {
+      "line": 1451,
+      "page": 30,
+      "text": "None."
+    },
+    {
+      "line": 1452,
+      "page": 30,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1453,
+      "page": 30,
+      "text": "1. Allgood Branch watershed upstream from Southern Railroad."
+    },
+    {
+      "line": 1454,
+      "page": 30,
+      "text": "2. Chappel Creek watershed."
+    },
+    {
+      "line": 1455,
+      "page": 30,
+      "text": "3. Chelsea Creek watershed.Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1456,
+      "page": 31,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 31"
+    },
+    {
+      "line": 1457,
+      "page": 31,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1458,
+      "page": 31,
+      "text": "4. East Fork Little River watershed."
+    },
+    {
+      "line": 1459,
+      "page": 31,
+      "text": "5. Hinton Creek watershed."
+    },
+    {
+      "line": 1460,
+      "page": 31,
+      "text": "6. Kings Creek watershed."
+    },
+    {
+      "line": 1461,
+      "page": 31,
+      "text": "7. Little Armuchee Creek watershed upstream from Chattooga County Road 326."
+    },
+    {
+      "line": 1462,
+      "page": 31,
+      "text": "8. Middle Fork Little River watershed."
+    },
+    {
+      "line": 1463,
+      "page": 31,
+      "text": "9. Mt. Hope Creek watershed."
+    },
+    {
+      "line": 1464,
+      "page": 31,
+      "text": "10. Perennial Spring watershed."
+    },
+    {
+      "line": 1465,
+      "page": 31,
+      "text": "11. Raccoon Creek watershed upstream from Georgia Hwy. 48."
+    },
+    {
+      "line": 1466,
+      "page": 31,
+      "text": "12. Ruff Creek watershed."
+    },
+    {
+      "line": 1467,
+      "page": 31,
+      "text": "13. Storey Mill Creek watershed."
+    },
+    {
+      "line": 1468,
+      "page": 31,
+      "text": "14. Taliaferro Creek watershed."
+    },
+    {
+      "line": 1469,
+      "page": 31,
+      "text": "CHEROKEE COUNTY"
+    },
+    {
+      "line": 1470,
+      "page": 31,
+      "text": "Primary:"
+    },
+    {
+      "line": 1471,
+      "page": 31,
+      "text": "None."
+    },
+    {
+      "line": 1472,
+      "page": 31,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1473,
+      "page": 31,
+      "text": "1. Bluff Creek watershed upstream from Cherokee County Road 114."
+    },
+    {
+      "line": 1474,
+      "page": 31,
+      "text": "2. Boston Creek watershed."
+    },
+    {
+      "line": 1475,
+      "page": 31,
+      "text": "3. Murphy Creek watershed."
+    },
+    {
+      "line": 1476,
+      "page": 31,
+      "text": "4. Pine Log Creek watershed."
+    },
+    {
+      "line": 1477,
+      "page": 31,
+      "text": "5. Salacoa Creek watershed."
+    },
+    {
+      "line": 1478,
+      "page": 31,
+      "text": "6. Soap Creek watershed upstream from Cherokee County Road 116."
+    },
+    {
+      "line": 1479,
+      "page": 31,
+      "text": "7. Stamp Creek watershed."
+    },
+    {
+      "line": 1480,
+      "page": 31,
+      "text": "8. Wiley Creek watershed."
+    },
+    {
+      "line": 1481,
+      "page": 31,
+      "text": "COBB COUNTY"
+    },
+    {
+      "line": 1482,
+      "page": 31,
+      "text": "Primary:"
+    },
+    {
+      "line": 1483,
+      "page": 31,
+      "text": "None."
+    },
+    {
+      "line": 1484,
+      "page": 31,
+      "text": "Secondary:Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1485,
+      "page": 32,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 32"
+    },
+    {
+      "line": 1486,
+      "page": 32,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1487,
+      "page": 32,
+      "text": "1. Chattahoochee River upstream from I-285 West Bridge."
+    },
+    {
+      "line": 1488,
+      "page": 32,
+      "text": "DADE COUNTY"
+    },
+    {
+      "line": 1489,
+      "page": 32,
+      "text": "Primary:"
+    },
+    {
+      "line": 1490,
+      "page": 32,
+      "text": "None."
+    },
+    {
+      "line": 1491,
+      "page": 32,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1492,
+      "page": 32,
+      "text": "1. Allison Creek watershed."
+    },
+    {
+      "line": 1493,
+      "page": 32,
+      "text": "2. East Fork Little River watershed."
+    },
+    {
+      "line": 1494,
+      "page": 32,
+      "text": "3. Lookout Creek watershed upstream from Dade County Road 197."
+    },
+    {
+      "line": 1495,
+      "page": 32,
+      "text": "4. Rock Creek watershed."
+    },
+    {
+      "line": 1496,
+      "page": 32,
+      "text": "5. West Fork Little River watershed."
+    },
+    {
+      "line": 1497,
+      "page": 32,
+      "text": "DAWSON COUNTY"
+    },
+    {
+      "line": 1498,
+      "page": 32,
+      "text": "Primary:"
+    },
+    {
+      "line": 1499,
+      "page": 32,
+      "text": "1. Amicalola Creek watershed upstream from Dawson County Road 192 (Devil's Elbow"
+    },
+    {
+      "line": 1500,
+      "page": 32,
+      "text": "Road)."
+    },
+    {
+      "line": 1501,
+      "page": 32,
+      "text": "2. Anderson Creek watershed."
+    },
+    {
+      "line": 1502,
+      "page": 32,
+      "text": "3. Long Swamp Creek watershed."
+    },
+    {
+      "line": 1503,
+      "page": 32,
+      "text": "4. Nimblewill Creek watershed."
+    },
+    {
+      "line": 1504,
+      "page": 32,
+      "text": "5. Sweetwater Creek watershed."
+    },
+    {
+      "line": 1505,
+      "page": 32,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1506,
+      "page": 32,
+      "text": "1. Amicalola Creek watershed from Georgia Hwy. 53 upstream to Dawson County Road 192"
+    },
+    {
+      "line": 1507,
+      "page": 32,
+      "text": "(Devil's Elbow Road)."
+    },
+    {
+      "line": 1508,
+      "page": 32,
+      "text": "2. Shoal Creek watershed upstream from the mouth of Burt Creek."
+    },
+    {
+      "line": 1509,
+      "page": 32,
+      "text": "ELBERT COUNTY"
+    },
+    {
+      "line": 1510,
+      "page": 32,
+      "text": "Primary:"
+    },
+    {
+      "line": 1511,
+      "page": 32,
+      "text": "None."
+    },
+    {
+      "line": 1512,
+      "page": 32,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1513,
+      "page": 32,
+      "text": "1. Savannah River for the ten-mile reach downstream from Hartwell Dam."
+    },
+    {
+      "line": 1514,
+      "page": 32,
+      "text": "FANNIN COUNTYChapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1515,
+      "page": 33,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 33"
+    },
+    {
+      "line": 1516,
+      "page": 33,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1517,
+      "page": 33,
+      "text": "Primary:"
+    },
+    {
+      "line": 1518,
+      "page": 33,
+      "text": "1. Conasauga River - Jacks River watershed."
+    },
+    {
+      "line": 1519,
+      "page": 33,
+      "text": "2. Ellijay River watershed."
+    },
+    {
+      "line": 1520,
+      "page": 33,
+      "text": "3. Etowah River watershed."
+    },
+    {
+      "line": 1521,
+      "page": 33,
+      "text": "4. Fightingtown Creek watershed."
+    },
+    {
+      "line": 1522,
+      "page": 33,
+      "text": "5. Owenby Creek watershed."
+    },
+    {
+      "line": 1523,
+      "page": 33,
+      "text": "6. Persimmon Creek watershed."
+    },
+    {
+      "line": 1524,
+      "page": 33,
+      "text": "7. South Fork Rapier Mill Creek watershed."
+    },
+    {
+      "line": 1525,
+      "page": 33,
+      "text": "8. Toccoa River watershed upstream to Blue Ridge Reservoir dam."
+    },
+    {
+      "line": 1526,
+      "page": 33,
+      "text": "9. Toccoa River watershed upstream from the backwater of Blue Ridge Reservoir."
+    },
+    {
+      "line": 1527,
+      "page": 33,
+      "text": "10. Tumbling Creek watershed."
+    },
+    {
+      "line": 1528,
+      "page": 33,
+      "text": "11. Wilscot Creek watershed."
+    },
+    {
+      "line": 1529,
+      "page": 33,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1530,
+      "page": 33,
+      "text": "All streams or stream sections not classified as primary in the above list."
+    },
+    {
+      "line": 1531,
+      "page": 33,
+      "text": "FLOYD COUNTY"
+    },
+    {
+      "line": 1532,
+      "page": 33,
+      "text": "Primary:"
+    },
+    {
+      "line": 1533,
+      "page": 33,
+      "text": "None."
+    },
+    {
+      "line": 1534,
+      "page": 33,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1535,
+      "page": 33,
+      "text": "1. Dykes Creek watershed."
+    },
+    {
+      "line": 1536,
+      "page": 33,
+      "text": "2. Johns Creek watershed upstream from Floyd County Road 212."
+    },
+    {
+      "line": 1537,
+      "page": 33,
+      "text": "3. Kings Creek watershed."
+    },
+    {
+      "line": 1538,
+      "page": 33,
+      "text": "4. Lavender Creek watershed upstream from Floyd County Road 893."
+    },
+    {
+      "line": 1539,
+      "page": 33,
+      "text": "5. Little Cedar Creek watershed."
+    },
+    {
+      "line": 1540,
+      "page": 33,
+      "text": "6. Mt. Hope Creek watershed."
+    },
+    {
+      "line": 1541,
+      "page": 33,
+      "text": "7. Silver Creek watershed upstream from Georgia Highway 1E."
+    },
+    {
+      "line": 1542,
+      "page": 33,
+      "text": "8. Spring Creek watershed (flows into State of Alabama)."
+    },
+    {
+      "line": 1543,
+      "page": 33,
+      "text": "9. Spring Creek water shed (flows into Etowah River). Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1544,
+      "page": 34,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 34"
+    },
+    {
+      "line": 1545,
+      "page": 34,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1546,
+      "page": 34,
+      "text": "10. Toms Creek watershed."
+    },
+    {
+      "line": 1547,
+      "page": 34,
+      "text": "FORSYTH COUNTY"
+    },
+    {
+      "line": 1548,
+      "page": 34,
+      "text": "Primary:"
+    },
+    {
+      "line": 1549,
+      "page": 34,
+      "text": "None."
+    },
+    {
+      "line": 1550,
+      "page": 34,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1551,
+      "page": 34,
+      "text": "1. Chattahoochee River."
+    },
+    {
+      "line": 1552,
+      "page": 34,
+      "text": "FULTON COUNTY"
+    },
+    {
+      "line": 1553,
+      "page": 34,
+      "text": "Primary:"
+    },
+    {
+      "line": 1554,
+      "page": 34,
+      "text": "None."
+    },
+    {
+      "line": 1555,
+      "page": 34,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1556,
+      "page": 34,
+      "text": "1. Chattahoochee River upstream from I-285 West Bridge."
+    },
+    {
+      "line": 1557,
+      "page": 34,
+      "text": "GILMER COUNTY"
+    },
+    {
+      "line": 1558,
+      "page": 34,
+      "text": "Primary:"
+    },
+    {
+      "line": 1559,
+      "page": 34,
+      "text": "1. Cartecay River watershed upstream from the mouth of Clear Creek."
+    },
+    {
+      "line": 1560,
+      "page": 34,
+      "text": "2. Clear Creek watershed upstream from Gilmer County Road 92."
+    },
+    {
+      "line": 1561,
+      "page": 34,
+      "text": "3. Conasauga River watershed - including Jacks River watershed."
+    },
+    {
+      "line": 1562,
+      "page": 34,
+      "text": "4. Ellijay River watershed upstream from the mouth of Kells Creek."
+    },
+    {
+      "line": 1563,
+      "page": 34,
+      "text": "5. Harris Creek watershed."
+    },
+    {
+      "line": 1564,
+      "page": 34,
+      "text": "6. Johnson Creek watershed."
+    },
+    {
+      "line": 1565,
+      "page": 34,
+      "text": "7. Mountaintown Creek watershed upstream from U.S. Highway 76."
+    },
+    {
+      "line": 1566,
+      "page": 34,
+      "text": "8. Tails Creek watershed upstream from Georgia Hwy. 282."
+    },
+    {
+      "line": 1567,
+      "page": 34,
+      "text": "9. Toccoa River watershed - including Fightingtown Creek watershed."
+    },
+    {
+      "line": 1568,
+      "page": 34,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1569,
+      "page": 34,
+      "text": "1. All streams or sections thereof except the Coosawattee River downstream from Ga. Hwy."
+    },
+    {
+      "line": 1570,
+      "page": 34,
+      "text": "5 Bridge, and Talking Rock Creek (not including tributaries) and those classified as"
+    },
+    {
+      "line": 1571,
+      "page": 34,
+      "text": "primary."
+    },
+    {
+      "line": 1572,
+      "page": 34,
+      "text": "2. Ball Creek watershed."
+    },
+    {
+      "line": 1573,
+      "page": 34,
+      "text": "3. Sevenmile Creek watershed.Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1574,
+      "page": 35,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 35"
+    },
+    {
+      "line": 1575,
+      "page": 35,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1576,
+      "page": 35,
+      "text": "4. Town Creek watershed."
+    },
+    {
+      "line": 1577,
+      "page": 35,
+      "text": "5. Wildcat Creek watershed."
+    },
+    {
+      "line": 1578,
+      "page": 35,
+      "text": "GORDON COUNTY"
+    },
+    {
+      "line": 1579,
+      "page": 35,
+      "text": "Primary:"
+    },
+    {
+      "line": 1580,
+      "page": 35,
+      "text": "None."
+    },
+    {
+      "line": 1581,
+      "page": 35,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1582,
+      "page": 35,
+      "text": "1. Johns Creek watershed."
+    },
+    {
+      "line": 1583,
+      "page": 35,
+      "text": "2. Long Branch watershed."
+    },
+    {
+      "line": 1584,
+      "page": 35,
+      "text": "3. Pine Log Creek watershed upstream from Georgia Hwy. 53."
+    },
+    {
+      "line": 1585,
+      "page": 35,
+      "text": "4. Pin Hook Creek watershed upstream from Gordon County Road 275."
+    },
+    {
+      "line": 1586,
+      "page": 35,
+      "text": "5. Rocky Creek watershed upstream from Gordon County Road 210."
+    },
+    {
+      "line": 1587,
+      "page": 35,
+      "text": "6. Salacoa Creek watershed upstream from U.S. Hwy. 411."
+    },
+    {
+      "line": 1588,
+      "page": 35,
+      "text": "7. Snake Creek watershed."
+    },
+    {
+      "line": 1589,
+      "page": 35,
+      "text": "GWINNETT COUNTY"
+    },
+    {
+      "line": 1590,
+      "page": 35,
+      "text": "Primary:"
+    },
+    {
+      "line": 1591,
+      "page": 35,
+      "text": "None."
+    },
+    {
+      "line": 1592,
+      "page": 35,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1593,
+      "page": 35,
+      "text": "1. Chattahoochee River."
+    },
+    {
+      "line": 1594,
+      "page": 35,
+      "text": "HABERSHAM COUNTY"
+    },
+    {
+      "line": 1595,
+      "page": 35,
+      "text": "Primary:"
+    },
+    {
+      "line": 1596,
+      "page": 35,
+      "text": "1. Chattahoochee River watershed upstream from Georgia Hwy. 255 Bridge."
+    },
+    {
+      "line": 1597,
+      "page": 35,
+      "text": "2. Middle Fork Broad River watershed upstream from USFS Route 92-B."
+    },
+    {
+      "line": 1598,
+      "page": 35,
+      "text": "3. Panther Creek watershed."
+    },
+    {
+      "line": 1599,
+      "page": 35,
+      "text": "4. Soque River watershed upstream from King's Bridge (bridge on Georgia Hwy. 197 just"
+    },
+    {
+      "line": 1600,
+      "page": 35,
+      "text": "below the mouth of Shoal Creek)."
+    },
+    {
+      "line": 1601,
+      "page": 35,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1602,
+      "page": 35,
+      "text": "1. Chattahoochee River watershed upstream from Georgia Hwy. 115 to the Georgia Hwy."
+    },
+    {
+      "line": 1603,
+      "page": 35,
+      "text": "255 Bridge.Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1604,
+      "page": 36,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 36"
+    },
+    {
+      "line": 1605,
+      "page": 36,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1606,
+      "page": 36,
+      "text": "2. Davidson Creek watershed."
+    },
+    {
+      "line": 1607,
+      "page": 36,
+      "text": "3. Middle Fork Broad River tributaries entering below USFS Route 92-B."
+    },
+    {
+      "line": 1608,
+      "page": 36,
+      "text": "4. Nancytown Creek watershed upstream from Nancytown Lake."
+    },
+    {
+      "line": 1609,
+      "page": 36,
+      "text": "5. North Fork Broad River watershed."
+    },
+    {
+      "line": 1610,
+      "page": 36,
+      "text": "6. Soque River watershed upstream from the mouth of Deep Creek to King's Bridge (Georgia"
+    },
+    {
+      "line": 1611,
+      "page": 36,
+      "text": "Hwy. 197)."
+    },
+    {
+      "line": 1612,
+      "page": 36,
+      "text": "7. Toccoa Creek watershed."
+    },
+    {
+      "line": 1613,
+      "page": 36,
+      "text": "HARALSON COUNTY"
+    },
+    {
+      "line": 1614,
+      "page": 36,
+      "text": "Primary:"
+    },
+    {
+      "line": 1615,
+      "page": 36,
+      "text": "None."
+    },
+    {
+      "line": 1616,
+      "page": 36,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1617,
+      "page": 36,
+      "text": "1. Beach Creek watershed upstream from Haralson County Road 34."
+    },
+    {
+      "line": 1618,
+      "page": 36,
+      "text": "2. Flatwood Creek watershed."
+    },
+    {
+      "line": 1619,
+      "page": 36,
+      "text": "3. Lassetter Creek watershed."
+    },
+    {
+      "line": 1620,
+      "page": 36,
+      "text": "4. Mann Creek watershed upstream from Haralson County Road 162."
+    },
+    {
+      "line": 1621,
+      "page": 36,
+      "text": "5. Mountain Creek watershed."
+    },
+    {
+      "line": 1622,
+      "page": 36,
+      "text": "6. Tallapoosa River watershed upstream from Haralson County Road 222."
+    },
+    {
+      "line": 1623,
+      "page": 36,
+      "text": "7. Tallapoosa Creek watershed."
+    },
+    {
+      "line": 1624,
+      "page": 36,
+      "text": "HART COUNTY"
+    },
+    {
+      "line": 1625,
+      "page": 36,
+      "text": "Primary:"
+    },
+    {
+      "line": 1626,
+      "page": 36,
+      "text": "None."
+    },
+    {
+      "line": 1627,
+      "page": 36,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1628,
+      "page": 36,
+      "text": "1. Savannah River."
+    },
+    {
+      "line": 1629,
+      "page": 36,
+      "text": "LUMPKIN COUNTY"
+    },
+    {
+      "line": 1630,
+      "page": 36,
+      "text": "Primary:"
+    },
+    {
+      "line": 1631,
+      "page": 36,
+      "text": "1. Amicalola Creek watershed."
+    },
+    {
+      "line": 1632,
+      "page": 36,
+      "text": "2. Camp Creek watershed.Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1633,
+      "page": 37,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 37"
+    },
+    {
+      "line": 1634,
+      "page": 37,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1635,
+      "page": 37,
+      "text": "3. Cane Creek watershed upstream from Cane Creek Falls."
+    },
+    {
+      "line": 1636,
+      "page": 37,
+      "text": "4. Cavender Creek watershed."
+    },
+    {
+      "line": 1637,
+      "page": 37,
+      "text": "5. Chestatee River watershed upstream from Lumpkin County Road 52-S976 (Lumpkin"
+    },
+    {
+      "line": 1638,
+      "page": 37,
+      "text": "County Road 190)."
+    },
+    {
+      "line": 1639,
+      "page": 37,
+      "text": "6. Clay Creek watershed."
+    },
+    {
+      "line": 1640,
+      "page": 37,
+      "text": "7. Etowah River watershed upstream from the Georgia Hwy. 52 Bridge."
+    },
+    {
+      "line": 1641,
+      "page": 37,
+      "text": "8. Hurricane Creek watershed upstream from Lumpkin County Road 202."
+    },
+    {
+      "line": 1642,
+      "page": 37,
+      "text": "9. Mooney Branch watershed."
+    },
+    {
+      "line": 1643,
+      "page": 37,
+      "text": "10. Tobacco Pouch Branch watershed."
+    },
+    {
+      "line": 1644,
+      "page": 37,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1645,
+      "page": 37,
+      "text": "1. Cane Creek watershed upstream from Georgia Hwy. 52 Bridge to Cane Creek Falls."
+    },
+    {
+      "line": 1646,
+      "page": 37,
+      "text": "2. Chestatee River watershed upstream from the mouth of Tesnatee Creek to Lumpkin County"
+    },
+    {
+      "line": 1647,
+      "page": 37,
+      "text": "Road 52-S976 (Lumpkin County Road 190)."
+    },
+    {
+      "line": 1648,
+      "page": 37,
+      "text": "3. Etowah River watershed upstream from Castleberry Bridge to Georgia Hwy. 52 except"
+    },
+    {
+      "line": 1649,
+      "page": 37,
+      "text": "those classified as primary above."
+    },
+    {
+      "line": 1650,
+      "page": 37,
+      "text": "4. Shoal Creek watershed."
+    },
+    {
+      "line": 1651,
+      "page": 37,
+      "text": "5. Yahoola Creek watershed upstream from Georgia Hwy. 52."
+    },
+    {
+      "line": 1652,
+      "page": 37,
+      "text": "MURRAY COUNTY"
+    },
+    {
+      "line": 1653,
+      "page": 37,
+      "text": "Primary:"
+    },
+    {
+      "line": 1654,
+      "page": 37,
+      "text": "1. Conasauga River watershed, including - Jacks River watershed, upstream from Georgia--"
+    },
+    {
+      "line": 1655,
+      "page": 37,
+      "text": "Tennessee state line."
+    },
+    {
+      "line": 1656,
+      "page": 37,
+      "text": "2. Holly Creek watershed upstream from Murray County Rd. SR826 (U.S. Forest Service"
+    },
+    {
+      "line": 1657,
+      "page": 37,
+      "text": "line)."
+    },
+    {
+      "line": 1658,
+      "page": 37,
+      "text": "3. Rock Creek watershed upstream from Murray County Rd. 4 (Dennis)."
+    },
+    {
+      "line": 1659,
+      "page": 37,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1660,
+      "page": 37,
+      "text": "1. All tributaries to Carters Reservoir."
+    },
+    {
+      "line": 1661,
+      "page": 37,
+      "text": "2. Holly Creek watershed (including Emory Creek watershed) upstream from Emory Creek"
+    },
+    {
+      "line": 1662,
+      "page": 37,
+      "text": "to Murray County Road SR826 (U.S. Forest Service line)."
+    },
+    {
+      "line": 1663,
+      "page": 37,
+      "text": "3. Mill Creek watershed upstream from Murray County Road 27."
+    },
+    {
+      "line": 1664,
+      "page": 37,
+      "text": "4. Mill Creek (Hassler Mill Creek) watershed within the Holly Creek watershed. Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1665,
+      "page": 38,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 38"
+    },
+    {
+      "line": 1666,
+      "page": 38,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1667,
+      "page": 38,
+      "text": "5. North Prong Sumac Creek watershed."
+    },
+    {
+      "line": 1668,
+      "page": 38,
+      "text": "6. Sugar Creek watershed upstream from Murray County Road 4."
+    },
+    {
+      "line": 1669,
+      "page": 38,
+      "text": "7. Sumac Creek watershed upstream from Coffey Lake."
+    },
+    {
+      "line": 1670,
+      "page": 38,
+      "text": "8. Rock Creek watershed upstream of Murray County Road 301."
+    },
+    {
+      "line": 1671,
+      "page": 38,
+      "text": "PAULDING COUNTY"
+    },
+    {
+      "line": 1672,
+      "page": 38,
+      "text": "Primary:"
+    },
+    {
+      "line": 1673,
+      "page": 38,
+      "text": "None."
+    },
+    {
+      "line": 1674,
+      "page": 38,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1675,
+      "page": 38,
+      "text": "1. Possum Creek watershed upstream from Paulding County Road 64."
+    },
+    {
+      "line": 1676,
+      "page": 38,
+      "text": "2. Powder Creek (Powder Springs Creek) watershed."
+    },
+    {
+      "line": 1677,
+      "page": 38,
+      "text": "3. Pumpkinvine Creek watershed upstream from Paulding County Road 231."
+    },
+    {
+      "line": 1678,
+      "page": 38,
+      "text": "4. Pyle Creek watershed."
+    },
+    {
+      "line": 1679,
+      "page": 38,
+      "text": "5. Raccoon Creek watershed upstream from Road SR2299 (Paulding County Road 471)."
+    },
+    {
+      "line": 1680,
+      "page": 38,
+      "text": "6. Tallapoosa River watershed."
+    },
+    {
+      "line": 1681,
+      "page": 38,
+      "text": "7. Simpson Creek watershed."
+    },
+    {
+      "line": 1682,
+      "page": 38,
+      "text": "8. Thompson Creek watershed."
+    },
+    {
+      "line": 1683,
+      "page": 38,
+      "text": "9. Ward Creek watershed."
+    },
+    {
+      "line": 1684,
+      "page": 38,
+      "text": "PICKENS COUNTY"
+    },
+    {
+      "line": 1685,
+      "page": 38,
+      "text": "Primary:"
+    },
+    {
+      "line": 1686,
+      "page": 38,
+      "text": "1. Cartecay River watershed."
+    },
+    {
+      "line": 1687,
+      "page": 38,
+      "text": "2. Talking Rock Creek watershed upstream from Route S1011 (GA Highway 136)."
+    },
+    {
+      "line": 1688,
+      "page": 38,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1689,
+      "page": 38,
+      "text": "1. Amicalola Creek watershed."
+    },
+    {
+      "line": 1690,
+      "page": 38,
+      "text": "2. Ball Creek watershed."
+    },
+    {
+      "line": 1691,
+      "page": 38,
+      "text": "3. Bluff Creek watershed."
+    },
+    {
+      "line": 1692,
+      "page": 38,
+      "text": "4. East Branch watershed (including Darnell Creek watershed)."
+    },
+    {
+      "line": 1693,
+      "page": 38,
+      "text": "5. Fisher Creek watershed (upstream from the confluence of Talona Creek and Fisher"
+    },
+    {
+      "line": 1694,
+      "page": 38,
+      "text": "Creek). Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1695,
+      "page": 39,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 39"
+    },
+    {
+      "line": 1696,
+      "page": 39,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1697,
+      "page": 39,
+      "text": "6. Fourmile Creek watershed."
+    },
+    {
+      "line": 1698,
+      "page": 39,
+      "text": "7. Hobson Creek watershed."
+    },
+    {
+      "line": 1699,
+      "page": 39,
+      "text": "8. Little Scarecorn Creek watershed."
+    },
+    {
+      "line": 1700,
+      "page": 39,
+      "text": "9. Long Branch watershed."
+    },
+    {
+      "line": 1701,
+      "page": 39,
+      "text": "10. Long Swamp Creek watershed upstream from Pickens County Road 294."
+    },
+    {
+      "line": 1702,
+      "page": 39,
+      "text": "11. Mud Creek watershed."
+    },
+    {
+      "line": 1703,
+      "page": 39,
+      "text": "12. Pin Hook Creek watershed."
+    },
+    {
+      "line": 1704,
+      "page": 39,
+      "text": "13. Polecat Creek watershed."
+    },
+    {
+      "line": 1705,
+      "page": 39,
+      "text": "14. Rock Creek watershed."
+    },
+    {
+      "line": 1706,
+      "page": 39,
+      "text": "15. Salacoa Creek watershed."
+    },
+    {
+      "line": 1707,
+      "page": 39,
+      "text": "16. Scarecorn Creek watershed upstream from Georgia Hwy. 53."
+    },
+    {
+      "line": 1708,
+      "page": 39,
+      "text": "17. Sevenmile Creek watershed."
+    },
+    {
+      "line": 1709,
+      "page": 39,
+      "text": "18. Soap Creek watershed."
+    },
+    {
+      "line": 1710,
+      "page": 39,
+      "text": "19. Town Creek watershed."
+    },
+    {
+      "line": 1711,
+      "page": 39,
+      "text": "20. Wildcat Creek watershed."
+    },
+    {
+      "line": 1712,
+      "page": 39,
+      "text": "POLK COUNTY"
+    },
+    {
+      "line": 1713,
+      "page": 39,
+      "text": "Primary:"
+    },
+    {
+      "line": 1714,
+      "page": 39,
+      "text": "None."
+    },
+    {
+      "line": 1715,
+      "page": 39,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1716,
+      "page": 39,
+      "text": "1. Cedar Creek watershed upstream from Polk County Road 121."
+    },
+    {
+      "line": 1717,
+      "page": 39,
+      "text": "2. Fish Creek watershed upstream of Plantation Pipeline."
+    },
+    {
+      "line": 1718,
+      "page": 39,
+      "text": "3. Lassetter Creek watershed."
+    },
+    {
+      "line": 1719,
+      "page": 39,
+      "text": "4. Little Cedar Creek watershed."
+    },
+    {
+      "line": 1720,
+      "page": 39,
+      "text": "5. Pumpkinpile Creek watershed upstream from Road SR1032."
+    },
+    {
+      "line": 1721,
+      "page": 39,
+      "text": "6. Silver Creek watershed."
+    },
+    {
+      "line": 1722,
+      "page": 39,
+      "text": "7. Simpson Creek watershed upstream of Lake Dorene."
+    },
+    {
+      "line": 1723,
+      "page": 39,
+      "text": "8. Spring Creek watershed. Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1724,
+      "page": 40,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 40"
+    },
+    {
+      "line": 1725,
+      "page": 40,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1726,
+      "page": 40,
+      "text": "9. Swinney Branch watershed."
+    },
+    {
+      "line": 1727,
+      "page": 40,
+      "text": "10. Thomasson Creek watershed."
+    },
+    {
+      "line": 1728,
+      "page": 40,
+      "text": "11. Thompson Creek watershed upstream of Polk County Road 441."
+    },
+    {
+      "line": 1729,
+      "page": 40,
+      "text": "RABUN COUNTY"
+    },
+    {
+      "line": 1730,
+      "page": 40,
+      "text": "Primary:"
+    },
+    {
+      "line": 1731,
+      "page": 40,
+      "text": "1. Chattooga River - all tributaries classified as primary."
+    },
+    {
+      "line": 1732,
+      "page": 40,
+      "text": "2. Little Tennessee River - entire stream and tributaries classified as primary except all"
+    },
+    {
+      "line": 1733,
+      "page": 40,
+      "text": "streams or sections thereof classified as secondary."
+    },
+    {
+      "line": 1734,
+      "page": 40,
+      "text": "3. Tallulah River - entire stream and tributaries classified as primary except the Tallulah River"
+    },
+    {
+      "line": 1735,
+      "page": 40,
+      "text": "downstream from Lake Rabun Dam to headwaters of Tugaloo Lake."
+    },
+    {
+      "line": 1736,
+      "page": 40,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1737,
+      "page": 40,
+      "text": "1. Little Tennessee River downstream from U.S. Hwy. 441 Bridge."
+    },
+    {
+      "line": 1738,
+      "page": 40,
+      "text": "2. Mud Creek downstream from Sky Valley Ski Resort Lake to the Little Tennessee River."
+    },
+    {
+      "line": 1739,
+      "page": 40,
+      "text": "STEPHENS COUNTY"
+    },
+    {
+      "line": 1740,
+      "page": 40,
+      "text": "Primary:"
+    },
+    {
+      "line": 1741,
+      "page": 40,
+      "text": "1. Middle Fork Broad River watershed upstream from USFS Route 92-B."
+    },
+    {
+      "line": 1742,
+      "page": 40,
+      "text": "2. Panther Creek watershed upstream from the mouth of Davidson Creek."
+    },
+    {
+      "line": 1743,
+      "page": 40,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1744,
+      "page": 40,
+      "text": "1. Davidson Creek watershed."
+    },
+    {
+      "line": 1745,
+      "page": 40,
+      "text": "2. Leatherwood Creek watershed upstream from Georgia Hwy. 184 Bridge."
+    },
+    {
+      "line": 1746,
+      "page": 40,
+      "text": "3. Little Toccoa Creek watershed."
+    },
+    {
+      "line": 1747,
+      "page": 40,
+      "text": "4. Middle Fork Broad River watershed upstream from SCS flood control structure #44 to"
+    },
+    {
+      "line": 1748,
+      "page": 40,
+      "text": "USFS Route 92-B."
+    },
+    {
+      "line": 1749,
+      "page": 40,
+      "text": "5. North Fork Broad River watershed upstream from SCS flood control structure #1."
+    },
+    {
+      "line": 1750,
+      "page": 40,
+      "text": "6. Panther Creek watershed downstream from the mouth of Davidson Creek."
+    },
+    {
+      "line": 1751,
+      "page": 40,
+      "text": "7. Toccoa Creek upstream from Toccoa Falls."
+    },
+    {
+      "line": 1752,
+      "page": 40,
+      "text": "TOWNS COUNTY"
+    },
+    {
+      "line": 1753,
+      "page": 40,
+      "text": "Primary:Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1754,
+      "page": 41,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 41"
+    },
+    {
+      "line": 1755,
+      "page": 41,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1756,
+      "page": 41,
+      "text": "1. Brasstown Creek watershed."
+    },
+    {
+      "line": 1757,
+      "page": 41,
+      "text": "2. Chattahoochee River watershed."
+    },
+    {
+      "line": 1758,
+      "page": 41,
+      "text": "3. Gumlog Creek watershed."
+    },
+    {
+      "line": 1759,
+      "page": 41,
+      "text": "4. Hiawassee River watershed - entire stream and all tributaries classified as primary except"
+    },
+    {
+      "line": 1760,
+      "page": 41,
+      "text": "all streams or sections thereof classified as secondary."
+    },
+    {
+      "line": 1761,
+      "page": 41,
+      "text": "5. Tallulah River watershed."
+    },
+    {
+      "line": 1762,
+      "page": 41,
+      "text": "6. Winchester Creek watershed."
+    },
+    {
+      "line": 1763,
+      "page": 41,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1764,
+      "page": 41,
+      "text": "1. Hightower Creek downstream from the mouth of Little Hightower Creek."
+    },
+    {
+      "line": 1765,
+      "page": 41,
+      "text": "UNION COUNTY"
+    },
+    {
+      "line": 1766,
+      "page": 41,
+      "text": "Primary:"
+    },
+    {
+      "line": 1767,
+      "page": 41,
+      "text": "1. Arkaqua Creek watershed."
+    },
+    {
+      "line": 1768,
+      "page": 41,
+      "text": "2. Brasstown Creek watershed."
+    },
+    {
+      "line": 1769,
+      "page": 41,
+      "text": "3. Chattahoochee River watershed."
+    },
+    {
+      "line": 1770,
+      "page": 41,
+      "text": "4. Conley Creek watershed upstream from Road S2325 (Union County Rd 237)."
+    },
+    {
+      "line": 1771,
+      "page": 41,
+      "text": "5. Coosa Creek watershed upstream from mouth of Anderson Creek."
+    },
+    {
+      "line": 1772,
+      "page": 41,
+      "text": "6. Dooley Creek watershed."
+    },
+    {
+      "line": 1773,
+      "page": 41,
+      "text": "7. East Fork Wolf Creek watershed upstream from Lake Trahlyta."
+    },
+    {
+      "line": 1774,
+      "page": 41,
+      "text": "8. Gumlog Creek watershed."
+    },
+    {
+      "line": 1775,
+      "page": 41,
+      "text": "9. Ivylog Creek watershed upstream from USDA Forest Service property line."
+    },
+    {
+      "line": 1776,
+      "page": 41,
+      "text": "10. Nottely River watershed upstream from the mouth of Town Creek."
+    },
+    {
+      "line": 1777,
+      "page": 41,
+      "text": "11. Toccoa River watershed."
+    },
+    {
+      "line": 1778,
+      "page": 41,
+      "text": "12. Town Creek watershed."
+    },
+    {
+      "line": 1779,
+      "page": 41,
+      "text": "13. West Fork Wolf Creek watershed."
+    },
+    {
+      "line": 1780,
+      "page": 41,
+      "text": "14. Youngcane Creek watershed upstream from the mouth of Jones Creek."
+    },
+    {
+      "line": 1781,
+      "page": 41,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1782,
+      "page": 41,
+      "text": "1. All streams or sections thereof except the Butternut Creek watershed and the Nottely River"
+    },
+    {
+      "line": 1783,
+      "page": 41,
+      "text": "downstream of Nottely Dam and those classified as primary.Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1784,
+      "page": 42,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 42"
+    },
+    {
+      "line": 1785,
+      "page": 42,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1786,
+      "page": 42,
+      "text": "WALKER COUNTY"
+    },
+    {
+      "line": 1787,
+      "page": 42,
+      "text": "Primary:"
+    },
+    {
+      "line": 1788,
+      "page": 42,
+      "text": "1. Furnace Creek watershed."
+    },
+    {
+      "line": 1789,
+      "page": 42,
+      "text": "2. Harrisburg Creek watershed (including Dougherty Creek and Allen Creek) upstream from"
+    },
+    {
+      "line": 1790,
+      "page": 42,
+      "text": "Dougherty Creek."
+    },
+    {
+      "line": 1791,
+      "page": 42,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1792,
+      "page": 42,
+      "text": "1. Chappel Creek watershed."
+    },
+    {
+      "line": 1793,
+      "page": 42,
+      "text": "2. Chattanooga Creek watershed upstream of Walker County Road 235."
+    },
+    {
+      "line": 1794,
+      "page": 42,
+      "text": "3. Concord Creek watershed."
+    },
+    {
+      "line": 1795,
+      "page": 42,
+      "text": "4. Dry Creek watershed (tributary to East Armuchee Creek)."
+    },
+    {
+      "line": 1796,
+      "page": 42,
+      "text": "5. Duck Creek watershed."
+    },
+    {
+      "line": 1797,
+      "page": 42,
+      "text": "6. East Armuchee Creek watershed upstream from Georgia Hwy. 136."
+    },
+    {
+      "line": 1798,
+      "page": 42,
+      "text": "7. East Fork Little River watershed (flows into Dade County)."
+    },
+    {
+      "line": 1799,
+      "page": 42,
+      "text": "8. East Fork Little River watershed (flows into Chattooga County; includes Gilreath Creek)."
+    },
+    {
+      "line": 1800,
+      "page": 42,
+      "text": "9. Gulf Creek watershed."
+    },
+    {
+      "line": 1801,
+      "page": 42,
+      "text": "10. Johns Creek watershed."
+    },
+    {
+      "line": 1802,
+      "page": 42,
+      "text": "11. Left Fork Coulter Branch watershed."
+    },
+    {
+      "line": 1803,
+      "page": 42,
+      "text": "12. Little Chickamauga Creek watershed."
+    },
+    {
+      "line": 1804,
+      "page": 42,
+      "text": "13. Middle Fork Little River watershed (includes Cannon Branch and Hale Branch)."
+    },
+    {
+      "line": 1805,
+      "page": 42,
+      "text": "14. Rock Creek watershed (including Sawmill Branch) upstream from Sawmill Branch."
+    },
+    {
+      "line": 1806,
+      "page": 42,
+      "text": "15. Ruff Creek watershed."
+    },
+    {
+      "line": 1807,
+      "page": 42,
+      "text": "16. Snake Creek watershed."
+    },
+    {
+      "line": 1808,
+      "page": 42,
+      "text": "17. West Armuchee Creek watershed."
+    },
+    {
+      "line": 1809,
+      "page": 42,
+      "text": "18. West Chickamauga Creek watershed upstream from Walker County Road 107."
+    },
+    {
+      "line": 1810,
+      "page": 42,
+      "text": "19. West Fork Little River watershed."
+    },
+    {
+      "line": 1811,
+      "page": 42,
+      "text": "WHITE COUNTY"
+    },
+    {
+      "line": 1812,
+      "page": 42,
+      "text": "Primary:Chapter 391-3-6 Rules for Water Quality Control"
+    },
+    {
+      "line": 1813,
+      "page": 43,
+      "text": "Adopted by GA DNR Board of Natural Resources – January 28, 2022 43"
+    },
+    {
+      "line": 1814,
+      "page": 43,
+      "text": "Approved by US EPA Region IV – August 31, 2022"
+    },
+    {
+      "line": 1815,
+      "page": 43,
+      "text": "1. Cathey Creek watershed upstream from the Arrowhead Campground Lake at the mouth"
+    },
+    {
+      "line": 1816,
+      "page": 43,
+      "text": "of Tom White Branch."
+    },
+    {
+      "line": 1817,
+      "page": 43,
+      "text": "2. Chattahoochee River watershed upstream from Georgia Hwy. 255 Bridge."
+    },
+    {
+      "line": 1818,
+      "page": 43,
+      "text": "3. Town Creek watershed upstream from the mouth of Jenny Creek."
+    },
+    {
+      "line": 1819,
+      "page": 43,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1820,
+      "page": 43,
+      "text": "1. Chattahoochee River watershed upstream from Georgia Hwy. 115 to the Georgia Hwy."
+    },
+    {
+      "line": 1821,
+      "page": 43,
+      "text": "255 Bridge."
+    },
+    {
+      "line": 1822,
+      "page": 43,
+      "text": "2. Little Tesnatee Creek watershed upstream from the mouth of Turner Creek."
+    },
+    {
+      "line": 1823,
+      "page": 43,
+      "text": "3. Turner Creek watershed except as listed under primary above (Turner Creek nearest to"
+    },
+    {
+      "line": 1824,
+      "page": 43,
+      "text": "Cleveland city limits)."
+    },
+    {
+      "line": 1825,
+      "page": 43,
+      "text": "WHITFIELD COUNTY"
+    },
+    {
+      "line": 1826,
+      "page": 43,
+      "text": "Primary:"
+    },
+    {
+      "line": 1827,
+      "page": 43,
+      "text": "None."
+    },
+    {
+      "line": 1828,
+      "page": 43,
+      "text": "Secondary:"
+    },
+    {
+      "line": 1829,
+      "page": 43,
+      "text": "1. Coahulla Creek watershed upstream from Whitfield County Road 183."
+    },
+    {
+      "line": 1830,
+      "page": 43,
+      "text": "2. Dry Creek watershed."
+    },
+    {
+      "line": 1831,
+      "page": 43,
+      "text": "3. Snake Creek watershed."
+    },
+    {
+      "line": 1832,
+      "page": 43,
+      "text": "4. Spring Creek watershed."
+    },
+    {
+      "line": 1833,
+      "page": 43,
+      "text": "5. Swamp Creek watershed upstream from Whitfield County Road 9."
+    },
+    {
+      "line": 1834,
+      "page": 43,
+      "text": "6. Tiger Creek watershed"
+    }
+  ]
+}

@@ -14,15 +14,15 @@ from .monitoring_packet import bytes_member, file_member
 SCHEMA = "upstate.utility-monitoring-report/v1"
 
 
-def contexts(workspace, plan, network, visits):
-    """Join only preparations bound to this exact saved native network."""
-    if plan["network_id"] != network["id"] or plan["source_bindings"] != network["source_bindings"]:
-        raise ValueError("The utility report must use the design's original native network")
-    matches = [row for row in utility_monitoring.catalog(workspace)
-               if row["network_id"] == network["id"]]
+def source_snapshot(workspace, network):
+    """Load each original utility edition once for one native report operation."""
     output = []
-    for candidate in matches:
+    for candidate in utility_monitoring.catalog(workspace):
+        if candidate["network_id"] != network["id"]:
+            continue
         prepared = utility_monitoring.inspect(workspace, candidate["id"])
+        if prepared["network_id"] != network["id"] or prepared["method"]["target_units"] != "ha":
+            raise ValueError("Use the original utility overlap-hectare preparation for this network")
         directory, exported, selection, utility, _ = utility_monitoring.export_selection(
             workspace, prepared["export_id"])
         for descriptor in exported["files"].values():
@@ -33,94 +33,117 @@ def contexts(workspace, plan, network, visits):
                 or observed["profile_sha256"] != utility["profile_source"]["sha256"]
                 or sorted(observed["utility"]["huc12s"]) != sorted(utility["huc12s"])):
             raise ValueError("Original observation context belongs to another utility selection")
-        original_stations = {
-            row["station_id"]: row for row in observed["utility"]["station_summaries"]
-        } if observed is not None else {}
-        native_stations = {row["id"]: row for row in network["stations"]}
-        existing_ids = set(plan.get("existing_station_ids", []))
-        visits_by_station, effective_visits = {}, {}
-        for visit in visits:
-            planned = (visit.get("planned_station_id") if "planned_station_id" in visit
-                       else visit.get("station_id"))
-            if planned:
-                visits_by_station.setdefault(planned, []).append(visit["visit_key"])
-            if visit.get("station_id"):
-                effective_visits.setdefault(visit["station_id"], []).append(visit["visit_key"])
-        rows = []
-        for station_id in sorted(set(original_stations) | set(native_stations)):
-            original, native = original_stations.get(station_id), native_stations.get(station_id)
-            rows.append({
-                "station_id": station_id,
-                "source_record_state": "retained_original_summary" if original is not None else "not_in_selected_observed_summary",
-                "original_membership_basis": original.get("selection_basis") if original else None,
-                "original_matched_huc12": (original.get("matched_huc12") or None) if original else None,
-                "original_huc8": original.get("source_huc8") if original else None,
-                "native_assignment": native["assignment"] if native else "station_source_not_selected",
-                "native_huc12": native["huc_id"] if native else None,
-                "outlet_verified": native["outlet_verified"] if native else None,
-                "explicit_existing_credit": station_id in existing_ids,
-                "scheduled_visit_ids": visits_by_station.get(station_id, []),
-                "effective_visit_ids": effective_visits.get(station_id, []),
-                "original_summary": deepcopy(original) if original else None,
-                "native_source_properties": deepcopy(native["source_properties"]) if native else None,
-                "source_membership_differs_from_native": (
-                    original.get("matched_huc12") != native["huc_id"]
-                    if original and original.get("matched_huc12") and native and native["huc_id"] else None),
-            })
-        selected_ids, covered_ids = set(plan["selected_ids"]), set(plan["covered_ids"])
-        utility_ids = set(utility["huc12s"])
-        ambiguities = {}
-        for issue in network["station_assignment_issues"]:
-            for huc in issue["candidate_catchments"]:
-                ambiguities.setdefault(huc, []).append(issue["station_id"])
-        stations_selected = prepared["identity"]["include_microbial"]
-        catchments = []
-        for huc in sorted(utility_ids | selected_ids):
-            node = network["nodes"][huc]
-            assigned = [row["station_id"] for row in rows if row["native_huc12"] == huc]
-            catchments.append({
-                "huc12": huc, "utility_target": huc in utility_ids,
-                "selected_search_area": huc in selected_ids, "covered_in_plan": huc in covered_ids,
-                "target_overlap_ha": node["weight"], "native_geodesic_area_km2": node["area_km2"],
-                "native_historical_station_ids": assigned if stations_selected else None,
-                "native_station_count": len(assigned) if stations_selected else None,
-                "ambiguous_station_ids": sorted(ambiguities.get(huc, [])) if stations_selected else None,
-                "station_inventory_state": (
-                    "original_station_source_not_selected" if not stations_selected
-                    else "boundary_assignment_unresolved" if ambiguities.get(huc)
-                    else "selected_original_station_source"),
-                "scheduled_visits": sum(visit["site_id"] == huc for visit in visits),
-            })
-        binding = {
-            "workspace_id": workspace.project["id"], "plan_id": plan["id"],
-            "network_id": network["id"], "utility_preparation_id": prepared["id"],
-            "utility_preparation_record_sha256": prepared["record_sha256"],
-            "utility_export_id": exported["id"], "original_selection": exported["files"]["selected-watersheds.json"],
+        output.append({
+            "export_id": exported["id"], "preparation": deepcopy(prepared),
+            "utility": deepcopy(utility), "observations": deepcopy(observed),
             "original_files": deepcopy(exported["files"]),
-            "actual_visits_sha256": digest(visits), "implementation_sha256": file_digest(__file__),
-        }
-        value = {
-            "schema": SCHEMA, "id": digest(binding), "binding": binding,
-            "utility": deepcopy(utility), "method": deepcopy(prepared["method"]),
-            "original_observations": deepcopy(observed),
-            "plan": {"id": plan["id"], "title": plan["title"], "status": plan["status"],
-                     "coverage_mode": plan["coverage_mode"], "coverage_meaning": plan["coverage_meaning"],
-                     "coverage": deepcopy(plan["coverage"]), "target_units": "ha",
-                     "configuration": deepcopy(plan["configuration"]),
-                     "selected_context_huc12s": sorted(selected_ids - utility_ids)},
-            "catchments": catchments, "stations": rows,
-            "station_assignment_issues": deepcopy(network["station_assignment_issues"]),
-            "interpretation": [
-                "Coverage weights are EPSG:5070 vector overlap hectares with the original whole-HUC utility footprint.",
-                "Historical sample summaries describe their retained cohort, methods, dates and original units.",
-                "Source utility membership, native point-in-polygon assignment, existing-programme credit and scheduled station binding remain separate.",
-                "Unselected station sources retain unknown per-catchment inventory rather than a zero count.",
-                "Regional stream nutrient and flow observations retain their regional geographic scope.",
-            ],
-        }
-        value["record_sha256"] = digest(value)
-        output.append(value)
+        })
     return output
+
+
+def contexts(workspace, plan, network, visits):
+    """Join only preparations bound to this exact saved native network."""
+    if plan["network_id"] != network["id"] or plan["source_bindings"] != network["source_bindings"]:
+        raise ValueError("The utility report must use the design's original native network")
+    return [_context_from_source(workspace, plan, network, visits, original)
+            for original in source_snapshot(workspace, network)]
+
+
+def _context_from_source(workspace, plan, network, visits, original):
+    """Derive one plan's metadata from this operation's loaded original edition."""
+    if plan["network_id"] != network["id"] or plan["source_bindings"] != network["source_bindings"]:
+        raise ValueError("The utility report must use the design's original native network")
+    prepared, utility, observed = original["preparation"], original["utility"], original["observations"]
+    if prepared["network_id"] != network["id"] or prepared["identity"]["workspace_id"] != workspace.project["id"]:
+        raise ValueError("The loaded original utility edition belongs to another Workspace/network")
+    exported = {"id": original["export_id"], "files": original["original_files"]}
+    original_stations = {
+        row["station_id"]: row for row in observed["utility"]["station_summaries"]
+    } if observed is not None else {}
+    native_stations = {row["id"]: row for row in network["stations"]}
+    existing_ids = set(plan.get("existing_station_ids", []))
+    visits_by_station, effective_visits = {}, {}
+    for visit in visits:
+        planned = (visit.get("planned_station_id") if "planned_station_id" in visit
+                   else visit.get("station_id"))
+        if planned:
+            visits_by_station.setdefault(planned, []).append(visit["visit_key"])
+        if visit.get("station_id"):
+            effective_visits.setdefault(visit["station_id"], []).append(visit["visit_key"])
+    rows = []
+    for station_id in sorted(set(original_stations) | set(native_stations)):
+        original, native = original_stations.get(station_id), native_stations.get(station_id)
+        rows.append({
+            "station_id": station_id,
+            "source_record_state": "retained_original_summary" if original is not None else "not_in_selected_observed_summary",
+            "original_membership_basis": original.get("selection_basis") if original else None,
+            "original_matched_huc12": (original.get("matched_huc12") or None) if original else None,
+            "original_huc8": original.get("source_huc8") if original else None,
+            "native_assignment": native["assignment"] if native else "station_source_not_selected",
+            "native_huc12": native["huc_id"] if native else None,
+            "outlet_verified": native["outlet_verified"] if native else None,
+            "explicit_existing_credit": station_id in existing_ids,
+            "scheduled_visit_ids": visits_by_station.get(station_id, []),
+            "effective_visit_ids": effective_visits.get(station_id, []),
+            "original_summary": deepcopy(original) if original else None,
+            "native_source_properties": deepcopy(native["source_properties"]) if native else None,
+            "source_membership_differs_from_native": (
+                original.get("matched_huc12") != native["huc_id"]
+                if original and original.get("matched_huc12") and native and native["huc_id"] else None),
+        })
+    selected_ids, covered_ids = set(plan["selected_ids"]), set(plan["covered_ids"])
+    utility_ids = set(utility["huc12s"])
+    ambiguities = {}
+    for issue in network["station_assignment_issues"]:
+        for huc in issue["candidate_catchments"]:
+            ambiguities.setdefault(huc, []).append(issue["station_id"])
+    stations_selected = prepared["identity"]["include_microbial"]
+    catchments = []
+    for huc in sorted(utility_ids | selected_ids):
+        node = network["nodes"][huc]
+        assigned = [row["station_id"] for row in rows if row["native_huc12"] == huc]
+        catchments.append({
+            "huc12": huc, "utility_target": huc in utility_ids,
+            "selected_search_area": huc in selected_ids, "covered_in_plan": huc in covered_ids,
+            "target_overlap_ha": node["weight"], "native_geodesic_area_km2": node["area_km2"],
+            "native_historical_station_ids": assigned if stations_selected else None,
+            "native_station_count": len(assigned) if stations_selected else None,
+            "ambiguous_station_ids": sorted(ambiguities.get(huc, [])) if stations_selected else None,
+            "station_inventory_state": (
+                "original_station_source_not_selected" if not stations_selected
+                else "boundary_assignment_unresolved" if ambiguities.get(huc)
+                else "selected_original_station_source"),
+            "scheduled_visits": sum(visit["site_id"] == huc for visit in visits),
+        })
+    binding = {
+        "workspace_id": workspace.project["id"], "plan_id": plan["id"],
+        "network_id": network["id"], "utility_preparation_id": prepared["id"],
+        "utility_preparation_record_sha256": prepared["record_sha256"],
+        "utility_export_id": exported["id"], "original_selection": exported["files"]["selected-watersheds.json"],
+        "original_files": deepcopy(exported["files"]),
+        "actual_visits_sha256": digest(visits), "implementation_sha256": file_digest(__file__),
+    }
+    value = {
+        "schema": SCHEMA, "id": digest(binding), "binding": binding,
+        "utility": deepcopy(utility), "method": deepcopy(prepared["method"]),
+        "original_observations": deepcopy(observed),
+        "plan": {"id": plan["id"], "title": plan["title"], "status": plan["status"],
+                 "coverage_mode": plan["coverage_mode"], "coverage_meaning": plan["coverage_meaning"],
+                 "coverage": deepcopy(plan["coverage"]), "target_units": "ha",
+                 "configuration": deepcopy(plan["configuration"]),
+                 "selected_context_huc12s": sorted(selected_ids - utility_ids)},
+        "catchments": catchments, "stations": rows,
+        "station_assignment_issues": deepcopy(network["station_assignment_issues"]),
+        "interpretation": [
+            "Coverage weights are EPSG:5070 vector overlap hectares with the original whole-HUC utility footprint.",
+            "Historical sample summaries describe their retained cohort, methods, dates and original units.",
+            "Source utility membership, native point-in-polygon assignment, existing-programme credit and scheduled station binding remain separate.",
+            "Unselected station sources retain unknown per-catchment inventory rather than a zero count.",
+            "Regional stream nutrient and flow observations retain their regional geographic scope.",
+        ],
+    }
+    value["record_sha256"] = digest(value)
+    return value
 
 
 def _text(value):
@@ -255,23 +278,30 @@ def _csv(rows):
     return stream.getvalue().encode("utf-8-sig")
 
 
+def _context_members(record, prepared):
+    """Render one retained plan context without reopening its shared source files."""
+    if (prepared["id"] != record["binding"]["utility_preparation_id"]
+            or prepared["record_sha256"] != record["binding"]["utility_preparation_record_sha256"]):
+        raise ValueError("The utility preparation changed during Monitoring export")
+    prefix = "utility-context/" + record["id"] + "/"
+    yield prefix + "preparation.json", bytes_member(canonical(prepared) + b"\n")
+    yield prefix + "context.json", bytes_member(canonical(record) + b"\n")
+    yield prefix + "catchment-context.csv", bytes_member(_csv(record["catchments"]))
+    yield prefix + "station-context.csv", bytes_member(_csv(record["stations"]))
+    report = ("<!doctype html><html lang='en'><meta charset='utf-8'><title>Utility monitoring context</title>"
+              "<style>body{font:15px/1.5 system-ui,sans-serif;color:#222;background:white;max-width:1200px;margin:24px auto;padding:16px}"
+              "table{border-collapse:collapse;width:100%}td,th{padding:8px;border:1px solid #aaa;text-align:left;vertical-align:top;overflow-wrap:anywhere}"
+              ".utility-context-table{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>"
+              + fragment(record, source_prefix="original-report/") + "</html>")
+    yield prefix + "report.html", bytes_member(report.encode("utf-8"))
+
+
 def export_members(workspace, records):
     """Stream exact original source-report members with the native field package."""
     for record in records:
         prefix = "utility-context/" + record["id"] + "/"
         prepared = utility_monitoring.inspect(workspace, record["binding"]["utility_preparation_id"])
-        if prepared["record_sha256"] != record["binding"]["utility_preparation_record_sha256"]:
-            raise ValueError("The utility preparation changed during Monitoring export")
-        yield prefix + "preparation.json", bytes_member(canonical(prepared) + b"\n")
-        yield prefix + "context.json", bytes_member(canonical(record) + b"\n")
-        yield prefix + "catchment-context.csv", bytes_member(_csv(record["catchments"]))
-        yield prefix + "station-context.csv", bytes_member(_csv(record["stations"]))
-        report = ("<!doctype html><html lang='en'><meta charset='utf-8'><title>Utility monitoring context</title>"
-                  "<style>body{font:15px/1.5 system-ui,sans-serif;color:#222;background:white;max-width:1200px;margin:24px auto;padding:16px}"
-                  "table{border-collapse:collapse;width:100%}td,th{padding:8px;border:1px solid #aaa;text-align:left;vertical-align:top;overflow-wrap:anywhere}"
-                  ".utility-context-table{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>"
-                  + fragment(record, source_prefix="original-report/") + "</html>")
-        yield prefix + "report.html", bytes_member(report.encode("utf-8"))
+        yield from _context_members(record, prepared)
         directory, exported, _, _, _ = utility_monitoring.export_selection(
             workspace, record["binding"]["utility_export_id"])
         if exported["files"] != record["binding"]["original_files"]:

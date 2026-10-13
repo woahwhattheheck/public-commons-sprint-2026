@@ -14,6 +14,12 @@ from . import study_transfer
 from . import scientific_report_study_transfer as reports
 from . import implementation_report_transfer as fieldwork
 from .portable_implementation import report_edition
+from . import gauge_study_receiving
+from . import ensemble_study_receiving
+from . import report_review_study_receiving
+from . import observation_comparability_study_transfer as comparability_transfer
+from . import observed_landcover_receiving
+from . import study_report_transfer
 
 HEX = re.compile(r"[0-9a-f]{64}")
 SCHEMA = "upstate.study-receiving-view/v1"
@@ -47,6 +53,11 @@ def _summary(value):
         "editable_plan_count": len({row["native_plan"]["plan_id"] for row in fields
                                    if row.get("native_plan") is not None}),
         "selection": deepcopy(identity["selection"]),
+        **gauge_study_receiving.summary(identity),
+        **ensemble_study_receiving.summary(identity),
+        **report_review_study_receiving.summary(identity),
+        **comparability_transfer.summary(identity),
+        **observed_landcover_receiving.summary(identity),
     }
 
 
@@ -79,10 +90,14 @@ def detail(workspace, key):
         workspace, identity["selection"],
         report_lineage="scientific_report_sources" in identity,
         implementation_lineage="implementation_report_sources" in identity,
+        customer_review_lineage="customer_reviews" in identity,
+        report_source_keys={(row["source_collection_id"], row["source_id"])
+                            for row in identity.get("scientific_report_sources", [])},
     ).resolve(identity.get("investigation_dependencies", ()))
     captured_reports = identity.get("scientific_report_editions", [])
     captured_fields = identity.get("implementation_report_sources", [])
     reports.verify_receipt(closure, captured_reports)
+    study_report_transfer.verify_receipt(closure, identity.get("scientific_report_sources", []))
     fieldwork.verify_receipt(closure, captured_fields)
     current_reports = {row["id"]: row for row in reports.receipt(closure)}
     current_fields = {(row["source_collection_id"], row["source_id"]): row
@@ -138,6 +153,11 @@ def detail(workspace, key):
                     "members": members,
                 })
         result["field_sources"].append(row)
+    gauge_study_receiving.augment(closure, retained, result)
+    ensemble_study_receiving.augment(closure, retained, result)
+    report_review_study_receiving.augment(closure, retained, result)
+    comparability_transfer.augment(closure, retained, result)
+    observed_landcover_receiving.augment(closure, retained, result)
     # Validate the resolved file identities again after constructing this read.
     # The existing ticket service verifies actual member bytes when downloaded.
     closure.assert_unchanged()

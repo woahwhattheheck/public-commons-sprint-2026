@@ -10,6 +10,14 @@ The retained `focal-report.html` opens offline and prints the entire focal inter
 
 Use this edition beside the complete 217-watershed paired report from `observations/landcover_2023_2025/scientific-report/source-manifest.json`. It gives the four priority watersheds a focused reading without changing the broader report's domain or denominator. The dated-observation profiles and gauge whole-catchment source remain separately identified documents.
 
+## Reading charts on screen and paper
+
+The second presentation edition preserves every original numerical source, figure specification and SVG byte. On a wide screen the complete four-panel chart keeps its original 1,100-pixel width inside a keyboard-focusable horizontal region. Below 700 pixels, the same original SVG is shown as four separate clipped viewports, one panel per row. Each panel preserves the original coordinates and an at-least-550-pixel display width, so its axis labels remain readable; swipe horizontally or focus the region and use the arrow keys. The legend is repeated with each panel. All complete values remain in the original tables and CSV downloads.
+
+Printing uses the same separate panel viewports at the page width. Each panel can stay together while the whole figure flows across pages, avoiding a four-panel diagram shrunk into unreadable text. Tables retain their complete rows and repeating column headers. Table regions are labelled and keyboard-focusable on screen, and the header downloads have full-height touch targets.
+
+At the existing native receiving boundary, open the exact outgoing `focal-report.html` in Chromium at the screenshare width and 390/320 pixels. Look at the populated charts and tables, operate horizontal scrolling with keyboard and touch, download an original CSV/SVG, and inspect the actual print preview/PDF. Fix any clipping or unreadable output on this maintained producer. Source review alone does not replace that rendered-product inspection. The native ordered report and independent archive/reopen remain the same original course.
+
 ## Reproduce from the actual retained sources
 
 From the application directory, with an existing output parent:

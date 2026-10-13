@@ -76,7 +76,7 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
       (product.error?'<p role="alert" class="np-error">'+esc(product.error.message)+'</p>':'')+executionMarkup()+
       (product.state!=='complete'||!product.rendered?'<p>'+button('resume-report','Preview and continue original report','',busy)+'</p>':'')+'</section>'+
       (product.source_choice?'<section class="np-section"><h2>Continue with this scientific source</h2>'+metadata({'Source collection':product.source_choice.source_collection_id,'Source':product.source_choice.source_id})+
-      '<div class="np-actions">'+(typeof openScientificReport==='function'?button('scientific-report','Open scientific report','',busy):'')+button('source','Open original source collection')+'</div><p>This recipe is available in the existing ordered scientific-report picker. To revise an existing delivery, choose its original saved selection below; this report is appended once and the earlier report order is preserved.</p>'+
+      '<div class="np-actions">'+(typeof openScientificReport==='function'?button('scientific-report','Open this report only','data-selection-mode="replace"',busy)+button('scientific-report','Add to current report','data-selection-mode="append"',busy):'')+button('source','Open original source collection')+'</div><p>Open this report only starts the composer with this source and report title. Add to current report preserves the current ordered sources and title, adding this source once.</p><p>To revise an existing mapped delivery, choose its original saved selection below; this report is appended once and the earlier report order is preserved.</p>'+
       '<label>Saved delivery<select data-np-field="deliveryId">'+options(deliveries.map(row=>[row.id,row.selection?.title||row.title||short(row.id)]),draft.deliveryId,'Choose a retained delivery')+'</select></label>'+button('delivery','Open delivery with this report','',busy||!draft.deliveryId)+'</section>':'')+
       downloadsMarkup()+(product.tables?.length?tableMarkup():'');
   }
@@ -181,11 +181,13 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
       else if(action==='previous'||action==='next'){draft.offset=action==='previous'?Math.max(0,draft.offset-100):rows.next_offset;await loadTable(m);}
       else if(action==='scientific-report'){
         if(typeof openScientificReport!=='function')throw Error('Receive the maintained scientific-report composer in this application.');
+        const selectionMode=buttonNode.dataset.selectionMode;
+        if(!['replace','append'].includes(selectionMode))throw Error('Choose whether to open this report only or add it to the current report.');
         const report=copy(product),choice=copy(report.source_choice);
         if(!valid(m)||!(await waitForSource(choice,m)))return;
         if(!valid(m))return;
         closeDetail();
-        await openScientificReport({workspace_key:m.workspace,sources:[choice],title:report.title});
+        await openScientificReport({workspace_key:m.workspace,sources:[choice],title:report.title,selection_mode:selectionMode});
       }
       else if(action==='delivery'){
         const report=copy(product),delivery=draft.deliveryId;

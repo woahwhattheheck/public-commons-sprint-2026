@@ -35,7 +35,10 @@ await fs.mkdir(output, {recursive: true, mode: 0o700});
 const progress = path.join(output, 'receiving-water-browser.json');
 const caseHash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const selection = {workspace, plan_id: c.plan_id || null, analysis_id: c.analysis_id || null,
-  subjects: c.subjects || null, paper: c.paper || 'letter', dpi: c.dpi || 220};
+  subjects: c.subjects || null, paper: c.paper || 'letter', dpi: c.dpi || 220,
+  ...(c.editable_selection ? {editable_selection: true} : {})};
+assert.ok(c.editable_selection === undefined || typeof c.editable_selection === 'boolean',
+  'editable_selection must be true or false.');
 assert.ok(['letter', 'a4'].includes(selection.paper) && [150, 220, 300].includes(selection.dpi),
   'Choose the original supported map paper and resolution.');
 const applicationRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -44,6 +47,13 @@ const applicationNames = ['operator/receiving_water_browser.mjs', 'operator/serv
   'operator/web/receiving_water_spatial.mjs', 'operator/web/spatial.mjs',
   'model/receiving_water_spatial.py', 'model/spatial.py', 'model/spatial_exports.py',
   'model/cartography.py', 'model/rasters.py'];
+if (selection.editable_selection) applicationNames.push(
+  'operator/web/receiving_water_editing.mjs', 'operator/web/receiving_water_sources.mjs',
+  'operator/web/receiving_water_plan_compare.mjs',
+  'operator/web/receiving_waters_extension.mjs',
+  'operator/web/receiving_waters.css', 'operator/web/extensions/study_transfer.mjs',
+  'operator/extensions/receiving-waters.json', 'model/receiving_waters.py',
+  'model/receiving_water_accounting.py', 'model/spatial_esri.py', 'source/capture_upstream_network.py');
 const applicationFiles = await Promise.all(applicationNames.map(async name =>
   ({name, ...await fileRecord(path.join(applicationRoot, name))})));
 const applicationIdentity = caseHash(applicationFiles.map(({name, bytes, sha256}) => ({name, bytes, sha256})));
@@ -105,7 +115,7 @@ async function openBrowserContext() {
       attempt.http_errors.push({status: response.status(), path: new URL(response.url()).pathname});
   });
   for (const file of applicationFiles.filter(row => row.name.startsWith('operator/web/'))) {
-    const response = await context.request.get(origin + '/web/' + path.basename(file.name));
+    const response = await context.request.get(origin + '/web/' + file.name.slice('operator/web/'.length));
     assert.ok(response.ok(), 'Open the current original operator web source: ' + file.name);
     const body = await response.body();
     assert.equal(body.length, file.bytes, 'Served browser source differs: ' + file.name);
@@ -346,6 +356,237 @@ function casesFor(plan, analysis) {
   assert.ok(cases.length, 'Choose existing original receiving areas.');
   return cases;
 }
+
+async function captureEditable(label) {
+  report.editable_selection ||= {screenshots: [], records: {}};
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({width, height: 1080});
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const filename = path.join(output, label + '-' + width + '-attempt-' + report.attempts.length + '.png');
+    await page.screenshot({path: filename, fullPage: true});
+    report.editable_selection.screenshots.push({label, viewport: {width, height: 1080},
+      ...await fileRecord(filename)});
+    await checkpoint();
+  }
+  await page.setViewportSize({width: 1440, height: 1080});
+}
+async function openRevision(kind, row) {
+  await openWater(kind, row.id);
+  await page.locator('#water-selected [data-action="water-revise"]' +
+    attr('data-kind', kind) + attr('data-id', row.id)).click();
+  await page.locator('#form-dialog[open]').waitFor();
+  await page.locator('#operation-form [name="receiving_advanced_selection"]').waitFor({state: 'attached'});
+  if (kind === 'analysis') await page.waitForFunction(() => /original receiving areas loaded/.test(
+    document.querySelector('#water-accounting-plan-status')?.textContent || ''));
+  const seed = JSON.parse(await page.locator('#operation-form [name="receiving_advanced_selection"]').inputValue());
+  assert.deepEqual(seed, row.identity.selection, 'The revision form must retain the exact original selection.');
+  return seed;
+}
+
+async function operateSourceChooser(row) {
+  const area = page.locator('#operation-form [data-water-receptor]').first();
+  const sourceBefore = JSON.parse(await area.locator('[name="receptor_source"]').inputValue());
+  await area.locator('[data-action="water-source-pick"]').click();
+  const picker = page.locator('#operation-form [data-water-source-picker]');
+  await picker.waitFor();
+  await page.waitForFunction(() => {
+    const root = document.querySelector('#operation-form [data-water-source-picker]');
+    return root && root.getAttribute('aria-busy') !== 'true'
+      && root.querySelector('[data-water-source-loading]')?.hidden;
+  });
+  const error = picker.locator('[data-water-source-error]');
+  assert.equal(await error.evaluate(node => node.hidden ? '' : node.textContent), '');
+  await picker.locator('[data-water-source-map]').waitFor();
+  await picker.locator('[data-rws-mode][value="ids"]').check();
+  const choice = picker.locator('[data-rws-id]').first();
+  await choice.waitFor();
+  const nativeId = await choice.getAttribute('data-rws-id');
+  assert.ok(nativeId !== null && nativeId !== '', 'Choose the retained native feature identity.');
+  await choice.check(); await choice.uncheck(); await choice.check();
+  const layer = await picker.locator('[data-rws-layer]').inputValue();
+  await captureEditable('editable-plan-original-feature-chooser');
+  await picker.locator('[data-water-source-apply]').click();
+  await picker.waitFor({state: 'hidden'});
+  assert.deepEqual(JSON.parse(await area.locator('[name="receptor_source"]').inputValue()), sourceBefore);
+  assert.equal(await area.locator('[name="receptor_layer"]').inputValue(), layer);
+  const selected = JSON.parse(await area.locator('[name="receptor_features"]').inputValue());
+  assert.ok(Array.isArray(selected) && selected.some(id => String(id) === nativeId),
+    'Apply must place the chosen original native identity into the receiving-area form.');
+  report.editable_selection.source_picker = {original_plan_id: row.id, source: sourceBefore,
+    native_id: nativeId, layer, applied_to_draft: true, draft_saved: false};
+  await captureEditable('editable-plan-applied-source-selection');
+  await closeDialogs();
+  await openRevision('plan', row);
+}
+
+async function editableSelection(kind, row) {
+  const studyKind = kind === 'plan' ? 'receiving-water-plans' : 'receiving-water-analyses';
+  await openWater(kind, row.id);
+  await page.locator('#water-selected [data-action="water-study-transfer"]' +
+    attr('data-kind', kind) + attr('data-id', row.id)).click();
+  const returnButton = page.locator('[data-study-catalogue] [data-study-action="open-receiving"]' +
+    attr('data-study-kind', studyKind) + attr('data-study-id', row.id));
+  await returnButton.waitFor();
+  const selected = page.locator('[data-study-root]' + attr('data-study-root', studyKind + ':' + row.id));
+  assert.ok(await selected.isChecked(), 'Transfer must select the original saved Receiving root.');
+  await captureEditable('editable-' + kind + '-study-return');
+  await returnButton.click();
+  await page.locator('#water-selected' + attr('data-water-record-kind', kind) +
+    attr('data-water-record-id', row.id) + '[aria-busy="false"] h2').waitFor();
+  const original = await openRevision(kind, row);
+  const title = page.locator('#operation-form [name="' + (kind === 'plan' ? 'plan_title' : 'analysis_title') + '"]');
+  const originalTitle = await title.inputValue();
+  await title.fill(originalTitle + ' / editing');
+  await page.waitForFunction(() => /^Changed settings:/.test(
+    document.querySelector('[data-water-edit-summary]')?.textContent || ''));
+  await title.fill(originalTitle);
+  await page.waitForFunction(() => /^No changes to/.test(
+    document.querySelector('[data-water-edit-summary]')?.textContent || ''));
+  if (kind === 'plan') {
+    await operateSourceChooser(row);
+    // The native browser visits every original edit page. No feature, source,
+    // method or extra field is changed by traversing the visible source form.
+    let pages = 0;
+    for (;;) {
+      pages++;
+      for (const area of await page.locator('[data-water-receptor]').all()) {
+        const id = await area.locator('[name="receptor_id"]').inputValue();
+        const retained = original.receptors.find(item => item.id === id);
+        assert.ok(retained, 'Every visible area belongs to the original saved selection.');
+        assert.deepEqual(JSON.parse(await area.locator('[name="receptor_source"]').inputValue()),
+          {source_collection_id: retained.source.source_collection_id, source_id: retained.source.source_id});
+      }
+      const next = page.locator('[data-water-plan-page="1"]');
+      if (await next.isDisabled()) break;
+      await next.click();
+    }
+    report.editable_selection.plan_pages = pages;
+    while (!(await page.locator('[data-water-plan-page="-1"]').isDisabled()))
+      await page.locator('[data-water-plan-page="-1"]').click();
+  }
+  await captureEditable('editable-' + kind + '-revision');
+  const task = await originalAction('editable-' + kind + ':save',
+    kind === 'plan' ? 'receiving.water.plan' : 'receiving.water.analyze',
+    () => page.locator('#operation-form button[type="submit"]').click());
+  const stage = report.stages['editable-' + kind + ':save'];
+  assert.deepEqual(stage.request.payload.selection || stage.request.payload, original,
+    'Saving an unchanged visible revision must preserve the full original scientific selection.');
+  assert.match(task.result.id, /^[0-9a-f]{64}$/, 'Preparation returns its actual immutable record.');
+  const reread = await api(endpoint('/api/receiving-waters/' + kind, {[kind + '_id']: row.id}));
+  assert.deepEqual(reread.identity, row.identity, 'The original saved study remains unchanged.');
+  const saved = task.result.id === row.id ? reread
+    : await api(endpoint('/api/receiving-waters/' + kind, {[kind + '_id']: task.result.id}));
+  assert.deepEqual(saved.identity.selection, original);
+  assert.equal(saved.state, 'complete');
+  assert.equal(saved.identity.project_id, report.project_id);
+  assert.equal(saved.identity.implementation_sha256,
+    applicationFiles.find(file => file.name === 'model/receiving_waters.py').sha256);
+  report.editable_selection.records[kind] = {id: saved.id, original_id: row.id, task_id: task.id,
+    selection_unchanged: true, original_identity_preserved: true,
+    reused_original: saved.id === row.id, reopened: false};
+  await closeDialogs();
+  await checkpoint();
+}
+async function openPlanPair(referenceId, candidateId) {
+  await openWater('plan', referenceId);
+  await page.locator('#water-selected [data-action="water-compare-new"]').click();
+  await page.locator('#water-selected [data-water-plan-chooser]').waitFor();
+  await page.locator('#water-selected [name="plan_compare_reference"]').selectOption(referenceId);
+  await page.locator('#water-selected [name="plan_compare_candidate"]').selectOption(candidateId);
+  await page.locator('#water-selected [data-action="water-compare-apply"]').click();
+  const root = page.locator('#water-selected[aria-busy="false"][data-water-record-kind="plan-comparison"] [data-water-plan-comparison]' +
+    attr('data-reference', referenceId) + attr('data-candidate', candidateId) + '[aria-busy="false"]');
+  await root.waitFor();
+  assert.equal(await page.locator('#form-dialog').evaluate(node => node.open), false,
+    'Saved plan comparison operates in the original Receiving view.');
+  return root;
+}
+async function operatePlanComparison(plan, analysis) {
+  const candidateId = report.editable_selection.records.plan.id;
+  const candidate = await api(endpoint('/api/receiving-waters/plan', {plan_id: candidateId}));
+  let root = await openPlanPair(plan.id, candidateId);
+  await captureEditable('editable-plan-comparison');
+  const firstId = plan.receptors[0]?.id || candidate.receptors[0]?.id;
+  assert.ok(firstId, 'Compare the actual saved receiving areas.');
+  await root.locator('[data-water-compare-search]').fill(firstId);
+  await root.locator('[data-action="water-compare-detail"]' + attr('data-id', firstId)).waitFor();
+  const expectedName = 'receiving-plan-comparison-' + plan.id.slice(0, 12) + '-' + candidateId.slice(0, 12) + '.json';
+  const received = page.waitForEvent('download');
+  await root.locator('[data-action="water-compare-download"]').click();
+  const download = await received;
+  assert.equal(download.suggestedFilename(), expectedName);
+  const filename = path.join(output, expectedName.replace(/\.json$/, '-attempt-' + report.attempts.length + '.json'));
+  await download.saveAs(filename);
+  assert.equal(await download.failure(), null);
+  const comparison = JSON.parse(await fs.readFile(filename, 'utf8'));
+  assert.equal(comparison.schema, 'upstate.receiving-water-plan-comparison/v1');
+  assert.equal(comparison.project_id, report.project_id);
+  assert.equal(comparison.reference.id, plan.id);
+  assert.equal(comparison.reference.record_sha256, plan.record_sha256);
+  assert.equal(comparison.candidate.id, candidate.id);
+  assert.equal(comparison.candidate.record_sha256, candidate.record_sha256);
+  assert.equal(comparison.same_record, plan.id === candidate.id);
+  assert.deepEqual(comparison.rows.map(row => row.id).sort(),
+    [...new Set([...plan.receptors, ...candidate.receptors].map(row => row.id))].sort(),
+    'The downloaded original comparison remains complete when the visible table is filtered.');
+  const status = comparison.rows.find(row => row.id === firstId).state;
+  await root.locator('[data-water-compare-status]').selectOption(status);
+  await root.locator('[data-action="water-compare-detail"]' + attr('data-id', firstId)).click();
+  await page.locator('#detail-dialog[open]').waitFor();
+  await captureEditable('editable-plan-comparison-original-detail');
+  await closeDialogs();
+  await root.locator('[data-water-compare-search]').fill('');
+  await root.locator('[data-water-compare-status]').selectOption('');
+  await root.locator('[data-action="water-compare-swap"]').click();
+  await page.locator('#water-selected[aria-busy="false"][data-water-record-kind="plan-comparison"] [data-water-plan-comparison]' +
+    attr('data-reference', candidateId) + attr('data-candidate', plan.id) + '[aria-busy="false"]').waitFor();
+  root = await openPlanPair(plan.id, candidateId);
+  const result = {reference_id: plan.id, candidate_id: candidateId,
+    reference_record_sha256: plan.record_sha256, candidate_record_sha256: candidate.record_sha256,
+    same_record: comparison.same_record, original_receiving_areas: comparison.rows.length,
+    download: await fileRecord(filename), completed: true, reopened: false};
+  if (analysis) {
+    await root.locator('[data-water-compare-analysis]').selectOption(analysis.id);
+    await root.locator('[data-action="water-compare-analysis"]').click();
+    await page.locator('#form-dialog[open] [data-water-comparison-revision]').waitFor();
+    await page.waitForFunction(() => /original receiving areas loaded/.test(
+      document.querySelector('#water-accounting-plan-status')?.textContent || ''));
+    const field = page.locator('#operation-form [name="receiving_advanced_selection"]');
+    await field.waitFor({state: 'attached'});
+    const draft = JSON.parse(await field.inputValue());
+    assert.deepEqual(draft, {...analysis.identity.selection, plan_id: candidateId},
+      'The candidate-plan analysis draft changes only the exact original plan choice.');
+    await captureEditable('editable-plan-comparison-analysis-draft');
+    await closeDialogs();
+    result.analysis_draft = {original_analysis_id: analysis.id, candidate_plan_id: candidateId,
+      original_other_selections_preserved: true, submitted: false};
+  }
+  report.editable_selection.comparison = result;
+  await checkpoint();
+}
+
+async function reopenEditableRecords() {
+  if (!selection.editable_selection) return;
+  for (const [kind, row] of Object.entries(report.editable_selection.records)) {
+    for (const id of new Set([row.original_id, row.id])) {
+      await openWater(kind, id);
+      const reread = await api(endpoint('/api/receiving-waters/' + kind, {[kind + '_id']: id}));
+      await openRevision(kind, reread);
+      await captureEditable('editable-' + kind + '-cold-reopen-' + id.slice(0, 12));
+      await closeDialogs();
+    }
+    row.reopened = true;
+  }
+  const comparison = report.editable_selection.comparison;
+  assert.ok(comparison?.completed, 'Complete the actual saved plan comparison first.');
+  await openPlanPair(comparison.reference_id, comparison.candidate_id);
+  await captureEditable('editable-plan-comparison-cold-reopen');
+  comparison.reopened = true;
+  report.editable_selection.complete = true;
+  report.editable_selection.visual_review = 'Open the exact saved screenshots and operate the outgoing view before client-facing delivery.';
+  await checkpoint();
+}
+
 try {
   attempt.stage = 'browser_import';
   ({chromium} = modules
@@ -367,6 +608,12 @@ try {
   const catalog = await api(endpoint('/api/spatial/catalog'));
   report.runtime = await api('/api/runtime');
   await checkpoint();
+  if (selection.editable_selection) {
+    attempt.stage = 'operate_editable_selection';
+    await editableSelection('plan', plan);
+    if (analysis) await editableSelection('analysis', analysis);
+    await operatePlanComparison(plan, analysis);
+  }
   attempt.stage = 'operate_maps';
   for (const target of cases) {
     const key = caseHash(target), row = report.cases[key] ||= {target};
@@ -406,6 +653,8 @@ try {
     assert.deepEqual(review.view, row.view);
     row.cold_reopened = true; await checkpoint();
   }
+  attempt.stage = 'cold_reopen_editable_selection';
+  await reopenEditableRecords();
   assert.deepEqual(attempt.page_errors, []);
   assert.deepEqual(attempt.http_errors, []);
   attempt.complete = true; attempt.completed_at = new Date().toISOString();

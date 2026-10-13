@@ -138,3 +138,8 @@ Inspect the actual completed scientific screens, reports, source pages and downl
 
 Source assembly and standalone application handoffs retain the application-level instruction copies with their current guides. This file records an owner-requested product delivery requirement; it does not change provider safeguards, repository access controls, or existing authorization boundaries.
 <!-- /TJLABS_RENDERED_PRODUCT_INSPECTION -->
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+Owner delivery rule: before presenting this product or ANY attachment, open, observe and normally use the exact outgoing result as its recipient would. Apply the complete [rendered product inspection policy](../../docs/policies/rendered-product-inspection-policy.md), including downloaded HTML/PDF/reports/slides/spreadsheets/maps/images/audio/video/archive/project contents, actual screenshare and relevant narrow widths, critical controls and states, and final exported media playback. Use available high-quality generative voice/TTS with natural professional delivery for videos and applicable generative media models when helpful. Fix concrete presentation defects and keep building/shipping; no review theatre, test theatre, parallel review bureaucracy or approval gate. Tests, source, metadata, checklists and receipts do not substitute for actual observation and normal use. Preserve the existing sprint cutoff and every other owner control.
+<!-- bryce-rendered-product-inspection:end -->

@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.3",
+  "version": "2.4.8",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "0cd423ac3d94e3455a743dd3f17af084fa71a122",
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 16445,
-      "sha256": "263ce8a1dd6f7faa96fb80f17009c95652a95514bec625b4dc93b7be0d09aac8"
+      "bytes": 16551,
+      "sha256": "05e7fdc17a8ddc2b24e150959ba14aeaecb0f6d8f144c36017abd2940fee6d7c"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -87,6 +87,11 @@
       "sha256": "9008a32f3712f4bb335acf8294781658d146c1037fc02fd62707ec98339f56f4"
     },
     {
+      "path": "measurement_workspace/microbial_selection.py",
+      "bytes": 24872,
+      "sha256": "4d2614392aaac6e9eb6638d64d8964dc5d84c223a6e9e07fa725762eb94a45c3"
+    },
+    {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
       "bytes": 5368,
       "sha256": "0d2d48b0788575f1ff842270d0a5d519db647ecf9660298c2d14959975fc23f1"
@@ -103,8 +108,8 @@
     },
     {
       "path": "measurement_workspace/RL18151_OBSERVATIONS.md",
-      "bytes": 12026,
-      "sha256": "d7292d75b99b4d59e8baee5f18b591679293f37df593fe5fc3cb514c211fa86a"
+      "bytes": 17575,
+      "sha256": "df533cd90360baac9409f1f5ad909727ed645fded0e74d174854380f6c013fcf"
     },
     {
       "path": "measurement_workspace/rl18151_observations.py",
@@ -128,8 +133,8 @@
     },
     {
       "path": "measurement_workspace/STUDY_REVIEWS.md",
-      "bytes": 21679,
-      "sha256": "45ebb0fe307313733f4423dc8a3ed2c8e2a88c286eeafddf2c274be11fd82d67"
+      "bytes": 23073,
+      "sha256": "5fe30b9de12b2d7c7002c9c3efb38d231b4212ec4cc7d0d121004be976f1e3e5"
     },
     {
       "path": "measurement_workspace/study_reviews.py",
@@ -1153,8 +1158,8 @@
     },
     {
       "path": "operator/extensions/published-studies.json",
-      "bytes": 4412,
-      "sha256": "f20a3a09bbad3018353a7a170a480be513e3b807d40bd1104f41017793069afa"
+      "bytes": 5132,
+      "sha256": "1aa58c9fe23ec42072b56f03f207cf98b6f50034c5ec5bff0d3a9f2002ae5651"
     },
     {
       "path": "operator/extensions/station-geography.json",
@@ -1163,23 +1168,23 @@
     },
     {
       "path": "operator/PUBLISHED_REVIEW_REPORTS.md",
-      "bytes": 9369,
-      "sha256": "3817432aa78d94a979a421f3cfdfdb2fab4771005c2a33193f6af56edda4f4b8"
+      "bytes": 15804,
+      "sha256": "84aa48061127d302f9873fa65e1cac030db0e9cc498ab784d9b528a87fb6edbd"
     },
     {
       "path": "operator/published_study_operator.py",
-      "bytes": 26325,
-      "sha256": "3383710dfd07904afbc793eabf2e7d502b8e80dcaee2a90ad16b2108b0c7382f"
+      "bytes": 26955,
+      "sha256": "8d229833413b8173703ecd3c1044404509f973bdd00c7ce9e358288f86c97f9a"
     },
     {
       "path": "operator/team_route_policy.json",
-      "bytes": 6250,
-      "sha256": "d8ab44660b9d411018b826258f80e514d552a953c358808445b15a220206fead"
+      "bytes": 6634,
+      "sha256": "23aca138fb70aa7ee9c84f5915c6c941e72b89b2567cde04f22883d04545662d"
     },
     {
       "path": "operator/web/published_review_reports.mjs",
-      "bytes": 9328,
-      "sha256": "bbb0cceb979c715f3c47009aa30146a8bc35ae88c3ed50bb0e1b12f0395670e0"
+      "bytes": 10027,
+      "sha256": "ff27f5185c57822b8442e74249e9d14005c0ca67ef539414ad7b953dbf498438"
     },
     {
       "path": "operator/web/published_studies.css",
@@ -1188,8 +1193,13 @@
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 73651,
-      "sha256": "3ce28db7dc3456b1e6bacab9e826a930ee125cdf9fd1dfa48241b9546c07f25f"
+      "bytes": 74650,
+      "sha256": "767e583709a623930ad34bbac4599fe94177e6901893d486c9a878ee8b5dba4f"
+    },
+    {
+      "path": "operator/web/published_microbial_selection.mjs",
+      "bytes": 14197,
+      "sha256": "46f6909f2badf288d1deaf62d15c6bac78ad4bc2c122635b62fe1d2407a8f1c5"
     },
     {
       "path": "operator/web/station_geography.mjs",
@@ -1213,8 +1223,8 @@
     },
     {
       "path": "source_tools/continue_study_report.py",
-      "bytes": 27916,
-      "sha256": "27a609e1e95f9acd6750accc63d2f3a7fe5e0c509172f3c911a3b72cad504c72"
+      "bytes": 29224,
+      "sha256": "67a4b0156548d8883cfa8e93aa6e8220ab77170b47b076f7a327d61c8ad88009"
     },
     {
       "path": "source_tools/offline_handover/adapt_eighteenmile_retained.py",
@@ -1233,8 +1243,8 @@
     },
     {
       "path": "source_tools/offline_handover/README.md",
-      "bytes": 6603,
-      "sha256": "d06587c644fe4dfef951eba061c072c047b9cb9d4a98007652b354607be57aa1"
+      "bytes": 9808,
+      "sha256": "978129046b0862957e18da170ac4bfa0f5951b530799e5e125ccffc48c9971e7"
     },
     {
       "path": "source_tools/receive_geographic_study_review.py",
@@ -2252,6 +2262,14 @@
         "native_course": "source/observed-report-20261013/receive_operator.py",
         "restart": "Retain exact study version, original review export, scientific source and original queued report tasks; --resume continues the same receiving directory.",
         "original_station_geography": "20f1eb34d1edefd64340f8dea6f817a69e5fbe0880f0c349b2e1fd0b0ecfec8b"
+      },
+      "composer_selection": {
+        "modes": [
+          "replace",
+          "append"
+        ],
+        "contract": "Existing openScientificReport passes selection_mode through to source_report_editions.openForSources; replace uses only this immutable source/title, append preserves the ordered draft and deduplicates source choices.",
+        "controller": "operator/web/published_review_reports.mjs"
       }
     }
   }

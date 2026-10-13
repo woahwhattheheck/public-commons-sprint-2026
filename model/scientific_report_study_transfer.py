@@ -92,6 +92,8 @@ def _source(closure, choice, expected_source):
     from . import published_review_study_transfer
     published_review_study_transfer.include_source(closure, collection_id, entry)
     ensemble_study_transfer.include_source(closure, collection_id, entry)
+    from . import paired_ensemble_study_transfer
+    paired_ensemble_study_transfer.include_source(closure, collection_id, entry)
     gauge_study_transfer.include_source(closure, collection_id, entry)
     from . import community_study_transfer, conservation_study_transfer
     community_study_transfer.include_source(closure, collection_id, entry)
@@ -102,6 +104,8 @@ def _source(closure, choice, expected_source):
     landcover_study_transfer.include_source(closure, collection_id, entry)
     from . import chemistry_study_transfer
     chemistry_study_transfer.include_source(closure, collection_id, entry)
+    from . import observation_comparability_study_transfer
+    observation_comparability_study_transfer.include_source(closure, collection_id, entry)
     return {
         "schema": "upstate.observed-report-binding/v1", "edition": observed_context.EDITION,
         "source_collection_id": collection_id, "source_id": entry["id"],

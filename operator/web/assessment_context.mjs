@@ -30,13 +30,59 @@ const empty=()=>({title:'Assessment geographic context',station_geography_id:'',
   assessment:{title:'',status:'',vintage:'',reference:''}});
 const opts=(rows,value,label,id='id')=>'<option value="">Choose…</option>'+list(rows).map(r=>'<option value="'+esc(r[id])+'" '+(r[id]===value?'selected':'')+'>'+esc(label(r))+'</option>').join('');
 
+export function comparedAssessmentMemberships(row,selection){
+ const source=selection?.watershed_source;
+ if(!source?.collection_id||!source?.source_id)return [];
+ return list(row?.computed_memberships).filter(member=>member.source_ref?.collection_id===source.collection_id&&member.source_ref?.source_id===source.source_id);
+}
+export function assessmentMembershipLabels(members){
+ return list(members).map(member=>{
+  const native=member.watershed_id;
+  let label=native==null||native===''?'Not recorded':String(native);
+  if(list(members).filter(other=>other.watershed_id===native).length>1){
+   const reference=member.source_ref||{};
+   label+=' [feature '+(reference.native_feature_id??('index '+String(reference.source_feature_index??'Not recorded')))+']';
+  }
+  return label+' ('+String(member.relation??'Not recorded')+')';
+ });
+}
+export function assessmentComparisonCounts(rows){
+ const values={agree:0,differ:0,unresolved:0};
+ for(const row of list(rows))values[row.association_agreement===true?'agree':row.association_agreement===false?'differ':'unresolved']++;
+ return values;
+}
+export function assessmentContextFilteredCSV(rows,selection){
+ const headers=['station_id','row_number','assessment_row_id','cause','impaired_use','county','use_support','original_watershed_value','location_status','watershed_status','geographic_status','association_agreement','association_status',
+  'compared_watershed_source','compared_watershed_ids','compared_memberships','published_polygon_ids','computed_polygon_ids','selected_polygon_ids','computed_memberships','assessment','assessment_edition','assessment_record_id','original_edition_source','source_ref','original'];
+ const cell=v=>{let t=v==null?'':typeof v==='object'?JSON.stringify(v):String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
+ return [headers.join(','),...list(rows).map(row=>{
+  const memberships=comparedAssessmentMemberships(row,selection),record={...row,compared_watershed_source:selection?.watershed_source??null,compared_watershed_ids:memberships.map(member=>member.watershed_id),compared_memberships:memberships};
+  return headers.map(name=>cell(record[name])).join(',');
+ })].join('\r\n')+'\r\n';
+}
+
+export function assessmentReportVersion(catalog){
+ const version=catalog?.report_version;
+ return typeof version==='string'&&version.trim()===version&&version.length>0?version:null;
+}
+export function assessmentReportRequest(catalog,{context_id,parcel_id,delivery_id}){
+ const version=assessmentReportVersion(catalog);
+ if(!version)throw Error('Reload Assessment context to load the current report preparation controls.');
+ return {context_id,...(parcel_id?{parcel_id}:{}),...(delivery_id?{delivery_id}:{}),report_version:version};
+}
+export function assessmentReportReady(result,catalog,contextId,parcelId=null,deliveryId=''){
+ const version=assessmentReportVersion(catalog);
+ return Boolean(version&&result?.version===version&&result.context_id===contextId&&
+  (result.parcel_id||null)===(parcelId||null)&&(result.selected_delivery_id||'')===deliveryId);
+}
+
 export function attachAssessmentContext(host){
  let node=null,workspace=null,state=null,catalog=null,options=null,edition=null,draft=empty();
  let controller=null,epoch=0,busy=false,error='',message='',requests=[],currentTask=null,selectedEdition=null;
  let selectedPolygon='',query='',page=0,taskFingerprint='';
  let parcelEdition=null,selectedParcelEdition=null,parcelQuery='',parcelPage=0;
  let optionsRequest=0,editionRequest=0,parcelRequest=0,pendingEdition=null,optionsLoading=false;
- let reportDelivery='',reportReady=null;
+ let reportDelivery='',reportReady=null,reportPreparing=false,reportPreparationRequest=0;
  let catalogRequest=0,geographyRequest=0,geographyOpening=false;
  const parcelActions=new Set(['assessment.context.parcels','assessment.context.receive_parcels']);
  const read=(operation,value={})=>host.api('/api/assessment-context/'+operation,{method:'POST',body:{workspace,...value},signal:controller?.signal});
@@ -118,7 +164,7 @@ export function attachAssessmentContext(host){
     await loadOptions(draft.station_geography_id,true);if(gen!==epoch||request!==catalogRequest)return;if(selectedEdition)await openEdition(selectedEdition);}
    else renderForm();
    if(gen!==epoch||request!==catalogRequest)return;if(initial&&selectedParcelEdition)await openParcels(selectedParcelEdition);
-   if(gen!==epoch||request!==catalogRequest)return;renderParcels();renderParcelResult();await openPendingEdition();}catch(e){if(gen===epoch&&request===catalogRequest)fail(e);}
+   if(gen!==epoch||request!==catalogRequest)return;renderResult();renderParcels();renderParcelResult();await openPendingEdition();}catch(e){if(gen===epoch&&request===catalogRequest)fail(e);}
  }
  async function openEdition(id){
   cancelGeographyOpening();
@@ -156,7 +202,7 @@ export function attachAssessmentContext(host){
   target.innerHTML='<div class="ac-toolbar"><span>'+filtered.length+' original assessment rows</span>'+btn('export-rows','Download filtered CSV')+'</div>'+
    '<div class="ac-table-wrap"><table><thead><tr><th>Station / original row</th><th>Original cause / use / edition</th><th>Published watershed</th><th>Computed membership</th><th>Source detail</th></tr></thead><tbody>'+
    shown.map(r=>'<tr><td>'+esc(r.station_id)+'<small>row '+r.row_number+' · '+esc(r.location_status)+'</small></td><td>'+esc(r.cause)+' / '+esc(r.impaired_use)+
-    '<small>'+esc(r.use_support??'not reported')+' · '+esc(r.assessment_edition??'')+' · '+esc(r.assessment?.status)+' · '+esc(r.assessment?.vintage)+'</small></td><td>'+esc(r.original_watershed_value)+'<small>'+esc(r.geographic_status)+'</small></td><td>'+list(r.computed_memberships).map(m=>esc(m.watershed_id)+' ('+esc(m.relation)+')').join('<br>')+
+    '<small>'+esc(r.use_support??'not reported')+' · '+esc(r.assessment_edition??'')+' · '+esc(r.assessment?.status)+' · '+esc(r.assessment?.vintage)+'</small></td><td>'+esc(r.original_watershed_value)+'<small>'+esc(r.geographic_status)+'</small></td><td>'+(assessmentMembershipLabels(comparedAssessmentMemberships(r,edition.selection)).map(esc).join('<br>')||'No retained membership in compared source')+
     '<small>'+(r.association_agreement===true?'Associations agree':r.association_agreement===false?'Associations differ':'Comparison unresolved')+'</small></td><td><details><summary>Original fields and references</summary><pre>'+esc(JSON.stringify({assessment:r.assessment,edition:r.assessment_edition,original_edition_source:r.original_edition_source,assessment_record_id:r.assessment_record_id,original:r.original,source:r.source_ref,computed:r.computed_memberships},null,2))+'</pre></details></td></tr>').join('')+
    '</tbody></table></div><div class="ac-toolbar">'+btn('previous','Previous',page===0?'disabled':'')+'<span>Page '+(page+1)+' of '+Math.max(1,Math.ceil(filtered.length/40))+'</span>'+
    btn('next','Next',(page+1)*40>=filtered.length?'disabled':'')+'</div>';
@@ -173,19 +219,36 @@ export function attachAssessmentContext(host){
     list(r.station_ids).join(' '),JSON.stringify(r.original_parcel_attributes)].join(' ').toLowerCase().includes(term));
  }
  function reportControls(contextId,parcelId=null){
-  const ready=reportReady?.context_id===contextId&&(reportReady.parcel_id||null)===(parcelId||null)&&
-   (reportReady.selected_delivery_id||'')===reportDelivery;
+  const ready=assessmentReportReady(reportReady,catalog,contextId,parcelId,reportDelivery);
   return '<section class="ac-report"><h3>Scientific and client report</h3><label>Retain a saved mapped delivery (optional)<select data-ac-report-delivery>'+
    '<option value="">New report selection</option>'+list(state?.data?.deliveries).map(row=>'<option value="'+esc(row.id)+'" '+(row.id===reportDelivery?'selected':'')+'>'+esc(row.title||row.id)+'</option>').join('')+'</select></label>'+
    '<div class="ac-toolbar">'+btn('prepare-report','Use saved '+(parcelId?'parcel and assessment':'assessment')+' context in report',
-    'data-context="'+esc(contextId)+'" data-parcel="'+esc(parcelId||'')+'" '+(busy?'disabled':''))+
+    'data-context="'+esc(contextId)+'" data-parcel="'+esc(parcelId||'')+'" '+(busy||reportPreparing||!assessmentReportVersion(catalog)?'disabled':''))+
    (ready?btn('open-report','Open scientific report')+btn('open-mapped-report','Open Maps and delivery'):'')+'</div>'+
    '<p>Open the scientific report to arrange the original studies and publish their saved assessment or parcel context. Maps and delivery keeps the chosen native runs and map settings. Both use the complete saved selection and original packages; current table searches do not replace that selection.</p></section>';
  }
  function acceptReport(task){
   if(task?.workspace!==workspace||task?.action!=='assessment.context.report'||task.state!=='complete'||
-     !task.result?.source||!task.result?.delivery_selection)return;
+     !task.result?.source||!task.result?.delivery_selection||
+     task.result.version!==assessmentReportVersion(catalog))return;
   reportReady=clone(task.result);persist();renderResult();renderParcelResult();
+ }
+ async function prepareCurrentReport(contextId,parcelId=null){
+  if(busy||reportPreparing)return;
+  const gen=epoch,keyNow=workspace,deliveryId=reportDelivery,request=++reportPreparationRequest;
+  const active=()=>Boolean(node)&&gen===epoch&&keyNow===workspace&&request===reportPreparationRequest&&
+   keyNow===(host.getWorkspace()||host.getState()?.workspace_key);
+  reportPreparing=true;renderResult();renderParcelResult();
+  try{
+   const available=await read('catalog');
+   if(!active())return;
+   catalog=available;
+   if(reportDelivery!==deliveryId||
+      (parcelId?(parcelEdition?.id!==parcelId||parcelEdition.context_id!==contextId):edition?.id!==contextId))return;
+   const payload=assessmentReportRequest(available,{context_id:contextId,parcel_id:parcelId,delivery_id:deliveryId});
+   await submit('assessment.context.report',payload);
+  }catch(e){if(active())fail(e);}
+  finally{if(active()){reportPreparing=false;renderResult();renderParcelResult();}}
  }
  async function openReport(value,originalWorkspace=workspace,{mapped=false}={}){
   if(!value?.source||!value?.delivery_selection)throw Error('Finish the retained assessment report-source operation first.');
@@ -246,11 +309,11 @@ export function attachAssessmentContext(host){
  function renderResult(){
   const result=node?.querySelector('[data-ac-result]');if(!result)return;
   if(!edition){result.innerHTML='<p>Prepare a context from a retained station study or receive a complete context package.</p>';return;}
-  const r=edition.result,s=edition.summary,a=r.assessment;
+  const r=edition.result,s=edition.summary,a=r.assessment,comparisons=assessmentComparisonCounts(r.rows);
   result.innerHTML='<h2>'+esc(edition.title)+'</h2><p><strong>'+esc(a.title)+' · '+esc(a.status)+' · '+esc(a.vintage)+'</strong></p>'+
    '<p>'+esc(r.relation)+'</p><div class="ac-toolbar">'+btn('use-context','Use this saved selection for a new context')+'</div><div class="ac-summary">'+[['Inventories',s.inventory_count??1],['Stations',s.station_count],['Assessment rows',s.assessment_row_count],['Watersheds',s.watershed_count],
-    ['Unmatched rows',s.unmatched_row_count],['Multiple associations',s.multiple_association_row_count],['Different associations',s.differing_association_row_count],['Unresolved comparisons',s.unresolved_comparison_row_count]].map(([k,v])=>'<div><strong>'+v+'</strong><span>'+esc(k)+'</span></div>').join('')+'</div>'+
-   '<p>Association basis: '+esc(r.relationship_basis)+'. Original records: '+sourceLinks(r)+'</p>'+
+    ['Unmatched rows',s.unmatched_row_count],['Multiple associations',s.multiple_association_row_count],['Agreeing assessments',comparisons.agree],['Different assessments',comparisons.differ],['Unresolved comparisons',comparisons.unresolved]].map(([k,v])=>'<div><strong>'+v+'</strong><span>'+esc(k)+'</span></div>').join('')+'</div>'+
+   '<p>Association basis: '+esc(r.relationship_basis)+'. Compared watershed source: '+esc(edition.selection?.watershed_source?.source_id)+' / '+esc(edition.selection?.watershed_source?.collection_id)+'. Original records: '+sourceLinks(r)+'</p>'+
    '<details><summary>Original assessment editions and cause/use groups</summary><pre>'+esc(JSON.stringify(r.assessment_groups,null,2))+'</pre></details><div data-ac-map class="ac-map"></div><label class="ac-search">Find original station, cause, watershed or source text<input data-ac-search value="'+esc(query)+'"></label>'+
    '<div data-ac-rows></div><section data-ac-parcels></section><h3>Complete source and editable package</h3><div class="ac-downloads">'+
    list(edition._downloads).filter(f=>f.filename!=='started.json'&&f.filename!=='original-station-geography.zip').map(f=>'<a href="'+esc(f.url)+'" download="'+esc(f.filename)+'">'+esc(f.filename)+'</a>').join('')+'</div>';
@@ -258,17 +321,14 @@ export function attachAssessmentContext(host){
   renderMap();renderRows();renderParcels();
  }
  function exportRows(){
-  const headers=['station_id','row_number','assessment_row_id','cause','impaired_use','county','use_support','original_watershed_value','location_status','watershed_status','geographic_status','association_agreement','association_status',
-    'published_polygon_ids','computed_polygon_ids','selected_polygon_ids','assessment','assessment_edition','assessment_record_id','original_edition_source','source_ref','original'];
-  const cell=v=>{let t=v==null?'':typeof v==='object'?JSON.stringify(v):String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
-  const text=[headers.join(','),...rows().map(r=>headers.map(k=>cell(r[k])).join(','))].join('\r\n')+'\r\n';
+  const text=assessmentContextFilteredCSV(rows(),edition.selection);
   const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');
   a.href=url;a.download='assessment-context-filtered.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }
  function ownedTasks(){return list(state?.tasks).filter(t=>String(t.action||'').startsWith('assessment.context.')&&(!t.workspace||t.workspace===workspace));}
  function renderTasks(){
   const target=node?.querySelector('[data-ac-tasks]');if(!target)return;
-  target.innerHTML=ownedTasks().slice(-15).reverse().map(t=>'<div class="ac-task">'+btn('task',t.action+' · '+t.state,'data-id="'+esc(t.id)+'"')+
+  target.innerHTML=ownedTasks().slice(0,15).map(t=>'<div class="ac-task">'+btn('task',t.action+' · '+t.state,'data-id="'+esc(t.id)+'"')+
    (t.state==='complete'&&t.action==='assessment.context.report'&&t.result?.source?btn('report-task','Open scientific report','data-id="'+esc(t.id)+'"'):'')+
    (t.state==='complete'&&t.result?.id?btn('open-result','Open saved result','data-id="'+esc(t.result.id)+'" data-parcels="'+(parcelActions.has(t.action)?'1':'0')+'"'):'')+(t.error?'<span>'+esc(t.error.message||t.error)+'</span>':'')+'</div>').join('')||'<p>Operations appear here after submission. They remain in the original queue when this desk closes.</p>';
  }
@@ -316,8 +376,7 @@ export function attachAssessmentContext(host){
   const t=event.target.closest('[data-ac-action]');if(!t)return;
   const a=t.dataset.acAction;
   if(a==='prepare-report'){
-   await submit('assessment.context.report',{context_id:t.dataset.context,...(t.dataset.parcel?{parcel_id:t.dataset.parcel}:{}),
-    ...(reportDelivery?{delivery_id:reportDelivery}:{})});
+   await prepareCurrentReport(t.dataset.context,t.dataset.parcel||null);
   }
   else if(a==='open-report'||a==='open-mapped-report'){try{await openReport(reportReady,workspace,{mapped:a==='open-mapped-report'});}catch(e){fail(e);}}
   else if(a==='report-task'){
@@ -377,7 +436,7 @@ export function attachAssessmentContext(host){
  }
 
  function mount(container,initial=host.getState()){
-  detach();node=container;state=initial;workspace=host.getWorkspace()||state?.workspace_key;controller=new AbortController();epoch++;restore();if(pendingEdition&&pendingEdition.workspace!==workspace)pendingEdition=null;
+  detach();node=container;state=initial;workspace=host.getWorkspace()||state?.workspace_key;controller=new AbortController();epoch++;reportPreparing=false;reportPreparationRequest++;restore();if(pendingEdition&&pendingEdition.workspace!==workspace)pendingEdition=null;
   node.innerHTML='<section class="ac-desk"><header><h1>Assessment geographic context</h1><p>Original assessment records, watershed association and parcel context in one retained source edition.</p></header>'+
    '<p data-ac-notice class="ac-notice" aria-live="polite"></p><details open><summary>Prepare from a saved station study</summary><div data-ac-form-area></div></details>'+
    '<section class="ac-toolbar"><label>Saved context<select data-ac-editions></select></label><label>Receive complete context ZIP<input type="file" accept=".zip" data-ac-receive></label></section>'+

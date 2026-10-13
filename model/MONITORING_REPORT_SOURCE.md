@@ -16,7 +16,11 @@ The map displays all original catchment polygons and actual source station point
 
 ## Existing operator course
 
-From the original Monitoring desk, choose a saved feasible design or the displayed campaign revision and prepare its report source. The existing operator queue owns execution. Open the completed source in the ordinary delivery editor, keeping other selected reports, and continue the existing scientific report workflow.
+From the original Monitoring desk, choose a saved feasible design, the displayed campaign revision or an exact saved budget comparison and prepare its report source. The existing operator queue owns execution. Reopen an existing retained source when continuing earlier work.
+
+Choose **Open this report only** to replace the standalone scientific composer's draft with the prepared report's complete saved source selection and title. This selection includes any sources from the scientific delivery selected during preparation or reopening, in their retained order. Choose **Add to current report** to preserve the composer's current source order and nonempty title, then append each missing source from that complete saved selection in order. An empty composer title uses the retained report title.
+
+Both controls call the existing `openScientificReport` interface with explicit `selection_mode: "replace"` or `selection_mode: "append"`, the current Workspace key, a cloned complete `delivery_selection.observed_context_sources` and the retained title. Neither action changes the immutable source, budget comparison, campaign revision or saved delivery. **Open model delivery** continues to use the complete original delivery selection through its existing editor.
 
 The backend action is monitoring.report.prepare. Its backend-only extension uses the existing queue, authenticated file tickets and delivery navigation. Browser and provider code are maintained separately from this producer and use the exact API below.
 
@@ -198,3 +202,23 @@ New comparison report sources register their figures with the existing scientifi
 All map panels use the same extent. Gray polygons show the original network, dark outlines identify selected catchment search areas, and point symbols use actual retained source station coordinates. The source specification retains every projected vertex and hole, the complete original network file identity, exact selected/covered IDs and the explicit WGS84-to-EPSG:5070 display transformation. The original geometry and previously linked Monitoring SVGs remain in the package.
 
 The figure specification and SVGs are ordinary report companions. PDF drawings and SVGs use the same maintained vector renderer. New report identities bind the installed figure-renderer bodies, pyproj/PROJ and ReportLab versions. Original saved reports keep their prior retained content and inspector behavior. This course uses the application's existing ReportLab, pyproj, scientific_figures.py and scientific_map_figures.py dependencies.
+
+## Receiving both report choices
+
+Use the actual application's saved design, campaign revision and budget
+comparison sources. With another source already selected in the scientific
+composer, choose **Open this report only** and inspect the exact prepared source
+set, retained order and report title. Reopen that same source with an existing
+scientific delivery to check that its original earlier sources remain in the
+replacement set. Then choose **Add to current report**, inspect the previous
+source order and title, and repeat to check that sources are not duplicated.
+Changing the Monitoring selection or opening these controls must not publish a
+new report source; the original preparation queue remains explicit.
+
+Open and inspect every outgoing artifact: HTML, PDF, each map and archive
+contents. Open the received project and use the relevant saved programme,
+comparison and report controls. Look at actual rendered desktop and narrow
+screenshots, including both report actions and the final source list. The native
+producing owner checks the outgoing product and repairs visible errors. Keep
+its actual immutable selectors, resulting report editions and native receiving
+outputs with the existing operation.
