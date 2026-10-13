@@ -1,3 +1,4 @@
+import {createCalibrationMaps} from './calibration_maps.mjs';
 /* Calibration and validation against original retained annual loads. */
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
@@ -39,6 +40,9 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   };
   const draftKey = () => 'upstate-calibration-draft:'+current();
   const form = () => $('#operation-form');
+  const mapsDesk=createCalibrationMaps({current,read,submitAction,openForm,fileList,detail,repaint,
+    getReport:()=>activeReport,getUncertainty:()=>activeUncertainty,getData:calibrationData,
+    openReport,openUncertainty,activate:()=>{if(!mounted)location.hash='calibration';else repaint();}});
   async function read(operation,values={}){
     const workspace=current(),ticket=generation;
     const result=await api(endpoint('/api/calibration/'+operation,values));
@@ -52,6 +56,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return '<header class="page-header"><div><p class="eyebrow">ORIGINAL OBSERVATIONS · NATIVE MODELS</p><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></div><div class="page-actions">'+actions+'</div></header>';
   }
   function render(){
+    if(mapsDesk.active())return mapsDesk.render();
     if(activeReport?.workspace_key!==current()){activeReport=null;activeUncertainty=null;}
     if(activeUncertainty)return renderUncertainty();
     if(activeReport)return renderReport();
@@ -74,16 +79,23 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     repaint();
   }
   function update(){
+    const mapChanged=mapsDesk.sync();
     if(!mounted)return;
+    if(mapsDesk.active()){if(mapChanged)repaint();return;}
     if(activeReport){
       if(activeReport.workspace_key!==current()){activeReport=null;activeUncertainty=null;}
       else{
-        const latest=calibrationData().calibration_uncertainties;
-        if(!Array.isArray(latest)||activeUncertainty)return;
-        const rows=latest.filter(row=>row.calibration_id===activeReport.report.id);
-        if(JSON.stringify(rows)===JSON.stringify(activeReport.uncertainties??[]))return;
-        activeReport.uncertainties=rows;
-        repaint();return;
+        let changed=mapChanged;
+        for(const [source,key] of [['calibration_uncertainties','uncertainties'],['calibration_maps','maps']]){
+          const latest=calibrationData()[source];
+          if(!Array.isArray(latest))continue;
+          const rows=latest.filter(row=>row.calibration_id===activeReport.report.id);
+          if(JSON.stringify(rows)!==JSON.stringify(activeReport[key]??[])){
+            activeReport[key]=rows;changed=true;
+          }
+        }
+        if(changed)repaint();
+        return;
       }
     }
     const markup=render();
@@ -91,12 +103,13 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   }
   function detach(){
     mounted=null;lastMarkup=null;
-    generation++;
+    generation++;mapsDesk.invalidate();
   }
   function repaint(){
     if(!mounted)return;
     lastMarkup=render();mounted.innerHTML=lastMarkup;
-    if(activeReport)bindReport();
+    if(mapsDesk.active())mapsDesk.bind(mounted);
+    else if(activeReport)bindReport();
   }
   function savedDraft(){
     try{
@@ -292,6 +305,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return newForm(null,handoff);
   }
   async function newForm(planId=null,handoff=null){
+    mapsDesk.invalidate();
     const workspace=current(),request=++formRequest;
     const catalog=await read('catalog');
     if(current()!==workspace||request!==formRequest)return;
@@ -515,6 +529,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     detail(plan.selection.title,body,{kind:'calibration-plan',id});
   }
   async function openReport(id){
+    mapsDesk.reset();
     const request=++resultRequest;
     const packet=await read('report',{id});
     if(request!==resultRequest)return;
@@ -606,6 +621,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       (view.observations.length?section('Observed and modeled annual loads','The dashed diagonal marks equal observed and modeled load. Circles show calibration catchments; outlined squares show validation catchments.',
         '<div class="calibration-plots">'+pollutants.map(name=>scatter(view.observations,name)).join('')+'</div>'):'')+
       uncertaintyList()+
+      (report.selected_run_id?mapsDesk.summary(report.id):'')+
       section('Results','Search and sort the retained rows; downloaded files contain the complete selection and results.',
         '<div class="calibration-tabs" role="tablist" aria-label="Calibration results">'+Object.entries(tabTitles).map(([key,title])=>'<button type="button" role="tab" aria-selected="'+(key===activeTab)+'" data-action="calibration-tab" data-tab="'+key+'">'+esc(title)+' <small>'+number((view[key]??[]).length)+'</small></button>').join('')+'</div>'+
         '<div class="calibration-table-controls">'+field('Find a result',input('calibration_result_search',query,'search','id="calibration-result-search" placeholder="Profile, catchment or pollutant"'))+'</div><div id="calibration-result-table">'+resultTable()+'</div>')+
@@ -680,6 +696,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         '<p class="calibration-empty">A completed sensitivity analysis will appear here beside this unchanged nominal calibration.</p>'));
   }
   function uncertaintyForm(reportId){
+    mapsDesk.invalidate();
     if(!reportId)throw Error('Open a completed calibration before analyzing its observation errors.');
     const workspace=current(),request=++formRequest;
     const retained=activeUncertainty?.analysis;
@@ -698,6 +715,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       });
   }
   async function openUncertainty(id){
+    mapsDesk.reset();
     const workspace=current(),request=++resultRequest;
     const packet=await read('uncertainty',{id});
     if(request!==resultRequest||current()!==workspace)return;
@@ -751,6 +769,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         '<div class="section-body"><p><strong>'+esc(sensitivityLabel(sensitivity.state||analysis.state))+'</strong></p>'+
         '<p>The first-tie multiplier is calculated with the same fixed pollutant weights and calibration scales. Numerical comparison tolerances remain visible with each gap. The calculation is a deterministic sensitivity range; a possible reversal is not a probability or a new profile selection.</p>'+
         gapPlot(analysis.pairwise??[])+'</div>')+
+      mapsDesk.summary(analysis.calibration_id,analysis.id)+
       section('Retained sensitivity results','Search and sort complete candidate comparisons, source records and reference ranges. Held-out validation units appear only as descriptive reference bands.',
         '<div class="calibration-tabs" role="tablist" aria-label="Observation uncertainty results">'+Object.entries(uncertaintyTitles).map(([key,label])=>'<button type="button" role="tab" aria-selected="'+(key===activeTab)+'" data-action="calibration-tab" data-tab="'+key+'">'+esc(label)+' <small>'+number(uncertaintyRows(analysis,key).length)+'</small></button>').join('')+'</div>'+
         '<div class="calibration-table-controls">'+field('Find a source or comparison',input('calibration_result_search',query,'search','id="calibration-result-search" placeholder="Profile, station, source record or pollutant"'))+'</div><div id="calibration-result-table">'+resultTable()+'</div>')+
@@ -764,15 +783,17 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const value=task.result??{};
     return '<div class="page-actions">'+(value.plan_id?button('plan','Open calibration selection',value.plan_id):'')+
       (value.report_id?button('report','Open calibration results',value.report_id):'')+
-      (value.uncertainty_id?button('uncertainty','Open observation sensitivity',value.uncertainty_id):'')+'</div>';
+      (value.uncertainty_id?button('uncertainty','Open observation sensitivity',value.uncertainty_id):'')+
+      (value.map_id?button('maps-open','Open catchment residual maps',value.map_id):'')+'</div>';
   }
   async function dispatch(node){
+    if(node.dataset.action?.startsWith('calibration-maps-')){resultRequest++;return mapsDesk.dispatch(node);}
     const action=node.dataset.action?.replace(/^calibration-/,''),id=node.dataset.id;
     if(action==='new')return newForm();
     if(action==='revise')return newForm(id);
     if(action==='plan')return openPlan(id);
     if(action==='report')return openReport(id);
-    if(action==='back'){activeReport=null;activeUncertainty=null;resultRequest++;return repaint();}
+    if(action==='back'){mapsDesk.reset();activeReport=null;activeUncertainty=null;resultRequest++;return repaint();}
     if(action==='uncertainty-new')return uncertaintyForm(id);
     if(action==='uncertainty')return openUncertainty(id);
     if(action==='uncertainty-nominal')return openReport(id);
