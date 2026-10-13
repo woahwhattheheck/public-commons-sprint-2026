@@ -102,7 +102,7 @@ async function openEdition(receipt) {
     canonical(detail.edition) === canonical(receipt.edition),
     'The Sources desk opened a different report edition or Workspace.');
   await page.locator('[data-scientific-report-detail]').waitFor({ state: 'visible' });
-  const frame = page.frameLocator('[data-scientific-report-detail] iframe');
+  const frame = page.frameLocator('[data-scientific-report-document-host] iframe:not([hidden]), [data-scientific-report-detail] iframe:not([hidden])');
   await frame.locator('h1').waitFor({ state: 'visible' });
   requireValue((await frame.locator('h1').innerText()).trim() === receipt.title,
     'The report frame changed the retained title.');
