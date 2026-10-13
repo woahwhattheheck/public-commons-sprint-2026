@@ -5,6 +5,7 @@ import importlib
 import importlib.metadata
 import inspect
 import logging
+import sys
 from pathlib import Path
 from .common import (INVEST_SOURCE, INVEST_VERSION, atomic_json, describe_file, digest,
                      file_digest, held, now, read_json, verify_file)
@@ -14,6 +15,7 @@ from .model_selection import (models, run_models, required_roles, required_outpu
 from .reuse import native_companions, registry_snapshot, verify_stage
 from .stage_cache import runtime_environment, signature, recover, register, execution_slot
 from .native_arguments import build_native_arguments
+from .native_execution import NativeExecution
 
 
 def runtime(selection=None):
@@ -50,128 +52,154 @@ def execute_run(workspace, key):
             for artifact in state["artifacts"].values():
                 verify_file(directory, artifact)
             return {**state, "reused": True, "model_scope": run_scope(state)}
-        modules, runtime_source = runtime(active)
-        grid = workspace.get_grid(state["selection"]["grid_id"])
-        grid_directory = workspace.root / "grids" / grid["id"]
-        needed = required_roles(active) + ("model_domain", "reporting_mask")
-        paths = {name: verify_file(grid_directory, grid["files"][name]) for name in needed}
-        verified_inputs = {str(path.resolve()): grid["files"][name] for name, path in paths.items()}
-        profile = workspace._get("profiles", state["selection"]["profile_id"])
-        scenario = workspace._get("scenarios", state["selection"]["scenario_id"])
-        table, table_entry = workspace.source_file(profile["source_collection_id"], profile["biophysical_source_id"])
-        if table_entry["body"]["sha256"] != profile["table_summary"]["sha256"]:
-            raise ValueError("Original biophysical table differs from the saved profile")
-        # source_file has just verified the original object and native view.
-        verified_inputs[str(table.resolve())] = table_entry["body"]
-        previous_runtime = state.get("runtime")
-        if previous_runtime and previous_runtime != runtime_source:
-            state.setdefault("runtime_history", []).append(
-                {"recorded_at": now(), "runtime": previous_runtime})
-        for name in active:
-            if name in state["stages"] and "runtime" not in state["stages"][name] and previous_runtime:
-                state["stages"][name]["runtime"] = previous_runtime
-        state.update(state="running", updated_at=now(), runtime=runtime_source)
-        state.pop("error", None)
-        state.pop("validation", None)
-        atomic_json(directory / "run.json", state)
-        handler = logging.FileHandler(directory / "native.log", encoding="utf-8")
-        handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s"))
-        root_logger = logging.getLogger()
-        previous_level = root_logger.level
-        root_logger.setLevel(logging.INFO)
-        root_logger.addHandler(handler)
-        try:
-            lulc = paths["NLCD"]
-            if scenario["kind"] == "landcover":
-                if "landcover" in state["stages"]:
-                    lulc = verify_file(directory, state["stages"]["landcover"]["artifact"])
-                else:
-                    lulc = directory / "scenario_lulc.tif"
-                    edits = rasters.make_scenario(
-                        paths["NLCD"], lulc, grid["grid"], scenario["patches"],
-                        source_loader=lambda sid: workspace.source_file(scenario["source_collection_id"], sid),
-                        allowed_codes=set(profile["table_summary"]["lucodes"]))
-                    state["stages"]["landcover"] = {"completed_at": now(), "edits": edits,
-                                                    "artifact": describe_file(directory, lulc, units="class")}
-                    atomic_json(directory / "run.json", state)
-            if scenario["kind"] == "landcover":
-                verified_inputs[str(lulc.resolve())] = state["stages"]["landcover"]["artifact"]
-            arguments = build_native_arguments(active, profile, paths, table, lulc)
-            for name, module in modules.items():
-                args = {**arguments[name], "workspace_dir": str(directory / name)}
-                if name in state["stages"]:
-                    verify_stage(directory, state["stages"][name])
-                    # An original pre-selection stage stays intact. Indexing it
-                    # requires the input/runtime signature recorded at execution.
-                    register(workspace, key, name, state["stages"][name])
-                    continue
-                selected = signature(name, args, runtime_source, verified_inputs=verified_inputs)
-                with execution_slot(workspace, selected):
-                    reused, rejected = recover(workspace, key, name, selected, directory, args)
-                    if rejected:
-                        state.setdefault("reuse_observations", {})[name] = rejected
-                    if reused is not None:
-                        state["stages"][name] = reused
-                        register(workspace, key, name, reused)
-                        atomic_json(directory / "run.json", state)
-                        logging.getLogger(__name__).info(
-                            "Reused original %s stage from run %s", name, reused["reused_from"]["run_id"])
-                        continue
-                    args_path = directory / (name + "-arguments.json")
-                    atomic_json(args_path, args)
-                    errors = module.validate(args)
-                    if errors:
-                        state["validation"] = {name: [{"fields": list(fields), "message": message}
-                                                       for fields, message in errors]}
-                        raise ValueError("Native " + name.upper() + " validation: " +
-                                         "; ".join(message for _, message in errors))
-                    started = now()
-                    registry = module.execute(args)
-                    if not isinstance(registry, dict):
-                        raise ValueError("Native engine did not return its original output registry")
-                    files, outputs, additional_files = registry_snapshot(directory, name, registry)
-                    stage = {"started_at": started, "completed_at": now(),
-                             "arguments": describe_file(directory, args_path),
-                             "files": files, "registry_ids": sorted(registry),
-                             "registry_outputs": outputs,
-                             "additional_files": additional_files,
-                             "companions": native_companions(directory, files),
-                             "input_signature": selected, "runtime": runtime_source}
-                    state["stages"][name] = stage
-                    atomic_json(directory / "run.json", state)
-                    register(workspace, key, name, stage)
-            output_selection = {"nitrogen_export": ("ndr", "n_total_export"),
-                                "phosphorus_export": ("ndr", "p_surface_export"),
-                                "sediment_export": ("sdr", "sed_export")}
-            for name in required_outputs(active):
-                model, native_id = output_selection[name]
-                if name in state["artifacts"]:
-                    verify_file(directory, state["artifacts"][name])
-                    continue
-                stage = state["stages"][model]["files"]
-                if native_id not in stage:
-                    raise ValueError("Original native registry lacks " + native_id)
-                source = verify_file(directory, stage[native_id])
-                target = directory / (name + ".tif")
-                summary = rasters.rate_to_mass(source, target, grid["grid"],
-                                               reporting_mask=paths["reporting_mask"], pollutant=name)
-                state["artifacts"][name] = describe_file(directory, target, **summary,
-                                                        native_output=stage[native_id])
-                atomic_json(directory / "run.json", state)
-            state.update(state="complete", completed_at=now(), updated_at=now())
-            state["model_scope"] = validate_completed_run(state)
-            atomic_json(directory / "run.json", state)
-            return state
-        except BaseException as exc:
-            state.update(state="failed", updated_at=now(),
-                         error={"type": type(exc).__name__, "message": str(exc)})
-            state["model_scope"] = run_scope(state)
-            atomic_json(directory / "run.json", state)
-            raise
-        finally:
-            root_logger.removeHandler(handler)
-            root_logger.setLevel(previous_level)
-            handler.close()
+        # Runtime loading, input reads and log creation belong to the same
+        # recoverable attempt as the native calculation itself.
+        with NativeExecution(directory, state) as execution:
+            root_logger = logging.getLogger()
+            previous_level = root_logger.level
+            handler = None
+            try:
+                execution.phase("log")
+                handler = logging.FileHandler(directory / "native.log", encoding="utf-8")
+                handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s"))
+                root_logger.setLevel(logging.INFO)
+                root_logger.addHandler(handler)
+                previous_runtime = state.get("runtime")
+                unfinished = [name for name in active if name not in state["stages"]]
+                for name in active:
+                    if name in state["stages"]:
+                        execution.phase("verify_stage", model=name)
+                        stage = state["stages"][name]
+                        verify_stage(directory, stage)
+                        if "runtime" not in stage and previous_runtime:
+                            stage["runtime"] = previous_runtime
+                        register(workspace, key, name, stage)
+                unfinished_outputs = [name for name in required_outputs(active)
+                                      if name not in state["artifacts"]]
+                for name in required_outputs(active):
+                    if name in state["artifacts"]:
+                        execution.phase("verify_export", artifact=name)
+                        verify_file(directory, state["artifacts"][name])
+                # A failure during export or final publication can leave every
+                # selected native stage complete. Use their original outputs
+                # directly; loading or executing InVEST again is unnecessary.
+                modules = {}
+                arguments = {}
+                runtime_source = previous_runtime
+                if unfinished or unfinished_outputs:
+                    execution.phase("grid")
+                    grid = workspace.get_grid(state["selection"]["grid_id"])
+                    grid_directory = workspace.root / "grids" / grid["id"]
+                    needed = (required_roles(unfinished) + ("model_domain",)) if unfinished else ()
+                    if unfinished_outputs:
+                        needed += ("reporting_mask",)
+                    paths = {name: verify_file(grid_directory, grid["files"][name]) for name in needed}
+                    verified_inputs = {str(path.resolve()): grid["files"][name] for name, path in paths.items()}
+                if unfinished:
+                    execution.phase("runtime")
+                    modules, runtime_source = runtime(unfinished)
+                    if previous_runtime and previous_runtime != runtime_source:
+                        state.setdefault("runtime_history", []).append(
+                            {"recorded_at": now(), "runtime": previous_runtime})
+                    state["runtime"] = runtime_source
+                    execution.phase("sources")
+                    profile = workspace._get("profiles", state["selection"]["profile_id"])
+                    scenario = workspace._get("scenarios", state["selection"]["scenario_id"])
+                    table, table_entry = workspace.source_file(
+                        profile["source_collection_id"], profile["biophysical_source_id"])
+                    if table_entry["body"]["sha256"] != profile["table_summary"]["sha256"]:
+                        raise ValueError("Original biophysical table differs from the saved profile")
+                    verified_inputs[str(table.resolve())] = table_entry["body"]
+                    lulc = paths["NLCD"]
+                    if scenario["kind"] == "landcover":
+                        execution.phase("landcover")
+                        if "landcover" in state["stages"]:
+                            lulc = verify_file(directory, state["stages"]["landcover"]["artifact"])
+                        else:
+                            lulc = directory / "scenario_lulc.tif"
+                            edits = rasters.make_scenario(
+                                paths["NLCD"], lulc, grid["grid"], scenario["patches"],
+                                source_loader=lambda sid: workspace.source_file(scenario["source_collection_id"], sid),
+                                allowed_codes=set(profile["table_summary"]["lucodes"]))
+                            state["stages"]["landcover"] = {
+                                "completed_at": now(), "edits": edits,
+                                "artifact": describe_file(directory, lulc, units="class")}
+                            execution.save()
+                        verified_inputs[str(lulc.resolve())] = state["stages"]["landcover"]["artifact"]
+                    arguments = build_native_arguments(unfinished, profile, paths, table, lulc)
+                for name, module in modules.items():
+                    args = {**arguments[name], "workspace_dir": str(directory / name)}
+                    execution.phase("stage_identity", model=name)
+                    selected = signature(name, args, runtime_source, verified_inputs=verified_inputs)
+                    execution.phase("waiting_stage", model=name)
+                    with execution_slot(workspace, selected):
+                        execution.phase("stage_reuse", model=name)
+                        reused, rejected = recover(workspace, key, name, selected, directory, args)
+                        if rejected:
+                            state.setdefault("reuse_observations", {})[name] = rejected
+                        if reused is not None:
+                            state["stages"][name] = reused
+                            # Save the reusable completed stage before indexing it.
+                            execution.save()
+                            register(workspace, key, name, reused)
+                            logging.getLogger(__name__).info(
+                                "Reused original %s stage from run %s", name, reused["reused_from"]["run_id"])
+                            continue
+                        execution.phase("validate", model=name)
+                        args_path = directory / (name + "-arguments.json")
+                        atomic_json(args_path, args)
+                        errors = module.validate(args)
+                        if errors:
+                            state["validation"] = {name: [{"fields": list(fields), "message": message}
+                                                           for fields, message in errors]}
+                            raise ValueError("Native " + name.upper() + " validation: " +
+                                             "; ".join(message for _, message in errors))
+                        execution.phase("native", model=name)
+                        started = now()
+                        registry = module.execute(args)
+                        if not isinstance(registry, dict):
+                            raise ValueError("Native engine did not return its original output registry")
+                        files, outputs, additional_files = registry_snapshot(directory, name, registry)
+                        stage = {"started_at": started, "completed_at": now(),
+                                 "arguments": describe_file(directory, args_path),
+                                 "files": files, "registry_ids": sorted(registry),
+                                 "registry_outputs": outputs,
+                                 "additional_files": additional_files,
+                                 "companions": native_companions(directory, files),
+                                 "input_signature": selected, "runtime": runtime_source}
+                        state["stages"][name] = stage
+                        execution.phase("retain_stage", model=name)
+                        register(workspace, key, name, stage)
+                output_selection = {"nitrogen_export": ("ndr", "n_total_export"),
+                                    "phosphorus_export": ("ndr", "p_surface_export"),
+                                    "sediment_export": ("sdr", "sed_export")}
+                for name in unfinished_outputs:
+                    model, native_id = output_selection[name]
+                    execution.phase("export", model=model, artifact=name)
+                    stage = state["stages"][model]["files"]
+                    if native_id not in stage:
+                        raise ValueError("Original native registry lacks " + native_id)
+                    source = verify_file(directory, stage[native_id])
+                    target = directory / (name + ".tif")
+                    summary = rasters.rate_to_mass(source, target, grid["grid"],
+                                                   reporting_mask=paths["reporting_mask"], pollutant=name)
+                    state["artifacts"][name] = describe_file(directory, target, **summary,
+                                                            native_output=stage[native_id])
+                    execution.save()
+                state.update(state="complete", completed_at=now(), updated_at=now())
+                state["model_scope"] = validate_completed_run(state)
+                execution.finish()
+                return state
+            finally:
+                if handler is not None:
+                    root_logger.removeHandler(handler)
+                    root_logger.setLevel(previous_level)
+                    primary_failure = sys.exc_info()[1]
+                    try:
+                        handler.close()
+                    except OSError:
+                        if primary_failure is None:
+                            raise
 
 def compare_runs(workspace, ids):
     if len(ids) < 2 or len(set(ids)) != len(ids):

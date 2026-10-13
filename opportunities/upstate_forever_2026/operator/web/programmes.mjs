@@ -133,24 +133,38 @@ export function attachProgrammes(context) {
   function executionHTML(row) {
     const execution = row.execution, summary = executionSummary(execution);
     const storage = storageText(execution?.storage);
-    const checkpoint = execution?.phase_started_at || execution?.started_at || execution?.updated_at;
+    const checkpoint = execution?.storage_recorded_at || execution?.phase_started_at || execution?.started_at || execution?.updated_at;
     let html = summary ? '<small>' + escapeHTML(summary) + '</small>' : '';
     if (storage) {
-      html += '<small>Storage at phase checkpoint' +
+      html += '<small>Storage recorded' +
         (checkpoint ? ' · ' + escapeHTML(new Date(checkpoint).toLocaleString()) : '') +
         ': ' + escapeHTML(storage) + '</small>';
     }
-    const failureStorage = storageText(row.error?.storage_at_failure);
-    if (failureStorage) html += '<small>Storage at failure: ' + escapeHTML(failureStorage) + '</small>';
-    if (typeof row.error?.recovery === 'string' && row.error.recovery) {
-      html += '<p class="programme-run-error">' + escapeHTML(row.error.recovery) + '</p>';
-    }
+    html += failureRecoveryHTML(row.error);
     const history = asArray(row.execution_history);
     if (history.length) {
-      html += '<details><summary>Previous execution attempts</summary><ul>' + history.map(item =>
-        '<li>' + escapeHTML(executionSummary(item)) +
-        (item.updated_at ? ' · ' + escapeHTML(new Date(item.updated_at).toLocaleString()) : '') + '</li>'
-      ).join('') + '</ul></details>';
+      html += '<details data-programme-details="' + escapeHTML('execution:' + record.id + ':' + row.key) +
+        '"><summary>Previous execution attempts</summary><ul>' + history.map(item => {
+          const message = item?.error?.message || (typeof item?.error === 'string' ? item.error : '');
+          return '<li>' + escapeHTML(executionSummary(item)) +
+            (item?.updated_at ? ' · ' + escapeHTML(new Date(item.updated_at).toLocaleString()) : '') +
+            (message ? '<p class="programme-run-error">' + escapeHTML(message) + '</p>' : '') +
+            failureRecoveryHTML(item?.error) + '</li>';
+        }).join('') + '</ul></details>';
+    }
+    return html;
+  }
+  function failureRecoveryHTML(error) {
+    let html = '';
+    const storage = storageText(error?.storage_at_failure);
+    if (storage) {
+      const recorded = error?.storage_recorded_at;
+      html += '<small>Storage at failure' +
+        (recorded ? ' · ' + escapeHTML(new Date(recorded).toLocaleString()) : '') +
+        ': ' + escapeHTML(storage) + '</small>';
+    }
+    if (typeof error?.recovery === 'string' && error.recovery) {
+      html += '<p class="programme-run-error">' + escapeHTML(error.recovery) + '</p>';
     }
     return html;
   }
@@ -197,18 +211,23 @@ export function attachProgrammes(context) {
       '<section class="programme-output"><header class="section-header"><div><h3>Result catalogue</h3><p>Open the original quantities, units, geographic coverage and result files retained for these runs.</p></div>' +
       actionButton('open-report', 'Open saved catalogue', record.id, report || files.length ? '' : 'disabled') + '</header>' +
       (files.length ? fileList(files) : '<p class="note">Build the catalogue after a run finishes. Completed cases can be reported while other cases remain in the programme.</p>') + '</section>' +
-      '<details class="technical"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
+      '<details class="technical" data-programme-details="' + escapeHTML('selection:' + record.id) + '"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(record.selection, null, 2)) + '</pre></details></section>';
   }
   function draw() {
     if (!host) return;
     const preserveScroll = host.scrollTop;
+    const expanded = new Set(Array.from(host.querySelectorAll('details[data-programme-details][open]'),
+      node => node.dataset.programmeDetails));
     host.innerHTML = '<div class="programme-workbench"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Run programmes</h1><p>Run saved native cases, inspect progress, pause between calculations and continue the same work after reopening.</p></div>' +
       '<div class="page-actions">' + actionButton('create', 'Create programme') + actionButton('import', 'Import selections') +
       (catalogue?.experiments_available ? actionButton('experiment', 'Use saved experiment') : '') +
       '<button type="button" data-view="runs">Native model runs</button></div></header><div class="notice error" data-programme-error role="alert"' +
       (latestError ? '' : ' hidden') + '>' + escapeHTML(latestError) + '</div>' + catalogueHTML() + programmeHTML() +
       '<p class="programme-method">Parameter designs and interpretation use the selected experiment and scientific profile. ' + methodLink + '.</p></div>';
+    for (const node of host.querySelectorAll('details[data-programme-details]')) {
+      node.open = expanded.has(node.dataset.programmeDetails);
+    }
     host.scrollTop = preserveScroll;
   }
   async function refreshRecord() {
