@@ -14,7 +14,13 @@ Choose one native run for each parameter profile and land-cover case. A workspac
 
 Check the displayed native run IDs and parameter values. The baseline must exist under each profile used to calculate a matched scenario effect. Reference-profile results provide a second comparison for interpreting parameter changes.
 
-Keep runs comparable in model version, pollutant, raster grid, input domain, and reporting boundaries. Review the coordinate system, cell size, and spatial extent before interpreting differences. The upstream modeling domain and the South Carolina reporting area serve different purposes: upstream land supplies the hydrologic context, while reporting boundaries define where results are summarized.
+Keep runs comparable in producing model version, pollutant, raster grid, input domain, and reporting boundaries. Scientific interpretation reads each completed model stage's recorded InVEST version first, then the original observed-run fallback, and finally a labeled requested-version fallback for older records. The **Native producing versions** column states that basis. A requested version is not presented as evidence that the engine actually executed.
+
+The immutable original run selection and ID remain unchanged when a completed run is adopted into a newer experiment. Each pollutant's comparison checks its producing model across every complete applicable run: NDR for nitrogen/phosphorus and SDR for sediment. Different NDR versions leave the nutrient cohort unavailable without suppressing a compatible sediment cohort. Missing selected artifacts, unresolved versions, or unfinished expected cases remain visible. Explicitly inactive models remain **Model not selected**. No mismatched run is quietly removed to make a comparison succeed.
+
+Older saved reports keep their original identities and native bindings. New reports retain each run's exact original selection, so **Prepare Decision study** can use an adopted run without reconstructing its requested version. Analysis source stamps include the original version-policy and model-selection modules; reanalysis under changed scientific code creates a new diagnostic snapshot.
+
+Review the coordinate system, cell size, and spatial extent before interpreting differences. The upstream modeling domain and the South Carolina reporting area serve different purposes: upstream land supplies the hydrologic context, while reporting boundaries define where results are summarized.
 
 Use a distinct cohort for a different experiment design or structural model choice. One-at-a-time profiles and factorial profiles cover parameter space differently; combining their rows would change the meaning of a design frequency.
 
@@ -35,6 +41,8 @@ Choose **Analyze**. Review the source summary before the result tables: selected
 Start with **Missing or unfinished runs** and **Common spatial support**. Expected and completed counts describe which comparisons the selected design actually supports. A missing baseline prevents its paired scenario comparison. A missing scenario or profile remains identifiable throughout the summary.
 
 Read the selected models beside run completion. A completed NDR-only run can support nutrient diagnostics while sediment appears under **Model not selected**. A missing output from a selected model remains incomplete.
+
+Observation fit uses its own baseline-only producing-version cohort. An incompatible hypothetical scenario does not invalidate otherwise compatible baseline observation comparisons. If applicable baseline producing versions differ, raw per-profile modeled/observed rows and the frozen expected observation IDs remain available, while shared-cohort and full-cohort scores are withheld with the version reason.
 
 Common support is the shared set of valid cells used for the stated comparison. Read its area and coverage beside every spatial result. A run's full native total and its total restricted to common support answer different questions; keep their labels distinct.
 
@@ -103,10 +111,16 @@ The integration passes the current registered workspace and exact diagnostic dat
 
 ## Include this analysis in a scientific or client report
 
-Choose **Use in scientific report** on a saved analysis. Select a new report or
-an existing delivery whose native runs and ordered sources should continue.
-The original queued operation retains the exact report SHA and complete source
-companions. Its completed task opens the prepared original report form.
+Choose **Use in scientific report** on a saved analysis. A new standalone
+scientific report opens the original Sources composer after the report source
+is prepared. It supports the selected NDR, SDR or combined-model results and
+keeps the current source order, title and contact editable. Preview and prepare
+a saved PDF, HTML, Markdown and data edition there.
+
+You can also choose an existing mapped delivery whose native runs and ordered
+sources should continue. The same completed task offers **Open scientific
+report** and **Open mapped report form**. Both use the exact retained report SHA
+and original source companions; reopening the task does not prepare a new source.
 
 See [DIAGNOSTIC_REPORTS.md](DIAGNOSTIC_REPORTS.md) for the complete operator,
 command-line, revision-recovery and receiving workflow. Incomplete diagnostic

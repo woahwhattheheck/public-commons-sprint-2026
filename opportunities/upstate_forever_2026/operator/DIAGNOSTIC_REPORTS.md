@@ -11,18 +11,28 @@ support masks and available analysis ZIP travel as native source companions.
    results state, common support, matched effects and observation coverage.
 2. Choose **Use in scientific report**. The dialog identifies the report revision
    and its complete or partial results state.
-3. Choose an existing delivery to retain its native runs, map settings and ordered
-   scientific sources, or choose a new report. Prepare the report source.
+3. Keep **New standalone scientific report** to publish the saved scientific
+   results, or choose an existing mapped delivery to retain its native runs,
+   map settings and ordered scientific sources. Prepare the report source.
 4. The original task queue retains the operation. On completion, choose
-   **Open prepared report form** in the saved task. If the request completed
-   immediately, the same form opens directly.
-5. In the original delivery form, review the native baseline and alternatives,
-   report order, contact details and map settings. The diagnostic source is
-   appended once. Build through the existing delivery action.
-6. Open the scientific PDF and client report, then download their editable
-   workspace and source companions. Existing report sources remain in their
-   selected order.
+   **Open scientific report** in the saved task. An immediately completed new
+   report opens the same original Sources composer directly.
+5. In the scientific report composer, review the ordered sources, title and
+   contact. The incoming sources are appended once after the existing draft
+   order; an existing title and contact stay intact. Preview the selection,
+   prepare the edition, and open its PDF, HTML, Markdown and source data.
+6. A saved task also offers **Open mapped report form**. This continues the
+   prepared native baseline, alternatives and report order through the original
+   delivery form and existing delivery action, producing its scientific PDF
+   and client report.
+7. Reopen either saved edition from its original desk. Download the complete
+   report ZIP or use the original Workspace backup and restore to continue
+   editing its retained source selections.
 
+The standalone report path supports a saved NDR-only or SDR-only diagnostic as
+well as a combined-model analysis. Its results use the same exact report SHA and
+source companions. A mapped delivery continues to use the actual native cohort
+selected in its original delivery form.
 A partial saved diagnostic is a usable working report. Its report sections show
 the missing native members, incomplete shared support, inactive model families,
 observation omissions and unavailable full-cohort scores. Report preparation does
@@ -93,8 +103,9 @@ with a delivery ID.
 The command returns the original source collection/document IDs, immutable
 report identity, manifest and recipe descriptors, and prepared native delivery
 selection. `diagnostics.report.prepare` exposes the same operation through the
-original authenticated queue. Actual report publication remains the maintained
-`delivery.build` workflow.
+original authenticated queue. Standalone report publication uses the original `source-reports.render` queue
+action and saved scientific editions. Mapped scientific/client publication uses
+the maintained `delivery.build` workflow.
 
 ## Source installation and receiving
 
@@ -111,8 +122,11 @@ contains those same files.
 
 On the existing receiving host, reopen the same original application and
 Workspace. Use an actual saved diagnostic report ID/SHA, prepare its source,
-complete the report form, then inspect the PDF/client sections and original
-companions. Back up and restore through the original operator and reopen the
+open the standalone scientific composer, preserve an existing draft's source
+order and contact, then preview and prepare the saved PDF/HTML/Markdown/data.
+Reopen the saved edition and verify its source choices. Also use the same
+completed diagnostic task's mapped-report action to inspect its PDF/client
+sections and original companions. Back up and restore through the original operator and reopen the
 same source and report. The expected identity is the same original project,
 analysis ID, report SHA, source collection and document ID; further scientific
 runs or new report editions can then continue independently.
@@ -166,3 +180,23 @@ cross-profile fit is unavailable because of producing-version differences.
 The report shows the original score state and reason beside the separate
 complete/shared-cohort values. Older saved diagnostic reports remain readable;
 they do not acquire invented execution-version metadata.
+
+## Continue a prepared diagnostic in Sources
+
+The registered `openScientificReport` capability forwards the current workspace
+and the completed task's exact original source choices into the existing
+SourceReports composer. It performs no new model calculation or source
+preparation. A resumed or reopened original task can use the same action later.
+The incoming source order and exact collection/document IDs are retained;
+duplicate choices are added once. The composer preserves an existing draft's
+title, contact and prior order before adding the chosen scientific sources.
+
+A task from another workspace, an unfinished preparation, a missing diagnostic
+source in its retained order, or an advanced clicked report revision is reported
+at the original operation. Navigating away during an asynchronous task read does
+not reopen the abandoned view. The original mapped report action remains
+available beside the standalone scientific report action.
+
+Install this UI with the maintained SourceReports saved-edition feature, whose
+original host supplies `openScientificReport`. The component installer checks
+that host capability before publishing the updated registry descriptor.
