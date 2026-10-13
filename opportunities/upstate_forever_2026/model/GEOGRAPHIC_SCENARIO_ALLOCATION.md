@@ -90,7 +90,9 @@ The native signed change is **alternative minus baseline**, accumulated from the
 
 **Do not subtract restoration and control pairwise native changes as a matched-control effect.** Their baseline intersections can differ. This companion adds three-run support counts but deliberately does not replace the native quantity calculation with a new common-support mass estimator.
 
-These modeled annual quantities represent land export delivered to streams within the named support. They are not observed loads, intake concentrations, reservoir delivery or treatment removal. Equal local changed counts or class mix alone do not establish equal rainfall, terrain, routing, baseline export or native response.
+These modeled annual quantities represent exports originating from source pixels in the named support and delivered to streams. A mask total is not a load crossing that boundary. They are not observed loads, intake concentrations, reservoir delivery or treatment removal. Equal local changed counts or class mix alone do not establish equal rainfall, terrain, routing, baseline export or native response.
+
+For NDR, each source pixel's load is combined with its downstream delivery ratio, and watershed totals sum these source contributions. Downstream restoration can therefore affect upstream source exports outside the four-anchor reporting mask; retain the separate model-domain/upstream scope to inspect that modeled effect. SDR likewise assigns sediment export to its eroding source pixel. These definitions follow the original [InVEST 3.20 NDR nutrient-export equations](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html#nutrient-export) and [SDR sediment-export equations](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html#sediment-export).
 
 ## Maps and balance figures
 
