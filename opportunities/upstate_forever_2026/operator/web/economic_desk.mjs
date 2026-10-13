@@ -500,7 +500,7 @@ export function attachEconomicDesk(host) {
     box.hidden=false;
     box.innerHTML='<h3>Calculated whole-scenario preview</h3><p>'+report.alternatives.length+' comparable scenarios; '+report.frontier.eligible_ids.length+' meet the prepared criteria. '+(budget?'Budget currency '+escape(budget.currency)+'.':'No budget was applied.')+'</p>'+
       '<div class="econ-table-wrap"><table><thead><tr><th>Scenario</th>'+metrics.map(metric=>'<th>'+axes[metric].label+' avoided, '+axes[metric].unit+'</th>').join('')+'<th>Annualized cost</th><th>Decision</th></tr></thead><tbody>'+report.alternatives.map(row=>'<tr><th>'+escape(row.label)+'</th>'+metrics.map(metric=>'<td>'+format(row.outputs[metric].reduction)+'</td>').join('')+'<td>'+(row.cost?format(row.cost.annualized)+' '+escape(row.cost.currency)+'/year':'Cost not entered')+'</td><td>'+(row.decision.eligible?'Eligible':'Outside prepared criteria')+(row.decision.pareto?' · Pareto':'')+'</td></tr>').join('')+'</tbody></table></div>'+
-      '<p class="econ-note">The complete edition retains source coverage, signed changes, undefined zero-baseline percentages, cost assumptions, exports and working notes.</p>'+lifecycleReportMarkup(report);
+      '<p class="econ-note">The complete edition retains source coverage, signed changes, undefined zero-baseline percentages, cost assumptions, exports and working notes.</p>'+lifecycleReportMarkup(report,null,false);
   }
   async function loadSource(reportId,{preserve=false,zoneId=null}={}) {
     const token=++epoch,selectedWorkspace=workspace,retained=preserve&&draft?JSON.parse(JSON.stringify(draft)):null;

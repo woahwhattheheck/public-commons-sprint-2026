@@ -10,6 +10,7 @@
     "economic_desk.css",
     "economic_cost_worksheet.mjs",
     "economic_lifecycle.mjs",
+    "economic_lifecycle.css",
     "economic_implementation.mjs",
     "economic_comparison.mjs",
     "economic_quantity_estimate.mjs",
@@ -192,7 +193,8 @@
       "navigate"
     ],
     "styles": [
-      "/web/economic_desk.css"
+      "/web/economic_desk.css",
+      "/web/economic_lifecycle.css"
     ],
     "view": {
       "id": "economic-desk",
