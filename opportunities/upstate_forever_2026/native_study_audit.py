@@ -22,6 +22,8 @@ INVEST_SOURCE = {
 }
 SCHEMA = "commons.native-study-delivery/v1"
 CONTEXT_SCHEMA = "commons.native-study-context/v1"
+EXECUTION_EDITION = "native-study-release/3"
+EXECUTION_POLICY = "completed_stage_runtime_else_observed_run_else_labeled_requested_legacy"
 MAP_FAMILIES = (
     "future_sediment_loss", "future_nutrient_runoff",
     "current_nutrient_export", "current_sediment_export",
@@ -47,6 +49,83 @@ def _read_json(path, *, maximum):
     if not isinstance(value, dict):
         raise ValueError("The original study JSON root must be an object")
     return value
+
+
+def _execution_metadata(context, model, require):
+    """Check immutable declared execution sources without importing the app."""
+    runs = context["runs"]
+    supplied = ("execution" in context or any(
+        "model_versions" in run or "stage_execution_sources" in run for run in runs))
+    if context.get("edition") != EXECUTION_EDITION and not supplied:
+        return
+    execution = context.get("execution")
+    if not require(isinstance(execution, dict), "execution.context",
+                   "This study edition requires its declared execution policy and cohort versions"):
+        return
+    expected_models = ["ndr", "sdr"]
+    if not require(execution.get("policy") == EXECUTION_POLICY
+                   and execution.get("models") == expected_models
+                   and execution.get("versions") == {name: INVEST_VERSION for name in expected_models},
+                   "execution.cohort", "Retain the shared policy and full original-model version cohort"):
+        return
+    manifest = model.get("native_version_provenance")
+    if not require(isinstance(manifest, dict), "execution.manifest",
+                   "The manifest must retain the same original execution cohort"):
+        return
+    require(all(manifest.get(name) == execution.get(name) for name in ("policy", "models", "versions")),
+            "execution.manifest", "Manifest and study execution policy or versions differ")
+    declared_runs = manifest.get("runs")
+    if not require(isinstance(declared_runs, dict), "execution.runs",
+                   "Retain the original run/model execution records in the manifest"):
+        return
+    require(set(declared_runs) == {run["id"] for run in runs},
+            "execution.runs", "Execution provenance must cover the same original native cohort")
+
+    def text(value):
+        return value.strip() if isinstance(value, str) and value.strip() else None
+
+    for run in runs:
+        versions = run.get("model_versions")
+        sources = run.get("stage_execution_sources")
+        if not require(isinstance(versions, dict) and set(versions) == set(expected_models)
+                       and isinstance(sources, dict) and set(sources) == set(expected_models),
+                       "execution.sources", "Retain both selected-model records and original stage sources"):
+            continue
+        require(declared_runs.get(run["id"]) == versions,
+                "execution.run." + run["id"], "Manifest and study per-model execution records differ")
+        requested = text(run["selection"].get("invest_version"))
+        runtime = run.get("runtime")
+        observed = text(runtime.get("version")) if isinstance(runtime, dict) else None
+        for name in expected_models:
+            key = "execution." + run["id"] + "." + name
+            info, stage = versions[name], sources[name]
+            if not require(isinstance(info, dict) and isinstance(stage, dict)
+                           and {"completed_at", "runtime", "reused_from"} <= set(stage),
+                           key, "Retain the complete original stage execution fields"):
+                continue
+            stage_runtime = stage.get("runtime")
+            stage_version = (text(stage_runtime.get("version"))
+                             if stage.get("completed_at") and isinstance(stage_runtime, dict) else None)
+            effective = stage_version or observed or requested
+            basis = ("completed_stage_runtime" if stage_version else
+                     "observed_run_fallback" if observed else
+                     "requested_legacy" if requested else "unavailable")
+            expected = {
+                "model": name, "comparison_version": effective, "basis": basis,
+                "observed_stage_version": stage_version, "observed_run_version": observed,
+                "requested_version": requested,
+                "differs_from_requested": bool(effective and requested and effective != requested),
+                "stage_completed_at": stage.get("completed_at"),
+                "reused_from": stage.get("reused_from"),
+            }
+            require(type(info.get("differs_from_requested")) is bool
+                    and all(field in info and info[field] == value for field, value in expected.items()),
+                    key + ".metadata", "Declared model provenance differs from its original stage/run sources")
+            require(effective == execution.get("versions", {}).get(name),
+                    key + ".cohort", "The original producing model differs from the retained cohort version")
+            chosen = stage_runtime if stage_version else runtime
+            require((run.get("stage_runtimes") or {}).get(name) == chosen,
+                    key + ".runtime", "The retained official runtime does not follow completed-stage priority")
 
 
 def inspect(manifest_path, *, max_manifest_bytes=MAX_JSON_BYTES):
@@ -182,6 +261,10 @@ def inspect(manifest_path, *, max_manifest_bytes=MAX_JSON_BYTES):
                         and module.get("git_blob") == INVEST_SOURCE[model + "_blob"],
                         "native." + model,
                         "Native runtime module differs from its retained official source")
+
+        _execution_metadata(context, data["model"], require)
+        if context.get("execution") is not None:
+            summary["execution"] = context["execution"]
 
         maps = data["maps"]
         require(set(context["expected_map_families"]) == set(MAP_FAMILIES),

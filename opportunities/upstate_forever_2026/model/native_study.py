@@ -2,15 +2,17 @@
 from __future__ import annotations
 
 import math
+from copy import deepcopy
 from pathlib import Path
 
 from .common import (INVEST_SOURCE, INVEST_VERSION, atomic_json, describe_file, identifier,
                      verify_file)
 from .reuse import copy_verified
+from . import native_versions
 
 SCHEMA = "commons.native-study-delivery/v1"
 CONTEXT_SCHEMA = "commons.native-study-context/v1"
-EDITION = "native-study-release/2"
+EDITION = "native-study-release/3"
 MAP_FAMILIES = (
     "future_sediment_loss", "future_nutrient_runoff",
     "current_nutrient_export", "current_sediment_export",
@@ -86,31 +88,34 @@ def source_records(workspace, grid, profile, records):
     return [records[key] for key in sorted(records)]
 
 
-def retained_runtimes(run):
-    """Keep each executed model's original runtime, including adopted stages."""
+def retained_runtimes(run, *, versions=None):
+    """Keep the original runtime selected by the shared completed-stage policy."""
     stages = run.get("stages", {})
     if not isinstance(stages, dict):
         raise ValueError("Retain the original native model stages")
+    versions = native_versions.model_versions(run) if versions is None else versions
+    if set(versions) != {"ndr", "sdr"}:
+        raise ValueError("A full native study retains both original NDR and SDR models")
     result = {}
     for model in ("ndr", "sdr"):
         stage = stages.get(model, {})
         if not isinstance(stage, dict):
             raise ValueError("Retain the original " + model.upper() + " stage")
-        original = stage.get("runtime")
-        if original is None:
-            original = run.get("runtime")
+        info = versions[model]
+        original = (stage.get("runtime") if info["basis"] == "completed_stage_runtime"
+                    else run.get("runtime"))
         modules = original.get("modules") if isinstance(original, dict) else None
         module = modules.get(model) if isinstance(modules, dict) else None
-        if (not isinstance(original, dict)
+        if (info["comparison_version"] != INVEST_VERSION
+                or not isinstance(original, dict)
                 or original.get("version") != INVEST_VERSION
                 or original.get("declared_source") != INVEST_SOURCE
                 or not isinstance(module, dict)
                 or module.get("git_blob") != INVEST_SOURCE[model + "_blob"]):
             raise ValueError("Retain the original InVEST " + INVEST_VERSION
                              + " runtime for the completed " + model.upper() + " stage")
-        result[model] = original
+        result[model] = deepcopy(original)
     return result
-
 
 def retain(workspace, directory, state, selection, grid, profile, baseline, alternatives, records):
     """Capture source-bound context and original study geometry beside the report."""
@@ -136,7 +141,9 @@ def retain(workspace, directory, state, selection, grid, profile, baseline, alte
     if isinstance(buffer, bool) or not math.isfinite(float(buffer)) or float(buffer) < 0:
         raise ValueError("Native study context buffer must be finite and nonnegative")
     runs = [baseline, *alternatives]
-    runtimes = {run["id"]: retained_runtimes(run) for run in runs}
+    executed = native_versions.comparison_versions(runs, ("ndr", "sdr"))
+    runtimes = {run["id"]: retained_runtimes(run, versions=executed["runs"][run["id"]])
+                for run in runs}
     for run in runs:
         for name, units in MASS_UNITS.items():
             if run["artifacts"].get(name, {}).get("units") != units:
@@ -165,9 +172,15 @@ def retain(workspace, directory, state, selection, grid, profile, baseline, alte
         "expected_map_families": list(MAP_FAMILIES),
         "baseline_run_id": baseline["id"],
         "scenario_run_ids": [run["id"] for run in alternatives],
+        "execution": {name: deepcopy(executed[name]) for name in ("policy", "models", "versions")},
         "runs": [{
             "id": run["id"], "selection": run["selection"], "runtime": run.get("runtime"),
             "stage_runtimes": runtimes[run["id"]],
+            "model_versions": deepcopy(executed["runs"][run["id"]]),
+            "stage_execution_sources": {
+                model: {name: deepcopy(((run.get("stages") or {}).get(model) or {}).get(name))
+                        for name in ("completed_at", "runtime", "reused_from")}
+                for model in ("ndr", "sdr")},
             "artifacts": {name: run["artifacts"][name] for name in MASS_UNITS},
             "scenario": workspace._get("scenarios", run["selection"]["scenario_id"]),
         } for run in runs],
@@ -175,6 +188,7 @@ def retain(workspace, directory, state, selection, grid, profile, baseline, alte
         "methods": [
             "Original study affine, reporting mask and model-domain polygons are retained.",
             "Each completed model retains its original runtime, including independently adopted NDR and SDR stages.",
+            "Execution versions follow the shared completed-stage policy; original stage completion, runtime and reuse records are retained for independent receiving.",
             "Annual native rates were converted once using the retained pixel area; delivered raster values are annual mass per pixel.",
             "Each scenario map is alternative minus baseline on paired native valid cells.",
             "The combined map uses the separately retained nonnegative weights and normalization.",
