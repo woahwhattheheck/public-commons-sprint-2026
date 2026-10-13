@@ -122,7 +122,8 @@ def table_preview(path, opts, sheet=None):
     header_number = opts["header_row"]
     try:
         first = list(itertools.islice(iterator, header_number))
-        need(len(first) == header_number, "The selected header row is beyond this file.")
+        need(len(first) == header_number, "The selected header row is beyond this " +
+             ("worksheet." if sheet is not None else "file."))
         fields = headers(first[-1][1])
         rows = list(itertools.islice(iterator, PREVIEW_ROWS + 1))
         return {"kind": "table", "name": sheet or Path(path).name, "sheet": sheet,
@@ -157,7 +158,17 @@ def inspect_file(path, supplied=None):
             names = list(book.sheetnames)
         finally:
             book.close()
-        return {"format": suffix[1:], "options": opts, "parts": [table_preview(path, opts, name) for name in names],
+        parts = []
+        for name in names:
+            try:
+                parts.append(table_preview(path, opts, name))
+            except ValueError as error:
+                # A cover or empty sheet must not hide usable scientific sheets.
+                # Keep its original position so reviewed part identities are stable.
+                parts.append({"kind": "table", "name": name, "sheet": name,
+                              "header_row": opts["header_row"],
+                              "error": {"type": type(error).__name__, "message": str(error)}})
+        return {"format": suffix[1:], "options": opts, "parts": parts,
                 "questions": ["The complete original workbook is retained, including unselected worksheets and formulas. Cached formula values are used only if explicitly selected. Macros are never executed."]}
     if suffix in {".tif", ".tiff"}:
         try:
@@ -220,6 +231,7 @@ def checked_selection(value, inspection):
     need(type(result.get("part_index")) is int and 0 <= result["part_index"] < len(parts),
          "Choose an original worksheet, layer or raster band.")
     part = parts[result["part_index"]]
+    need(not part.get("error"), "Correct this worksheet's reading choices and inspect again before selecting it.")
     role = result.get("role", "CONTEXT")
     need(role in ROLES[part["kind"]], "Choose a scientific role compatible with this original file.")
     result["role"] = role
