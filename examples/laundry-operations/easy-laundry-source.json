@@ -1,0 +1,1947 @@
+{
+  "schema": "commons.laundry-operations-source.v1",
+  "id": "easy-laundry-public-source-20261013",
+  "version": 3,
+  "checked_at": "2026-10-13",
+  "business": {
+    "name": "Easy Laundry",
+    "url": "https://easylaundry.com/",
+    "contact_url": "mailto:info@easylaundry.com",
+    "phone": "0800 0932 363",
+    "country": "GB",
+    "currency": "GBP",
+    "currency_basis": "Published £ amounts and UK business location",
+    "timezone": "Europe/London",
+    "timezone_basis": "UK branch locations; operational setting"
+  },
+  "target": {
+    "name": "Wash Junkie",
+    "url": "https://washjunkie.com/",
+    "contact_url": "mailto:info@washjunkie.com"
+  },
+  "sources": [
+    {
+      "id": "price-list",
+      "url": "https://easylaundry.com/services",
+      "title": "Domestic, dry-cleaning and alteration tariff",
+      "effective_label": "Domestic 1 April 2026; dry cleaning and alterations 1 April 2025",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "booking",
+      "url": "https://easylaundry.com/book-now",
+      "title": "Current domestic booking flow",
+      "effective_label": "No explicit page update date",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "terms",
+      "url": "https://easylaundry.com/terms",
+      "title": "Service and payment terms",
+      "effective_label": "September 2026",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "contact",
+      "url": "https://easylaundry.com/contact",
+      "title": "Branch and general contact",
+      "effective_label": "",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "faq",
+      "url": "https://easylaundry.com/faq",
+      "title": "Published service FAQ",
+      "effective_label": "",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "collection",
+      "url": "https://easylaundry.com/collection-delivery",
+      "title": "Collection and delivery coverage",
+      "effective_label": "",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "ironing",
+      "url": "https://easylaundry.com/ironing-service",
+      "title": "Ironing and extra work",
+      "effective_label": "",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "duvets",
+      "url": "https://easylaundry.com/duvet-cleaning",
+      "title": "Duvet sizes and fill variants",
+      "effective_label": "Tariff 1 April 2026; October offer 1–31 October 2026",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "commercial",
+      "url": "https://easylaundry.com/commercial-laundry",
+      "title": "Commercial and linen-hire enquiry",
+      "effective_label": "",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "home",
+      "url": "https://easylaundry.com/",
+      "title": "Current public offers and service overview",
+      "effective_label": "",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "vendor",
+      "url": "https://washjunkie.com/",
+      "title": "Wash Junkie staff operations contract",
+      "effective_label": "Early access",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "vendor-limits",
+      "url": "https://washjunkie.com/what-wash-junkie-does-not-do",
+      "title": "Product boundaries",
+      "effective_label": "",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "vendor-template",
+      "url": "https://washjunkie.com/laundry-order-tracking-template.csv",
+      "title": "Published downloadable order tracker",
+      "effective_label": "Illustrative March 2026 rows",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "vendor-pricing",
+      "url": "https://washjunkie.com/pricing",
+      "title": "WashCredit commercial model",
+      "effective_label": "Early access",
+      "retrieved_at": "2026-10-13"
+    },
+    {
+      "id": "vendor-contact",
+      "url": "https://washjunkie.com/contact",
+      "title": "Business contact",
+      "effective_label": "",
+      "retrieved_at": "2026-10-13"
+    }
+  ],
+  "rates": [
+    {
+      "id": "wash-fold-standard",
+      "label": "Service wash — standard",
+      "category": "service-wash",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£16.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 1600,
+        "upper_minor": 1600,
+        "unit": "published load",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Wash, dry and fold; the published load labels have no stated kg capacity."
+      ],
+      "attributes": {
+        "load_label": "standard",
+        "weight_kg": null
+      }
+    },
+    {
+      "id": "wash-fold-large",
+      "label": "Service wash — large",
+      "category": "service-wash",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£22.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 2200,
+        "upper_minor": 2200,
+        "unit": "published load",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Wash, dry and fold; the published load labels have no stated kg capacity."
+      ],
+      "attributes": {
+        "load_label": "large",
+        "weight_kg": null
+      }
+    },
+    {
+      "id": "wash-fold-extra-large",
+      "label": "Service wash — extra-large",
+      "category": "service-wash",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£26.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 2600,
+        "upper_minor": 2600,
+        "unit": "published load",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Wash, dry and fold; the published load labels have no stated kg capacity."
+      ],
+      "attributes": {
+        "load_label": "extra-large",
+        "weight_kg": null
+      }
+    },
+    {
+      "id": "wdi-5kg",
+      "label": "Wash, dry and iron — 5 kg bag",
+      "category": "wash-dry-iron",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£23.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 2300,
+        "upper_minor": 2300,
+        "unit": "5 kg bag",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Keep the base bag distinct from extra kilograms; no rounding rule is published."
+      ],
+      "attributes": {
+        "included_kg": 5
+      }
+    },
+    {
+      "id": "wdi-extra-kg",
+      "label": "Wash, dry and iron — extra kilogram",
+      "category": "wash-dry-iron",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "+ £5.00/kg",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 500,
+        "upper_minor": 500,
+        "unit": "kg",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [
+        "wdi-5kg"
+      ],
+      "qualifiers": [],
+      "attributes": {},
+      "role": "add-on",
+      "display": "+ £5.00/kg"
+    },
+    {
+      "id": "sports-kit",
+      "label": "Rugby / football kit",
+      "category": "sports-kit",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£26.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 2600,
+        "upper_minor": 2600,
+        "unit": "kit",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "The page does not state a garment count or a weight limit for the kit."
+      ],
+      "attributes": {}
+    },
+    {
+      "id": "wash-only-standard",
+      "label": "Wash only — standard",
+      "category": "wash-only",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£9.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 900,
+        "upper_minor": 900,
+        "unit": "published load",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [],
+      "attributes": {
+        "load_label": "standard",
+        "weight_kg": null
+      }
+    },
+    {
+      "id": "wash-only-large",
+      "label": "Wash only — large",
+      "category": "wash-only",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£12.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 1200,
+        "upper_minor": 1200,
+        "unit": "published load",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [],
+      "attributes": {
+        "load_label": "large",
+        "weight_kg": null
+      }
+    },
+    {
+      "id": "wash-only-extra-large",
+      "label": "Wash only — extra-large",
+      "category": "wash-only",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£14.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 1400,
+        "upper_minor": 1400,
+        "unit": "published load",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [],
+      "attributes": {
+        "load_label": "extra-large",
+        "weight_kg": null
+      }
+    },
+    {
+      "id": "iron-kg",
+      "label": "Ironing — measured weight",
+      "category": "ironing",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£4.50/kg + 60p extras",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 450,
+        "upper_minor": 450,
+        "unit": "kg",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Record the actual measured weight and separately selected extras; do not invent weight rounding."
+      ],
+      "attributes": {},
+      "display": "£4.50/kg + 60p extras"
+    },
+    {
+      "id": "iron-extra",
+      "label": "Ironing — assessed extra",
+      "category": "ironing",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "60p extras",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 60,
+        "upper_minor": 60,
+        "unit": "extra",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [
+        "iron-kg"
+      ],
+      "qualifiers": [
+        "The ironing page gives collars and cuffs as examples; the count/basis for each charged extra needs staff assessment."
+      ],
+      "attributes": {},
+      "role": "add-on",
+      "display": "60p extras"
+    },
+    {
+      "id": "collection-inner",
+      "label": "Collection and delivery — inner zone",
+      "category": "delivery",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£3.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 300,
+        "upper_minor": 300,
+        "unit": "order",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "One combined collection/delivery charge per domestic order; part of the £15 minimum."
+      ],
+      "attributes": {
+        "zone": "inner"
+      }
+    },
+    {
+      "id": "collection-outer",
+      "label": "Collection and delivery — outer zone",
+      "category": "delivery",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "up to £5.00",
+      "pricing": {
+        "kind": "up-to",
+        "amount_minor": null,
+        "lower_minor": null,
+        "upper_minor": 500,
+        "unit": "order",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "£5 is a published ceiling, not the exact fee for every outer address; office selects the actual charge."
+      ],
+      "attributes": {
+        "zone": "outer"
+      },
+      "kind": "up-to",
+      "display": "up to £5.00"
+    },
+    {
+      "id": "duvet-single-polyester",
+      "label": "Duvet — single — polyester",
+      "category": "duvet",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£25.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 2500,
+        "upper_minor": 2500,
+        "unit": "duvet",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [],
+      "attributes": {
+        "size": "single",
+        "fill": "polyester",
+        "service": "published duvet cleaning"
+      }
+    },
+    {
+      "id": "duvet-single-feather",
+      "label": "Duvet — single — feather",
+      "category": "duvet",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£27.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 2700,
+        "upper_minor": 2700,
+        "unit": "duvet",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [],
+      "attributes": {
+        "size": "single",
+        "fill": "feather",
+        "service": "published duvet cleaning"
+      }
+    },
+    {
+      "id": "duvet-single-wash-only",
+      "label": "Duvet — single — wash-only",
+      "category": "duvet",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£15.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 1500,
+        "upper_minor": 1500,
+        "unit": "duvet",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "The wash-only column does not specify a separate polyester/feather price."
+      ],
+      "attributes": {
+        "size": "single",
+        "fill": null,
+        "service": "wash only"
+      }
+    },
+    {
+      "id": "duvet-double-polyester",
+      "label": "Duvet — double — polyester",
+      "category": "duvet",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£27.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 2700,
+        "upper_minor": 2700,
+        "unit": "duvet",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [],
+      "attributes": {
+        "size": "double",
+        "fill": "polyester",
+        "service": "published duvet cleaning"
+      }
+    },
+    {
+      "id": "duvet-double-feather",
+      "label": "Duvet — double — feather",
+      "category": "duvet",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£29.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 2900,
+        "upper_minor": 2900,
+        "unit": "duvet",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [],
+      "attributes": {
+        "size": "double",
+        "fill": "feather",
+        "service": "published duvet cleaning"
+      }
+    },
+    {
+      "id": "duvet-double-wash-only",
+      "label": "Duvet — double — wash-only",
+      "category": "duvet",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£17.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 1700,
+        "upper_minor": 1700,
+        "unit": "duvet",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "The wash-only column does not specify a separate polyester/feather price."
+      ],
+      "attributes": {
+        "size": "double",
+        "fill": null,
+        "service": "wash only"
+      }
+    },
+    {
+      "id": "duvet-king-super-king-polyester",
+      "label": "Duvet — king super king — polyester",
+      "category": "duvet",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£29.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 2900,
+        "upper_minor": 2900,
+        "unit": "duvet",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [],
+      "attributes": {
+        "size": "king-super-king",
+        "fill": "polyester",
+        "service": "published duvet cleaning"
+      }
+    },
+    {
+      "id": "duvet-king-super-king-feather",
+      "label": "Duvet — king super king — feather",
+      "category": "duvet",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£33.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 3300,
+        "upper_minor": 3300,
+        "unit": "duvet",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [],
+      "attributes": {
+        "size": "king-super-king",
+        "fill": "feather",
+        "service": "published duvet cleaning"
+      }
+    },
+    {
+      "id": "duvet-king-super-king-wash-only",
+      "label": "Duvet — king super king — wash-only",
+      "category": "duvet",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "£19.00",
+      "pricing": {
+        "kind": "fixed",
+        "amount_minor": 1900,
+        "upper_minor": 1900,
+        "unit": "duvet",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2026-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "The wash-only column does not specify a separate polyester/feather price."
+      ],
+      "attributes": {
+        "size": "king-super-king",
+        "fill": null,
+        "service": "wash only"
+      }
+    },
+    {
+      "id": "dry-suit-two-piece",
+      "label": "2-piece gents / ladies trouser or skirt suit",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £18.50",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1850,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £18.50"
+    },
+    {
+      "id": "dry-suit-three-piece",
+      "label": "3-piece gents / ladies trouser suit",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £23.50",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 2350,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £23.50"
+    },
+    {
+      "id": "dry-dinner-suit",
+      "label": "2-piece dinner suit",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £22.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 2200,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £22.00"
+    },
+    {
+      "id": "dry-linen-suit",
+      "label": "2-piece linen suit",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £22.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 2200,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £22.00"
+    },
+    {
+      "id": "dry-jacket",
+      "label": "Jacket",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £12.50",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1250,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £12.50"
+    },
+    {
+      "id": "dry-waistcoat",
+      "label": "Waistcoat",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £8.50",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 850,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £8.50"
+    },
+    {
+      "id": "dry-trousers",
+      "label": "Trousers",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £9.50",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 950,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £9.50"
+    },
+    {
+      "id": "dry-skirt",
+      "label": "Skirt",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £11.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1100,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £11.00"
+    },
+    {
+      "id": "dry-pleated-skirt",
+      "label": "Pleated skirt",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £16.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1600,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £16.00"
+    },
+    {
+      "id": "dry-tie",
+      "label": "Tie",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £7.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 700,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £7.00"
+    },
+    {
+      "id": "dry-scarf",
+      "label": "Scarf",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £9.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 900,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £9.00"
+    },
+    {
+      "id": "dry-coat",
+      "label": "Coat",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £17.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1700,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £17.00"
+    },
+    {
+      "id": "dry-dress",
+      "label": "Dress",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £19.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1900,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £19.00"
+    },
+    {
+      "id": "dry-long-dress",
+      "label": "Long dress",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £26.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 2600,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £26.00"
+    },
+    {
+      "id": "dry-delicate-blouse",
+      "label": "Silk or delicate blouse",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £12.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1200,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £12.00"
+    },
+    {
+      "id": "dry-knitwear",
+      "label": "Jumper / knitwear",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £11.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1100,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £11.00"
+    },
+    {
+      "id": "dry-shirt",
+      "label": "Shirt",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £7.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 700,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £7.00"
+    },
+    {
+      "id": "dry-duvet",
+      "label": "Duvet",
+      "category": "dry-cleaning",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £32.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 3200,
+        "upper_minor": null,
+        "unit": "item",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price follows style, fabric and stain assessment."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £32.00"
+    },
+    {
+      "id": "repair-trouser-shorten",
+      "label": "Trouser shorten",
+      "category": "alterations",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £18.50",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1850,
+        "upper_minor": null,
+        "unit": "job",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price depends on garment and fabric."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £18.50"
+    },
+    {
+      "id": "repair-dress-shorten",
+      "label": "Dress shorten",
+      "category": "alterations",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £19.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1900,
+        "upper_minor": null,
+        "unit": "job",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price depends on garment and fabric."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £19.00"
+    },
+    {
+      "id": "repair-trouser-waist",
+      "label": "Trouser waist alteration",
+      "category": "alterations",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £19.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1900,
+        "upper_minor": null,
+        "unit": "job",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price depends on garment and fabric."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £19.00"
+    },
+    {
+      "id": "repair-trouser-pocket",
+      "label": "Trouser pocket",
+      "category": "alterations",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £12.50",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1250,
+        "upper_minor": null,
+        "unit": "job",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price depends on garment and fabric."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £12.50"
+    },
+    {
+      "id": "repair-zip",
+      "label": "Trouser / skirt zip",
+      "category": "alterations",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £17.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 1700,
+        "upper_minor": null,
+        "unit": "job",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price depends on garment and fabric."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £17.00"
+    },
+    {
+      "id": "repair-sleeves",
+      "label": "Coat / jacket sleeves shorten",
+      "category": "alterations",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "from £29.00",
+      "pricing": {
+        "kind": "from",
+        "amount_minor": 2900,
+        "upper_minor": null,
+        "unit": "job",
+        "tax_basis": "not stated"
+      },
+      "effective_on": "2025-04-01",
+      "applies_to": [],
+      "qualifiers": [
+        "Specialist partner; published guide lead time one week. Final price depends on garment and fabric."
+      ],
+      "attributes": {},
+      "kind": "from",
+      "display": "from £29.00"
+    },
+    {
+      "id": "commercial-bespoke",
+      "label": "Commercial laundry / linen hire",
+      "category": "commercial",
+      "source_id": "price-list",
+      "currency": "GBP",
+      "published_display": "Bespoke",
+      "pricing": {
+        "kind": "quote",
+        "amount_minor": null,
+        "upper_minor": null,
+        "unit": "reviewed arrangement",
+        "tax_basis": "not stated"
+      },
+      "effective_on": null,
+      "applies_to": [],
+      "qualifiers": [
+        "Use an actual office-entered quote; published commercial collection and delivery are included. No domestic minimum or credit terms are inherited."
+      ],
+      "attributes": {},
+      "kind": "quote"
+    }
+  ],
+  "locations": [
+    {
+      "id": "burbage",
+      "name": "Burbage shop",
+      "address": "73 Boyslade Road, Burbage LE10 2RF",
+      "phone": "01455 632152",
+      "role": "staffed-shop",
+      "source_id": "booking",
+      "opening": {
+        "monday_friday": "09:00–16:00",
+        "saturday": "09:00–15:00",
+        "sunday": "closed"
+      }
+    },
+    {
+      "id": "earl-shilton",
+      "name": "Earl Shilton shop",
+      "address": "50 Wood Street, Earl Shilton LE9 7ND",
+      "phone": "01455 844368",
+      "role": "staffed-shop",
+      "source_id": "booking",
+      "opening": {
+        "monday_friday": "09:00–16:00",
+        "saturday": "09:00–15:00",
+        "sunday": "closed"
+      }
+    },
+    {
+      "id": "head-office",
+      "name": "Head office",
+      "address": "1a Clarendon Road, Hinckley LE10 0PJ",
+      "role": "office",
+      "source_id": "contact"
+    },
+    {
+      "id": "nuneaton",
+      "name": "Nuneaton collection area",
+      "role": "coverage-only",
+      "postal_prefixes": [
+        "CV10",
+        "CV11"
+      ],
+      "source_id": "booking",
+      "note": "Queens Road shop is closed; retain collection coverage rather than create a third operating shop."
+    }
+  ],
+  "delivery_zones": [
+    {
+      "id": "inner",
+      "source_id": "collection",
+      "rate_id": "collection-inner",
+      "areas": [
+        "Hinckley",
+        "Burbage",
+        "Earl Shilton",
+        "Barwell",
+        "Nuneaton",
+        "Stoke Golding",
+        "Higham on the Hill",
+        "Sapcote",
+        "Stoney Stanton",
+        "Sharnford",
+        "Broughton Astley",
+        "surrounding villages"
+      ],
+      "exact_postcode_map": null
+    },
+    {
+      "id": "outer",
+      "source_id": "collection",
+      "rate_id": "collection-outer",
+      "areas": [
+        "Leicester fringe",
+        "Lutterworth",
+        "Rugby",
+        "Coventry fringe",
+        "Market Bosworth",
+        "Desford",
+        "Enderby",
+        "Narborough",
+        "Bedworth",
+        "Bulkington",
+        "Wolvey",
+        "surrounding areas"
+      ],
+      "exact_postcode_map": null
+    }
+  ],
+  "minimums": [
+    {
+      "id": "domestic-collection-minimum",
+      "source_id": "price-list",
+      "amount_minor": 1500,
+      "currency": "GBP",
+      "scope": "domestic collection/delivery order",
+      "includes": [
+        "service charges",
+        "one collection/delivery charge"
+      ],
+      "exclude_scope": [
+        "shop drop-off",
+        "commercial bespoke arrangement"
+      ],
+      "published_display": "£15 minimum service cost, including delivery",
+      "application_note": "Review the assessed order total; if adding an adjustment to meet the minimum, display it explicitly. Discount/minimum ordering is not published."
+    }
+  ],
+  "promotions": [
+    {
+      "id": "october-duvet",
+      "source_id": "duvets",
+      "description": "Published October duvet-cleaning offer",
+      "percent": 30,
+      "month": 10,
+      "year": 2026,
+      "scope": "Duvet laundering, all sizes; price varies by filling and size",
+      "default_enabled": false,
+      "review_fields": [
+        "wash-only column eligibility",
+        "eligible charge base versus delivery",
+        "minimum ordering"
+      ],
+      "note": "Direct original HTML includes the complete dated campaign terms; the older indexed text did not. Care-label suitability still needs assessment.",
+      "starts_on": "2026-10-01",
+      "ends_on": "2026-10-31",
+      "excluded_categories": [
+        "dry-cleaning"
+      ],
+      "combination": "cannot combine with any other offer",
+      "code_required": false
+    },
+    {
+      "id": "first-order-opt-in",
+      "source_id": "booking",
+      "description": "Marketing email opt-in with first-order offer",
+      "percent": 20,
+      "default_enabled": false,
+      "requires_explicit_consent": true,
+      "review_fields": [
+        "eligible charge base",
+        "actual first-order eligibility",
+        "combination with October offer",
+        "minimum ordering"
+      ],
+      "note": "Opt-in is optional; booking says details arrive by email. Do not apply to an order without actual eligibility and an explicit selected basis."
+    }
+  ],
+  "intake_fields": [
+    {
+      "id": "location-type-0",
+      "name": "location-type",
+      "type": "radio",
+      "value": "collection-delivery",
+      "required_attribute": true,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "location-type-1",
+      "name": "location-type",
+      "type": "radio",
+      "value": "drop-off",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-postcode-check",
+      "name": "",
+      "type": "text",
+      "value": "",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "shop-3",
+      "name": "shop",
+      "type": "radio",
+      "value": "burbage",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "shop-4",
+      "name": "shop",
+      "type": "radio",
+      "value": "earl-shilton",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "service-5",
+      "name": "service",
+      "type": "checkbox",
+      "value": "service-wash",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "service-6",
+      "name": "service",
+      "type": "checkbox",
+      "value": "wash-dry-iron",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "service-7",
+      "name": "service",
+      "type": "checkbox",
+      "value": "wash-only",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "service-8",
+      "name": "service",
+      "type": "checkbox",
+      "value": "ironing",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "service-9",
+      "name": "service",
+      "type": "checkbox",
+      "value": "duvet-cleaning",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "service-10",
+      "name": "service",
+      "type": "checkbox",
+      "value": "sports-kit",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "service-11",
+      "name": "service",
+      "type": "checkbox",
+      "value": "dry-cleaning",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "service-12",
+      "name": "service",
+      "type": "checkbox",
+      "value": "repairs",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "service-13",
+      "name": "service",
+      "type": "checkbox",
+      "value": "commercial",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "book-name",
+      "name": "name",
+      "type": "text",
+      "value": "",
+      "required_attribute": true,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-email",
+      "name": "email",
+      "type": "email",
+      "value": "",
+      "required_attribute": true,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-phone",
+      "name": "phone",
+      "type": "tel",
+      "value": "",
+      "required_attribute": true,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-address1",
+      "name": "address1",
+      "type": "text",
+      "value": "",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "book-address2",
+      "name": "address2",
+      "type": "text",
+      "value": "",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-city",
+      "name": "city",
+      "type": "text",
+      "value": "",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "book-postcode",
+      "name": "postcode",
+      "type": "text",
+      "value": "",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": "Conditional JavaScript validation was not executed; absence of HTML required attribute is not a conclusion that this field is operationally optional."
+    },
+    {
+      "id": "care-21",
+      "name": "care",
+      "type": "checkbox",
+      "value": "Items that must be washed cool",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "care-22",
+      "name": "care",
+      "type": "checkbox",
+      "value": "Items that must not be tumble dried",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "care-23",
+      "name": "care",
+      "type": "checkbox",
+      "value": "Delicates or hand wash items",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "care-24",
+      "name": "care",
+      "type": "checkbox",
+      "value": "Heavily soiled items",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "care-25",
+      "name": "care",
+      "type": "checkbox",
+      "value": "New or brightly coloured items",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "care-26",
+      "name": "care",
+      "type": "checkbox",
+      "value": "Please call me to discuss my items",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-notes",
+      "name": "notes",
+      "type": "textarea",
+      "value": "",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-marketing",
+      "name": "marketing",
+      "type": "checkbox",
+      "value": "",
+      "required_attribute": false,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-date",
+      "name": "date",
+      "type": "date",
+      "value": "",
+      "required_attribute": true,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-time",
+      "name": "time",
+      "type": "select",
+      "value": "",
+      "required_attribute": true,
+      "source_id": "booking",
+      "notes": ""
+    },
+    {
+      "id": "book-terms",
+      "name": "terms",
+      "type": "checkbox",
+      "value": "",
+      "required_attribute": true,
+      "source_id": "booking",
+      "notes": ""
+    }
+  ],
+  "care_flags": [
+    "Items that must be washed cool",
+    "Items that must not be tumble dried",
+    "Delicates or hand wash items",
+    "Heavily soiled items",
+    "New or brightly coloured items",
+    "Please call me to discuss my items"
+  ],
+  "slot_options": [
+    "08:00–12:00",
+    "09:00–13:00",
+    "flexible"
+  ],
+  "observations": [
+    {
+      "id": "payment-current-booking",
+      "source_id": "booking",
+      "topic": "payment timing",
+      "value": "No payment at booking; invoice after assessment and completed job; external card/BACS/PayPal payment using order reference.",
+      "recommended_default": true
+    },
+    {
+      "id": "payment-older-faq",
+      "source_id": "faq",
+      "topic": "payment timing",
+      "value": "Collection charge paid on booking and service balance after assessment.",
+      "recommended_default": false
+    },
+    {
+      "id": "payment-terms",
+      "source_id": "terms",
+      "topic": "payment timing",
+      "value": "Payment due on collection or delivery of cleaned items unless agreed otherwise.",
+      "recommended_default": false
+    },
+    {
+      "id": "dry-partner-week",
+      "source_id": "price-list",
+      "topic": "dry-cleaning lead time",
+      "value": "Specialist partner; one-week lead time.",
+      "recommended_default": true
+    },
+    {
+      "id": "dry-faq-alternative",
+      "source_id": "faq",
+      "topic": "dry-cleaning lead time",
+      "value": "FAQ describes two to three working days and an on-premises process.",
+      "recommended_default": false
+    },
+    {
+      "id": "repair-partner-week",
+      "source_id": "price-list",
+      "topic": "alteration lead time",
+      "value": "Specialist partner; one-week lead time.",
+      "recommended_default": true
+    },
+    {
+      "id": "domestic-return",
+      "source_id": "booking",
+      "topic": "domestic turnaround",
+      "value": "Usually same day to 48 hours; a requested slot requires office confirmation.",
+      "recommended_default": true
+    },
+    {
+      "id": "three-shops-legacy",
+      "source_id": "duvets",
+      "topic": "branch count",
+      "value": "Legacy wording says three shops; page branch details instead show Burbage, Earl Shilton and Nuneaton doorstep coverage.",
+      "recommended_default": false
+    },
+    {
+      "id": "two-shops-current",
+      "source_id": "booking",
+      "topic": "branch count",
+      "value": "Burbage and Earl Shilton are staffed; Queens Road Nuneaton is closed.",
+      "recommended_default": true
+    }
+  ],
+  "policies": [
+    {
+      "id": "request-not-booking",
+      "source_id": "booking",
+      "kind": "scheduling",
+      "text": "A preferred date or slot is a request. Staff check the route and confirm by phone, WhatsApp or email before scheduling the driver."
+    },
+    {
+      "id": "collection-days",
+      "source_id": "booking",
+      "kind": "calendar",
+      "text": "Collections and deliveries run Monday to Friday. Saturday is shop drop-off only; Sunday is closed. Office confirmation remains necessary."
+    },
+    {
+      "id": "no-charge-before-collection",
+      "source_id": "booking",
+      "kind": "cancellation",
+      "text": "Cancellation before collection has no charge. Later cancellation charges are not specified."
+    },
+    {
+      "id": "assessed-prices",
+      "source_id": "booking",
+      "kind": "quotation",
+      "text": "Displayed prices are indicative; staff assess the actual items before confirming the service charge."
+    },
+    {
+      "id": "quote-preservation",
+      "source_id": "terms",
+      "kind": "quotation",
+      "text": "Later tariff changes do not alter orders already placed. Additional work costs are discussed with the customer before proceeding."
+    },
+    {
+      "id": "care-assessment",
+      "source_id": "terms",
+      "kind": "care",
+      "text": "Record declared care needs, pre-existing condition, labels, sorted colours and advised temperatures. Staff may refuse unsuitable or hazardous items; no automatic suitability conclusion is generated."
+    },
+    {
+      "id": "collection-access",
+      "source_id": "terms",
+      "kind": "handoff",
+      "text": "Items must be ready and accessible for the agreed collection. Failed access may require rearrangement. Exact times are not guaranteed."
+    },
+    {
+      "id": "commercial-arrangement",
+      "source_id": "commercial",
+      "kind": "commercial",
+      "text": "Commercial prices are bespoke by volume and frequency; collection/delivery included. Daily, weekly or fortnightly weekday schedules are offered; no minimum commercial order is stated."
+    },
+    {
+      "id": "commercial-invoicing",
+      "source_id": "terms",
+      "kind": "commercial",
+      "text": "Commercial and regular customers may have an individually agreed invoice arrangement. No automatic net terms or billing cadence is published."
+    },
+    {
+      "id": "complaint-window",
+      "source_id": "terms",
+      "kind": "complaint",
+      "text": "The shop asks for a complaint within 48 hours of receipt and reviews it. A reclean, refund or credit is discretionary, recorded as an actual decision."
+    },
+    {
+      "id": "uncollected",
+      "source_id": "terms",
+      "kind": "uncollected",
+      "text": "The published terms discuss items uncollected for over 90 days after notification. A workbench should retain notification and review records, not automatically dispose of property."
+    },
+    {
+      "id": "payment-recording",
+      "source_id": "vendor-limits",
+      "kind": "product boundary",
+      "text": "Wash Junkie records payments; it does not move money, process cards, implement refunds or replace accounting. External payment references can be recorded."
+    },
+    {
+      "id": "existing-web-flow",
+      "source_id": "vendor-limits",
+      "kind": "product boundary",
+      "text": "Keep the customer-facing Easy Laundry booking and Pay Your Bill tools; Wash Junkie currently has no customer app, public API or integrations."
+    }
+  ],
+  "issues": [
+    {
+      "id": "payment-source-conflict",
+      "source_ids": [
+        "booking",
+        "faq",
+        "terms"
+      ],
+      "title": "Current booking versus older payment wording",
+      "required_choice": "Keep source observations; use current booking workflow for the starter, allow a reasoned office override. Never charge the collection fee twice."
+    },
+    {
+      "id": "partner-turnaround-conflict",
+      "source_ids": [
+        "price-list",
+        "faq"
+      ],
+      "title": "Specialist partner and turnaround alternatives",
+      "required_choice": "Retain the current price-list partner week and the shorter FAQ claim. Use an actual promised date, not an unconditional calculation."
+    },
+    {
+      "id": "branch-count-conflict",
+      "source_ids": [
+        "booking",
+        "duvets",
+        "commercial"
+      ],
+      "title": "Legacy three-shop wording",
+      "required_choice": "Starter has only two active shops; Nuneaton remains coverage."
+    },
+    {
+      "id": "weight-bases",
+      "source_ids": [
+        "price-list"
+      ],
+      "title": "Load sizes and measured weights are different units",
+      "required_choice": "Never infer kg capacity for standard/large/XL. Record actual WDI and ironing weight; operator selects rounding if needed."
+    },
+    {
+      "id": "outer-fee",
+      "source_ids": [
+        "price-list"
+      ],
+      "title": "Outer fee is up to £5",
+      "required_choice": "Require actual selected fee rather than treating the maximum as a fixed price."
+    },
+    {
+      "id": "tax-unknown",
+      "source_ids": [
+        "price-list",
+        "terms"
+      ],
+      "title": "No published VAT/tax basis",
+      "required_choice": "Retain source £ totals and an explicitly reviewed tax setting. Do not silently add VAT or claim inclusive/exclusive status."
+    },
+    {
+      "id": "discount-basis",
+      "source_ids": [
+        "booking",
+        "price-list"
+      ],
+      "title": "Promotions need explicit eligibility and charge scope",
+      "required_choice": "The October 2026 duvet offer is 30%, excludes dry cleaning and cannot stack with any other offer. Keep actual order date and approved charge scope. First-order eligibility, wash-only scope and minimum ordering remain explicit choices."
+    },
+    {
+      "id": "tracker-not-import",
+      "source_ids": [
+        "vendor-template",
+        "vendor-limits"
+      ],
+      "title": "Downloadable tracker is not a native importer",
+      "required_choice": "Export a neutral copy of the published 12-column layout and source-linked richer files; do not claim one-click import."
+    }
+  ],
+  "vendor_contract": {
+    "staff_orders": true,
+    "per_outlet_catalogue": true,
+    "machine_cycle_tracking": true,
+    "driver_assignment": true,
+    "recorded_payments": true,
+    "offline_change_queue": true,
+    "customer_app": false,
+    "payment_processing": false,
+    "public_api": false,
+    "integrations": false,
+    "gps_route_optimisation": false,
+    "accounting": false,
+    "bulk_import_contract": null,
+    "contact_url": "mailto:info@washjunkie.com",
+    "source_ids": [
+      "vendor",
+      "vendor-limits",
+      "vendor-pricing",
+      "vendor-contact"
+    ]
+  },
+  "published_tracker": {
+    "source_id": "vendor-template",
+    "headers": [
+      "Order ref",
+      "Date in",
+      "Customer",
+      "Phone",
+      "Items",
+      "Service",
+      "Promised",
+      "Status",
+      "Price",
+      "Paid",
+      "Outstanding",
+      "Notes"
+    ],
+    "purpose": "Public downloadable order tracker; not a verified native import schema",
+    "licence_note": "Publisher explicitly permits use and change without attribution",
+    "original_csv": "Order ref,Date in,Customer,Phone,Items,Service,Promised,Status,Price,Paid,Outstanding,Notes\nA1001,2026-03-02,Maya Reyes,+1 555 0142,4 shirts / 1 coat,Wash & fold,2026-03-04,Ready,24.00,24.00,0.00,Coat has a loose button\nA1002,2026-03-02,Jonas Weber,+44 20 7946 0018,1 suit / 2 shirts,Dry clean,2026-03-05,In wash,62.00,30.00,32.00,Paid half at the counter\nA1003,2026-03-03,Aisha Rahman,+971 50 123 4567,6 items,Wash & iron,2026-03-05,Sorting,37.00,0.00,37.00,\nA1004,2026-03-03,Tomas Herrera,+34 600 123 456,2 duvets,Bulky,2026-03-07,Out for delivery,48.00,48.00,0.00,Leave with the concierge\nA1005,2026-03-04,Priya Nair,+91 98200 12345,3 items,Wash & fold,2026-03-06,Collected,22.00,22.00,0.00,\n,,,,,,,,,,,\nHOW TO USE THIS,,,,,,,,,,,\n\"1. Delete the five example rows above and start typing your own.\",,,,,,,,,,,\n\"2. Order ref: give every order a short code and write it on the bag. Letters plus digits beats a plain number - 'A1002' is harder to mishear on the phone than '1002'.\",,,,,,,,,,,\n\"3. Status: keep to a short fixed list so you can filter. Suggested: Taken in / Sorting / In wash / Drying / Folding / Ready / Out for delivery / Collected.\",,,,,,,,,,,\n\"4. Outstanding: set this to =Price-Paid so it keeps itself right, and filter on it to see who owes you money.\",,,,,,,,,,,\n\"5. Promised: the date you told the customer. Sort by it every morning - that is your run order for the day.\",,,,,,,,,,,\n\"6. One sheet per month keeps it fast. Name them 2026-03, 2026-04 and so on so they sort properly.\",,,,,,,,,,,\n,,,,,,,,,,,\n\"A warning worth having: if two people have this file open at once, the one who saves last wins and nobody is told. If that is happening to you, it is the point at which a spreadsheet stops being the right tool.\",,,,,,,,,,,\n,,,,,,,,,,,\n\"Made by Wash Junkie - management software for laundry and dry cleaning businesses. https://washjunkie.com\",,,,,,,,,,,\n\"Free to use and change. No attribution required.\",,,,,,,,,,,\n",
+    "example_rows_are_fictional": true,
+    "starter_import_example_rows": false
+  },
+  "initial_operational_records": {
+    "customers": [],
+    "orders": [],
+    "assessments": [],
+    "quotes": [],
+    "machines": [],
+    "cycles": [],
+    "drivers": [],
+    "routes": [],
+    "invoices": [],
+    "payments": [],
+    "complaints": []
+  },
+  "scope_note": "This is a prepared public-source operating model for the software vendor. Empty actual records remain empty. Customer-facing code and examples use factual source fields and concise operating paraphrases; raw third-party HTML remains in the private research archive.",
+  "revision_note": "Revision 3 incorporates the complete dated October duvet campaign from the original public HTML: 1–31 October 2026, 30%, no code, dry cleaning excluded and no offer stacking. Revision 2 outer-fee ceiling remains."
+}
