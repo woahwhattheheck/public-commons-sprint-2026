@@ -190,8 +190,14 @@ operation IDs, actual returned context/station/parcel IDs, screenshot paths and
 download hashes. Queue request identity is persisted when its request is issued
 and the actual task ID as soon as its response arrives. On interruption it
 recovers that original task from the retained server state; failed or interrupted
-tasks use the visible **Resume** control. An unreturned original task remains
-identified in that same journal instead of creating another queue intent.
+tasks use the visible **Resume** control. The journal keeps the authored request
+operation ID separately from the accepted task's operation ID: the existing
+operator can coalesce an identical active request into that earlier task. If a
+submission response was interrupted before its task ID was recorded, recovery
+requires the exact Workspace, action, source payload and native request SHA.
+An unambiguous matching retained task is reused; absent or ambiguous matches
+leave the original request identified for recovery without another queue intent.
+A recorded task ID must still match that complete original request.
 
 The original Sources report segment still permits no newly submitted actions.
 The separate editable continuation permits only the explicit, source-bound

@@ -17,6 +17,41 @@ const sourceChoices = rows => rows.map(({ source_collection_id, source_id }) =>
   ({ source_collection_id, source_id }));
 const terminal = task => ['complete', 'failed', 'interrupted', 'cancelled'].includes(task?.state);
 
+function assessmentAdoptionRequest(workspace, source) {
+  const request = { workspace, action: 'assessment.context.adopt_source', payload: source };
+  return { request, sha256: createHash('sha256').update(canonical(request)).digest('hex') };
+}
+function matchesAssessmentAdoptionTask(task, request, sha256) {
+  return task?.workspace === request.workspace && task.action === request.action &&
+    canonical(task.payload) === canonical(request.payload) && task.request_sha256 === sha256;
+}
+function retainedAssessmentAdoptionTask(tasks, previous, request, sha256) {
+  if (previous?.source) requireValue(canonical(previous.source) === canonical(request.payload),
+    'The receiving checkpoint selects another original assessment source.');
+  if (previous?.request_sha256) requireValue(previous.request_sha256 === sha256,
+    'The receiving checkpoint changed its original queued request.');
+  const matching = tasks.filter(task => matchesAssessmentAdoptionTask(task, request, sha256));
+  if (previous?.task_id) {
+    const task = tasks.find(item => item.id === previous.task_id);
+    requireValue(task && matchesAssessmentAdoptionTask(task, request, sha256),
+      'Retain the original source receiving task and exact request before resuming: ' + previous.task_id);
+    return task;
+  }
+  const requestOperation = previous?.request_operation_id || previous?.operation_id;
+  if (requestOperation) {
+    const exact = matching.filter(item => item.operation_id === requestOperation);
+    if (exact.length === 1) return exact[0];
+    requireValue(!exact.length, 'The original operation has more than one retained task.');
+    // Operator.submit may bind this authored operation to an already active
+    // identical task. Its accepted task carries the earlier operation ID.
+    requireValue(matching.length === 1,
+      'Recover the accepted task for original source request ' + requestOperation +
+      ' before continuing; exact retained matches: ' + matching.map(item => item.id).join(', '));
+    return matching[0];
+  }
+  return matching.find(item => item.state === 'complete') || matching[0] || null;
+}
+
 async function identity(path) {
   const hash = createHash('sha256'); let bytes = 0;
   for await (const part of createReadStream(path)) { hash.update(part); bytes += part.length; }
@@ -441,12 +476,16 @@ export async function runReceivedAssessmentChapter({
       return;
     }
     const key = canonical(activeBinding), previous = journal.requests[key];
-    if (previous?.operation_id && previous.operation_id !== data.operation_id) {
+    const originalRequest = previous?.request_operation_id ||
+      (!previous?.task_id ? previous?.operation_id : null);
+    if (originalRequest && originalRequest !== data.operation_id) {
       requestFailure = Error('Source receiving replaced its original queue operation.');
       return;
     }
+    const queued = assessmentAdoptionRequest(workspace, activeBinding);
     journal.requests[key] = { ...previous, source: { ...activeBinding },
-      operation_id: data.operation_id, state: 'submitted' };
+      request_operation_id: data.operation_id, request_sha256: queued.sha256,
+      operation_id: previous?.operation_id || data.operation_id, state: 'submitted' };
     journal.submitted_actions.push({ workspace, action: data.action,
       operation_id: data.operation_id, source: { ...activeBinding } });
     checkpoint().catch(error => { requestFailure = error; });
@@ -611,20 +650,12 @@ export async function runReceivedAssessmentChapter({
   async function adopt(row, index) {
     const wanted = binding(row), key = token(row), previous = journal.requests[key];
     activeBinding = wanted;
+    const queued = assessmentAdoptionRequest(workspace, wanted);
     const sameResult = task => canonical(task.result?.source) === canonical(wanted);
-    const sameTask = task => task.workspace === workspace &&
-      task.action === 'assessment.context.adopt_source' &&
-      (canonical(task.payload) === canonical(wanted) || sameResult(task));
+    const sameTask = task => matchesAssessmentAdoptionTask(task, queued.request, queued.sha256);
     let state = await refreshState();
-    const owned = (state.tasks || []).filter(task =>
-      task.workspace === workspace && task.action === 'assessment.context.adopt_source');
-    let task = previous?.task_id ? owned.find(item => item.id === previous.task_id) :
-      previous?.operation_id ? owned.find(item => item.operation_id === previous.operation_id) :
-      owned.find(item => sameTask(item) && item.state === 'complete') || owned.find(sameTask);
-    requireValue(!previous?.task_id && !previous?.operation_id || task,
-      'Retain the original source receiving task before resuming: ' +
-      String(previous?.task_id || previous?.operation_id || ''));
-    if (task) requireValue(sameTask(task), 'The retained receiving task selects another original source.');
+    let task = retainedAssessmentAdoptionTask(state.tasks || [], previous,
+      queued.request, queued.sha256);
     if (task && ['failed', 'interrupted', 'cancelled'].includes(task.state)) {
       await taskDetails(task.id);
       const pending = page.waitForResponse(responseAt('/api/task/resume', { id: task.id }), { timeout });
@@ -639,8 +670,11 @@ export async function runReceivedAssessmentChapter({
       task = await originalJSON(await pending, 'Receive this original assessment source');
     }
     requireValue(task?.id && sameTask(task), 'The receiving UI submitted another source or Workspace.');
-    journal.requests[key] = { ...journal.requests[key], source: wanted, task_id: task.id,
-      operation_id: task.operation_id, state: task.state };
+    const submitted = journal.requests[key];
+    journal.requests[key] = { ...submitted, source: wanted, task_id: task.id,
+      request_operation_id: submitted?.request_operation_id ||
+        (!submitted?.task_id ? submitted?.operation_id : undefined),
+      request_sha256: queued.sha256, operation_id: task.operation_id, state: task.state };
     await checkpoint();
     const deadline = Date.now() + timeout;
     while (!terminal(task)) {
