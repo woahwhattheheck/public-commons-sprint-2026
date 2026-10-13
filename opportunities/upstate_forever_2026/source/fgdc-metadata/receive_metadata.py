@@ -149,7 +149,7 @@ def writer_examples(application, output, validator):
                 assert [x.tag for x in tree.find("spref/horizsys/planar/mapproj/albers")] == [
                     "stdparll", "stdparll", "longcm", "latprjo", "feast", "fnorth"]
             else:
-                assert value("spref/horizsys/planar/localp/localpd")
+                assert value("spref/horizsys/planar/gridsys/othergrd")
             if kind == "scenario_difference":
                 assert value("metainfo/metc/cntinfo/cntperp/cntper") == complete_contact["name"]
                 assert value("distinfo/distrib/cntinfo/cntaddr/postal") == "00000"
