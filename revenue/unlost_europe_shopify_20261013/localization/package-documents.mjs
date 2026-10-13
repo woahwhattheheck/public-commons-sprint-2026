@@ -2,20 +2,20 @@ import Core from '../runtime/tools/revenue_owner_console_20261010/lead_fulfillme
 import Sha from '../runtime/host/connected_sha256.cjs';
 import Zip from '../runtime/host/connected_zip.cjs';
 import Gzip from '../runtime/host/connected_gzip.cjs';
-import {renderCustomerDocumentViewer} from './customer-document-viewer.mjs';
+import {renderLocalizationPackageViewer} from './complete-package-viewer.mjs';
 
 export function buildPackageDocuments(working) {
  const packId=working?.pack?.id;
  if(packId!=='UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013')throw Error('Use the complete original Unlost working record');
- const at='2026-10-13T15:00:00.000Z';
+ const at='2026-10-13T15:55:00.000Z';
  const received=Core.applyLeadFulfillment({},{
-  operation_id:packId+':complete-document-receive-02',kind:'working-record-receive',
+  operation_id:packId+':complete-document-receive-03',kind:'working-record-receive',
   expected_root_sha256:Core.hash(Core.validateRoot({})),input:{bundle:working}
  },at);
  if(JSON.stringify(Core.leadFulfillmentExport(received.ledger,{packId,format:'working-record'}).value)!==JSON.stringify(working))throw Error('The complete original customer record changed on receiving');
- const outputs={},archives=[],panels=[],records=[];
+ const outputs={},archives=[],panels=[],records=[],allArchives=[];
  for(const kind of ['sample','paid']) {
-  const selected=Core.leadCustomerPackageSelection(received.ledger,packId+':'+kind+'-localization-package-03',packId);
+  const selected=Core.leadCustomerPackageSelection(received.ledger,packId+':'+kind+'-localization-package-04',packId);
   const entries=selected.files.map(file=>{
    const d=file.document,data=Zip.fromBase64(d.content_base64);
    if(data.length!==d.bytes||Sha.sha256Bytes(data).sha256!==d.sha256)throw Error('Original customer member differs: '+d.name);
@@ -30,13 +30,14 @@ export function buildPackageDocuments(working) {
   const archive={name:'Unlost-localization-'+kind+'.zip',title:selected.packet.title,quantity:selected.edition.leads.length,
    bytes:data.length,sha256:Sha.sha256Bytes(data).sha256,payload:Zip.base64(data),
    files:selected.files.map(f=>({name:f.document.name,bytes:f.document.bytes,sha256:f.document.sha256}))};
+  allArchives.push(archive);
   const raw=JSON.stringify({customer:'Unlost',packages:[archive]}),input=Zip.utf8(raw);
   const deflated=Gzip.deflateRawBytes(input,{huffman:'auto'}).data,gzip=new Uint8Array(deflated.length+18);
   gzip.set([31,139,8,0,0,0,0,0,0,255]);gzip.set(deflated,10);
   const trailer=new DataView(gzip.buffer);trailer.setUint32(gzip.length-8,Zip.crc32(input),true);trailer.setUint32(gzip.length-4,input.length,true);
   if(Zip.utf8Text(Gzip.gunzipBytes(gzip,{expected_bytes:input.length,max_output_bytes:input.length}).data)!==raw)throw Error('The complete document envelope did not reopen');
   const envelope={payload:Zip.base64(gzip),bytes:input.length,sha256:Sha.sha256Bytes(input).sha256};
-  const html=renderCustomerDocumentViewer({customer:archive.title,rootId:'unlost-'+kind+'-complete-customer-packages',envelope});
+  const html=renderLocalizationPackageViewer({customer:archive.title,rootId:'unlost-'+kind+'-complete-customer-packages',envelope});
   const identity=Sha.sha256Utf8(html);if(identity.bytes>256*1024)throw Error('Keep each complete edition within the existing Page limit');
   const panelName='Unlost-complete-'+kind+'-documents.html';
   outputs[archive.name]=data;outputs[panelName]=html;
@@ -44,6 +45,10 @@ export function buildPackageDocuments(working) {
   panels.push({edition:kind,name:panelName,...identity});
   records.push({edition:kind,packet:selected.packet,files:archive.files});
  }
+ const completeRaw=JSON.stringify({customer:'Unlost',packages:allArchives}),completeInput=Zip.utf8(completeRaw),completeDeflated=Gzip.deflateRawBytes(completeInput,{huffman:'auto'}).data,completeGzip=new Uint8Array(completeDeflated.length+18);
+ completeGzip.set([31,139,8,0,0,0,0,0,0,255]);completeGzip.set(completeDeflated,10);const completeTrailer=new DataView(completeGzip.buffer);completeTrailer.setUint32(completeGzip.length-8,Zip.crc32(completeInput),true);completeTrailer.setUint32(completeGzip.length-4,completeInput.length,true);
+ if(Zip.utf8Text(Gzip.gunzipBytes(completeGzip,{expected_bytes:completeInput.length,max_output_bytes:completeInput.length}).data)!==completeRaw)throw Error('Complete paired package envelope differs.');
+ outputs['Unlost-complete-packages.html']=renderLocalizationPackageViewer({customer:'Unlost localization — complete packages',rootId:'unlost-complete-customer-packages',envelope:{payload:Zip.base64(completeGzip),bytes:completeInput.length,sha256:Sha.sha256Bytes(completeInput).sha256}});
  const receipt={schema:'unlost.complete-customer-documents.v1',prepared_at:at,pack_id:packId,working_record_sha256:working.sha256,
   complete_record_received_equal:true,archives,panels,selections:records,
   source:{zip:'public-commons-sprint-2026@0546dccef76d47fac69abb17e0ddad213eaf5e23:host/connected_zip.cjs',
