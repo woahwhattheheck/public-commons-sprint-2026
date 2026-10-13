@@ -40,7 +40,7 @@ The same original streaming intake, SQLite commit, source/context identity, revi
 
 This module solves the complete vocabulary-context input. Select the flat business_data.resources CLI export for the current receiver. Nested Tile.serialize-only variants require their own explicit complete child inspection before acceptance.
 
-The current source adapter conservatively blocks disagreement between historical graph_publication_id and exporter-current publication_id. They are distinct native facts. Retain the actual historical graph for a historical instance; source records must never be rewritten to make those fields agree. The explicit native publication-policy integration is separate from this context receiver and must be selected before representing a historical instance as compatible.
+The explicit source_format="native_json" integration preserves historical graph_publication_id separately from exporter-current publication_id. The stored publication must bind the selected original graph edition; the exporter-current value is retained and validated separately. The existing business_data/resource choices keep their Starches interpretation. Select the native contract deliberately when joining this saved context to the original flat native business export. Source records are never rewritten to make distinct publication facts agree.
 
 ## Original publisher receiving exercise
 
