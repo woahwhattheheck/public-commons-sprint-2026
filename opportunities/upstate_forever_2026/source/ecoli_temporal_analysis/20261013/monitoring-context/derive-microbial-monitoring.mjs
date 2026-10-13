@@ -1,4 +1,4 @@
-import {buildOutputs,csvOutput,parseCSV} from "../analysis.mjs";
+import {buildOutputs,csvOutput,parseCSV} from "./original-analysis/analysis.mjs";
 
 const GAUGE="USGS-02177000";
 const unique=values=>[...new Set(values)].sort();
@@ -17,7 +17,7 @@ export function deriveMicrobialMonitoring({result_csv,station_csv,flow_json,sour
  if(original.length!==36||records.length!==730||computed.flow.daily.length!==365)throw Error("Original microbial source edition changed");
  const observations=records.map(r=>({...r,observation_id:r.source_file+"#row="+r.source_row,characteristic:"Escherichia coli",
   lower:Number.isFinite(r.lower)?r.lower:null,upper:Number.isFinite(r.upper)?r.upper:null,
-  upper_unbounded:r.upper_unbounded===true,source_csv:"source/ecoli_utility_context/20261013/results-with-provenance.csv"}));
+  upper_unbounded:r.upper_unbounded===true,source_csv:"source/ecoli_temporal_analysis/20261013/monitoring-context/original-utility/results-with-provenance.csv"}));
  const byActivity=groups(observations,r=>JSON.stringify([r.station_id,r.activity_id]));
  const activities=[...byActivity.values()].map(rows=>{
   const r=rows[0];if(rows.some(x=>x.date!==r.date||x.activity_type!==r.activity_type))throw Error("Original activity identity spans incompatible records");
