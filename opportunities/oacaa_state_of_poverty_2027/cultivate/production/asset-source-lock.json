@@ -1,0 +1,60 @@
+{
+  "schema": "tjl.oacaa.acs-source-lock.v1",
+  "files": [
+    {
+      "path": "sources/Scorecard-assets-trends-original.json",
+      "bytes": 2027,
+      "sha256": "d900f927b67dcc81db398ecc961e79d4b519e7143729200053b567b37ccbc5d4"
+    },
+    {
+      "path": "sources/Scorecard-assets-current-original.json",
+      "bytes": 805,
+      "sha256": "5145a78d50f7729014cd9a8ba5f55aca6490b521ab053788b49a550c53cbb602"
+    },
+    {
+      "path": "sources/Scorecard-assets-source-metadata.json",
+      "bytes": 3868,
+      "sha256": "0ee5b0d395ee1493bb316bb6328fed39615e0fab0563aceb3b92df9beab5bf02"
+    },
+    {
+      "path": "sources/OACAA2026-Tables6-7-retained-OCR.json",
+      "bytes": 3060,
+      "sha256": "0fd7b92d5a2aaef761eb47831e1e2c75853bf2c78f3a78f50d8808abf215575c"
+    },
+    {
+      "path": "asset_reporting.cjs",
+      "bytes": 9099,
+      "sha256": "946f111b7c50049118d833aa083c5dbd3debd2e6069748e84010d38f2f8fe94e"
+    },
+    {
+      "path": "datasets/ohio-us-scorecard-asset-history.json",
+      "bytes": 27948,
+      "sha256": "5822d1471e6418fec8a1e0d0fb1ec31df61731e0cd0dfb50f95ce7c2c4149863"
+    },
+    {
+      "path": "datasets/scorecard-asset-measure-definitions.json",
+      "bytes": 4491,
+      "sha256": "3de7a2523b82715d9a7974e7f95092483c39a5347bc4820083a70bc3538d67f6"
+    },
+    {
+      "path": "ASSET_SOURCE_CONCORDANCE.json",
+      "bytes": 9466,
+      "sha256": "863be859b6a3b0317dd0a2f5fb103fe40cabb3ca241b56db4bce1c4a2cb7461f"
+    },
+    {
+      "path": "asset-working-plan.json",
+      "bytes": 13034,
+      "sha256": "4d1ef5cdd2018fdfcf82bf4dee3bdfcb0fce84fed281cb2f03f55a7952a34fee"
+    },
+    {
+      "path": "ASSET_SOURCE_GUIDE.md",
+      "bytes": 4481,
+      "sha256": "b8b8ae0e78721f17d5746ad3fa45ecd19b9071522c9e5ad24053fa7474023b2d"
+    },
+    {
+      "path": "ASSET_SOURCE_MANIFEST.json",
+      "bytes": 1626,
+      "sha256": "eafc6a4cf0f767e75172e476baeaf202be241d52f4277dc43dda3ee964c148bf"
+    }
+  ]
+}
