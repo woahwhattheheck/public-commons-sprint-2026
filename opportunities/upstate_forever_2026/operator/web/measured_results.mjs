@@ -9,7 +9,7 @@ const REASONS = {
   'native-domain-edition-changed':'The selected native reach source changed after the assignment.',
   'censored-result':'A detection limit or other censoring condition is retained; no point-value substitution was made.',
   'missing-numeric-result':'The source does not supply a usable numeric result.',
-  'unmapped-constituent':'The characteristic or fraction has no supported constituent mapping.',
+  'unmapped-constituent':'This constituent is outside the current native calibration-input parameter list; the original observation remains available.',
   'unmapped-characteristic-or-fraction':'The characteristic or fraction has no supported constituent mapping.',
   'unrecognized-unit':'The reported unit has no admitted normalization.',
   'negative-concentration':'A negative concentration requires source review.',
@@ -153,4 +153,37 @@ export function renderSourceInspection(source,{limit=100}={}) {
     (rejected.length?'<p>Showing '+Math.min(limit,rejected.length)+' retained rows. The complete rejected-row download keeps all original values.</p>'+
       rejected.slice(0,limit).map(r=>'<details><summary>Source line '+esc(r.line??r.sourceLine??'not supplied')+' · '+esc(r.reason||reasonList(r.reasons))+
       '</summary>'+show(r.raw||r.values||r)+'</details>').join(''):'<p>No rejected rows in this response.</p>')+'</section>';
+}
+
+/** Format retained point/bound values without replacing unresolved censoring by zero. */
+export function measurementValue(row) {
+  const number=value=>value===null||value===undefined||value===''?'—':Number(value).toLocaleString(undefined,{maximumSignificantDigits:8});
+  const unit=row.unit?' '+String(row.unit):'';
+  if(!row.censor||row.censor==='none')return number(row.value)+unit;
+  if(row.censor==='left')return row.upper===null||row.upper===undefined?'Upper bound unresolved'+unit:'≤ '+number(row.upper)+unit;
+  if(row.censor==='right')return row.lower===null||row.lower===undefined?'Lower bound unresolved'+unit:'≥ '+number(row.lower)+unit;
+  return 'Censoring unresolved'+unit;
+}
+/** Present source semantics; recognition never changes model-input eligibility. */
+export function renderObservationContext(row) {
+  const interpretation=row.characteristicInterpretation||{},detection=row.detectionInterpretation||{};
+  const list=entries=>'<dl class="mwr-fields">'+entries.map(([name,value])=>'<dt>'+esc(name)+'</dt><dd>'+esc(cell(value))+'</dd>').join('')+'</dl>';
+  const depth=(value,unit,reference)=>[value===null||value===undefined||value===''?'Not supplied':String(value),unit,reference].filter(Boolean).join(' · ');
+  return '<section class="mwr"><h3>Original quantity and interpretation</h3>'+
+    '<p>Characteristic recognition describes the retained observation. Native calibration, temporal matching, flow support and annual-load eligibility remain separate decisions.</p>'+
+    list([['Publisher characteristic',row.characteristic],['Recognized parameter',row.parameter],['Retained result',measurementValue(row)],
+      ['Original value / unit',[row.reportedValue,row.reportedUnit].filter(x=>x!==null&&x!==undefined&&x!=='').join(' ')],
+      ['Source chemical speciation',row.speciation||interpretation.sourceSpeciation],['Retained chemical basis',row.basis],
+      ['Source sample fraction',row.fraction],['Basis source',interpretation.basisSource],['Chemical conversion',interpretation.chemicalConversion],
+      ['Unit kind',interpretation.unitKind],['Microbial count method',interpretation.microbialCountMethod],['Turbidity scale',interpretation.turbidityScale],
+      ['Conductivity temperature correction',interpretation.conductivityTemperatureCorrection]])+
+    '<h4>Original method and sampling context</h4>'+
+    list([['Method identifier',row.method],['Method authority / context',row.methodContext],['Method name',row.methodName],
+      ['Laboratory',row.laboratory],['Result depth / unit / reference',depth(row.resultDepth,row.resultDepthUnit,row.resultDepthReference)],
+      ['Activity depth / unit / reference',depth(row.activityDepth,row.activityDepthUnit,row.activityDepthReference)],
+      ['Relative depth',row.relativeDepth],['Time basis',row.timeBasis],['Temperature basis',row.temperatureBasis],['Weight basis',row.weightBasis]])+
+    '<h4>Retained interpretation editions</h4>'+
+    list([['Characteristic edition',interpretation.edition||'Legacy normalization (no characteristic edition pinned)'],
+      ['Detection edition',detection.edition||'Legacy normalization (no detection edition pinned)'],
+      ['Publisher detection condition',row.detection],['Direction source',detection.directionSource],['Limit source',detection.limitSource]])+'</section>';
 }
