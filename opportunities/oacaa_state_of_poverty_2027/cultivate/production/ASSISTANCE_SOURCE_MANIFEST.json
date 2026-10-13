@@ -1,0 +1,87 @@
+{
+  "schema": "tjl.oacaa.assistance-source-manifest.v1",
+  "retrievedDate": "2026-10-13",
+  "sourceUrls": {
+    "lausCurrent": "https://ohiolmi.com/_docs/LAUS/AnnualAverages/OhioCivilianLaborForceEstimates_2024.pdf",
+    "lausOriginal": "https://prod-ohlmi.mt.gov/_docs/LAUS/AnnualAverages/2024CLFE.pdf",
+    "healthFiveYear": "https://api.censusreporter.org/1.0/data/show/acs2024_5yr?table_ids=B27001&geo_ids=04000US39,050%7C04000US39",
+    "healthOneYear": "https://api.censusreporter.org/1.0/data/show/acs2024_1yr?table_ids=B27001&geo_ids=04000US39",
+    "heapCsv": "https://analytics.das.ohio.gov/t/OHFAPUB/views/RentUtilitiesHousingInstabilityMaps/HHHEAP.csv",
+    "heapContext": "https://ohiohome.org/research/utilities-25.aspx",
+    "snap": "https://dam.assets.ohio.gov/image/upload/jfs.ohio.gov/PRC/CaseloadSummaryReportJune2025.pdf",
+    "medicaid": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+    "originalReport": "https://oacaa.org/wp-content/uploads/2026/08/2026-state-of-poverty-report_final-low.pdf"
+  },
+  "rawFiles": [
+    {
+      "path": "sources/ASSISTANCE_ORIGINALS.json",
+      "bytes": 478638,
+      "sha256": "0c4763df34ab1c5688bfc520d06af86eb4b9dfc40446bb39bafd407e2ce37bfe",
+      "representation": "Semantic source bundle with retained extraction/provenance"
+    },
+    {
+      "path": "sources/ASSISTANCE_HEALTH_ACS2024_5YR.json",
+      "bytes": 198714,
+      "sha256": "06d3fba5eeaeae6da30058dcc3aa7bac15ba8e1a7822b31d5601b4b5c6431eae",
+      "representation": "Exact received UTF-8 source representation"
+    },
+    {
+      "path": "sources/ASSISTANCE_HEALTH_ACS2024_1YR.json",
+      "bytes": 5943,
+      "sha256": "0537814ff4e8e10f9eae1a9d57637df38fb89c54f9b0bdadf5bfb99ca817ec0d",
+      "representation": "Exact received UTF-8 source representation"
+    },
+    {
+      "path": "sources/ASSISTANCE_HEAP_2024.csv",
+      "bytes": 3517,
+      "sha256": "d02b496ca7d152acd6cbeb05da3a18ef89811ba862b591def5c7d5041def1802",
+      "representation": "Exact received UTF-8 source representation"
+    },
+    {
+      "path": "sources/ASSISTANCE_SNAP_2025_06.txt",
+      "bytes": 8929,
+      "sha256": "9c244c74ba5f9bd31aaef7923ebaba86d34cb0900ea8e24f6edf98f9e1d88f2a",
+      "representation": "Exact received UTF-8 source representation"
+    },
+    {
+      "path": "sources/ASSISTANCE_LAUS_2024_CURRENT.txt",
+      "bytes": 12075,
+      "sha256": "d8c56da44eaeb470b3d2648e8ad961029b09d4c69ff62629a7ab60efd063ef10",
+      "representation": "Exact received UTF-8 source representation"
+    }
+  ],
+  "medicaidSelected": {
+    "sourceUrl": "https://www.healthpolicyohio.org/files/assets/medicaidcountyenrollment.pdf",
+    "publisher": "Health Policy Institute of Ohio",
+    "publication": "February 2025",
+    "enrollmentRetrievalDate": "2025-02-19",
+    "enrollmentMonth": null,
+    "populationRelease": "ACS 2023 five-year (2019–2023)",
+    "sourceNoteLocator": "Physical PDF page 3, web lines 131–134",
+    "sourceNote": "HPIO analysis of ODM dashboard and Census ACS; dashboard updated monthly for retroactive and back-dated eligibility.",
+    "reader": {
+      "bytes": 5191,
+      "sha256": "b07983c9f769e13f666eedc55c10c489de96b27d930663cd51cf77b9785db5a0"
+    },
+    "retainedFileUploadId": "3f8dd772-3100-81c3-931d-00b2f108d911",
+    "representation": "Statistical observations only; complete copyrighted reader retained in original private source page.",
+    "rows": 88
+  },
+  "originalLabour": {
+    "kind": "Selected numeric table rows from primary government PDF opened by web reader",
+    "sourceRef": "turn288view1",
+    "pages": 4,
+    "lines": 358,
+    "footer": "2025-04-22; 2024 benchmark",
+    "note": "The later plain-text receiver encountered HTTP 404; this record uses the previously received primary PDF table, with physical page and web-line locators retained in each observation."
+  },
+  "primaryHealthDefinitions": {
+    "url": "https://api.census.gov/data/2024/acs/acs5/subject/groups/S2701.html",
+    "universe": "Civilian noninstitutionalized population"
+  },
+  "sourceAcquisitionNotes": [
+    "Official public Tableau HHHEAP CSV returned complete county values. Medicaid candidate view CSV URLs returned 404; the retained complete HPIO numeric table supplies its explicitly attributed snapshot.",
+    "The complete earlier Ohio LMI PDF table was received through the primary web reader; subsequent text requests returned 404 and are not included as statistical data.",
+    "The B27001 originals retain provider release metadata and all source estimate/MOE cells; transformation does not silently replace them with a different ACS universe."
+  ]
+}
