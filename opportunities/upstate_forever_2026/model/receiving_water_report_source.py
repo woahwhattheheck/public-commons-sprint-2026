@@ -122,9 +122,10 @@ def _implementation(analysis):
                "map_renderer": Path(scientific_map_figures.__file__),
                "scientific_figures": Path(scientific_figures.__file__)}
     if analysis is not None:
-        from . import receiving_water_delivery, scientific_report
+        from . import receiving_water_delivery, scientific_report, client_receiving_waters
         modules.update(exporter=Path(receiving_water_delivery.__file__),
-                       scientific_formatter=Path(scientific_report.__file__))
+                       scientific_formatter=Path(scientific_report.__file__),
+                       accounting_formatter=Path(client_receiving_waters.__file__))
     return modules
 
 

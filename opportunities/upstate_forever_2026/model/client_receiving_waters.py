@@ -287,6 +287,7 @@ def build_sections(directory, state, *, baseline_run_id, alternative_run_ids,
              "Use the family-union results above when combining receiving areas that overlap."],
             tables,
         ))
+    sections.extend(accounting_sections(inventory, number=number, text=text, run_names=run_names))
     return {
         "sections": sections,
         "provenance": {
@@ -294,3 +295,84 @@ def build_sections(directory, state, *, baseline_run_id, alternative_run_ids,
             "inventory": inventory,
         },
     }
+
+
+def accounting_sections(inventory, *, number, text, run_names=None):
+    """Present saved disjoint accounting and closure without recomputing quantities."""
+    run_names = run_names or {}
+    roles = {
+        "total": "Downstream total", "upstream_union": "Upstream union",
+        "incremental": "Downstream incremental",
+        "reservoir_inflow": "Above-reservoir land", "other_upstream": "Other upstream land",
+    }
+    statistics = {
+        "current_export": "Baseline export", "alternative_export": "Alternative export",
+        "alternative_minus_baseline": "Signed change",
+        "positive_increased_export": "Increased export",
+        "positive_avoided_export": "Avoided export",
+        "common_baseline_export": "Baseline on common valid cells",
+        "common_alternative_export": "Alternative on common valid cells",
+    }
+    sections = []
+    for index, group in enumerate((inventory.get("accounting") or {}).get("groups", []), 1):
+        ordered = list(dict.fromkeys(["total", "upstream_union"] + group["partition_roles"]))
+        paragraphs = [
+            str(group.get("rationale") or ""),
+            "These quantities describe modeled land export to streams inside the original source "
+            "catchments. Above-reservoir land retains that interpretation. Reservoir throughput "
+            "requires additional sourced modelling.",
+            "Disjoint partition: " + " + ".join(roles.get(role, role)
+                                                for role in group["partition_roles"])
+            + ". The upstream union is a subtotal.",
+        ]
+        tables = [_table(["Accounting selection", "Retained value"], [
+            ["Group", text(group["id"])],
+            ["Downstream total receptor", text(group["subject_ids"]["total"])],
+            ["Selected-cell partition residual", number(group.get("selected_cell_residual"))],
+            *[[roles.get(role, role) + " subject", text(group["subject_ids"][role])]
+              for role in ordered if role != "total" and role in group["subject_ids"]],
+        ])]
+        items = group.get("quantities", [])
+        for run_id in dict.fromkeys(item["run_id"] for item in items):
+            run_items = [item for item in items if item["run_id"] == run_id]
+            run_title = run_names.get(run_id) or run_id
+            for statistic in dict.fromkeys(item["statistic"] for item in run_items):
+                rows = [item for item in run_items if item["statistic"] == statistic]
+                label = run_title + ": " + statistics.get(statistic, statistic)
+                tables.append(_table(
+                    ["Quantity", "Accounting area", "Annual quantity", "Units",
+                     "Valid cells", "Valid fraction"],
+                    [[_label(item["quantity"]), roles.get(role, role),
+                      _quantity(item["values"].get(role, {}), "sum", number),
+                      text(item["units"]),
+                      number(item["values"].get(role, {}).get("valid_cells")),
+                      number(item["values"].get(role, {}).get("coverage_fraction"))]
+                     for item in rows for role in ordered if role in item["values"]],
+                    label,
+                ))
+                tables.append(_table(
+                    ["Quantity", "Partition sum", "Residual", "Units",
+                     "Cell residual", "Closure"],
+                    [[_label(item["quantity"]), number(item["closure"].get("partition_sum")),
+                      number(item["closure"].get("residual")), text(item["units"]),
+                      number(item["closure"].get("valid_cell_residual")),
+                      text(item["closure"].get("status", "pending")).replace("_", " ")]
+                     for item in rows],
+                    label + ": saved reconciliation of disjoint areas with the total",
+                ))
+                tables.append(_table(
+                    ["Quantity", "Float64 summation allowance", "Within allowance"],
+                    [[_label(item["quantity"]),
+                      number(item["closure"].get("float64_summation_allowance")),
+                      text(item["closure"].get("within_summation_allowance"))]
+                     for item in rows],
+                    "The recorded allowance accounts for floating-point summation only.",
+                ))
+        source_rows = [[name, text(value)] for name, value in _records({
+            "Original source relationships": group.get("source_relationships", []),
+            "Relationship references": group.get("references", []),
+        })]
+        tables.append(_table(["Source and relationship", "Retained value"], source_rows))
+        sections.append(_section("receiving-water-accounting-" + str(index),
+                                 text(group.get("title") or group["id"]), paragraphs, tables))
+    return sections
