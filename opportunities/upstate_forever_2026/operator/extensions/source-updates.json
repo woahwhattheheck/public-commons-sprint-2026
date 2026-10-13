@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-updates",
   "title": "Source updates",
-  "version": "9",
+  "version": "10",
   "order": 25,
   "assets": [
     "source-refresh.html",
@@ -15,7 +15,8 @@
     "actions": [
       "source.refresh.plan",
       "source.refresh.apply",
-      "source.refresh.landcover"
+      "source.refresh.landcover",
+      "source.refresh.report_source"
     ],
     "invoke": {
       "handler": "invoke",
@@ -86,8 +87,8 @@
       ]
     },
     "verify_workspace": {
-      "module": "model.source_refresh_receiving",
-      "handler": "verify_all",
+      "module": "model.source_refresh_report_source",
+      "handler": "verify_workspace",
       "args": [
         "workspace"
       ]
