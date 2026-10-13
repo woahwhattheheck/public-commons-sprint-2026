@@ -56,6 +56,8 @@ const SEMANTIC_SOURCE = [
 ].map(path => ROOT + path);
 const REQUIRED = [
   ...SEMANTIC_SOURCE,
+  ...['dcat-corrections.mjs', 'dcat-correction-cli.mjs', 'CORRECTION_WORKBENCH.md', 'CORRECTIONS_AGENT.md',
+    'public/dcat-corrections.mjs', 'public/dcat-correction-json.mjs'].map(path => ROOT + path),
   ROOT + 'dcat-cli.mjs', ROOT + 'dcat-workspace.mjs', ROOT + 'dcat_migration.py',
   ROOT + 'application-provider.mjs', ROOT + 'public/migration.mjs',
   ROOT + 'dcat-acquisition.mjs', ROOT + 'public/dcat-sources.mjs', ROOT + 'RECURRING_CATALOGS.md',
@@ -74,7 +76,7 @@ export function dcatApplication(common) {
   return {
     id: 'dcat-migration', command: 'dcat', title: 'DCAT catalog workspace', terminal: false,
     requiredSource: ROOT + 'dcat-cli.mjs',
-    description: 'Open an existing catalogue migration workspace to receive original DCAT-US documents, review conversion, publisher changes, native semantic findings and saved snapshot impact, select catalogue releases and hand over the complete project.',
+    description: 'Open an existing catalogue migration workspace to receive original DCAT-US documents, edit exact catalogue revisions, review conversion, publisher changes, native semantic findings and saved snapshot impact, select catalogue releases and hand over the complete project.',
     fields: [
       field('workspaceDirectory', 'Catalogue workspace', 'path', true,
         'Select the original private DCAT-US project directory. Source editions, reviews, release selection and rollback history remain in that project.'),

@@ -1,0 +1,153 @@
+{
+  "schema": "tjlabs.sling-reference-selection.v1",
+  "purpose": "Complete original native Sling replication with a declared Airbyte configured-catalogue reference and independent parallel consumer. No captured customer or Airbyte API response is asserted.",
+  "upstream": {
+    "repository": "slingdata-io/sling-cli",
+    "commit": "7641892e24a7023c8012069596698970c7b3e041",
+    "tag": "v1.6.5"
+  },
+  "originalFiles": [
+    {
+      "path": "reference/original/test1.csv",
+      "upstreamPath": "tests/files/test1.csv",
+      "bytes": 115474,
+      "sha256": "822b7a39c8ef7ecff1539429ae1dcaa40cc2d66069e45a5718de1d579f084977",
+      "rows": 1000,
+      "columns": [
+        "id",
+        "first_name",
+        "last_name",
+        "email",
+        "target",
+        "create_dt",
+        "date",
+        "rating",
+        "code",
+        "update_dt"
+      ]
+    },
+    {
+      "path": "reference/original/test1.upsert.csv",
+      "upstreamPath": "tests/files/test1.upsert.csv",
+      "bytes": 1289,
+      "sha256": "065a26bc8c53c50ebbf0b9602fb225d5aa0d4aaa17a13002e51118059f8aec5c",
+      "rows": 14,
+      "columns": [
+        "id",
+        "first_name",
+        "last_name",
+        "email",
+        "target",
+        "create_dt",
+        "date",
+        "rating",
+        "code",
+        "json_data"
+      ]
+    }
+  ],
+  "authoredFiles": [
+    {
+      "path": "reference/baseline-airbyte-catalogue.json",
+      "bytes": 1977,
+      "sha256": "ea29601d66c5935c115efb2475e441307e573cffa16f88278255f8f9239b0bf1"
+    },
+    {
+      "path": "reference/evolved-airbyte-catalogue.json",
+      "bytes": 2108,
+      "sha256": "5eb7bc86098803302c117587682b36af87df5962408ffa6992e46e769034b87d"
+    },
+    {
+      "path": "reference/baseline-bindings.json",
+      "bytes": 1199,
+      "sha256": "13884ddf0848fca42f1d61a3af4fda0ecde88d84ef9f807b02010d63b56a2c45"
+    },
+    {
+      "path": "reference/evolved-bindings.json",
+      "bytes": 1218,
+      "sha256": "347530f4e7a161f01ed8092811838e48a68d0c0ceab0f88c9af0f1a23a37bedd"
+    },
+    {
+      "path": "reference/consumer-files.json",
+      "bytes": 274,
+      "sha256": "b0f3c8740e64a45ba4b8b056e54012ff8372ded06417fbe8459d1bf47db5ed71"
+    },
+    {
+      "path": "reference/consumer-edits.json",
+      "bytes": 270,
+      "sha256": "f60215d6be4804e926e6697bb39aedaaad736c38e9d93c06c7310df693b3e1a0"
+    }
+  ],
+  "declaredBindings": {
+    "sourceTable": [
+      "main",
+      "test1"
+    ],
+    "parallelTable": [
+      "main",
+      "test1_parallel"
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "cursor": "create_dt",
+    "baselineBusinessColumns": [
+      "id",
+      "first_name",
+      "last_name",
+      "email",
+      "target",
+      "create_dt",
+      "date",
+      "rating",
+      "code",
+      "update_dt"
+    ],
+    "evolvedBusinessColumns": [
+      "id",
+      "first_name",
+      "last_name",
+      "email",
+      "target",
+      "create_dt",
+      "date",
+      "rating",
+      "code",
+      "update_dt",
+      "json_data"
+    ],
+    "preservedColumn": "update_dt",
+    "introducedColumn": "json_data"
+  },
+  "expectedSourceChange": {
+    "updatedExistingIds": [
+      "706",
+      "707",
+      "708",
+      "758",
+      "759",
+      "760",
+      "761",
+      "846",
+      "968",
+      "969",
+      "997",
+      "998"
+    ],
+    "insertedIds": [
+      "1001",
+      "1002"
+    ],
+    "expectedFinalRows": 1002,
+    "assertionStatus": "expectation_from_original_CSV_inputs_until_native_receipt"
+  },
+  "nativeSteps": [
+    "Original Sling CSV baseline full-refresh to private source SQLite",
+    "Original Sling source SQLite to separate parallel SQLite",
+    "Complete native exports and every typed business cell comparison",
+    "Original 14-row CSV incremental source upsert",
+    "Explicit evolved catalogue and native incremental parallel upsert",
+    "Complete changed-source comparison, actual consumer cutover/rollback, original downstream apply/restore",
+    "Whole immutable history, original native/runtime/source bytes, editable application receiving"
+  ]
+}

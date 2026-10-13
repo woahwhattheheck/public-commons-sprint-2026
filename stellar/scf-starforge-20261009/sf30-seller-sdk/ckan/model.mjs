@@ -12,6 +12,7 @@ import { bindCkanCapture, projectCkanValue } from './source.mjs';
 import { describeCkanSemantics, projectCkanSemantics, checkCkanSemanticReview, compareCkanSemantics } from './semantics.mjs';
 import { createCkanReviewedRefreshes } from './reviewed-refresh.mjs';
 import { createDcatWorkspace, validateDcatState } from './dcat-workspace.mjs';
+import { createDcatCorrections, validateDcatCorrections } from './dcat-corrections.mjs';
 import { createDcatSemanticWorkspace } from './dcat-semantic.mjs';
 import { createCkanCapturePlans } from './capture-plans.mjs';
 import { createCkanRemoteWorkspace } from './remote-workspace.mjs';
@@ -101,6 +102,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, sou
     if (!['ckan', 'dcat-us'].includes(state.sourceKind)) throw fault('CATALOG_SOURCE_KIND_INVALID');
     if (sourceKind && state.sourceKind !== sourceKind) throw fault('CKAN_PROJECT_BINDING_CHANGED');
     validateDcatState(state.dcat);
+    validateDcatCorrections(state.dcat);
     if (origin && catalogOrigin(origin) !== state.catalogOrigin || authTokenEnv && authTokenEnv !== state.authTokenEnv)
       throw fault('CKAN_PROJECT_BINDING_CHANGED');
     if (state.operation?.state === 'RUNNING') {
@@ -213,6 +215,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, sou
     const capturePlans = await createCkanCapturePlans({ directory, state, launch, persist, capture,
       prepareRefresh: reviewedRefreshes.prepareRefresh });
     const dcat = createDcatWorkspace({ directory, state, launch, persist, environment });
+    const corrections = createDcatCorrections({ directory, state, dcat, launch, persist });
     const remote = await createCkanRemoteWorkspace({ directory, state, launch, persist, environment,
       assertSource: source => reviewedRefreshes.assertRefreshPublicationSource(source) });
     const semantic = await createDcatSemanticWorkspace({ directory, state, dcat, launch, persist, environment });
@@ -221,6 +224,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, sou
       ...reviewedRefreshes,
       ...capturePlans,
       ...dcat,
+      ...corrections,
       ...semantic.api,
       ...remote,
       directory,

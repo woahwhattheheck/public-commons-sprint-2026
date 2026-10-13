@@ -661,3 +661,7 @@ catalogue or review ID. Follow the shared operation status. Keep those IDs
 through interruption and recovery instead of constructing replacement
 identities. Complete source and report downloads retain the original bytes and
 all records.
+
+## Edit a catalogue inside this workspace
+
+The [Catalogue correction workbench](CORRECTION_WORKBENCH.md) adds retained, attributed drafts and complete typed field editing to this same application. Open an exact source or saved candidate, inspect its record fields, preview ordered edits, save revisions and retain a separately identified catalogue for the original migration review. Complete documents, change history and candidate lineage travel in the original workspace archive. The [command-line and agent course](CORRECTIONS_AGENT.md) uses the same saved workspace and exact request identities.
