@@ -29,6 +29,27 @@
         "parcels.js",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/evidence.js",
+      [
+        "evidence.js",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/evidence-store.js",
+      [
+        "evidence-store.js",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/evidence.css",
+      [
+        "evidence.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }
