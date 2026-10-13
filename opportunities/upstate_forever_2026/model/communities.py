@@ -383,10 +383,8 @@ def _context(workspace, value, groups=()):
             comparison_id = identifier(comparison.get("id"))
             if comparison_path.parent.name != comparison_id:
                 raise ValueError("Original comparison identity differs")
-            expected = digest({"runs": [baseline_id] + [row["run_id"] for row in alternatives],
-                               "direction": "alternative minus baseline"})
-            if comparison_id != expected:
-                raise ValueError("Original comparison selection changed")
+            from .native_versions import validate_run_comparison
+            validate_run_comparison(workspace, comparison, expected_id=comparison_id)
             snapshots["comparisons"].append(comparison)
     watershed_id = value.get("watershed_context_id") or None
     if watershed_id:
