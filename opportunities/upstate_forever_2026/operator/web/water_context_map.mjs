@@ -22,12 +22,12 @@ function node(tag,text,className){
   if(className)value.className=className;
   return value;
 }
-function coordinates(geometry,visit){
+function coordinates(geometry,visit,projected=false){
   if(!geometry)return;
-  if(geometry.type==='GeometryCollection'){for(const g of geometry.geometries||[])coordinates(g,visit);return;}
+  if(geometry.type==='GeometryCollection'){for(const g of geometry.geometries||[])coordinates(g,visit,projected);return;}
   function walk(value){
     if(Array.isArray(value)&&value.length>=2&&typeof value[0]==='number'){
-      if(Number.isFinite(value[0])&&Number.isFinite(value[1])&&Math.abs(value[0])<=180&&Math.abs(value[1])<=90)visit(value[0],value[1]);
+      if(Number.isFinite(value[0])&&Number.isFinite(value[1])&&(projected||(Math.abs(value[0])<=180&&Math.abs(value[1])<=90)))visit(value[0],value[1]);
     }else if(Array.isArray(value))for(const v of value)walk(v);
   }
   walk(geometry.coordinates);
@@ -46,7 +46,14 @@ function geometryPath(geometry,project){
   if(geometry.type==='GeometryCollection')return (geometry.geometries||[]).map(g=>geometryPath(g,project)).join(' ');
   return '';
 }
-export function createWaterContextMap(container,preview){
+export function createWaterContextMap(container,preview,options={}){
+  let config={...options};
+  const declaredCRS=String(config.source_crs||preview?.source_crs||'EPSG:4326').toUpperCase();
+  const projected=/^(?:EPSG:|ESRI:)?(?:3857|102100)$/.test(declaredCRS);
+  if(!projected&&!['EPSG:4326','4326','CRS84','OGC:CRS84'].includes(declaredCRS))
+    throw new Error('Unsupported map source CRS: '+declaredCRS);
+  const styles={...STYLES,...config.styles};
+  const labelFor=feature=>config.featureLabel?.(feature)||feature.properties?.label||feature.properties?.name||feature.properties?.feature_id||feature.properties?.huc12||'Map feature';
   const features=preview?.geojson?.features||[];
   container.replaceChildren();
   const toolbar=node('div',undefined,'wc-map-toolbar');
@@ -59,15 +66,15 @@ export function createWaterContextMap(container,preview){
   let minLon=Infinity,maxLon=-Infinity,minLat=Infinity,maxLat=-Infinity;
   for(const feature of features)coordinates(feature.geometry,(lon,lat)=>{
     minLon=Math.min(minLon,lon);maxLon=Math.max(maxLon,lon);minLat=Math.min(minLat,lat);maxLat=Math.max(maxLat,lat);
-  });
-  if(!Number.isFinite(minLon)){canvas.append(node('p','The preview contains no finite WGS84 coordinates.'));return {destroy(){}};}
-  const cosine=Math.max(.001,Math.cos((minLat+maxLat)*Math.PI/360));
+  },projected);
+  if(!Number.isFinite(minLon)){canvas.append(node('p','The preview contains no finite coordinates in '+declaredCRS+'.'));return {destroy(){}};}
+  const cosine=projected?1:Math.max(.001,Math.cos((minLat+maxLat)*Math.PI/360));
   const project=(lon,lat)=>[(lon-minLon)*cosine,maxLat-lat];
   const width=Math.max((maxLon-minLon)*cosine,.000001),height=Math.max(maxLat-minLat,.000001);
   const pad=Math.max(width,height)*.04;
   const initial={x:-pad,y:-pad,w:width+2*pad,h:height+2*pad};
   let view={...initial},drag=null,destroyed=false;
-  const svg=element('svg',{role:'img',tabindex:'0','aria-label':'Water and habitat map. Drag to pan; use plus and minus to zoom.','preserveAspectRatio':'xMidYMid meet'});
+  const svg=element('svg',{role:'img',tabindex:'0','aria-label':config.ariaLabel||'Water and habitat map. Drag to pan; use plus and minus to zoom.','preserveAspectRatio':'xMidYMid meet'});
   svg.classList.add('wc-map-svg');
   canvas.append(svg);
   const roles=[...new Set(features.map(f=>f.properties?.context_role||'unknown'))];
@@ -75,22 +82,42 @@ export function createWaterContextMap(container,preview){
   for(const role of roles){
     const group=element('g',{'data-role':role});layers.set(role,group);svg.append(group);
   }
-  let selectedPath=null;
+  let selectedPath=null,suppressClick=false;
+  const rendered=[];
+  function applyStyle(feature,path){
+    const role=feature.properties?.context_role||'unknown';
+    const style={...(styles[role]||{stroke:'#555',fill:'none',width:1}),...config.featureStyle?.(feature)};
+    for(const [key,value] of Object.entries({stroke:style.stroke,fill:style.fill,'stroke-width':style.width,
+      'fill-opacity':style.opacity??1,'stroke-dasharray':style.dash||''}))path.setAttribute(key,String(value));
+    if(style.order!==undefined)path.dataset.mapOrder=String(style.order);
+    path.setAttribute('aria-label',labelFor(feature));
+    const title=path.querySelector('title');if(title)title.textContent=labelFor(feature);
+    if(config.onSelect){path.setAttribute('role','button');path.setAttribute('tabindex','0');}
+    if(style.selected!==undefined)path.setAttribute('aria-pressed',String(Boolean(style.selected)));
+  }
+  function redraw(){
+    for(const item of rendered)applyStyle(item.feature,item.path);
+    for(const group of layers.values()){
+      const children=Array.from(group.children).sort((a,b)=>Number(a.dataset.mapOrder||0)-Number(b.dataset.mapOrder||0));
+      for(const child of children)group.append(child);
+    }
+  }
   function inspect(feature,path){
     if(selectedPath)selectedPath.classList.remove('wc-feature-selected');
-    selectedPath=path;selectedPath?.classList.add('wc-feature-selected');detail.replaceChildren();
+    selectedPath=path;if(!config.onSelect)selectedPath?.classList.add('wc-feature-selected');detail.replaceChildren();
     const props=feature.properties||{};
-    detail.append(node('h4',props.label||props.feature_id||'Selected feature'));
-    detail.append(node('p',(STYLES[props.context_role]?.label||props.context_role||'Context')+
-      ' · source '+(props.source_id||'')+' · '+(props.identity_kind==='native_feature'?'native ID ':'derived component ')+(props.feature_id||''),'wc-note'));
+    detail.append(node('h4',labelFor(feature)));
+    detail.append(node('p',config.featureSourceLabel?.(feature)||((styles[props.context_role]?.label||props.context_role||'Context')+
+      ' · source '+(props.source_id||'')+' · '+(props.identity_kind==='native_feature'?'native ID ':'derived component ')+(props.feature_id||'')),'wc-note'));
     const table=node('table'),body=node('tbody');
-    for(const [key,value] of Object.entries(props.native_properties||{})){
+    for(const [key,value] of Object.entries(props.native_properties||props)){
       const row=node('tr');row.append(node('th',key),node('td',typeof value==='object'?JSON.stringify(value):String(value??'')));body.append(row);
     }
     table.append(body);detail.append(table);
+    config.onSelect?.(feature);
   }
   features.forEach((feature,index)=>{
-    const role=feature.properties?.context_role||'unknown',style=STYLES[role]||{stroke:'#555',fill:'none',width:1};
+    const role=feature.properties?.context_role||'unknown',style=styles[role]||{stroke:'#555',fill:'none',width:1};
     const data=geometryPath(feature.geometry,project);if(!data)return;
     const path=element('path',{d:data,stroke:style.stroke,fill:style.fill,'stroke-width':style.width,
       'fill-opacity':style.opacity??1,'fill-rule':'evenodd','vector-effect':'non-scaling-stroke','data-feature':index});
@@ -101,9 +128,12 @@ export function createWaterContextMap(container,preview){
       const shades={Digital:'#eee',No_Data:'#a6a6a6',Unknown:'#ccc',Conflict:'#888'};
       path.setAttribute('fill',shades[status]||'#ccc');
     }
-    const title=element('title');title.textContent=feature.properties?.label||feature.properties?.feature_id||style.label;
+    const title=element('title');title.textContent=labelFor(feature);
     path.append(title);
-    path.addEventListener('click',event=>{if(!drag?.moved)inspect(feature,path);event.stopPropagation();});
+    path.addEventListener('click',event=>{if(!suppressClick&&!drag?.moved)inspect(feature,path);event.stopPropagation();});
+    path.addEventListener('keydown',event=>{if(config.onSelect&&(event.key==='Enter'||event.key===' ')){event.preventDefault();event.stopPropagation();inspect(feature,path);}});
+    if(config.featureStyle)applyStyle(feature,path);
+    rendered.push({feature,path});
     layers.get(role).append(path);
   });
   // Place the reporting outline above thematic fills.
@@ -123,11 +153,14 @@ export function createWaterContextMap(container,preview){
   for(const role of roles){
     const label=node('label'),check=node('input');check.type='checkbox';check.checked=true;
     check.addEventListener('change',()=>{layers.get(role).style.display=check.checked?'':'none';});
-    const mark=node('span',undefined,'wc-legend-swatch');mark.style.borderColor=(STYLES[role]||{}).stroke||'#777';
-    mark.style.background=(STYLES[role]||{}).fill==='none'?'white':((STYLES[role]||{}).fill||'#ddd');
-    label.append(check,mark,node('span',STYLES[role]?.label||role));legend.append(label);
+    const mark=node('span',undefined,'wc-legend-swatch');mark.style.borderColor=(styles[role]||{}).stroke||'#777';
+    mark.style.background=(styles[role]||{}).fill==='none'?'white':((styles[role]||{}).fill||'#ddd');
+    label.append(check,mark,node('span',styles[role]?.label||role));legend.append(label);
   }
-  notes.textContent=String(preview.shown_features??features.length)+' of '+String(preview.feature_count??features.length)+
+  legend.hidden=config.showLegend===false;
+  legend.style.display=config.showLegend===false?'none':'';
+  detail.hidden=config.showDetail===false;
+  notes.textContent=config.notes||String(preview.shown_features??features.length)+' of '+String(preview.feature_count??features.length)+
     ' derived features shown. Display simplification: '+String(preview.display_simplification_m??0)+
     ' m. Quantities use the full analysis geometry; full geometry is available in the GeoJSON export.';
   function svgPoint(event){
@@ -150,9 +183,12 @@ export function createWaterContextMap(container,preview){
     view={...drag.view,x:drag.view.x-dx/scale,y:drag.view.y-dy/scale};display();
   };
   const pointerUp=event=>{
-    if(drag&&!drag.moved){
+    if(event.type!=='pointercancel'&&drag&&!drag.moved){
       const path=document.elementFromPoint(event.clientX,event.clientY)?.closest('path[data-feature]');
-      if(path&&svg.contains(path))inspect(features[Number(path.getAttribute('data-feature'))],path);
+      if(path&&svg.contains(path)){
+        inspect(features[Number(path.getAttribute('data-feature'))],path);
+        suppressClick=true;setTimeout(()=>{suppressClick=false;},0);
+      }
     }
     const previous=drag;setTimeout(()=>{if(drag===previous)drag=null;},0);
   };
@@ -169,5 +205,17 @@ export function createWaterContextMap(container,preview){
   svg.addEventListener('pointerdown',pointerDown);svg.addEventListener('pointermove',pointerMove);
   svg.addEventListener('pointerup',pointerUp);svg.addEventListener('pointercancel',pointerUp);
   svg.addEventListener('wheel',wheel,{passive:false});svg.addEventListener('keydown',keydown);display();
-  return {destroy(){if(destroyed)return;destroyed=true;drag=null;container.replaceChildren();}};
+  return {
+    update(next={}){if(destroyed)return;config={...config,...next};redraw();},
+    fit(predicate){
+      if(!predicate){view={...initial};display();return;}
+      let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+      for(const feature of features)if(predicate(feature))coordinates(feature.geometry,(x,y)=>{
+        const point=project(x,y);x0=Math.min(x0,point[0]);x1=Math.max(x1,point[0]);y0=Math.min(y0,point[1]);y1=Math.max(y1,point[1]);
+      },projected);
+      if(Number.isFinite(x0)){const padding=Math.max(x1-x0,y1-y0,initial.w/1000)*.06;
+        view={x:x0-padding,y:y0-padding,w:Math.max(x1-x0,initial.w/1000)+padding*2,h:Math.max(y1-y0,initial.h/1000)+padding*2};display();}
+    },
+    destroy(){if(destroyed)return;destroyed=true;drag=null;container.replaceChildren();}
+  };
 }
