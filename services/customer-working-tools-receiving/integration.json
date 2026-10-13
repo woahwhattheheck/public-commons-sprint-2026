@@ -64,6 +64,11 @@
       "source": "run_treelance_receiving.mjs",
       "path": "operations/lead-case-handoff-20261012/working-tools/run_treelance_receiving.mjs",
       "sha256": "27fc90b784e7e2d61e75e7d0f20540b89ef3d1e0ad9cf0d302e409fce8fae928"
+    },
+    {
+      "source": "run_two_receiving.mjs",
+      "path": "operations/lead-case-handoff-20261012/working-tools/run_two_receiving.mjs",
+      "sha256": "835650ccf4d0e7ec0aa90c4a4b23176738b3f2366a788844a1da9cc3e439bfd7"
     }
   ],
   "customers": [
@@ -94,6 +99,13 @@
       "record": "treelance-working-record.json",
       "module": "run_treelance_receiving.mjs",
       "export_name": "runTreelanceReceiving"
+    },
+    {
+      "id": "two-writer-trial",
+      "directory": "two",
+      "record": "TWO_Lead_Working_Record.json",
+      "module": "run_two_receiving.mjs",
+      "export_name": "runTwoReceiving"
     }
   ]
 }
