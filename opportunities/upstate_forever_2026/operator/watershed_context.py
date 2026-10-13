@@ -8,6 +8,7 @@ from pathlib import Path
 
 from model.common import atomic_bytes, atomic_json, describe_file, held, identifier, now, read_json
 from model import watershed_context as context_model
+from model.watershed_brief import BRIEF_FORMAT, write_selection_brief
 
 ACTIONS = frozenset({"watershed.context.analyze", "watershed.context.export"})
 CONTEXT_NAME = "full-domain-water-context.json"
@@ -334,6 +335,7 @@ class WatershedContextActions:
         identity = {
             "report_id": record["id"], "report_sha256": report_sha, "huc12s": selected,
             "csv_format": CSV_FORMAT, "csv_columns": list(context_model.HUC_COLUMNS),
+            "brief_format": BRIEF_FORMAT,
         }
         key = _hash(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8"))
         target = ws.root / "watershed-context-exports" / key
@@ -351,6 +353,7 @@ class WatershedContextActions:
             }
             atomic_json(target / "selected-watersheds.json", selection)
             (target / "selected-watersheds.csv").write_bytes(_csv(rows))
+            brief_files = write_selection_brief(target, selection)
             result = {
                 "schema": "upstate.watershed-context-export/v1", "id": key,
                 "title": "Regional watershed selection", "state": "complete", "created_at": now(),
@@ -360,6 +363,7 @@ class WatershedContextActions:
                     for name in ("selected-watersheds.json", "selected-watersheds.csv")
                 },
             }
+            result["files"].update(brief_files)
             atomic_json(path, result)
         return result
 
