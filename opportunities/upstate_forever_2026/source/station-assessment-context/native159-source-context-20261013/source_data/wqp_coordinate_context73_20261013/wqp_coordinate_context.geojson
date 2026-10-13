@@ -1,0 +1,2252 @@
+{
+  "type": "FeatureCollection",
+  "name": "SCDES WQP published coordinate context for73 retained assessment stations",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RL-18151",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RL-18151",
+        "MonitoringLocationName": "RL-18151",
+        "MonitoringLocationTypeName": "Lake",
+        "MonitoringLocationDescriptionText": "LAKE KEOWEE APPROX 0.15 MILES SSW OF END OF POINT NORTH DRIVE",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.8410240000",
+        "LongitudeMeasure": "-82.9031650000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RL-18151/",
+        "source_web_reference": "turn51view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.903165,
+          34.841024
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-02304",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-02304",
+        "MonitoringLocationName": "RS-02304",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.6910650000",
+        "LongitudeMeasure": "-83.1062250000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-02304/",
+        "source_web_reference": "turn51view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.106225,
+          34.691065
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-02466",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-02466",
+        "MonitoringLocationName": "RS-02466",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.9357320000",
+        "LongitudeMeasure": "-83.0015820000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-02466/",
+        "source_web_reference": "turn51view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.001582,
+          34.935732
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-03342",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-03342",
+        "MonitoringLocationName": "RS-03342",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.9160990000",
+        "LongitudeMeasure": "-82.1779720000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "065",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-03342/",
+        "source_web_reference": "turn51view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.177972,
+          33.916099
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-04542",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-04542",
+        "MonitoringLocationName": "RS-04542",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.0704190000",
+        "LongitudeMeasure": "-82.2887220000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "047",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-04542/",
+        "source_web_reference": "turn51view4",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.288722,
+          34.070419
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-04544",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-04544",
+        "MonitoringLocationName": "RS-04544",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "UNNAMED TRIBUTARY TO THE SAVANNAH RIVER AT RIVER BLUFF RD IN THE RAPIDS S/D IN NORTH AUGUSTA. SAMPLE AT THE END OF SERVICE RD FOR TELEPHONE LINES. SEND MORE DETAILED DIRECTIONS TO DISTRICT.",
+        "HUCEightDigitCode": "03060106",
+        "LatitudeMeasure": "33.5161000000",
+        "LongitudeMeasure": "-81.9908900000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "003",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-04544/",
+        "source_web_reference": "turn54view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -81.99089,
+          33.5161
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-05586",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-05586",
+        "MonitoringLocationName": "RS-05586",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.3386340000",
+        "LongitudeMeasure": "-82.5071190000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-05586/",
+        "source_web_reference": "turn54view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.507119,
+          34.338634
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-06016",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-06016",
+        "MonitoringLocationName": "RS-06016",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "34.0498670000",
+        "LongitudeMeasure": "-82.1762460000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "047",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-06016/",
+        "source_web_reference": "turn54view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.176246,
+          34.049867
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-07222",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-07222",
+        "MonitoringLocationName": "RS-07222",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.2088920000",
+        "LongitudeMeasure": "-82.2679400000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-07222/",
+        "source_web_reference": "turn54view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.26794,
+          34.208892
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-08068",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-08068",
+        "MonitoringLocationName": "RS-08068",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.9528380000",
+        "LongitudeMeasure": "-81.9681990000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "037",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-08068/",
+        "source_web_reference": "turn56view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -81.968199,
+          33.952838
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-08089",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-08089",
+        "MonitoringLocationName": "RS-08089",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7380760000",
+        "LongitudeMeasure": "-83.1141770000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-08089/",
+        "source_web_reference": "turn56view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.114177,
+          34.738076
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-09092",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-09092",
+        "MonitoringLocationName": "RS-09092",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CALHOUN CK AT BRIDGE ON SC 71",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.1897290000",
+        "LongitudeMeasure": "-82.4619380000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-09092/",
+        "source_web_reference": "turn56view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.461938,
+          34.189729
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-09330",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-09330",
+        "MonitoringLocationName": "RS-09330",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "PEA CREEK AT BRIDGE ON S-04-48",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.4963270000",
+        "LongitudeMeasure": "-82.5715160000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "007",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-09330/",
+        "source_web_reference": "turn56view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.571516,
+          34.496327
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-11009",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-11009",
+        "MonitoringLocationName": "RS-11009",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "TWELVEMILE CREEK AT S-39-267; 3.5 MI SW OF PICKENS",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.8428890000",
+        "LongitudeMeasure": "-82.7457190000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-11009/",
+        "source_web_reference": "turn59view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.745719,
+          34.842889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-11053",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-11053",
+        "MonitoringLocationName": "RS-11053",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "WILSON CREEK AT OLD BRIDGE ON S-04-30 -FRED BRADFORD RD- WHICH IS BETWEEN SC 81 AND S-04-668 AND SOUTH OF S-04-156; 2.1 MI SE OF STARR",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.3614220000",
+        "LongitudeMeasure": "-82.6644590000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "007",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-11053/",
+        "source_web_reference": "turn59view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.664459,
+          34.361422
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-13118",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-13118",
+        "MonitoringLocationName": "RS-13118",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CUFFYTOWN CREEK AT S-24-44 -EPWORTH CAMP ROAD E",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "34.0734022600",
+        "LongitudeMeasure": "-82.0706721100",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "047",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-13118/",
+        "source_web_reference": "turn53view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.07067211,
+          34.07340226
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-15241",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-15241",
+        "MonitoringLocationName": "RS-15241",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "STEVENS CREEK AT SC 283",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.8533380000",
+        "LongitudeMeasure": "-82.2268370000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "065",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-15241/",
+        "source_web_reference": "turn53view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.226837,
+          33.853338
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-15257",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-15257",
+        "MonitoringLocationName": "RS-15257",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "TURKEY CREEK AT S-19-35 WALKER ROAD",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.8562990000",
+        "LongitudeMeasure": "-82.0764130000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "037",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-15257/",
+        "source_web_reference": "turn53view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.076413,
+          33.856299
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-16289",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-16289",
+        "MonitoringLocationName": "RS-16289",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CAMP BRANCH AT NEW CUT ROAD",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.7924460000",
+        "LongitudeMeasure": "-82.0819210000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "037",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-16289/",
+        "source_web_reference": "turn53view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.081921,
+          33.792446
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-16306",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-16306",
+        "MonitoringLocationName": "RS-16306",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "MCKENLEY CREEK AT SC 72",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.1058190000",
+        "LongitudeMeasure": "-82.5306730000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-16306/",
+        "source_web_reference": "turn59view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.530673,
+          34.105819
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-16318",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-16318",
+        "MonitoringLocationName": "RS-16318",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CUFFYTOWN CREEK AT US 25",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "34.0416630000",
+        "LongitudeMeasure": "-82.0618010000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "047",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-16318/",
+        "source_web_reference": "turn59view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.061801,
+          34.041663
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-17350",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-17350",
+        "MonitoringLocationName": "RS-17350",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "LONG CANE CREEK AT NATIONAL FOREST ROAD 505 (NF-505); SECESSION STREET",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.1348960000",
+        "LongitudeMeasure": "-82.3257930000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-17350/",
+        "source_web_reference": "turn57view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.325793,
+          34.134896
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-17385",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-17385",
+        "MonitoringLocationName": "RS-17385",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CHEVES CREEK AT DRY BRIDGE ROAD; LEFT ON FS ROAD 637-3; SECOND BRIDGE. GOOD PARKING PULL OFF JUST BEFORE BRIDGE.",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.6573300000",
+        "LongitudeMeasure": "-82.0220700000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "037",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-17385/",
+        "source_web_reference": "turn57view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.02207,
+          33.65733
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-19473",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-19473",
+        "MonitoringLocationName": "RS-19473",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "UNNAMED TRIBUTARY TO GOLDEN CREEK ON SILVERY LANE ACUTALLY A PRIVATE DRIVEWAY WITH A SIGN THAT GIVES THE ADDRESSES 511 AND 513 HAVE TO WALK DOWN BANK TO SAMPLE BUT VERY CLEAR AND EASY ACCESS",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7839910000",
+        "LongitudeMeasure": "-82.7313000000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-19473/",
+        "source_web_reference": "turn57view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.7313,
+          34.783991
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-20545",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-20545",
+        "MonitoringLocationName": "RS-20545",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "LITTLE CREEK AT S-24-112/QUATTLEBAUM CEMETARY RD/LONG CANE RD",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.9687280000",
+        "LongitudeMeasure": "-82.1390340000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "065",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-20545/",
+        "source_web_reference": "turn57view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.139034,
+          33.968728
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-21038",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-21038",
+        "MonitoringLocationName": "RS-21038",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "ROCKY CREEK BRIDGE ON STATE RD S-33-86/ CIMMARON RD",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.8994160000",
+        "LongitudeMeasure": "-82.2536780000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "065",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-21038/",
+        "source_web_reference": "turn55view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.253678,
+          33.899416
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-22075",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-22075",
+        "MonitoringLocationName": "RS-22075",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "PENNY CREEK ON FLAT ROCK RD",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.2384280000",
+        "LongitudeMeasure": "-82.4916680000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-22075/",
+        "source_web_reference": "turn55view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.491668,
+          34.238428
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-015",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-015",
+        "MonitoringLocationName": "SV-015",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "TWELVE MI CK AT S-39-51 N OF NORRIS",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7803360800",
+        "LongitudeMeasure": "-82.7581115400",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-015/",
+        "source_web_reference": "turn55view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.75811154,
+          34.78033608
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-017",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-017",
+        "MonitoringLocationName": "SV-017",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "EIGHTEENMILE CK AT UNNUMBERED CO RD 2.25 MI SSW OF EASLEY",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.8022421000",
+        "LongitudeMeasure": "-82.6198569800",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-017/",
+        "source_web_reference": "turn55view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.61985698,
+          34.8022421
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-041",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-041",
+        "MonitoringLocationName": "SV-041",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "ROCKY RVR AT S-04-152 BL ROCKY RVR STP",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.4472089300",
+        "LongitudeMeasure": "-82.6022523900",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "007",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-041/",
+        "source_web_reference": "turn58view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.60225239,
+          34.44720893
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-043",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-043",
+        "MonitoringLocationName": "SV-043",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CHEROKEE CK AT S-04-318 4 MI S OF BELTON",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.4611439700",
+        "LongitudeMeasure": "-82.4994461800",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "007",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-043/",
+        "source_web_reference": "turn58view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.49944618,
+          34.46114397
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-052",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-052",
+        "MonitoringLocationName": "SV-052",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "SAWNEY CK AT CO RD 1.5 MI SE OF CALHOUN FALLS",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.0760336500",
+        "LongitudeMeasure": "-82.5769013300",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-052/",
+        "source_web_reference": "turn58view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.57690133,
+          34.07603365
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-053B",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-053B",
+        "MonitoringLocationName": "SV-053B",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "BLUE HILL CK ON S MAIN ST ABBEVILLE",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.1671596300",
+        "LongitudeMeasure": "-82.3694023600",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-053B/",
+        "source_web_reference": "turn58view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.36940236,
+          34.16715963
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-073",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-073",
+        "MonitoringLocationName": "SV-073",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "LITTLE HORSE CK AT SC 421 BL EFF OF CLEARWTR FIN",
+        "HUCEightDigitCode": "03060106",
+        "LatitudeMeasure": "33.4984018400",
+        "LongitudeMeasure": "-81.8885241500",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "003",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-073/",
+        "source_web_reference": "turn60view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -81.88852415,
+          33.49840184
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-108",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-108",
+        "MonitoringLocationName": "SV-108",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CHOESTOEA CREEK AT S-37-49",
+        "HUCEightDigitCode": "03060102",
+        "LatitudeMeasure": "34.6036631100",
+        "LongitudeMeasure": "-83.0978616500",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-108/",
+        "source_web_reference": "turn60view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.09786165,
+          34.60366311
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-135",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-135",
+        "MonitoringLocationName": "SV-135",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "EIGHTEENMILE CK AT S-39-93 S OF CENTRAL",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.6729105600",
+        "LongitudeMeasure": "-82.7877239900",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-135/",
+        "source_web_reference": "turn52view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.78772399,
+          34.67291056
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-136",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-136",
+        "MonitoringLocationName": "SV-136",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "FIRST CK AFTER LEAVING CENTRAL AT CLVT ON MAW BRDG RD",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7412872700",
+        "LongitudeMeasure": "-82.7949802200",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-136/",
+        "source_web_reference": "turn52view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.79498022,
+          34.74128727
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-137",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-137",
+        "MonitoringLocationName": "SV-137",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "TWELVE MILE CK AT S-39-337",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7428545900",
+        "LongitudeMeasure": "-82.8021016200",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-137/",
+        "source_web_reference": "turn52view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.80210162,
+          34.74285459
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-140",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-140",
+        "MonitoringLocationName": "SV-140",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CUPBOARD CK AT S-04-209 BL EFF FROM BELTON 2 PLANT",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.5288948500",
+        "LongitudeMeasure": "-82.5340220200",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "007",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-140/",
+        "source_web_reference": "turn52view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.53402202,
+          34.52889485
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-151",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-151",
+        "MonitoringLocationName": "SV-151",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "HARD LABOR CREEK AT S-24-164 BRIDGE",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "34.1265199700",
+        "LongitudeMeasure": "-82.1867158200",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "047",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-151/",
+        "source_web_reference": "turn60view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.18671582,
+          34.12651997
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-164",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-164",
+        "MonitoringLocationName": "SV-164",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "LITTLE RIVER AT S-01-24",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.3412002400",
+        "LongitudeMeasure": "-82.4607791800",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-164/",
+        "source_web_reference": "turn60view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.46077918,
+          34.34120024
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-239",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-239",
+        "MonitoringLocationName": "SV-239",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "GOLDEN CK AT S-39-222 1.2 MI NW OF LIBERTY",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.8010840800",
+        "LongitudeMeasure": "-82.7067094500",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-239/",
+        "source_web_reference": "turn62view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.70670945,
+          34.80108408
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-245",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-245",
+        "MonitoringLocationName": "SV-245",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "EIGHTEENMILE CK AT S-39-27 3.3 MI S OF LIBERTY",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7419027100",
+        "LongitudeMeasure": "-82.6916993600",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-245/",
+        "source_web_reference": "turn62view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.69169936,
+          34.74190271
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-301",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-301",
+        "MonitoringLocationName": "SV-301",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "NORRIS CK AT S-37-435 1 MI S OF WESTMINSTER",
+        "HUCEightDigitCode": "03060102",
+        "LatitudeMeasure": "34.6396198100",
+        "LongitudeMeasure": "-83.0992136400",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-301/",
+        "source_web_reference": "turn62view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.09921364,
+          34.63961981
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-316",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-316",
+        "MonitoringLocationName": "SV-316",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "BIG GENEROSTEE CK AT CO RD 104",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.4532399800",
+        "LongitudeMeasure": "-82.7317630100",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "007",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-316/",
+        "source_web_reference": "turn62view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.73176301,
+          34.45323998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-318",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-318",
+        "MonitoringLocationName": "SV-318",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "LONG CANE CK AT S-33-117 7.0 MI NW MCCORMICK",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.0004167700",
+        "LongitudeMeasure": "-82.3521630400",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "065",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-318/",
+        "source_web_reference": "turn61view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.35216304,
+          34.00041677
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-330",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-330",
+        "MonitoringLocationName": "SV-330",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "STEVENS CREEK AT S-33-21",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.8058124500",
+        "LongitudeMeasure": "-82.2088719600",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "065",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-330/",
+        "source_web_reference": "turn61view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.20887196,
+          33.80581245
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-333",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-333",
+        "MonitoringLocationName": "SV-333",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CONEROSS CK AT S-37-13",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.6756316300",
+        "LongitudeMeasure": "-83.0320411200",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-333/",
+        "source_web_reference": "turn61view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.03204112,
+          34.67563163
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-341",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-341",
+        "MonitoringLocationName": "SV-341",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "LITTLE EASTATOE CREEK AT S-39-49",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.9491954100",
+        "LongitudeMeasure": "-82.8330968800",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-341/",
+        "source_web_reference": "turn61view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.83309688,
+          34.94919541
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-342",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-342",
+        "MonitoringLocationName": "SV-342",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CANE CREEK AT S-37-133",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7665349400",
+        "LongitudeMeasure": "-83.0257104500",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-342/",
+        "source_web_reference": "turn63view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.02571045,
+          34.76653494
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-343",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-343",
+        "MonitoringLocationName": "SV-343",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7692690000",
+        "LongitudeMeasure": "-83.0115020000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-343/",
+        "source_web_reference": "turn63view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.011502,
+          34.769269
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-347",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-347",
+        "MonitoringLocationName": "SV-347",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "WILSON CREEK AT S-04-294",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.2957743500",
+        "LongitudeMeasure": "-82.6188376900",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "007",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-347/",
+        "source_web_reference": "turn63view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.61883769,
+          34.29577435
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-348",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-348",
+        "MonitoringLocationName": "SV-348",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "LITTLE RIVER AT S-01-32",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.1670730900",
+        "LongitudeMeasure": "-82.4953971800",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-348/",
+        "source_web_reference": "turn64view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.49539718,
+          34.16707309
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-349",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-349",
+        "MonitoringLocationName": "SV-349",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "LONG CANE CREEK AT S-01-159",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.2177160300",
+        "LongitudeMeasure": "-82.3037396800",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-349/",
+        "source_web_reference": "turn64view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.30373968,
+          34.21771603
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-351",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-351",
+        "MonitoringLocationName": "SV-351",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CUFFYTOWN CREEK AT S-33-138",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.9241713800",
+        "LongitudeMeasure": "-82.1795985900",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "065",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-351/",
+        "source_web_reference": "turn64view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.17959859,
+          33.92417138
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-352",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-352",
+        "MonitoringLocationName": "SV-352",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "TURKEY CREEK AT S-33-227/S-19-68",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.7943732200",
+        "LongitudeMeasure": "-82.1442659600",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "037",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-352/",
+        "source_web_reference": "turn64view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.14426596,
+          33.79437322
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-353",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-353",
+        "MonitoringLocationName": "SV-353",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "BEAVERDAM CREEK AT FOREST SERVICE ROAD 621 OFF S-19-68",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.7998100700",
+        "LongitudeMeasure": "-82.1233145600",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "037",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-353/",
+        "source_web_reference": "turn65view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.12331456,
+          33.79981007
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-354",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-354",
+        "MonitoringLocationName": "SV-354",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "STEVENS CREEK AT S-33-88/S-19-143",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.6886230600",
+        "LongitudeMeasure": "-82.1496366800",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "037",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-354/",
+        "source_web_reference": "turn65view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.14963668,
+          33.68862306
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-362",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-362",
+        "MonitoringLocationName": "SV-362",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "TWELVE MILE CK AT S-39-137",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.8011443200",
+        "LongitudeMeasure": "-82.7499137900",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-362/",
+        "source_web_reference": "turn65view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.74991379,
+          34.80114432
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-365",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-365",
+        "MonitoringLocationName": "SV-365",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "STEVENS CREEK AT S-33-138",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.7913915400",
+        "LongitudeMeasure": "-82.1966580900",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "065",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-365/",
+        "source_web_reference": "turn65view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.19665809,
+          33.79139154
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-371",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-371",
+        "MonitoringLocationName": "SV-371",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "HORN CK AT S-19-143",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.6514412400",
+        "LongitudeMeasure": "-82.0737226100",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "037",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-371/",
+        "source_web_reference": "turn66view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.07372261,
+          33.65144124
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-375",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-375",
+        "MonitoringLocationName": "SV-375",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "EIGHTEEN MILE CK AT ANN DRIVE",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7910840000",
+        "LongitudeMeasure": "-82.6492180000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-375/",
+        "source_web_reference": "turn66view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.649218,
+          34.791084
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-735",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-735",
+        "MonitoringLocationName": "SV-735",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "THREE AND TWENTY CREEK AT SR 29",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.6275440000",
+        "LongitudeMeasure": "-82.7464160000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "007",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-735/",
+        "source_web_reference": "turn67view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.746416,
+          34.627544
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-806",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-806",
+        "MonitoringLocationName": "SV-806",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "AT MOCCASIN ROAD - ACROSS BOGGS PROPERTY",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.9584130000",
+        "LongitudeMeasure": "-82.8258770000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "077",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-806/",
+        "source_web_reference": "turn67view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.825877,
+          34.958413
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-807",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-807",
+        "MonitoringLocationName": "SV-807",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.8183210000",
+        "LongitudeMeasure": "-83.0321400000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-807/",
+        "source_web_reference": "turn69view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.03214,
+          34.818321
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-808",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-808",
+        "MonitoringLocationName": "SV-808",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.8132210000",
+        "LongitudeMeasure": "-83.0256500000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-808/",
+        "source_web_reference": "turn69view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.02565,
+          34.813221
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-809",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-809",
+        "MonitoringLocationName": "SV-809",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060102",
+        "LatitudeMeasure": "34.5100290000",
+        "LongitudeMeasure": "-83.0209100000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-809/",
+        "source_web_reference": "turn69view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.02091,
+          34.510029
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-810",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-810",
+        "MonitoringLocationName": "SV-810",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.8026700000",
+        "LongitudeMeasure": "-83.0232500000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-810/",
+        "source_web_reference": "turn69view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.02325,
+          34.80267
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-811",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-811",
+        "MonitoringLocationName": "SV-811",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.8012840000",
+        "LongitudeMeasure": "-83.0056730000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-811/",
+        "source_web_reference": "turn68view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.005673,
+          34.801284
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-812",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-812",
+        "MonitoringLocationName": "SV-812",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7870660000",
+        "LongitudeMeasure": "-83.0141630000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-812/",
+        "source_web_reference": "turn68view1",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.014163,
+          34.787066
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-813",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-813",
+        "MonitoringLocationName": "SV-813",
+        "MonitoringLocationTypeName": "River/Stream",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7912900000",
+        "LongitudeMeasure": "-83.0250640000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-813/",
+        "source_web_reference": "turn68view2",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.025064,
+          34.79129
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-832",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-832",
+        "MonitoringLocationName": "SV-832",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "CANE CREEK AT 183 N. CATHERINE ST",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7732410000",
+        "LongitudeMeasure": "-83.0611920000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "073",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-832/",
+        "source_web_reference": "turn68view3",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.061192,
+          34.773241
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-SV-833",
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-SV-833",
+        "MonitoringLocationName": "SV-833",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "THREE AND TWENTY CREEK AND HWY 88",
+        "HUCEightDigitCode": "03060101",
+        "LatitudeMeasure": "34.7047920000",
+        "LongitudeMeasure": "-82.6369660000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "007",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-SV-833/",
+        "source_web_reference": "turn70view0",
+        "source_representation": "official_station_page_metadata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.636966,
+          34.704792
+        ]
+      }
+    }
+  ]
+}

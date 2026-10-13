@@ -1,0 +1,64 @@
+{
+  "type": "FeatureCollection",
+  "name": "SCDES WQP additional station locations completing the 159-site assessment inventory",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-21038",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.253678,
+          33.899416
+        ]
+      },
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-21038",
+        "MonitoringLocationName": "RS-21038",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "ROCKY CREEK BRIDGE ON STATE RD S-33-86/ CIMMARON RD",
+        "HUCEightDigitCode": "03060107",
+        "LatitudeMeasure": "33.8994160000",
+        "LongitudeMeasure": "-82.2536780000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "065",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-21038/"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "21SC60WQ_WQX-RS-22075",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.491668,
+          34.238428
+        ]
+      },
+      "properties": {
+        "OrganizationIdentifier": "21SC60WQ_WQX",
+        "OrganizationFormalName": "South Carolina Department of Environmental Services (State)",
+        "MonitoringLocationIdentifier": "21SC60WQ_WQX-RS-22075",
+        "MonitoringLocationName": "RS-22075",
+        "MonitoringLocationTypeName": "River/Stream",
+        "MonitoringLocationDescriptionText": "PENNY CREEK ON FLAT ROCK RD",
+        "HUCEightDigitCode": "03060103",
+        "LatitudeMeasure": "34.2384280000",
+        "LongitudeMeasure": "-82.4916680000",
+        "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+        "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+        "CountryCode": "US",
+        "StateCode": "45",
+        "CountyCode": "001",
+        "ProviderName": "STORET",
+        "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RS-22075/"
+      }
+    }
+  ]
+}
