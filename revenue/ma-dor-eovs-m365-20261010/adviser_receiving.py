@@ -42,6 +42,61 @@ def source_rows(documents):
     rows["report_templates"][0]["definition"]={"title":"EXAMPLE: Upcoming reviews","columns":["contact_id","owner_id","next_occurrence"],"filters":{"status":"active"},"sort":["next_occurrence","contact_id"]}
     return rows
 
+def reopen_completed(root,receipt_path):
+    """Return the original completed generation while preserving later recipient work."""
+    def original_file(path):
+        regular(path)
+        return path
+    receipt=json.loads(original_file(receipt_path).read_text())
+    if receipt.get("schema")!=SCHEMA or receipt.get("state")!="NATIVE_COMPLETE":
+        raise ValueError("The original complete native receipt is invalid")
+    archive=Path(receipt["original_archive"])
+    if not archive.is_relative_to(root/"workspace") or file_hash(original_file(archive))!=receipt["archive"]:
+        raise ValueError("The original completed archive identity changed")
+    inspected=inspect_delivery(archive)
+    if inspected["manifest"]["workspace_id"]!=receipt["project_id"] or inspected["manifest"]["revision"]!=receipt["source_revision"]:
+        raise ValueError("The original completed archive selection changed")
+    for item in receipt["exports"]:
+        path=Path(item["path"])
+        if not path.is_relative_to(root/"exports") or file_hash(original_file(path))!={k:item[k] for k in ("sha256","bytes")}:
+            raise ValueError("A completed original export changed")
+    accepted=json.loads(original_file(root/"accepted-final-release.json").read_text())
+    request=json.loads(original_file(root/"requests"/"final-release.json").read_text())
+    if accepted["request"]!=request or accepted["result"]["id"]!=receipt["release_id"]:
+        raise ValueError("The original completed release request changed")
+    destination=root/"received"
+    if str(destination)!=receipt["received_directory"]:
+        raise ValueError("Continue the original selected receiving directory")
+    def inspect_workspace(path,recipient):
+        current=MigrationWorkspace(path)
+        try:
+            if current.project["id"]!=receipt["project_id"]:
+                raise ValueError("The retained workspace is a different project")
+            if current.dispatch("adviser.release.get",{"id":receipt["release_id"]})!=accepted["result"]:
+                raise ValueError("The retained original release changed")
+            head=current.project["revision"]
+            result=current.dispatch("adviser.release.create",request)
+            if result["result"]!=accepted["result"] or current.project["revision"]!=head:
+                raise ValueError("The original accepted release replay changed the current workspace")
+            for original in receipt["document_files"]:
+                source=current.dispatch("source.get",{"id":original["source_id"]})
+                if source["file_sha256"]!=original["sha256"] or source["bytes"]!=original["bytes"]:
+                    raise ValueError("The original document source changed")
+                with current.open_file(original["sha256"]):
+                    pass
+            if recipient:
+                operation=current.dispatch("operation.get",{"id":"adviser-course-received-note"})["operation"]
+                if operation["status"]!="SUCCEEDED" or operation["result"]["revision"]!=receipt["recipient_revision"]:
+                    raise ValueError("The original accepted recipient edit changed")
+            return head
+        finally:current.close()
+    inspect_workspace(root/"workspace",False)
+    before=inspect_workspace(destination/"workspace",True)
+    receive_delivery(archive,destination)
+    if inspect_workspace(destination/"workspace",True)!=before:
+        raise AssertionError("Repeated complete receiving replaced later recipient work")
+    return receipt
+
 def run(directory, browser_command=None):
     root=ordinary_directory(directory,create=True);os.chmod(root,0o700)
     lock=os.open(root/"course.lock",os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
@@ -58,6 +113,13 @@ def run(directory, browser_command=None):
         requests=ordinary_directory(root/"requests",create=True)
         originals=ordinary_directory(root/"originals",create=True)
         wpath=root/"workspace"
+        if (root/"native-receipt.json").exists():
+            completed=reopen_completed(root,root/"native-receipt.json")
+            print(canonical(completed),flush=True)
+            if browser_command:
+                process=subprocess.run([*browser_command,"--course",str(root)],cwd=HERE,check=False)
+                if process.returncode:raise RuntimeError("The original browser continuation did not complete; preserve its same course directory")
+            return completed
         ws=MigrationWorkspace(wpath,create=not (wpath/"workspace.sqlite3").exists(),title="EXAMPLE: Adviser migration commissioning")
         results={}
         def apply(key,operation,payload):
@@ -260,6 +322,7 @@ def run(directory, browser_command=None):
             if later_request_path.exists():later=json.loads(later_request_path.read_text())
             publish_bytes(later_request_path,encoded(later))
             edited=cold.dispatch("workspace.update",later)
+            recipient_generation_revision=edited["revision"]
             continued_revision=cold.project["revision"]
         finally:cold.close()
         receive_delivery(archive,destination)
@@ -273,7 +336,8 @@ def run(directory, browser_command=None):
             "source_families":len(FAMILIES),"source_rows":sum(len(v) for v in populations.values()),"verified_work_count":len(all_work),
             "identity_rejections":[{"operation_id":v["request"]["operation_id"],"code":v["receipt"]["error"]["code"]} for v in rejections],
             "original_archive":str(archive),"archive":file_hash(archive),"received_directory":str(destination),
-            "source_revision":inspected["manifest"]["revision"],"recipient_revision":continued_revision,
+            "source_revision":inspected["manifest"]["revision"],"recipient_revision":recipient_generation_revision,
+            "document_files":[{"source_id":v["source"]["id"],"sha256":v["sha256"],"bytes":v["bytes"]} for v in document_specs],
             "exports":[{"path":str(path),**file_hash(path)} for path in sorted(exports.iterdir())],"replay":True,"cold_receive":True,"recipient_continuation":True}
         publish_bytes(root/"native-receipt.json",encoded(receipt))
         print(canonical(receipt),flush=True)
