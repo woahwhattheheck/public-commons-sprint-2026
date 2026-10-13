@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "research-preservation-workbench",
-  "description": "Complete research-preservation source review, Archivematica/RODA/Preservica/LIBNOVA operations, editable handover and original managed Applications launch. Original-file collection accession, explicit metadata/rights review, verified BagIt and full collection-only workspace receiving. Complete retained BagIt inspection and ordered edition comparison through the original profile engines.",
+  "description": "Complete research-preservation source review, Archivematica/RODA/Preservica/LIBNOVA operations, editable handover and original managed Applications launch. Original-file collection accession, explicit metadata/rights review, verified BagIt and full collection-only workspace receiving. Complete retained BagIt inspection and ordered edition comparison through the original profile engines. Self-contained full-inventory collection reviews, offline edit/save/reopen and explicit return to the original saved/local/imported review.",
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/preservation.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/roda.py",
@@ -43,7 +43,11 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/transfer_inspection.js",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/TRANSFER_INSPECTION.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/receiving/transfer_inspection_receive.py",
-    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/receiving/transfer_inspection_browser.mjs"
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/receiving/transfer_inspection_browser.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/collection_review.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/collection_review.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/COLLECTION_REVIEW.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/receiving/collection_review_receive.mjs"
   ],
   "commands": {
     "preservation-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/cli.mjs"
