@@ -5,7 +5,11 @@ the maintained ECD1 application in one source composition. It includes the earli
 registered desk cohort and the complete Published Studies, observed context,
 Station Geography, Regional Soil, Receiving Waters, and Scenario Design families.
 The source receiver uses the original application format and each component's
-maintained installer.
+maintained installer. This successor preserves the complete preceding 494-file
+supplement and closes the selected 57-component edition against the original
+586-file ECD1 base. Shared runtime source is pinned to the reviewed PR3167-era
+application, with explicit original component successors described below. The
+canonical scientific source remains separate from transformed installed source.
 
 ## Complete source inputs
 
@@ -26,7 +30,7 @@ The preserved source families are:
 
 | Family | Complete source used |
 |---|---|
-| Calibration, source uncertainty, original-catchment maps and review packages | PR2925 plus reviewed source7d39e71ef50dc845f0cfda2763f6e238bec01c99, all seventeen maintained source/installer files and the complete native report review journey |
+| Calibration, source uncertainty, original-catchment maps and review packages | PR2925 plus reviewed source7d39e71ef50dc845f0cfda2763f6e238bec01c99, the complete PR3218 receiving successor, its original twenty-two-file installer cohort, retained calibration design, uncertainty, residual maps and saved review journey |
 | Editable GIS | GIS1.2.1 current registered installer and thirteen complete files |
 | Water and Habitat Context | Complete core, browser, CLI, guides and current-source portable installer |
 | Parcel Source Desk | Complete current desk, original source receiver and maintained installer |
@@ -35,11 +39,18 @@ The preserved source families are:
 | Observed regional context | A73C fifteen-file receiving family, 88 original hydrology files, 24 assessment files and retained public-water original geometries |
 | Observed measurements v3 | Maintained five-file intake, guarded observation/browser edits and original censored-value/date handling |
 | Routine nutrient/flow contrasts | Original thirteen-file executed processor, six tables, source manifest and existing-Workspace importer |
-| Station Geography | PR3029 complete 28-file Station Geography/Assessment Context family, direct original JSON inventory reader, original 192 published assessment records at 159 sites, and PR3017 two-point/crosswalk source; the distinct 87-site draft remains separately retained |
+| Station Geography | Complete current 53-file Station Geography/Assessment Context family, including maintained microbial and prepared-study joins, direct original JSON inventory reader, original 192 published assessment records at 159 sites, and the original two-point/crosswalk source; the distinct 87-site draft remains separately retained |
 | Regional Soil | PR2944 complete native source/coverage/region modules, original USDA field metadata and registered desk |
 | Scenario Design | Complete original 35-file editor/native binding cohort and PR3021 maintained installer |
 | Receiving Waters | Complete R8 29-file science/source/browser family plus the focused current-report/shared-host compatibility correction |
-| Eighteenmile stream nutrient source | PR3064 eleven original/derived source files, exact basin join, full original date slices and reproducible normalizer |
+| Eighteenmile stream nutrient source | PR3135 complete eighteen-file original network/source family and PR3167 complete twenty-file flow analysis; all original date slices, exact network and basin relations, derived tables, figures, report and reproduction source are retained |
+| Monitoring | Original MONITOR12 runtime plus the complete observational-context successor, nine original AE11 companion sources, and the full three-entry source manifest with its original network/flow companions |
+| Guided journey and calibration review | PR3218 complete original seven-member Guided source manifest, original eight-step route, optional saved review selection, native saved-session verification and full calibration-design dependencies |
+| Project transfer and continuity | Complete original 49-file receiving/startup family, composed with PR3178 mode-preserving incremental materialization, source-acquisition recovery and authenticated review-frame source |
+| Keowee and scientific review | Complete original 104-file component including the original scientific source declaration, full regional watershed context, native 217-HUC result archive, scientific setup and reconciliation installers |
+| Scenario experiments and native interactions | Complete original 32-file scenario/experiment family and nine-file native interaction family; current maintained installers compose against the actual receiving source |
+| Native Reach chemistry and original-source updates | Complete original twenty-two-file chemistry runtime and twenty-eight-file source-update family, including their actual full installers and current typed-registry dependencies |
+| Decision action registration | The maintained Robust Workbench retirement preserves either exact published legacy registration under its original retirement suffix before loading the current action provider |
 
 The latest 62-file study retains four original upper-censored E. coli rows and
 their source bounds. Its seventeen-entry model manifest and seven-entry figure
@@ -47,8 +58,8 @@ manifest retain the complete original bodies and reproduction sources. The
 separate published report, cohort reconciliation, paired analysis and routine
 nutrient comparisons keep their own original record selections.
 
-All fourteen ordinary upstate.sources/v1 manifests in this edition resolve to
-the exact retained member bytes. The four-stream nutrient packet keeps its
+The original source manifests selected by the context and monitoring installers
+resolve to their exact retained ordinary files, lengths and SHA256 values. The four-stream nutrient packet keeps its
 separate provenance manifest and dated concentration semantics.
 
 ## Compose and install
@@ -61,7 +72,7 @@ continue using the original scientific Workspace.
 "$ECO_PYTHON" -B "$ECO_ASSEMBLER" "$ECO_BASE_CARRIER" \
   --overlay "$ECO_CONTEXT_CARRIER" \
   --expect 0:4064517a7a3ca09db90dc3d936413cf07e8af96e4b30e5cb4a3c9c88a91514a8 \
-  --edition eco13-complete-scientific-context \
+  --edition eco13-complete-scientific-context-57 \
   --operation-id UPSTATE-INTEGRATED-DELIVERY-ECD1-20261012 \
   --output "$ECO_SOURCE_ROOT" \
   --source-map "$ECO_SOURCE_MAP"
@@ -71,6 +82,29 @@ continue using the original scientific Workspace.
   --output "$ECO_INSTALLED_ROOT" \
   --archive "$ECO_APPLICATION_ZIP"
 ~~~
+
+### Canonical scientific source
+
+The current maintained installer accepts `--scientific-source` for the independent
+original Keowee and scientific-review source root. Its default is the complete
+input supplied through `--source`. The frozen supplement includes the unchanged
+canonical 104-file source, so that default closes the original manifests. When a
+receiving host composes a newer shared application alongside that canonical
+edition, retain the original source root independently and pass it explicitly:
+
+~~~sh
+"$ECO_PYTHON" -B "$ECO_SOURCE_ROOT/source_tools/install_cumulative_application.py" \\
+  --source "$ECO_SOURCE_ROOT" \\
+  --scientific-source "$ECO_CANONICAL_SCIENTIFIC_SOURCE" \\
+  --output "$ECO_INSTALLED_ROOT" \\
+  --archive "$ECO_APPLICATION_ZIP"
+~~~
+
+The installer verifies the original canonical package before copying or changing
+an application. It passes that untouched source to the component authors'
+installers and checks both source inventories again before publishing. The
+original 168,281-byte conservation entrypoint in that canonical package has its
+own manifest identity; a newer shared entrypoint does not replace that identity.
 
 The installer copies the complete source to a fresh staging directory and checks
 that actual copied inventory before transforming the application. It preserves
@@ -171,3 +205,76 @@ The existing equipped receiving thread remains the place for the actual
 application root/interpreter, completed installation, original collection/run
 identifiers and the first concrete native output. Continue the same operation
 through any source or runtime correction.
+
+## Complete successor receiving sequence
+
+The original operation remains UPSTATE-INTEGRATED-DELIVERY-ECD1-20261012.
+Receive the original 586-file source once, then this complete supplement. Its
+members include the earlier 494-file edition and the current selected families;
+there is no intermediate partial supplement to reconstruct.
+
+The original application assembler verifies each member before materialization.
+The cumulative installer then operates in its own staging directory. It retains
+source-only families, binary inputs, full controller dependencies and the exact
+component catalogue; the final installed inventory is produced after all original
+component hooks. A failure preserves the actual partial source and reports its
+current phase and exception for the same receiver to continue.
+
+The retained-session composer admits the exact original source forms and the
+current maintained saved-session/CAS forms. It preserves the current methods,
+then the original calibration installer composes the optional saved-review
+validation. Repeating the receiving composition preserves that known review join.
+It never removes an unrelated saved-session edit on the strength of a marker.
+
+The Decision registration hook uses the original Robust Workbench retirement
+operation. It accepts only the original 757-byte registration or the original
+1,912-byte ECD1 registration with their exact SHA256 values. Its original bytes
+and filesystem mode remain under `robust-decisions.json.retired-ECO13-ROBUST-DD6B`.
+The typed registry therefore gives the twelve shared actions to the current
+workbench exactly once. A different existing registration remains an explicit
+source-composition condition.
+
+The Monitoring hook verifies the complete maintained runtime before invoking its
+original observational-context installer. The root
+`eighteenmile_monitoring_context.sources.json` registers the existing observed
+source, original station points and context report. Its source companions retain
+the original concentration rows, full daily records, dated flow coverage and
+network responses. The existing monitoring workspace, calendar, field records,
+optimisation engine and queued export path remain the consuming workflow.
+
+## Saved review, original flow context and transfer
+
+Use the existing native continuation to reopen an original completed calibration
+review, save it in the Guided journey, export that scientific Workspace and
+receive it through the original transfer desk. Reopen the same review and its
+retained maps and source reports after restore. The original study, run,
+observation and catchment identities travel in the native package.
+
+The current incremental transfer materializer preserves each original ZIP member's
+Unix mode. The cumulative archive receiver also compares member mode, creator,
+length and complete bytes before accepting an already-existing archive. Source
+acquisition recovery and the maintained SQLite snapshot logic stay with their
+original owners. A complete archive remains self-contained with the installed
+application, original source bodies and guides.
+
+The retained Eighteenmile analysis contains 589 original nutrient rows, 153 dated
+activities on 106 dates, and 2,192 original daily gauge observations. Its original
+annual-P95 classification reports 65 high-flow episodes, 58 without a sampled
+activity. These are retained outputs from the published source analysis. The
+monitoring context displays the original station-to-station network relation and
+historical sampling support beside the existing campaign design, preserving the
+observed period and the original constituent and censoring definitions.
+
+## Source references
+
+This complete source builds on merged PR3127 and explicitly incorporates the
+source cohorts from PR3135, PR3167, PR3178, PR3180, PR3218 and the maintained
+PR3228 compact-catalogue installer fixes. The canonical shared cumulative installer
+is PR3213 with the receiving joins in this edition. Monitoring observational
+source is merged PR3261, preserving its composed WATERLINK browser and exact
+source-adoption manifest over the complete author carrier F0C8TGD4UM7. The
+original nine-file companion carrier is F0C9L1GQZ4Y. The native source inspector
+uses the full maintained relative-import repair from original packet
+5bcb80546ad012e2d5dbc751183eb62abe3b2ce3, including complete native source-manifest
+closure. Each member's own source reference and
+hash remains in the complete source bank.

@@ -201,9 +201,34 @@ def shared_lifecycle(root):
     write(index, html)
 
 
-def compose(root, records=None, *, source_root=None):
+def robust_registry_join(root, records):
+    """Use the original owner retirement for an exact predecessor descriptor."""
+    relative = "source/install_robust_workbench.py"
+    if not (root / relative).is_file():
+        return
+    original = module(root, relative)
+    legacy, retained = original["prepare_legacy_retirement"](root, {})
+    old = original["target_path"](root, original["LEGACY"])
+    target = original["target_path"](root, original["RETIRED"])
+    if legacy is not None:
+        original_mode = old.stat().st_mode & 0o777
+        if (original["read_existing"](root, original["LEGACY"]) != legacy
+                or original["read_existing"](root, original["RETIRED"]) != retained):
+            raise ValueError("Original Decision registration changed during retirement")
+        os.replace(old, target)
+        if (target.read_bytes() != legacy
+                or target.stat().st_mode & 0o777 != original_mode):
+            raise ValueError("Original Decision registration retirement differs")
+    records.append({"component": "Original Decision action registration",
+                    "retained_as": original["RETIRED"],
+                    "sha256": sha(legacy if legacy is not None else retained)
+                    if legacy is not None or retained is not None else None})
+
+
+def compose(root, records=None, *, source_root=None, application_source=None):
     if records is None:
         records = []
+    application_source = root if application_source is None else application_source
     retained_source = Path(source_root).resolve(strict=True) if source_root is not None else None
     canonical_installers = (
         "source_tools/install_keowee_watershed_join.py",
@@ -212,6 +237,7 @@ def compose(root, records=None, *, source_root=None):
     if any((root / name).is_file() for name in canonical_installers):
         if retained_source is None or retained_source == root.resolve():
             raise ValueError("Pass the independent retained source_root when composing the Keowee and scientific-review families.")
+    robust_registry_join(root, records)
     diagnostic_join(root, records)
     experiments = module(root, "install_experiments.py")
     apply_function(root, [
@@ -232,9 +258,9 @@ def compose(root, records=None, *, source_root=None):
     ], "Conservation plans", records)
     if (root / "operator/install_chemistry.py").is_file():
         chemistry = module(root, "operator/install_chemistry.py")
-        # The staged complete application already holds the byte-verified
-        # chemistry source. source_root above may be a separate Keowee/review family.
-        result = chemistry["install"](root, source_root=root)
+        # Retain the complete application source independently of the canonical
+        # Keowee/review source and the transformed installed application.
+        result = chemistry["install"](root, source_root=application_source)
         records.append({"component": "Reach chemistry", "result": result})
     elif (root / "install_chemistry.py").is_file():
         # Earlier complete chemistry editions exposed their original transforms
@@ -285,7 +311,7 @@ def compose(root, records=None, *, source_root=None):
             ("operator/web/app.mjs", investigations["patch_app"]),
         ], "Native Investigations and scientific interpretation", records)
     registered_desks_join(root, records)
-    context_desks_join(root, records)
+    context_desks_join(root, records, application_source=application_source)
     scientific_source_join(root, retained_source, records)
     continuity_join(root, records)
     return records
@@ -362,18 +388,13 @@ def registered_desks_join(root, records):
         result = module(root, gis[0])["install"](root, root)
         records.append({"component": "Editable GIS projects", "result": result})
 
-    calibration = ("operator/install_calibration.py", "source_tools/calibration_assembly.py",
-                   "model/calibration.py", "model/CALIBRATION.md",
-                   "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md",
-                   "model/calibration_maps.py", "model/CALIBRATION_MAPS.md",
-                   "model/calibration_review.py", "model/CALIBRATION_REVIEW.md",
-                   "operator/web/calibration_review.mjs",
-                   "operator/calibration.py", "operator/CALIBRATION.md",
-                   "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs",
-                   "operator/web/calibration.css", "operator/extensions/calibration.json")
-    if complete("Calibration, source uncertainty and residual maps", calibration):
-        result = module(root, calibration[0])["install"](root, root)
-        records.append({"component": "Calibration, source uncertainty and residual maps",
+    calibration_path = "operator/install_calibration.py"
+    if (root / calibration_path).is_file():
+        calibration = module(root, calibration_path)
+        complete("Calibration, source uncertainty, residual maps and saved reviews",
+                 tuple(calibration["FILES"]) + (calibration_path,))
+        result = calibration["install"](root, root)
+        records.append({"component": "Calibration, source uncertainty, residual maps and saved reviews",
                         "result": result})
 
     water = ("source_tools/install_water_context.py", "model/water_context.py",
@@ -441,8 +462,9 @@ def registered_desks_join(root, records):
                         "paths": list(annual)})
 
 
-def context_desks_join(root, records):
+def context_desks_join(root, records, *, application_source=None):
     """Join complete original study and geography sources to the maintained host."""
+    application_source = root if application_source is None else application_source
     def complete(label, paths):
         present = [(root / name).is_file() for name in paths]
         if not any(present):
@@ -624,12 +646,35 @@ def context_desks_join(root, records):
                         "receiver": observed,
                         "original_source_manifests": [manifest(name) for name in names]})
 
+    native_path = "operator/install_native_interactions.py"
+    if (root / native_path).is_file():
+        native = module(root, native_path)
+        complete("Native conservation interactions", native["FILES"])
+        result = native["install"](root, application_source)
+        records.append({"component": "Native conservation interactions", "result": result})
+
+    monitoring_path = "integrations/monitoring/install_observed_context.py"
+    if (root / monitoring_path).is_file():
+        adoption = json.loads((root / "integrations/monitoring/source_adoption.json").read_text("utf-8"))
+        complete("Monitoring observational context", tuple(
+            item["path"] for item in adoption["installed_files"]) + (
+                monitoring_path, "integration/monitoring_observed_sources.json",
+                "eighteenmile_monitoring_context.sources.json"))
+        for item in adoption["installed_files"]:
+            body = (root / item["path"]).read_bytes()
+            if len(body) != item["bytes"] or sha(body) != item["sha256"]:
+                raise ValueError("Monitoring original runtime differs: " + item["path"])
+        result = module(root, monitoring_path)["install"](root, application_source)
+        records.append({"component": "Monitoring observational context", "result": result,
+                        "original_source_manifests": [
+                            manifest("eighteenmile_monitoring_context.sources.json")]})
+
     # Use the maintained collector composition once on the actual receiving
     # source. Newer assemblers read these names from portable; older complete
     # source editions keep their original literal inventory.
     directories = tuple(name for name in (
         "scenario-design", "measurement_workspace", "observations",
-        "assessment", "source_data", "wqp", "docs") if (root / name).is_dir())
+        "assessment", "source_data", "wqp", "docs", "integrations") if (root / name).is_dir())
     if directories:
         if namespace_helper is None:
             raise ValueError("Receive the maintained source inventory installer")
@@ -719,10 +764,10 @@ def same_archive_members(current, proposed):
     if names != proposed.namelist():
         return False
     for name in names:
-        retained, selected = current.getinfo(name), proposed.getinfo(name)
-        if (retained.file_size != selected.file_size
-                or retained.create_system != selected.create_system
-                or (retained.external_attr >> 16) != (selected.external_attr >> 16)):
+        left_info, right_info = current.getinfo(name), proposed.getinfo(name)
+        if (left_info.file_size != right_info.file_size
+                or left_info.create_system != right_info.create_system
+                or left_info.external_attr != right_info.external_attr):
             return False
         with current.open(name) as left, proposed.open(name) as right:
             while True:
@@ -825,7 +870,8 @@ def install(source, output, archive, *, scientific_source=None):
             raise ValueError("Copied application source differs from its retained inventory")
         sys.path[:0] = [str(root / "operator"), str(root)]
         phase = "compose_application"
-        compose(root, steps, source_root=scientific_root)
+        compose(root, steps, source_root=scientific_root,
+                application_source=source)
         phase = "restore_original_inputs"
         inputs = restore_inputs(root)
         phase = "check_application_sources"
