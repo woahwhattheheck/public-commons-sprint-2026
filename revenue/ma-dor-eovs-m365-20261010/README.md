@@ -1,10 +1,10 @@
-# Migration Workbench — original evidence, cases and cutover
+# Migration Workbench — original evidence, registers and cutover
 
-A complete local operating application for source inventories, file migration evidence, case/document relationships, explicit destination plans, independent rehearsal results, reviewed findings and portable customer continuation. The Python browser and command line share one original SQLite workspace, immutable source objects and request history.
+A complete local operating application for source inventories, file migration evidence, case/document relationships, typed registers, exact financial controls, property continuity, independent rehearsal results, reviewed findings and portable customer continuation. The Python browser and command line share one original SQLite workspace, immutable source objects and request history.
 
 ## Start the complete application
 
-Use Linux and Python 3.10 or later. The application uses the Python standard library; no package installation is required. From this complete directory:
+Use Linux and Python 3.10 or later. The application uses the Python standard library; no package installation is required. The optional automated browser receiving course additionally uses an installed Node runtime, Playwright and Chromium; its complete invocation is in REGISTER_RECEIVING.md. From this complete directory:
 
     python3 migration_server.py --workspace /absolute/path/to/workspace --create --title "Migration review"
 
@@ -22,24 +22,31 @@ Keep the whole received application, workspace and retained object tree. The ori
 | --- | --- |
 | Import inventories/provider reports, review mappings, reconcile file evidence and work corrections | [Operating Workbench](OPERATING_WORKBENCH.md) |
 | Project supplied cases/documents/links, set a lifecycle cutoff and destination policy, reconcile independent rehearsals, review findings and record cutover readiness | [Cases & cutover](CASE_MIGRATION.md) |
+| Map typed people, episodes and related registers, compare independent target populations, reconcile signed financial controls and review cutover | [Register operator](REGISTER_OPERATOR.md) and [Register domain](REGISTER_MIGRATION.md) |
+| Run two complete register editions, customer continuation and full return, or the authored seven-register example | [Register receiving](REGISTER_RECEIVING.md) |
+| Review grant-specific source families and independent migration returns | [Grant migration](GRANT_MIGRATION.md) |
+| Build selected financial reports, reconcile exact original totals and record reviews/releases | [Financial reporting](FINANCIAL_REPORTING.md) |
+| Review property, lease and temporal continuity with its original programme | [Property continuity](PROPERTY_CONTINUITY.md) |
 | Exact original operation envelope, parsers, pagination, source profiles and snapshot contracts | [Core API](MIGRATION_CORE.md) |
 | Run the complete supplied-case programme, preserve interrupted requests and verify customer/return continuation | [Case receiving](CASE_RECEIVING.md) |
 
-In the browser, retain complete original files in Sources. Then use the existing Rounds, Mappings & evidence, Reconciliation and Corrections views for file evidence, or open Cases & cutover for its six source-to-decision views. Handover & history prepares the entire editable project. Download the Cases working JSON separately when preserving unsubmitted browser drafts.
+In the browser, retain complete original files in Sources. Then use the existing Rounds, Mappings & evidence, Reconciliation and Corrections views for file evidence, or open Cases & cutover for its six source-to-decision views. Handover & history prepares the entire editable project. Cases and Registers each retain their own complete browser working file, including unsubmitted drafts and original pending requests. The header links open the financial and property workflows in the same project.
 
 ## Native entry points
 
     python3 migration_cli.py --workspace /absolute/path/to/workspace state
     python3 migration_cli.py --workspace /absolute/path/to/workspace case schema
     python3 migration_cli.py --workspace /absolute/path/to/workspace case list rehearsal --offset 0 --limit 100
+    python3 migration_cli.py --workspace /absolute/path/to/workspace register schema
+    python3 register_reference_example.py --directory /absolute/private/authored-register-example
 
 The complete CLI also retains source import, original request inspection/resume, complete CSV/NDJSON exports, report publication, delivery preparation/download and independent receiving. Mutation requests use actual operation IDs, recorded actors and the current reviewed revision; examples in the guides identify where supplied values are required.
 
 ## Complete handover and source selection
 
-New deliveries contain all 21 application files, the original SQLite snapshot, every retained object and earlier archive referenced by that snapshot, complete readable reports and full case/file result exports. Current case deliveries declare the exact commons.case-migration-application/v1 roster. Complete historical 16-file deliveries remain inspectable and receivable under their original profile and frozen bytes.
+New deliveries contain all 48 application files, the original SQLite snapshot, every retained object and earlier archive referenced by that snapshot, complete readable reports and full result exports. The current profile is commons.migration-workbench-application/v4. Complete historical 16-, 21-, 24-, 31- and 39-file deliveries remain inspectable and receivable under their original profiles and frozen bytes. Preparations already in progress retain their selected complete edition.
 
-Read reports/review.html and reports/case-review.html in a prepared handover. Continue the same logical project in its separate received workspace, prepare a customer return, and independently reopen it. Re-receiving the original identical archive preserves later customer edits.
+Read reports/review.html, reports/case-review.html and reports/register-review.html in a prepared handover. Continue the same logical project in its separate received workspace, prepare a customer return, and independently reopen it. Re-receiving the original identical archive preserves later customer edits.
 
 ## Evidence and execution scope
 
