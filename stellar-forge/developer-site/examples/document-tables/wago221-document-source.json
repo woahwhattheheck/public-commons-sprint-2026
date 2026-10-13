@@ -1,0 +1,53 @@
+{
+  "schema": "stellar-forge.document-table-source.v1",
+  "id": "document-924e3df6226d6a7a1d3b944fa9888918a636568e745d30415859064a12541cf4",
+  "filename": "AutomationDirect-WAGO-221-extracted-tables.html",
+  "sourceUrl": "https://cdn.automationdirect.com/static/specs/221serieslevernuts.pdf",
+  "document": {
+    "filename": "221serieslevernuts.pdf",
+    "url": "https://cdn.automationdirect.com/static/specs/221serieslevernuts.pdf",
+    "bytes": 3536448,
+    "pageCount": 5,
+    "title": "Splicing Connectors — 221 Series LEVER-NUTS and Gelbox 207 Series"
+  },
+  "extraction": {
+    "provider": "Adobe PDF to Markdown",
+    "extractedAt": "2026-10-13",
+    "method": "Unmodified HTML table segments from the original complete PDF extraction, in source order."
+  },
+  "tableLocations": [
+    {
+      "tableIndex": 1,
+      "page": 2,
+      "label": "sales · ad-wago221-table-1"
+    },
+    {
+      "tableIndex": 2,
+      "page": 2,
+      "label": "connector-specifications · ad-wago221-table-2"
+    },
+    {
+      "tableIndex": 3,
+      "page": 2,
+      "label": "compatibility · ad-wago221-table-3"
+    },
+    {
+      "tableIndex": 4,
+      "page": 4,
+      "label": "sales · ad-wago221-table-4"
+    },
+    {
+      "tableIndex": 5,
+      "page": 4,
+      "label": "compatibility · ad-wago221-table-5"
+    },
+    {
+      "tableIndex": 6,
+      "page": 5,
+      "label": "gelbox-specifications · ad-wago221-table-6"
+    }
+  ],
+  "sourceText": "<table><tr> <td colspan=10> Splicing Connectors 221 Series LEVER-NUTS®</td> </tr>\n<tr> <td> Part Number</td> <td> Qty</td> <td> Number of Openings</td> <td> Wire Range</td> <td> Number of Commons</td> <td> Strip Length</td> <td> Wiring Direction</td> <td> Splice Type</td> <td> Price</td> <td> Drawing Link</td> </tr>\n<tr> <td colspan=10> 20 Amp Models</td> </tr>\n<tr> <td> 221-412</td> <td> 100</td> <td rowspan=2> 2</td> <td rowspan=6> 0.2–4 mm² [24–12 AWG] (Solid/Stranded)</td> <td rowspan=8> 1</td> <td rowspan=8> 11mm [0.43in]</td> <td rowspan=6> Side-entry</td> <td rowspan=8> Lever</td> <td> $34.00</td> <td> PDF</td> </tr>\n<tr> <td> 221-412/K007-0000</td> <td> 10</td> <td> $5.00</td> <td> PDF</td> </tr>\n<tr> <td> 221-413</td> <td> 50</td> <td> 3</td> <td> $21.00</td> <td> PDF</td> </tr>\n<tr> <td> 221-415</td> <td> 25</td> <td rowspan=2> 5</td> <td> $16.50</td> <td> PDF</td> </tr>\n<tr> <td> 221-415/K006-0000</td> <td> 10</td> <td> $9.00</td> <td> PDF</td> </tr>\n<tr> <td> 221-420/K000-0002</td> <td> 15</td> <td> 10</td> <td> $22.00</td> <td> PDF</td> </tr>\n<tr> <td> 221-2401</td> <td> 60</td> <td rowspan=2> 2</td> <td rowspan=2> 0.2–4 mm² [20–12 AWG] Solid 0.2–2.5 mm² [18–12 AWG] Stranded</td> <td rowspan=2> In-line</td> <td> $25.50</td> <td> PDF</td> </tr>\n<tr> <td> 221-2401/K000-0006</td> <td> 10</td> <td> $7.00</td> <td> PDF</td> </tr>\n<tr> <td colspan=10> 30 Amp Models</td> </tr>\n<tr> <td> 221-612</td> <td> 50</td> <td> 2</td> <td rowspan=3> 0.5–6 mm² [20–10 AWG] (Solid/Stranded)</td> <td rowspan=3> 1</td> <td rowspan=3> 12–14mm [0.47–0.55in]</td> <td rowspan=3> Side-entry</td> <td rowspan=3> Lever</td> <td> $30.50</td> <td> PDF</td> </tr>\n<tr> <td> 221-613</td> <td> 30</td> <td> 3</td> <td> $24.50</td> <td> PDF</td> </tr>\n<tr> <td> 221-615</td> <td> 15</td> <td> 5</td> <td> $19.00</td> <td> PDF</td> </tr></table>\n\n<table><tr> <td colspan=9> Specifications</td> </tr>\n<tr> <td> Part Number</td> <td> 221-412</td> <td> 221-413</td> <td> 221-415</td> <td> 221-420</td> <td> 221-2401</td> <td> 221-612</td> <td> 221-613</td> <td> 221-615</td> </tr>\n<tr> <td> UL Rated Voltage (per UL 486C)</td> <td colspan=8> 600V</td> </tr>\n<tr> <td> Nominal Current</td> <td colspan=5> Up to 20A (depends on AWG)</td> <td colspan=3> Up to 30A (depends on AWG)</td> </tr>\n<tr> <td> IEC Rated Voltage (per EN 60998)</td> <td colspan=8> 450V</td> </tr>\n<tr> <td> Nominal Current</td> <td colspan=5> Up to 32A (depends on AWG)</td> <td colspan=3> Up to 41A (depends on AWG)</td> </tr>\n<tr> <td> Temperature Range</td> <td colspan=8> Surrounding air temperature: -40 to +85 °C [-40 to +185 °F] Continuous air temperature: -60 to +105 °C [-76 to +221 °F]</td> </tr>\n<tr> <td> Connection Technology</td> <td colspan=8> CAGE CLAMP®</td> </tr>\n<tr> <td> Connector Conductor Material</td> <td colspan=8> Copper</td> </tr>\n<tr> <td> Housing Material</td> <td colspan=8> Polycarbonate (PC)</td> </tr>\n<tr> <td> Housing Color</td> <td colspan=8> Transparent</td> </tr>\n<tr> <td> Actuator Color</td> <td colspan=8> Orange</td> </tr>\n<tr> <td> Flammability Class (per UL94)</td> <td colspan=8> V2</td> </tr>\n<tr> <td> Weight</td> <td> 1.7g</td> <td> 2.5g</td> <td> 4g</td> <td> 7g</td> <td> 2.4g</td> <td> 3g</td> <td> 4g</td> <td> 7.1g</td> </tr>\n<tr> <td> CE Conformity</td> <td colspan=8> CE (EN 60998-1/EN 60998-2-2)</td> </tr>\n<tr> <td> Approvals</td> <td colspan=8> cULus E69654/E201573</td> </tr></table>\n\n<table><tr> <td colspan=8> Gelbox Compatibility</td> </tr>\n<tr> <td> Part Number</td> <td> 221-412</td> <td> 221-413</td> <td> 221-415</td> <td> 221-612</td> <td> 221-613</td> <td> 221-615</td> <td> 221-2401</td> </tr>\n<tr> <td> 207-1331</td> <td> 1</td> <td> 1</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> </tr>\n<tr> <td> 207-1332</td> <td> 2</td> <td> —</td> <td> 1</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> </tr>\n<tr> <td> 207-1372</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> 2</td> </tr>\n<tr> <td> 207-1373</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> 3</td> </tr>\n<tr> <td> 207-1431</td> <td> —</td> <td> —</td> <td> —</td> <td> 1</td> <td> 1</td> <td> 1</td> <td> —</td> </tr>\n<tr> <td> 207-1433</td> <td> —</td> <td> —</td> <td> —</td> <td> 3</td> <td> 2</td> <td> —</td> <td> —</td> </tr></table>\n\n<table><tr> <td colspan=8> Gelbox 207 Series</td> </tr>\n<tr> <td> Part Number</td> <td> Qty</td> <td> Dimension H x W x D mm [in]</td> <td> Design</td> <td> Splice Type</td> <td> Price</td> <td> Weight g</td> <td> Drawing Link</td> </tr>\n<tr> <td> 207-1331</td> <td> 4</td> <td> 17.80 x 32.00 x 33.60 [0.70 x 1.26 x 1.32]</td> <td> Size 1</td> <td> Branch</td> <td> $31.00</td> <td> 12</td> <td> PDF</td> </tr>\n<tr> <td> 207-1332</td> <td> 4</td> <td> 17.80 x 45.90 x 33.60 [0.70 x 1.80 x 1.32]</td> <td> Size 2</td> <td> Branch</td> <td> $37.00</td> <td> 18.4</td> <td> PDF</td> </tr>\n<tr> <td> 207-1372</td> <td> 4</td> <td> 17.80 x 32.70 x 56.90 [0.70 x 1.29 x 2.20]</td> <td> Size 1</td> <td> In-line</td> <td> $46.00</td> <td> 19.8</td> <td> PDF</td> </tr>\n<tr> <td> 207-1373</td> <td> 4</td> <td> 17.80 x 41.70 x 56.90 [0.70 x 1.61 x 2.20]</td> <td> Size 2</td> <td> In-line</td> <td> $50.00</td> <td> 19.8</td> <td> PDF</td> </tr>\n<tr> <td> 207-1431</td> <td> 4</td> <td> 21.30 x 38.00 x 40.10 [0.84 x 1.50 x 1.58]</td> <td> Size 1</td> <td> Branch</td> <td> $45.00</td> <td> 27.8</td> <td> PDF</td> </tr>\n<tr> <td> 207-1433</td> <td> 2</td> <td> 21.30 x 57.00 x 40.10 [0.84 x 2.24 x 1.58]</td> <td> Size 3</td> <td> Branch</td> <td> $30.00</td> <td> 35.4</td> <td> PDF</td> </tr></table>\n\n<table><tr> <td colspan=14> Gelbox Compatibility</td> </tr>\n<tr> <td> Part Number</td> <td> 221-412</td> <td> 221-413</td> <td> 221-415</td> <td> 221-612</td> <td> 221-613</td> <td> 221-615</td> <td> 221-2401</td> <td> 2773-402</td> <td> 2773-403</td> <td> 2773-404</td> <td> 2773-405</td> <td> 2773-406</td> <td> 2773-408</td> </tr>\n<tr> <td> 207-1331</td> <td> 1</td> <td> 1</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> 1</td> <td> 1</td> <td> —</td> <td> —</td> <td> —</td> </tr>\n<tr> <td> 207-1332</td> <td> 2</td> <td> —</td> <td> 1</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> 3</td> <td> 2</td> <td> –</td> <td> 1</td> <td> 1</td> <td> 1</td> </tr>\n<tr> <td> 207-1372</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> 2</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —–</td> <td> —</td> </tr>\n<tr> <td> 207-1373</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> 3</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> </tr>\n<tr> <td> 207-1431</td> <td> —</td> <td> —</td> <td> —</td> <td> 1</td> <td> 1</td> <td> 1</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> </tr>\n<tr> <td> 207-1433</td> <td> —</td> <td> —</td> <td> —</td> <td> 3</td> <td> 2</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> <td> —</td> </tr></table>\n\n<table><tr> <td colspan=2> Specifications</td> </tr>\n<tr> <td> Actuation Type</td> <td> Locking system</td> </tr>\n<tr> <td> Serviceable</td> <td> Yes</td> </tr>\n<tr> <td> Gel</td> <td> Pre-filled silicon-free</td> </tr>\n<tr> <td> Protection Rating</td> <td> IPX8</td> </tr>\n<tr> <td> Application</td> <td> Wet locations, outdoor, moisture-prone</td> </tr>\n<tr> <td> Temperature Range</td> <td> Operating temperature: -55 to +85 °C [-67 to +185 °F] Storage temperature: 0 to 40 °C [32 to 104 °F]</td> </tr>\n<tr> <td> Housing Material</td> <td> Polypropylene</td> </tr>\n<tr> <td> Housing Color</td> <td> Gray</td> </tr>\n<tr> <td> Approvals</td> <td> RoHS compliant, no exemption</td> </tr></table>",
+  "bytes": 7998,
+  "sha256": "c7130840d07ba4432a3e2175c1f105748a7a1f01838360d38927fbf3f22b9a89"
+}

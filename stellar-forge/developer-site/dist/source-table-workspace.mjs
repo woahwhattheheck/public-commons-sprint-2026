@@ -1,4 +1,8 @@
 // MIT. Source-table authoring for the existing Stellar Forge merchant workspace.
+import {SourceTableError,DELIMITERS,decodeSource,parseTable} from './source-delimited.mjs';
+export {SourceTableError,DELIMITERS,decodeSource,parseTable};
+import { correctionContext, correctionState, applySourceCorrection, correctionsCsv } from './source-table-corrections.mjs';
+export { correctionContext, correctionState, correctionsCsv };
 import { DEFAULT_STARTER, DEFAULT_RESOURCE, SOURCE_CONTRACT, createDatasetWorkspace, zipWorkspace } from './onboarding.mjs';
 import { validateDocumentTableSource, validateDocumentTableProjection } from './source-document-tables.mjs';
 import { validateDocumentIntake } from './source-table-intake.mjs';
@@ -8,7 +12,6 @@ export const MAPPING_SCHEMA = 'stellar-forge.source-table-mapping.v1';
 export const RESOURCE_SCHEMA = 'stellar-forge.tabular-resource.v1';
 export const TYPES = Object.freeze(['text', 'integer', 'integer-text', 'decimal-text', 'boolean', 'date', 'timestamp']);
 export const EMPTY_POLICIES = Object.freeze(['keep', 'null', 'omit', 'error']);
-export const DELIMITERS = Object.freeze({ comma: ',', tab: '\t', semicolon: ';', pipe: '|' });
 export const LIMITS = Object.freeze({ sourceBytes: 16 * 1024 * 1024, projectBytes: 128 * 1024 * 1024, rows: 100000, columns: 512, documents: 64 });
 const encoder = new TextEncoder();
 const own = (o, key) => Object.prototype.hasOwnProperty.call(o, key);
@@ -20,11 +23,6 @@ const now = () => new Date().toISOString();
 const id = prefix => prefix + '-' + crypto.randomUUID();
 const bytes = text => encoder.encode(text).length;
 
-export class SourceTableError extends Error {
-  constructor(code, message, details = {}) {
-    super(message); this.name = 'SourceTableError'; this.code = code; Object.assign(this, details);
-  }
-}
 function fail(code, message, details) { throw new SourceTableError(code, message, details); }
 function text(value, label, maximum = 1000) {
   if (typeof value !== 'string' || value.length > maximum || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value))
@@ -42,70 +40,6 @@ export async function sha256(value) {
   const data = typeof value === 'string' ? encoder.encode(value) : value;
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', data)), b => b.toString(16).padStart(2, '0')).join('');
 }
-export function decodeSource(value) {
-  try { return sourceText(new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(value)); }
-  catch (error) { if (error instanceof SourceTableError) throw error; fail('SOURCE_ENCODING', 'The selected file is not valid UTF-8. Export the original table as UTF-8 CSV or TSV.'); }
-}
-function delimiter(value) {
-  const d = own(DELIMITERS, value) ? DELIMITERS[value] : value;
-  if (!Object.values(DELIMITERS).includes(d)) fail('DELIMITER', 'Select comma, tab, semicolon or pipe.');
-  return d;
-}
-
-/** Strict delimited-text reader. Original text is retained separately, including BOM and line endings. */
-export function parseTable(input, { delimiter: selected = ',', header = true, skipEmptyRecords = false } = {}) {
-  sourceText(input);
-  if (typeof header !== 'boolean' || typeof skipEmptyRecords !== 'boolean') fail('DIALECT', 'Header and empty-record options must be true or false.');
-  const separator = delimiter(selected), s = input.replace(/^\uFEFF/, '');
-  if (!s.length) fail('EMPTY_SOURCE', 'The selected source is empty.');
-  const records = [];
-  let cells = [], cell = '', quoted = false, closed = false, started = false;
-  let line = 1, recordLine = 1, skipped = 0;
-  const pushCell = () => {
-    cells.push(cell); cell = ''; closed = false;
-    if (cells.length > LIMITS.columns) fail('COLUMN_LIMIT', 'A table can contain at most ' + LIMITS.columns + ' columns.', { line });
-  };
-  const pushRecord = () => {
-    pushCell(); records.push({ cells, line: recordLine, record: records.length + 1 });
-    if (records.length > LIMITS.rows + 1) fail('ROW_LIMIT', 'A source can contain at most ' + LIMITS.rows + ' data records.');
-    cells = []; started = false;
-  };
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i];
-    if (quoted) {
-      if (c === '"') { if (s[i + 1] === '"') { cell += '"'; i++; } else { quoted = false; closed = true; } }
-      else if (c === '\r') { cell += c; if (s[i + 1] === '\n') cell += s[++i]; line++; }
-      else { cell += c; if (c === '\n') line++; }
-      continue;
-    }
-    if (c === '\r' || c === '\n') {
-      pushRecord(); if (c === '\r' && s[i + 1] === '\n') i++;
-      line++; recordLine = line; continue;
-    }
-    if (c === separator) { pushCell(); started = true; continue; }
-    if (closed) fail('CSV_AFTER_QUOTE', 'Unexpected character after a closing quote on source line ' + line + '.', { line });
-    if (c === '"') {
-      if (cell.length) fail('CSV_QUOTE', 'A quoted field must start with a quote on source line ' + line + '.', { line });
-      quoted = true; started = true; continue;
-    }
-    cell += c; started = true;
-  }
-  if (quoted) fail('CSV_UNCLOSED_QUOTE', 'The quoted field beginning in record at line ' + recordLine + ' is not closed.', { line: recordLine });
-  if (started || cells.length || cell.length || closed) pushRecord();
-  const first = records[0], width = first.cells.length;
-  const headings = header ? [...first.cells] : Array.from({ length: width }, (_, i) => 'Column ' + (i + 1));
-  const body = header ? records.slice(1) : records;
-  const rows = [];
-  for (const record of body) {
-    if (skipEmptyRecords && record.cells.every(value => value === '')) { skipped++; continue; }
-    if (record.cells.length !== width)
-      fail('ROW_WIDTH', 'Source record ' + record.record + ' (line ' + record.line + ') has ' + record.cells.length + ' fields; the table declares ' + width + '.', { line: record.line, record: record.record, expected: width, actual: record.cells.length });
-    rows.push(record);
-  }
-  if (rows.length > LIMITS.rows) fail('ROW_LIMIT', 'A source can contain at most ' + LIMITS.rows + ' data records.');
-  return { delimiter: separator, header, skipEmptyRecords, headings, width, rows, skippedEmptyRecords: skipped, sourceRecordCount: body.length };
-}
-
 /** Dialect suggestions are shown for review; the saved mapping always contains an explicit delimiter. */
 export function inspectSource(input, options = {}) {
   if (options.delimiter) {
@@ -213,15 +147,18 @@ function keyFor(row, names) {
 }
 
 /** Convert only the operator-selected fields. Strings, exact decimals and original source records stay recoverable. */
-export function normalizeTable(edition, mapping) {
-  const parsed = parseTable(edition.sourceText, mapping);
+export function normalizeTable(edition, mapping, corrections = null) {
+  const decisions = correctionState(edition, mapping, corrections), parsed = decisions.parsed;
   validateMapping(mapping, parsed);
   const columns = mapping.columns.filter(c => c.include), names = keyNames(mapping);
   const projectedRecords = edition.documentTable ? new Map(edition.documentTable.projection.rows.map(row => [row.record, row])) : null;
   const rows = [], records = [], issues = [], seenKeys = new Map();
   let issueCount = 0;
   const issue = value => { issueCount++; if (issues.length < 200) issues.push(value); };
-  for (const record of parsed.rows) {
+  for (const originalRecord of parsed.rows) {
+    if (decisions.excluded.has(originalRecord.record)) continue;
+    const cellDecisions = originalRecord.cells.map((original, column) => decisions.cells.get(originalRecord.record + ':' + column) || null);
+    const record = { ...originalRecord, cells: originalRecord.cells.map((original, column) => cellDecisions[column] ? cellDecisions[column].value : original) };
     const row = Object.create(null);
     let invalid = false;
     for (const column of columns) {
@@ -238,6 +175,7 @@ export function normalizeTable(edition, mapping) {
     if (!invalid) {
       rows.push(row);
       const origin = { record: record.record, line: record.line };
+      if (cellDecisions.some(Boolean)) origin.corrections = cellDecisions.flatMap((decision, column) => decision ? [{column,original:originalRecord.cells[column],...copy(decision)}] : []);
       if (edition.documentTable) {
         const retained = edition.documentTable, projection = retained.projection;
         const projected = projectedRecords.get(record.record);
@@ -252,13 +190,14 @@ export function normalizeTable(edition, mapping) {
   if (issueCount) fail('FIELD_VALUES', 'Review ' + issueCount + ' source field or key issue' + (issueCount === 1 ? '' : 's') + ' before retaining this edition.', { issues, issueCount, issuesTruncated: issueCount > issues.length });
   const fields = columns.map(c => ({ name: c.name, sourceName: c.sourceName, sourceIndex: c.index, type: c.type, empty: c.empty, trim: c.trim, unit: c.unit, timeBasis: c.timeBasis }));
   const data = { schema: RESOURCE_SCHEMA, source: { editionId: edition.id, filename: edition.filename, sha256: edition.sha256, bytes: edition.bytes,
+      ...(corrections ? { corrections: copy(corrections) } : {}),
       ...(edition.documentTable ? { documentTable: { sourceId: edition.documentTable.sourceId,
         sourceSha256: edition.documentTable.sourceSha256, projectionId: edition.documentTable.projection.id,
         tableIndex: edition.documentTable.projection.selection.tableIndex, document: copy(edition.documentTable.document) } } : {}) },
     fields, keyFields: names, rows };
   const dataText = json(data), dataBytes = bytes(dataText);
   if (dataBytes > SOURCE_CONTRACT.maximumDataBytes) fail('OUTPUT_SIZE', 'The complete mapped output is ' + dataBytes + ' bytes; the native dataset resource accepts ' + SOURCE_CONTRACT.maximumDataBytes + '. Select fewer fields or use the existing native database/dataset workflow.');
-  return { data, dataText, dataBytes, sourceRecords: records, summary: { rows: rows.length, columns: fields.length, sourceRecords: parsed.sourceRecordCount, skippedEmptyRecords: parsed.skippedEmptyRecords, keyFields: names } };
+  return { data, dataText, dataBytes, sourceRecords: records, summary: { rows: rows.length, columns: fields.length, sourceRecords: parsed.sourceRecordCount, skippedEmptyRecords: parsed.skippedEmptyRecords, keyFields: names, ...(corrections ? { correctionRevision: corrections.revision, correctedCells: decisions.cells.size, excludedRecords: decisions.excluded.size } : {}) } };
 }
 export function createProject({ name = 'Source tables', starter } = {}) {
   text(name, 'Project name', 200);
@@ -279,6 +218,27 @@ export function selectedReview(doc) {
   const review = doc.reviews.find(r => r.id === doc.selectedReviewId);
   if (!review) fail('REVIEW_REQUIRED', 'Review ' + doc.label + ' before exporting its native resource.');
   return review;
+}
+
+export function selectedCorrections(doc) {
+  const context=correctionContext(selectedEdition(doc),doc.mapping);
+  return (doc.correctionSets||[]).find(value=>same(value.context,context))||null;
+}
+export function recordCorrection(project,documentId,input) {
+  const next=copy(project),doc=documentIn(next,documentId),edition=selectedEdition(doc);
+  const current=selectedCorrections(doc),value=applySourceCorrection(edition,doc.mapping,current,input);
+  doc.correctionSets ||= [];
+  const index=doc.correctionSets.findIndex(row=>same(row.context,value.context));
+  if(index<0)doc.correctionSets.push(value);else doc.correctionSets[index]=value;
+  return next;
+}
+export function sourceRecords(doc,{offset=0,limit=20}={}) {
+  if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>100)fail('SOURCE_RECORDS','Choose a nonnegative offset and 1–100 records.');
+  const edition=selectedEdition(doc),value=selectedCorrections(doc),state=correctionState(edition,doc.mapping,value);
+  return {context:correctionContext(edition,doc.mapping),headings:state.parsed.headings,total:state.parsed.rows.length,offset,limit,
+    revision:state.revision,correctedCells:state.cells.size,excludedRecords:state.excluded.size,
+    rows:state.parsed.rows.slice(offset,offset+limit).map(row=>({...copy(row),exclusion:copy(state.excluded.get(row.record)||null),
+      decisions:row.cells.map((original,column)=>copy(state.cells.get(row.record+':'+column)||null))}))};
 }
 async function newEdition(filename, value) {
   text(filename, 'Original filename', 500); sourceText(value);
@@ -364,14 +324,14 @@ export function replaceMapping(project, documentId, mapping) {
 }
 export async function freezeReview(project, documentId) {
   const next = copy(project), doc = documentIn(next, documentId), edition = selectedEdition(doc);
-  const result = normalizeTable(edition, doc.mapping), outputSha256 = await sha256(result.dataText);
+  const corrections = selectedCorrections(doc), result = normalizeTable(edition, doc.mapping, corrections), outputSha256 = await sha256(result.dataText);
   const fingerprint = await sha256(JSON.stringify({ source: edition.sha256, mapping: doc.mapping, output: outputSha256 }));
   const reviewId = 'r-' + fingerprint;
   let review = doc.reviews.find(r => r.id === reviewId);
   const reused = Boolean(review);
   if (!review) {
     review = { id: reviewId, editionId: edition.id, reviewedAt: now(), mapping: copy(doc.mapping), sourceSha256: edition.sha256,
-      outputSha256, dataText: result.dataText, dataBytes: result.dataBytes, sourceRecords: result.sourceRecords, summary: result.summary };
+      ...(corrections ? {corrections:copy(corrections)} : {}), outputSha256, dataText: result.dataText, dataBytes: result.dataBytes, sourceRecords: result.sourceRecords, summary: result.summary };
     doc.reviews.push(review);
   }
   if (doc.selectedReviewId && doc.selectedReviewId !== reviewId) doc.baselineReviewId = doc.selectedReviewId;
@@ -384,7 +344,7 @@ export async function freezeReview(project, documentId) {
 export function reviewIsCurrent(doc) {
   if (!doc.selectedReviewId) return false;
   const review = selectedReview(doc);
-  return review.editionId === doc.selectedEditionId && same(review.mapping, doc.mapping);
+  return review.editionId === doc.selectedEditionId && same(review.mapping, doc.mapping) && same(review.corrections || null, selectedCorrections(doc));
 }
 export function compareReviews(doc, baselineId, currentId = doc.selectedReviewId) {
   const before = doc.reviews.find(r => r.id === baselineId), after = doc.reviews.find(r => r.id === currentId);
@@ -477,11 +437,22 @@ export async function importProject(input) {
         fail('PROJECT_SOURCE', 'The retained source bytes or source identity do not match.');
       editions.set(edition.id, edition);
     }
+    if (doc.correctionSets !== undefined && !Array.isArray(doc.correctionSets)) fail('SOURCE_CORRECTION','The correction register must be an array.');
+    const correctionContexts = new Set();
+    for (const value of doc.correctionSets || []) {
+      const edition=editions.get(value.context?.editionId), key=JSON.stringify(value.context);
+      if (!edition || correctionContexts.has(key)) fail('SOURCE_CORRECTION','A correction source is absent or duplicated.');
+      correctionState(edition,value.context.parser,value);correctionContexts.add(key);
+    }
     const reviews = new Set();
     for (const review of doc.reviews) {
       const edition = editions.get(review.editionId);
       if (!edition) fail('PROJECT_REVIEW', 'A retained review is missing its original source.');
-      const result = normalizeTable(edition, review.mapping), hash = await sha256(result.dataText);
+      if (review.corrections) {
+        const retained=(doc.correctionSets||[]).find(value=>same(value.context,review.corrections.context));
+        if(!retained || !same(retained.history.slice(0,review.corrections.revision),review.corrections.history)) fail('SOURCE_CORRECTION','A reviewed correction history is missing from the complete register.');
+      }
+      const result = normalizeTable(edition, review.mapping, review.corrections || null), hash = await sha256(result.dataText);
       const fingerprint = await sha256(JSON.stringify({ source: edition.sha256, mapping: review.mapping, output: hash }));
       if (review.id !== 'r-' + fingerprint || reviews.has(review.id) || review.sourceSha256 !== edition.sha256 || review.dataText !== result.dataText ||
         review.outputSha256 !== hash || review.dataBytes !== result.dataBytes || !same(review.sourceRecords, result.sourceRecords) || !same(review.summary, result.summary))
@@ -495,7 +466,8 @@ export async function importProject(input) {
       !doc.mapping.columns.length || doc.mapping.columns.length > LIMITS.columns || typeof doc.mapping.header !== 'boolean' ||
       typeof doc.mapping.skipEmptyRecords !== 'boolean' || !Array.isArray(doc.mapping.keyColumns))
       fail('PROJECT_MAPPING', 'The saved editable mapping is incomplete.');
-    delimiter(doc.mapping.delimiter);
+    if (!Object.values(DELIMITERS).includes(DELIMITERS[doc.mapping.delimiter] || doc.mapping.delimiter))
+      fail('PROJECT_MAPPING','The saved delimiter is not supported.');
     const mappingIndices = new Set();
     for (const column of doc.mapping.columns) {
       if (!object(column) || !Number.isSafeInteger(column.index) || column.index < 0 || column.index >= LIMITS.columns ||
@@ -558,6 +530,12 @@ export async function createTableWorkspace(project) {
       }
       entry.sources.push(sourceEntry);
     }
+    if (doc.correctionSets?.length) {
+      entry.corrections = doc.correctionSets.map((value,index) => {
+        const base='corrections/'+doc.id+'/'+index;
+        return {context:value.context,revision:value.revision,record:append(base+'.json',json(value)),history:append(base+'.csv',correctionsCsv(value))};
+      });
+    }
     for (const review of doc.reviews) {
       const base = 'reviews/' + doc.id + '/' + review.id + '/';
       const output = append(base + 'output.json', review.dataText);
@@ -578,6 +556,7 @@ export async function createTableWorkspace(project) {
     'This directory contains the original source editions, explicit mappings, reviewed complete outputs and editable project. The merchant uses the original seller.json and workspace.json in the parent directory.\n\n' +
     '## Reopen and update\n\nOpen source-tables.html in the maintained Stellar Forge front door and choose Open project JSON, then select source-tables/project.json. Select a table, add the next source edition, inspect the declared header and mapping, and retain its review. The prior source and output remain available. Record keys identify changed rows; with no keys, comparisons report whole-row additions and removals including duplicates. Unit and time-basis fields document meaning and do not convert values.\n\n' +
     'Export the complete native workspace after reviewing every current mapping. The parent README.md contains the original installation and merchant commands. Keep the original source version and receiving application with the commissioned installation. The current dataset resource is a startup snapshot; follow the native release/change operation when replacing a serving source.\n\n' +
+    '## Reviewed source corrections\n\nCorrections belong to an exact original source edition and parsing choice. The correction register retains reviewer, reason, original value and every before/after decision; restore actions append history. Complete histories are included under corrections/. Each review retains the precise correction snapshot it used. New editions do not inherit row decisions.\n\n' +
     '## Document tables\n\nDocument-derived resources retain complete extracted text under documents/, original document identity and extraction metadata in source.json, and each explicit table selection plus projected row and cell origins under projections/. The selected CSV is an ordinary source edition in the same mapping and review workflow. Saving and reopening preserves unselected original rows for later remapping. Selecting a new projection creates a new edition even when its CSV text matches an earlier projection.\n\n' +
     '## Receiving and commissioning\n\nReceive the entire directory. materials.json lists every original source and reviewed output with its exact identity. Each output has fields, keyFields, source and rows. Integers of arbitrary size and exact decimals use their explicitly selected text types. An empty string, null and an omitted value retain distinct policies. The same project reopens in the browser or original source-table CLI.\n\n' +
     'For an existing SF49 commissioning case, retain this complete directory as the source material attached through its existing source-bundle operation. Use that case owner’s original source handoff, terms, operation ID and source-bundle writer. The original case/bundle keeps the selected customer workorder and native receiving result alongside these files.\n\n' +

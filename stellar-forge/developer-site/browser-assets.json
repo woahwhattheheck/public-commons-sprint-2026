@@ -960,6 +960,13 @@
         "woo.html",
         "text/html; charset=utf-8"
       ]
+    ],
+    [
+      "/source-table-corrections.mjs",
+      [
+        "source-table-corrections.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

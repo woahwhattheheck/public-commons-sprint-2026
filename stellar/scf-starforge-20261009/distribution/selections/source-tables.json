@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "source-tables",
   "title": "Source Tables workbench",
-  "description": "Complete CSV and TSV source authoring, explicit typed mappings, retained editions and comparisons, managed Applications, native merchant publication and portable customer receiving",
+  "description": "Complete original CSV, TSV and document tables; retained intake, reviewed source-cell corrections and row exclusions; explicit typed mappings, editions and comparisons; managed Applications, native merchant publication and portable customer receiving",
   "base": {
     "commands": [
       "installation",
@@ -121,12 +121,12 @@
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "CSV and TSV source editions, exact field meaning, reviewed comparisons, managed workbench and complete native merchant delivery",
+    "description": "Original delimited and document sources, retained preparation and reviewed corrections, complete history and comparison, managed workbench and native merchant delivery",
     "repository": {
       "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace",
       "directory": ""
     },
-    "readme": "products/source-tables/OPERATING.md",
+    "readme": "products/source-tables/PACKAGE_README.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"
     }
