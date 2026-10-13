@@ -21,6 +21,14 @@ The manifest binds nine result files and the producing `analysis-run.json`. Thos
 | Earlier annual inventory | 477,495 bytes; SHA256 `1e4bea16ffb1ccaf8361972a042bb2b71a2320b36aea069d9a2282954e005836` |
 | Later annual inventory | 477,860 bytes; SHA256 `21a9d49dc2811778ef86d5bd05114530e52bdd2cabb60e8eb4857dd8fd40adc8` |
 
+## Ready-to-import original scientific source
+
+The published application already includes the complete independently generated report at `observations/landcover_2023_2025/scientific-report/source-manifest.json`. Import this manifest directly into the existing regional Workspace; Node and raster-library execution are unnecessary for this receiving step. Its source ID is `original-landcover-change-b8bceabf4cbc9f3e97cefb88`.
+
+Open `landcover-change-report.html` from that same directory for the standalone report. Keep all sixteen adjacent members together: eleven exact original inputs and five generated report/source members. The original Git blob objects are reused without changing their bytes. The import manifest binds the complete scientific recipe and all fourteen input/report companions; the recipe binds the same originals and derived summaries. The ordinary source importer retains those bodies for Scientific Reports, selected-source downloads and full Workspace archive/reopen.
+
+The final producer was independently executed against the complete original source; both annual inventories, all 219 spatial scopes and all six CSVs reconciled. Its actual browser script was exercised against 768 matrix cells across domain/first/last watershed and search/clear. Printable source includes every watershed after filtering. Generated HTML SHA256 is `08246409893ef3727caab9d0ab6df65e74f701b2ad8961f4349c2a5a3508dc8a`; recipe SHA256 is `b8bceabf4cbc9f3e97cefb88916fdb32cc755279559e0f6d5101ef7732611e59`.
+
 ## Produce and receive the complete report
 
 Run from the maintained application root with the existing completed analysis directory intact:
