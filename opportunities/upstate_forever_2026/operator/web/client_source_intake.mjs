@@ -267,12 +267,24 @@ export function createClientSourceIntake(host){
       (['failed','interrupted','cancelled'].includes(t.state)?actionButton('resume','Resume original operation','data-ci-id="'+t.id+'" data-ci-mutating'):'')+'</div>').join('');
     messages();
   }
+  function profileTables(){
+    const edition=arr(state?.data?.sources).find(row=>row.id===result?.source_collection_id);
+    return arr(edition?.entries).filter(row=>arr(result?.source_ids).includes(row.id)&&
+      row.kind==='table'&&row.role==='BIOPHYSICAL'&&row.client_source?.selection?.confirmed===true&&
+      arr(row.client_source.selection.models).length>0);
+  }
+  function profileLinks(){
+    const tables=profileTables();if(!tables.length)return '';
+    return '<h3>Prepare parameter profiles</h3><p>Continue with each exact reviewed table and its selected native models. Enter the scientific parameters in the Profile workbench.</p>'+tables.map(row=>
+      '<div class="ci-operation"><strong>'+esc(row.title)+'</strong><span>'+esc(row.client_source.selection.models.map(name=>name.toUpperCase()).join(' + '))+' coefficient table</span>'+
+      actionButton('profile','Prepare parameter profile','data-ci-source="'+esc(row.id)+'" data-ci-mutating')+'</div>').join('');
+  }
   function renderResult(){
     const area=q('[data-ci-result]');if(!area)return;
     if(!result||result.action!=='client-source.commit'){area.innerHTML='';return;}
     area.innerHTML='<h2>Saved scientific source edition</h2><p>'+esc(result.title)+' · '+esc(result.state)+'</p>'+
       (result.source_collection_id?'<p>These originals and reviewed interpretations are available in the existing source, grid, profile and run controls.</p>'+actionButton('source','Open exact saved source edition','data-ci-id="'+result.source_collection_id+'"'):'')+
-      '<ol>'+arr(result.next_steps).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol><div class="ci-actions">'+
+      profileLinks()+'<ol>'+arr(result.next_steps).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol><div class="ci-actions">'+
       actionButton('navigate','Prepare workbook measurements','data-ci-view="client-measurement-sources"')+
       actionButton('navigate','Prepare study inputs','data-ci-view="source-preparation"')+
       actionButton('navigate','Choose native model grid','data-ci-view="grids"')+
@@ -410,6 +422,14 @@ export function createClientSourceIntake(host){
     if(action==='source'){await host.openItem('sources',button.dataset.ciId);return;}
     if(action==='navigate'){host.navigate(button.dataset.ciView);return;}
     await run(async()=>{
+      if(action==='profile'){
+        const table=profileTables().find(row=>row.id===button.dataset.ciSource);
+        need(table,'Open the saved biophysical source edition before preparing its profile.');
+        need(typeof host.openDesk==='function','Open the Profile workbench in this complete application.');
+        await host.openDesk('profile-workbench','openSource',{workspace_key:workspace,
+          source_collection_id:result.source_collection_id,biophysical_source_id:table.id,
+          expected_table_sha256:table.body.sha256});return;
+      }
       if(action==='refresh'){await refreshCatalog();return;}
       if(action==='open-result'){await openResult(button.dataset.ciId);return;}
       if(action==='resume'){await host.api('/api/task/resume',{method:'POST',body:{id:button.dataset.ciId}});await host.refresh({force:true});return;}
@@ -500,7 +520,7 @@ export function createClientSourceIntake(host){
   }
   function update(currentState=host.getState()){
     if(!root||workspace!==host.getWorkspace())return;
-    state=currentState;renderHistory();
+    state=currentState;renderHistory();renderResult();
   }
   function suspend(){
     controller?.abort();controller=null;root=null;generation++;reading++;busy=false;

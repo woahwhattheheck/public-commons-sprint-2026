@@ -191,10 +191,15 @@
       "original_claim": "1791919621.914169",
       "delivery_edition": 3
     },
+    "workbook_profile_handoff": {
+      "operation_id": "ECO-WORKBOOK-PROFILE-HANDOFF-20261013",
+      "base_commit": "94222ec3e88ed3ad5631fad6aa69eca346cb665e",
+      "purpose": "Open the exact reviewed biophysical source and native model scope in the existing Profile workbench; preserve unfinished drafts."
+    },
     "large_collections": {
       "operation_id": "CEDAR-10212-ECO-LARGE-COLLECTIONS-20261013",
       "original_claim": "1791920117.443899",
-      "source_base": "94222ec3e88ed3ad5631fad6aa69eca346cb665e",
+      "source_base": "fcb5d42f80db396a35ed1af5b2d2f007424cf7a5",
       "guide": "measurement_workspace/LARGE_COLLECTIONS.md",
       "browser_guide": "MEASUREMENT_COLLECTION_WORKING.md",
       "behavior": "Original canonical collections receive retained large originals, preserve reviewed per-file progress, and publish through the same collection-bound streaming native archive.",
@@ -1422,8 +1427,8 @@
     },
     {
       "path": "operator/web/client_source_intake.mjs",
-      "bytes": 42852,
-      "sha256": "f4657a0aa92b6454c0e3ca0607c960915ff2d84ace9efef4caa8501e8c5a3190"
+      "bytes": 44426,
+      "sha256": "3ae2d6d5bfa07b62618e77214711250f6375f30f090bf440afa8997449852a7d"
     },
     {
       "path": "operator/web/collection_transfer.mjs",
@@ -2264,7 +2269,8 @@
     ],
     "operator/web/client_source_intake.mjs": [
       "4165a38f7c53578025dad6df047131ff6b00aa4bafd73922a776d8dea76073bd",
-      "a8319e4a970e5508f763f05a8c105c187278c80b4ab38fc471866ebe6ea0d2b8"
+      "a8319e4a970e5508f763f05a8c105c187278c80b4ab38fc471866ebe6ea0d2b8",
+      "f4657a0aa92b6454c0e3ca0607c960915ff2d84ace9efef4caa8501e8c5a3190"
     ],
     "measurement_workspace/engine/intake.mjs": [
       "be7e0157389a4416b048080b755b9d1061d3c49915ef71a86705551db04b3b8a",

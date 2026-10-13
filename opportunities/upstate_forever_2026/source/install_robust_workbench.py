@@ -21,6 +21,10 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/conservation_joint_choices.py",
+    "operator/web/conservation_joint_choices.mjs",
+    "CONSERVATION_JOINT_CHOICES.md",
+    "integration/component_fragments/conservation-joint-choices.json",
     "CONSERVATION_DECISION_METHODS.md",
     "ecsa_runs/upstate.py",
     "integration/component_fragments/calibration-native-catchments.json",
@@ -631,6 +635,10 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/conservation_joint_choices.py",
+    "operator/web/conservation_joint_choices.mjs",
+    "CONSERVATION_JOINT_CHOICES.md",
+    "integration/component_fragments/conservation-joint-choices.json",
     "CONSERVATION_DECISION_METHODS.md",
     "ecsa_runs/upstate.py",
     "integration/component_fragments/calibration-native-catchments.json",
@@ -2461,7 +2469,47 @@ def verify_conservation_sampling_dependencies(application, pending):
         assembled_data(application, pending, name)
 
 
+def verify_conservation_joint_dependencies(application, pending):
+    """Keep the original joint comparison kernel, desk and registration together."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+    native = source("model/conservation_optimization.py")
+    client = source("operator/web/conservation.mjs")
+    if not ((native is not None and b"conservation_joint_choices" in native)
+            or (client is not None and b"./conservation_joint_choices.mjs" in client)):
+        return
+    for name in (
+        "model/conservation_joint_choices.py",
+        "operator/web/conservation_joint_choices.mjs",
+        "CONSERVATION_JOINT_CHOICES.md",
+        "integration/component_fragments/conservation-joint-choices.json",
+        "model/conservation.py", "model/conservation_optimization.py",
+        "model/conservation_reporting.py", "model/conservation_report_source.py",
+        "model/conservation_study_transfer.py",
+        "operator/web/conservation.mjs", "operator/extensions/conservation.json",
+        "operator/install_conservation.py",
+    ):
+        assembled_data(application, pending, name)
+    descriptor = json.loads(assembled_data(application, pending,
+        "operator/extensions/conservation.json"))
+    if "conservation_joint_choices.mjs" not in descriptor.get("assets", []):
+        raise ValueError("Register the original Conservation joint comparison browser module")
+    fragment = json.loads(assembled_data(application, pending,
+        "integration/component_fragments/conservation-joint-choices.json"))
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "conservation-joint-choices"):
+        raise ValueError("Retain the original Conservation joint component identity")
+    extension = fragment.get("extend_components", {}).get("conservation", {})
+    if not {"model/conservation_joint_choices.py",
+            "operator/web/conservation_joint_choices.mjs",
+            "CONSERVATION_JOINT_CHOICES.md"}.issubset(extension.get("paths", [])):
+        raise ValueError("Retain the complete original Conservation joint component paths")
+    if set(extension) - {"paths", "requires", "import_roots", "source_manifests"}:
+        raise ValueError("Conservation joint choices use original append-only component fields")
+
+
 def verify_composition(application, pending):
+    verify_conservation_joint_dependencies(application, pending)
     verify_advancing_study_dependencies(application, pending)
     verify_conservation_sampling_dependencies(application, pending)
     verify_native_observation_context_dependencies(application, pending)
