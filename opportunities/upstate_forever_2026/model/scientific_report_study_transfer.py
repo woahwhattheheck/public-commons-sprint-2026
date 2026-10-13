@@ -75,6 +75,9 @@ def _source(closure, choice, expected_source):
     study_report_transfer.include_calibration(closure, collection_id, entry)
     receiving_water_report_transfer.include_source(closure, collection_id, entry)
     native_process_study_transfer.include_source(closure, collection_id, entry)
+    from . import community_study_transfer, conservation_study_transfer
+    community_study_transfer.include_source(closure, collection_id, entry)
+    conservation_study_transfer.include_source(closure, collection_id, entry)
     return {
         "schema": "upstate.observed-report-binding/v1", "edition": observed_context.EDITION,
         "source_collection_id": collection_id, "source_id": entry["id"],
