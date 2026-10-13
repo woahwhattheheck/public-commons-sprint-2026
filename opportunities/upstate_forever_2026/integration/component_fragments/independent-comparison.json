@@ -48,7 +48,8 @@
         "operator/web/independent_comparison_figures.mjs",
         "model/scientific_figures.py",
         "model/scientific_map_figures.py",
-        "model/rasters.py"
+        "model/rasters.py",
+        "operator/web/sparrow_budget_figures.mjs"
       ],
       "requires": [
         "observed-context",
@@ -106,7 +107,8 @@
         "operator/web/independent_comparison_figures.mjs",
         "model/scientific_figures.py",
         "model/scientific_map_figures.py",
-        "model/rasters.py"
+        "model/rasters.py",
+        "operator/web/sparrow_budget_figures.mjs"
       ]
     }
   }

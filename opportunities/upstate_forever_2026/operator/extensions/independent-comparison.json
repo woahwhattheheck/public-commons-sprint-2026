@@ -2,13 +2,14 @@
   "schema": "upstate.operator-extension/v1",
   "id": "independent-comparison",
   "title": "Independent source comparisons",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "order": 60,
   "assets": [
     "independent_comparison.mjs",
     "independent_comparison_state.mjs",
     "independent_comparison.css",
-    "independent_comparison_figures.mjs"
+    "independent_comparison_figures.mjs",
+    "sparrow_budget_figures.mjs"
   ],
   "backend": {
     "module": "independent_comparison",
