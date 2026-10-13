@@ -212,3 +212,52 @@ The continuation exports the complete portable plan JSON and creates the native 
 ## Inspect the actual received product
 
 The current application repository instructions require the producing worker to open and operate the exact outgoing client-facing product on the receiving host before calling it ready. Use the existing Economic receiving course with the actual retained native scenario and Workspace. View its rendered desktop and narrow layouts, operate the core controls and relevant empty/loading/error states, then download and reopen the actual outputs. Inspect the returned screenshots and pages, repair concrete visible faults, and retain the actual source, task and result identities with that same receiving course. Source-runtime checks or a receipt alone do not establish that the delivered product was viewed.
+
+## Receive an existing native plan and its recorded cost ledger
+
+The native operator receiver can reopen an actual saved FIELD12 plan and exercise its original cost-review workflow. Use the installed complete application, the original authenticated operator URL file, and the operator's actual workspace key. The input review is the explicit selection exported by **Review economic costs**, or the same original `upstate.implementation-cost-review-selection/v1` JSON with reviewed row decisions, forecast sources, scope and rationale.
+
+```sh
+python -B operator/economic_receive.py \
+  --operator-url-file /actual/operator-ready.json \
+  --application /actual/upstate_forever_2026 \
+  --workspace-key ACTUAL_WORKSPACE_KEY \
+  --cost-plan-id ACTUAL_SAVED_PLAN_ID \
+  --cost-candidate-id ACTUAL_ECONOMIC_CANDIDATE_ID \
+  --cost-review /actual/original-cost-review.json \
+  --output /actual/economic-existing-plan-receiving \
+  --browser-executable /usr/bin/chromium
+```
+
+Replace the example paths and identities with the actual receiving workspace. Omit `--browser-executable` when the selected Python Playwright installation already has its browser. The complete original native operator must already be running; this command does not start another model run or manufacture a plan, expense, allocation, forecast, or attachment.
+
+`--cost-plan-id` requires `--cost-review`. `--cost-candidate-id` requires both. The receiver reads the original native cost catalogue for the selected saved revision, which verifies the candidate's retained source snapshot. It derives the native report ID, source SHA, reporting-zone ID and modeled run from that candidate. Consequently, `--report-id`, `--zone-id` and `--run-id` are optional in this mode. When supplied, they are exact source filters and must match the candidate. If more than one valid candidate remains, receiving stops and prints their actual IDs and bindings; choose `--cost-candidate-id` explicitly. It never selects the first ambiguous candidate.
+
+The receiver pins the plan ID, current saved revision and document digest before the upstream Economic journey. It then opens **Implementation**, selects the saved plan, and uses **Reopen native**. It compares the reopened complete document to the pinned original and exports that document through the ordinary UI. A concurrent native plan change causes a clear mismatch before the cost action; select and review the new saved revision explicitly. Browser drafts remain subject to the original workbench's retained-draft behavior.
+
+The candidate may have been imported from an older completed Economic edition. The receiver opens that actual historical edition and verifies its original input, report and candidate snapshot. It does not require its economic edition ID to equal the new upstream receiving edition. It does require the same original native report bytes, report/zone/run identities, physical baseline, full alternative cohort, signed output quantities and spatial support. Costs and screening can legitimately differ between the two economic editions.
+
+### What the existing-plan course operates
+
+After the original Economic preview, save, build, embedded-desk save/reopen and complete-package receiving steps, the course:
+
+1. Reopens the actual saved plan and retains its complete original JSON, economic source snapshot and validated candidate catalogue.
+2. Exports the original implementation plan and its native report through the existing workbench.
+3. Opens **Costs → Review economic costs**, selects the bound candidate, and loads the supplied original review JSON. If the file contains a bound exported wrapper, its full binding must equal this saved revision and candidate.
+4. Confirms that the native context contains every original ledger row unchanged. Budget, commitment and actual counts and cents totals are reported separately; they are not summed into a fictitious combined cost.
+5. Previews the explicit row allocations and forecasts through the native provider, verifies unchanged physical outputs, and applies the reviewed operation through the original queue.
+6. Rejoins the exact original queued request, verifies the retained draft and completed economic edition, and confirms that the saved FIELD12 plan itself was not modified.
+7. Downloads and verifies the complete cost-review package, including the original plan, source audit, associated evidence and nested economic package. ZIP members are copied in bounded chunks and then checked against their retained lengths and SHA256 values.
+8. Opens the outgoing economic edition at desktop and narrow widths, prints its PDF, and opens the same completed edition again in the mounted native Economic desk.
+
+The supplied review decides which actual rows are capital, operating or excluded. Candidate-task attribution, shared allocations, dated or undated records, remaining capital, annual operating forecasts, horizon/rate and scope remain governed by the existing reviewed cost model. The receiver reports the rows that actually exist. An empty ledger is an empty-ledger receiving case, not evidence that recorded expenses were exercised. It does not automatically create a ledger from the forecast or from budget/commitment rows.
+
+Without `--cost-plan-id`, the existing `--implementation` and `--cost-review` journeys retain their original behavior: they create a new source-linked implementation plan from the explicitly selected scenario. This is useful for the source handoff and forecast workflow, but does not by itself exercise pre-existing recorded ledger expenses.
+
+### Retained receiving evidence and visual inspection
+
+Each invocation creates a separate timestamped receiving directory. `operator-journey.json` records the actual selected plan/revision/candidate, original economic edition, upstream receiving edition, native task IDs, cost-review operation, per-kind ledger counts, original source binding, actual timings and any first failure. Original plan/catalogue/source-edition JSON, the supplied review, native context/preview, completed receipt, verified packages, PDFs and screenshots travel in the receiving package. Authentication tokens are redacted from the journal.
+
+The producer must **open and inspect the actual outgoing desktop and narrow screenshots, PDF and retained product**, operate its core controls and download/reopen states, and repair any observed defect before calling the course client-ready. Capturing files alone is not visual inspection. Relevant outputs include `09-original-field-cost-preview-desktop.png`, `10-original-field-cost-preview-narrow.png`, `11-received-cost-edition-desktop.png`, `12-received-cost-edition-narrow.png`, `13-saved-field-cost-review-receipt.png`, `14-reopened-reviewed-economic-desk.png` and `field-cost-economic-report.pdf`. Preserve the original receiving directory and provide these actual files to the reviewing producer.
+
+The command reports native execution outcomes only when run in the accepting environment. Source inspection or JavaScript-only checks are not substitutes for that executed course. A failed or interrupted queued action remains in the original operator; inspect its recorded task and source before issuing another independent course.
