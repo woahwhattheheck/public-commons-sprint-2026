@@ -417,3 +417,10 @@ retains all other current server code. The same function is used by the
 cumulative source assembly before its complete source map and archive are
 created. Current source-design controls and their exact support source also
 travel in the complete calibration component.
+
+
+## Include a native calibration dossier in the client delivery
+
+Open a saved complete review and choose **Prepare report source**. This queued operation registers its exact ranking, original reference and validation metrics, optional source-error analysis, equal-axis figures, map atlas and complete original dossier as an ordinary `upstate.observed-report/v1` source. The review lists each completed source and opens the existing complete-delivery form with its original native baseline and source selection. Other observed studies remain in the same ordered source picker.
+
+The complete scientific report receives its readable tables and vector PDF figures. Every original dossier file, full ZIP, map, source CSV and figure specification travels as a verified companion; original relative links survive export and reopening. The calibration provider verifies this saved source again during ordinary Workspace restore. See [the complete source workflow](../model/CALIBRATION_REPORT_SOURCE.md) for native APIs, partial-model behavior, source identities and maintained receiving.

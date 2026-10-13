@@ -21,7 +21,8 @@ import tempfile
 FILES = ("model/calibration.py", "model/CALIBRATION.md",
          "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md",
          "model/calibration_maps.py", "model/CALIBRATION_MAPS.md",
-         "model/calibration_review.py", "model/CALIBRATION_REVIEW.md", "operator/calibration.py",
+         "model/calibration_review.py", "model/CALIBRATION_REVIEW.md",
+         "model/calibration_report_source.py", "model/CALIBRATION_REPORT_SOURCE.md", "operator/calibration.py",
          "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs",
          "operator/web/calibration_review.mjs", "operator/web/calibration.css",
          "operator/extensions/calibration.json", "operator/CALIBRATION.md",
@@ -29,15 +30,17 @@ FILES = ("model/calibration.py", "model/CALIBRATION.md",
          "operator/web/calibration_design.mjs", "operator/CALIBRATION_DESIGN.md",
          "operator/calibration_design_patch.json", "operator/install_calibration_design.py",
          "source/calibration-design/upper-savannah-reference-support.json")
-SHARED = ("operator/server.py", "operator/web/app.mjs", "operator/web/index.html")
+SHARED = ("operator/server.py", "operator/web/app.mjs", "operator/web/index.html",
+          "model/scientific_figures.py")
 DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.mjs",
-                "install_extensions.py")
+                "install_extensions.py", "model/observed_context.py")
 VERSION = "upstate.calibration-registration/v3"
 PREDECESSORS = {
     "model/CALIBRATION_REVIEW.md": {
         "2e074fac920846af9cb50013c520e83e0808b95c3d148e4f7734199f1ec9bbd0",
     },
     "operator/web/calibration_review.mjs": {
+        "8d130494b0536c577188fcf373a3b24110409030d8eecf28ec60a411c0776842",
         "dfead8c5d57617ed5b2dc22fd8674687a9441d0da64e17abf122280f89fe8a9d",
     },
     "operator/web/calibration_maps.mjs": {
@@ -52,6 +55,7 @@ PREDECESSORS = {
         "ea20e443b4152012cac68c9ef0f322ddb1529f3ce45c7995e4bc3c47a0c9bfd1",
     },
     "operator/calibration.py": {
+        "f6bbc4b21204860ca7c4df93aa8de06db424c306d4f965b2e5051705a074de2c",
         "4081205000d0071e9c0d0f8dd2d0532b4b2a5f98dbb930d8945c84c58c56461f",
         "f606ecace454c6ce9f7644dddd68a0637f0e243106dc6d56e404c38bf44003ae",
         "9440c787158558bccf0df44314de00872ce560ab31ea71246e51446a58edbac3",
@@ -61,6 +65,7 @@ PREDECESSORS = {
         "c93bc426673d7489ce14b11921c2093e867aa09b4aaa73f33aff322c7d88e776",
     },
     "operator/web/calibration.mjs": {
+        "21e46c77b45e4497078a8f8f8b3da8c195a70d634a7784227cb04143495f7658",
         "0304425bc0d1fc508631f4556f14aebc5d6764c74100142a7bf40567ca7f6229",
         "b8e08775f1aec0b16c701857363bdfdc6a31c460f5cec39f9bf8c028750307e1",
         "d62b47ff8248083c231e61d2aaddc609ff7a66b2b8e9f02c5c3100a47503f5c7",
@@ -76,12 +81,14 @@ PREDECESSORS = {
         "6d523b2bf1b10f94b70e9c2a270eea08137e8edf0345160efee497108228386e",
     },
     "operator/extensions/calibration.json": {
+        "0eb78308aa339b690f43750eeba71694b5332593465c6be9cde2d1ca812ea2bb",
         "482005956a6d3ec9347f2cc16700c644055f7c44259e81bc97ac3baf329bd547",
         "92175b71c806f5f71889031dd24d4766bf45d3e9f5a8f5b087c78c735f557f71",
         "dd9e74df13aaf1d183897a9c2bb6d26478f60b05b21ca5882ffb548dc85e9fe4",
         "a2865a0fd8429f5e684e5111e61e5edac7be4dbd8a03956654cba79595e6b8b9",
     },
     "operator/CALIBRATION.md": {
+        "a0dcca8637af2a326f92a7318468d21f0487c8275aaeacd9142987af2310f6c2",
         "82042e958306863a9b90b311d6affb17a9d97cf486bfcd044a820e36aab8607d",
         "d77a8b7cb6e8fac7a83148356de08322f96badc1cf481dda676150eeae2ba836",
         "e9a139100b382867c5afdfccf3a5691318cc34886f40227a508f6bba9403eaca",
@@ -93,6 +100,7 @@ PREDECESSORS = {
         "4b475c00a806812548da18d54fe3885e7e73a01daaad49e5709212718b9624ad",
     },
     "operator/install_calibration.py": {
+        "9e93c9b0f6b5f4c2cb5ec0fa6e4103d93b9dff01224ddb5cd291fb7bf8ee8103",
         "4d8124b5b891f347d87dcb56ac0b8796530b1381764e24229bc259c2ef095a49",
         "d1e92bc00687a7ef5c470ba9e4902e2e78677742f01794b6725c91ec33acd768",
         "88e464da584ec4f34c9f71d0a0211ebfa25e90ab3e10f021613a73157ca4764d",
@@ -103,6 +111,7 @@ PREDECESSORS = {
         "50360ee8e59a0c318d298fa449498be43f6d47abfbae87e5a88969d3f26aa32a",
     },
     "source_tools/calibration_assembly.py": {
+        "a5a6a1c63cafe6dfe4d22a52a32f290b6a0845a4a7da5b0cac370bdf7d7dce8c",
         "d3ab1ab2f4baf0c93d2ad1b390d73e61118ba7c8ee724de44210f07238d96210",
         "d0521c411956d084a30dfc4da76d39301e78baf6afebda1d2a0689cfa7ea46b7",
         "d249ffa25199f07dd400af8bb5e93aa4cd02bb55dc55ec3d07b3e1187b6cc583",
@@ -228,6 +237,34 @@ def patch_journey_validation(source):
     return result
 
 
+def patch_figure_markers(source):
+    """Compose the maintained renderer's optional line-only reference series."""
+    changes = [
+  [
+    "        for series in panel.get(\"series\", []):\n            if series.get(\"geometry\") not in (\"line\", \"scatter\", \"boxplot\"):",
+    "        for series in panel.get(\"series\", []):\n            if \"markers\" in series and (not isinstance(series[\"markers\"], bool)\n                    or (series[\"markers\"] is False and series.get(\"geometry\") != \"line\")):\n                raise ValueError(\"Scientific series markers must be boolean; marker-free geometry must be a line\")\n            if series.get(\"geometry\") not in (\"line\", \"scatter\", \"boxplot\"):"
+  ],
+  [
+    "        for x,y,is_open in marker_points:\n            _marker(drawing,x,y,str(marker),2.1,ink,is_open)",
+    "        for x,y,is_open in marker_points:\n            if series.get(\"markers\", True):\n                _marker(drawing,x,y,str(marker),2.1,ink,is_open)"
+  ],
+  [
+    "        _marker(drawing,cursor+7,legend_y,str(mark).removesuffix(\"-open\"),2.0,ink,\n                str(mark).endswith(\"-open\"))",
+    "        if series.get(\"markers\", True):\n            _marker(drawing,cursor+7,legend_y,str(mark).removesuffix(\"-open\"),2.0,ink,\n                    str(mark).endswith(\"-open\"))"
+  ]
+]
+    for before, after in changes:
+        if after in source:
+            if source.count(after) != 1:
+                raise ValueError("Current figure renderer repeats its line-marker join")
+            continue
+        if source.count(before) != 1:
+            raise ValueError("Compose the current scientific figure renderer's marker support")
+        source = source.replace(before, after, 1)
+    ast.parse(source, filename="model/scientific_figures.py")
+    return source
+
+
 def register_sources(sources, extension_installer):
     """Compose the current maintained host and migrate only our earlier joins."""
     for name in (*SHARED, *DEPENDENCIES):
@@ -237,6 +274,7 @@ def register_sources(sources, extension_installer):
         "operator/server.py": patch_journey_validation(extension_installer.patch_server(_legacy_server(sources["operator/server.py"]))),
         "operator/web/app.mjs": extension_installer.patch_app(_legacy_app(sources["operator/web/app.mjs"])),
         "operator/web/index.html": sources["operator/web/index.html"],
+        "model/scientific_figures.py": patch_figure_markers(sources["model/scientific_figures.py"]),
     }
     ast.parse(result["operator/server.py"], filename="operator/server.py")
     return result
