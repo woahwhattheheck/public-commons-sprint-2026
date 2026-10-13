@@ -292,7 +292,7 @@ document.addEventListener("input",event=>{
  if(t.id==="filter-query"){rememberDrafts();query=t.value;page=0;const start=t.selectionStart;render();$("filter-query").focus();$("filter-query").setSelectionRange(start,start);}
 });
 $("save-file").onclick=()=>run(saveWorkspace);$("package").onclick=()=>run(handover);
-$("retry").onclick=()=>run(async()=>{if(!pending)throw Error("No saved operation needs continuation.");const ctx=editorContext,cmd=pending;await commit(cmd);const group={import:"intake",mapping:"mapping",compare:"compare",review:"review",accept:"accept"}[cmd.action];if(group)clearDraft(group,ctx);editorContext=null;render();note("Continued the original saved operation.");});
+$("retry").onclick=()=>run(async()=>{if(!pending)throw Error("No saved operation needs continuation.");await commit(pending);render();note("Continued the original saved operation. Unfinished groups remain available for review or explicit discard.");});
 $("workspace-select").onchange=()=>{const key=$("workspace-select").value;run(()=>select(key));};
 $("actor").onchange=()=>run(()=>put("meta","actor",$("actor").value));
 $("open-file").onchange=()=>run(async()=>{const f=$("open-file").files[0];if(!f)return;if(f.size>128*1024*1024)throw Error("The complete workspace exceeds 128 MiB.");const w=C.receive(await f.text());await addBook(w);$("open-file").value="";note("Received the complete original workspace in a separate saved copy.");});
