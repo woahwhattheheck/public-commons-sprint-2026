@@ -1,4 +1,5 @@
 /** Scientific setup preparation through the existing Workspace and review desk. */
+import {renderConfiguration,renderConfigurationTable,renderConfigurationComparison,renderObservations,renderObservationRows} from './setup_configuration.mjs';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const arr = value => Array.isArray(value) ? value : [];
 const text = value => value == null ? 'Not recorded' : typeof value === 'object' ? JSON.stringify(value) : String(value);
@@ -81,13 +82,14 @@ export function renderScientificSetup(spec,checks=null) {
       details('Complete grid specification',grid.spec||grid))+
     section('Model and parameter profile',
       defs([['Implementation',method.model_implementation],['Version',method.version],['Selected models',method.selected_models],['Saved parameter profile',title(method.profile)],['Native model source',method.source],['Coefficient source collection',method.profile?.source_collection_id],['Biophysical coefficient table',method.profile?.biophysical_source_id]])+
+      renderConfiguration(method.configuration,{editable:true})+
       details('Original parameter profile and coefficient bindings',method.profile||method))+
     section('Baseline and alternatives',
       scenarioCard(spec.baseline,'Baseline')+arr(spec.alternatives).map((row,i)=>scenarioCard(row,'Alternative '+(i+1))).join(''))+
     section('Original sources',sourceInventory(arr(spec.source_inventory)),
       'Original editions, coverage, units and transformation records remain attached to the setup.')+
     section('Observations and validation',
-      (arr(spec.observations).length?table(['Observation','Included records','Context records','Original metadata'],spec.observations.map(row=>'<tr><th scope="row">'+esc(row.metadata?.title||row.metadata?.name||row.id)+'</th><td>'+esc(text(row.admitted_count))+'</td><td>'+esc(text(row.context_count))+'</td><td>'+details('Observation source and metadata',row)+'</td></tr>')):'<p>No saved observations are selected.</p>')+
+      renderObservations(spec.observations)+
       defs([['Validation method',validation.method],['Intended comparison',validation.intended_comparison],['Limitations',validation.limitations]]))+
     section('Review findings and responsibilities',renderSetupChecks(checks||spec.checks)+
       defs([['Scientific reviewer',roleSummary(roles.scientific_reviewer)],['Receiving operator',roleSummary(roles.receiving_operator)]])+
@@ -105,6 +107,7 @@ function safeDownload(item) {
 export function attachScientificSetup(host) {
   let root=null,catalog=null,draft=defaultSetupSelection(),preview=null,active=null,pending=null,busy=false;
   let epoch=0,sequence=0,workspaceKey=null,storageWarning=false;
+  let configurationInspection=null,configurationSequence=0;
   const q=(selector,node=root)=>node?.querySelector(selector);
   const qa=(selector,node=root)=>[...(node?.querySelectorAll(selector)||[])];
   const workspace=()=>host.getState()?.workspace_key;
@@ -114,7 +117,7 @@ export function attachScientificSetup(host) {
   function stored(name){try{return JSON.parse(localStorage.getItem(name)||'null');}catch(_){return null;}}
   function save(name,value){try{if(value==null)localStorage.removeItem(name);else localStorage.setItem(name,JSON.stringify(value));return true;}catch(_){if(!storageWarning){storageWarning=true;notice('Browser draft saving is unavailable. Keep this page open until the setup task is retained.',true);}return false;}}
   function notice(message,error=false){const node=q('[data-setup-notice]');if(node){node.textContent=message;node.hidden=!message;node.className=error?'notice error':'notice';}else if(message)host.toast?.(message);}
-  function stateBusy(value,message=''){busy=value;for(const node of qa('[data-setup-action="preview"],[data-setup-action="create"],[data-setup-action="refresh"],[data-setup-action="new"],[data-setup-action="edit"],[data-setup-action="resume"],[data-setup-action="open"]'))node.disabled=value;const p=q('[data-setup-progress]');if(p)p.textContent=message;const create=q('[data-setup-action="create"]');if(create)create.disabled=value||!preview||!!pending;}
+  function stateBusy(value,message=''){busy=value;for(const node of qa('[data-setup-action="configuration"],[data-setup-action="preview"],[data-setup-action="create"],[data-setup-action="refresh"],[data-setup-action="new"],[data-setup-action="edit"],[data-setup-action="resume"],[data-setup-action="open"]'))node.disabled=value;const p=q('[data-setup-progress]');if(p)p.textContent=message;const create=q('[data-setup-action="create"]');if(create)create.disabled=value||!preview||!!pending;}
   function request(path,{method='GET',body}={}){return host.api(method==='GET'?host.endpoint(path,body||{}):path,method==='GET'?{}:{method,body:{workspace:workspaceKey,...body}});}
   function fieldValue(name){return q('[data-setup-field="'+name+'"]')?.value??'';}
   function selected(name){return qa('[data-setup-group="'+name+'"]:checked').map(n=>n.value);}
@@ -136,7 +139,7 @@ export function attachScientificSetup(host) {
     const node=q('[data-setup-form]');if(!node||!catalog)return;
     node.innerHTML='<div class="form-grid">'+field('title','Setup title',draft.title,{required:true})+
       select('grid_id','Saved model grid',catalog.grids,draft.grid_id,'The saved grid supplies the actual reporting area, model domain and aligned input definitions.')+
-      select('profile_id','Saved parameter profile',catalog.profiles,draft.profile_id)+
+      select('profile_id','Saved parameter profile',catalog.profiles,draft.profile_id,'Use Inspect selected configuration to read the original coefficients and native parameter meaning before choosing or revising this profile.')+
       select('baseline_scenario_id','Baseline',catalog.scenarios.filter(row=>row.kind==='baseline'),draft.baseline_scenario_id)+
       field('expected_resolution_m','Requested grid resolution (m)',draft.expected_resolution_m??'',{type:'number',help:'A requested target to compare with the saved grid. Leave blank for no requested target.'})+
       field('expected_alternative_count','Requested number of alternatives',draft.expected_alternative_count??'',{type:'number',help:'A difference is shown for review alongside the selected scenarios.'})+'</div>'+
@@ -162,6 +165,7 @@ export function attachScientificSetup(host) {
     root.innerHTML='<header class="page-header"><div><p class="eyebrow">SCIENTIFIC SETUP</p><h1>Prepare a setup for review</h1><p>Retain the study area, original sources, grid, parameter profile and scenario definitions in one editable review package.</p></div><div class="page-actions">'+button('refresh','Refresh saved inputs')+button('new','New setup')+'</div></header>'+
       '<p data-setup-notice class="notice" role="status" aria-live="polite" hidden></p>'+
       section('Select the saved project setup','<form data-setup-form></form><div class="page-actions">'+button('preview','Preview setup','',true)+button('create','Retain setup and create review','disabled')+'</div><p data-setup-progress role="status" aria-live="polite"></p><div data-setup-pending></div>','Use the actual saved inputs. Requested targets appear as review findings alongside their measured definitions.')+
+      section('Selected scientific configuration','<div class="page-actions">'+button('configuration','Inspect selected configuration')+'</div><p data-setup-configuration-status role="status" aria-live="polite"></p><div data-setup-configuration></div>','Read the original native choices, units and coefficient source. Revisions use the existing Profile Workbench.')+
       '<div data-setup-preview></div><div data-setup-detail></div>'+
       section('Retained setup packages','<div data-setup-history></div>');
     renderForm();renderHistory();renderPending();
@@ -179,6 +183,63 @@ export function attachScientificSetup(host) {
     if(first){draft=normalizeSetupDraft(stored(key('draft')));pending=stored(key('operation'));}
     renderShell();return true;
   }
+  function inspectedSpecification(node){
+    if(node.closest('[data-setup-preview]'))return preview?.specification||null;
+    if(node.closest('[data-setup-detail]'))return active?.specification||null;
+    return configurationInspection?{method:{configuration:configurationInspection},observations:[]}:null;
+  }
+  function clearConfiguration(){
+    configurationSequence++;configurationInspection=null;
+    const node=q('[data-setup-configuration]');if(node)node.innerHTML='';
+    const status=q('[data-setup-configuration-status]');if(status)status.textContent='';
+  }
+  async function inspectConfiguration(){
+    persistDraft();
+    if(!draft.profile_id)throw Error('Choose a saved parameter profile.');
+    const selectedProfile=draft.profile_id,selectedGrid=draft.grid_id;
+    const generation=epoch,keyValue=workspaceKey,requestNumber=++configurationSequence;
+    const status=q('[data-setup-configuration-status]');if(status)status.textContent='Opening original profile and coefficient table…';
+    try{
+      const result=await request('/api/scientific-setup/configuration',{body:{profile_id:selectedProfile,...(selectedGrid?{grid_id:selectedGrid}:{})}});
+      if(!alive(generation,keyValue)||requestNumber!==configurationSequence||fieldValue('profile_id')!==selectedProfile||fieldValue('grid_id')!==selectedGrid)return;
+      if(result.workspace_key!==keyValue||result.configuration?.profile_id!==selectedProfile||String(result.grid_id||'')!==selectedGrid)throw Error('The selected scientific configuration changed. Reopen the current profile.');
+      configurationInspection=result.configuration;
+      q('[data-setup-configuration]').innerHTML=renderConfiguration(configurationInspection,{editable:true});
+      if(status)status.textContent='Original configuration opened. These choices have not been changed.';
+    }catch(error){if(alive(generation,keyValue)&&requestNumber===configurationSequence){if(status)status.textContent='';throw error;}}
+  }
+  function configurationSearch(node){
+    const spec=inspectedSpecification(node);if(!spec)return false;
+    if(node.hasAttribute('data-setup-config-search')){
+      const region=node.closest('.setup-configuration'),target=q('[data-config-coefficients]',region);
+      if(target)target.innerHTML=renderConfigurationTable(spec.method?.configuration,{query:node.value,page:0});return true;
+    }
+    if(node.hasAttribute('data-setup-observation-search')){
+      const record=arr(spec.observations).find(row=>row.id===node.dataset.setupObservationSearch);
+      const region=node.closest('[data-config-observation]'),target=q('[data-config-observation-rows]',region);
+      if(record&&target)target.innerHTML=renderObservationRows(record,{query:node.value,page:0});return true;
+    }return false;
+  }
+  async function configurationAction(node){
+    const spec=inspectedSpecification(node),configuration=spec?.method?.configuration;
+    if(node.dataset.setupConfigAction==='edit-profile'){
+      if(!configuration||configuration.profile_id!==node.dataset.configProfile)throw Error('Reopen the selected original profile before revision.');
+      persistDraft();
+      await host.openDesk('profile-workbench','open',configuration.profile_id);
+      return;
+    }
+    if(node.dataset.setupConfigAction==='page'){
+      const page=Number(node.dataset.configPage);if(!Number.isInteger(page)||page<0)return;
+      if(node.dataset.configScope==='coefficients'){
+        const region=node.closest('.setup-configuration'),target=q('[data-config-coefficients]',region);
+        if(configuration&&target)target.innerHTML=renderConfigurationTable(configuration,{query:q('[data-setup-config-search]',region)?.value||'',page});
+      }else{
+        const record=arr(spec?.observations).find(row=>row.id===node.dataset.configId);
+        const region=node.closest('[data-config-observation]'),target=q('[data-config-observation-rows]',region);
+        if(record&&target)target.innerHTML=renderObservationRows(record,{query:q('[data-setup-observation-search]',region)?.value||'',page});
+      }
+    }
+  }
   async function previewSetup(){
     if(busy||pending)return;
     const form=q('[data-setup-form]');if(!form?.reportValidity())return;
@@ -190,7 +251,8 @@ export function attachScientificSetup(host) {
       const value=await request('/api/scientific-setup/preview',{method:'POST',body:selection});
       if(!alive(generation,keyValue)||sequence!==requestNumber)return;
       preview={...value,request:selection};
-      q('[data-setup-preview]').innerHTML='<header class="page-header"><div><h2>Setup preview</h2><p>Review the original selections and findings, then retain this setup to create its normal customer review.</p></div></header>'+renderScientificSetup(value.specification,value.checks);
+      q('[data-setup-preview]').innerHTML='<header class="page-header"><div><h2>Setup preview</h2><p>Review the original selections and findings, then retain this setup to create its normal customer review.</p></div></header>'+renderScientificSetup(value.specification,value.checks)+
+        (active?.specification?'<section class="section"><div class="section-body">'+renderConfigurationComparison(active.specification.method?.configuration,value.specification.method?.configuration)+'</div></section>':'');
       q('[data-setup-preview]').scrollIntoView({block:'start',behavior:'smooth'});
     }finally{if(alive(generation,keyValue))stateBusy(false);}
   }
@@ -253,25 +315,35 @@ export function attachScientificSetup(host) {
   }
   function change(event){
     const node=event.target;
+    if(configurationSearch(node))return;
     if(!node.matches('[data-setup-field],[data-setup-group]'))return;
+    if(['profile_id','grid_id'].includes(node.dataset.setupField))clearConfiguration();
     if(node.dataset.setupField==='baseline_scenario_id')updateBaseline();
     persistDraft();invalidatePreview();
   }
   async function click(event){
+    const configNode=event.target.closest('[data-setup-config-action]');
+    if(configNode&&root?.contains(configNode)){
+      event.preventDefault();event.stopPropagation();if(busy)return;
+      const generation=epoch,keyValue=workspaceKey;
+      try{await configurationAction(configNode);}catch(error){if(alive(generation,keyValue))notice(error.message,true);else host.toast?.(error.message||String(error));}
+      return;
+    }
     const node=event.target.closest('[data-setup-action]');if(!node||!root?.contains(node))return;
     event.preventDefault();event.stopPropagation();const action=node.dataset.setupAction;
     const generation=epoch,keyValue=workspaceKey;
     if(busy&&action!=='task')return;
     try{
       if(action==='reload'){await mount(root);return;}
+      if(action==='configuration')await inspectConfiguration();
       if(action==='preview')await previewSetup();
       if(action==='create')await createSetup();
       if(action==='resume')await resume();
       if(action==='open')await openSetup(node.dataset.setupId);
       if(action==='task')await host.showTask?.(node.dataset.taskId);
-      if(action==='refresh'){persistDraft();invalidatePreview();await refresh();}
-      if(action==='new'){if(pending)throw Error('Reopen the retained operation before creating another setup.');draft=defaultSetupSelection();preview=null;active=null;sequence++;save(key('draft'),draft);save(key('active'),null);renderShell();}
-      if(action==='edit'&&active){if(pending)throw Error('Reopen the retained operation before creating another setup.');draft=normalizeSetupDraft(active.setup?.selection||active.specification?.selection);preview=null;sequence++;save(key('draft'),draft);renderForm();q('[data-setup-form]').scrollIntoView({block:'start',behavior:'smooth'});stateBusy(false);}
+      if(action==='refresh'){persistDraft();invalidatePreview();clearConfiguration();await refresh();}
+      if(action==='new'){if(pending)throw Error('Reopen the retained operation before creating another setup.');clearConfiguration();draft=defaultSetupSelection();preview=null;active=null;sequence++;save(key('draft'),draft);save(key('active'),null);renderShell();}
+      if(action==='edit'&&active){if(pending)throw Error('Reopen the retained operation before creating another setup.');clearConfiguration();draft=normalizeSetupDraft(active.setup?.selection||active.specification?.selection);preview=null;sequence++;save(key('draft'),draft);renderForm();q('[data-setup-form]').scrollIntoView({block:'start',behavior:'smooth'});stateBusy(false);}
     }catch(error){if(alive(generation,keyValue))notice(error.message||String(error),true);}
   }
   function submit(event){if(!event.target.matches('[data-setup-form]'))return;event.preventDefault();const generation=epoch,keyValue=workspaceKey;previewSetup().catch(error=>{if(alive(generation,keyValue))notice(error.message,true);});}
@@ -284,6 +356,6 @@ export function attachScientificSetup(host) {
     catch(error){if(alive(generation,keyValue)){root.innerHTML='<p data-setup-notice class="notice error" role="alert"></p>'+button('reload','Reopen saved setup inputs');notice(error.message,true);}}
   }
   function update(){if(root?.isConnected&&workspace()!==workspaceKey)detach();}
-  function detach(){if(root){if(catalog&&q('[data-setup-form]'))persistDraft();root.removeEventListener('click',click);root.removeEventListener('input',change);root.removeEventListener('change',change);root.removeEventListener('submit',submit);root.classList.remove('scientific-setup');}epoch++;sequence++;root=null;busy=false;}
+  function detach(){if(root){if(catalog&&q('[data-setup-form]'))persistDraft();root.removeEventListener('click',click);root.removeEventListener('input',change);root.removeEventListener('change',change);root.removeEventListener('submit',submit);root.classList.remove('scientific-setup');}epoch++;sequence++;configurationSequence++;configurationInspection=null;root=null;busy=false;}
   return {mount,update,detach,openSetup};
 }

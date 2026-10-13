@@ -44,11 +44,13 @@ PACKAGE_FILES = (
     "operator/web/keowee-method-view.mjs", "operator/web/conservation.mjs",
     "operator/KEOWEE_METHOD_VIEW.md", "source/keowee-method-view-integration-20261013.json",
     "operator/extensions/keowee-method-view.json",
-    "model/setup_review.py", "operator/scientific_setup.py",
-    "source_tools/receive_scientific_setup.py", "model/SCIENTIFIC_SETUP.md",
+    "model/setup_review.py", "model/setup_configuration.py", "operator/scientific_setup.py",
+    "source_tools/receive_scientific_setup.py",
+    "source_tools/receive_scientific_configuration_browser.mjs", "model/SCIENTIFIC_SETUP.md",
     "source/scientific-setup-selection.schema.json",
     "source/scientific-setup-integration-20261013.json",
     "operator/web/scientific-setup.mjs", "operator/web/scientific-setup.css",
+    "operator/web/setup_configuration.mjs",
     "operator/extensions/scientific-setup.json", "operator/SCIENTIFIC_SETUP_DESK.md",
     "source_tools/keowee_interval_receiving.mjs",
     "source/keowee-native-receiving-20261013/source-interval-journey.json",
@@ -69,6 +71,8 @@ HOST_FILES = (
     "operator/watershed_context.py", "source/keowee-priority-methods-20261013.json",
     "operator/server.py", "operator/extension_registry.py", "operator/web/app.mjs",
     "model/reviews.py", "model/model_selection.py", "model/scenario_footprint.py",
+    "model/experiment_profiles.py", "operator/extensions/profile-workbench.json",
+    "operator/profile_workbench.py", "operator/web/profile_workbench.mjs",
     "operator/customer_reviews.py", "source_tools/gura_comparison.py",
     "source_tools/gura_workflow.py", "source_tools/receive_gura.py",
 )
@@ -142,6 +146,7 @@ def validate_host(application):
         ("model/reviews.py", None, {"create_review", "show_review", "history", "export_review",
                                     "describe_export", "response_template", "validate_workspace"}),
         ("model/model_selection.py", None, {"grid_models", "selected", "required_roles"}),
+        ("model/experiment_profiles.py", None, {"catalog"}),
         ("model/scenario_footprint.py", None, {"validate_destination_codes"}),
         ("source_tools/gura_comparison.py", None, {"catalog", "make_plan", "_check_plan"}),
         ("operator/watershed_context.py", "WatershedContextActions", {"read", "invoke", "_export"}),
@@ -160,6 +165,14 @@ def validate_host(application):
     if ("ExtensionRegistry" not in server or "web_assets" not in server
             or "createExtensionHost" not in browser):
         raise ValueError("Install the maintained shared operator extension host before receiving the method view")
+    profile_descriptor = json.loads(bodies["operator/extensions/profile-workbench.json"])
+    if (profile_descriptor.get("schema") != "upstate.operator-extension/v1"
+            or profile_descriptor.get("id") != "profile-workbench"
+            or profile_descriptor.get("client", {}).get("view", {}).get("id") != "profile-workbench"
+            or profile_descriptor.get("client", {}).get("module") != "/web/profile_workbench.mjs"):
+        raise ValueError("Receive the original Profile Workbench before enabling scientific profile revision")
+    if "openDesk" not in browser:
+        raise ValueError("Receive the existing operator openDesk host capability before scientific profile revision")
     customer_reviews = bodies["operator/customer_reviews.py"].decode("utf-8")
     for action in ("customer.review.create", "customer.review.export"):
         if action not in customer_reviews:
@@ -274,10 +287,16 @@ def package(source_root):
     setup_descriptor = json.loads(sources["operator/extensions/scientific-setup.json"])
     if (setup_descriptor.get("schema") != "upstate.operator-extension/v1"
             or setup_descriptor.get("id") != "scientific-setup"
-            or setup_descriptor.get("assets") != ["scientific-setup.mjs", "scientific-setup.css"]
+            or setup_descriptor.get("assets") != ["scientific-setup.mjs", "scientific-setup.css",
+                                                        "setup_configuration.mjs"]
             or setup_descriptor.get("backend", {}).get("module") != "scientific_setup"
             or setup_descriptor.get("backend", {}).get("actions") != ["scientific.setup.create"]
             or setup_descriptor.get("requires_actions") != ["customer.review.create", "customer.review.export"]
+            or "openDesk" not in setup_descriptor.get("client", {}).get("requires", [])
+            or not any(route.get("path") == "/api/scientific-setup/configuration"
+                       and "GET" in route.get("methods", [])
+                       and route.get("operation") == "configuration"
+                       for route in setup_descriptor.get("backend", {}).get("routes", []))
             or setup_descriptor.get("client", {}).get("module") != "/web/scientific-setup.mjs"
             or setup_descriptor.get("client", {}).get("styles") != ["/web/scientific-setup.css"]):
         raise ValueError("Expected the original scientific setup action and view registration")
