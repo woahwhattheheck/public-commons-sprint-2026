@@ -932,7 +932,7 @@ function observationCompareForm(id){
 function deliverySource(name,label,choice={},requiredField=true,withFilters=false){
  const collection=choice.source_collection_id||collectionDefault(),source=choice.source_id||'';
  return '<fieldset class="full" data-delivery-source="'+esc(name)+'"><legend>'+esc(label)+'</legend>'+
- (!requiredField?'<label class="check"><input type="checkbox" name="'+esc(name)+'_enabled" '+(source?'checked':'')+'><span>Include this original overlay</span></label>':'')+
+ (!requiredField?'<label class="check"><input type="checkbox" name="'+esc(name)+'_enabled" '+(source?'checked':'')+'><span>Include this original source</span></label>':'')+
  '<div class="form-grid" data-source-fields>'+field('Source edition',select(name+'_collection',sources(),collection,requiredField))+
  field('Original source',select(name+'_source',sourceRows(collection,withFilters?'vector':null),source,requiredField))+
  (withFilters?field('Native layer name',input(name+'_layer','text',choice.layer||''),'Optional for a source with one layer.')+filterEditor(name,choice.where):'')+'</div></fieldset>';
@@ -966,20 +966,23 @@ function retainedDeliveryCohort(selection,baseline,alternatives){
 }
 async function deliveryForm(id,initialSelection){
  requireSources();const saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null,row=saved?.selection||initialSelection;
+ const nativeStudy=row?.delivery_mode==='native_study',originalStudy=row?.native_study;
+ if(row?.delivery_mode!==undefined&&!['regional_rfp','native_study'].includes(row.delivery_mode))throw Error('Open a regional or native-study delivery with its original mode.');
+ if(nativeStudy&&(!originalStudy||['title','purpose'].some(key=>typeof originalStudy[key]!=='string'||!originalStudy[key].trim())||(originalStudy.reference!=null&&typeof originalStudy.reference!=='string')))throw Error('The native study must retain its original title, purpose and optional reference.');
  const complete=state.data.runs.filter(fullNativeRun);
- if(complete.length<2)throw Error('Complete both NDR and SDR for the original baseline and at least one alternative before assembling the seven-map delivery.');
+ if(complete.length<2)throw Error('Complete both NDR and SDR for the original baseline and at least one alternative before assembling the complete scientific delivery.');
  const roles=[['PROTECTED_LANDS','Protected-lands source'],['PARCEL','Original parcel source'],['NHD','National Hydrography Dataset source'],['NWI','National Wetlands Inventory source']];
- const overlays=[['drinking_water','Critical drinking-water source boundaries',true],['high_quality_waters','Designated high-quality waters',true],['protected_lands','Protected-lands cartographic overlay',false],['parcels','Parcel priority inventory and GIS export',false]];
+ const overlays=[['drinking_water','Critical drinking-water source boundaries',!nativeStudy],['high_quality_waters','Designated high-quality waters',!nativeStudy],['protected_lands','Protected-lands cartographic overlay',false],['parcels','Parcel priority inventory and GIS export',false]];
  const settings=row?.map_settings||{},weights=settings.weights||{};
  let observedReports;
  const attachedAnalysis=row?.source_scenario_analysis_id?{id:row.source_scenario_analysis_id,sha256:row.source_scenario_analysis_sha256,title:row.source_scenario_analysis_title||row.title||'Saved scenario analysis'}:null;
- openForm(saved?'Revise complete map delivery':'Build complete seven-map delivery','Join the completed native baseline and alternatives with original water designations and supporting source data. The existing delivery engine writes the physical rasters, PDFs, report, metadata, parcel inventory when selected, and a restorable scientific workspace.',
- '<div class="form-grid">'+(attachedAnalysis?'<fieldset class="full"><legend>Saved analysis attached</legend><p>'+esc(attachedAnalysis.title)+'</p><p class="note">Original analysis '+esc(attachedAnalysis.id)+'. The delivery retains its exact source areas, native cohort, settings and result files. Map settings below describe this delivery; the attached saved analysis preserves its original calculations.</p></fieldset>':'')+field('Delivery title',input('title','text',row?.title||'','required'),'',true)+
+ openForm(saved?(nativeStudy?'Revise native-study delivery':'Revise complete map delivery'):(nativeStudy?'Build complete native-study delivery':'Build complete seven-map delivery'),nativeStudy?'Retain the original study context, completed native cohort and selected scientific sources. Supporting regional sources and overlays are optional; the complete study reports, maps and editable workspace follow the retained native study.':'Join the completed native baseline and alternatives with original water designations and supporting source data. The existing delivery engine writes the physical rasters, PDFs, report, metadata, parcel inventory when selected, and a restorable scientific workspace.',
+ '<div class="form-grid">'+(nativeStudy?'<fieldset class="full"><legend>Original native study</legend><p><strong>'+esc(originalStudy.title)+'</strong></p><p>'+esc(originalStudy.purpose)+'</p>'+(originalStudy.reference?'<p class="note">Reference: '+esc(originalStudy.reference)+'</p>':'')+'<p class="note">This delivery keeps its original study context. Supporting regional source editions and overlays below are optional.</p></fieldset>':'')+(attachedAnalysis?'<fieldset class="full"><legend>Saved analysis attached</legend><p>'+esc(attachedAnalysis.title)+'</p><p class="note">Original analysis '+esc(attachedAnalysis.id)+'. The delivery retains its exact source areas, native cohort, settings and result files. Map settings below describe this delivery; the attached saved analysis preserves its original calculations.</p></fieldset>':'')+field('Delivery title',input('title','text',row?.title||'','required'),'',true)+
  field('Completed baseline run',select('baseline',complete.map(x=>[x.id,runTitle(x.id)]),row?.baseline_run_id),'',true)+
  '<fieldset class="full"><legend>Completed alternatives on the same grid</legend><div id="delivery-alternatives"></div></fieldset>'+
  receivingWaters.deliveryFields(row||{})+
  '<h3 class="subheading full">Actual supporting source editions</h3><p class="note full">The five modeled raster sources and computed LS factor come from the selected original run. Choose these additional original sources for the delivery lineage.</p>'+
- roles.map(([key,label])=>deliverySource('role_'+key,label,row?.source_roles?.[key])).join('')+
+ roles.map(([key,label])=>deliverySource('role_'+key,label,row?.source_roles?.[key],!nativeStudy)).join('')+
  '<div class="full" id="delivery-observed-reports"></div>'+
  '<h3 class="subheading full">Source-backed cartography and parcel priority</h3>'+
  overlays.map(([key,label,requiredField])=>deliverySource('overlay_'+key,label,row?.overlays?.[key],requiredField,true)).join('')+
@@ -991,13 +994,13 @@ async function deliveryForm(id,initialSelection){
  '<fieldset class="full"><legend>Retained observed-load comparisons</legend>'+checks('observation_comparisons',(state.data.observation_comparisons||[]).map(x=>({id:x.id,title:named('observations',x.observation_id)+' · '+runTitle(x.run_id)})),row?.observation_comparison_ids||[])+'</fieldset>'+
  '<fieldset class="full"><legend>Saved spatial review views</legend>'+checks('spatial_reviews',(state.data.spatial_reviews||[]).map(x=>({id:x.id,title:x.title})),row?.spatial_review_ids||[])+'<p class="note">Selected views carry their original sources, filters, markers, viewport and interpretation as working project assets.</p></fieldset>'+
  '<fieldset class="full"><legend>Printable map packs</legend>'+checks('spatial_exports',(state.data.spatial_exports||[]).filter(x=>x.state==='complete').map(x=>({id:x.id,title:x.title})),row?.spatial_export_ids||[])+'<p class="note">Include the retained PDF, vector and raster figures, annotations and complete map pack. Their original saved reviews are included with the delivery.</p></fieldset>'+
- '<h3 class="subheading full">Delivery contact and interpretation</h3>'+field('Contact name',input('contact_name','text',row?.contact?.name||'','required'))+
- field('Organization',input('contact_organization','text',row?.contact?.organization||'','required'))+field('Email',input('contact_email','email',row?.contact?.email||'','required'))+
+ '<h3 class="subheading full">Delivery contact and interpretation</h3>'+field('Contact name',input('contact_name','text',row?.contact?.name||'',nativeStudy?'':'required'))+
+ field('Organization',input('contact_organization','text',row?.contact?.organization||'',nativeStudy?'':'required'))+field('Email',input('contact_email','email',row?.contact?.email||'',nativeStudy?'':'required'))+
  field('Delivery notes',area('notes',(row?.notes||[]).join('\n')),'One original interpretation or delivery note per line.',true)+'</div>',
  'Build complete original delivery',()=>{
   const alternatives=retainedDeliveryCohort(row,val('baseline'),chosen('alternatives'));if(!alternatives.length)throw Error('Select at least one completed alternative on the baseline grid.');
   const source_roles={...(row?.source_roles||{})},selectedOverlays={...(row?.overlays||{})},weights={},caps={};
-  for(const [key]of roles)source_roles[key]=readDeliverySource('role_'+key,true,false,row?.source_roles?.[key]);
+  for(const [key]of roles){const choice=readDeliverySource('role_'+key,!nativeStudy,false,row?.source_roles?.[key]);if(choice)source_roles[key]=choice;else delete source_roles[key];}
   const observedReportSources=observedReports.selection();if(observedReportSources.length)source_roles.OBSERVED_CONTEXT=observedReportSources[0];else delete source_roles.OBSERVED_CONTEXT;
   for(const [key,,requiredField]of overlays){
    const x=readDeliverySource('overlay_'+key,requiredField,true,row?.overlays?.[key]);
@@ -1011,11 +1014,11 @@ async function deliveryForm(id,initialSelection){
   }
   if(Object.values(weights).every(x=>x===0))throw Error('At least one pollutant weight must be positive.');
   const map_settings={...(row?.map_settings||{}),weights,dpi:num('dpi')};delete map_settings.caps;delete map_settings.title;if(Object.keys(caps).length)map_settings.caps=caps;if(val('map_title').trim())map_settings.title=val('map_title').trim();
-  const sourceBinding={...(row?.economic_edition_id?{economic_edition_id:row.economic_edition_id,...(row.economic_edition_sha256?{economic_edition_sha256:row.economic_edition_sha256}:{})}:{}),...(row?.source_report_id?{source_report_id:row.source_report_id,...(row.source_report_sha256?{source_report_sha256:row.source_report_sha256}:{})}:{}),...(attachedAnalysis?{source_scenario_analysis_id:attachedAnalysis.id,...(attachedAnalysis.sha256?{source_scenario_analysis_sha256:attachedAnalysis.sha256}:{})}:{})};
+  const sourceBinding={...(nativeStudy?{delivery_mode:'native_study',native_study:{...originalStudy}}:(row?.delivery_mode?{delivery_mode:row.delivery_mode}:{})),...(row?.economic_edition_id?{economic_edition_id:row.economic_edition_id,...(row.economic_edition_sha256?{economic_edition_sha256:row.economic_edition_sha256}:{})}:{}),...(row?.source_report_id?{source_report_id:row.source_report_id,...(row.source_report_sha256?{source_report_sha256:row.source_report_sha256}:{})}:{}),...(attachedAnalysis?{source_scenario_analysis_id:attachedAnalysis.id,...(attachedAnalysis.sha256?{source_scenario_analysis_sha256:attachedAnalysis.sha256}:{})}:{})};
   return submitAction('delivery.build',{...sourceBinding,...receivingWaters.deliverySelection({baseline_run_id:val('baseline'),scenario_run_ids:alternatives},row||{}),title:val('title'),baseline_run_id:val('baseline'),scenario_run_ids:alternatives,source_roles,...(observedReportSources.length>1?{observed_context_sources:observedReportSources}:{}),overlays:selectedOverlays,map_settings,observation_comparison_ids:chosen('observation_comparisons'),spatial_review_ids:chosen('spatial_reviews'),spatial_export_ids:chosen('spatial_exports'),contact:{name:val('contact_name'),organization:val('contact_organization'),email:val('contact_email')},notes:lines(val('notes'))});
  },()=>{
   observedReports=mountObservedReports($('#delivery-observed-reports'),state.data.sources,row||{});
-  for(const [key]of roles)bindDeliverySource('role_'+key,true,false);
+  for(const [key]of roles)bindDeliverySource('role_'+key,!nativeStudy,false);
   for(const [key,,requiredField]of overlays)bindDeliverySource('overlay_'+key,requiredField,true);
   let initial=row?.scenario_run_ids||[];
   const update=()=>{
