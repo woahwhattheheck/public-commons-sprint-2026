@@ -25,6 +25,12 @@ The original root-selective apply implementation keeps its progress, cancellatio
 
 The function apply_plan defaults to preparation. The original root-selective class and CLI keep their execute-runs default. Use --prepare-only for the original CLI and --run-models to request edition model execution.
 
+For edition plans, explicit execution completes every successor run, including unchanged physical inputs rebound to a newer citation/source edition. It offers each completed original run through Workspace.run(reuse_source_run_ids=[original_id]); the maintained native matcher and stage cache own all input/runtime verification and reuse. The preview's requires_native_rerun flag remains an input-impact classification. It does not substitute for the target's actual complete state. A plan reaches complete only after every selected successor has retained complete native outputs.
+
+The common view presents older false-complete lineage-only checkpoints as prepared when their saved targets still lack completion. This read adaptation leaves original checkpoint bytes and immutable plan IDs unchanged. Applying resumes their existing remappings; a completed operator task gets a new operation ID only on a new explicit click. Active or uncertain submissions retain their exact earlier ID.
+
+Edition run_results retains each model's actual reuse source, input signature and original stage completion time alongside the target's output descriptors. Both physical and lineage-only completed pairs use the existing direction, model-version and common-support comparison rules. NativeProcessInterrupted is rethrown after checkpointing as interrupted; storage exhaustion is saved and propagated immediately. Root-selective plan behavior and its SQLite native_state records remain intact.
+
 report_plan returns json, csv and html. Root-selective plans use their original report implementation. Edition reports include immutable input selections, affected-object remappings, retained native comparison descriptors and common-support coverage. Annual export differences remain alternative minus baseline; summed mass units remove the per-pixel denominator once. The original workspace backup path exports either format under its corresponding refresh lock.
 
 ## CLI compatibility

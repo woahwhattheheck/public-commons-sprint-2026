@@ -22,7 +22,7 @@ import sys
 import tempfile
 import unicodedata
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 SCHEMA = "upstate.classified-water-crosswalk/v1"
 PLANNING_SHA256 = "133bc5369bd0d68bfdb53c61e3df24f9445f799b0d68b301f321d2c49d71eab6"
 FOCUS_HUCS = ("030601010703", "030601010704", "030601020507", "030601020502")
@@ -31,6 +31,10 @@ KNOWN_CLASSES = ("ONRW", "ORW", "TPGT", "TPT", "TN", "FW", "SA", "SB", "SFH")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+
+from source_tools.water_classifications import (classification_scope, classification_key,
+    literal_class, record_scope, validate_registry)
 
 
 def now():
@@ -178,6 +182,11 @@ def parse_class(raw_value, field_metadata, layer_mapping):
     elif key in native:
         label, resolution = native[key], "native.codedValues"
     label = None if label is None else str(label)
+    if layer_mapping.get("classification_system"):
+        jurisdiction, _ = classification_scope(layer_mapping, required=True)
+        if jurisdiction != "SC":
+            return {"class_raw": raw_value, "class_resolution": resolution,
+                    **literal_class(label, layer_mapping)}
     text = unicodedata.normalize("NFKC", label or "").strip()
     codes = "|".join(KNOWN_CLASSES)
     # R.61-69 E/F use SFH and both attached (FWsp/SAsp) and spaced sp.
@@ -288,14 +297,16 @@ def load_capture(capture_root, mapping_path, inputs):
         config = mapping["layers"].get(layer_id)
         if not isinstance(config, dict):
             raise ValueError("Supply exact metadata field mapping for layer " + layer_id)
-        if config.get("status") not in ("current", "proposed") or not config.get("vintage"):
-            raise ValueError("Every layer mapping needs current/proposed status and source vintage")
+        if config.get("status") not in ("current", "proposed", "source-published", "historical", "superseded") or not config.get("vintage"):
+            raise ValueError("Every layer mapping needs an explicit edition status and source vintage")
+        classification_scope(config)
         fields = {row["name"]: row for row in layer["field_schema"]}
         for key in ("class_field", "name_field"):
             if not config.get(key):
                 raise ValueError("Missing " + key + " in mapping for " + layer_id)
         for key in ("class_field", "name_field", "description_field", "county_field",
-                    "ndz_field", "previous_class_field", "site_specific_field"):
+                    "ndz_field", "previous_class_field", "site_specific_field",
+                    "native_index_field", "effective_date_field"):
             if config.get(key) and config[key] not in fields:
                 raise ValueError(key + " does not match native metadata exactly for " + layer_id)
         references = [layer["metadata_path"], layer["object_ids_path"], layer["count_path"],
@@ -536,6 +547,7 @@ class LegalAssociations:
     def __init__(self, registry_paths, bindings_path, inputs):
         self.records = {}
         self.index = collections.defaultdict(list)
+        self.original_indices = collections.defaultdict(list)
         self.bindings = collections.defaultdict(list)
         self.associations = []
         self.seen_features = set()
@@ -543,18 +555,19 @@ class LegalAssociations:
             path = Path(path).resolve(strict=True)
             inputs.add("inputs/registry/%03d-%s" % (index, path.name), path)
             value = read_json(path)
-            if value.get("schema") != "upstate.classified-water-registry/v1":
-                raise ValueError("Expected native legal reach registry schema")
+            validate_registry(value)
             edition = value["edition"]
-            if edition.get("status") not in ("current", "proposed"):
-                raise ValueError("Legal registry edition must retain current/proposed status")
             for record in value["records"]:
                 key = record["id"]
                 if key in self.records:
                     raise ValueError("Duplicate legal reach identity: " + key)
                 self.records[key] = {"record": record, "edition": edition}
-                self.index[(normalized_name(record["waterbody_name"]), record["class_code"],
-                            edition["status"])].append(key)
+                scope = classification_key(record, edition)
+                if record.get("allow_name_candidate", True):
+                    self.index[(*scope, normalized_name(record["waterbody_name"]),
+                                edition["status"])].append(key)
+                if record.get("original_index") is not None:
+                    self.original_indices[(*scope, str(record["original_index"]), edition["status"])].append(key)
         if bindings_path:
             inputs.add("inputs/registry/bindings.json", bindings_path)
             value = read_json(bindings_path)
@@ -580,8 +593,10 @@ class LegalAssociations:
         for binding in self.bindings.get(key, []):
             record_id = binding["registry_record_id"]
             entry = self.records[record_id]
+            if record_scope(entry["record"], entry["edition"]) != classification_scope(properties):
+                raise ValueError("Explicit legal binding crosses classification jurisdictions or systems")
             if entry["edition"]["status"] != properties["status"]:
-                raise ValueError("Explicit legal binding mixes proposed and current source editions")
+                raise ValueError("Explicit legal binding mixes different source edition statuses")
             links.append({"feature_id": key, "registry_record_id": record_id,
                           "geometry_relation": binding["geometry_relation"],
                           "method": "explicit-binding", "in_geographic_scope": in_scope,
@@ -589,7 +604,17 @@ class LegalAssociations:
                           "binding": binding})
         explicit = {link["registry_record_id"] for link in links}
         counties = {normalized_name(value) for value in properties["county_codes"]}
-        lookup = (normalized_name(properties["waterbody_name"]), properties["class_code"], properties["status"])
+        scope = classification_key(properties)
+        index_value = properties.get("original_index")
+        if index_value is not None:
+            for record_id in self.original_indices.get((*scope, str(index_value), properties["status"]), []):
+                if record_id in explicit:
+                    continue
+                links.append({"feature_id": key, "registry_record_id": record_id,
+                              "geometry_relation": "candidate", "method": "exact-jurisdiction-index-class",
+                              "in_geographic_scope": in_scope, "native_class_agrees": True})
+                explicit.add(record_id)
+        lookup = (*scope, normalized_name(properties["waterbody_name"]), properties["status"])
         if counties:
             for record_id in self.index.get(lookup, []):
                 entry = self.records[record_id]
@@ -671,7 +696,15 @@ def feature_properties(loaded, feature):
         values["site_specific"] = values["site_specific"] or sp_value
     ndz_raw = attributes.get(config["ndz_field"]) if config.get("ndz_field") else None
     county_raw = attributes.get(config["county_field"]) if config.get("county_field") else None
-    return {"feature_id": layer["id"] + ":" + oid, "layer_id": layer["id"], "object_id": oid,
+    declared = {}
+    if config.get("classification_system"):
+        jurisdiction, system = classification_scope(config, required=True)
+        declared = {"jurisdiction": jurisdiction, "classification_system": system}
+    if config.get("native_index_field"):
+        declared["original_index"] = attributes.get(config["native_index_field"])
+    if config.get("effective_date_field"):
+        declared["native_effective_date"] = attributes.get(config["effective_date_field"])
+    return {**declared, "feature_id": layer["id"] + ":" + oid, "layer_id": layer["id"], "object_id": oid,
             "waterbody_name": attributes.get(config["name_field"]),
             "reach_description": attributes.get(config["description_field"]) if config.get("description_field") else None,
             "status": config["status"], "legal_edition_status": config["status"],
@@ -808,6 +841,7 @@ def build_crosswalk(capture_root, mapping_path, project_source, output_root, *,
                                          planning_path=planning_path, focus_path=focus_path)
     legal = LegalAssociations(registry_paths, bindings_path, inputs)
     inputs.add("inputs/producer/high_quality_water_crosswalk.py", Path(__file__))
+    inputs.add("inputs/producer/water_classifications.py", PROJECT_ROOT / "source_tools/water_classifications.py")
     inputs.add("inputs/producer/capture_upstream_network.py",
                PROJECT_ROOT / "source/capture_upstream_network.py")
     runtime = {"python": sys.version.split()[0], "fiona": fiona.__version__,
@@ -903,7 +937,13 @@ def build_crosswalk(capture_root, mapping_path, project_source, output_root, *,
                     maps[map_name].append({"id": key + "@" + region["id"],
                                           "geometry": selected if counted else intersection, "properties": row})
                     if counted:
-                        scopes = ["all", "class:" + (properties["class_code"] or "UNPARSED:" + str(properties["class_label"]))]
+                        qualified = classification_scope(properties)
+                        class_scope = properties["class_code"] or "UNPARSED:" + str(properties["class_label"])
+                        if qualified[0] != "SC":
+                            class_scope = qualified[0] + ":" + qualified[1] + ":" + class_scope
+                        scopes = ["all", "class:" + class_scope]
+                        if qualified[0] != "SC":
+                            scopes.append("jurisdiction:" + qualified[0])
                         if properties["rfp_high_quality_candidate"]:
                             scopes.append("priority")
                         for scope in scopes:
@@ -953,11 +993,12 @@ def build_crosswalk(capture_root, mapping_path, project_source, output_root, *,
                           "aggregation": "Feature sums expose overlap. Unique geometry measures dissolve coincident geometry "
                                          "within region, status, class scope and dimension. Regional totals use the union "
                                          "region; never add independent HUC memberships or separate class totals.",
-                          "legal": "Current and proposed identify legal editions; source data_status (including provisional) "
+                          "legal": "Legal edition status and publisher data_status (including provisional) "
                                    "and catalogue_source_id remain separate labels. Explicit legal associations retain "
                                    "reach descriptions. Spatial HUC membership does not imply downstream applicability.",
-                          "priority": "ONRW, ORW, TN, TPGT and TPT are high-quality map candidates; unknown class values "
-                                      "remain visible and require source-domain mapping.",
+                          "priority": "Priority is a jurisdiction-specific source screening predicate. SC retains ONRW/ORW/TN/TPGT/TPT; "
+                                      "NC uses original Tr/HQW/ORW components; GA uses original trout, ONRW or wild/scenic designations. "
+                                      "These predicates do not make the states legally equivalent. Unknown labels remain visible.",
                           "zero": "Boundary-only intersections are retained as touch-only and contribute zero measure."}}
         write_json(staging / "provenance.json", provenance)
 
@@ -986,6 +1027,8 @@ def build_crosswalk(capture_root, mapping_path, project_source, output_root, *,
             original = "inputs/capture/" + layer["combined_path"]
             references = list(dict.fromkeys([layer["metadata_path"], layer["object_ids_path"], layer["count_path"]]
                                              + [page["path"] for page in layer["pages"]]))
+            with (staging / original).open("rb") as source_stream:
+                original_is_gzip = source_stream.read(2) == b"\x1f\x8b"
             entries.append({"id": layer["id"] + "-native", "title": layer["title"],
                             "kind": "vector", "uri": layer["url"], "vintage": config["vintage"],
                             "role": "WATER_CLASSIFICATION",
@@ -996,7 +1039,8 @@ def build_crosswalk(capture_root, mapping_path, project_source, output_root, *,
                                          "class_field": config["class_field"],
                                          "classification_status": config.get("data_status", layer.get("data_status"))},
                             "status": config["status"], "legal_edition_status": config["status"],
-                            **source_labels(layer, config), "source_format": "Esri JSON", "encoding": "gzip",
+                            **source_labels(layer, config), "source_format": "Esri JSON",
+                            **({"encoding": "gzip"} if original_is_gzip else {}),
                             "source_crs": layer["source_crs"], "mapping": config,
                             **descriptor(original),
                             "companions": [descriptor("inputs/capture/" + name) for name in references]
@@ -1045,7 +1089,7 @@ def main(argv=None):
     parser.add_argument("--focus-hucs", help="Retained original four-focus HUC12 response")
     parser.add_argument("--output", required=True, help="Parent for immutable crosswalk editions")
     parser.add_argument("--huc", action="append", default=[], help="Extra native HUC file or upstream network-selection.json")
-    parser.add_argument("--registry", action="append", default=[], help="Current/proposed source reach registry; repeatable")
+    parser.add_argument("--registry", action="append", default=[], help="Original source reach registry with explicit edition status; repeatable")
     parser.add_argument("--bindings", help="Explicit native-feature/legal-record binding JSON")
     parser.add_argument("--workspace", help="Existing model Workspace; imports the completed local sources.json")
     args = parser.parse_args(argv)

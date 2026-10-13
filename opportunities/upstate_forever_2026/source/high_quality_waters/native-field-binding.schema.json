@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "upstate.classified-water-bindings/v1",
-  "title": "Native SC DES classification field bindings",
+  "title": "Jurisdiction-qualified native classified-water field bindings",
   "type": "object",
   "required": [
     "layers"
@@ -42,9 +42,12 @@
           "status": {
             "enum": [
               "current",
-              "proposed"
+              "proposed",
+              "source-published",
+              "historical",
+              "superseded"
             ],
-            "description": "Current or proposed legal-edition context. Preserve provisional data status separately in data_status."
+            "description": "Explicit legal source edition status. A source-published reference is not silently asserted as current law; publisher data quality remains separate."
           },
           "vintage": {
             "type": "string",
@@ -71,7 +74,7 @@
                 }
               ]
             },
-            "description": "Explicit native county label or code to R.61-69 county abbreviation(s)."
+            "description": "Explicit native county labels to same-jurisdiction legal registry county values. Historical SC mappings use original R.61-69 abbreviations."
           },
           "county_separator": {
             "type": "string",
@@ -91,7 +94,54 @@
             "type": "object",
             "additionalProperties": true,
             "description": "Original catalogue labels, source references and other source metadata retained alongside legal_edition_status."
+          },
+          "jurisdiction": {
+            "enum": [
+              "SC",
+              "NC",
+              "GA"
+            ]
+          },
+          "classification_system": {
+            "enum": [
+              "SC-R61-69",
+              "NC-15A-NCAC-02B",
+              "GA-391-3-6-.03"
+            ]
+          },
+          "native_index_field": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact original metadata field containing the legal source index, such as BIMS_INDEX."
+          },
+          "effective_date_field": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Original native per-reach date field; raw source value remains distinct from legal effective_date."
+          },
+          "class_components": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "description": "Source-declared GA literal label to original component names; exact label retained."
+          },
+          "classification_role": {
+            "type": "string",
+            "description": "Designated use, trout protection or other original source role."
           }
+        },
+        "dependentRequired": {
+          "jurisdiction": [
+            "classification_system"
+          ],
+          "classification_system": [
+            "jurisdiction"
+          ]
         }
       }
     }

@@ -185,3 +185,39 @@ Record original result checksums before and after this presentation operation,
 the actual saved report/source/composer IDs, elapsed rendering time and original
 source provenance. A rendering or source-binding exception belongs to the same
 active native receiving operation and is repaired against its concrete output.
+
+## Composite measurements and historical source identities
+
+The source tables retain an original composite row's `measurement`, conserved
+`basis`, complete `components` list and weights, along with a readable operator
+expression. A composite row has no single `species`; it is never relabeled as
+one modeled species. Legacy single-species rows use their original species and
+declared mass basis.
+
+Reference-versus-prediction figures group by the complete original observation
+operator, not merely by its display label or elemental basis. Fit and held-out
+symbols retain their original roles, every panel has equal numeric axes, and
+censored observations stay in the complete tables. State time-series figures
+continue to show the modeled species themselves.
+
+Parameter-prior figures display the exact original target median and 5th/95th
+percentiles from the joint draws. Composite intervals come from those retained
+per-draw operator predictions. Adding marginal species quantiles would discard
+their joint dependence and is not used. Panels for different reaches share one
+physical scale only when their complete operator is the same.
+
+The source schema and producer edition remain compatible with historical
+saved sources. The changed producer's exact source hash makes a new immutable
+selection when a source is prepared. Inspection reopens the saved original
+selection and its own producer hash rather than regenerating old artifacts.
+The original report, project, request, result and complete editable ZIP remain
+exact companions of each source edition.
+
+## Compound and interval presentation edition
+
+New compound/interval sources use `native-chemistry-scientific-source-v2`.
+Inspection still accepts the original v1 source and verifies its own original
+selection, producer hash, report and retained files. Preparing v2 does not alter a
+saved v1 source. Interval tables and figures carry the original two limits,
+endpoint inclusion flags and native predicted values; they do not substitute a
+point concentration. The original figure specification renders both SVG and PDF.

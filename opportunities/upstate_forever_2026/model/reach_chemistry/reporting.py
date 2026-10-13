@@ -59,17 +59,58 @@ def _provenance(value):
             "source_detail": value}
 
 
+def _observation_operator(project, row):
+    """Describe the retained single-species or same-basis observation operator."""
+    sid = row.get("species")
+    if isinstance(sid, str) and sid in project.species:
+        # Legacy output is interpreted exactly as its original single-species
+        # engine. Unused request metadata must not change old result semantics.
+        species = project.species[sid]
+        return {"identity": {"kind": "species", "species": sid, "basis": species["basis"]},
+                "label": _text(species.get("name") or sid), "basis": species["basis"], "expression": sid}
+    components = row.get("components")
+    if components is not None:
+        if row.get("species") is not None:
+            raise ValueError("A composite Chemistry observation must not name a single species")
+        measurement, basis = row.get("measurement"), row.get("basis")
+        if (not isinstance(measurement, str) or not measurement.strip()
+                or not isinstance(basis, str) or not basis
+                or not isinstance(components, list) or not components):
+            raise ValueError("A composite Chemistry observation needs its original measurement, basis and components")
+        seen, canonical, expression = set(), [], []
+        for item in components:
+            if not isinstance(item, dict):
+                raise ValueError("An original Chemistry observation component must be an object")
+            sid, weight = item.get("species"), item.get("weight")
+            if (not isinstance(sid, str) or sid not in project.species or sid in seen
+                    or isinstance(weight, bool) or not isinstance(weight, (int, float))
+                    or not math.isfinite(weight) or weight <= 0):
+                raise ValueError("Original Chemistry observation weights require unique species and positive finite values")
+            if project.species[sid]["basis"] != basis:
+                raise ValueError("A composite Chemistry observation combines different conserved bases")
+            seen.add(sid)
+            canonical.append({"species": sid, "weight": float(weight)})
+            expression.append(_text(weight) + " × " + sid)
+        identity = {"kind": "composite", "measurement": measurement, "basis": basis,
+                    "components": sorted(canonical, key=lambda item: item["species"])}
+        return {"identity": identity, "label": measurement, "basis": basis,
+                "expression": " + ".join(expression)}
+    raise ValueError("A retained Chemistry observation needs its declared species or composite operator")
+
+
 def _species(project, row):
-    """Describe a retained measurement without inventing a physical species."""
-    if "components" in row:
-        label = row["measurement"]
-        expression = " + ".join(_text(c["weight"]) + " × " + c["species"] for c in row["components"])
-        value = {**row, "operator_label": label, "operator_expression": expression}
+    """Keep current original operator validation and labels, with explicit interval limits."""
+    if row.get("components") is not None or row.get("species") in project.species:
+        operator = _observation_operator(project, row)
+        value = {**row, "basis": operator["basis"], "species_label": operator["label"],
+                 "measurement_label": operator["label"], "operator_label": operator["label"],
+                 "operator_expression": operator["expression"]}
     else:
         sid = row.get("species")
-        species = project.species.get(sid, {})
-        value = {**row, "basis": species.get("basis"), "species_label": species.get("name", sid),
-                 "operator_label": sid, "operator_expression": sid}
+        value = {**row, "basis": row.get("basis"), "species_label": sid,
+                 "measurement_label": row.get("measurement", sid),
+                 "operator_label": row.get("measurement", sid),
+                 "operator_expression": row.get("measurement", sid)}
     if row.get("qualifier") == "interval":
         value["declared_interval"] = (("[" if row["lower_closed"] else "(")
             + _text(row["lower_mg_l"]) + ", " + _text(row["upper_mg_l"])
@@ -85,6 +126,12 @@ def _observation_groups(project, rows):
     order = {("species", sid): index for index, sid in enumerate(project.species)}
     keys = sorted(groups, key=lambda key: order.get(key, len(order)))
     return [(key, _species(project, groups[key][0]), groups[key]) for key in keys]
+
+
+OBSERVATION_FIELDS = [
+    ("measurement_label", "Measurement"), ("operator_expression", "Observation operator"),
+    ("components", "Original components"), ("basis", "Conserved basis"),
+]
 
 
 def _interval_figures(project, observations):
@@ -209,7 +256,7 @@ def summary(project, result, request=None):
             "held_out_records": sum(r.get("role") == "holdout" for r in observations),
             "below_limit_records": sum(r.get("qualifier") == "below" for r in observations),
             "interval_records": sum(r.get("qualifier") == "interval" for r in observations),
-            "compound_records": sum("components" in r for r in observations),
+            "compound_records": sum("components" in r and "species" not in r for r in observations),
             "converged": result.get("converged"), "termination": result.get("termination"),
             "draw_count": result.get("draw_count"), "seed": result.get("seed"),
             "recorded_solver_elapsed_seconds": result.get("elapsed_seconds", result.get("baseline", result).get("numerics", {}).get("elapsed_seconds"))}
@@ -319,7 +366,7 @@ def report(project, result, request=None, *, identity=None, links=None):
                   ("Presentation edition", REPORT_EDITION),
                   ("Recorded solver elapsed seconds", info["recorded_solver_elapsed_seconds"])], "Retained analysis identity")
         + _table(source_rows, [("item", "Provenance field"), ("value", "Original value")], "Original project provenance")
-        + "<p>Concentrations and masses use each species' declared conserved basis. For example, nitrogen-basis mg/L is an elemental nitrogen concentration, not the molecular mass concentration of an ammonium or nitrate compound. Each reach is completely mixed at a fixed volume, with phasewise-constant linear coefficients. Times are model days from the project origin.</p>"]
+        + "<p>Concentrations and masses use each species' declared conserved basis. For example, nitrogen-basis mg/L is an elemental nitrogen concentration, not the molecular mass concentration of an ammonium or nitrate compound. Each reach is completely mixed at a fixed volume, with phasewise-constant linear coefficients. Times are model days from the project origin. Composite measurements retain their declared positive weighted sum of species on one conserved basis; that sum is an observation operator, not an additional modeled species.</p>"]
     if identity:
         sections.append(_items(list(identity.items()), "Saved native result and source identities"))
     run = result.get("baseline", result)

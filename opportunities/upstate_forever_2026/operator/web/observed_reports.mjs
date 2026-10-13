@@ -18,7 +18,7 @@ export function selectedObservedReports(selection={}){
 export function observedReportCatalogue(collections=[]){
  const rows=[],seen=new Set();
  for(const collection of collections)for(const entry of collection.entries||[]){
-  if(entry.kind!=="document"||entry.metadata?.report_schema!=="upstate.observed-report/v1")continue;
+  if(entry.kind!=="document"||(entry.metadata?.report_schema!=="upstate.observed-report/v1"&&entry.role!=="OBSERVED_CONTEXT"))continue;
   const choice={source_collection_id:collection.id,source_id:entry.id},id=key(choice);
   if(seen.has(id))continue;seen.add(id);
   rows.push({key:id,choice,title:entry.title||entry.id,vintage:entry.vintage||"",collection:collection.title||collection.id});

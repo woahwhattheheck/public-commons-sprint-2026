@@ -1,0 +1,672 @@
+{
+  "schema": "upstate.monitoring-source-upgrade/v1",
+  "source_commit": "1528b5f1c52e2eb999e4567f6a930c27eeb84fc4",
+  "source_root": "opportunities/upstate_forever_2026",
+  "operation_id": "ECO13-MONITORING-SCOPED-UPGRADE-DD6B-20261013",
+  "native_project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
+  "installer": "integrations/monitoring/install_monitoring.py",
+  "inventory": "integrations/monitoring/current_application_files.json",
+  "source_files": 94,
+  "source_bytes": 1754013,
+  "parts": [
+    {
+      "path": "source-01.json",
+      "bytes": 449164,
+      "sha256": "c35d5704e42856f13816cb30033eddd3745ee956c7e0eb3c81deba93e015b5fe",
+      "members": 22,
+      "source_bytes": 333242
+    },
+    {
+      "path": "source-02.json",
+      "bytes": 459143,
+      "sha256": "7242db9bf2d54e4e21545063140e618b8bdf3a780de72a805dcb0b410c06b0e1",
+      "members": 18,
+      "source_bytes": 341519
+    },
+    {
+      "path": "source-03.json",
+      "bytes": 429642,
+      "sha256": "e9a4e1e37c29869c2ad313f80069e15b107dddd02d8d2bb74b4813fb08cb8b7a",
+      "members": 13,
+      "source_bytes": 320124
+    },
+    {
+      "path": "source-04.json",
+      "bytes": 443131,
+      "sha256": "86a8bc78869748750c0c19faf29bc05df1180315cce632fa112ee8e19a3e00f6",
+      "members": 21,
+      "source_bytes": 329036
+    },
+    {
+      "path": "source-05.json",
+      "bytes": 438798,
+      "sha256": "0e310971ccc626085f1f11888332c21e7fbf41a223f60dfa88423312cc9f19ab",
+      "members": 16,
+      "source_bytes": 326497
+    },
+    {
+      "path": "source-06.json",
+      "bytes": 139237,
+      "sha256": "63c76168974a0e7811fad13a9f185382c7646c870b111dee29ba36ad099bf67a",
+      "members": 4,
+      "source_bytes": 103595
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/MONITORING_EXPORT_STREAMING.md",
+      "bytes": 3798,
+      "sha256": "c525f42f13267bdcc20eaf4cc87d1a7a6c1d62504e2b983fcdc4d3cf4eff3341",
+      "role": "installed_component"
+    },
+    {
+      "path": "docs/MONITORING_FIELDWORK_RETURN.md",
+      "bytes": 6261,
+      "sha256": "98b23e599548d4c919f727f8cb44b43e3672463652b1efe2f9c85952937e58a5",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-budget-comparison.json",
+      "bytes": 801,
+      "sha256": "964daaf5c02aac67b6642cb976cad23e038cd491c3f16b4263f89e695596c1d2",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-comparison-report.json",
+      "bytes": 747,
+      "sha256": "79668fbafe90b88dbe25741232afe92196845f72495d78afc95fdb559fa1a481",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-observed-station-scope.json",
+      "bytes": 507,
+      "sha256": "93df7b6ee47e9f3ad1d5d83b629bff6c0a0fd2b9c464e474bdba3fcdd5f70a88",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-study-transfer.json",
+      "bytes": 1980,
+      "sha256": "27a54cb4773c6e7f6a10691616dcf63200837b3bd114704c48ab3a576968e85b",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/monitoring_observed_sources.json",
+      "bytes": 42243,
+      "sha256": "ad0d9d525a2305c729a11adb22623319d69490841a83890a3ea41eb424706a6f",
+      "role": "installed_component"
+    },
+    {
+      "path": "integration/monitoring_study_transfer_sources.json",
+      "bytes": 22842,
+      "sha256": "5b63658973fba77de088c6a389fe816acf55de037d727b9db6d16d87cfc0c1aa",
+      "role": "installed_component"
+    },
+    {
+      "path": "integrations/monitoring/PREDECESSORS.json",
+      "bytes": 58210,
+      "sha256": "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11",
+      "role": "installed_component"
+    },
+    {
+      "path": "integrations/monitoring/current_application_files.json",
+      "bytes": 6889,
+      "sha256": "ef6a3db77688fb9980b2922e6efa6da9e2f355b380bf7fdcc3298af728440022",
+      "role": "installed_component"
+    },
+    {
+      "path": "integrations/monitoring/install_monitoring.py",
+      "bytes": 12373,
+      "sha256": "62164e9fbe593e845c8b4d095914da82a817d53d7de86b997e2813bab8f32575",
+      "role": "installed_component"
+    },
+    {
+      "path": "integrations/monitoring/install_native_monitoring.py",
+      "bytes": 6256,
+      "sha256": "fba4efc487ba27aa9271273e1e8841b2f66641903887734523d40036d5e537b5",
+      "role": "installed_component"
+    },
+    {
+      "path": "integrations/monitoring/install_observed_context.py",
+      "bytes": 4753,
+      "sha256": "866659927b487baeef09498535c5bca1c2bfee881793c6fe4a04555027c4a393",
+      "role": "installed_component"
+    },
+    {
+      "path": "integrations/monitoring/source_adoption.json",
+      "bytes": 47827,
+      "sha256": "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/MONITORING.md",
+      "bytes": 19210,
+      "sha256": "666f2407ff9e3c668e6dc1bff9e1871db3abbf4e3438d402db1f0d612096e4d5",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/MONITORING_BUDGET_COMPARISON.md",
+      "bytes": 7176,
+      "sha256": "6986fd948b0f4eaab9a1a70564c1d3c1df59dfae87b0557637ecb38b82c3865a",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/MONITORING_FIELDWORK.md",
+      "bytes": 5022,
+      "sha256": "c8b9819e114304822e60e0aeecd461a31f75293b4b5544000cf704dceb6c0c03",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/MONITORING_OBSERVED_CONTEXT.md",
+      "bytes": 19887,
+      "sha256": "62ec7d4c2bc092d00f862b40115ad345135e728db268a6508c9746de2a1db7fb",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/MONITORING_REPORT_SOURCE.md",
+      "bytes": 15794,
+      "sha256": "f6782ea83fc1aaaa6c9fcb24bb7d9649175f48446bd81cd3b383ad26103a060a",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/MONITORING_STUDY_TRANSFER.md",
+      "bytes": 12999,
+      "sha256": "4b163903f3e69610cc53150e1064af3bbd375fe7b5dcad8797071310305ff8c7",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/common.py",
+      "bytes": 13565,
+      "sha256": "996a045501e9b190a05896af3beeff5f5b8fba8d88c60fe82d5ea44434ce134b",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/decision_study_transfer.py",
+      "bytes": 24102,
+      "sha256": "aedd9cb9fe385494c2ba8c55f9b5b171927a337746a6000421823cfefab45c0e",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/implementation.py",
+      "bytes": 35546,
+      "sha256": "30cda1f91ffb417ec36bcd31747e586c6007101a5af5595fe6e3cd82fdb531ba",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/implementation_reporting.py",
+      "bytes": 26051,
+      "sha256": "4ed4cf30a39220e03196fb6bc57e36fe855ed3cb9466da7dbf8fbb154bfd3bde",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/implementation_schema.py",
+      "bytes": 33034,
+      "sha256": "5bcfed020925f0e54ba62fa876e5df5d6345c5bf18fa7f1ef5053e72f48ac6c2",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/monitoring_actions.py",
+      "bytes": 5097,
+      "sha256": "6a1943001eb067e41681d491dd25e6e6ecc3a324e958f4b547367db212bd84c1",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_campaign.py",
+      "bytes": 8179,
+      "sha256": "9e6ad6d5590c6200236211e59b6098c3fafb5db93ec1fbeb12061fe7ea89ac36",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_cli.py",
+      "bytes": 1694,
+      "sha256": "a6849dfdc19121a0b49fcd127dbe4bb1c9b2500c27db63c04aa67dfa6f89633f",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_common.py",
+      "bytes": 626,
+      "sha256": "a25fce18c6f7da1c0db7f1e3ec926610b86206348b83e4be3813e14ef027ba2f",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_comparison_report.py",
+      "bytes": 25249,
+      "sha256": "71f6d2c545283a7afb146bedcfcc3432738f4a943864f53afa3b384efc9f3217",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_design.py",
+      "bytes": 15170,
+      "sha256": "ff755941cf4529874fa954278d0143c774069e23a362c4cc9d35f14e69694a18",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_field_return.py",
+      "bytes": 24812,
+      "sha256": "d9019900577dfb9ae9311e6086b3d2c175871c80055f5dec874e840c3455876b",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_frontier_comparison.py",
+      "bytes": 31679,
+      "sha256": "148f17fc82afc5b472e56d0d60b5d9ee8eee7932e82669d15eb5b548d6a8b73e",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_implementation.py",
+      "bytes": 28170,
+      "sha256": "9531ab05a3ee4359991a9cadd06bbac79b828d0244fee7818e8690c87801de0d",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_network.py",
+      "bytes": 11729,
+      "sha256": "9e4e57f104a805a939c96f93984c5245c2a5b3e4ddddb234f927a92d5f7da122",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_observed_context.py",
+      "bytes": 36783,
+      "sha256": "168507dcd2742f2955796904e9104a5b46da84ba23130018affaaff7522d1591",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_packet.py",
+      "bytes": 6625,
+      "sha256": "f207268b6653db1ac92f1c861e2b8497fc4c9e4cddb605b9dec6c36492b0bb26",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_report_cli.py",
+      "bytes": 3558,
+      "sha256": "d9e924c7ccf7bde0166d98feb627cf08d40d3b1c2ccbe1136308707349dc2821",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_report_source.py",
+      "bytes": 38381,
+      "sha256": "7fd4c62fa756db94a9134f14ea54f1085f54dd119f3f27d9c82506094e49951c",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_sources.py",
+      "bytes": 9136,
+      "sha256": "832279605375c3dc2b2ac9d322d17b3c2556afceceb07e9dc62526317406c53b",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_study_transfer.py",
+      "bytes": 30930,
+      "sha256": "f3a9da48bbb9865c60b8aacf846ab20f1da0a664002227a3ea7e484a67bbee51",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/monitoring_workspace.py",
+      "bytes": 34937,
+      "sha256": "8f5dbb9a50311e8e63574561ebb44921f3bfcd7fb19320c053e35c6a3227a97e",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/observed_context.py",
+      "bytes": 17856,
+      "sha256": "7b7562c9b5b079556520068407f87ac58e98bc625616de52ae84f4347487e6ee",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/portable_implementation.py",
+      "bytes": 11505,
+      "sha256": "699c40189ce642caf58689c7dc5c46a6e83ca5ff62cee098380563a26ec7a8a0",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/portable_parameter_studies.py",
+      "bytes": 3360,
+      "sha256": "8c08026c0cccc5835bc7f9826557bc8def034ea689811b580872f6c643ddd98c",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/receiving_water_monitoring.py",
+      "bytes": 35039,
+      "sha256": "6269570ffc42f07f04b55c01169b1831ebc611de1524e7324fb8f152a0dee88a",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/receiving_waters.py",
+      "bytes": 76078,
+      "sha256": "4e2c28fd282f0353f7c19e25febacc15e7d50248a03f136223e1c691875004a4",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/requirements-monitoring.txt",
+      "bytes": 181,
+      "sha256": "01b1d14a98a0e180a062ccaa19ea6d45bb9f70fa84c991eafbdf534427e8764d",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/scientific_figures.py",
+      "bytes": 13833,
+      "sha256": "927331dade754525ae4f72b73385661fbfa8c14845ca2c54d0d0426480299465",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/scientific_map_figures.py",
+      "bytes": 15526,
+      "sha256": "d672b36181131605d8844f77508b58b37157a2c95b8f1cc99ff64366e1887302",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/study_delivery_transfer.py",
+      "bytes": 22059,
+      "sha256": "dcc1dee4664baa09b25316e7d907245fd265eae3f25438c559d2b1d277fbc326",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/study_transfer.py",
+      "bytes": 56428,
+      "sha256": "8543e9d0be3cef933df792a3bd3d888af383b6bf00026d0fab06b66c3b0a85a3",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/study_transfer_cli.py",
+      "bytes": 2392,
+      "sha256": "ebdcb6e9f476ea50e9274c8e5c4a64032cfc23d12b6933bbd1bd3028a60a3009",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/utility_microbial_study.py",
+      "bytes": 26280,
+      "sha256": "0c9cff3fa4ebe11832673b020e3dce5394f5c342888e7896f7552a91ccb9de45",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "model/utility_monitoring.py",
+      "bytes": 24973,
+      "sha256": "39e91bf5e74340efc7254af53f75c4f0049fb98662da0a941cb00f7c33ea52bc",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/utility_monitoring_report.py",
+      "bytes": 31602,
+      "sha256": "37d63a3f80bf0486fd9c488c1db260ab49b2e159ba5ec6cfbed4055eb461cb15",
+      "role": "installed_component"
+    },
+    {
+      "path": "model/workspace.py",
+      "bytes": 27783,
+      "sha256": "40e4c6e873a62447df76e7c4e16b687315e6f90e358a369bb414c59e7f8f679b",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "operator/MONITORING_API.md",
+      "bytes": 7631,
+      "sha256": "605d66bbac8c60d1767579529d94e8f3b75873cc0c1089b684aed58611a2a0fe",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/MONITORING_BUDGET_CHOICES.md",
+      "bytes": 7564,
+      "sha256": "6662691dc5356db34233b8247bf07c9716f4d8fb31541165d3307411c96f3c34",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/MONITORING_COMPARISON_REPORT.md",
+      "bytes": 3963,
+      "sha256": "5a3a39de3947f18b909cd729c46d4245994a51216c6a858ec5ca4d251bc69478",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/STUDY_TRANSFER.md",
+      "bytes": 26322,
+      "sha256": "c064495988f565d6c099ed777dc12414a954e383ad5460d0d6d2a8b368ab697c",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "operator/extension_registry.py",
+      "bytes": 30994,
+      "sha256": "e2e5802791e8cf74b29bfa5e8e0ebeaf5021a0e9b05e6299aacc8f3c57967f82",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "operator/extensions/implementation.json",
+      "bytes": 13726,
+      "sha256": "901f51d744b11eee438291756344fc173f9761837afb31c31c1e07dc286bb4ee",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "operator/extensions/monitoring-report.json",
+      "bytes": 1021,
+      "sha256": "87bee20cea4caf7b1e5427c09bf2668766ef3b1cee83fe641ffc8476d103b0db",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/extensions/monitoring.json",
+      "bytes": 2017,
+      "sha256": "0c97b6dd758697849acc96a2f7b1fa42c2a702962569929e6b43fb798e498d35",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/extensions/study-transfer.json",
+      "bytes": 3008,
+      "sha256": "1f9ef29684f752f2fa45abb69a049754d2d4274091e4e4abc970163226234ce6",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "operator/install_receiving_waters.py",
+      "bytes": 49860,
+      "sha256": "6221255d84b339fd54bb67f4256e26a865e088e3430524b8eadbc65da473e606",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/monitoring.py",
+      "bytes": 217,
+      "sha256": "5a03358a60f0ca0899499ffeb082fea556aca89d83a4b6b2230f5d3f5139d920",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/monitoring_native.py",
+      "bytes": 9632,
+      "sha256": "3f0d199f044445c45b72fde84bc356bac33e97ff7e45189d6cda0112456a47dd",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/monitoring_receiving.py",
+      "bytes": 18059,
+      "sha256": "f59fea6a2b5c61f90803728776029b5880fe33bd61a2d7393e0abfa389727756",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/monitoring_report_native.py",
+      "bytes": 3011,
+      "sha256": "64019738a699d15baa93bd00e4d58a105dd4411826f0eae3d8606cd1bcad233b",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "operator/static/monitoring.js",
+      "bytes": 27040,
+      "sha256": "eb3c4684e9de66b6dd448ca08ccf0277f28aa27def9e6f1983569838ddeb0b41",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/study_transfer.py",
+      "bytes": 6447,
+      "sha256": "810b0bd97da587585195e69477a9f84b77f0b8f2a357a6f0459041252cc02d7d",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "operator/web/extensions/study_transfer.css",
+      "bytes": 7886,
+      "sha256": "758b64db4bda43e2b9b33bcbb315c5f087baf4285c7d2de398aab68c6b8cc645",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "operator/web/extensions/study_transfer.mjs",
+      "bytes": 33793,
+      "sha256": "a4bb23c47a8556b0a5b64923e037d5b858430c33ee6573772195e9f524f6135f",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "operator/web/monitoring-component.mjs",
+      "bytes": 24189,
+      "sha256": "af53661a464cfc5f838dbeae1552806a047544bdeb57e3aa1a0bc0af7566d1cd",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/monitoring-frontiers.css",
+      "bytes": 1484,
+      "sha256": "5e171a30eba7511e8c163c25e3a88209fcc7a07aa2ee5c07a5769260165cde59",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/monitoring-frontiers.mjs",
+      "bytes": 25764,
+      "sha256": "44907cdc2646358490a6d24130f13864b9c674120c41485fb1d6e430c393f466",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/monitoring-observed.mjs",
+      "bytes": 25250,
+      "sha256": "0226a65719bea63020a69e41bf0b9efc68ff27ff0c5dc11fe6b55066ec367f0b",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/monitoring-report.mjs",
+      "bytes": 19572,
+      "sha256": "9c5a5375901acd3912fc8b475087ec0b8d3bc6cba4fb491f3a5a6892c79c19ff",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/monitoring-study-transfer.mjs",
+      "bytes": 4888,
+      "sha256": "a9f5181bb522082c6a7b36ad23c0177980040c8912cb63713fab210b73c1570a",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/monitoring.css",
+      "bytes": 3592,
+      "sha256": "a2bc999bad6bee6f9f6c6c849c3e39f617b8e5344529f5f17a509b3d5bc2cd93",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/monitoring.mjs",
+      "bytes": 13110,
+      "sha256": "fc32b32ac15149e72e564a110f1e04fb8a1fa4c1241662171df69701111479cc",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/monitoring_field_return.mjs",
+      "bytes": 10523,
+      "sha256": "5a203e3ca27b97e5b10fbfc8659bd6b573c1a001537446861fb982398e48b2b7",
+      "role": "installed_component"
+    },
+    {
+      "path": "operator/web/monitoring_fieldwork.mjs",
+      "bytes": 4708,
+      "sha256": "3fd06327c4ba24ab45dac440d2c21a96c2ea7d4d2b792a6eb82c0614d4e7685b",
+      "role": "installed_component"
+    },
+    {
+      "path": "source/CHEMISTRY_BROWSER.md",
+      "bytes": 13365,
+      "sha256": "e5523c30547bdd2497cd3c58095a3d3af6a688c33f9561dac0ef23a9bf1dccb0",
+      "role": "receiving_driver"
+    },
+    {
+      "path": "source/MONITORING_BROWSER.md",
+      "bytes": 21920,
+      "sha256": "ee32619819ffecffe6ecca64c33607b9cd8ec5dcd14d5836b33202cf18eefa1d",
+      "role": "receiving_driver"
+    },
+    {
+      "path": "source/run_chemistry_browser.mjs",
+      "bytes": 35307,
+      "sha256": "b1ff68644141b5b52d538202b5e5d032fae51f7694a148a68007be7a08bb452d",
+      "role": "receiving_driver"
+    },
+    {
+      "path": "source/run_monitoring_browser.mjs",
+      "bytes": 61932,
+      "sha256": "52ecc7f557439433418a7f0b22503622a46abe55813a3fcbcae0dda6a71bdbe0",
+      "role": "receiving_driver"
+    },
+    {
+      "path": "source_tools/REGIONAL_PROGRESSION.md",
+      "bytes": 27100,
+      "sha256": "cef2298f7c51c568c3dd5e285be08dc97857c3a5b9d3a33a84bb41592e8592b7",
+      "role": "receiving_driver"
+    },
+    {
+      "path": "source_tools/receive_implementation.py",
+      "bytes": 17017,
+      "sha256": "675b2dfac733583b886bfd3e1a5d38650366b2a8a9afa91efc017cb9013e2775",
+      "role": "existing_base_dependency"
+    },
+    {
+      "path": "source_tools/receive_monitoring_fieldwork.py",
+      "bytes": 8230,
+      "sha256": "0013adef7cece77ff1c043bb06420a143d50b786686e79ab8de0cde565266eac",
+      "role": "installed_component"
+    },
+    {
+      "path": "source_tools/receive_regional_progression.py",
+      "bytes": 75631,
+      "sha256": "cf3f3d287cdc7408f80af64cddfe921db81e8086310b49205348c6c5b1c535d0",
+      "role": "receiving_driver"
+    },
+    {
+      "path": "source_tools/return_monitoring_fieldwork.py",
+      "bytes": 2717,
+      "sha256": "e5d55b67011c1e9b28ce3e74f0a0ec6eb38d7c8bd512938869087081a242f0be",
+      "role": "installed_component"
+    }
+  ],
+  "base_contract": {
+    "application": "Existing complete registered Upper Savannah scientific application",
+    "preserved_dependencies": [
+      "model/common.py",
+      "model/decision_study_transfer.py",
+      "model/implementation.py",
+      "model/implementation_reporting.py",
+      "model/implementation_schema.py",
+      "model/portable_implementation.py",
+      "model/portable_parameter_studies.py",
+      "model/receiving_water_monitoring.py",
+      "model/receiving_waters.py",
+      "model/study_delivery_transfer.py",
+      "model/study_transfer.py",
+      "model/study_transfer_cli.py",
+      "model/utility_microbial_study.py",
+      "model/workspace.py",
+      "operator/STUDY_TRANSFER.md",
+      "operator/extension_registry.py",
+      "operator/extensions/implementation.json",
+      "operator/extensions/study-transfer.json",
+      "operator/monitoring_report_native.py",
+      "operator/study_transfer.py",
+      "operator/web/extensions/study_transfer.css",
+      "operator/web/extensions/study_transfer.mjs",
+      "source_tools/receive_implementation.py"
+    ],
+    "scientific_report_composer": [
+      "sourceReports.openForSources",
+      "source-reports.render",
+      "source-reports.export",
+      "/api/source-reports/scientific-catalog",
+      "/api/source-reports/scientific-preview",
+      "/api/source-reports/scientific-edition"
+    ],
+    "scientific_python": [
+      "fiona",
+      "shapely",
+      "pyproj",
+      "scipy",
+      "reportlab"
+    ],
+    "browser": "Existing authorized Playwright + Chromium route"
+  },
+  "shared_renderer_adoption": {
+    "guard": "Original Monitoring PREDECESSORS.json",
+    "map_role_labels_version": 1,
+    "historical_map_editions": 2,
+    "historical_vector_editions": 3
+  },
+  "data_custody": "The original retained Workspace supplies its exact native sources, completed plans, campaigns and model runs. Original broader source manifests remain intact; this bank performs no scientific data import."
+}

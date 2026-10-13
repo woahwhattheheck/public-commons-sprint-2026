@@ -74,7 +74,7 @@ export function csvObservations(text, reference, project=null){
  });
 }
 function observationView(row){
- const r=row.observation||row.candidate||row,compound=Array.isArray(r.components);
+ const r=row.observation||row.candidate||row,compound=!Object.hasOwn(r,'species')&&Array.isArray(r.components);
  const expression=compound?r.components.map(c=>String(c.weight)+' × '+c.species).join(' + '):r.species;
  const limit=r.qualifier==='interval'
   ?(r.lower_closed?'[':'(')+r.lower_mg_l+', '+r.upper_mg_l+(r.upper_closed?']':')')

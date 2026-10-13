@@ -170,7 +170,9 @@ def _figures(project, result):
                                        "summaries of the supplied parameter-prior draws, not a simultaneous "
                                        "band or a measurement-error confidence interval. The supplied "
                                        "priors, bounds, latent correlation, seed and completed draw count "
-                                       "remain in the report. Shared reach panels use one physical scale for "
+                                       "remain in the report. Composite quantiles come from the original "
+                                       "joint per-draw operator; marginal species quantiles are never added. "
+                                       "Shared reach panels use one physical scale for "
                                        + species["operator_expression"] + " on the " + species["basis"] + " basis.",
                             "panels": panels})
     figures.extend(_interval_figures(project, result.get("observations", [])))

@@ -56,6 +56,7 @@ FILES = (
 # Exact byte identities from the complete source banks already delivered.
 KNOWN_RELEASES = {
     "model/source_refresh.py": [
+        "3e6c89916d90faa7d9a1d2b584ebb8559b3c80cc6dd1834c18cdeb9b16807690",
         "45ffa005526147e9b7d82de695724697d93fa044fe718c5f18f8195f09fdc893",
         "0d5c82011c23a6ddd0f2e1b2560d938a10babda51f8a48eb3b21203e01d1f12b",
         "57c45e6d341370109e154bfe382844316d75f29f1c13535062d5a67c025dd559",
@@ -107,6 +108,7 @@ KNOWN_RELEASES = {
         "7f60d9e886ae06382d0e518c54734c24c4e30430656517c30d62f5715919eb3e"
     ],
     "operator/SOURCE_UPDATES.md": [
+        "170a91e1a909d0304069dd9a719ef08c58f38f32ad93d60eb736367fbb42639b",
         "d5638a7ea89219c4465e19f18fdf54e393557ccaed96471720e62bca3d4c4d78",
         "3320a1abddc882ac10534c7139430f52e98e5cbab11132b3a82fa7d05af0e19e",
         "a601dda094dd0841016cf5d4835a055e7da3b910583deb61361ebec21d942cfc",
@@ -124,6 +126,7 @@ KNOWN_RELEASES = {
         "f7acd72e10b3986682c3dbb4617d629cb7586eaaacc159b6134ca4763f4ced1a"
     ],
     "operator/install_source_refresh.py": [
+        "5253c8230ade1a76d4722cfc3fe945b361624e333bf35ecc26f0b560f290ca39",
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
         "57fb0ee006ee3e718bd17feb3de0613aebc8d2734dc4f98c76c7e71879747545",
         "05b9e89c91a03435b166bd1cbcb296221d4792b37d41f941f269a6cf7310417f",
@@ -146,6 +149,7 @@ KNOWN_RELEASES = {
         "6cfded328d17b8684ea3c9bbb7bc6f40c014c36b08580d244f0b0506126c6c77"
     ],
     "install_source_refresh.py": [
+        "5253c8230ade1a76d4722cfc3fe945b361624e333bf35ecc26f0b560f290ca39",
         "689226ec18f615ee4ada207b59dd2b1c9f05975be6a2ca0286b213adfac9126c",
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
         "57fb0ee006ee3e718bd17feb3de0613aebc8d2734dc4f98c76c7e71879747545",

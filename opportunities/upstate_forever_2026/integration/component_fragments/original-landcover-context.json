@@ -10,12 +10,32 @@
         "source_tools/original_landcover_context.mjs",
         "source_tools/original_landcover_context_cli.mjs",
         "source_tools/ORIGINAL_LANDCOVER_CONTEXT.md",
-        "source_tools/archive_codec.mjs"
+        "source_tools/archive_codec.mjs",
+        "observations/landcover_2023_2025/report-2023/landcover-report.html",
+        "observations/landcover_2023_2025/report-2023/watersheds.csv",
+        "observations/landcover_2023_2025/report-2023/watershed-classes.csv",
+        "observations/landcover_2023_2025/report-2023/original-zonal.json",
+        "observations/landcover_2023_2025/report-2023/raster-source-entry.json",
+        "observations/landcover_2023_2025/report-2023/class-area.csv",
+        "observations/landcover_2023_2025/report-2023/observed-report.json",
+        "observations/landcover_2023_2025/report-2023/source-manifest.json",
+        "observations/landcover_2023_2025/report-2025/landcover-report.html",
+        "observations/landcover_2023_2025/report-2025/watersheds.csv",
+        "observations/landcover_2023_2025/report-2025/watershed-classes.csv",
+        "observations/landcover_2023_2025/report-2025/original-zonal.json",
+        "observations/landcover_2023_2025/report-2025/raster-source-entry.json",
+        "observations/landcover_2023_2025/report-2025/class-area.csv",
+        "observations/landcover_2023_2025/report-2025/observed-report.json",
+        "observations/landcover_2023_2025/report-2025/source-manifest.json"
       ],
       "requires": [
         "original-landcover-analysis",
         "observed-context",
         "scientific-report-editions"
+      ],
+      "source_manifests": [
+        "observations/landcover_2023_2025/report-2023/source-manifest.json",
+        "observations/landcover_2023_2025/report-2025/source-manifest.json"
       ]
     }
   },

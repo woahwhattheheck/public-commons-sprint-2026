@@ -1,0 +1,573 @@
+{
+  "schema": "upstate.classified-water-capture/v1",
+  "operation_id": "ECO12-NC-DESIGNATED-WATER-20261013",
+  "captured_at": "2026-10-13",
+  "files": [
+    {
+      "path": "original/nc-surface-water-classifications-layer-original-20261013.json",
+      "bytes": 15836,
+      "sha256": "506e655fcd62ec9694cd4b5bd076953801264402343eabcdb962c3018de1c838"
+    },
+    {
+      "path": "original/nc-savannah-classification-count-original-20261013.json",
+      "bytes": 15,
+      "sha256": "2dcfc360649fd6f1b8b9e14faeba23fcd7c0311aa9db7692ee424345faf0d9fb"
+    },
+    {
+      "path": "original/nc-savannah-classification-ids-original-20261013.json",
+      "bytes": 563,
+      "sha256": "4c30bdfdb720e6b7c70be99a56bca4268194147844d0569884a7aac35abf2e3a"
+    },
+    {
+      "path": "original/nc-savannah-classification-attributes-original-20261013.json",
+      "bytes": 52012,
+      "sha256": "c712fa061627b5da064fbc4c490f68f8e3824b15ea360b40b668cf5aaf90f9f3"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p001-original-20261013.json",
+      "bytes": 85964,
+      "sha256": "501b14bf3c6b2f9f5313f5375d458a5ac36e40d9c94801a903bcaed0a91ab463"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p002-original-20261013.json",
+      "bytes": 93949,
+      "sha256": "4cc11d57e2f13d96377e9859c59d5dfe8822e49b6b8f7f759ae9dc9afd53905f"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p003-original-20261013.json",
+      "bytes": 108471,
+      "sha256": "00e1f4bcea1a937120ad537a270fe127c85cfcd3e7f3ed17958456332259a88a"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p004-original-20261013.json",
+      "bytes": 105612,
+      "sha256": "cb1bac734f3801c02b6e1aca7abb4d26f473a24cbdbaee19c326576ddcee6a85"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p005-original-20261013.json",
+      "bytes": 58615,
+      "sha256": "b988771229f04227567cdf778d00ec7cc4010ba52ff759bffbd68a8d174f464e"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p006-original-20261013.json",
+      "bytes": 40845,
+      "sha256": "99035ee544d3bb2f8e8f343f2a0061892305d3e0809a5b81e0e9a618cf368d1b"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p007-original-20261013.json",
+      "bytes": 85579,
+      "sha256": "332c3441c809ee6f165d695fda7c304b5b55a1220df0e62676f6aaa2c252f8f9"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p008-original-20261013.json",
+      "bytes": 58111,
+      "sha256": "4c4fd66de0c6a6f375369b788f9a4efe0343d8298aadab70ce67140ef7159be1"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p009-original-20261013.json",
+      "bytes": 23742,
+      "sha256": "5b83d803f9e53556af2801bc9024457a40b2237a660229642e93eb9f167fbc87"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p010-original-20261013.json",
+      "bytes": 77537,
+      "sha256": "8fa97f9dd8482bcabc380582dc28cf80584e663561d9cf134ab7300b878ecfda"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p011-original-20261013.json",
+      "bytes": 98574,
+      "sha256": "8e25a4e29c8167fcfd655f1de9b1e1d5dd91a46b29a0070b98219e1ef7bff37e"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p012-original-20261013.json",
+      "bytes": 26100,
+      "sha256": "0379e99cd0aab7ca3a50f08dcc3a4db23c91f12af35561500f36f73e319ac179"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p013-original-20261013.json",
+      "bytes": 45806,
+      "sha256": "191fbc4b65f3d2d08047f0b43a5186e872be50d1d69441e55003a66a14050c44"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p014-original-20261013.json",
+      "bytes": 47345,
+      "sha256": "90985393fe3392fd4c79fc00de3301dd7eebe8fc76151d30f1492f5176cba6fc"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p015-original-20261013.json",
+      "bytes": 54957,
+      "sha256": "9f8102fd63f683eb49ae42b81a7246aaadafc6a14d15901f817c6fe260c13e49"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p016-original-20261013.json",
+      "bytes": 22852,
+      "sha256": "3ae1eea2ef1d6eba753f55d64d7b6cfbd54190053f3dd109e89412762eaf9d88"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p017-original-20261013.json",
+      "bytes": 27982,
+      "sha256": "92fe42b6adc4d2f4b4d61fade9370603ca8fe4808cce26949ce13e05660ef9f4"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p018-original-20261013.json",
+      "bytes": 20381,
+      "sha256": "3074c2376c1147e9ed54c5cc0fa52525ff229fc3bb99c80d21d82bfd62a0b50b"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p019-original-20261013.json",
+      "bytes": 24107,
+      "sha256": "d3dbc2a28fc5026cb80b9991e9bb8f43028ebeb8b1dc4675136bd66fd39d7946"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p020-original-20261013.json",
+      "bytes": 22576,
+      "sha256": "24ae3fe54f4cb35aa72f48bd338e1d09821c5004fc3bef5085229f2af40dd0fc"
+    },
+    {
+      "path": "original/nc-savannah-native-geometry-p021-original-20261013.json",
+      "bytes": 17016,
+      "sha256": "61f31e6eb89b29f4c232cdcc38f9dd71fc5d6a7dcda5d521c40fbfa23ff243e6"
+    },
+    {
+      "path": "original/nc-surface-water-classifications-layer-after-capture-original-20261013.json",
+      "bytes": 15836,
+      "sha256": "506e655fcd62ec9694cd4b5bd076953801264402343eabcdb962c3018de1c838"
+    }
+  ],
+  "layers": [
+    {
+      "id": "nc-savannah-classified-water",
+      "url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0",
+      "name": "SurfaceWaterClassifications",
+      "title": "NC DEQ Savannah native surface-water classifications",
+      "feature_count": 103,
+      "oid_field": "OBJECTID",
+      "geometry_type": "esriGeometryPolyline",
+      "source_crs": {
+        "wkid": 32119,
+        "latestWkid": 32119
+      },
+      "field_schema": [
+        {
+          "name": "OBJECTID",
+          "type": "esriFieldTypeOID",
+          "alias": "OBJECTID",
+          "sqlType": "sqlTypeOther",
+          "nullable": false,
+          "editable": false,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "BIMS_INDEX",
+          "type": "esriFieldTypeString",
+          "alias": "BIMS_INDEX",
+          "sqlType": "sqlTypeOther",
+          "length": 254,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "BIMS_Name",
+          "type": "esriFieldTypeString",
+          "alias": "BIMS_Name",
+          "sqlType": "sqlTypeOther",
+          "length": 254,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "BIMS_Descr",
+          "type": "esriFieldTypeString",
+          "alias": "BIMS_Descr",
+          "sqlType": "sqlTypeOther",
+          "length": 254,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "BIMS_Class",
+          "type": "esriFieldTypeString",
+          "alias": "BIMS_Class",
+          "sqlType": "sqlTypeOther",
+          "length": 254,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "BIMS_Date",
+          "type": "esriFieldTypeDate",
+          "alias": "BIMS_Date",
+          "sqlType": "sqlTypeOther",
+          "length": 8,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null,
+          "precision": 1
+        },
+        {
+          "name": "ClassURL",
+          "type": "esriFieldTypeString",
+          "alias": "ClassURL",
+          "sqlType": "sqlTypeOther",
+          "length": 250,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "esriFieldTypeString",
+          "alias": "Name",
+          "sqlType": "sqlTypeOther",
+          "length": 50,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "GlobalID",
+          "type": "esriFieldTypeGlobalID",
+          "alias": "GlobalID",
+          "sqlType": "sqlTypeOther",
+          "length": 38,
+          "nullable": false,
+          "editable": false,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "Shape__Length",
+          "type": "esriFieldTypeDouble",
+          "alias": "Shape__Length",
+          "sqlType": "sqlTypeDouble",
+          "nullable": true,
+          "editable": false,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "Shape_Length",
+          "type": "esriFieldTypeString",
+          "alias": "Shape_Length",
+          "sqlType": "sqlTypeOther",
+          "length": 256,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "Sup_Class",
+          "type": "esriFieldTypeString",
+          "alias": "Supplemental Classification",
+          "sqlType": "sqlTypeOther",
+          "length": 255,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null
+        },
+        {
+          "name": "Pri_Class",
+          "type": "esriFieldTypeString",
+          "alias": "Pri_Class",
+          "sqlType": "sqlTypeOther",
+          "length": 255,
+          "nullable": true,
+          "editable": true,
+          "domain": null,
+          "defaultValue": null
+        }
+      ],
+      "metadata_path": "original/nc-surface-water-classifications-layer-original-20261013.json",
+      "object_ids_path": "original/nc-savannah-classification-ids-original-20261013.json",
+      "count_path": "original/nc-savannah-classification-count-original-20261013.json",
+      "combined_path": "derived/combined-native-features.json",
+      "pages": [
+        {
+          "path": "original/nc-savannah-native-geometry-p001-original-20261013.json",
+          "object_ids": [
+            9580,
+            9581,
+            9582,
+            9583,
+            9584
+          ],
+          "bytes": 85964,
+          "sha256": "501b14bf3c6b2f9f5313f5375d458a5ac36e40d9c94801a903bcaed0a91ab463",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9580%2C9581%2C9582%2C9583%2C9584&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p002-original-20261013.json",
+          "object_ids": [
+            9585,
+            9586,
+            9587,
+            9588,
+            9589
+          ],
+          "bytes": 93949,
+          "sha256": "4cc11d57e2f13d96377e9859c59d5dfe8822e49b6b8f7f759ae9dc9afd53905f",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9585%2C9586%2C9587%2C9588%2C9589&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p003-original-20261013.json",
+          "object_ids": [
+            9590,
+            9591,
+            9592,
+            9593,
+            9594
+          ],
+          "bytes": 108471,
+          "sha256": "00e1f4bcea1a937120ad537a270fe127c85cfcd3e7f3ed17958456332259a88a",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9590%2C9591%2C9592%2C9593%2C9594&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p004-original-20261013.json",
+          "object_ids": [
+            9595,
+            9596,
+            9597,
+            9598,
+            9599
+          ],
+          "bytes": 105612,
+          "sha256": "cb1bac734f3801c02b6e1aca7abb4d26f473a24cbdbaee19c326576ddcee6a85",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9595%2C9596%2C9597%2C9598%2C9599&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p005-original-20261013.json",
+          "object_ids": [
+            9600,
+            9601,
+            9602,
+            9603,
+            9604
+          ],
+          "bytes": 58615,
+          "sha256": "b988771229f04227567cdf778d00ec7cc4010ba52ff759bffbd68a8d174f464e",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9600%2C9601%2C9602%2C9603%2C9604&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p006-original-20261013.json",
+          "object_ids": [
+            9605,
+            9606,
+            9607,
+            9608,
+            9609
+          ],
+          "bytes": 40845,
+          "sha256": "99035ee544d3bb2f8e8f343f2a0061892305d3e0809a5b81e0e9a618cf368d1b",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9605%2C9606%2C9607%2C9608%2C9609&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p007-original-20261013.json",
+          "object_ids": [
+            9610,
+            9611,
+            9612,
+            9613,
+            9614
+          ],
+          "bytes": 85579,
+          "sha256": "332c3441c809ee6f165d695fda7c304b5b55a1220df0e62676f6aaa2c252f8f9",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9610%2C9611%2C9612%2C9613%2C9614&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p008-original-20261013.json",
+          "object_ids": [
+            9615,
+            9616,
+            9617,
+            9618,
+            9619
+          ],
+          "bytes": 58111,
+          "sha256": "4c4fd66de0c6a6f375369b788f9a4efe0343d8298aadab70ce67140ef7159be1",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9615%2C9616%2C9617%2C9618%2C9619&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p009-original-20261013.json",
+          "object_ids": [
+            9620,
+            9621,
+            9622,
+            9623,
+            9624
+          ],
+          "bytes": 23742,
+          "sha256": "5b83d803f9e53556af2801bc9024457a40b2237a660229642e93eb9f167fbc87",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9620%2C9621%2C9622%2C9623%2C9624&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p010-original-20261013.json",
+          "object_ids": [
+            9924,
+            9925,
+            9926,
+            9927,
+            9928
+          ],
+          "bytes": 77537,
+          "sha256": "8fa97f9dd8482bcabc380582dc28cf80584e663561d9cf134ab7300b878ecfda",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9924%2C9925%2C9926%2C9927%2C9928&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p011-original-20261013.json",
+          "object_ids": [
+            9929,
+            9930,
+            9931,
+            9932,
+            9933
+          ],
+          "bytes": 98574,
+          "sha256": "8e25a4e29c8167fcfd655f1de9b1e1d5dd91a46b29a0070b98219e1ef7bff37e",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9929%2C9930%2C9931%2C9932%2C9933&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p012-original-20261013.json",
+          "object_ids": [
+            9934,
+            9935,
+            9936,
+            9937,
+            9938
+          ],
+          "bytes": 26100,
+          "sha256": "0379e99cd0aab7ca3a50f08dcc3a4db23c91f12af35561500f36f73e319ac179",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9934%2C9935%2C9936%2C9937%2C9938&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p013-original-20261013.json",
+          "object_ids": [
+            9939,
+            9940,
+            9941,
+            9942,
+            9943
+          ],
+          "bytes": 45806,
+          "sha256": "191fbc4b65f3d2d08047f0b43a5186e872be50d1d69441e55003a66a14050c44",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9939%2C9940%2C9941%2C9942%2C9943&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p014-original-20261013.json",
+          "object_ids": [
+            9944,
+            9945,
+            9946,
+            9947,
+            9948
+          ],
+          "bytes": 47345,
+          "sha256": "90985393fe3392fd4c79fc00de3301dd7eebe8fc76151d30f1492f5176cba6fc",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9944%2C9945%2C9946%2C9947%2C9948&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p015-original-20261013.json",
+          "object_ids": [
+            9949,
+            9950,
+            9951,
+            9952,
+            9953
+          ],
+          "bytes": 54957,
+          "sha256": "9f8102fd63f683eb49ae42b81a7246aaadafc6a14d15901f817c6fe260c13e49",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9949%2C9950%2C9951%2C9952%2C9953&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p016-original-20261013.json",
+          "object_ids": [
+            9954,
+            9955,
+            9956,
+            9957,
+            9958
+          ],
+          "bytes": 22852,
+          "sha256": "3ae1eea2ef1d6eba753f55d64d7b6cfbd54190053f3dd109e89412762eaf9d88",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9954%2C9955%2C9956%2C9957%2C9958&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p017-original-20261013.json",
+          "object_ids": [
+            9959,
+            9960,
+            9961,
+            9962,
+            9963
+          ],
+          "bytes": 27982,
+          "sha256": "92fe42b6adc4d2f4b4d61fade9370603ca8fe4808cce26949ce13e05660ef9f4",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9959%2C9960%2C9961%2C9962%2C9963&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p018-original-20261013.json",
+          "object_ids": [
+            9964,
+            9965,
+            9966,
+            9967,
+            9968
+          ],
+          "bytes": 20381,
+          "sha256": "3074c2376c1147e9ed54c5cc0fa52525ff229fc3bb99c80d21d82bfd62a0b50b",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9964%2C9965%2C9966%2C9967%2C9968&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p019-original-20261013.json",
+          "object_ids": [
+            9969,
+            9970,
+            9971,
+            9972,
+            9973
+          ],
+          "bytes": 24107,
+          "sha256": "d3dbc2a28fc5026cb80b9991e9bb8f43028ebeb8b1dc4675136bd66fd39d7946",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9969%2C9970%2C9971%2C9972%2C9973&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p020-original-20261013.json",
+          "object_ids": [
+            9974,
+            9975,
+            9976,
+            9977,
+            9978
+          ],
+          "bytes": 22576,
+          "sha256": "24ae3fe54f4cb35aa72f48bd338e1d09821c5004fc3bef5085229f2af40dd0fc",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9974%2C9975%2C9976%2C9977%2C9978&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        },
+        {
+          "path": "original/nc-savannah-native-geometry-p021-original-20261013.json",
+          "object_ids": [
+            9979,
+            9980,
+            9981
+          ],
+          "bytes": 17016,
+          "sha256": "61f31e6eb89b29f4c232cdcc38f9dd71fc5d6a7dcda5d521c40fbfa23ff243e6",
+          "source_url": "https://services2.arcgis.com/kCu40SDxsCGcuUWO/arcgis/rest/services/SurfaceWaterClassifications/FeatureServer/0/query?f=json&objectIds=9979%2C9980%2C9981&outFields=*&returnGeometry=true&returnTrueCurves=true&orderByFields=OBJECTID"
+        }
+      ]
+    }
+  ]
+}

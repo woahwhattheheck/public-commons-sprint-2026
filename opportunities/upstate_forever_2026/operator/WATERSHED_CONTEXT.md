@@ -508,3 +508,112 @@ utility receiver writes the same complete packet for each utility selection.
 ## Present the original selection and continue the review
 
 Each new saved selection export includes a source-context report/model and an offline briefing/page index, alongside its original watershed brief and complete observation files. Open source-context-report-briefing.html from the extracted utility-watershed-packet.zip to choose an agenda, inspect exact source tables and export actual meeting notes. The Implementation desk's saved-report chooser can receive that same source export and notes as editable, source-linked follow-up. The original scientific interpretation, units, methods, HUC membership and source jurisdiction remain in every report. [Utility source briefing](../docs/UTILITY_SOURCE_BRIEFING.md) gives the complete route through native report, Transfer and independent reopening.
+
+
+## Observed land cover and original station context in saved selections
+
+The existing Regional watersheds export can include the retained 2023 and 2025
+annual land-cover classification comparison beside South Carolina's 2026 draft
+assessment context and original dated station/gauge point membership. The choice
+uses the installed, verified `landcover_observation_profiles.sources.json`
+edition. Its complete source files and original companions travel with the saved
+selection.
+
+1. Open the current saved regional report. The **Observed land cover and station
+   context** section identifies the source years, assessment edition, geographic
+   support and exact selected source manifest.
+2. Leave **Include the retained observed evidence in the next selection export**
+   checked, or clear it for a planning-only export. The choice applies to matching
+   watersheds, one watershed, the four RFP anchors, network selections and utility
+   contributing watersheds through their existing export buttons.
+3. Export the desired membership. The ordinary task history records the
+   operation. When that task completes, the desk opens its new saved selection.
+   A pending export remains associated with its original project during a browser
+   session reload.
+4. Review **Saved observed evidence**. Selected watersheds and their distinct
+   contributing-watershed union have separate summaries and group balances.
+   Areas are hectares under the original native-cell centre support. Gross
+   gains/losses represent crossings between the original land-cover groups; net
+   change is the difference between their two annual areas.
+5. Open the existing HTML brief or download the complete saved source files and
+   packet. Reopen the same saved selection after changing a filter, refreshing,
+   or restoring the project. Its evidence comes from that saved export and
+   retains its original source identity.
+
+The live source choice is optional. An application without this source can still
+export its original planning selection. A requested source that changes between
+display and export requires a refresh before another evidence export. Reopening
+a saved selection does not substitute the newly installed source for its saved
+bytes.
+
+### Original quantities and geographic scope
+
+Assessment stations and observed-flow gauges are counts of original local point
+identities in the selected HUC12 polygons. They are not counts of all upstream
+monitoring and do not define a sampled drainage area. Retained NLDI basins,
+native network membership and the source's original coordinates supply their
+own geographic context. Original coordinate alternatives remain distinct source
+rows while identity counts follow the source's stated deduplication rule.
+
+South Carolina draft assessment cause codes retain that edition and jurisdiction.
+An unrepresented cause or station does not establish attainment or absence of
+monitoring. Developed land-cover classes include vegetated open space; their
+change is not an impervious-surface calculation or a measured pollutant-load
+change. Classification years, the draft assessment edition and the point-query
+date are separate source periods.
+
+### Existing API contract
+
+`GET /api/watershed-context/report` supplies `_evidence_profiles`, either
+`null` or a validated `upstate.watershed-observation-choice/v1` object.
+The current browser sends the following additional fields on the existing
+`watershed.context.export` action:
+
+```json
+{
+  "include_evidence": true,
+  "evidence_profile_sha256": "the exact displayed 64-character manifest SHA-256"
+}
+```
+
+The original `report_id`, `huc12s` and optional `utility_key` remain
+unchanged. A false or omitted flag keeps the original planning-only behavior.
+The completed export record exposes `landcover_observation_context`; its
+`source`, `selected` and optional `contributing_union` fields drive the
+saved display. The complete selected profiles, location rows and source bindings
+remain in `selected-watersheds.json` and the original file inventory. The
+existing download tickets and project archive carry those same members.
+
+## Inspect the rendered outgoing watershed product
+
+Bryce's standing instruction applies to every local or cloud producer and
+receiving peer: before describing a client-facing desk, demo, report or export as
+ready, open the exact outgoing version, look at its actual rendered screen or
+screenshots, and operate the important controls. Source review, HTTP responses,
+DOM counts and automated checks do not establish its visual usability. Carry
+this instruction into delegated receiving work and the current owner-controlled
+guides and instruction files those peers actually read.
+
+Use the populated original project for the final Regional watersheds inspection.
+At the intended screenshare width and a narrow/mobile width, view the source
+choice, watershed table, filters, detail, utility selection, task progress and
+saved export. Inspect the optional-source-empty and actual loading/error displays
+when those states occur in the receiving course. Exercise the evidence checkbox,
+selection/export controls, download links and reopening of the saved selection.
+The selected and contributing-union summaries must remain clearly distinguished;
+group labels, hectares, source periods and saved source identity must be readable.
+
+Open the outgoing HTML brief and the HTML briefing extracted from the downloaded
+packet. View any supplied PDF at normal reading scale. Inspect the actual restored
+project and its saved downloads as well as the producing project. Fix clipping,
+overflow, unreadable tables, broken links, cramped controls or confusing labels
+in the maintained implementation before presenting the product.
+
+Keep the industrial software design: clear hierarchy, readable tables, consistent
+type and spacing, restrained controls and responsive layouts. Record the actual
+version, original project/export identity, viewed widths and material repairs in
+the existing receiving handoff. Keep this inspection within the real product
+course; create no separate validation application or broad test suite.
+
+Instruction source: [Bryce's rendered-product direction, relayed to the Ecosystem
+owners](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791881463183449).
