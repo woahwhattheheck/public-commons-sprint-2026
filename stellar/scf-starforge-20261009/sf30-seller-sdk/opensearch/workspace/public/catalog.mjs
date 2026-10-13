@@ -1,6 +1,7 @@
 // MIT. Material operations inside the original OpenSearch operator workspace.
 import { sha256File } from '/file-sha256.mjs';
 import { createSupplierController } from '/supplier.mjs';
+import { createDocumentPreparationController } from '/document-preparation-ui.mjs';
 const MAPPING_SCHEMA = 'stellar-forge.material-catalog-mapping.v1';
 const FIELDS = [
   ['materialId', 'Material identifier', 'PRODUCTID'],
@@ -29,7 +30,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
   let decisionOffset = 0, decisionNext = null, selectedPanel = 'setup', fileNotice = '', quantityUrl = null;
   let storageOffset = 0, storageNext = null, storageRows = [], storageSelection = null, storageReceipt = null;
   const hashes = new WeakMap();
-  let supplier = null;
+  let supplier = null, documentPreparation = null, preparedSourceFile = null;
   const nav = element('button', 'Material catalogs', { 'data-view': 'catalog', type: 'button' });
   document.querySelector('nav[aria-label="Workspace views"]').append(nav);
   const section = element('section', undefined, { id: 'view-catalog', hidden: '' });
@@ -41,6 +42,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     '<div class="cat-tabs" role="tablist" aria-label="Material catalog work"><button type="button" role="tab" data-catalog-view="setup" aria-selected="true">Sources and mapping</button><button type="button" role="tab" data-catalog-view="review" aria-selected="false">Edition review</button><button type="button" role="tab" data-catalog-view="matches" aria-selected="false">Customer matches</button><button type="button" role="tab" data-catalog-view="handover" aria-selected="false">Search and handover</button><button type="button" role="tab" data-catalog-view="supplier" aria-selected="false">Supplier delivery</button></div>',
     '<section id="cat-panel-setup" aria-label="Catalog sources and mapping">',
     '<div class="two-column"><label>Catalog title<input id="cat-title" maxlength="120" autocomplete="off"></label><label>Tenant identifier<input id="cat-tenant" maxlength="256" autocomplete="off"><span class="help">Use the retained organization identifier for this catalog.</span></label></div>',
+    '<article id="cat-document-preparation" aria-label="Supplier document preparation"></article>',
     '<h3>Map original material fields</h3><p class="help">Enter a CSV header or JSON Pointer. Complex fields also accept a declared constant, text join or retained lookup as JSON. Identifier values keep their original text.</p>',
     '<div class="actions"><button id="cat-sap" type="button">Map SAP product columns</button><button id="cat-xchange" type="button">Map ETIM xChange products</button><label>Identifier matching<select id="cat-policy"><option value="exact">Exact original identifiers</option><option value="casefold">Explicit case-insensitive lookup</option></select></label></div>',
     '<div id="cat-fields" class="cat-field-grid"></div>',
@@ -108,6 +110,19 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     field.append(input); $('cat-fields').append(field);
     input.addEventListener('input', changed);
   }
+  documentPreparation = createDocumentPreparationController({
+    container: $('cat-document-preparation'), host, notice, attempt,
+    async usePrepared(file, mapping, provenance) {
+      if (host.busy || host.pending || reading) throw new Error('Finish the current retained request before selecting another source.');
+      if (dirty && !window.confirm('Replace the current mapping editor with this prepared document mapping? The saved catalog revision remains retained.')) return false;
+      preparedSourceFile = file; $('cat-file').value = '';
+      $('cat-format').value = 'json'; $('cat-rows-path').value = '/products'; formatControls();
+      for (const [key, id] of [['url', 'cat-source-url'], ['publisher', 'cat-publisher'], ['revision', 'cat-source-revision'],
+        ['kind', 'cat-source-kind'], ['note', 'cat-source-note']]) $(id).value = provenance[key] || '';
+      fillMapping(mapping); fileNotice = 'Prepared source selected: ' + file.name + ' · ' + file.size + ' bytes. Retain this exact file through the existing source upload.';
+      changed(); renderFileState(); panel('setup'); return true;
+    },
+  });
   function options(id, rows, label, chosen, empty = 'Choose a saved item') {
     const select = $(id), previous = chosen ?? select.value;
     select.replaceChildren(element('option', empty, { value: '' }));
@@ -435,7 +450,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     showStorageSelection();
     if (failure) throw failure;
   }
-  function fileFor(kind) { return $(kind === 'catalog-import' ? 'cat-bundle-file' : 'cat-file').files[0]; }
+  function fileFor(kind) { return kind === 'catalog-import' ? $('cat-bundle-file').files[0] : preparedSourceFile || $('cat-file').files[0]; }
   async function checksum(file) {
     if (!hashes.has(file)) hashes.set(file, sha256File(file, { onProgress({ bytes, total }) {
       fileNotice = 'Computing original checksum · ' + bytes + ' of ' + total + ' bytes';
@@ -528,6 +543,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     $('cat-use-lookup').disabled = held || !$('cat-lookup-source').value;
     renderFileState();
     supplier?.buttons();
+    documentPreparation?.buttons();
   }
   function formatControls() {
     const kind = $('cat-format').value, tabular = ['csv', 'tsv'].includes(kind);
@@ -584,7 +600,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
   $('cat-lookup-source').addEventListener('change', buttons);
   for (const id of ['cat-source', 'cat-review-source']) $(id).addEventListener('change', () => attempt(() => read(async () => { await selectSource($(id).value); buttons(); })));
   $('cat-format').addEventListener('change', formatControls); $('cat-header').addEventListener('change', formatControls);
-  $('cat-file').addEventListener('change', () => { fileNotice = fileFor('catalog-upload')?.name ?? ''; renderFileState(); buttons(); });
+  $('cat-file').addEventListener('change', () => { preparedSourceFile = null; fileNotice = fileFor('catalog-upload')?.name ?? ''; renderFileState(); buttons(); });
   $('cat-bundle-file').addEventListener('change', () => { renderFileState(); buttons(); });
   $('cat-upload').addEventListener('click', () => attempt(() => submitFile('catalog-upload')));
   $('cat-import').addEventListener('click', () => attempt(() => submitFile('catalog-import')));
@@ -633,7 +649,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
   })));
   $('cat-storage-retire').addEventListener('click', () => attempt(() => read(releaseImportStage)));
   formatControls();
-  return { sync, buttons, transmitFile, hasUnsaved: () => dirty || supplier.hasUnsaved(),
+  return { sync, buttons, transmitFile, hasUnsaved: () => dirty || supplier.hasUnsaved() || documentPreparation.hasUnsaved(),
     restorePending(pending) {
       supplier.restorePending(pending);
       if (pending?.kind === 'catalog' && pending.payload.action === 'save') {

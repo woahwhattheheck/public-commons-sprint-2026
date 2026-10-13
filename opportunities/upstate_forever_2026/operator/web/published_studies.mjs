@@ -136,7 +136,7 @@ export function createPublishedStudiesDesk(host) {
       "; surface " + esc(grab.surface_depth_m) + " m; " + esc(grab.visits_per_site) + " planned visits per site.</p>" +
       '<p><strong>Continuous sensors:</strong> ' + esc(arr(continuous.stations).join(", ")) + "; " +
       esc(continuous.interval_minutes) + " minute interval at approximately " + esc(continuous.approximate_depth_m) +
-      " m. Monthly sample counts are days.</p></div></section>";
+      " m. Monthly sample counts are days.</p></div>" + reportLinks(complete) + "</section>";
     const availableSites = arr(complete.available_stations || complete.tables.stations).map(row => row.site_id);
     selection.site_ids = selection.site_ids.filter(id => availableSites.includes(id));
     if (!selection.site_ids.length) selection.site_ids = availableSites;
@@ -153,6 +153,16 @@ export function createPublishedStudiesDesk(host) {
     find('form[data-ps-filters] select[name="stratum"]').value = selection.strata[0] || "";
     find('form[data-ps-filters] select[name="month"]').value = selection.months[0] || "";
     find("[data-ps-filters]").hidden = false;
+  }
+
+  function reportLinks(value) {
+    const reports = arr(value?.retained_reports);
+    if (!reports.length) return "";
+    return '<section class="ps-methods"><h3>Original sampling report</h3><p>Open the retained report to inspect its full observation cohorts, figures, original records and source files. Report filters are independent of the table selection below.</p><ul class="ps-source-list">' +
+      reports.map(report => "<li>" + link(report.url, "Open " + report.path.split("/").pop()) +
+        " · " + link(report.download?.url + "?download=1", "Download original HTML") +
+        '<span class="ps-help">' + Number(report.bytes).toLocaleString() + " bytes</span></li>").join("") +
+      "</ul><p>Export the complete study to keep the report and all original companion files together for offline use.</p></section>";
   }
 
   function sourcePage(row) {
@@ -210,7 +220,7 @@ export function createPublishedStudiesDesk(host) {
         esc(observed.temporal_support || "Import the current installed study to retain its original activity sources.") +
         '</p><p>Activity values, original sample counts and printed report statistics remain visible together. Quantified-only statistics use the original recorded numbers. Censored rows retain blank values and their own detection limits.</p></section>';
       const illustrated = arr(complete?.source_artifacts).find(item => item.path === "wqp_20261013/lake-observations-report.html");
-      if (illustrated) output += '<p>' + link(illustrated.download?.url, "Original activity figures and complete chlorophyll cohort report") + '</p>';
+      if (illustrated) output += '<p>' + link(illustrated.preview_url || illustrated.download?.url, "Original activity figures and complete chlorophyll cohort report") + '</p>';
       output += table("Observed series and report rows", series, [
         ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_support","Sample support"],["record_count","Original rows"],
         ["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
@@ -296,7 +306,8 @@ export function createPublishedStudiesDesk(host) {
     } else {
       output = '<section class="ps-methods"><h2>Original report and retained files</h2><p>' +
         link(complete.study.original_url,"Publisher report") + '</p><ul class="ps-source-list">' +
-        arr(context.source_artifacts).map(item => "<li>" + link(item.download?.url,item.path) + '<span class="ps-help">' +
+        arr(context.source_artifacts).map(item => "<li>" + link(item.preview_url || item.download?.url,item.path) +
+          (item.preview_url ? " · " + link(item.download?.url + "?download=1", "Original HTML") : "") + '<span class="ps-help">' +
           Number(item.bytes).toLocaleString() + " bytes</span></li>").join("") + "</ul></section>";
       for (const visual of arr(context.visual_context)) {
         const reading = visual.visual_reading || {};

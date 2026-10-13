@@ -93,6 +93,20 @@ def _overlay(workspace, choice, grid_crs, reporting, *, label):
                         "sha256": entry["body"]["sha256"], "title": entry["title"]},
             "width": .65, "style": "--" if label == "Designated high-quality waters" else "-"}
 
+def _delivery_audit_scope(selection, grid):
+    """Keep an explicit contract, otherwise follow the original prepared grid."""
+    chosen = selection.get("audit_scope")
+    if chosen is not None:
+        if chosen not in ("regional-30m", "source-native"):
+            raise ValueError("Select regional-30m or source-native delivery audit scope")
+        return chosen
+    a, b, _, d, e, _ = (float(value) for value in grid["grid"]["transform"])
+    regional = (math.isclose(abs(a), 30, rel_tol=0, abs_tol=1e-6)
+                and math.isclose(abs(e), 30, rel_tol=0, abs_tol=1e-6)
+                and abs(b) < 1e-8 and abs(d) < 1e-8
+                and grid["spec"]["upstream_buffer_m"] > 0)
+    return "regional-30m" if regional else "source-native"
+
 def _grid_measurements(grid):
     """Describe the actual retained pixel geometry and physical area."""
     a, b, _, d, e, _ = (float(value) for value in grid["grid"]["transform"])
@@ -649,14 +663,22 @@ def build(workspace, selection):
                 ))
                 state["files"]["report"] = describe_file(directory, target)
                 atomic_json(state_path, state)
+            original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
+            grid_path = directory / "grid" / "grid.json"
+            _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
+            state["files"]["native_grid_record"] = describe_file(directory, grid_path)
             manifest = {"schema": "upstate-ec-sdc-2026/delivery-v1",
+                "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
+                         "record": state["files"]["native_grid_record"]["path"],
+                         "audit_scope": _delivery_audit_scope(selection, grid)},
                 "model": {"name": "InVEST NDR and SDR", "version": INVEST_VERSION,
                           "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
                           "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
                           "profile_id": profile["id"], "grid_id": grid["id"]},
                 "source_data": records, "rasters": {},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
-                "project_assets": [state["files"]["combined_priority"]["path"],
+                "project_assets": [state["files"]["native_grid_record"]["path"],
+                                   state["files"]["combined_priority"]["path"],
                                    state["files"]["working_archive"]["path"],
                                    state["files"]["display_scales"]["path"]]}
             for name in rasters.MASS_UNITS:

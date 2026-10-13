@@ -45,7 +45,7 @@ Selected-class records use the source publisher's HUC12 attributes and the origi
 - write_selection_brief(directory, selection) writes watershed-selection-brief.md and watershed-selection-brief.html and returns the existing operator's relative filename/file-descriptor mapping.
 
 
-## Distinct contributing membership (brief v2)
+## Distinct contributing membership (brief v3)
 
 Selections with retained native upstream membership now include a contributing-area union. The implementation joins every member to the full original regional report and calls the native model's summary function on distinct rows. Each focal watershed keeps its individual contributing set. The union counts a shared HUC once and retains the repeated memberships separately.
 
@@ -70,7 +70,7 @@ The current installer already retains the completed connectivity CSV and summary
 - watershed-selection-brief.html and watershed-selection-brief.md, with the union, per-focal areas, priority names and expanded source-class labels.
 - watershed-contributing-hucs.csv, with one row per distinct contributing HUC, original area and priority fields, class counts, focal membership and the selected-HUC flag.
 
-The provider includes both brief_format v2 and a digest of the retained contributing context in the export identity. Reopening an existing export continues to return its original files. A saved enriched selection renders independently of the live report and connectivity files.
+The provider includes both brief_format v3 and a digest of the retained contributing context in the export identity. Reopening an existing export continues to return its original files. A saved enriched selection renders independently of the live report and connectivity files.
 
 ### Additional module API
 
@@ -78,3 +78,5 @@ The provider includes both brief_format v2 and a digest of the retained contribu
 - add_contributing_context(selection, report, upstream_by_huc=None, source=None) returns the selection with its union when membership is available.
 - selection_with_contributing_context(report, selected_huc12s, report_sha256, completed_directory=None) provides the operator's native-or-bound-completed result path.
 - write_selection_brief also returns the contributing CSV descriptor when the saved selection retains a union.
+
+Brief v3 preserves the final application revision2's supporting_source_references and brief_source_sha256. The contributing-context digest is an additional identity component; it retains the original supporting-source downloads, chosen native-network provenance, source feature labels and completed report receiver.

@@ -295,7 +295,7 @@ export function createProjectTransferDesk(host) {
     }
   }
   async function submit(action,payload) {
-    const expected = workspace, requestKey = canonical({workspace:expected,action,payload});
+    const expected = workspace, epoch = generation, requestKey = canonical({workspace:expected,action,payload});
     let request = pending[requestKey], prior = request?.task_id ? tasks().find(item=>item.id===request.task_id) : null;
     if (!request || (prior && prior.state === 'complete')) {
       request = {operation_id:'transfer-'+crypto.randomUUID(),created_at:new Date().toISOString()};
@@ -303,7 +303,9 @@ export function createProjectTransferDesk(host) {
     }
     persist();
     const task = await host.api('/api/actions',{method:'POST',body:{workspace:expected,action,payload,operation_id:request.operation_id}});
-    if (workspace !== expected) return task;
+    if (workspace !== expected || generation !== epoch || host.getWorkspace() !== expected) {
+      throw new Error('The workspace changed. Reopen the original workspace to continue its transfer.');
+    }
     request.task_id = task.id; localTasks.set(task.id,task); persist();
     message = 'The original '+(names[action] || 'transfer')+' task is '+task.state+'.';
     return task;
@@ -316,19 +318,19 @@ export function createProjectTransferDesk(host) {
     return host.api('/api/upload',{method:'POST',raw:file,filename:file.name});
   }
   async function refreshAll() {
-    const expected = workspace;
+    const expected = workspace, epoch = generation;
     await (host.refreshState || host.refresh)({force:true});
-    if (workspace !== expected) return;
+    if (workspace !== expected || generation !== epoch || host.getWorkspace() !== expected) return;
     state = host.getState(); update(state); await refreshTaskDetails(); await loadCatalog(); await loadDetail();
   }
   async function run(work) {
     if (busy) return;
     busy = true; error = ''; render();
-    const expected = workspace;
-    const guard = () => { if (workspace !== expected || host.getWorkspace() !== expected) throw new Error('The workspace changed. Reopen the original workspace to continue its transfer.'); };
+    const expected = workspace, epoch = generation;
+    const guard = () => { if (workspace !== expected || generation !== epoch || host.getWorkspace() !== expected) throw new Error('The workspace changed. Reopen the original workspace to continue its transfer.'); };
     try { guard(); await work(guard); }
-    catch (problem) { if (workspace===expected) error = problem.message; }
-    finally { if (workspace===expected) { busy = false; persist(); render(); schedule(); } }
+    catch (problem) { if (workspace===expected && generation===epoch) error = problem.message; }
+    finally { if (workspace===expected && generation===epoch) { busy = false; persist(); render(); schedule(); } }
   }
   async function action(target) {
     const name = target.dataset.ptAction, id = target.dataset.id;
