@@ -15,8 +15,7 @@
         "model/terrain_conditioning_scientific_report.py",
         "integration/component_fragments/terrain-study-transfer.json"
       ],
-      "requires": [],
-      "retained_only": []
+      "requires": []
     }
   }
 }
