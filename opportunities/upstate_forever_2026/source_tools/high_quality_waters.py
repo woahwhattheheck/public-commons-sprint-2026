@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import re
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -343,6 +344,69 @@ def capture_layer(capture, source_url):
             "geometry_transform": "None in source capture"}
 
 
+
+def write_generated_manifest(root, manifest):
+    """Refresh generated source metadata while preserving immutable source bodies."""
+    root = Path(root)
+    path = root / "sources.json"
+    body = encode(manifest)
+    if not path.exists():
+        exact_write(path, body)
+        return
+    if path.is_symlink():
+        raise ValueError("The generated source manifest must be a regular local file")
+    previous_body = path.read_bytes()
+    if previous_body == body:
+        return
+    previous = json.loads(previous_body)
+    if previous.get("schema") != "upstate.sources/v1":
+        raise ValueError("Existing sources.json belongs to another source schema")
+
+    def source_identities(document):
+        entries = document.get("entries")
+        if not isinstance(entries, list):
+            raise ValueError("Generated manifest has no source entries")
+        identities = {}
+        for entry in entries:
+            identifier = entry["id"]
+            if identifier in identities:
+                raise ValueError("Generated manifest repeats a source identifier")
+            members = [entry, *(entry.get("companions") or [])]
+            identities[identifier] = (
+                entry["kind"],
+                sorted((member["path"], member["sha256"], member["bytes"])
+                       for member in members),
+            )
+        return identities
+
+    if source_identities(previous) != source_identities(manifest):
+        raise ValueError("Generated manifests describe different retained source bodies; "
+                         "use the output directory for the selected source edition")
+    for entry in manifest["entries"]:
+        for member in [entry, *(entry.get("companions") or [])]:
+            read_retained(root, member)
+    # Preserve the exact former import manifest; the native source members stay fixed.
+    exact_write(root / "source-manifests" / (sha(previous_body) + ".json"), previous_body)
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="wb", dir=root,
+                                         prefix="sources-", suffix=".pending",
+                                         delete=False) as stream:
+            pending = Path(stream.name)
+            stream.write(body)
+            stream.flush()
+            os.fsync(stream.fileno())
+        current_body = path.read_bytes()
+        if current_body == body:
+            return
+        if current_body != previous_body:
+            raise ValueError("Generated source manifest changed concurrently; rerun adoption")
+        os.replace(pending, path)
+    finally:
+        if pending is not None:
+            pending.unlink(missing_ok=True)
+
+
 def write_source_manifest(root, result):
     files = {item["path"]: item for item in result["files"]}
     entries = []
@@ -388,7 +452,7 @@ def write_source_manifest(root, result):
                 "notes": ["Original object IDs, all source fields, native geometry and CRS retained.",
                           "Current and proposed regulatory editions remain separate sources.",
                           "The assembled feature collection is derived solely by concatenating native responses."]}
-    exact_write(root / "sources.json", encode(manifest))
+    write_generated_manifest(root, manifest)
 
 
 def capture_command(args):
