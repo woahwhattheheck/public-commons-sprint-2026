@@ -195,6 +195,7 @@ export function createNativeInteractions(host){
   const pages=Math.max(1,Math.ceil(filtered.length/200));casePage=Math.max(0,Math.min(casePage,pages-1));
   const controls='<div class="toolbar"><label>Case state<select name="case_state"><option value="">All states</option>'+states.map(value=>'<option value="'+esc(value)+'"'+(value===caseFilter?' selected':'')+'>'+esc(value)+'</option>').join('')+'</select></label><button type="button" data-action="cases-previous">Previous cases</button><span>Page '+(casePage+1)+' of '+pages+' · '+filtered.length+' cases</span><button type="button" data-action="cases-next" data-last="'+(casePage>=pages-1?'true':'false')+'">More cases</button></div>';
   $('[data-plan]').innerHTML='<h3>'+esc(plan.title)+'</h3>'+table(['State','Phase','Completed cases','Required coalitions'],[[s.state||'planned',s.phase||'planned',s.completed_cases??cases.filter(x=>x.state==='complete').length,summary.coalition_count??plan.coalitions?.length]])+
+   '<div class="toolbar"><button type="button" data-action="programme-interaction" data-id="'+esc(plan.id)+'">Use in run programme</button></div>'+
    execution+active+analysis+(s.errors?.length?'<div class="notice">'+esc(JSON.stringify(s.errors))+'</div>':'')+
    '<details data-case-details'+(detailsOpen?' open':'')+'><summary>Retained native case bindings ('+cases.length+')</summary>'+(s.case_status_snapshot_at?'<p class="muted">Case details saved '+esc(s.case_status_snapshot_at)+'. The completion count above follows the current operation.</p>':'')+controls+table(['Coalition','Actions','Native run','State'],filtered.slice(casePage*200,(casePage+1)*200).map(x=>[x.key,(x.action_ids||[]).join(', '),x.run_id,x.state]))+'<p class="muted">Download plan includes every retained case binding.</p></details>';
   buttons();
@@ -266,6 +267,7 @@ export function createNativeInteractions(host){
  async function clicked(event){
   const button=event.target.closest('[data-action]');if(!button||!root.contains(button))return;
   const action=button.dataset.action;
+  if(action.startsWith('programme-'))return;
   if(action==='open-task'){if(host.showTask)await host.showTask(button.dataset.task);return;}
   await guarded(async()=>{
    if(['add-action','up','down','remove'].includes(action)){

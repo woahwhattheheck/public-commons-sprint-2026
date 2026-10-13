@@ -13,6 +13,9 @@ from model.compute_programme import ComputeProgrammes
 ACTIONS = {
     "compute.programme.save",
     "compute.programme.experiment",
+    "compute.programme.interaction",
+    "compute.programme.attach-interaction",
+    "compute.programme.sync-interaction",
     "compute.programme.pair-completion",
     "compute.programme.run",
     "compute.programme.report",
@@ -37,8 +40,10 @@ class Programmes:
 
     def catalogue(self, workspace, *, include_completed_sources=False):
         from model.programme_experiments import catalog
+        from model.programme_interactions import catalog as interaction_catalog
+        ws = self.operator.ws(workspace)
         return {**self._manager(workspace).catalog(include_completed_sources=include_completed_sources),
-                **catalog(self.operator.ws(workspace))}
+                **catalog(ws), **interaction_catalog(ws)}
 
     def _decorate(self, workspace, result):
         result = json.loads(json.dumps(result))
@@ -77,6 +82,10 @@ class Programmes:
         return {"workspace_key": workspace, **preview(self.operator.ws(workspace),
             payload.get("experiment_id"), payload.get("offset", 0), payload.get("limit", 100))}
 
+    def interaction_preview(self, workspace, payload):
+        from model.programme_interactions import preview
+        return {"workspace_key": workspace, **preview(self.operator.ws(workspace), payload.get("plan_id"))}
+
     def pause(self, workspace, payload):
         # This signal deliberately runs on the request thread. Enqueueing it in
         # the native worker would put it behind the calculation it should pause.
@@ -97,12 +106,26 @@ class Programmes:
         if action == "compute.programme.experiment":
             from model.programme_experiments import create
             return create(self.operator.ws(workspace), payload.get("experiment_id"))
+        if action == "compute.programme.interaction":
+            from model.programme_interactions import create
+            return create(self.operator.ws(workspace), payload.get("plan_id"))
         if action == "compute.programme.save":
             selection = payload.get("selection")
             if not isinstance(selection, dict):
                 raise self.Fault("PROGRAMME_SELECTION", "Create or import a programme selection.")
             return manager.create(selection, source_reference=payload.get("source_reference"))
         key = self._id(payload)
+        if action == "compute.programme.attach-interaction":
+            from model.programme_interactions import attach
+            return self._decorate(workspace, attach(self.operator.ws(workspace), key, payload.get("result_id")))
+        if action == "compute.programme.sync-interaction":
+            from model.programme_interactions import sync_completed
+            status = manager.status(key, include_ensemble_candidates=False)
+            result = sync_completed(self.operator.ws(workspace), status)
+            if result is None:
+                raise self.Fault("INTERACTION_PROGRAMME_REQUIRED",
+                                 "Choose a programme created from a conservation study.")
+            return self._decorate(workspace, result)
         if action == "compute.programme.pair-completion":
             result = self.operator.native_jobs.create_pair_completion(
                 task, manager, key, expected_preview_id=payload.get("expected_preview_id"))
@@ -134,7 +157,17 @@ class Programmes:
                         "Native programme completed; experiment result synchronization needs correction: " + str(exc)) from exc
                 if synchronized is not None:
                     result = {**result, "experiment_sync": synchronized}
-            return result
+                from model.programme_interactions import sync_completed as sync_interactions
+                try:
+                    interactions = sync_interactions(self.operator.ws(workspace), result)
+                except Exception as exc:
+                    raise self.Fault(
+                        "INTERACTION_SUMMARY_INCOMPLETE",
+                        "Native programme completed; conservation attribution needs correction: " + str(exc) +
+                        ". Open the programme and reconcile attribution to continue from its retained runs.") from exc
+                if interactions is not None:
+                    result = {**result, "interaction_sync": interactions}
+            return self._decorate(workspace, result)
         if action == "compute.programme.report":
             result = manager.report(key)
             task["result"] = result
@@ -175,7 +208,7 @@ class Programmes:
                     key = continuation.get("programme_id") or key
                 except (FileNotFoundError, KeyError, ValueError):
                     pass
-        if not key and task["action"] in ("compute.programme.save", "compute.programme.experiment"):
+        if not key and task["action"] in ("compute.programme.save", "compute.programme.experiment", "compute.programme.interaction"):
             key = result.get("id")
         downloads = list(task.get("_downloads") or [])
         if key:

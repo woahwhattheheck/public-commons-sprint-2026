@@ -21,6 +21,7 @@ FILES = (
     "model/compute_programme.py",
     "model/compute_programme_cli.py",
     "model/programme_experiments.py",
+    "model/programme_interactions.py",
     "model/PAIR_COMPLETION.md",
     "source_tools/receive_gura.py",
     "source_tools/gura_workflow.py",
@@ -44,19 +45,25 @@ PREVIOUS_EDITIONS = {
     "b118d793dc2b2cc2de8ea0016ccb8b0e0e18af422a1f154e8dd822801c6387c1",
     "c4327d021354b53a12f39ce9bca2d84442b997cb6b45a69e912593a186d497e5",
     "d9391e2f83a0b10ca5bc77560730780d2d318077f0dad19020ec4ff6c199e0f1",
-    "efdf95c8c2f31b1a0b288b10c80a8e33f57ee06639535d8165c92cda5df068bf"
+    "efdf95c8c2f31b1a0b288b10c80a8e33f57ee06639535d8165c92cda5df068bf",
+    "5df48145fc5b05a4a2468fe938c2eddd5c4bd508c6407e6e95cd3cc616969f37",
+    "1b01e49baeb0463b7dd194a39979b81bc47785c735c63cefea71c2a5d699753e",
+    "7bfaac9fd416a503441038a4716db4b75d2cf8c71db88c4417055c2c686ae4a1"
   ],
   "model/compute_programme_cli.py": [
     "2021af6d59f3a9f94849da50cbcd58eac987f9cbae52964582d1d090c461ff96",
     "268ea8468e60e13b81b6f2236df7cdcf8dae35a3767751e5168bd94e5dee3518",
     "a49c784ccfb96497780444f8259db5743b446c4568c5c143e010b200d1f5b7ea",
-    "29437b34d83c871f652b7d5300f50c0aa46a144671013aabc877366068f93551"
+    "29437b34d83c871f652b7d5300f50c0aa46a144671013aabc877366068f93551",
+    "634894886f680f1762a7885bf6de9233edad4d15a2159bcdd41506e8698f0f29"
   ],
   "operator/programmes.py": [
     "67c0c1697b44f81763e21dbf3dd62e258886247707f72a408d2b6ecbf6a10a61",
     "2cf9f3748debb8c78b272141ea2da4f02193ebe279a41b5a02ad1af0c6a56bd7",
     "d3d0b5e2a9fb774de81e61541c0b6420f58c766613e925d1e3ac566b293075d4",
-    "0741c15a214d01880a35bc1ff62198b36af20dcabe3e2fba321ef0bfb53e8aef"
+    "0741c15a214d01880a35bc1ff62198b36af20dcabe3e2fba321ef0bfb53e8aef",
+    "431a783614df0b72d3c25a3896f520ed69fbd421c172046d2a6b0b2480ccd94e",
+    "ad3ed6b0da026423fe1a42444306ebf2aa90474ab6e34a429d18360d45244656"
   ],
   "operator/web/programmes.mjs": [
     "0a334cf55eaa95a7c0347ad605adea170261495b3042fc33b6b051fbaad9d2d4",
@@ -65,7 +72,9 @@ PREVIOUS_EDITIONS = {
     "5a3f6d32cc1de2a8a4dc86550684c240cb51be5dad675eb6d3c7fe6e96bb3f0d",
     "95f29be61a90fbcca671264b0c3fe849e3de0aec894c6e8438235e0aded1fe30",
     "2602a24040ffbf5e9bb45dfcc709114328899cd2acb865c613478cba0ba09443",
-    "8f415ee9049807121bc842c27a0cbd465eb7702a747540f82a6c5fa52cd8d493"
+    "8f415ee9049807121bc842c27a0cbd465eb7702a747540f82a6c5fa52cd8d493",
+    "14b71fd70d0050c9968b9a025287c65d7240146aae8c085817762c79f4d40f8b",
+    "a68c80290257eed884503665ca47f6ebef5951a91a3667cb23d62dfc62ea6f3f"
   ],
   "operator/web/programmes.css": [
     "939dea3c338775175b137239acfbc7d4cd1e2daef58060af2ed73ea98c484bdf",
@@ -75,7 +84,11 @@ PREVIOUS_EDITIONS = {
     "168d26a1792c2f1ade350d92130279e2710c2c4d4790b2f1cdf911b1007b21f0",
     "d0def021491c12552834c3d2e3f85599d025dea5fc00bf14cde1df8fc3794508",
     "24610143bb5b2e13cbbc239153801cc5886332705ac9d27df3575783d77f1a06",
-    "cdac9d9f0d358ef788e3707618bc2a8526a72d47bbb1e4a312374741946f3055"
+    "cdac9d9f0d358ef788e3707618bc2a8526a72d47bbb1e4a312374741946f3055",
+    "d8348ad65bbd0cb08327af500b668fbb8072882c7d1d32863738df42b2ca2093",
+    "36551ce83830be56451913df78f5d64dee428ffd30f97490d41ef7c55313109b",
+    "8ddac4633d080a775ac6dd99136fd7e04ba52b6c9ad9e1aac9e58ce9ef4f30fb",
+    "3c23eb8407888398fbb95370a2671d924817b7ed54223565c107244698a28b3e"
   ],
   "PROGRAMMES.md": [
     "b0a9c33c09f4dddba47db5a677ddc135b5c4242630c255ab4c232d4f365a206f",
@@ -124,6 +137,7 @@ PREVIOUS_EDITIONS = {
   ]
 }
 
+
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 
@@ -145,6 +159,43 @@ def replace(source, old, new, label):
 
 
 def patch_server(source):
+    # Named-team editions classify these previews before workspace selection.
+    # Keep their existing authorization and add only this read-only inspection.
+    if "readonly = {" in source:
+        matches = [match for match in re.finditer(r"readonly\s*=\s*\{[^}]*\}", source)
+                   if '"/api/programmes/preview"' in match.group(0)]
+        if len(matches) != 1:
+            raise ValueError("Programme preview permissions: expected the maintained read-only route set.")
+        match = matches[0]
+        if '"/api/programmes/interaction-preview"' not in match.group(0):
+            updated = match.group(0)[:-1] + ', "/api/programmes/interaction-preview"}'
+            source = source[:match.start()] + updated + source[match.end():]
+    # A received current operator already owns compact state, supervised native
+    # jobs and task decorators. Compose the two read-only programme previews
+    # without replaying older shared-state registrations over those services.
+    installed = ("self.programmes = Programmes(self, Fault)",
+                 "return self.programmes.invoke(task)",
+                 "programme_reads[url.path]",
+                 "from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS")
+    if all(value in source for value in installed):
+        source = add(source,
+            '                return self.send_json(200, self.app.programmes.preview(value.get("workspace", self.app.primary), value))\n',
+            '            if url.path == "/api/programmes/experiment-preview":\n'
+            '                return self.send_json(200, self.app.programmes.experiment_preview(value.get("workspace", self.app.primary), value))\n',
+            "saved experiment preview")
+        source = add(source,
+            '                return self.send_json(200, self.app.programmes.experiment_preview(value.get("workspace", self.app.primary), value))\n',
+            '            if url.path == "/api/programmes/interaction-preview":\n'
+            '                return self.send_json(200, self.app.programmes.interaction_preview(value.get("workspace", self.app.primary), value))\n',
+            "saved conservation study preview")
+        previous = '{"programme_id": one("programme_id")}))'
+        updated = '{"programme_id": one("programme_id"), "include_sources": one("include_sources")}))'
+        if previous in source:
+            source = replace(source, previous, updated, "completed native source catalogue selection")
+        if not all(value in source for value in ("programmes.mjs", "programmes.css", "ACTIONS.update(PROGRAMME_ACTIONS)")):
+            raise ValueError("Complete the current programme asset and action registrations before adding study attribution.")
+        ast.parse(source, filename="operator/server.py")
+        return source
     source = add(source, "from model.spatial_exports import SpatialExports\n",
                  "from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS\n", "programme import")
     source = add(source, "ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)\n",
@@ -190,11 +241,16 @@ def patch_server(source):
                  '            if url.path == "/api/programmes/experiment-preview":\n'
                  '                return self.send_json(200, self.app.programmes.experiment_preview(value.get("workspace", self.app.primary), value))\n',
                  "saved experiment preview")
+    source = add(source,
+                 '                return self.send_json(200, self.app.programmes.experiment_preview(value.get("workspace", self.app.primary), value))\n',
+                 '            if url.path == "/api/programmes/interaction-preview":\n'
+                 '                return self.send_json(200, self.app.programmes.interaction_preview(value.get("workspace", self.app.primary), value))\n',
+                 "saved conservation study preview")
     source = replace(source,
         'return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],\n                        {"programme_id": one("programme_id")}))',
         'return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],\n                        {"programme_id": one("programme_id"), "include_sources": one("include_sources")}))',
         "completed native source catalogue selection")
-    matches = list(re.finditer(r"if selected not in (\(?)(\{[^}\n]+\})([^:\n]*):", source))
+    matches = list(re.finditer(r"if selected not in (\(*)(\{[^}\n]+\})([^:\n]*):", source))
     if len(matches) != 1:
         raise ValueError("Static programme assets: current operator asset registry is ambiguous.")
     match = matches[0]
@@ -210,6 +266,13 @@ def patch_server(source):
 
 
 def patch_app(source):
+    if "const programmes=attachProgrammes(" in source and "programmes.dispatch(button)" in source:
+        # Keep the maintained instance and its current host capabilities.
+        return add(source, "const actionLabels={",
+                   "'compute.programme.interaction':'Use conservation study',"
+                   "'compute.programme.attach-interaction':'Attach conservation attribution',"
+                   "'compute.programme.sync-interaction':'Reconcile conservation attribution',",
+                   "conservation programme task labels")
     source = add(source, "import {attachCustomerReviews} from './reviews.mjs';\n",
                  "import {attachProgrammes} from './programmes.mjs';\n", "programme browser import")
     source = add(source, "const viewLabels={", "programmes:'Run programmes',", "programme view")
@@ -223,6 +286,11 @@ def patch_app(source):
     source = add(source, "const actionLabels={",
                  "'compute.programme.experiment':'Use saved experiment',",
                  "saved experiment task label")
+    source = add(source, "const actionLabels={",
+                 "'compute.programme.interaction':'Use conservation study',"
+                 "'compute.programme.attach-interaction':'Attach conservation attribution',"
+                 "'compute.programme.sync-interaction':'Reconcile conservation attribution',",
+                 "conservation programme task labels")
     source = add(source, "function toast(message){",
                  "const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,openItem,"
                  "refreshState:refresh,navigate,closeDetail:()=>{detailDialog.close();detailContext=null;}});\n",
