@@ -11,8 +11,8 @@ const {zip}=require('./localization/zip.cjs');
 const api=createLocalizationCore(sha),root=__dirname,out=path.resolve(process.argv[2]||path.join(root,'localization-output'));
 if(fs.existsSync(out))throw Error('Choose a new complete output directory');
 const read=name=>fs.readFileSync(path.join(root,name),'utf8');
-const original=JSON.parse(read('source/pre-localization-working-record.json'));
-const records=JSON.parse(read('source-records.json')).records,at='2026-10-13T12:00:00.000Z';
+const original=JSON.parse(read('source/pre-recovery-working-record.json'));
+const records=JSON.parse(read('source-records.json')).records,at='2026-10-13T15:00:00.000Z';
 const guide=read('localization/README.txt'),customerFiles={'customer/localization-README.txt':guide},examples={};
 const sourceContent={
  'localization-core.cjs':read('localization/localization-core.cjs'),
@@ -22,8 +22,8 @@ const sourceContent={
  'README.txt':guide
 };
 for(const kind of['sample','paid']){
- const edition=original.editions.find(x=>x.kind===kind),workspace=api.create({workspaceId:'unlost-localization-'+kind+'-379a-20261013',workingRecord:original,records,editionId:edition.id,at});
- const working=JSON.stringify(api.exportWorking(workspace),null,2)+'\n';
+ const edition=original.editions.find(x=>x.kind===kind),working=read('customer/localization-'+kind+'/working.json'),workspace=api.receive(JSON.parse(working));
+ if(workspace.selection.editionId!==edition.id)throw Error('Retain the exact original customer working selection');
  const sourceFiles=Object.entries({...sourceContent,'initial-working.json':working}).map(([name,content])=>({path:name,content,...sha.sha256Utf8(content)}));
  const prefix='customer/localization-'+kind+'/';
  customerFiles[prefix+'app.html']=localizationHtml({coreSource:sourceContent['localization-core.cjs'],shaSource:sourceContent['connected_sha256.cjs'],workspace,sourceFiles,guide});

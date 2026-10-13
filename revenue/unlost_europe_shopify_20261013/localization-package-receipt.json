@@ -1,73 +1,60 @@
 {
   "schema": "unlost.localization-delivery.v1",
-  "prepared_at": "2026-10-13T12:00:00.000Z",
+  "prepared_at": "2026-10-13T15:00:00.000Z",
   "pack_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013",
-  "working_record_sha256": "b3d820f84a4cddda4a1f9112df4449a0e0c8f8e5bfafdb4bc2dffaf07242b814",
+  "working_record_sha256": "c4fcf338083618fc746de4afa017a5df2de3edbe9ac2b518c9c95843e24a6a02",
   "companies": 6,
   "editions": 2,
-  "customer_files": 14,
-  "customer_packages": 4,
+  "customer_files": 21,
+  "customer_packages": 6,
   "package_ids": {
-    "sample": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-localization-package-02",
-    "paid": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-localization-package-02"
+    "sample": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-localization-package-03",
+    "paid": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-localization-package-03"
   },
   "original_values_preserved": true,
   "received_equal": true,
   "files": [
     {
-      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:guide",
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-recovery-file:guide",
       "name": "localization-README.txt",
-      "bytes": 1610,
-      "sha256": "e4c2f4ea5a508dd58fef5680acafba5ddc95a24bbe217de632dc30a82886d2fe"
+      "bytes": 2989,
+      "sha256": "3d4bbd5439fa9f279437db87f391067536b4f6d3be7410bec613856c6718d903"
     },
     {
-      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-app-html",
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-recovery-file:sample-app-html",
       "name": "localization-sample/app.html",
-      "bytes": 149897,
-      "sha256": "00404da4cf402976475074bb8b1f910561e8a549c617a3bc4427437dd6ca0375"
+      "bytes": 172431,
+      "sha256": "c80ae205dad2c1bf316919d3d24d1d803032f7e4b38ef9e1dd8cc27e17a2fb30"
     },
     {
-      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-application-source-json",
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-recovery-file:sample-application-source-json",
       "name": "localization-sample/application-source.json",
-      "bytes": 77027,
-      "sha256": "cc6e2f2a828c11e6e1d1c2ef8649812960bbacc32eacc34087bef18c1a9dacce"
+      "bytes": 88362,
+      "sha256": "40271c7e70ed5adecfe7449ad683bbfc3e14d044ee116fdf1f5f444c98d8e343"
     },
     {
-      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-working-json",
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-recovery-file:sample-working-json",
       "name": "localization-sample/working.json",
       "bytes": 7896,
       "sha256": "5d6e07ac89771f75b028e63f12b61e72977cd5dc4d4c3d5ff1dd8164cd638a42"
     },
     {
-      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-app-html",
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-recovery-file:paid-app-html",
       "name": "localization-paid/app.html",
-      "bytes": 205894,
-      "sha256": "3b1c4f2a537ad03ce516654f344747ba24edd0070a905b1ccdf432102dec3951"
+      "bytes": 228428,
+      "sha256": "0cf942f7105a1434b6bd028bd2bc1add1c2365dd6941626f765086af828386d3"
     },
     {
-      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-application-source-json",
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-recovery-file:paid-application-source-json",
       "name": "localization-paid/application-source.json",
-      "bytes": 108535,
-      "sha256": "46fa35a8d79c243598d15d6a570d6c87e1db93ae213d552a442e1f464715cf81"
+      "bytes": 119870,
+      "sha256": "fd912f8693147a87a982c824c9eb0b6fbf20023cad9d06c22a68cf1c448d209a"
     },
     {
-      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-working-json",
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-recovery-file:paid-working-json",
       "name": "localization-paid/working.json",
       "bytes": 37695,
       "sha256": "ee579e6118e1e3e9cdce24c699fa101141b9e6b46cfd4cea150526b3884e36eb"
     }
-  ],
-  "authored_workflow_operations": {
-    "sample": 11,
-    "paid": 11
-  },
-  "actual_browser_operation": "prepared; no completed browser result exists for these new applications",
-  "prepared_sender": {
-    "draft_id": "r1515436171865349317",
-    "message_id": "1a1345ab017920d0",
-    "thread_id": "1a13459aceec1582",
-    "state": "DRAFT_ACCOUNT_WAITING",
-    "automation": "AUTOMATION_DEFERRED",
-    "unchanged": true
-  }
+  ]
 }

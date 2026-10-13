@@ -13,8 +13,8 @@
   "files": [
     {
       "path": "build-localization.cjs",
-      "bytes": 4687,
-      "sha256": "50372fa45de94aa946fa7740b1a870389dd1389fc23358d3c8f215f8496eb097"
+      "bytes": 4693,
+      "sha256": "1e42208dda32582852c4629d6ba178b9d439ac6f1705e74f3a41c001f4272102"
     },
     {
       "path": "build-package-documents.mjs",
@@ -28,8 +28,8 @@
     },
     {
       "path": "complete-document-receipt.json",
-      "bytes": 13708,
-      "sha256": "c03c3d6794fabb2385527322733fa696fe9530621414bc66515a2d10d25aaaf7"
+      "bytes": 16556,
+      "sha256": "75193cbd33cebe499177f48a738e16398a4e564da33fb74b2b3f47a448c2cfd3"
     },
     {
       "path": "customer-package-receipt.json",
@@ -48,13 +48,13 @@
     },
     {
       "path": "customer/localization-paid/app.html",
-      "bytes": 205894,
-      "sha256": "3b1c4f2a537ad03ce516654f344747ba24edd0070a905b1ccdf432102dec3951"
+      "bytes": 228428,
+      "sha256": "0cf942f7105a1434b6bd028bd2bc1add1c2365dd6941626f765086af828386d3"
     },
     {
       "path": "customer/localization-paid/application-source.json",
-      "bytes": 108535,
-      "sha256": "46fa35a8d79c243598d15d6a570d6c87e1db93ae213d552a442e1f464715cf81"
+      "bytes": 119870,
+      "sha256": "fd912f8693147a87a982c824c9eb0b6fbf20023cad9d06c22a68cf1c448d209a"
     },
     {
       "path": "customer/localization-paid/working.json",
@@ -63,18 +63,18 @@
     },
     {
       "path": "customer/localization-README.txt",
-      "bytes": 1610,
-      "sha256": "e4c2f4ea5a508dd58fef5680acafba5ddc95a24bbe217de632dc30a82886d2fe"
+      "bytes": 2989,
+      "sha256": "3d4bbd5439fa9f279437db87f391067536b4f6d3be7410bec613856c6718d903"
     },
     {
       "path": "customer/localization-sample/app.html",
-      "bytes": 149897,
-      "sha256": "00404da4cf402976475074bb8b1f910561e8a549c617a3bc4427437dd6ca0375"
+      "bytes": 172431,
+      "sha256": "c80ae205dad2c1bf316919d3d24d1d803032f7e4b38ef9e1dd8cc27e17a2fb30"
     },
     {
       "path": "customer/localization-sample/application-source.json",
-      "bytes": 77027,
-      "sha256": "cc6e2f2a828c11e6e1d1c2ef8649812960bbacc32eacc34087bef18c1a9dacce"
+      "bytes": 88362,
+      "sha256": "40271c7e70ed5adecfe7449ad683bbfc3e14d044ee116fdf1f5f444c98d8e343"
     },
     {
       "path": "customer/localization-sample/working.json",
@@ -118,13 +118,13 @@
     },
     {
       "path": "customer/Unlost-complete-paid-documents.html",
-      "bytes": 219798,
-      "sha256": "515f9a81c7d4658bd0c13374fd68d7074dc88a4434ebf650ecb942ca96743748"
+      "bytes": 241122,
+      "sha256": "191015d229c34b71f3ab6a91b1089ca1b8be968da6bb26e225e8b9070d1705e4"
     },
     {
       "path": "customer/Unlost-complete-sample-documents.html",
-      "bytes": 163532,
-      "sha256": "5b53c384a80bbb0d62cdcfa250468125a291f9f63182efef633e61f13620d0fa"
+      "bytes": 184836,
+      "sha256": "3526dd4f272c696d8f89a954150bd79a47bcb20150f3108dfb483e8a022dcf98"
     },
     {
       "path": "first-offer.json",
@@ -138,18 +138,23 @@
     },
     {
       "path": "localization-package-receipt.json",
-      "bytes": 2850,
-      "sha256": "6754384435899ac2b578bead26a476f6f326b348b20682c55541ed2d9bc0c962"
+      "bytes": 2490,
+      "sha256": "3e8b3bedf6cd0458f1ca44065b02859bf809452ae802e77992dbff5a1f23e861"
     },
     {
       "path": "localization/browser-originals.json",
-      "bytes": 371581,
-      "sha256": "7e213de4c64e21453d8f557e001ca2a2b915a704ee1a71c0ed3faab251dce968"
+      "bytes": 417619,
+      "sha256": "495185479830d8397cd9def3946ea6f5d16f4fbc547ed675138810bbc02ede73"
     },
     {
       "path": "localization/compose.cjs",
-      "bytes": 5351,
-      "sha256": "bb48f337f9bab17afcc422a35070e1474f0dfc6a5c12bba57dac3571c636f1fe"
+      "bytes": 5602,
+      "sha256": "ff75d1a6f36356116ac9a93dc3669daf97dadb82dbaef6af9cbeb46e3ef3b0eb"
+    },
+    {
+      "path": "localization/customer-document-viewer.mjs",
+      "bytes": 3442,
+      "sha256": "7c9d93fa6dce339802f86dc71b64822b828c9702880a4f02a48504fda72ac747"
     },
     {
       "path": "localization/customer-package-panel.mjs",
@@ -163,8 +168,8 @@
     },
     {
       "path": "localization/localization-view.cjs",
-      "bytes": 31145,
-      "sha256": "5adaad51171b5725739adaaa267bd117b08b233c160b7423632da24149596aa6"
+      "bytes": 40941,
+      "sha256": "c54f2ea86f67ef9217dda8f9b05561ef67149720c818bb7c9dec3a588b200296"
     },
     {
       "path": "localization/operate-example.cjs",
@@ -174,7 +179,7 @@
     {
       "path": "localization/package-documents.mjs",
       "bytes": 4586,
-      "sha256": "d2ccf3b8482395ff5d7c92b12811eebc464da3610d2f9d0a56a9f900084dd64e"
+      "sha256": "2abaaf503a955571f1b6adb23d41210baee5208568db71e4b5d22f43a04470dc"
     },
     {
       "path": "localization/product-context.json",
@@ -183,8 +188,8 @@
     },
     {
       "path": "localization/README.txt",
-      "bytes": 1610,
-      "sha256": "e4c2f4ea5a508dd58fef5680acafba5ddc95a24bbe217de632dc30a82886d2fe"
+      "bytes": 2989,
+      "sha256": "3d4bbd5439fa9f279437db87f391067536b4f6d3be7410bec613856c6718d903"
     },
     {
       "path": "localization/rebuild.cjs",
@@ -193,8 +198,8 @@
     },
     {
       "path": "localization/run-existing-browser.mjs",
-      "bytes": 15358,
-      "sha256": "2c23b0e2f365cb259fd244b25054de49e33d5f2befc6f503da17884adb64f675"
+      "bytes": 21797,
+      "sha256": "cd27bb533da1d636bf420882c00d9911b442f5cbe885588265d4f6dae9af910f"
     },
     {
       "path": "localization/zip.cjs",
@@ -208,8 +213,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 12408,
-      "sha256": "88885a2046aca76a88f6a3515775bf48795414341081c9fce551e521afd8a5ae"
+      "bytes": 15072,
+      "sha256": "2b01cf0c72e7e7fef4e9e62ba7c65e380bdef14e44062a468c228ff96a4ef270"
     },
     {
       "path": "rebuild-original.cjs",
@@ -287,6 +292,11 @@
       "sha256": "14485668020aae2e4012e1d481c8abf756c347b1c45fe306a402a96e5efdfa7b"
     },
     {
+      "path": "source/pre-recovery-working-record.json",
+      "bytes": 913538,
+      "sha256": "8981598331a515c51e0172bf1eafc3890f2e2287a7fef2681171654bc95752f5"
+    },
+    {
       "path": "source/predecessor-working-record.json",
       "bytes": 41100,
       "sha256": "205e880020f1312a0e1438c730912f783a1a1143ccf00c213fce27a7577811e4"
@@ -323,13 +333,8 @@
     },
     {
       "path": "working-record.json",
-      "bytes": 913538,
-      "sha256": "8981598331a515c51e0172bf1eafc3890f2e2287a7fef2681171654bc95752f5"
-    },
-    {
-      "path": "localization/customer-document-viewer.mjs",
-      "bytes": 3442,
-      "sha256": "7c9d93fa6dce339802f86dc71b64822b828c9702880a4f02a48504fda72ac747"
+      "bytes": 1808543,
+      "sha256": "f50639481ce164cacd34113fc3ca69668c43c9727a406601d0893d9652b97d5a"
     }
   ],
   "ownerInstruction": "Bryce requires the producing peer to open and use the exact final application, download and reopen the complete customer artifacts, and personally view every actual desktop and narrow-screen image before marking the package visually reviewed. Retain the original source and current customer record. Fix visible defects in the same original product; do not replace this operation with a screenshot-only claim or a parallel application.",
@@ -340,5 +345,17 @@
     "source_module": "localization/package-documents.mjs",
     "receipt": "complete-document-receipt.json",
     "complete_package_root_styles": true
+  },
+  "recovery": {
+    "schema": "tjlabs.merchant-localization-recovery.v1",
+    "original_working_record": "source/pre-recovery-working-record.json",
+    "original_customer_files_preserved": 14,
+    "original_packages_preserved": 4,
+    "current_customer_files": 21,
+    "current_packages": 6,
+    "initial_working_files_unchanged": true,
+    "raw_draft_values_separate": true,
+    "live_revision_guard_preserved": true,
+    "actual_browser_visual_result": "Pending same existing equipped receiving course"
   }
 }
