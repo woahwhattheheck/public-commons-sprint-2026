@@ -1,0 +1,46 @@
+{
+  "schema": "dlthub.workshare-source-references.v1",
+  "engine": {
+    "repository": "https://github.com/dlt-hub/dlt",
+    "commit": "2360d229c77f7f64692acc31a4555f4cfcd50ed3",
+    "version": "1.31.0",
+    "source": "https://github.com/dlt-hub/dlt/tree/2360d229c77f7f64692acc31a4555f4cfcd50ed3",
+    "selectionManifest": "upstream/dlt/SOURCE.json",
+    "license": "upstream/dlt/LICENSE.txt",
+    "completeRuntime": "runtime/OPERATING.md"
+  },
+  "referenceData": {
+    "repository": "https://github.com/slingdata-io/sling-cli",
+    "commit": "7641892e24a7023c8012069596698970c7b3e041",
+    "paths": [
+      "tests/files/test1.csv",
+      "tests/files/test1.upsert.csv"
+    ],
+    "local": [
+      "reference/original/test1.csv",
+      "reference/original/test1.upsert.csv"
+    ],
+    "meaning": "Unchanged original data; native engine for this product is dlt."
+  },
+  "nestedFixture": {
+    "path": "tests/normalize/cases/github.events.load_page_1_duck.json",
+    "gitBlob": "9d047f7ea02636cae4e05164e7e3dffa4a8264f3",
+    "bytes": 1729460,
+    "events": 100
+  },
+  "reuse": {
+    "workspace": "vendor/sling/SOURCE.json",
+    "adaptations": "vendor/sling/ADAPTATION.json",
+    "lease": "vendor/sling/vendor/stellar-expert/SOURCE.json"
+  },
+  "scope": "Retained selected original files document reviewed contracts. The runtime contains the actual complete original checkout and dependency payload.",
+  "facts": "Source-authored and reviewed. Native execution receipts are separate.",
+  "companyNeed": {
+    "observedDate": "2026-10-13",
+    "primarySources": [
+      "https://dlthub.com/contact",
+      "https://dlthub.com/product/solutions-engineering"
+    ],
+    "summary": "The official migration service describes parallel rebuilding, parity review, production cutover and maintainer handover, including a partner-led delivery option. Our proposal supplies an additive native OSS migration/recovery application; certification or a commercial relationship is not asserted."
+  }
+}

@@ -54,3 +54,9 @@ Five runnable application candidates now live in this public repository: [ClaimP
 The [complete directory product](products/human-services-directory/README.md) joins original HSDS and FHIR service-directory source with the maintained Gravity referral workspace. It includes complete source acquisition and indices, reviewed mapping and service selection, explicit clinical bindings, editable handoffs, the operator UI, native and connected CLIs, typed Merchant SDK/MCP and installed Applications.
 
 Build the `human-services-directory` selection using the [operating guide](products/human-services-directory/OPERATING.md), then continue the original native, browser, connected and installed application programme with the [receiving guide](products/human-services-directory/RECEIVING.md).
+
+## Migration Acceptance Workbench
+
+The [complete Migration Acceptance Workbench](products/migration-acceptance/OPERATING.md) joins native dlt/DuckDB migration, complete typed parity, business acceptance and reversible consumer selection with the maintained Runtime Applications and 21 customer-agent tools. Its installed selection includes Installation commissioning, the existing Grant workspace, retained source and request history, full project/runtime export and independent receiving.
+
+Build the `migration-acceptance` source selection from an exact commit, then follow the [same original receiving course](products/migration-acceptance/RECEIVING.md). Review/Save and Connect precede Start; wait for both the release and the saved application's connection readiness. Source publication does not establish a completed customer installation or rendered acceptance.

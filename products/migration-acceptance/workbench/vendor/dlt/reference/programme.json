@@ -1,0 +1,12 @@
+{
+  "schema": "dlthub.reference-programme.v1",
+  "operation": "DLTHUB-PIPELINE-MIGRATION-0C7A-20261013",
+  "originalDltCommit": "2360d229c77f7f64692acc31a4555f4cfcd50ed3",
+  "originalSlingDataCommit": "7641892e24a7023c8012069596698970c7b3e041",
+  "baselineRows": 1000,
+  "updatedRows": 12,
+  "insertedRows": 2,
+  "finalRows": 1002,
+  "originalNestedEvents": 100,
+  "meaning": "Original native dlt extract, normalize, load, package recovery, incremental, backfill and complete editable receiving. Data-only reuse of unchanged CSV inputs."
+}

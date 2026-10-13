@@ -1,0 +1,10 @@
+{
+  "name": "starforge-migration-acceptance-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {}
+}

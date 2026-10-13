@@ -1,0 +1,30 @@
+{
+  "schema": "definian.reference-programme.v1",
+  "operation": "DEFINIAN-MIGRATION-ACCEPTANCE-0C7A-20261013",
+  "engine": "dlt",
+  "version": "1.31.0",
+  "sourceCommit": "2360d229c77f7f64692acc31a4555f4cfcd50ed3",
+  "tables": {
+    "customers": 13,
+    "inventory_categories": 3,
+    "inventory": 6,
+    "purchases": 100
+  },
+  "phases": [
+    "original-resources",
+    "original-native-stages",
+    "full-parity",
+    "required-acceptance",
+    "explicit-orphan-edition",
+    "nonwaivable-hold",
+    "reviewable-acknowledgement",
+    "reviewable-exception",
+    "corrected-original-source",
+    "fresh-verification",
+    "cutover-rollback",
+    "operator",
+    "whole-runtime-receiving",
+    "same-forward-older",
+    "cold-reopen"
+  ]
+}

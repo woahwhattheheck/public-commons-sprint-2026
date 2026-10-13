@@ -1,0 +1,43 @@
+{
+  "schema": "definian.integration-validation.v1",
+  "nativeExecuted": false,
+  "sourceModel": {
+    "schema": "definian.source-model-validation.v1",
+    "mode": "V8 production function exercise against complete original JSON and published SQL schema; no SQLite/dlt native result",
+    "originalCommit": "7f67772503d71ba90f19283c38e93923addb43fa",
+    "rows": 15607,
+    "tables": 11,
+    "keys": 11,
+    "relations": 11,
+    "invoiceControls": 412,
+    "groupControls": 89,
+    "exactTotal": "2328.60",
+    "baselineProjection": "Original generator JSON invoice date receives only the source-proven T-to-space SQLite representation rule for this source-model exercise.",
+    "originalBaselineInvoiceDifferences": 0,
+    "originalBaselineGroupedDifferences": 0,
+    "orphanDetected": 1,
+    "compositeDuplicateDetected": 1,
+    "declaredDecimalBounds": true,
+    "nativeExecuted": false
+  },
+  "productionContract": {
+    "schema": "definian.production-contract-validation.v1",
+    "mode": "V8 original compiler/comparator and authored adapter; simulated job metadata only, no native execution",
+    "tables": 11,
+    "rows": 15607,
+    "originalCompilerReady": true,
+    "originalTypedComparatorEqual": true,
+    "relations": 11,
+    "invoiceControls": 412,
+    "groupControls": 89,
+    "accepted": false,
+    "changedObservationBytesRejected": true,
+    "nativeExecuted": false
+  },
+  "fixes": [
+    "Use the original canonical serializer for object identity after original compiler normalization.",
+    "Require exact native observations and selection bytes; bind input and target export descriptors.",
+    "Retain original request bodies and adopt completed intake ledger without reconstructing old revision guards."
+  ],
+  "pending": "Original E496 SQLite source and 0C7A dlt target operations remain with their existing owners; no fabricated native receipt."
+}
