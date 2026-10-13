@@ -254,8 +254,8 @@ def _retain_original_report(store, directory, selection):
     for attempt in attempts:
         if (attempt / "manifest.json").exists():
             edition = report_edition(store, attempt)
-            if (edition["document_digest"] == selection["document_digest"]
-                    and edition["as_of"] == selection["as_of"]):
+            if all(edition[name] == selection[name] for name in
+                   ("plan_id", "revision", "document_digest", "as_of")):
                 break
     else:
         if selection["rendering_sources"] != _report_sources():

@@ -27,7 +27,7 @@ python -B APP/source_tools/receive_monitoring_field_assignment.py \
   --receive-directory NEW_INDEPENDENT_RECEIVING_DIRECTORY
 ```
 
-Use actual existing paths and the user's saved selection. The output directory must be outside the app and original Workspace. The command creates the native plan and original report, retains a complete Workspace/application archive, restores it into a new directory, then runs the received application's own inspection command to reopen the exact original assignment/report. The archive retains the complete original project, source companions and editable implementation histories.
+Use actual existing paths and the user's saved selection. Both output and independently received-project directories must be outside the app and original Workspace. The received project uses a distinct directory from the course output. The command creates the native plan and original report, retains a complete Workspace/application archive, restores it into a new directory, then runs the received application's own inspection command to reopen the exact original assignment/report. The archive retains the complete original project, source companions and editable implementation histories.
 
 Repeat the same output directory to resume; the retained selection replaces external source-file arguments. Completed native task/report identities remain unchanged. An already-published receiving directory is reconciled through `portable.resume_restore` with the original archive SHA. Later receiving-side edits stay in place. Original report paths rebind to the received root. Current receiving revision is separate from the immutable original report revision.
 
