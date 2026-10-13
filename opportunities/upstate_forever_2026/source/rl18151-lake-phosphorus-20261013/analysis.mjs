@@ -37,7 +37,7 @@ function interval(row) {
   const condition=row.detection_condition.trim().toLowerCase();
   const left=["present below quantification limit","not detected","not present","non-detect","non detect"].includes(condition);
   if(left){
-    if(limit!==null&&limit>=0&&row.limit_unit===row.unit)
+    if(limit!==null&&limit>0&&row.limit_unit===row.unit)
       return {status:"left_censored",lower:0,upper:limit,lower_inclusive:true,upper_inclusive:false};
     return {status:"left_censored_without_comparable_limit",lower:null,upper:null};
   }
@@ -61,7 +61,10 @@ function finiteSummary(rows) {
     numeric_mean:values.length?average(values):null,
     all_record_mean_lower:bounded?average(rows.map(row=>row.interval.lower)):null,
     all_record_mean_upper:bounded?average(rows.map(row=>row.interval.upper)):null,
-    mean_interval_available:bounded,qualifiers:count(rows.map(row=>row.qualifier)),
+    mean_interval_available:bounded,
+    mean_interval_lower_inclusive:bounded?rows.every(row=>row.interval.lower_inclusive!==false):null,
+    mean_interval_upper_inclusive:bounded?rows.every(row=>row.interval.upper_inclusive!==false):null,
+    qualifiers:count(rows.map(row=>row.qualifier)),
     result_statuses:count(rows.map(row=>row.result_status)),
     detection_conditions:count(rows.map(row=>row.detection_condition))
   };
@@ -133,7 +136,7 @@ export function deriveStudy(sources, manifest) {
   for(const row of all){
     const key=JSON.stringify([row.date.slice(0,4),row.group,row.characteristic,row.fraction,row.unit,
       row.sample_media,row.sample_media_subdivision,row.depth_value,row.depth_unit,row.depth_reference,
-      row.result_depth_value,row.result_depth_unit,row.result_depth_reference,row.method_context,row.method_id,
+      row.result_depth_value,row.result_depth_unit,row.result_depth_reference,row.method_context,row.method_id,row.method_name,
       row.result_value_type,row.temperature_basis,row.weight_basis,row.analytical_fraction]);
     if(!cohorts.has(key))cohorts.set(key,[]);
     cohorts.get(key).push(row);
@@ -144,7 +147,7 @@ export function deriveStudy(sources, manifest) {
       fraction:first.fraction,unit:first.unit,sample_media:first.sample_media,sample_media_subdivision:first.sample_media_subdivision,
       depth_value:first.depth_value,depth_unit:first.depth_unit,depth_reference:first.depth_reference,
       result_depth_value:first.result_depth_value,result_depth_unit:first.result_depth_unit,result_depth_reference:first.result_depth_reference,
-      method_context:first.method_context,method_id:first.method_id,result_value_type:first.result_value_type,
+      method_context:first.method_context,method_id:first.method_id,method_name:first.method_name,result_value_type:first.result_value_type,
       temperature_basis:first.temperature_basis,weight_basis:first.weight_basis,analytical_fraction:first.analytical_fraction,
       ...finiteSummary(rows),record_ids:rows.map(row=>row.record_id)};
   }).sort((a,b)=>textOrder(a.characteristic,b.characteristic)||textOrder(a.year,b.year)||textOrder(JSON.stringify(a),JSON.stringify(b)));
