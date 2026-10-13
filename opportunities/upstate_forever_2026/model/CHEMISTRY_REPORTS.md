@@ -61,6 +61,23 @@ sampled concentrations, boundary exports and integrated reaction transfers.
 Kilograms over the completed model duration are not silently converted to annual
 loads. Numerical mass conservation describes the implemented model.
 
+## Readable screen and print tables
+
+Presentation edition `reach-chemistry-scientific-report/4` keeps the complete
+original rows and fields in keyboard-focusable horizontal table regions. Wide
+printed tables split into labeled panels with the original first-column record
+key repeated, so every value remains associated with its original record.
+Screen and print views use the same retained data and original column order.
+Tables, captions and headings use the same plain industrial presentation.
+
+The executed RIVER13 Monitoring and Chemistry study supplies the full source
+for this renderer and the offline study workbench. See
+[the complete study operating guide](../source/monitoring-chemistry-study/README.md)
+for the original three-budget comparison, four saved compound analyses, report
+refresh, self-contained browser, study brief and independent application
+receiving. Preparing the new presentation uses completed results; original
+numerical run IDs and earlier report editions stay readable.
+
 ## Native saved-result operation
 
 Use the existing actual Workspace and an existing completed Chemistry run ID:
@@ -170,7 +187,7 @@ derivatives, errors and information gain.
 Single-species 0.1 saved results retain their original interpretation. The
 legacy species field controls those original rows even when an old request
 carried unused extra metadata. This presentation is
-`reach-chemistry-scientific-report/3`; preparing it creates a new immutable report
+`reach-chemistry-scientific-report/4`; preparing it creates a new immutable report
 selection. Earlier saved reports and their exact original artifacts remain
 readable. The original numerical calculation is not repeated to render this
 edition.

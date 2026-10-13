@@ -3044,7 +3044,8 @@
         "source/hydrology-huc05-07-20261013/original/usgs-stations-expanded.tsv",
         "source/hydrology-huc05-07-20261013/rebuild_calibration.mjs",
         "source/hydrology-huc05-07-20261013/source-manifest.json",
-        "source_tools/receive_observed_context.py"
+        "source_tools/receive_observed_context.py",
+        "source_tools/receive_observed_station_studies.py"
       ],
       "requires": [
         "core",

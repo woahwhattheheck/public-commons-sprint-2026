@@ -51,37 +51,71 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     const row=nativeStudy();
     if(!row){panel.textContent=active?'Refresh this original saved study source before exporting.':'';return;}
     const detail=nativeStudyViews.get(activeWorkspace+':'+row.source_collection_id+':'+row.source_sha256);
+    const retained=lastSelection||readSaved(),chosen=retained?.native_study?.source_collection_id===row.source_collection_id?retained.native_study:{};
+    const contextOptions=(rows,current,label)=>'<option value="">Do not include an additional saved context</option>'+
+      rows.map(item=>'<option value="'+esc(item.id)+'"'+(item.id===current?' selected':'')+'>'+esc(label(item))+'</option>').join('')+
+      (current&&!rows.some(item=>item.id===current)?'<option value="'+esc(current)+'" selected>Retained selection · '+esc(current.slice(0,12))+' · refresh to inspect</option>':'');
     panel.innerHTML='<p>'+esc(row.title)+'</p><p>The complete original cohort, report, numeric tables and companions travel together. Native rasters retain their units and reporting support.</p>'+
       (detail?'<p>'+pretty(detail.run_count)+' completed runs · '+pretty(detail.comparison_count)+' original comparisons · '+pretty(detail.source_companions)+' report companions</p>'+
        '<p>'+esc(detail.interpretation)+'</p><details><summary>Original grid, scope and quantities</summary><pre>'+
-       esc(JSON.stringify({grid:detail.grid,scope:detail.scope,quantities:detail.quantities},null,2))+'</pre></details>':'');
+       esc(JSON.stringify({grid:detail.grid,scope:detail.scope,quantities:detail.quantities},null,2))+'</pre></details>':'')+
+      '<label>Saved scientific report<select name="scientific_report_id">'+
+      contextOptions(detail?.scientific_reports||[],chosen.scientific_report?.id,item=>item.title+' · '+item.source_count+' studies')+'</select></label>'+
+      '<label>Saved execution history<select name="execution_history_id">'+
+      contextOptions(detail?.execution_histories?.histories||[],chosen.execution_history?.id,item=>item.title+' · captured '+item.captured_at)+'</select></label>'+
+      '<p>Only histories with this exact run set are offered. Export verifies the frozen inputs and result descriptors, and retains recorded gaps and reuse separately.</p>'+
+      (detail?.execution_histories?.available===false?'<p>'+esc(detail.execution_histories.message)+'</p>':'')+
+      '<button type="button" data-native-study-refresh>Refresh source and selected context</button>'+
+      (detail?.selected_execution_history?'<details><summary>Selected recorded execution snapshot</summary><pre>'+
+        esc(JSON.stringify({captured_at:detail.selected_execution_history.captured_at,summary:detail.selected_execution_history.summary},null,2))+'</pre></details>':'');
+    const reopen=()=>createForNativeStudy({workspace_key:activeWorkspace,source_collection_id:row.source_collection_id,
+      source_id:row.source_id,scientific_report_id:selected('scientific_report_id').value,
+      execution_history_id:selected('execution_history_id').value}).catch(reason=>error(reason.message));
+    selected('scientific_report_id').addEventListener('change',reopen);
+    selected('execution_history_id').addEventListener('change',reopen);
+    panel.querySelector('[data-native-study-refresh]').addEventListener('click',reopen);
   }
   async function createForNativeStudy(request){
     const frozen=JSON.parse(JSON.stringify(request||{})),workspace=getState()?.workspace_key;
     if(!root||!workspace||frozen.workspace_key!==workspace)
       throw new Error('Open the original native-study Workspace before preparing its GIS handover.');
+    if(!catalogue||activeWorkspace!==workspace||!root.querySelector('[data-gis-export]'))
+      throw new Error('Wait for the original GIS catalog to open, then choose the saved study again.');
     const collection=frozen.source_collection_id;
     if(!/^[0-9a-f]{64}$/.test(collection||''))throw new Error('Choose a retained native-study source.');
-    const before=canonical(formSelection(false)),element=root,token=++intakeVersion;
+    const current=lastSelection||readSaved(),sameSource=current?.native_study?.source_collection_id===collection;
+    const reportId=Object.prototype.hasOwnProperty.call(frozen,'scientific_report_id')?frozen.scientific_report_id:
+      (sameSource?current.native_study.scientific_report?.id:'');
+    const historyId=Object.prototype.hasOwnProperty.call(frozen,'execution_history_id')?frozen.execution_history_id:
+      (sameSource?current.native_study.execution_history?.id:'');
+    const snapshot=()=>canonical({selection:formSelection(false),
+      report:selected('scientific_report_id')?.value,history:selected('execution_history_id')?.value});
+    const before=snapshot(),element=root,token=++intakeVersion;
     controller?.abort();const own=new AbortController();controller=own;intakeLoading=true;
     try{
       const data=await api('/api/gis/projects?'+new URLSearchParams({workspace,native_study_collection:collection,
-        native_study_source:frozen.source_id||'saved-native-ensemble-study'}),{signal:own.signal});
+        native_study_source:frozen.source_id||'saved-native-ensemble-study',
+        ...(reportId?{scientific_report_id:reportId}:{}),...(historyId?{execution_history_id:historyId}:{})}),{signal:own.signal});
       if(token!==intakeVersion||own.signal.aborted||root!==element||getState()?.workspace_key!==workspace||
-         canonical(formSelection(false))!==before)
+         snapshot()!==before)
         throw new Error('The Workspace or handover selection changed while opening this native study.');
       if(data.workspace_key!==workspace||data.native_study?.source_collection_id!==collection)
         throw new Error('The native-study response belongs to another original selection.');
       const detail=data.native_study,row=(catalogue.native_studies||[]).find(x=>x.source_collection_id===collection);
+      if((reportId||null)!==(detail.selected_scientific_report?.binding.id||null)||
+         (historyId||null)!==(detail.selected_execution_history?.binding.id||null))
+        throw new Error('The saved report or execution history response changed its selected identity.');
       if(!row||row.source_id!==detail.source_id||row.source_sha256!==detail.source_sha256)
         throw new Error('Refresh the original saved native-study source before opening it.');
       nativeStudyViews.set(workspace+':'+collection+':'+detail.source_sha256,detail);
-      const value={title:(detail.source_title+' · editable GIS').slice(0,240),
+      const value={title:sameSource?selected('title').value:(detail.source_title+' · editable GIS').slice(0,240),
         project_crs:detail.project_crs||selected('project_crs').value,
         native_study:{source_collection_id:collection,source_id:detail.source_id,source_sha256:detail.source_sha256,
           ...(detail.rendered_report?{rendered_report:{source_operation_id:detail.rendered_report.source_operation_id,
-            files_sha256:detail.rendered_report.files_sha256}}:{})},
-        notes:[]};
+            files_sha256:detail.rendered_report.files_sha256}}:{}),
+          ...(detail.selected_scientific_report?{scientific_report:detail.selected_scientific_report.binding}:{}),
+          ...(detail.selected_execution_history?{execution_history:detail.selected_execution_history.binding}:{})},
+        notes:sameSource?selected('notes').value.split('\n').filter(value=>value.trim()):[]};
       saveSelection(value);render();root.querySelector('[data-gis-export]')?.scrollIntoView({block:'start'});
       return JSON.parse(JSON.stringify(value));
     }finally{if(token===intakeVersion)intakeLoading=false;}
@@ -378,6 +412,10 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       include_grid:true,notes:selected('notes').value.split('\n').map(x=>x.trim()).filter(Boolean)};
     if(selected('native_study_collection')?.value){
       const row=nativeStudy(),retained=lastSelection||readSaved();
+      if(validate&&(selected('scientific_report_id')?.value||'')!==(retained?.native_study?.scientific_report?.id||''))
+        throw new Error('Refresh the selected saved report before exporting.');
+      if(validate&&(selected('execution_history_id')?.value||'')!==(retained?.native_study?.execution_history?.id||''))
+        throw new Error('Refresh the selected execution history before exporting.');
       if(!row||!row.local_project)throw new Error('Choose the saved native study in its original restored project.');
       if(validate&&(retained?.native_study?.source_collection_id!==row.source_collection_id||
          retained.native_study.source_id!==row.source_id||retained.native_study.source_sha256!==row.source_sha256))
@@ -385,7 +423,11 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       return {title:value.title,project_crs:value.project_crs,notes:value.notes,
         native_study:{source_collection_id:row.source_collection_id,source_id:row.source_id,source_sha256:row.source_sha256,
           ...((retained?.native_study?.source_collection_id===row.source_collection_id&&retained.native_study.source_sha256===row.source_sha256&&retained.native_study.rendered_report)?
-            {rendered_report:retained.native_study.rendered_report}:{})}};
+            {rendered_report:retained.native_study.rendered_report}:{}),
+          ...((retained?.native_study?.source_collection_id===row.source_collection_id&&retained.native_study.source_sha256===row.source_sha256&&retained.native_study.scientific_report)?
+            {scientific_report:retained.native_study.scientific_report}:{}),
+          ...((retained?.native_study?.source_collection_id===row.source_collection_id&&retained.native_study.source_sha256===row.source_sha256&&retained.native_study.execution_history)?
+            {execution_history:retained.native_study.execution_history}:{})}};
     }
     if(sourceIDs.length)value.source_collection_id=collection;
     for(const name of ['grid_id','baseline_run_id','delivery_id'])if(selected(name).value)value[name]=selected(name).value;
@@ -552,9 +594,9 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     }catch(e){if(e.name!=='AbortError')error(e.message);}
   }
   return {
-    mount(element,state){root=element;if(activeWorkspace!==state.workspace_key)signature='';
+    async mount(element,state){root=element;if(activeWorkspace!==state.workspace_key)signature='';
       if(!catalogue||activeWorkspace!==state.workspace_key)root.innerHTML='<section class="gis-workspace"><h1>Editable GIS projects</h1><p>Opening the retained study selections…</p><p data-gis-error role="alert" hidden></p></section>';
-      else render();void load(true);},
+      else render();await load(true);},
     update(state){if(root&&getState()?.workspace_key===state?.workspace_key)void load();},
     detach(){intakeVersion++;intakeLoading=false;controller?.abort();controller=null;root=null;},
     createForSources,createForDelivery,createForNativeStudy

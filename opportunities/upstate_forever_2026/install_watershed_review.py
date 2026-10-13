@@ -16,7 +16,7 @@ import os
 from pathlib import Path, PurePosixPath
 import tempfile
 
-EXPECTED_BANK_SHA256 = "f43828edfc97a4411d3adf6699dd76b9c62f36a6390345031227e7d361083e29"
+EXPECTED_BANK_SHA256 = "a2de6c8b2b93d5c7b689c17e616c9b6b0984aa199921e8df35cef10f2ba500bc"
 PREFIX = "source_tools/watershed_review/"
 REPORT = "model/implementation_reporting.py"
 COMPONENT = "integration/component_fragments/fieldwork-scientific-receiving.json"

@@ -1,0 +1,325 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "SV-833:original",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.636966,
+          34.704792
+        ]
+      },
+      "properties": {
+        "id": "SV-833:original",
+        "station_id": "SV-833",
+        "location_view": "original",
+        "coordinate_basis": "Original source coordinate",
+        "comid": null,
+        "source_path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+        "source_sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-833:indexed",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.6369656,
+          34.704794
+        ]
+      },
+      "properties": {
+        "id": "SV-833:indexed",
+        "station_id": "SV-833",
+        "location_view": "indexed",
+        "coordinate_basis": "Original source coordinate",
+        "comid": "11749277",
+        "source_path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+        "source_sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-833:snapped",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.63727703166195,
+          34.70460483592276
+        ]
+      },
+      "properties": {
+        "id": "SV-833:snapped",
+        "station_id": "SV-833",
+        "location_view": "snapped",
+        "coordinate_basis": "Original source coordinate",
+        "comid": "11749277",
+        "source_path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+        "source_sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-833:projected",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.63727108411582,
+          34.704603023831254
+        ]
+      },
+      "properties": {
+        "id": "SV-833:projected",
+        "station_id": "SV-833",
+        "location_view": "projected",
+        "coordinate_basis": "Derived local projection on declared COMID",
+        "comid": "11749277",
+        "source_path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+        "source_sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "RS-26250:original",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.70322019,
+          34.64971302
+        ]
+      },
+      "properties": {
+        "id": "RS-26250:original",
+        "station_id": "RS-26250",
+        "location_view": "original",
+        "coordinate_basis": "Original source coordinate",
+        "comid": null,
+        "source_path": "source/three-twenty-water-quality-20261013/original/three-twenty-rs-26250-station-2026-original.csv",
+        "source_sha256": "015a0a608294e3f5d1b136860e0a8a9178400a6f6aa8dc7cdfc218adc85b20e0"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "RS-26250:indexed",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.7032197,
+          34.6497151
+        ]
+      },
+      "properties": {
+        "id": "RS-26250:indexed",
+        "station_id": "RS-26250",
+        "location_view": "indexed",
+        "coordinate_basis": "Original source coordinate",
+        "comid": "11749733",
+        "source_path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-rs-26250-nldi-feature-original.json",
+        "source_sha256": "a6a5e73d97d849c87d0aab0f31553ceb2c31faa1109f4f64dce392fe3d67a881"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "RS-26250:snapped",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.70347336371871,
+          34.649607007926114
+        ]
+      },
+      "properties": {
+        "id": "RS-26250:snapped",
+        "station_id": "RS-26250",
+        "location_view": "snapped",
+        "coordinate_basis": "Original source coordinate",
+        "comid": "11749733",
+        "source_path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-rs-26250-nldi-hydrolocation-original.json",
+        "source_sha256": "ed6384155ceefa06041089829a22a426daff08da03937196c3a0162e8059fecf"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "RS-26250:projected",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.70346708541229,
+          34.64960297361476
+        ]
+      },
+      "properties": {
+        "id": "RS-26250:projected",
+        "station_id": "RS-26250",
+        "location_view": "projected",
+        "coordinate_basis": "Derived local projection on declared COMID",
+        "comid": "11749733",
+        "source_path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-rs-26250-nldi-hydrolocation-original.json",
+        "source_sha256": "ed6384155ceefa06041089829a22a426daff08da03937196c3a0162e8059fecf"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-735:original",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.746416,
+          34.627544
+        ]
+      },
+      "properties": {
+        "id": "SV-735:original",
+        "station_id": "SV-735",
+        "location_view": "original",
+        "coordinate_basis": "Original source coordinate",
+        "comid": null,
+        "source_path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+        "source_sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-735:indexed",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.7464154,
+          34.6275461
+        ]
+      },
+      "properties": {
+        "id": "SV-735:indexed",
+        "station_id": "SV-735",
+        "location_view": "indexed",
+        "coordinate_basis": "Original source coordinate",
+        "comid": "11749763",
+        "source_path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-735-nldi-feature-original.json",
+        "source_sha256": "bff07db20857dbd945e97341ac5e02148345542249da4ada4912554eec2417e8"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-735:snapped",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.74682744358783,
+          34.62729489957129
+        ]
+      },
+      "properties": {
+        "id": "SV-735:snapped",
+        "station_id": "SV-735",
+        "location_view": "snapped",
+        "coordinate_basis": "Original source coordinate",
+        "comid": "11749763",
+        "source_path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-735-nldi-hydrolocation-original.json",
+        "source_sha256": "7911eed7d00c90cd489a945acff45da5f1d5395f422630d00dd57f815ac1cb93"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-735:projected",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.74682139039199,
+          34.627290214837885
+        ]
+      },
+      "properties": {
+        "id": "SV-735:projected",
+        "station_id": "SV-735",
+        "location_view": "projected",
+        "coordinate_basis": "Derived local projection on declared COMID",
+        "comid": "11749763",
+        "source_path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-735-nldi-hydrolocation-original.json",
+        "source_sha256": "7911eed7d00c90cd489a945acff45da5f1d5395f422630d00dd57f815ac1cb93"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-111:original",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.77229111,
+          34.59978497
+        ]
+      },
+      "properties": {
+        "id": "SV-111:original",
+        "station_id": "SV-111",
+        "location_view": "original",
+        "coordinate_basis": "Original source coordinate",
+        "comid": null,
+        "source_path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+        "source_sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-111:indexed",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.7722906,
+          34.5997871
+        ]
+      },
+      "properties": {
+        "id": "SV-111:indexed",
+        "station_id": "SV-111",
+        "location_view": "indexed",
+        "coordinate_basis": "Original source coordinate",
+        "comid": "11749507",
+        "source_path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-111-nldi-feature-original.json",
+        "source_sha256": "0fe2a180083e337ce8c971edcf0ec53fba6aa3d1770761ae1d0deffcd52bc976"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-111:snapped",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.77244812991137,
+          34.5997583332128
+        ]
+      },
+      "properties": {
+        "id": "SV-111:snapped",
+        "station_id": "SV-111",
+        "location_view": "snapped",
+        "coordinate_basis": "Original source coordinate",
+        "comid": "11749507",
+        "source_path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-111-nldi-hydrolocation-original.json",
+        "source_sha256": "780aace0f2025dfd78931d8be93d6d5a89f432c625939657fa92bd9a7703a431"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SV-111:projected",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.77244694998832,
+          34.59975347652262
+        ]
+      },
+      "properties": {
+        "id": "SV-111:projected",
+        "station_id": "SV-111",
+        "location_view": "projected",
+        "coordinate_basis": "Derived local projection on declared COMID",
+        "comid": "11749507",
+        "source_path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-111-nldi-hydrolocation-original.json",
+        "source_sha256": "780aace0f2025dfd78931d8be93d6d5a89f432c625939657fa92bd9a7703a431"
+      }
+    }
+  ]
+}

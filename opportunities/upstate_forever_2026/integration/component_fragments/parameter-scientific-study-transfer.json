@@ -1,0 +1,34 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "parameter-scientific-study-transfer",
+  "source_reference": "Original editable Parameter study lineage for a selected scientific report; preserves experiment.json/spec/checkpoint/native case family and partial-state semantics.",
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/parameter_study_transfer.py",
+        "model/PARAMETER_STUDY_RECEIVING.md",
+        "integration/component_fragments/parameter-scientific-study-transfer.json",
+        "model/parameter_study_receiving.py",
+        "operator/parameter_receiving.py",
+        "operator/web/parameter_received_studies.mjs"
+      ]
+    },
+    "parameter-studies": {
+      "paths": [
+        "model/parameter_study_transfer.py",
+        "model/parameter_report_source.py",
+        "model/parameter_scientific_figures.py",
+        "model/parameter_result_query.py",
+        "model/parameter_views.py",
+        "model/portable_parameter_studies.py",
+        "model/PARAMETER_STUDY_RECEIVING.md"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "model/parameter_study_transfer.py",
+        "model/PARAMETER_STUDY_RECEIVING.md"
+      ]
+    }
+  }
+}

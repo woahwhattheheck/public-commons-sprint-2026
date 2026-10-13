@@ -4,13 +4,16 @@
   "extend_components": {
     "simulated-customer-recording": {
       "paths": [
+        "model/field_report_presentation.py",
         "source_tools/simulated_fieldwork_recording.py",
         "source/implementation/run_sample_qc_browser.mjs",
         "docs/SIMULATED_FIELDWORK_BROWSER.md",
         "integration/component_fragments/simulated-field-recording.json",
         "source_tools/simulated_headwaters_narration.py",
         "source_tools/simulated_headwaters_handover.py",
-        "docs/SIMULATED_HEADWATERS_HANDOVER.md"
+        "docs/SIMULATED_HEADWATERS_HANDOVER.md",
+        "model/field_report_adoption.py",
+        "docs/FIELD_REPORT_ADOPTION.md"
       ]
     }
   },

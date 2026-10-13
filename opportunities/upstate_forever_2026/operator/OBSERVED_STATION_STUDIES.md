@@ -145,6 +145,18 @@ The receiver retains the full original prepared selections, executes each study 
 
 The producing native worker must open, LOOK at and operate the actual outgoing Station Geography reports and every attachment as their recipient would: readable maps/tables at desktop/screenshare and 390px, the original source downloads, complete geography archives, and their independently received editions. Inspect the actual exported pages and contents, fix observed faults, and retain actual result identities in the original receiving thread. A saved screenshot that nobody viewed is insufficient. Keep this focused on completing the product.
 
+## Standalone family export and completed original receiving
+
+The cumulative `observed-station-studies` component and both `observed-station-wbd` declarations retain `source_tools/receive_observed_station_studies.py` as an ordinary source member. The maintained installer also retains this same file. For the complete original nine-study course, export the `observed-station-wbd` family so its existing dependency closure includes the station modules, all four original manifests, their companions and both WBD replay scripts:
+
+```sh
+python -B APPLICATION/source_tools/application_assembly.py APPLICATION --family-component observed-station-wbd --edition original-nine-study-wbd --source-map OWNED_OUTPUT/observed-station-wbd.source.json
+```
+
+Use the returned complete family source with the existing cumulative application receiver; retain its declaration provenance and original member identities when composing with a newer application. The family does not require a reverse dependency from the base station component. Keep the full owner brief below with the exported guide and preserve the installed application and original Workspace during receiving.
+
+The original b9d5 course completed on October 13, 2026, from 11:30:59.301535 to 11:32:53.984309 UTC. All nine native studies were built and independently received with zero unresolved locations and zero unassigned rows. The [completed native delivery](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791891652021069?thread_ts=1791724121.853269) retains the original station and linked-row counts, all nine geography archives, complete source/input edition, viewer source and operated exports. The producing worker opened and inspected the outgoing desktop and 390px views and exercised selection, original-source/location inspection, filtering, exact record export, notes and edition-bound reopening. Reuse those completed editions; this assembly declaration update does not require repeating that native course.
+
 ## Current owner direction carried with this receiving operation
 
 The following is the complete `CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`. Its native model priority and October 13, 2026 14:00 UTC cutoff govern this complementary receiving course.
