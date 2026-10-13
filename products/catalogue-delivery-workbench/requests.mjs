@@ -53,9 +53,15 @@ export class CatalogueDeliveryRequests{
    need(v.requestKey===record.key&&v.inputSha256===record.inputSha256&&name===record.key+'.'+hash(canonical(v))+'.observed.json','CATALOGUE_DELIVERY_REQUEST_IDENTITY','The original response observation changed.',409);rows.push(v);}
   return rows;
  }
- async list(alias,{offset=0,limit=25}={}){
+ async list(alias,{offset=0,limit=25}={},access){
   integer(offset,'request offset');integer(limit,'request page size',100,1);const root=await this.directory(alias),all=await readdir(root);
-  const names=all.filter(n=>/^[a-f0-9]{64}\.request\.json$/.test(n)).sort(),requests=[];
+  const names=[],requests=[];
+  need(access&&typeof access==='object','CATALOGUE_DELIVERY_REQUEST_AUTHORITY','Bind request reads to the current original workspace.');
+  for(const name of all.filter(n=>/^[a-f0-9]{64}\.request\.json$/.test(n)).sort()){
+   const record=(await readJson(join(root,name),MAX_JSON)).value;
+   need(record.schema==='stellar-forge.catalogue-delivery-request.v1'&&record.workspace===alias&&name===record.key+'.request.json','CATALOGUE_DELIVERY_REQUEST_IDENTITY','The original request descriptor changed.',409);
+   if(canonical(record.access)===canonical(access))names.push(name);
+  }
   for(const name of names.slice(offset,offset+limit)){
    const record=(await readJson(join(root,name),MAX_JSON)).value;
    need(record.schema==='stellar-forge.catalogue-delivery-request.v1'&&record.workspace===alias&&name===record.key+'.request.json',
