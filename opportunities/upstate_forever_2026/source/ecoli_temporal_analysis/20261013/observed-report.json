@@ -1,0 +1,290 @@
+{
+  "schema": "upstate.observed-report/v1",
+  "title": "Utility-focus microbial observations: temporal, calendar-support and same-station flow context",
+  "edition": "20261013-original-temporal-calendar-explorer",
+  "inputs": [
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-summary.csv",
+      "bytes": 13740,
+      "sha256": "306f93bda04c2d8727f6c0fef782deff5f599a3818beb30c09e1f3aaed9c94ba"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-year-summary.csv",
+      "bytes": 30692,
+      "sha256": "5ddba3ebf23067820609734731f817b4513ba3a5381e175cd3b5340579d43f21"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-season-summary.csv",
+      "bytes": 48144,
+      "sha256": "9ce54e608a226b26200092b15225bb63d033a3982a03ee897060d88f349fce08"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-month-summary.csv",
+      "bytes": 122016,
+      "sha256": "2d3090b1f3e63f42abb2e2950cd71c839ce5fb039667a2e0555ace8cc5f23390"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/record-intervals.csv",
+      "bytes": 227126,
+      "sha256": "4ad3864e802385c038f4c9005ed72c79f93de6b930a5b66b061ac325143ddfa0"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/field-replicates.csv",
+      "bytes": 708,
+      "sha256": "9e922602ca20ddaeac8d4858c65404ba7bded9b71b8c43b1f09645562803b004"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/comment-sensitivity.csv",
+      "bytes": 13752,
+      "sha256": "74d9853ac07b5339a3cdbe2577948cc9393537bb7da0519980610744c5d8ce15"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/flagged-source-comments.csv",
+      "bytes": 28893,
+      "sha256": "a62b00d921d09b939a4ad67b746ba2b4afc392a1aa076477b450783d2e4eb384"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/annual-sampling-coverage.csv",
+      "bytes": 206,
+      "sha256": "8e2d8aa914bb20a28e2403af83ce31c0e7eaea8c3eabd8e48f46ce33b0560d63"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/flow-daily-2022.csv",
+      "bytes": 21567,
+      "sha256": "8fbd91d565fe517080ff8edd45cd309bfdaa31fbd1a745bf001bac48f12d14ad"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/flow-sample-join.csv",
+      "bytes": 7536,
+      "sha256": "d71fee49d8363898397f7039d6ee1beb0100f4fea9373d4f7cb682e96f88e44b"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/analysis-summary.json",
+      "bytes": 8450,
+      "sha256": "e492f216935e85cef11ba789cca65f39aaa330f7c8e2b40d6c6825588b1591fd"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/analysis.mjs",
+      "bytes": 20084,
+      "sha256": "4c00450d05f8e6509ea300af53aeca2cbbb17f87bbd1584fa1353919a8829e0b"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/reproduce.mjs",
+      "bytes": 2314,
+      "sha256": "a6f5101449c038a5a3563b644372f8cad5035d2d5dd6efa3583ee85b06de8a76"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/source-manifest.json",
+      "bytes": 9294,
+      "sha256": "e044c8bad2693b34c3f5912ff1f360d7a2da594b92504fc2ec6ac2f69573f391"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+      "bytes": 368696,
+      "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/station-membership.csv",
+      "bytes": 6909,
+      "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+    },
+    {
+      "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+      "bytes": 55405,
+      "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/compare-calendar-support.mjs",
+      "bytes": 6915,
+      "sha256": "3aeb39798609ccce35a85e87cb46d8f9da6f744fbbd983d9dcbff6031cdd2742"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/calendar-support-comparisons.csv",
+      "bytes": 17589,
+      "sha256": "11e7a36b5eeca7a7aee55e654c30446effb473c8b2da795b239eb8b6576cd878"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/calendar-support-source-rows.csv",
+      "bytes": 122498,
+      "sha256": "fe5265cac8f80ef6a2f1a654526e86f536b94819f2bbd1bebf669ad32a99cc15"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/calendar-support-summary.json",
+      "bytes": 2686,
+      "sha256": "bf51236ce577930f1f557e41eb5f7195c858b6ffbcdd11c07aa26c8863f13779"
+    }
+  ],
+  "sections": [
+    [
+      "Original sampling support",
+      [
+        "The source retains 730 original E. coli activities at 36 stations, including 729 routine observations and one separate field replicate. Station, original analytical method and units remain distinct throughout the analysis.",
+        {
+          "kind": "table",
+          "columns": [
+            "Year",
+            "Routine records",
+            "Stations",
+            "First appearing",
+            "Repeated-panel records"
+          ],
+          "rows": [
+            [
+              "2021",
+              "174",
+              "18",
+              "18",
+              "103"
+            ],
+            [
+              "2022",
+              "105",
+              "15",
+              "1",
+              "80"
+            ],
+            [
+              "2023",
+              "119",
+              "14",
+              "2",
+              "93"
+            ],
+            [
+              "2024",
+              "144",
+              "16",
+              "5",
+              "92"
+            ],
+            [
+              "2025",
+              "187",
+              "21",
+              "10",
+              "82"
+            ]
+          ]
+        },
+        "Eleven stations occur in each of the five years, contributing 450 routine records. Their sampled months vary. Ten stations first appear in this selected source in 2025."
+      ]
+    ],
+    [
+      "Original censoring and source comments",
+      [
+        "Numerical values retain [value,value]; below-limit/not-detected values retain [0,reported limit]; above-limit values retain [reported limit,infinity]. Bounds describe original censoring and are not sampling confidence intervals.",
+        "All original records remain available. A separate sensitivity excludes 72 literal Information Only comments, including the publisher spelling Infomation. Three ECOL power-interruption comments and one BOD-specific comment remain separately visible. The original detection status and qualifier fields are preserved."
+      ]
+    ],
+    [
+      "Calendar support in the repeated station panel",
+      [
+        "At SV-833, all-date 2021/2025 interval medians 419.6→387.3 MPN per 100 mL appear lower. Restricting both years to the eight common calendar months gives 298.9→666.8, with eight observations in each year. Equal calendar support does not align exact dates, flow, weather or management.",
+        {
+          "kind": "table",
+          "columns": [
+            "SV-833 comparison",
+            "2021 sample median",
+            "2025 sample median",
+            "2021 records",
+            "2025 records"
+          ],
+          "rows": [
+            [
+              "All original dates",
+              "419.6",
+              "387.3",
+              "9",
+              "11"
+            ],
+            [
+              "Common calendar months",
+              "298.9",
+              "666.8",
+              "8",
+              "8"
+            ]
+          ]
+        },
+        "All five Georgia lake repeat-panel stations have only Information Only observations in 2025. The explicit exclusion sensitivity leaves six SC stations represented in all five years; the original eleven-station coverage count remains correct."
+      ]
+    ],
+    [
+      "Exact same-station discharge context",
+      [
+        "The USGS-02177000 original 2022 series supplies 365 daily means and all 16 microbial sample-date joins. All 16 sample-date daily means are A. The seven-prior-day window for 8 March contains four original A;e daily values; the remaining 15 windows are A throughout.",
+        {
+          "kind": "table",
+          "columns": [
+            "Flow comparison",
+            "Numeric-only Spearman",
+            "All 16 strict below 20 sensitivity"
+          ],
+          "rows": [
+            [
+              "Same-date daily mean",
+              "0.605728341635478",
+              "0.24889570439054157 to 0.49631865313380186"
+            ],
+            [
+              "Seven complete prior days",
+              "-0.19383306932335295",
+              "-0.39322575782411007 to -0.18114894461560127"
+            ]
+          ]
+        },
+        "Rank ranges reflect allowable censored ranks, not confidence intervals. None of the 16 sample dates reaches the annual 95th-percentile discharge of 1,284 ft³/s. Six calendar months have no microbial samples. Daily mean discharge is contextual and does not establish instantaneous load."
+      ]
+    ],
+    [
+      "Use the complete source explorer",
+      [
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Open the complete offline temporal and flow explorer",
+              "path": "source/ecoli_temporal_analysis/20261013/index.html"
+            },
+            {
+              "title": "Explorer and native integration guide",
+              "path": "source/ecoli_temporal_analysis/20261013/EXPLORER.md"
+            },
+            {
+              "title": "All original record intervals and comments",
+              "path": "source/ecoli_temporal_analysis/20261013/record-intervals.csv"
+            },
+            {
+              "title": "Exact calendar-support source-row memberships",
+              "path": "source/ecoli_temporal_analysis/20261013/calendar-support-source-rows.csv"
+            },
+            {
+              "title": "All 16 original sample-date flow joins",
+              "path": "source/ecoli_temporal_analysis/20261013/flow-sample-join.csv"
+            }
+          ]
+        }
+      ]
+    ]
+  ],
+  "source_links": [
+    "source/ecoli_temporal_analysis/20261013/source-manifest.json",
+    "source/ecoli_temporal_analysis/20261013/README.md",
+    "source/ecoli_temporal_analysis/20261013/CALENDAR_SUPPORT.md",
+    "source/ecoli_temporal_analysis/20261013/station-summary.csv",
+    "source/ecoli_temporal_analysis/20261013/station-year-summary.csv",
+    "source/ecoli_temporal_analysis/20261013/station-season-summary.csv",
+    "source/ecoli_temporal_analysis/20261013/station-month-summary.csv",
+    "source/ecoli_temporal_analysis/20261013/record-intervals.csv",
+    "source/ecoli_temporal_analysis/20261013/field-replicates.csv",
+    "source/ecoli_temporal_analysis/20261013/comment-sensitivity.csv",
+    "source/ecoli_temporal_analysis/20261013/flagged-source-comments.csv",
+    "source/ecoli_temporal_analysis/20261013/annual-sampling-coverage.csv",
+    "source/ecoli_temporal_analysis/20261013/flow-daily-2022.csv",
+    "source/ecoli_temporal_analysis/20261013/flow-sample-join.csv",
+    "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+    "source/ecoli_utility_context/20261013/station-membership.csv",
+    "source/ecoli_temporal_analysis/20261013/calendar-support-comparisons.csv",
+    "source/ecoli_temporal_analysis/20261013/calendar-support-source-rows.csv"
+  ]
+}
