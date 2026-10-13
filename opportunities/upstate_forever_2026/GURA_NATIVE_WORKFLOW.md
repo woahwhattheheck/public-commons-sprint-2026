@@ -45,7 +45,7 @@ For a new intake the workflow checks the retained generation-specific InVEST
 
 | Input | SHA256 |
 | --- | --- |
-| NDR.zip | df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4c8af8bea53c6c7d |
+| NDR.zip | df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4d4c8af8bea53c6c7d |
 | SDR.zip | 34351a1305d8e6258c2d566917cfeab5f152096e930ef5b0a834968146bdc779 |
 
 The source code preserves the original Google Cloud Storage object generations
