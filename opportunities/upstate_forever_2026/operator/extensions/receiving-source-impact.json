@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receiving-source-impact",
   "title": "Receiving source impact",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "order": 54,
   "assets": [
     "receiving_source_impact.mjs",
@@ -38,7 +38,8 @@
       "endpoint",
       "openExtension",
       "navigate",
-      "toast"
+      "toast",
+      "getView"
     ],
     "styles": [
       "/web/receiving_waters.css",
