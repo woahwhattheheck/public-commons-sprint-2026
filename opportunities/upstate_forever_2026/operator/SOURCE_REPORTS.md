@@ -230,3 +230,134 @@ The existing catalogue additionally returns `retained_editions` for actual sourc
 Continue the same accepted source intake with its actual donor/receiving Workspaces and original files. Exercise document-only NC2022/GA2024 export and reimport after their actual original source import, plus an existing HTML report export to confirm the original path still operates. When a retained edition is restored without the installed publisher folder, use **Retained source editions** directly. Return actual archive bytes/SHA, manifest member, original and receiving collection/source IDs, completed import task and any first exception.
 
 The producing owner must OPEN and LOOK at the exact outgoing Sources and import views at desktop/screenshare and narrow/mobile widths. Operate ready/empty/search/loading/error states, download, import and reopen; inspect long identifiers and document titles for clipping or overflow. Download and extract the actual ZIP, compare its complete declared inventory through the original import, and literally open the contained scientific documents, data and final report. Code/V8 checks, HTTP success and screenshots that nobody viewed do not satisfy this inspection. Repair visible or functional defects in the original source and retain the actual result in the existing operation.
+
+
+## Included source ZIPs: preview and import without downloading first
+
+An installed edition can contain a complete original source ZIP and an
+`artifacts.json` inventory without a separate source manifest file. **Sources →
+Available source editions** now lists these editions alongside registered
+manifests. Choose **Preview included ZIP**, inspect the original source records
+in the normal import form, and choose **Import this source edition**.
+
+The first included edition is **Physical assessment coverage, measured E. coli
+and annual references**, under
+`results/native-assessment-annual-yields-20261013/`. Its unchanged inventory
+selects `native-assessment-microbial-delivery.zip` and its root
+`sources.json`. This is the complete annual-yield successor: 17 original typed
+source entries, native station geography, the measured 730-record source,
+assessment records, five original annual basins and the annual reference
+tables. The preview shows the actual entry count from that selected manifest;
+discovery does not infer a source count from the number of archive members.
+
+### Operator course
+
+1. Open **Sources** in the intended Workspace and choose **Refresh available
+   editions**. Search for “annual references”. The included ZIP row displays its
+   title, installed size, declared member count and original archive SHA256.
+2. Choose **Preview included ZIP**. The operator retains the unchanged ZIP,
+   checks its declared byte count and SHA256, and uses the existing archive
+   preview to select the exact original manifest. In a team operator,
+   server-owned included files follow the same administrator requirement as
+   registered source manifests.
+3. In **Import original source data**, review **Included source archive**, its
+   original filename and manifest path, and every original source title, kind,
+   role, publisher URI, vintage and units. Nothing has been imported yet.
+   Choose **Import this source edition** to use the original queued
+   `source.import` action. Changing to another source mode uses the normal
+   file/registered preview flow; returning to this included archive restores
+   this exact retained preview in the same Workspace.
+4. After the import task completes, return to Sources. **Retained in this
+   Workspace** is determined by the original manifest SHA256. **Open report**
+   opens the unchanged HTML, **Inspect retained edition** opens the source
+   record, and **Add source studies to report** appends the original scientific
+   recipe to the maintained ordered report composer.
+5. Continue the original scientific preview and saved-report flow. Inspect the
+   annual-yield section, original units and five basin denominators. The
+   report's existing native-station and measured-activity controls retain
+   their original source bindings; the 730 source rows are not relabelled as
+   the eight assessment records or four overlapping sites.
+6. Use **Download report and source edition** for the existing complete
+   retained-source export. Import that ZIP into the receiving Workspace through
+   **Import report ZIP**, then reopen the original report and inspect the
+   scientific source. Preserve the existing native operation and project when
+   continuing an already accepted receiving course.
+
+A missing ZIP, changed installed size or capacity problem is shown in **Source
+files need attention**. A changed inventory or mismatched ZIP/manifest hash
+stops preview and leaves the Workspace unmodified. Restore the complete source
+edition or use **Refresh available editions** after a deliberate installation
+update. Invalid ZIP structure or missing declared source members uses the
+original archive-preview error. The application never substitutes a similarly
+named report or guesses a manifest when several exist.
+
+### Installation and discovery
+
+Ship `operator/source_archive_ingress.py` with the maintained Source Reports
+provider, browser, descriptor and the source import form in `operator/web/app.mjs`.
+The original `operator/server.py`, ZIP validation and import task remain in use.
+
+The built-in inventory is
+`results/native-assessment-annual-yields-20261013/artifacts.json`; its exact ZIP
+must also be included. Existing `--source-root` directories may contain
+`artifacts.json` or `*-artifacts.json` directly, or the known application-relative
+inventory path. An explicitly configured inventory file also works. Discovery
+does not recursively walk a Workspace, scan archive contents, extract source
+files or hash the entire archive during refresh.
+
+A supported inventory uses the existing `commons.artifacts/v1` schema:
+
+```json
+{
+  "schema": "commons.artifacts/v1",
+  "title": "Original source edition title",
+  "archive": {
+    "path": "original-source-edition.zip",
+    "bytes": 12345,
+    "sha256": "<original ZIP SHA256>",
+    "manifest_member": "sources.json"
+  },
+  "files": [
+    {"path": "sources.json", "bytes": 1234, "sha256": "<original manifest SHA256>"}
+  ]
+}
+```
+
+The illustrative counts above are placeholders for the publisher's actual
+inventory. Keep every original member descriptor in a real inventory. Paths
+are canonical relative paths; the archive remains inside the selected edition.
+The import manifest requires its own original byte/hash descriptor. Inventory
+reads are limited to 4 MiB and 20,000 declared members. Archive upload and
+extraction limits remain the operator's existing configured limits.
+
+The catalogue returns `source_kind: "included_archive"`, an opaque
+`archive_id`, the original archive size/SHA, manifest name/SHA and readiness.
+It returns no selectable server filesystem path. A byte-identical, ready loose
+manifest already listed takes precedence over an included ZIP. A missing loose
+companion does not hide a complete included ZIP of that same edition. Explicit
+registered-source ordering and source kinds remain unchanged.
+
+`POST /api/source-reports/included-archive-preview` accepts only an
+`archive_id` from current discovery. It calls the original
+`Operator.receive_upload` and `Operator.preview_source`, then returns the
+same retained preview with its Workspace and archive identity. The browser
+rejects a changed Workspace, a superseded preview request or mismatched
+archive/manifest metadata before opening the import form. Navigating away
+discards a pending UI handoff; the original retained upload can still be reused
+by a later valid preview.
+
+### Native receiving and visual use
+
+Continue the original annual-yield receiving operation with this exact outgoing
+application. Operate the included ZIP row through preview, original queued
+import, report open, scientific preparation, complete source export and fresh
+Workspace reimport. Check the retained collection's root manifest identity
+against the inventory and retain the actual import task/collection IDs.
+Do not recalculate geography or the measured source just to verify this intake.
+
+Open the actual Sources and import screens at desktop/screenshare and narrow
+widths. Read the long edition title, original identities, source table and
+actionable missing/changed-file messages; operate the real controls. Open the
+resulting HTML, scientific report and exported/reimported source edition. A
+source review or simulated DOM does not establish that the delivered screens
+render correctly.

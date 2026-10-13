@@ -47,7 +47,7 @@ function download(url,label){
 export function attachSourceReports(host) {
   const scientific=attachScientificReportEditions(host);
   let panel=null,currentWorkspace=null,currentCatalogKey=null,reports=[],editions=[],discoveryIssues=[],selected=null,selectedMember=null;
-  let generation=0,detailGeneration=0,active=false,loading=null,query='',catalogError=null;
+  let generation=0,detailGeneration=0,archivePreviewGeneration=0,active=false,loading=null,query='',catalogError=null;
   let retainedEditions=[],editionGeneration=0;
   const editionDownloads=new Map();
   const request = (path,values={}) => host.api(host.endpoint(path,values));
@@ -106,20 +106,20 @@ export function attachSourceReports(host) {
   function renderEditions(){
     const words=String(query).trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
     const visible=editions.filter(row=>{
-      const text=[row.title,row.manifest_name,row.origin,...row.source_ids,...row.vintages,
+      const text=[row.title,row.manifest_name,row.archive_name,row.origin,...row.source_ids,...row.vintages,
         ...row.reports.flatMap(report=>[report.title,report.source_id,report.role]),
         ...(row.documents||[]).flatMap(document=>[document.title,document.source_id,document.role,document.path])].join(' ').toLocaleLowerCase();
       return words.every(word=>text.includes(word));
     });
     panel.querySelector('[data-source-report-editions]').innerHTML=
       '<section class="source-report-editions" aria-label="Available source editions"><h3>Available source editions</h3>'+
-      '<p>Preview original source metadata, then import the chosen edition into this Workspace. Retained HTML previews appear below. Original scientific documents can be added to the ordered report after import.</p>'+
+      '<p>Preview original source metadata, then import the chosen edition into this Workspace. Included ZIPs open directly here. Retained HTML previews appear below, and original scientific documents can be added to the ordered report after import.</p>'+
       (visible.length?'<div class="table-scroll"><table><thead><tr><th>Source edition</th><th>Original contents</th><th>Workspace status</th><th></th></tr></thead><tbody>'+
       visible.map(row=>{
         const retained=row.retained_collections||[],linked=row.retained_reports||[];
         const previewIDs=new Set(row.reports.map(report=>report.source_id));
         const documents=(row.documents||[]).filter(document=>!previewIDs.has(document.source_id));
-        const scientific=row.retained_scientific_sources||[];
+        const scientific=row.retained_scientific_sources||[],included=row.source_kind==='included_archive';
         const status=retained.length?'Retained in this Workspace':row.ready?'Ready to preview':'Source files need attention';
         const actions=linked.length?linked.map(report=>'<button type="button" data-source-report-action="open" data-report-key="'+
           esc(rowKey(report))+'">Open '+esc(report.title)+'</button>').join(''):
@@ -127,9 +127,19 @@ export function attachSourceReports(host) {
         const scientificActions=retained.filter(collection=>scientific.some(source=>source.source_collection_id===collection.id))
           .map(collection=>'<button type="button" data-source-report-action="edition-scientific" data-collection-id="'+
             esc(collection.id)+'" data-manifest-sha="'+esc(row.manifest_sha256)+'">Add source studies to report</button>').join('');
+        const contents=(Number.isInteger(row.entry_count)?row.entry_count.toLocaleString()+' original sources · ':'')+
+          row.member_count.toLocaleString()+(included?' declared files':' files');
+        const importAction=included
+          ?'<button type="button" data-source-report-action="preview-archive" data-archive-id="'+esc(row.archive_id)+'">'+
+            (retained.length?'Review archive metadata':'Preview included ZIP')+'</button>'
+          :'<button type="button" data-source-report-action="preview-edition" data-registered-id="'+esc(row.registered_id)+'">'+
+            (retained.length?'Review import metadata':'Preview and import')+'</button>';
         return '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.vintages.join(' · '))+'</small><small>'+
-          esc(row.origin)+' · '+esc(row.manifest_name)+'</small></td><td>'+row.entry_count.toLocaleString()+
-          ' original sources · '+row.member_count.toLocaleString()+' files'+
+          esc(row.origin)+' · '+esc(included?row.archive_name:row.manifest_name)+'</small>'+
+          (included?'<small>'+size(row.archive_bytes)+' · ZIP</small>':'')+'</td><td>'+contents+
+          (included?'<p class="note">Preview lists the exact source entries before import.</p><details><summary>Original archive identity</summary>'+
+            '<p>Import manifest: <span class="mono">'+esc(row.manifest_name)+'</span></p>'+
+            '<p class="mono">SHA256 '+esc(row.archive_sha256)+'</p></details>':'')+
           (row.reports.length?'<ul>'+row.reports.map(report=>'<li>'+esc(report.title)+'<small>'+esc(report.vintage)+
             ' · '+esc(labels[report.role]||report.role||report.kind)+'</small></li>').join('')+'</ul>':'')+
           (documents.length?'<ul>'+documents.map(document=>'<li>'+esc(document.title)+'<small>'+esc(document.vintage)+
@@ -138,9 +148,7 @@ export function attachSourceReports(host) {
           (row.regional_context?'<small>Regional watershed source context</small>':'')+'</td><td>'+esc(status)+
           (row.problems.length?'<details><summary>'+row.problems.length+' source file issue'+(row.problems.length===1?'':'s')+
             '</summary><ul>'+row.problems.map(item=>'<li><span class="mono">'+esc(item.member)+'</span>: '+esc(item.reason)+'</li>').join('')+'</ul></details>':'')+
-          '</td><td><div class="inline-actions">'+actions+scientificActions+
-          (row.ready?'<button type="button" data-source-report-action="preview-edition" data-registered-id="'+esc(row.registered_id)+'">'+
-            (retained.length?'Review import metadata':'Preview and import')+'</button>':'')+'</div></td></tr>';
+          '</td><td><div class="inline-actions">'+actions+scientificActions+(row.ready?importAction:'')+'</div></td></tr>';
       }).join('')+'</tbody></table></div>':'<p class="note">'+(editions.length?'No available edition matches this search.':
         'No bundled report edition is available here. Import a report ZIP, or register its original source manifest when starting this operator.')+'</p>')+
       (discoveryIssues.length?'<details><summary>Source discovery details</summary><ul>'+
@@ -331,8 +339,33 @@ export function attachSourceReports(host) {
     }catch(error){if(valid(workspace,ticket))status.textContent=error.message||String(error);}
     finally{if(button.isConnected)button.disabled=false;}
   }
+  async function previewIncludedArchive(button){
+    const row=editions.find(item=>item.archive_id===button.dataset.archiveId);
+    if(!row?.ready||row.source_kind!=='included_archive')
+      throw Error('Refresh and choose an available included source ZIP.');
+    const workspace=host.getWorkspace(),ticket=generation,requestTicket=++archivePreviewGeneration;
+    const current=()=>active&&valid(workspace,ticket)&&requestTicket===archivePreviewGeneration;
+    button.disabled=true;
+    showError({message:'Checking '+row.archive_name+' and its original import manifest…'});
+    try{
+      const result=await host.api(host.endpoint('/api/source-reports/included-archive-preview'),{
+        method:'POST',body:{archive_id:row.archive_id},
+      });
+      if(!current())return;
+      if(result.workspace_key!==workspace||result.archive_id!==row.archive_id||
+        result.archive?.sha256!==row.archive_sha256||result.archive?.bytes!==row.archive_bytes||
+        result.preview?.manifest_sha256!==row.manifest_sha256||
+        result.preview?.manifest_member!==row.manifest_name)
+        throw Error('The returned archive differs from the selected edition. Refresh its source metadata.');
+      showError({message:'Original ZIP checked. Review the source entries in the import form.'});
+      return host.openSourceImport({mode:'included',includedArchive:result});
+    }catch(error){if(current())showError({message:'Included ZIP: '+(error.message||String(error))});}
+    finally{if(button.isConnected)button.disabled=false;}
+  }
   async function dispatch(button){
     const action=button.dataset.sourceReportAction;
+    if(action==='preview-archive')return previewIncludedArchive(button);
+    archivePreviewGeneration++;
     if(action==='refresh')return catalog(true);
     if(action==='preview-edition'){
       const row=editions.find(item=>item.registered_id===button.dataset.registeredId);
@@ -380,13 +413,13 @@ export function attachSourceReports(host) {
     await Promise.all([catalog(),scientific.mount(panel.querySelector('[data-scientific-reports]'))]);
   }
   function detach(){
-    active=false;editionGeneration++;
+    archivePreviewGeneration++;active=false;editionGeneration++;
     for(const [key,value] of editionDownloads)if(value.busy)editionDownloads.delete(key);
     scientific.detach();if(panel)panel.hidden=true;
   }
   function reset(){
     scientific.reset();
-    generation++;detailGeneration++;editionGeneration++;editionDownloads.clear();retainedEditions=[];
+    generation++;detailGeneration++;archivePreviewGeneration++;editionGeneration++;editionDownloads.clear();retainedEditions=[];
     loading=null;currentCatalogKey=null;reports=[];editions=[];discoveryIssues=[];selected=null;selectedMember=null;query='';catalogError=null;
     if(panel){panel.remove();panel=null;}currentWorkspace=null;active=false;
   }
