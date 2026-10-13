@@ -25,9 +25,11 @@ VERSION = 1
 def _capture(workspace, selection):
     if not isinstance(selection, dict):
         raise ValueError("Choose a saved original watershed study")
-    allowed = {"network_id", "preparation_id", "title"}
+    allowed = {"network_id", "preparation_id", "title", "include_maps"}
     if set(selection) - allowed:
         raise ValueError("Unknown source-water report selection fields")
+    if "include_maps" in selection and not isinstance(selection["include_maps"], bool):
+        raise ValueError("Choose whether to include projected original-source maps")
     preparation = None
     preparation_id = selection.get("preparation_id")
     if preparation_id is not None:
@@ -70,6 +72,11 @@ def _capture(workspace, selection):
                 "prepared_result": ({key: prepared_result[key] for key in ("sha256", "bytes")} if prepared_result else None),
                 "source_members": {name: {key: item[key] for key in ("sha256", "bytes")}
                                    for name, (_, item) in sorted(source_files.items())}}
+    if selection.get("include_maps", False):
+        from . import receptor_report_maps
+        selected["include_maps"] = True
+        identity["version"] = 2
+        identity["native_map_runtime"] = receptor_report_maps.runtime()
     return selected, identity, source_files, product, network, preparation
 
 
@@ -205,12 +212,17 @@ def _sections(product, network, preparation, title):
     return summary, sections
 
 
-def _html(title, sections, geography):
+def _html(title, sections, geography, maps=None):
     output = ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
               '<meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escape(title) + '</title>',
               '<style>body{font:14px/1.5 system-ui;color:#202327;background:white;max-width:1280px;margin:32px auto;padding:0 24px}h1{font-size:27px}h2{font-size:20px;margin-top:30px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ccc;padding:7px;text-align:left;vertical-align:top}th{background:#eee}a{color:inherit}img{width:100%;height:auto}p,td{overflow-wrap:anywhere}@media print{body{margin:10mm;padding:0}thead{display:table-header-group}tr{break-inside:avoid}table{font-size:9px}}</style></head><body><h1>' + escape(title) + '</h1>']
     if geography:
         output.append('<figure><img src="' + escape(geography, quote=True) + '" alt="Retained original watershed geography"><figcaption>Original geographic view from the saved drainage study.</figcaption></figure>')
+    if maps:
+        output.append("<section><h2>Original projected watershed maps</h2><p>Light grey marks upstream HUC12 units; dark outlines mark original anchor polygons. Numbered labels identify receiving areas. Scale is projected grid distance.</p>")
+        for figure in maps["figures"]:
+            output.append('<figure><h3>' + escape(figure["title"]) + '</h3><img src="' + escape(figure["path"], quote=True) + '" alt="' + escape(figure["caption"], quote=True) + '"><figcaption>' + escape(figure["caption"]) + '</figcaption><p><a href="' + escape(figure["path"], quote=True) + '">Download original vector figure</a></p></figure>')
+        output.append("</section>")
     for heading, blocks in sections:
         output.append("<section><h2>" + escape(heading) + "</h2>")
         for block in blocks:
@@ -267,6 +279,22 @@ def build(workspace, selection):
                 raise ValueError("The original watershed product changed during source capture: " + name)
             atomic_bytes(directory / name, raw, immutable=True)
         summary, sections = _sections(product, network, preparation, selected["title"])
+        maps = None
+        if selected.get("include_maps", False):
+            from . import receptor_report_maps
+            maps = receptor_report_maps.prepare(directory, product, network, preparation, identity["native_map_runtime"])
+            summary["projected_maps"] = maps["summary"]
+            sections.insert(1, ["Original projected map interpretation", [
+                "Scientific figures show the saved original HUC12 memberships and anchor polygons in their native projected coordinate reference. "
+                "Grey fills are geographic support; they do not encode concentrations or additive quantities. "
+                "The original Esri reader assembles rings and records geometry repairs in the retained inventory.",
+                "Scale bars use projected grid metres. In EPSG:3857 these are not corrected ground distances. "
+                "Published area totals continue to use the original AreaSqKm attributes.",
+                {"kind": "links", "items": [
+                    {"title": "Original geometry interpretation and native runtime", "path": receptor_report_maps.READER},
+                    {"title": "Complete native figure specification", "path": maps["figure_spec"]},
+                ]},
+            ]])
         atomic_json(directory / "summary.json", summary, immutable=True)
         provenance = {"schema": "upstate.receptor-report-provenance/v1",
                       "report_id": key, "identity": identity,
@@ -274,16 +302,21 @@ def build(workspace, selection):
                       "network_id": product["id"], "preparation_id": selected["preparation_id"]}
         atomic_json(directory / "provenance.json", provenance, immutable=True)
         originals = [describe_file(directory, directory / name) for name in sorted(sources)]
-        inputs = originals + [describe_file(directory, directory / name) for name in ("summary.json", "provenance.json")]
+        map_files = maps["files"] if maps else []
+        inputs = originals + map_files + [describe_file(directory, directory / name) for name in ("summary.json", "provenance.json")]
         recipe = {"schema": RECIPE_SCHEMA, "title": selected["title"],
                   "source_scope": "Original watershed topology and prepared source geometry",
                   "inputs": [{name: item[name] for name in ("path", "bytes", "sha256")} for item in inputs],
                   "sections": sections,
                   "source_links": ["index.html", "summary.json", "provenance.json"] + sorted(sources)}
+        if maps:
+            recipe["figure_spec"] = maps["figure_spec"]
+            recipe["figures"] = [{name: item[name] for name in ("id", "path")} for item in maps["figures"]]
+            recipe["source_links"].extend(item["path"] for item in map_files)
         atomic_json(directory / "observed-report.json", recipe, immutable=True)
         geography = ("network/" + product["files"]["geography"]["path"]) if product["files"].get("geography") else None
-        atomic_bytes(directory / "index.html", _html(selected["title"], sections, geography), immutable=True)
-        paths = sorted(sources) + ["summary.json", "provenance.json", "observed-report.json", "index.html"]
+        atomic_bytes(directory / "index.html", _html(selected["title"], sections, geography, maps), immutable=True)
+        paths = sorted(sources) + [item["path"] for item in map_files] + ["summary.json", "provenance.json", "observed-report.json", "index.html"]
         descriptors = [describe_file(directory, directory / name) for name in paths]
         source_id = "source-water-geography-" + key[:24]
         manifest = {"schema": "upstate.sources/v1", "title": selected["title"],
@@ -304,6 +337,7 @@ def build(workspace, selection):
         from .observed_context import bind
         binding = bind(workspace, {"source_roles": {"OBSERVED_CONTEXT": choice}})
         files = {"source_%04d" % i: item for i, item in enumerate(originals)}
+        files.update({"map_%04d" % i: item for i, item in enumerate(map_files)})
         files.update({name: describe_file(directory, directory / filename) for name, filename in
                       (("summary", "summary.json"), ("provenance", "provenance.json"),
                        ("recipe", "observed-report.json"), ("report", "index.html"), ("manifest", "sources.json"))})
@@ -329,6 +363,8 @@ def main(argv=None):
     create.add_argument("--network")
     create.add_argument("--prepared")
     create.add_argument("--title")
+    create.add_argument("--include-maps", action="store_true",
+                        help="Render original projected watershed figures with the installed native GIS/ReportLab runtime")
     check = commands.add_parser("inspect", help="Reopen the exact retained source and original companions")
     check.add_argument("id")
     args = parser.parse_args(argv)
@@ -342,6 +378,8 @@ def main(argv=None):
         selection = {key: value for key, value in
                      (("network_id", args.network), ("preparation_id", args.prepared), ("title", args.title))
                      if value is not None}
+        if args.include_maps:
+            selection["include_maps"] = True
         result = build(workspace, selection)
     print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
 

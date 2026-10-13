@@ -8,7 +8,8 @@
     "scenario-footprint.html",
     "scenario-footprint.css",
     "scenario-footprint.mjs",
-    "scenario-footprint-nav.mjs"
+    "scenario-footprint-nav.mjs",
+    "scenario_input_review.mjs"
   ],
   "backend": {
     "module": "scenario_footprint",
@@ -63,6 +64,14 @@
       "handler": "verify_workspace",
       "args": [
         "workspace"
+      ]
+    },
+    "state": {
+      "key": "scenario_footprints",
+      "handler": "state_snapshot",
+      "args": [
+        "operator",
+        "workspace_key"
       ]
     }
   },

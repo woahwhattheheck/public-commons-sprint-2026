@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "simulated-headwaters-demo",
-  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/commons/simulated-headwaters-demo-20261013",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/commons/simulated-headwaters-full-course-20261013",
   "components": {
     "simulated-headwaters-demo": {
       "title": "Simulated headwaters native case and operated teaching course",
@@ -21,7 +21,16 @@
         "operator/rehearsal_cli.py",
         "operator/web/rehearsal.mjs",
         "operator/web/rehearsal.css",
-        "operator/install_rehearsal.py"
+        "operator/install_rehearsal.py",
+        "source_tools/simulated_headwaters_control.py",
+        "source/simulated_headwaters_20261013/matched-control.json",
+        "source/simulated_headwaters_20261013/generate-matched-control.mjs",
+        "source/simulated_headwaters_20261013/MATCHED_CONTROL.md",
+        "source_tools/simulated_routing_check.py",
+        "source/simulated_headwaters_20261013/terrain-diagnostic.mjs",
+        "source_tools/prepare_simulated_fieldwork.py",
+        "model/simulated_fieldwork.py",
+        "docs/SIMULATED_FIELDWORK.md"
       ],
       "requires": [
         "core",
@@ -29,12 +38,14 @@
         "native-process-reports",
         "guided-journey",
         "project-continuity",
-        "delivery-datasets"
+        "delivery-datasets",
+        "implementation",
+        "headwaters-parameter-course"
       ],
       "source_reference": {
         "operation": "UPSTATE-DEMO-SIMULATED-INPUTS-20261013T140000Z",
         "coordination": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791874400339759",
-        "case_source": "4d1f6fb187b9d4da9ad31541acad60d0d46ccc61"
+        "case_source": "32a8937b61b0023ad969f89a901287da6ab7b1ae"
       }
     }
   },
