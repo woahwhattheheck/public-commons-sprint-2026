@@ -1,5 +1,6 @@
 // Source-bound programme reporting for the original assessment/station editions.
 import { createArchiveCodec } from "./archive_codec.mjs";
+import { addAnnualReferenceMapHtml } from "./annual_reference_maps.mjs";
 import { joinAssessmentIdentities } from "./station_assessment_identity.mjs";
 import { renderAssociationReviewer } from "./assessment_association_reviewer.mjs";
 import { renderNativeAssessmentReviewer, annualReferenceInterpretation, annualReferenceCsv } from "./native_assessment_reviewer.mjs";
@@ -78,7 +79,7 @@ function nativeGeography(text, records) {
       sha256: sha(text), bytes: codec.utf8Encode(text).length }, stations: result };
 }
 
-export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography, nativeAnnualContext, nativeMicrobialContext, nativeMicrobialObservations }) {
+export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography, nativeAnnualContext, nativeMicrobialContext, nativeMicrobialObservations, nativeAnnualMaps }) {
   const joined = joinAssessmentIdentities(assessments, identityCrosswalk);
   const programme = parse(priorities, "original programme crosswalk");
   if (programme.schema !== "upstate.source-priority-assessment-crosswalk/v2" ||
@@ -210,6 +211,15 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
     files["inputs/microbial-assessment-observations.csv"] = nativeMicrobialObservations;
   }
   result.inputs = Object.entries(files).filter(([path]) => path.startsWith("inputs/")).map(([path,text]) => identity(path,text));
+  if(nativeAnnualMaps){
+    if(!nativeAnnual||nativeAnnualMaps.context?.schema!=="upstate.annual-reference-basin-maps/v1"||
+       nativeAnnualMaps.context.input_sha256!==nativeAnnual.input_sha256||
+       nativeAnnualMaps.context.annual_source?.sha256!==sha(nativeAnnualContext))
+      throw Error("Annual map source binding differs from the selected report context.");
+    result.annual_reference_map={edition:nativeAnnualMaps.context.edition,
+      source:nativeAnnualMaps.context.annual_source,
+      geometry:identity("annual-reference-basin-map.json",nativeAnnualMaps.files["annual-reference-basin-map.json"])};
+  }
   files["assessment-associations.json"] = json(result);
   const flattened = records.map(row => ({ ...row,
     assessment_watershed_name: row.assessment_programme.name,
@@ -243,6 +253,13 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
     renderNativeAssessmentReviewer({result,context:parse(geography,"completed native geography"),annual:nativeAnnual,html:reviewHtml}) : reviewHtml;
   if (microbial) files["OPEN_ASSESSMENT_ASSOCIATIONS.html"] = renderNativeMicrobiology({
     html:files["OPEN_ASSESSMENT_ASSOCIATIONS.html"],bound:microbial});
+  if(nativeAnnualMaps){
+    for(const [path,body] of Object.entries(nativeAnnualMaps.files)){
+      if(files[path]!==undefined)throw Error("Annual map output collides with an existing report file.");
+      files[path]=body;
+    }
+    files["OPEN_ASSESSMENT_ASSOCIATIONS.html"]=addAnnualReferenceMapHtml(files["OPEN_ASSESSMENT_ASSOCIATIONS.html"],nativeAnnualMaps);
+  }
   const reportIdentity = identity("assessment-associations.json", files["assessment-associations.json"]);
   const sourceId = "assessment-association-report-" + reportIdentity.sha256.slice(0,20);
   files["artifacts.json"] = json({schema:"commons.artifacts/v1",source_id:sourceId,files:Object.entries(files).map(([path,text])=>identity(path,text))});
