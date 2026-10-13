@@ -33,8 +33,20 @@ async function transaction(mode, operation) {
 
 export function listDrafts() {
   return transaction('readonly', (store, done) => {
-    const request = store.getAll();
-    request.onsuccess = () => done(request.result.map(({ input, ...metadata }) => metadata).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+    const metadata = [];
+    // Keep the original key order for equal timestamps without materializing
+    // every complete saved input at once merely to open a draft selector.
+    const request = store.openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) {
+        done(metadata.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+        return;
+      }
+      const { input, ...record } = cursor.value;
+      metadata.push(record);
+      cursor.continue();
+    };
   });
 }
 
