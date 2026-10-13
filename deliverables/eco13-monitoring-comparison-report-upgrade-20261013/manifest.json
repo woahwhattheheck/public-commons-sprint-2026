@@ -668,5 +668,29 @@
     "historical_map_editions": 2,
     "historical_vector_editions": 3
   },
-  "data_custody": "The original retained Workspace supplies its exact native sources, completed plans, campaigns and model runs. Original broader source manifests remain intact; this bank performs no scientific data import."
+  "data_custody": "The original retained Workspace supplies its exact native sources, completed plans, campaigns and model runs. Original broader source manifests remain intact; this bank performs no scientific data import.",
+  "bootstrap": {
+    "path": "bootstrap/source_tools/application_assembly.py",
+    "bytes": 83770,
+    "sha256": "a0010a624c9d1fc5a765eaf7a0e99474f88c41df1f4f6dbefdd54f22902b3ce7",
+    "source_path": "opportunities/upstate_forever_2026/source_tools/application_assembly.py",
+    "source_commit": "39a1b704557493ed5b4dc495a7e5fa47362d18df"
+  },
+  "native_receiving": {
+    "path": "receive_native.py",
+    "bytes": 14410,
+    "sha256": "7e3062aacf90d4ed21bcce16e8b13a1ff797af4a5a9b2c9db602827cd434f62c",
+    "original_apis": [
+      "monitoring_frontier_comparison.prepare",
+      "monitoring_frontier_comparison.export_comparison",
+      "monitoring_report_source.prepare",
+      "monitoring_report_source.inspect",
+      "scientific_report_editions.preview",
+      "scientific_report_editions.render",
+      "scientific_report_editions.inspect",
+      "ScientificReportEditions.export",
+      "portable.backup",
+      "portable.restore"
+    ]
+  }
 }
