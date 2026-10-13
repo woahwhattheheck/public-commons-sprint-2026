@@ -6,15 +6,16 @@ The core imports supplied evidence. It does not migrate tenant content, look up 
 
 ## Installed source and runtime
 
-The five coupled core files are:
+The coupled core files are:
 
 - migration_store.py — original SQLite, immutable source objects, operations, snapshots, owner lock.
 - migration_formats.py — streaming original report/inventory parsing and explicit nullable fields.
 - migration_reconcile.py — immutable selected-round reconciliation and comparison.
 - migration_workspace.py — public dispatch, reviewed mappings, corrections, paginated views.
+- migration_cases.py — explicit case/document/link projections, cutoff/destination plans, independent rehearsals, immutable reviews and cutover decisions in the same original store.
 - migration_cli.py — complete native command, original file intake/export, snapshot and portable receiving entry.
 
-The full application also includes the maintained server, interface, portable/report modules and guides. Delivery requires the installed complete application roster used by migration_portable.py. Copying these five files alone does not claim to be the whole receiving product.
+The full application also includes the maintained server, interface, portable/report modules and guides. Delivery requires the installed complete application roster used by migration_portable.py. The current complete roster is 21 files: the original 16 plus migration_cases.py, public/migration-cases.js, CASE_MIGRATION.md, CASE_RECEIVING.md and case_receiving.py. Its exact application_profile is commons.case-migration-application/v1. Complete old 16-file packages remain valid under their original profile; an already frozen preparation retains that selected roster. Copying only core modules does not produce the whole receiving application.
 
 The core uses the Python standard library on Linux, Python 3.10 or later. It uses fcntl for the original exclusive owner lock and a held /proc/self/fd path to inspect exact SQLite snapshot bytes. Browser clients do not need Python. No package download is required by the core.
 
@@ -103,7 +104,46 @@ dispatch(operation,payload) returns ordinary JSON-compatible dictionaries.
 | operation.get | {id}; original operation and continuation evidence |
 | events | {offset?,limit?}; full revision-ordered event history |
 
-Paged results are {rows,total,offset,limit}. The default limit is 100; the maximum is 500. entity.list kinds are source, round, mapping, evidence_link, reconciliation, correction, delivery and workspace_edit. Search affects discovery only; identity matching remains exact and case-sensitive. Older IDs remain usable even when outside state’s summaries.
+Paged results are {rows,total,offset,limit}. The default limit is 100; the maximum is 500. entity.list kinds include source, round, mapping, evidence_link, reconciliation, correction, delivery, workspace_edit and the new case_dataset, case_plan, case_rehearsal, case_review and case_cutover entities. Search affects discovery only; identity matching remains exact and case-sensitive. Older IDs remain usable even when outside state’s summaries.
+
+## Case and document operating contract
+
+Case records share the original entities, operation ledger, object store and SQLite snapshot. Indexed case_dataset_rows and case_items retain every projected occurrence and plan/rehearsal result. They are included by the same complete database backup and portable receive; no second case database is created.
+
+### Mutations
+
+Every operation below uses the original operation_id / expected_revision / actor envelope. Bodies and selected dependencies become immutable accepted editions; corrections use explicit parent IDs.
+
+| Operation | Actual selected fields |
+| --- | --- |
+| case.dataset.create | title, source_id, kind cases/documents/links, side source/target/receipt, destination, exact columns selectors, explicit value_maps, review_note, optional parent_dataset_id |
+| case.plan.create | title, source_dataset_ids, explicit-offset cutoff_at, live_statuses, closed_statuses, max_snapshot_age_seconds, document_identity, multi_case_policy, checks, review_note, optional parent_plan_id/note |
+| case.rehearsal.create | title, plan_id, independent target_dataset_ids, separate receipt_dataset_ids, note, optional parent_rehearsal_id |
+| case.review.create | rehearsal_id, exact item_id, disposition, reason, assigned_to, evidence_row_ids, current parent_review_id for a successor |
+| case.cutover.create | title, rehearsal_id, decision/reason/owner, window_start/window_end, rollback, current review_ids, complete tasks with evidence_file_sha256s, optional parent_cutover_id |
+
+Column selectors are exactly {column:original_heading} or {pointer:RFC6901_pointer}. The installed case.schema lists fields, constraints and allowed vocabularies. Full original values, presence states, selectors, row references and findings remain in projections. Structured custom values use recursive typed encoding; built-in normalized fields retain their documented types.
+
+The plan freezes exact source editions and the supplied cutoff/status policy. Independent targets and reported loader receipts remain separate. Rehearsal items preserve original expected/observed/reported rows and per-field checks. A review successor requires the current predecessor; a cutover selects only current unsuperseded acceptances and retained evidence for completed tasks.
+
+### Complete reads and exports
+
+| Read | Selection |
+| --- | --- |
+| case.schema | Exact installed contract |
+| case.list | kind dataset/plan/rehearsal/review/cutover, offset/limit/query |
+| case.dataset.get / case.plan.get / case.rehearsal.get / case.review.get / case.cutover.get | Exact immutable id |
+| case.dataset.preview | Actual dataset configuration plus explicit page |
+| case.dataset.rows | id plus offset/limit/query |
+| case.plan.items | id plus offset/limit and optional kind/query |
+| case.rehearsal.items | id plus offset/limit and optional kind/status/query |
+| case.rehearsal.compare | before_id, after_id, offset/limit; matching scope/namespace/identity policy required |
+
+Rows retain the original page shape {rows,total,offset,limit}; the maximum limit remains 500. Comparison records preserve before/after objects and the actual transition classification.
+
+workspace.iter_export accepts case.dataset, case.plan, case.rehearsal, case.review and case.cutover with csv or ndjson. It holds the original mutex while yielding the full selection and rows. NDJSON identifies selection and record wrappers; CSV includes the same complete JSON beside safe indexing columns. Exact original JSON is never rewritten to sanitize a spreadsheet label. Browser GET /api/exports exposes these streams with a complete original file length.
+
+Reports include every immutable case descriptor and all projected/result populations, preserving the original file-evidence reports. Complete portable packages include both reports and the full same-store source/decision history. [CASE_MIGRATION.md](CASE_MIGRATION.md) covers actual operator use; [CASE_RECEIVING.md](CASE_RECEIVING.md) specifies the full original-case/customer-return programme.
 
 ## Original input profiles
 
