@@ -167,3 +167,17 @@ class ConservationDesign:
             "scenario_id": result.get("scenario_id"), "run_id": result.get("run_id"),
         }
         return value
+
+    def verify_workspace(self, workspace):
+        """Reopen the original retained designs after portable receiving."""
+        from model import conservation_design as original_design
+        summary = original_design.overview(workspace)
+        preparations = [original_design.get_preparation(workspace, row["id"])
+                        for row in summary["preparations"]]
+        receivings = [original_design.get_receiving(workspace, row["id"])
+                     for row in summary["receivings"]]
+        return {
+            "conservation_design_preparations": [row["id"] for row in preparations],
+            "conservation_design_receivings": [row["id"] for row in receivings],
+            "verified_count": len(preparations) + len(receivings),
+        }
