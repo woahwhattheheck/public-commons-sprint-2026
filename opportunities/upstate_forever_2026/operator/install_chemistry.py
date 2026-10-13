@@ -54,6 +54,13 @@ ORIGINAL_SHA256 = {
     "install_chemistry.py": "0229658125241edcc07b54bcd3a199c2e1f8ad06a85806044e404706052495ba"
 }
 
+# Exact native-registry predecessors; independently changed files still require
+# reconciliation before replacement.
+PREVIOUS_NATIVE_SHA256 = {
+    "operator/chemistry.py": "26cb08accf987602d1874775d9c61af4c13643ea5de3e8549c9331f9e7cf0541",
+    "operator/install_chemistry.py": "cc1eeeff12c27895497bfb9739e63502aa76ac22379c7d4073337cff79efcea5"
+}
+
 
 def install(application, source_root=None, dry_run=False):
     target = Path(application).resolve(strict=True)
@@ -77,7 +84,8 @@ def install(application, source_root=None, dry_run=False):
             destination = target / name
             current = destination.read_bytes() if destination.is_file() else None
             if (current is not None and current != body
-                    and hashlib.sha256(current).hexdigest() != ORIGINAL_SHA256.get(name)):
+                    and hashlib.sha256(current).hexdigest() not in
+                    {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = body, current
         descriptor = json.loads(pending["operator/extensions/chemistry.json"])
