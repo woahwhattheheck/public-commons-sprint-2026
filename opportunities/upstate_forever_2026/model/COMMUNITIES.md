@@ -304,3 +304,43 @@ The original Community source must match between parent and child, and the
 revision must point to its immediate predecessor. The existing **Add to scientific
 report** workflow carries the same register and all three original companions into
 the ordered scientific report.
+
+
+## Continue mapped Community work through scientific reporting and receiving
+
+The mapped receiving programme now continues the same saved Community case through the complete source handover and the ordinary scientific report composer. Run the existing `operator/community_receiving.py` command above with the actual original Workspace, original plan/report pair, current complete source commit and installed Node/Playwright/Chromium. Keep the same output directory and original operator request journal.
+
+### Original editable input and archived reports
+
+The original Community6730/1280 receiving result has project `1c9d74a3-b813-4ef4-9db3-4a40cfb124f7`, revised plan `d35858b2c34b63c48b5bb2c0298ce94bfe7c19f8ebb4100e7506be3ca6c608ba`, and report `153c431c1617bf3d47195fea1c83dd9d455c5ba28fa484ca78fa00f3ab098e91`. Select its existing registered Workspace or a complete original Workspace/Study receiving that preserves its source, table, plan and report records.
+
+The 270,296-byte, 33-member original result package (SHA256 `dd952535cc715a9a12aa2f665c5cddae0878dcb55d11792cd70e8cdbd1cc685e`) carries the original report and operated case files. It is a result package rather than the full editable Workspace. Its original report can enter an existing receiving Workspace through `model.community_report_context.prepare_archive` and `model.community_report_handover.export_archive`, using the exact inner archive, saved report record, original project UUID and original report JSON SHA256. Those maintained APIs preserve the donor provenance; they do not synthesize the missing editable donor registry.
+
+For the complete mapped programme, obtain the existing donor's full maintained Workspace backup or original Study transfer from its actual source owner. The native backup API is `model.portable.backup(Workspace(original_workspace), new_destination, include_intermediates=True, include_deliveries=True)`. It uses the original Workspace locks and complete source/working archive. Restore it through the existing portable receiver and continue the original plan/report pair. Preserve any current accepted native course and its original output directory.
+
+### One continuous operator course
+
+After retaining the original mapped CSV, plan revision and format-7 Community report, the same browser programme:
+
+1. Prepares the original and revised report sources through **Use in scientific report** and the original task queue. It verifies both distinct source editions and downloads all source-operation files.
+2. Exports the revised report's complete source handover ZIP, downloads it through the actual operator control, chooses that file in **Receive source handover**, reviews its original project/report/plan identity, and receives the unchanged archive through the original action.
+3. Opens the original report source with **Open this report only**, retains the existing composer contact fields, enters the report title, and uses **Add to current report** for the received mapped edition. Repeating Add keeps one copy of the selected source and preserves title/contact/order. Reloading the operator reopens that exact draft.
+4. Previews the ordered original sources and prepares the saved scientific report through the original native renderer. A previously completed exact edition is reopened. A retained request resumes the same action/operation ID rather than creating another render.
+5. Opens the actual rendered HTML on desktop and at 390 pixels, reads the mapped column headings and unchanged CSV SHA256 in its provenance section, and downloads every complete PDF/HTML/data/source attachment plus the full report ZIP.
+6. Saves the original Community view and notes, backs up the entire Workspace, restores it independently, and verifies the unchanged original source collections, Community plans/reports, source handover, scientific edition and every attachment. The delivered application then starts in its own existing native receiving phase; the browser opens and reloads the scientific report there again.
+
+The only new source module is `operator/community_scientific_receiving.mjs`. It borrows the original browser, selected Workspace, task dispatcher, output journal and download transport. The original Python receiver, original Node entry and source guide carry the integration. The initial non-mapped Community course keeps its established operating sequence.
+
+### Complete application and restart identity
+
+The whole Workspace archive carries the maintained report-source, handover, scientific composer, renderer, original Source reader and their full existing dependencies. The Python receiver now explicitly verifies the restored Community/scientific course and these coupled application leaves against the selected source edition. A complete source checkout or maintained cumulative source receiver supplies the application; copying only this companion file is insufficient.
+
+New source/report actions are keyed by the selected application commit inside the original course's `delivery_editions`. Previous completed archives remain retained. Original task requests are saved before HTTP dispatch. A saved response resumes the original task and its complete payload. Existing complete downloaded files must match their original byte count and SHA256 before reuse; source and rendered-report identities are compared again after independent receiving.
+
+The original browser result now includes `community_scientific` with the original/revised source identities, full collection records, handover file, source task IDs, ordered report selection, complete saved scientific edition, every downloaded member and ZIP. The Python result includes the same complete course descriptor. Failed or interrupted work keeps the original request, input selection, source edition, output directory and accepted native process for continuation.
+
+### Inspect the delivered product
+
+Use the actual screenshots and files from this original programme. Open and view the desktop and narrow Community intake, complete handover preview, ordered scientific composer, populated report and independently reopened report. Open the generated PDF pages and HTML and inspect the mapped-column/line record alongside the complete attached CSV and `INTERVENTION_IMPORT.json`. Check every affected downloadable attachment and reopen the full editable Workspace on the receiving side. Repair a concrete visual, interaction or file defect in the same source/course before returning the product.
+
+Preserve the complete current `CURRENT_OWNER_DIRECTION.md` with any child or equipped-host handoff. Keep original attribution, units, domain/reporting-mask distinction, scientific source editions and current operators. Community source preparation and scientific rendering use the retained actual reports; they do not launch another environmental model.
