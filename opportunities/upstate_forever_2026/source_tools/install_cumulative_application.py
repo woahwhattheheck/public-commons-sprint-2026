@@ -158,9 +158,16 @@ def shared_lifecycle(root):
     text = text.replace("async function selectWorkspace(id){\n conservation.detach();\n",
                         "async function selectWorkspace(id){\n", 1)
     text = replace(text, guard, guard + cleanup, "desk lifecycle after original draft guard")
-    text = replace(text, "toast(actionLabels[action]+' retained.');",
-                   "toast((actionLabels[action]||action)+' retained.');",
-                   "registered action completion label")
+    # The shared-host installer has emitted both authored fallback spellings.
+    # Normalize the older fallback before accepting the current one on replay.
+    old_confirmation = "toast((actionLabels[action]||action)+' retained.');"
+    confirmation = "toast((actionLabels[action] || action)+' retained.');"
+    if old_confirmation in text:
+        text = replace(text, old_confirmation, confirmation,
+                       "registered action completion label")
+    else:
+        text = replace(text, "toast(actionLabels[action]+' retained.');",
+                       confirmation, "registered action completion label")
     write(path, text)
 
     index = root / "operator/web/index.html"
