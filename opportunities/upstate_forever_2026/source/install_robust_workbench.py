@@ -21,7 +21,12 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/decision_study_transfer.py",
+    "model/study_transfer.py",
+    "operator/STUDY_TRANSFER.md",
     "model/robust_decisions/eco_robust/store.py",
+    "model/robust_decisions/eco_robust/diagnostics.py",
+    "model/robust_decisions/eco_robust/cli.py",
     "model/robust_decisions/eco_robust/operations.py",
     "model/robust_decisions/eco_robust/integration.py",
     "model/robust_decisions/SOURCE_MANIFEST.json",
@@ -29,6 +34,8 @@ ALLOWED = frozenset({
     "operator/extensions/robust-workbench.json",
     "operator/web/robust_workbench.mjs",
     "operator/web/robust_workbench.css",
+    "operator/web/retained_desks.mjs",
+    "operator/web/experiment_diagnostics.mjs",
     "operator/ROBUST_WORKBENCH.md",
     "operator/ROBUST_WORKBENCH_UI.md",
     "source/run_robust_workspace_transfer.py",
@@ -37,8 +44,15 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/decision_study_transfer.py",
+    "model/study_transfer.py",
+    "operator/STUDY_TRANSFER.md",
     "source/install_robust_workbench.py",
     "source/ROBUST_RECEIVING.md",
+    # Optional full postimages join existing registered diagnostic desks. The
+    # core sixteen-file packet also installs without changing these host files.
+    "operator/web/retained_desks.mjs",
+    "operator/web/experiment_diagnostics.mjs",
 }
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
@@ -158,7 +172,11 @@ def read_layers(paths):
             for key in PREIMAGE_KEYS:
                 value = item.get(key)
                 if value is not None:
-                    previous.add(checked_hash(value, name + " " + key))
+                    values = value if isinstance(value, list) else [value]
+                    if not values:
+                        raise ValueError(name + " " + key + ": expected at least one preimage SHA-256")
+                    for expected_before in values:
+                        previous.add(checked_hash(expected_before, name + " " + key))
             final[name], origins[name] = data, str(packet_path)
     return final, allowed, origins
 
