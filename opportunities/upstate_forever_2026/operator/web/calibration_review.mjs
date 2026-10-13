@@ -1,3 +1,4 @@
+import * as reportSourceSelection from './source_report_editions.mjs';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const short=value=>String(value??'').slice(0,12);
 const button=(action,title,id='',primary=false)=>'<button type="button" '+(primary?'class="primary" ':'')+'data-action="calibration-review-'+action+'" data-id="'+esc(id)+'">'+esc(title)+'</button>';
@@ -31,7 +32,9 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
     if(!active()||packet.review.id!==id)throw Error('Open the exact retained review before preparing its report source.');
     return submitAction('calibration.review.source',{review_id:id});
   }
-  async function scientificReport(id){
+  async function scientificReport(id,selectionMode='replace'){
+    if(!['replace','append'].includes(selectionMode))throw Error('Choose how this prepared source opens in Scientific Reports.');
+    if(selectionMode==='replace'&&reportSourceSelection.SCIENTIFIC_REPORT_SOURCE_SELECTION!=='replace-v1')throw Error('Receive the current Scientific Reports composer before opening this report alone. Add to current report is still available.');
     const workspace=current(),revision=++request;
     const result=await read('report-source',{id});
     if(current()!==workspace||revision!==request)return;
@@ -45,7 +48,7 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
     if(typeof openScientificReport!=='function')throw Error('Receive the current Sources desk and its scientific report composer.');
     return openScientificReport({workspace_key:workspace,
       sources:[{source_collection_id:record.source_collection_id,source_id:record.source_id}],
-      title:selection.title});
+      title:selection.title,selection_mode:selectionMode});
   }
   async function delivery(id){
     const workspace=current(),revision=++request;
@@ -59,12 +62,13 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
   function sourceSection(){
     const sources=reportSources();
     return section('Create a saved scientific report',
-      'Prepare the original review as a scientific source, then open the existing ordered report composer. Nutrient-only, sediment-only and combined analyses keep their exact supported pollutants, tables, equal-axis figures and complete source companions. The composer preserves your other selected sources, report title and contact.',
+      'Prepare the original review as a scientific source, then open the existing ordered report composer. Nutrient-only, sediment-only and combined analyses keep their exact supported pollutants, tables, equal-axis figures and complete source companions. Open this report only selects this original source and its title. Add to current report preserves the current ordered source list and title. Contact details stay in the existing report draft.',
       '<div class="section-body"><div class="page-actions">'+button('source','Prepare report source',packet.review.id,!sources.length)+'</div></div>'+
       (sources.length?table(['Registered source','Figures','Companions',''],sources.map(row=>
         '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.source_collection_id))+' · '+esc(row.source_id)+'</small><small>'+esc(row.edition||'Retained original edition')+'</small></td>'+
         '<td>'+esc(row.figure_count)+'</td><td>'+esc(row.companion_count)+'</td><td>'+
-        button('source-report','Open scientific report',row.id,true)+
+        button('source-report','Open this report only',row.id,true)+
+        button('source-append','Add to current report',row.id)+
         button('source-delivery','Open mapped report form',row.id)+
         button('source-edition','Open source edition',row.source_collection_id)+'</td></tr>')):
         '<p class="calibration-empty">The report source preserves this saved review and its exact native selection. Preparing it uses the current task queue.</p>'));
@@ -159,7 +163,8 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
   async function dispatch(node){
     const action=node.dataset.action?.replace(/^calibration-review-/,'');
     if(action==='source')return makeSource(node.dataset.id);
-    if(action==='source-report')return scientificReport(node.dataset.id);
+    if(action==='source-report')return scientificReport(node.dataset.id,'replace');
+    if(action==='source-append')return scientificReport(node.dataset.id,'append');
     if(action==='source-delivery')return delivery(node.dataset.id);
     if(action==='source-edition'){
       if(!active()||!reportSources().some(row=>row.source_collection_id===node.dataset.id))throw Error('Open the original registered report source first.');
