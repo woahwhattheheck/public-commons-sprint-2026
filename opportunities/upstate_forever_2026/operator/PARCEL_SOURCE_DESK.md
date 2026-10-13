@@ -7,15 +7,15 @@ Parent delivery: UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012
 
 **Parcel sources** connects original county acquisition, complete native preparation, saved source editions, full inventory browsing, native GIS, downloads, Conservation plans, and the existing map delivery.
 
-The known receiving application is `/mnt/data/eco12-integrated-20261012`; its interpreter is `/opt/pyvenv/bin/python`. Open the current original server's printed `operator_url`, then click **Parcel sources** in the existing navigation. After authentication, `/#parcel-sources` opens this desk directly.
+Use the receiving owner's current application directory and GIS-enabled Python interpreter as `ECO_APPLICATION` and `ECO_PYTHON`. Preserve that operator's registered Workspace, state directory and source roots. Open its printed `operator_url`, then click **Parcel sources** in the existing navigation. After authentication, `/#parcel-sources` opens this desk directly.
 
 The receiving owner registers the actual retained parcel plan/capture directory with the existing repeated `--source-root` option. That directory contains `parcel-plan.json`, `plan-transfer.json`, `parcel-masks.json`, original reporting/county context and retained `layers/<provider>/layer-capture.json` files. A registered parent also works; the desk browses its subdirectories. A received saved edition opens without registering its former acquisition directory.
 
 The normal existing server command is:
 
 ~~~sh
-cd /mnt/data/eco12-integrated-20261012
-/opt/pyvenv/bin/python -B operator/server.py \
+cd "$ECO_APPLICATION"
+"$ECO_PYTHON" -B operator/server.py \
   --workspace "$ECO_WORKSPACE" \
   --operator-state "$ECO_OPERATOR_STATE" \
   --source-root "$ECO_PARCEL_CAPTURE" \
@@ -47,7 +47,7 @@ Native source CRS and analysis CRS have different roles: original response compa
 
 The operator chooses a source capture, completed county edition, readable title, table/search/county selection and study mode. Scientific choices stay explicit in the original Conservation and scenario controls: purpose, accepted source classification, required contexts, eligibility thresholds, scoring weights, area or cost limits, actual native baseline/alternatives, land-cover codes, change reason, grid/profile and original run inputs.
 
-The initial source-context inventory has zero context weights because no context is yet selected; it still computes original geometry and coverage. The native-model bridge binds actual completed runs while leaving priority weights for the existing Conservation workflow. Retain the intended contexts and scoring choices there before interpreting a priority score.
+The initial source-context inventory has zero context weights because no context is yet selected; it still computes original geometry and coverage. The native-model bridge binds actual completed runs and the selected quantity basis, scale and pollutant weights from this desk. Conservation retains those settings with the study; continue its controls to define further contexts and portfolio rules before interpreting a priority score.
 
 ## Continue, recover and receive
 
@@ -63,7 +63,7 @@ The initial source-context inventory has zero context weights because no context
 
 ## Install the complete desk
 
-This extension adds nine distinct paths, with no predecessor in the reviewed application:
+This extension owns nine distinct paths. Its installer accepts the original edition, an identical current edition, or a source with the declared exact predecessor; a different concurrent body requires composition:
 
 - `model/parcel_source_desk.py`
 - `model/parcel_source_cli.py`
@@ -78,8 +78,8 @@ This extension adds nine distinct paths, with no predecessor in the reviewed app
 The existing ECSA host reads the new descriptor and assets. Its original queue, authentication, registered source roots, task recovery, verified downloads and receiving hooks perform the integration.
 
 ~~~sh
-/opt/pyvenv/bin/python -B "$ECO_PARCEL_SOURCE/operator/install_parcel_source_desk.py" \
-  --application /mnt/data/eco12-integrated-20261012 \
+"$ECO_PYTHON" -B "$ECO_PARCEL_SOURCE/operator/install_parcel_source_desk.py" \
+  --application "$ECO_APPLICATION" \
   --source-root "$ECO_PARCEL_SOURCE"
 ~~~
 
@@ -139,14 +139,14 @@ The browser factory `createParcelSourceDesk(host)` exposes `mount`, `update` and
 The same model operation is available through the CLI:
 
 ~~~sh
-/opt/pyvenv/bin/python -B -m model.parcel_source_cli \
+"$ECO_PYTHON" -B -m model.parcel_source_cli \
   capture "$ECO_PARCEL_CAPTURE" --output "$ECO_SOURCE_PREVIEW"
 
-/opt/pyvenv/bin/python -B -m model.parcel_source_cli \
+"$ECO_PYTHON" -B -m model.parcel_source_cli \
   --workspace "$ECO_WORKSPACE" prepare "$ECO_PARCEL_CAPTURE" \
   --selection "$ECO_SOURCE_PREVIEW" --title "Upper Savannah county parcel edition"
 
-/opt/pyvenv/bin/python -B -m model.parcel_source_cli \
+"$ECO_PYTHON" -B -m model.parcel_source_cli \
   --workspace "$ECO_WORKSPACE" rows "$ECO_PARCEL_EDITION" \
   --table parcels --limit 100
 ~~~
@@ -158,7 +158,7 @@ The same model operation is available through the CLI:
 The output contains real stage durations, original task/source/edition IDs, downloads, browser screenshots and a journey video.
 
 ~~~sh
-/opt/pyvenv/bin/python -B operator/parcel_source_receiving.py \
+"$ECO_PYTHON" -B operator/parcel_source_receiving.py \
   --operator-url-file "$ECO_OPERATOR_LAUNCH_JSON" \
   --capture-directory "$ECO_PARCEL_CAPTURE" \
   --title "Upper Savannah original county parcel edition" \
@@ -184,7 +184,7 @@ The journey selects these values in the real browser form, builds the original q
 After the original full workspace backup/restore, use the same edition ID against the received operator:
 
 ~~~sh
-/opt/pyvenv/bin/python -B operator/parcel_source_receiving.py \
+"$ECO_PYTHON" -B operator/parcel_source_receiving.py \
   --operator-url-file "$ECO_RECEIVED_OPERATOR_LAUNCH_JSON" \
   --edition-id "$ECO_PARCEL_EDITION" \
   --output "$ECO_RECEIVED_PARCEL_JOURNEY"

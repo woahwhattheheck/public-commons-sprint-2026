@@ -6,7 +6,18 @@ const action = (name, label, id='') => '<button type="button" data-action="trans
 const table = (headers, rows) => '<div class="table-scroll"><table><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
 
 export function attachProjectTransfers({getState,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask}) {
-  let host=null;
+  let host=null,viewIntent=0,mountedWorkspace=null;
+  async function readCurrent(path,parameters) {
+    const intent=viewIntent,key=getState()?.workspace_key,container=host;
+    const live=()=>intent===viewIntent&&getState()?.workspace_key===key&&host===container&&container?.isConnected;
+    try {
+      const result=await api(endpoint(path,parameters));
+      return live()?result:null;
+    } catch(error) {
+      if(live())throw error;
+      return null;
+    }
+  }
   const current=()=>getState();
   const sameWorkspace=key=>{if(current()?.workspace_key!==key)throw Error('The workspace changed. Reopen this operation in the intended project.');};
   const available=task=>current()?.data?.project_continuity?.accepted_actions?.includes(task.action)??task.handler_available!==false;
@@ -14,7 +25,8 @@ export function attachProjectTransfers({getState,api,endpoint,openForm,submitAct
   const hasIncremental=()=>['project.transfer.capture','project.transfer.restore'].every(name=>current()?.data?.project_continuity?.accepted_actions?.includes(name));
   const size=value=>(Number(value)||0).toLocaleString()+' bytes';
   function mount(container,state) {
-    host=container;
+    if(host!==container||mountedWorkspace!==state.workspace_key)viewIntent+=1;
+    host=container;mountedWorkspace=state.workspace_key;
     const transfers=state.data.project_continuity?.transfers??[];
     const retained=(state.tasks??[]).filter(t=>t.transfer_origin);
     const unfinished=retained.filter(t=>!['complete','cancelled'].includes(t.state));
@@ -34,12 +46,11 @@ export function attachProjectTransfers({getState,api,endpoint,openForm,submitAct
       '<section class="section"><header><h2>Archive route</h2></header><div class="section-body"><ol><li>Create a complete project with the work you want to carry forward.</li><li>Open its completed operation and download the scientific-workspace ZIP.</li><li>In the receiving operator, choose Receive a project and select that ZIP.</li><li>Switch to the received workspace. Inspect its preserved history, then resume unfinished work.</li></ol><p>Already completed native runs and comparison outputs reopen directly. Cancelled operations remain cancelled until explicitly selected.</p></div></section>';
   }
   function update(state){if(host)mount(host,state);}
-  function detach(){host=null;}
+  function detach(){viewIntent+=1;host=null;mountedWorkspace=null;}
   async function snapshotForm() {
     const key=current().workspace_key;
-    const plan=await api(endpoint('/api/extensions/project-continuity/plan'));
-    sameWorkspace(key);
-    if(!host?.isConnected)return;
+    const plan=await readCurrent('/api/extensions/project-continuity/plan');
+    if(!plan)return;
     const rows=plan.tasks.map(t=>'<tr><td><input type="checkbox" name="transfer-task" value="'+esc(t.id)+'" checked aria-label="Include '+esc(t.action)+' '+esc(short(t.id))+'"></td><td>'+esc(t.action)+'</td><td>'+esc(t.state)+'</td><td><code>'+esc(t.operation_id)+'</code></td></tr>');
     openForm('Create a complete project','Save the scientific workspace with the chosen operation history and original inputs needed by unfinished work.',
       '<label class="field"><span>Project title</span><input id="transfer-title" required value="'+esc(plan.project.title+' — complete project')+'"></label>'+
@@ -68,10 +79,8 @@ export function attachProjectTransfers({getState,api,endpoint,openForm,submitAct
       });
   }
   async function inspect(id) {
-    const key=current().workspace_key;
-    const record=await api(endpoint('/api/extensions/project-continuity/inspect',{transfer_id:id}));
-    sameWorkspace(key);
-    if(!host?.isConnected)return;
+    const record=await readCurrent('/api/extensions/project-continuity/inspect',{transfer_id:id});
+    if(!record)return;
     const rows=record.tasks.map(t=>'<tr><td>'+esc(t.action)+'</td><td>'+esc(t.state)+'</td><td><code>'+esc(t.operation_id)+'</code></td><td>'+esc(t.attempts?.length??0)+'</td></tr>');
     const uploads=Object.values(record.uploads).map(x=>'<tr><td>'+esc(x.record.filename)+'</td><td>'+x.record.bytes.toLocaleString()+'</td><td><code>'+esc(x.record.sha256)+'</code></td></tr>');
     detail(record.title,'<p>'+esc(record.project.title)+' · '+esc(date(record.created_at))+'</p><p>Original project <code>'+esc(record.project.id)+'</code></p>'+
@@ -93,10 +102,8 @@ export function attachProjectTransfers({getState,api,endpoint,openForm,submitAct
   }
 
   async function browseTransport() {
-    const key=current().workspace_key;
-    const result=await api(endpoint('/api/extensions/project-continuity/transport'));
-    sameWorkspace(key);
-    if(!host?.isConnected)return;
+    const result=await readCurrent('/api/extensions/project-continuity/transport');
+    if(!result)return;
     if(!result.available)throw Error('Install the original incremental handover component to open its editions.');
     detail('Retained handover editions',
       '<p>These editions belong to the original handover cache for this operator workspace. Open an edition to inspect actual receiving progress, create parts, or receive its independent working copy.</p>'+
@@ -105,10 +112,8 @@ export function attachProjectTransfers({getState,api,endpoint,openForm,submitAct
         '<p>Create an incremental project snapshot here, or receive its original manifest or transfer part.</p>'));
   }
   async function inspectTransport(id) {
-    const key=current().workspace_key;
-    const result=await api(endpoint('/api/extensions/project-continuity/transport',{snapshot_id:id}));
-    sameWorkspace(key);
-    if(!host?.isConnected)return;
+    const result=await readCurrent('/api/extensions/project-continuity/transport',{snapshot_id:id});
+    if(!result)return;
     if(!result.available)throw Error('Install the original incremental handover component to open this edition.');
     const request=result.request;
     detail(result.project.title+' — handover edition',
@@ -160,6 +165,7 @@ export function attachProjectTransfers({getState,api,endpoint,openForm,submitAct
       'Receive project',async()=>{sameWorkspace(key);await submitAction('workspace.receive',{snapshot_id:id});});
   }
   async function dispatch(button) {
+    viewIntent+=1;
     const command=button.dataset.action;
     if(command==='transfer-snapshot')return snapshotForm();
     if(command==='transfer-receive')return receiveForm();

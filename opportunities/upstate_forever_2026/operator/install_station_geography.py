@@ -13,6 +13,7 @@ import tempfile
 
 FILES = (
     "model/station_geography.py",
+    "model/station_assessment_context.py",
     "model/station_study.py",
     "operator/PREPARED_STATION_STUDY.md",
     "operator/station_geography.py",

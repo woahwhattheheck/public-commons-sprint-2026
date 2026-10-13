@@ -6,6 +6,20 @@ const token = sessionStorage.getItem(tokenKey) || '';
 $('resolution-nav').href = '/resolutions/#' + token;
 const state = { snapshot: null, selected: null, detail: null, ticket: null, page: 0, loading: false, mutating: false, lastStates: '' };
 const pageSize = 20;
+let outputFilesKey = null;
+const packageType = 'application/vnd.stellar-forge.job-result+zip';
+function fileType(value) {
+  const type = String(value ?? '').split(';')[0].toLowerCase();
+  if (type === packageType || type === 'application/zip') return 'ZIP package';
+  if (type === 'text/csv') return 'CSV spreadsheet';
+  if (type === 'text/tab-separated-values') return 'TSV spreadsheet';
+  if (type === 'application/json' || type.endsWith('+json')) return 'JSON document';
+  if (type === 'application/pdf') return 'PDF document';
+  if (type.startsWith('image/')) return type.slice(6).toUpperCase() + ' image';
+  if (type.startsWith('text/')) return 'Text document';
+  return 'Binary file';
+}
+
 const statuses = ['PREPARED', 'AWAITING_SETTLEMENT', 'QUEUED', 'RUNNING', 'CANCELLING', 'COMPLETED', 'FAILED', 'INTERRUPTED', 'CANCELLED'];
 const words = value => String(value ?? '').toLowerCase().replaceAll('_', ' ').replace(/^./, c => c.toUpperCase());
 const jobState = job => job?.state ?? job?.status ?? '';
@@ -87,6 +101,20 @@ function renderFunction() {
   terms($('function-terms'), [['Network', payment.network], ['Amount (atomic)', payment.amount], ['Asset', payment.asset],
     ['Recipient', payment.payTo], ['Execution limit', fn?.timeoutMs ? fn.timeoutMs / 1000 + ' seconds' : 'Configured by merchant']]);
   $('input-schema').textContent = json(fn?.inputSchema ?? {});
+  $('output-contract').hidden = fn?.output?.format !== 'package';
+  $('output-schema').replaceChildren();
+  for (const [slot, file] of Object.entries(fn?.output?.files ?? {})) {
+    const row = element('tr'), identity = element('td', file.filename);
+    const technical = element('details');
+    technical.append(element('summary', 'Technical details'),
+      element('pre', json({ 'Output slot': slot, 'Content type': file.contentType })));
+    identity.append(technical);
+    row.append(identity, element('td', fileType(file.contentType)),
+      element('td', Number(file.maxBytes).toLocaleString() + ' bytes'),
+      element('td', file.required ? 'Required' : 'Optional'));
+    $('output-schema').append(row);
+  }
+  $('output-technical').textContent = json(fn?.output ?? {});
   const slots = Object.entries(fn?.inputFiles?.slots ?? {}), requiredFiles = slots.some(([, slot]) => slot.required);
   $('input-file-route').hidden = slots.length === 0;
   $('input-file-description').textContent = requiredFiles ?
@@ -169,7 +197,16 @@ function renderDetail(job) {
   if (!job.history?.length) $('history').append(element('li', 'This job has no additional retained events.'));
   $('result-panel').hidden = status !== 'COMPLETED';
   const output = job.result ?? job.output ?? {};
-  $('result-summary').textContent = [output.filename, output.bytes !== undefined ? Number(output.bytes).toLocaleString() + ' bytes' : '', output.contentType, output.sha256].filter(Boolean).join(' · ');
+  $('result-summary').textContent = [output.filename, output.bytes !== undefined ? Number(output.bytes).toLocaleString() + ' bytes' : '', fileType(output.contentType)].filter(Boolean).join(' · ');
+  $('result-technical').textContent = json({ 'SHA-256': output.sha256 ?? null, 'Content type': output.contentType ?? null });
+  const packageResult = status === 'COMPLETED' && output.contentType === packageType;
+  $('result-files').hidden = !packageResult;
+  const filesKey = id + ':' + (output.sha256 ?? '');
+  if (filesKey !== outputFilesKey) {
+    outputFilesKey = filesKey;
+    $('result-files-rows').replaceChildren();
+    $('result-files-summary').textContent = 'Inspect the complete original package to view its declared files.';
+  }
   $('renew-claim-job').disabled = status !== 'PREPARED' || job.submittedAt !== null ||
     !!(job.nativeSettlement?.id ?? job.settlement?.id) || state.mutating;
   $('cancel-job').disabled = !['PREPARED', 'AWAITING_SETTLEMENT', 'QUEUED', 'RUNNING'].includes(status) || state.mutating;
@@ -258,7 +295,37 @@ $('result-preview').addEventListener('click', async () => {
     $('result-content').hidden = false;
   } catch (error) { note(error.message, true); }
 });
-$('result-download').addEventListener('click', () => attachment('/api/jobs/' + encodeURIComponent(state.selected) + '/result', 'job-result.bin').catch(error => note(error.message, true)));
+$('result-files-open').addEventListener('click', async () => {
+  const id = state.selected, selectedKey = outputFilesKey;
+  $('result-files-open').disabled = true;
+  try {
+    const result = await read('/api/jobs/' + encodeURIComponent(id) + '/outputs');
+    if (state.selected !== id || outputFilesKey !== selectedKey) return;
+    $('result-files-rows').replaceChildren();
+    for (const file of result.manifest.files) {
+      const row = element('tr'), button = element('button', 'Download');
+      button.type = 'button';
+      button.addEventListener('click', () =>
+        attachment('/api/jobs/' + encodeURIComponent(id) + '/outputs/' + file.slot, file.filename)
+          .catch(error => note(error.message, true)));
+      const action = element('td'); action.append(button);
+      const identity = element('td', file.filename);
+      const technical = element('details');
+      technical.append(element('summary', 'Technical details'), element('pre', json({
+        'Output slot': file.slot, 'Content type': file.contentType,
+        'File SHA-256': file.sha256, 'Package SHA-256': result.package.sha256,
+      })));
+      identity.append(technical);
+      row.append(identity, element('td', fileType(file.contentType)),
+        element('td', file.bytes.toLocaleString()), action);
+      $('result-files-rows').append(row);
+    }
+    $('result-files-summary').textContent = result.manifest.files.length +
+      ' verified files from the original completed attempt. The whole result remains available above.';
+  } catch (error) { note(error.message, true); }
+  finally { $('result-files-open').disabled = false; }
+});
+$('result-download').addEventListener('click', () => attachment('/api/jobs/' + encodeURIComponent(state.selected) + '/result', state.detail?.result?.filename ?? 'job-result.bin').catch(error => note(error.message, true)));
 for (const action of ['cancel', 'retry']) $(action + '-job').addEventListener('click', () => {
   if (!$('action-form').reportValidity() || !state.detail || jobId(state.detail) !== state.selected) return;
   const id = state.selected, expectedRevision = state.detail.revision, reason = $('reason').value.trim();

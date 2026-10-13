@@ -207,6 +207,7 @@ function renderOperations() {
     }
     article.append(actions);
     if (job.result) { const detail = make('details'); detail.open = expanded.has(job.id); detail.append(make('summary', 'Original operation result'), make('pre', JSON.stringify(job.result, null, 2))); article.append(detail); }
+    if (job.resultSource) article.append(make('p', 'Original receipt: ' + job.resultSource));
     list.append(article);
   }
 }

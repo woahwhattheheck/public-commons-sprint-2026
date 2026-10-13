@@ -43,7 +43,7 @@ fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
 started=stamp()
 
 # Reuse the maintained transfer engine with the original opaque reservation.
-upload_tools=Path('/workspace/scratch/b71092915960/wherobots/library-upload-20261012')
+upload_tools=Path(os.environ.get('STAC_LIBRARY_HELPER_DIRECTORY','/workspace/scratch/b71092915960/wherobots/library-upload-20261012'))
 upload_tool_hashes={
  'library_upload.py':'b11e4929596e321366c2f7291890fbb6d6bf8b413ae6d24593e9548f9bf50f23',
  'library_file_transfer.py':'5c81478cd94a59d721a1677d0bd36f7cec23c18a21b48740b1c9ff94d27fb26f',
@@ -56,7 +56,7 @@ for name,expected in upload_tool_hashes.items():
  exact(DELIVERY/'original-operation'/'library-upload'/name,source.read_bytes())
 sys.path.insert(0,str(upload_tools))
 from library_upload import UploadRequest,PreparedUpload,SignedUrlUploader
-source_owner=Path('/workspace/scratch/b71092915960/stac-managed-applications-native/operation-code')
+source_owner=Path(os.environ.get('STAC_OPERATION_CODE_DIRECTORY','/workspace/scratch/b71092915960/stac-managed-applications-native/operation-code'))
 for path in sorted(source_owner.iterdir()):
  if path.is_file():
   if path.is_symlink():raise ValueError('Use the selected original operation source')
@@ -64,26 +64,38 @@ for path in sorted(source_owner.iterdir()):
 metadata=BASE/'operation-code/source-7169.json'
 data=metadata.read_bytes()
 if hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()!='56da861934c0a161c8ab76b64a17c2a9b421d557':raise ValueError('Original full source metadata changed')
-selection=json.loads((BASE/'native-input.json').read_text())
+input_file=BASE/'native-input.json'
+following_file=BASE/'following-preparation.json'
+following=json.loads(following_file.read_text()) if following_file.is_file() else None
+if following:
+ if following.get('operationId')!=OPERATION or following.get('attemptLabel')!=label:
+  raise ValueError('Preserve the original following preparation')
+ input_file=BASE/'following-native-input.json'
+ original=following['originalInput'];selected=following['selectedInput']
+ if original['path']!='operation-base/native-input.json' or digest(BASE/'native-input.json')!=original['sha256']:
+  raise ValueError('Original native input changed after preparation')
+ if selected['path']!='operation-base/following-native-input.json' or input_file.stat().st_size!=selected['bytes'] or digest(input_file)!=selected['sha256']:
+  raise ValueError('Selected following input changed after preparation')
+selection=json.loads(input_file.read_text())
 if selection['operationId']!=OPERATION or selection['sourceCommit']!=SOURCE:raise ValueError('Continue the original selected operation')
 builder=Path(selection['builderDirectory'])
 for item in selection['builderFiles']:
- original=Path('/workspace/scratch/b71092915960/stac-applications-source-7169/builder')/item['name']
+ original=Path(os.environ.get('STAC_BUILDER_SOURCE_DIRECTORY','/workspace/scratch/b71092915960/stac-applications-source-7169/builder'))/item['name']
  body=original.read_bytes()
  if len(body)!=item['bytes'] or hashlib.sha1(b'blob '+str(len(body)).encode()+b'\0'+body).hexdigest()!=item['blob']:raise ValueError('Original builder source changed: '+item['name'])
  exact(builder/item['name'],body)
  exact(BASE/'incoming'/(item['blob']+'.blob'),body)
-save(DELIVERY/'native-carrier-selection.json',{'operationId':OPERATION,'sourceCommit':SOURCE,'carrierSource':'commons:0b1f4b156c01f0b05182d9ace93cba0c351e2b17','carrier':'original one-allocation put/run/pack/upload','base':str(BASE),'project':str(ROOT),'startedAt':started,'originalSharedInputSha256':digest(BASE/'original-shared-input.json'),'selectedInputSha256':digest(BASE/'native-input.json'),'selectionChanges':['builderDirectory moved to the owned private source copy'],'attemptLabel':label})
+save(DELIVERY/'native-carrier-selection.json',{'operationId':OPERATION,'sourceCommit':SOURCE,'carrierSource':'commons:0b1f4b156c01f0b05182d9ace93cba0c351e2b17','carrier':'original one-allocation put/run/pack/upload','base':str(BASE),'project':str(ROOT),'startedAt':started,'originalSharedInputSha256':digest(BASE/'original-shared-input.json'),'selectedInputSha256':digest(input_file),'selectedInputPath':str(input_file),'selectionChanges':['builderDirectory moved to the owned private source copy']+([item['field'] for item in following['changes']] if following else []),'followingPreparationSha256':digest(following_file) if following else None,'attemptLabel':label})
 out=logs/(label+'.original.stdout');err=logs/(label+'.original.stderr')
 code=1
 try:
  with out.open('wb') as stdout,err.open('wb') as stderr:
-  result=subprocess.run([sys.executable,'-B',str(BASE/'receive-and-continue.py')],cwd=ROOT,stdout=stdout,stderr=stderr,env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1','TMPDIR':str(ROOT/'temporary'),'NODE_OPTIONS':'--max-old-space-size=160'})
+  result=subprocess.run([sys.executable,'-B',str(BASE/'receive-and-continue.py')]+(['--input',str(input_file)] if following else []),cwd=ROOT,stdout=stdout,stderr=stderr,env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1','TMPDIR':str(ROOT/'temporary'),'NODE_OPTIONS':'--max-old-space-size=160'})
   code=result.returncode
 finally:
  original=DELIVERY/'original-operation'
  original.mkdir(mode=0o700,exist_ok=True)
- for name in ('native-input.json','original-shared-input.json','receive-and-continue.py','launch-native.py'):
+ for name in ('native-input.json','original-shared-input.json','following-native-input.json','following-preparation.json','receive-and-continue.py','launch-native.py'):
   p=BASE/name
   if p.is_file():shutil.copy2(p,original/name)
  shutil.copy2(Path(__file__),original/'one-allocation.py')

@@ -26,8 +26,10 @@ RFP page 2 requires all seven map datasets on a **30 m by 30 m production
 grid**, with a modeled buffer outside the Upper Savannah basin. The final maps
 may mask the external area. The regional project therefore retains its 30 m
 grid, the actual contributing terrain and an explicit buffer rationale. The
-original Gura workflow is a separate commissioning dataset at its actual
-300 m resolution; its source identity and native quantities remain intact.
+original Gura workflow is a separate commissioning study on its selected
+original source grid. The pinned official InVEST 3.20.0 release archives use
+15 m land-cover cells. Any separately retained resampled case keeps its own
+recorded grid and provenance; it is not the original archive resolution.
 
 The production release includes print- and web-quality maps with legends,
 scale and north arrow, their GIS data and metadata, and the final and working
@@ -68,9 +70,13 @@ totals use the actual selected raster support and reporting mask.
 The original [NDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/ndr.html) and [SDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/sdr.html) define the native output quantities. Physical conversions use each native raster's actual affine pixel area. NDR
 nitrogen/phosphorus export is kg/ha/year; SDR sediment export is metric
 tonnes/ha/year. Annual pixel mass multiplies the export rate by pixel area
-in hectares once. A 30 m square pixel covers 0.09 ha; the retained original
-Gura 300 m square pixel covers 9 ha. Grid edits preserve the selected native
-resolution.
+in hectares once. A 30 m square pixel covers 0.09 ha. The pinned official
+3.20.0 Gura source uses 15 m square pixels covering 0.0225 ha. A separately
+recorded 300 m square grid would cover 9 ha per cell. Grid edits and continued
+intake preserve each retained source selection and its actual affine-derived
+pixel area. The upstream context buffer is an independent distance: a saved
+zero-metre Gura context retains the original watershed geometry directly,
+while the regional production project uses its documented external buffer.
 
 ## Seven release roles
 

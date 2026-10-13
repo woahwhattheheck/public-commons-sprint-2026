@@ -3,6 +3,7 @@ import { mkdir, readdir, lstat, realpath } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { managedResult } from './managed-result.mjs';
 import { applicationEnvironment } from './application-environment.mjs';
 import { validateApplicationProviderBinding } from './application-providers.mjs';
 import { validatePythonManagedCommand, pythonManagedLaunch } from '../python-runtime/application-lifecycle.mjs';
@@ -391,9 +392,9 @@ export async function recoverManagedOperation(root, id) {
     if (commandResult && state.phase !== 'SUCCEEDED') {
       await saveJSON(join(directory, 'state.json'), { ...state, phase: 'SUCCEEDED', completedAt: commandResult.completedAt,
         updatedAt: now(), result: commandResult, recoveredFrom: state.phase }, true);
-      return { operationId: id, phase: 'SUCCEEDED', result: commandResult, reopened: true };
+      return { operationId: id, phase: 'SUCCEEDED', ...managedResult({ phase: 'SUCCEEDED', result: commandResult }, commandResult), reopened: true };
     }
-    if (state.phase === 'SUCCEEDED') return { operationId: id, phase: state.phase, reopened: true };
+    if (state.phase === 'SUCCEEDED') return { operationId: id, phase: state.phase, ...managedResult(state, commandResult), reopened: true };
     need(!await workerAlive(state), 'RUNTIME_WORKSPACE_OPERATION_RUNNING');
     if (request.operation === 'managed-run' && await readJSON(join(directory, 'command-launch.json'), true)) {
       if (await managedCommandAlive(state))
@@ -405,7 +406,7 @@ export async function recoverManagedOperation(root, id) {
           'The launch record has no retained process identity. Original output and host status supply its operating outcome.' };
       await saveJSON(join(directory, 'state.json'), { ...state, phase: 'SUCCEEDED', completedAt: now(),
         updatedAt: now(), result, recoveredFrom: state.phase }, true);
-      return { operationId: id, phase: 'SUCCEEDED', reconciled: true, result };
+      return { operationId: id, phase: 'SUCCEEDED', reconciled: true, ...managedResult({ phase: 'SUCCEEDED', result }) };
     }
     // These original operations are idempotent or use a retained source/selection/file guard.
     const attempt = (state.attempt ?? 1) + 1;

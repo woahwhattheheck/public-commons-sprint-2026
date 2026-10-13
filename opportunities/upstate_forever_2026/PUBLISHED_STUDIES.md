@@ -153,3 +153,116 @@ The CLI exposes import, list, get, context, report and export:
       import "$STUDY_SOURCE_PATH"
 
 The complete original data files were matched to all ten published SHA-256 hashes while building this carrier. The authored browser module was parsed with the JavaScript engine. Native intake and UI startup should be run by the receiving equipped session against its current registered application; the cloud executor was unavailable during assembly.
+
+## Original map and dated-source registration
+
+Installed source manifests are followed from their original locations. Each body and companion is retained with its original bytes, native source ID, metadata and coordinate reference system. The current 44-file study edition has a 17-entry parent manifest at `observations/eighteenmile_2023/model-sources.json`. The study importer also accepts that complete source bank directly; its data-source owner maintains the edition.
+
+The two original study vectors retain WGS84/EPSG:4326 for SV-268 and SV-374 and NAD83/EPSG:4269 for SV-838, SV-839 and SV-840. The current source edition also has observed chlorophyll points in those two native CRSs. The existing geography receiver performs display projection. Supply the imported `record.source_manifest.path` to its `--context-manifest` argument to use the same Workspace sources.
+
+Importing an already retained source version refreshes its registration to the current contract. The preceding immutable collection and original source bytes remain available. When several manifests identify the same native source, the importer compares resolved body bytes and retains the union of identical companions.
+
+## Report comparison and original WQP context
+
+The **Report comparison** tab places original activity counts, dates, methods, depths, detection limits and quantified-only statistics beside the published seasonal rows. Its active source follows the most complete installed edition:
+
+- The earlier twelve-file WQP companion supplies 88 original activities from SV-838, SV-839 and SV-840.
+- The separately maintained reconciled cohort adds all 75 chlorophyll activities across five lake stations, giving 118 comparison activities with the earlier 43 microcystin records.
+- The current 44-file edition retains 920 original results and 225 activity/project groups across nine source queries. Its comparison adopts the same 75 selected chlorophyll activities and all 85 original campaign microcystin activities. The two long-running stations have additional microcystin visits; exact calendars, counts and detection limits remain visible. All 85 original microcystin rows have distinct activity IDs, project SCDHEC-MICRO, source activity type Sample-Other, Water media and Final result status. Counts by SV-268/SV-374/SV-838/SV-839/SV-840 are 21/21/14/15/14. The comparison labels these as microcystin campaign context and retains the printed report analytical cohort separately. Source project and activity type define separate comparison series, preserving original QC/replicate distinctions if a source edition contains them.
+
+The **WQP source context** tab exposes the complete acquired result year, the original 167 analyte/fraction/unit coverage groups, and each original row. Station and parameter filters select these rows. The original project, fraction, unit, sample depth, detection condition, qualifier, method, activity ID and source-record identity remain attached. Both the normalized row and its original publisher response are downloadable through the authenticated Workspace source registry.
+
+The original station table contains five lake coordinates. The selector additionally includes the four original upstream source-query stations, without assigning coordinates from another station. The SV-591 source query returns an original header-only CSV, which stays visible as an empty source result. The current individual-measurement desk independently owns its native observation admission and series display; this study view provides the report, cohort and source-context relationship.
+
+Original blank measured values remain blank. Each result keeps its own detection limit and unit; quantified-only statistics do not substitute a detection fraction. The calendar table shows missing chlorophyll-visit dates and extra microcystin dates. Continuous month/year filters apply to the continuous summaries; original dated rows retain their full acquired source year and the comparison retains the published grab campaign.
+
+### Reconciled chlorophyll and the printed report
+
+All five selected series contain fifteen original chlorophyll activities at 0.3 m, spanning April 5 through October 17, 2023. Their arithmetic means and sample standard deviations are:
+
+| Station | Original activities | Mean (ug/L) | Sample SD (ug/L) | Printed Table 7 n |
+| --- | ---: | ---: | ---: | ---: |
+| SV-268 | 15 | 7.406666667 | 8.036293270 | 15 |
+| SV-374 | 15 | 10.675333333 | 4.264115830 | 4 |
+| SV-838 | 15 | 24.097333333 | 8.583679253 | 15 |
+| SV-839 | 15 | 15.415333333 | 7.429484568 | 15 |
+| SV-840 | 15 | 6.065333333 | 1.751321406 | 4 |
+
+These reproduce every printed mean, SD and range at the report's displayed precision. Original Table 7, printed page 14 / PDF viewer page 21, retains n=4 for SV-374 and SV-840.
+
+SV-268 and SV-374 have extra same-date chlorophyll activities. The source selection is an explicit inference from the agency project/calendar and publisher-displayed local clocks, supported by reproduction of all five summaries. SV-268 retains July 11 at 09:50 (15.76 ug/L); its extra routine visit is at 13:08. SV-374 retains August 8 at 10:54 (10.91 ug/L); its extra routine visit is at 10:59. Original EST and EDT labels remain unchanged. Every included and excluded source activity remains in the complete WQP context.
+
+## Upstream flow on sample dates
+
+The **Upstream flow** tab uses the current source edition's sixteen-date laboratory/flow table. It joins the original reporting dates to USGS-02186702 agency daily mean discharge, with original qualifiers and exact source response/record indices. The preceding three- and seven-day windows exclude the sample reporting date. Values remain in ft³/s.
+
+The table displays same-date discharge, annual percentile, antecedent means and maxima, maximum dates, valid/expected day counts and the retained annual p95. Source methods and every antecedent response index are available in row details. Selected activity dates outside the retained sixteen-date table are listed explicitly. The hydrology source owner supplies the complete daily-flow edition and its own reusable calculation.
+
+## Complete exports and native receiving
+
+Selected report output includes report comparisons, activity chronology and calendar, original WQP coverage, upstream flow and original page imagery when installed. The following CSV files retain the exact selected original cells and headers:
+
+- `original-activities-selected.csv` for the earlier normalized activity edition.
+- `chlorophyll-cohort-selected.csv` for the separately maintained full-column cohort.
+- `reconciled-chlorophyll-selected.csv` and `campaign-microcystin-selected.csv` for the current source edition.
+- `wqp-results-selected.csv`, `wqp-coverage-selected.csv` and `upstream-flow-selected.csv` for complete dated context.
+
+Full study ZIPs retain every source member, manifest, original response, reusable source calculation, report and image. Re-import that ZIP into a new actual Workspace to reopen the identical source version. Native project archives include the same application extensions and observation sources.
+
+From a maintained checkout, install the extension into the actual registered ECSA application:
+
+    python install_published_studies.py --application "$ACTUAL_APP"
+
+If the current original study bank is not materialized in that application, import its complete JSON bank directly:
+
+    python "$ACTUAL_APP/measurement_workspace/published_studies.py" \
+      --application "$ACTUAL_APP" --workspace "$ACTUAL_WORKSPACE" \
+      import "$CURRENT_STUDY_BANK"
+
+Use the returned study/version in the native desk. A selected report and complete-study export can also be produced from that same Workspace:
+
+    python "$ACTUAL_APP/measurement_workspace/published_studies.py" \
+      --application "$ACTUAL_APP" --workspace "$ACTUAL_WORKSPACE" \
+      report scdes-eighteenmile-lake-2023 --site SV-374 \
+      --parameter total_chlorophyll_a --destination "$ACTUAL_REPORT_DIRECTORY"
+
+    python "$ACTUAL_APP/measurement_workspace/published_studies.py" \
+      --application "$ACTUAL_APP" --workspace "$ACTUAL_WORKSPACE" \
+      export scdes-eighteenmile-lake-2023 --destination "$ACTUAL_STUDY_ZIP"
+
+The standalone installer checks original source conflicts before writing and retains backups of changed consumer code. Importing a different edition directly into Workspace creates another complete retained version.
+
+## Executed source calculation
+
+The original cohort reconciliation module was executed against its four retained input CSVs. Its 75-row cohort CSV (43,187 bytes), five-row summary CSV (644 bytes) and reconciliation JSON (8,067 bytes) reproduced the source edition byte for byte.
+
+The current nine-source `normalize_core.mjs` was also executed against all exact original capture CSVs. All six derived CSVs and `summary.json` matched their retained bytes: 920 measurements, 225 activities, 167 coverage groups, fifteen calendar dates, 75 selected chlorophyll records and five summaries. All 44 source member hashes and the complete source-bank hash matched. The authored browser module parses in JavaScript. The complete Python Workspace/operator/browser workflow is the native receiver exercise.
+
+## Direct original Canvas intake and existing illustrated report
+
+The same intake accepts a downloaded Canvas Markdown file. It reads the complete ordered base64 fences as one original gzip source bank, enforces the decompressed size limit and verifies every original member hash. It also accepts the earlier plain JSON companion fence. Source scripts in the Canvas are retained as source data; intake only decodes the original data blocks.
+
+When the maintained application includes `eighteenmile_lake_observation_report.sources.json` from PR2880, installed-study intake follows its six native entries and all original WQP/cohort companions. Repeated native IDs keep their original body and collect the full companion set. The existing illustrated observation report is linked from Report comparison and Sources and methods. Selected exports retain its exact original HTML as `original-lake-observation-report.html`; complete study and native project archives retain its original report, generator and both source trees.
+
+The optional application-root `eighteenmile_lake_paired_analysis.sources.json` follows the same source-registration path when installed. Its original station/date/activity-matched analysis, source inputs and method files remain under the study directory; native identifiers and declared companions travel with the retained study and project archive.
+
+
+## Complete scientific figures and reporting-limit support (1.3.0)
+
+The current 62-file source edition retains the same original agency CSV bodies, 75 selected chlorophyll activities and 16 flow dates. Its four scientific SVGs have an additional seven-entry native manifest at `figures/model-sources.json`. Installed intake and the standalone installer follow that manifest alongside the original study manifests and both maintained standalone flow manifests. The original full flow-method document remains preferred when the public-source flow companion is also present. Relative companions such as `../wqp/study_flow_dates.csv` resolve inside the study tree; paths outside that tree are rejected. Original SVGs, data tables, scientific figure specification, pinned local D3 code and licenses remain together.
+
+Scientific figures displays the four retained source figures in the existing Published studies desk. The figures cover the complete original cohort and preserve their original scope when the table selection changes. All numeric axes, units and source activity identifiers remain in the original SVG/specification. Report exports carry those same figures and their reconstruction inputs.
+
+The corrected source edition identifies four E. coli records above their original upper quantitation limits. Their measured-value fields stay blank. The original detection condition, limit type and limit are preserved; the study context honors the source's `censored_above` flag and exposes the direction and upper-censored coverage count. The 75 selected chlorophyll and 85 microcystin records are unchanged by that correction.
+
+ASTRA13's original `measurement_workspace/observation_support.py` now enriches each existing concentration series with all-row mean intervals, quantified/below-limit counts and original result selectors. The calculation keeps every station/parameter/project/activity-type group separate. Below-limit values contribute [0, their original limit), conditional on nonnegative concentration. These are arithmetic bounds on the retained rows, and original values stay blank. Selected-context JSON, the existing HTML report, the desk comparison and `observation-support-selected.csv` expose the same support. The module's command-line report avoids adding its section twice when the maintained exporter already includes it.
+
+The optional paired-analysis source is composed as a separate original module and seven-entry manifest. It uses the exact source date, displayed clock and time-zone label for cross-analyte matching. Its 67 links retain separate source activities and the different depth support: chlorophyll is reported at 0.3 m, while microcystin depth is blank. The paired report and every linked table, five original station CSVs, normalizer and executable analysis remain under `paired_analysis/`.
+
+Selected report export now includes `selected-study-report.zip`. Extract that package and open `study-report.html`: linked illustrated reports, scientific SVGs, paired-analysis report/downloads, selected original-cell tables and reconstruction files keep their relative paths. The complete-study ZIP remains the native re-import carrier. Application/source installation preserves existing originals and requires an explicit new source edition through native import when source bytes differ.
+
+### Source execution for this edition
+
+All 62 source-bank members match their declared byte lengths and SHA256 values. The exact updated normalizer reproduces all seven derived output files, and the pinned original D3 modules plus figure core reproduce all four SVGs, both figure tables and the complete figure specification byte for byte. The original study and figure manifests resolve 24 native entries with all referenced source hashes intact. The separate paired-analysis module was independently executed from its retained five original WQP CSVs (533 rows) through the original normalizer and actual analysis/report functions. All eleven published output files reproduced byte for byte. An independent decimal interval calculation checked all 128 microcystin contrast endpoints, endpoint inclusion and directions; all agreed. The seven-entry paired manifest resolves all 154 references to 22 unchanged source/output bodies, and its ten local report downloads resolve within the package.
+
+Native receiving continues through the same Workspace import, queued operator actions, browser source/detail links, report export, complete-study re-import and project archive reopen commands above.

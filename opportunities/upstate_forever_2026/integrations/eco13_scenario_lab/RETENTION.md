@@ -172,3 +172,26 @@ reuse counters.
 
 - [Python fcntl constants and ioctl API](https://docs.python.org/3/library/fcntl.html)
 - [Linux FICLONE copy-on-write semantics](https://man7.org/linux/man-pages/man2/FICLONE.2const.html)
+
+## Portable archive publication and receiving
+
+Export holds the original comparison lock, captures every regular file, and streams
+each member into a private archive while computing its SHA-256. File identity and
+the complete directory membership are checked before publication. This uses one
+full source read per member, including large native rasters.
+
+Every export uses its own temporary file. The final archive is published with an
+atomic create-only link on the destination volume. If another operation creates
+that filename first, its archive remains intact and this export reports the
+conflict. A retry chooses a new output filename or reopens the completed operation.
+
+Receiving checks schema 1, canonical relative paths, complete manifest membership,
+regular-file types, lengths and hashes. Each received file is written privately
+and synced in a staging directory. Publishers for the same destination share a
+destination lock; after checking that the destination is still absent, receiving
+promotes the complete edition and syncs its parent directory. Original workspaces,
+completed archives and existing receiving directories retain their contents.
+
+The native operator's export, upload and receive actions use these same functions.
+Saved report choices, original physical quantities, native source identities and
+independent report editions travel together through the existing archive format.

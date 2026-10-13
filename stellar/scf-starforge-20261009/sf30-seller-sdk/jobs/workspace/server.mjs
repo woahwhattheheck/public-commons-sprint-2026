@@ -138,6 +138,21 @@ export async function startJobsWorkspace({ model, delivery = null, port = 0, ser
           });
           return send(result.status ?? 200, result.value);
         }
+        const outputRoute = /^\/api\/jobs\/([^/?#]+)\/outputs(?:\/([A-Za-z][A-Za-z0-9_]{0,55}))?$/.exec(url.pathname);
+        if (outputRoute) {
+          if (!['GET', 'HEAD'].includes(req.method)) throw fault('METHOD_NOT_ALLOWED', 'Use GET or HEAD.', 405);
+          let id;
+          try { id = decodeURIComponent(outputRoute[1]); }
+          catch { throw fault('NOT_FOUND', 'This job was not found.', 404); }
+          if (!JOB_ID.test(id) || encodeURIComponent(id) !== outputRoute[1])
+            throw fault('NOT_FOUND', 'This job was not found.', 404);
+          if (!outputRoute[2]) return send(200, await model.outputPackage(id, { signal: controller.signal }));
+          const output = await model.outputFile(id, outputRoute[2], { signal: controller.signal });
+          return send(200, output.body, output.contentType, {
+            'content-disposition': 'attachment; filename="' + name(output.filename) + '"',
+            'x-sfjobs-sha256': output.sha256,
+          });
+        }
         const match = /^\/api\/jobs\/([^/?#]+)(?:\/(preview|result|cancel|retry|renew-claim))?$/.exec(url.pathname);
         if (match) {
           let id;

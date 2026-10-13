@@ -162,6 +162,48 @@
             ]
           },
           "priority": 90
+        },
+        {
+          "ids": [],
+          "roles": [
+            "WATER_CLASSIFICATION"
+          ],
+          "uris": [],
+          "required_metadata": {
+            "classification": "FW"
+          },
+          "selection": {
+            "fields": {
+              "classification": "H2OCLASS"
+            },
+            "class_scope": [
+              "FW"
+            ]
+          },
+          "priority": 90
+        },
+        {
+          "ids": [],
+          "roles": [
+            "WATER_CLASSIFICATION"
+          ],
+          "uris": [],
+          "required_metadata": {
+            "classification": "FW",
+            "huc_selection_mode": "geometry"
+          },
+          "required_metadata_keys": [
+            "criteria_coverage"
+          ],
+          "selection": {
+            "fields": {
+              "classification": "H2OCLASS"
+            },
+            "class_scope": [
+              "FW"
+            ]
+          },
+          "priority": 95
         }
       ],
       "selection": {}
@@ -188,7 +230,13 @@
               "TPGT"
             ]
           },
-          "priority": 80
+          "priority": 80,
+          "excluded_roles": [
+            "WATER_CLASSIFICATION_FW"
+          ],
+          "excluded_metadata": {
+            "classification": "FW"
+          }
         }
       ],
       "selection": {}

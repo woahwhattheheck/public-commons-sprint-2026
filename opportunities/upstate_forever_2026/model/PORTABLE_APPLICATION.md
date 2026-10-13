@@ -31,4 +31,6 @@ Content-addressed source objects, source editions, model runs, grids, delivery p
 
 ## Existing archives
 
-The archive format remains `upstate.scientific-workspace-archive/v1`. Earlier archives without database snapshot records still open through the same restore command. Each archive member is checked against its retained length and SHA-256 during inspection and extraction. Restore publishes into a new receiving directory and preserves existing destinations.
+The archive format remains `upstate.scientific-workspace-archive/v1`. Earlier archives without database snapshot records still open through the same restore command. Explicit archive inspection verifies each member against its retained length and SHA-256. Restore checks the complete manifest first, then verifies each member while extracting it, so large rasters do not need an extra decompression pass. Completed native result descriptors are bound to those verified member hashes and lengths. Saved scientific selections and their existing receiving validators are retained.
+
+Receiving reads from one opened archive edition and records its SHA-256 before publishing the new directory. An archive that changes in place during receiving stops the operation and removes its owned staging directory. Capture also records the finished archive's identity before publication. Restore publishes into a new receiving directory and preserves existing destinations.

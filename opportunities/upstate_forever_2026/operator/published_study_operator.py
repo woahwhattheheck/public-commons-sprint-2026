@@ -6,12 +6,19 @@ import json
 from pathlib import Path, PurePosixPath
 import re
 from typing import Any
+from urllib.parse import quote
 
 from model.common import describe_file
-from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA
+from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
+# Interactive original reports use an opaque origin and cannot call the operator.
+REPORT_POLICY = ("sandbox allow-scripts allow-downloads allow-modals allow-popups "
+                 "allow-popups-to-escape-sandbox; default-src 'none'; "
+                 "script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; "
+                 "connect-src 'none'; object-src 'none'; base-uri 'none'; "
+                 "form-action 'none'; frame-ancestors 'self'")
 
 
 class PublishedStudyProvider:
@@ -31,25 +38,71 @@ class PublishedStudyProvider:
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
     def _builtin_source(self):
-        names = (
+        required = (
             "study.json", "stations.csv", "stations.json", "seasonal_summaries.csv",
             "surface_ranges.csv", "continuous_monthly_do.csv", "continuous_monthly_ph.csv",
             "reported_npdes_permits.csv", "source_notes.json", "README.md",
-            "table7-visual-context.csv", "table7-visual-reading.json", "table7-page-render.json",
         )
-        files = []
-        for name in names:
-            path = self.builtin / name
-            if not path.is_file():
-                if name.startswith("table7-"):
-                    continue
-                self._fail("STUDY_BUILTIN", "The installed study is missing " + name, 404)
+        selected = {}
+        def retain(path, name=None):
+            path = path.resolve(strict=True)
+            root = self.builtin.resolve(strict=True)
+            if name is None:
+                if not path.is_relative_to(root):
+                    self._fail("STUDY_BUILTIN_PATH", "A study manifest points outside its installed study directory.")
+                name = path.relative_to(root).as_posix()
             raw = path.read_bytes()
-            files.append({
-                "path": name, "encoding": "utf-8", "bytes": len(raw),
-                "sha256": hashlib.sha256(raw).hexdigest(), "content": raw.decode("utf-8"),
-            })
-        evidence = {}
+            if name in selected and selected[name] != raw:
+                self._fail("STUDY_BUILTIN_PATH", "Installed source files conflict at " + name)
+            selected[name] = raw
+
+        for name in required:
+            retain(self.builtin / name)
+        for name in (
+            "table7-visual-context.csv", "table7-visual-reading.json", "table7-page-render.json",
+            "map-layer-capture.json", "NATIVE_IMPORT.md", "wqp/flow-context-sources.json",
+            "microcystin_support_20261013/original-campaign-support.json",
+        ):
+            path = self.builtin / name
+            if path.is_file():
+                retain(path)
+        manifests = (
+            self.builtin / "model-sources.json",
+            self.builtin / "wqp" / "flow-context-sources.json",
+            self.builtin / "wqp" / "flow-context-public-sources.json",
+            self.builtin / "wqp_20261013" / "source-manifest.json",
+            self.builtin / "figures" / "model-sources.json",
+            self.builtin.parent.parent / "eighteenmile_chlorophyll_reconciled.sources.json",
+            self.builtin.parent.parent / "eighteenmile_lake_observation_report.sources.json",
+            self.builtin.parent.parent / "eighteenmile_lake_paired_analysis.sources.json",
+        )
+        for manifest_path in manifests:
+            if not manifest_path.is_file():
+                continue
+            manifest_name = (
+                manifest_path.name if manifest_path.parent == self.builtin.parent.parent
+                else manifest_path.relative_to(self.builtin).as_posix()
+            )
+            retain(manifest_path, manifest_name)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+            if manifest.get("schema") != "upstate.sources/v1":
+                self._fail("STUDY_BUILTIN_MANIFEST", "The installed study manifest has an incompatible schema.")
+            for entry in manifest.get("entries", []):
+                for item in [entry, *entry.get("companions", [])]:
+                    try:
+                        relative = _manifest_path(manifest_name, item["path"])
+                    except (TypeError, ValueError) as error:
+                        self._fail("STUDY_BUILTIN_PATH", str(error))
+                    retain(self.builtin / relative)
+        files, evidence = [], {}
+        for name, raw in sorted(selected.items()):
+            if Path(name).suffix.lower() in (".pdf", ".png", ".jpg", ".jpeg"):
+                evidence[name] = raw
+            else:
+                files.append({
+                    "path": name, "encoding": "utf-8", "bytes": len(raw),
+                    "sha256": hashlib.sha256(raw).hexdigest(), "content": raw.decode("utf-8"),
+                })
         for name in (
             "2023LakeProgramFinalReport.pdf", "scdes-2023-lake-program-original.pdf",
             "table7-page21.png", "table7-crop.png",
@@ -142,10 +195,45 @@ class PublishedStudyProvider:
 
     def _source_links(self, workspace_key, ws, store, result):
         record = result["record"]
+        prefix = "/api/file/published-study/" + "/".join(
+            quote(str(part), safe="") for part in (workspace_key, record["source_collection_id"])
+        ) + "/"
+        reports = []
         for artifact in result.get("source_artifacts", []):
             path, _ = store.source_file(record["study_id"], artifact["path"], record["version_id"])
             artifact["download"] = self._ticket(workspace_key, ws, path, artifact["path"])
+            artifact["member_url"] = prefix + quote(artifact["path"], safe="/")
+            if PurePosixPath(artifact["path"]).suffix.lower() in (".html", ".htm"):
+                artifact["preview_url"] = artifact["member_url"]
+                reports.append({
+                    "path": artifact["path"], "url": artifact["preview_url"],
+                    "download": artifact["download"], "sha256": artifact["sha256"],
+                    "bytes": artifact["bytes"],
+                })
+        result["retained_reports"] = reports
         return result
+
+    def member(self, workspace_key, collection_id, member_path):
+        """Open exact original report members through the existing file transport."""
+        if not re.fullmatch(r"[0-9a-f]{64}", collection_id or ""):
+            self._fail("STUDY_COLLECTION", "Choose a retained study source collection.", 404)
+        ws, store = self._store(workspace_key)
+        try:
+            records = [
+                record for record in store.list_studies()["studies"]
+                if record.get("source_collection_id") == collection_id
+            ]
+            if len(records) != 1:
+                self._fail("STUDY_COLLECTION", "That retained study source collection is unavailable.", 404)
+            record = records[0]
+            # source_file accepts only registered inventory members and verifies
+            # their original content-addressed bodies before issuing the ticket.
+            path, _ = store.source_file(record["study_id"], member_path, record["version_id"])
+            return self._ticket(workspace_key, ws, path, member_path), REPORT_POLICY
+        except KeyError as error:
+            self._fail("STUDY_MEMBER", str(error), 404)
+        except (ValueError, OSError) as error:
+            self._fail("STUDY_SOURCE", str(error))
 
     def read(self, workspace_key, operation, payload):
         payload = payload or {}
@@ -234,7 +322,7 @@ class PublishedStudyProvider:
                     "study_id": study_id, "version_id": report["version_id"],
                     "selection": report["selection"], "view": "published-studies",
                     "artifacts": [
-                        self._artifact(ws, Path(item["path"]), item["filename"])
+                        self._artifact(ws, Path(item["path"]), item.get("relative_path", item["filename"]))
                         for item in report["files"]
                     ],
                 }

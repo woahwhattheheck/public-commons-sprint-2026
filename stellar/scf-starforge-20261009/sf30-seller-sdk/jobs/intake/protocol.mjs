@@ -1,5 +1,6 @@
 // MIT. Public input preparation contract; original SF30 remains the purchase authority.
 import { createHash } from 'node:crypto';
+import { validatePackagePolicy } from '../outputs/contract.mjs';
 
 export const CATALOG_SCHEMA = 'stellar-forge.job-intake-catalog.v1';
 export const REQUEST_SCHEMA = 'stellar-forge.job-intake-request.v1';
@@ -64,8 +65,12 @@ export function validateFunction(value, origin) {
     Buffer.byteLength(canonical(value.inputSchema)) <= 24000 &&
     integer(value.maxInputBytes, 1, 1048576) && integer(value.maxOutputBytes, 1, 67108864) &&
     integer(value.timeoutMs, 100, 3600000), 'JOB_INTAKE_FUNCTION_INVALID');
-  need(object(value.output) && ['json', 'bytes'].includes(value.output.format) &&
+  need(object(value.output) && ['json', 'bytes', 'package'].includes(value.output.format) &&
     text(value.output.contentType, 160) && text(value.output.filename, 100), 'JOB_INTAKE_OUTPUT_INVALID');
+  if (value.output.format === 'package') {
+    validatePackagePolicy(value.output);
+    need(value.output.maxBytes === value.maxOutputBytes, 'JOB_INTAKE_OUTPUT_INVALID');
+  }
   if (value.inputFiles !== undefined) need(object(value.inputFiles) &&
     value.inputFiles.schema === 'stellar-forge.job-input-policy.v1' &&
     HASH.test(value.inputFiles.policySha256 ?? '') && object(value.inputFiles.slots),
