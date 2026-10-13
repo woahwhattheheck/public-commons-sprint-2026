@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "profile-workbench",
   "title": "Profile workbench",
-  "version": "7",
+  "version": "8",
   "order": 25,
   "assets": [
     "profile_workbench.mjs",
@@ -355,7 +355,8 @@
       "getState",
       "api",
       "refreshState",
-      "showTask"
+      "showTask",
+      "openDesk"
     ],
     "styles": [
       "/web/profile_workbench.css"

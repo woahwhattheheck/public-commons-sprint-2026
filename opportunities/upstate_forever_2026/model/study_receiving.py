@@ -11,6 +11,7 @@ import re
 
 from .common import digest, identifier, read_json
 from . import study_transfer
+from . import management_case_study_transfer as management_transfer
 from . import scientific_report_study_transfer as reports
 from . import implementation_report_transfer as fieldwork
 from .portable_implementation import report_edition
@@ -69,6 +70,7 @@ def _summary(value):
         **observed_landcover_receiving.summary(identity),
         **received_published_reviews.summary(identity),
         **assessment_study_transfer.summary(identity),
+        **management_transfer.receiving_summary(identity),
     }
 
 
@@ -107,6 +109,7 @@ def detail(workspace, key):
         report_source_keys={(row["source_collection_id"], row["source_id"])
                             for row in identity.get("scientific_report_sources", [])},
         geographic_native_studies=identity.get("geographic_native_studies", []),
+        management_case_studies=identity.get("management_case_studies", []),
     ).resolve(identity.get("investigation_dependencies", ()))
     captured_reports = identity.get("scientific_report_editions", [])
     captured_fields = identity.get("implementation_report_sources", [])
@@ -199,6 +202,7 @@ def detail(workspace, key):
     received_published_reviews.augment(closure, retained, result)
     assessment_study_transfer.augment(closure, retained, result)
     geographic_study_receiving.augment(closure, retained, result)
+    management_transfer.augment_receiving(closure, retained, result)
     # Validate the resolved file identities again after constructing this read.
     # The existing ticket service verifies actual member bytes when downloaded.
     closure.assert_unchanged()
