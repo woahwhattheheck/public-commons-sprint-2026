@@ -24,9 +24,9 @@ Choose a saved chemical scenario and **Open scenario** to inspect and edit its p
 
 Concentrations use milligrams of the declared conserved basis per litre; external loads use kilograms of that basis per day, reach volumes cubic metres and flows cubic metres per day. Preserve the declared basis when assigning a measured species or entering a load.
 
-Explain the scientific change and select **Save immutable scenario edition**. The prior case remains retained as the parent. Open the resulting queued task and its saved scenario before running an edited selection.
+Explain the scientific change and select **Save immutable scenario edition**. The case opened in the editor remains its parent, even when the saved-scenario selector changes. Open the resulting queued task and its saved scenario before running an edited selection.
 
-Each scientific workspace retains its own editor and selected analysis while navigating to other desks. A newly completed operation refreshes saved scenarios and the analysis list without replacing an unsaved scientific draft. Opening another workspace uses that workspace's own retained editor.
+Each scientific workspace retains its own editor and selected analysis while navigating to other desks. A newly completed operation refreshes saved scenarios, retained source choices and the analysis list without replacing an unsaved scientific draft. Opening another workspace uses that workspace's own retained editor.
 
 ## Calculate and inspect results
 
