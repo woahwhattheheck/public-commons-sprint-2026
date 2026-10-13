@@ -139,6 +139,71 @@ def _footprint(closure, key, run_id):
     return value
 
 
+
+def _paired_report_edition(closure, product, analysis):
+    """Bind the captured report to its original ZIP, retaining the live report.
+
+    A later spatial review may extend reports.json. The original quantitative
+    archive still owns the older report signature and full member inventory.
+    Read only its directory, manifest and two JSON records; raster bytes remain
+    protected by the original archive descriptor and normal Study capture.
+    """
+    signature = product.get("report_signature")
+    if signature is None:
+        return
+    identifier(signature)
+    key = identifier(analysis["id"])
+    retained = product.get("archive")
+    if retained is None:
+        # Original interrupted operations can name a report before publication.
+        reports = closure.read("ensemble-products/" + key + "/reports.json")
+        if reports.get("ensemble_id") != key or digest(reports) != signature:
+            raise ValueError("The paired product lost its captured report edition")
+        return
+
+    import hashlib
+    import json
+    import zipfile
+    from .paired_ensemble.ensemble_portable import _manifest
+
+    path = closure.add_file(_member(retained["path"]), retained)
+    with zipfile.ZipFile(path, "r", allowZip64=True) as archive:
+        manifest, unused_size = _manifest(archive, max_bytes=None)
+        if manifest.get("ensemble_id") != key:
+            raise ValueError("The paired archive belongs to another native analysis")
+
+        def record(name):
+            expected = manifest["members"].get(name)
+            if expected is None or archive.getinfo(name).file_size > 64 * 1024**2:
+                raise ValueError("The paired archive lost its original JSON record: " + name)
+            body = archive.read(name)
+            if (len(body) != expected["bytes"]
+                    or hashlib.sha256(body).hexdigest() != expected["sha256"]):
+                raise ValueError("The paired archive JSON differs from its manifest: " + name)
+            return json.loads(body)
+
+        original = record("analysis.json")
+        reports = record("reports.json")
+        if (original.get("schema") != "upstate.paired-raster-ensemble/v1"
+                or original.get("id") != key or original.get("state") != "complete"
+                or original.get("selection") != analysis.get("selection")
+                or digest(original.get("selection")) != key
+                or reports.get("ensemble_id") != key or digest(reports) != signature):
+            raise ValueError("The paired archive changed its captured analysis or report edition")
+        artifacts = original.get("artifacts")
+        files = reports.get("files")
+        if not isinstance(artifacts, dict) or not isinstance(files, list):
+            raise ValueError("The paired archive lost its quantitative or report inventory")
+        for descriptor in [*artifacts.values(), *files]:
+            name = _member(descriptor["path"])
+            expected = manifest["members"].get(name)
+            if expected is None or not _same(descriptor, expected):
+                raise ValueError("The paired archive lost an original result member: " + name)
+        provenance = reports.get("native_provenance")
+        if provenance is not None and provenance not in files:
+            raise ValueError("The paired archive lost its original native provenance")
+
+
 def _ensemble(closure, prepared):
     """Retain the original native programme, including unfinished members.
 
@@ -282,11 +347,9 @@ def _ensemble(closure, prepared):
     def operation(value):
         if not isinstance(value, dict) or value.get("ensemble_id") != key:
             raise ValueError("Geographic operation belongs to another native programme")
-        # The original validator follows reports, paired selections, current
-        # editable trees and archive descriptors. An old report signature may
-        # no longer describe the live reports.json; its immutable archive binds
-        # that edition while the live analysis retains its current progress.
-        original._local_paired_products(closure, plan, operation=value)
+        # Current and historical operations retain their captured report ZIPs
+        # independently of later editions in the same editable analysis tree.
+        historical_operation(value)
 
     def historical_operation(value):
         if not isinstance(value, dict) or value.get("ensemble_id") != key:
@@ -337,6 +400,9 @@ def _ensemble(closure, prepared):
                 or choice.get("planned_member_count") != len(plan["members"])
                 or choice.get("selected_member_count") != len(selected_members)):
             raise ValueError("Historic paired product changed its planned or selected roster")
+        if product.get("state") == "complete" and analysis.get("state") != "complete":
+            raise ValueError("The completed geographic course lost its paired output")
+        _paired_report_edition(closure, product, analysis)
         closure.tree(paired_prefix)
         closure._descriptors(analysis.get("artifacts", {}), paired_prefix + "/")
         if product.get("archive") is not None:
