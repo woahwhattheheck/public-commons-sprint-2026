@@ -1,0 +1,26 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "restoration-programme",
+  "components": {
+    "restoration-programme": {
+      "title": "Source-bound restoration pricing, editable programme and native footprint derivation",
+      "paths": [
+        "source_tools/apply_simulated_restoration_programme.py",
+        "source_tools/derive_native_restoration_programme.py",
+        "source_data/simulated_restoration_programme_20261013/programme.json",
+        "source_data/simulated_restoration_programme_20261013/programme.html",
+        "source_data/sc_conservation_costs_20261013/catalogue.json",
+        "docs/SIMULATED_RESTORATION_PROGRAMME.md",
+        "docs/DERIVE_NATIVE_RESTORATION_PROGRAMME.md"
+      ],
+      "requires": [
+        "economic-comparison-source",
+        "scenario-footprint",
+        "implementation"
+      ]
+    }
+  },
+  "required_components": [
+    "restoration-programme"
+  ]
+}

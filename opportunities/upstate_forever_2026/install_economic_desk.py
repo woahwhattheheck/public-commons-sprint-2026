@@ -12,6 +12,14 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "source_tools/apply_simulated_restoration_programme.py",
+    "source_tools/derive_native_restoration_programme.py",
+    "source_data/simulated_restoration_programme_20261013/programme.json",
+    "source_data/simulated_restoration_programme_20261013/programme.html",
+    "source_data/sc_conservation_costs_20261013/catalogue.json",
+    "docs/SIMULATED_RESTORATION_PROGRAMME.md",
+    "docs/DERIVE_NATIVE_RESTORATION_PROGRAMME.md",
+    "integration/component_fragments/restoration-programme.json",
     "operator/economic_receive.py",
     "operator/ECONOMIC_RECEIVING_PHASES.md",
     "operator/web/economic_received_comparisons.mjs",
