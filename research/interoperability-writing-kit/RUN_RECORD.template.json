@@ -39,7 +39,7 @@
     "enforcement": null,
     "transport_status": null,
     "native_response_evidence": null,
-    "obligations": [],
+    "obligations": null,
     "client_output_evidence": null
   },
   "assessment": {

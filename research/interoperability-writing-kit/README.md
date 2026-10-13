@@ -14,7 +14,7 @@ Start with SAMPLE.md for the complete narrative and twelve authored WR reporting
 
 ## Vocabulary and templates
 
-The JSON schemas named here identify this authored reporting convention; they are not OpenTDF request schemas. null fields are unfinished inputs. not-executed and not-assessed preserve that state. A real execution gets its own observations and assessment.
+The JSON schemas named here identify this authored reporting convention; they are not OpenTDF request schemas. null fields are unfinished inputs. In particular, observed.obligations remains null until the actual response is observed; [] represents a response known to contain no obligations. not-executed and not-assessed preserve that state. A real execution gets its own observations and assessment.
 
 The scenario plan contains design work, with no execution IDs assigned. The comment CSV contains worked editorial examples, with disposition proposed. Keep those examples separate from your programme's actual review log.
 
@@ -24,4 +24,4 @@ Use the full source register in SOURCES.md for the current primary references. T
 
 Both JSON files are UTF-8 and open in standard editors. The CSV uses quoted RFC 4180-style fields and CRLF rows; import all columns as text to preserve identifiers and editorial wording. The Markdown files retain complete content, ordinary tables and links. An HTML reader is supplied with the same source bodies and original download controls. Save that reader together with these editable members.
 
-The producer opens and visually inspects the exact outgoing HTML, rendered Markdown/PDF if used, JSON and CSV. Use the reader at desktop and390px; follow every section, download the files and reopen them. Source-level checks complement that actual receiving operation.
+The producer opens and visually inspects the exact outgoing HTML, rendered Markdown/PDF if used, JSON and CSV. Use the reader at desktop and 390px; follow every section, download the files and reopen them. Source-level checks complement that actual receiving operation.
