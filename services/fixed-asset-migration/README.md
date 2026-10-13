@@ -113,3 +113,8 @@ The issuer companion receives a complete original source package or saved source
 ## Work-order migration companion
 
 The complete browser and CLI now include original order/cost intake, exact destination allocation, actual returned-export matching, rehearsals, acceptance and source-retaining handover. Start with [WORK_ORDER_OPERATING.md](WORK_ORDER_OPERATING.md). The original six-domain financial reconciliation and working-copy recovery remain the same product. An actual published Port of Bellingham capital-class reference is under examples/port-bellingham-2025/.
+
+
+## Complete offline application source
+
+The maintained standalone builder embeds the full declared application, including Business Central/Dynaway source preparation and the Microsoft accounting contract. The existing browser and CLI handover retain it under application/ beside the unchanged original workspace and issuer/financial/work-order outputs. Start with [APPLICATION_DELIVERY.md](APPLICATION_DELIVERY.md); that guide covers source preparation, independent reopening, rebuild commands and the offered50,000-line scope with10,000-row review batches. Missing customer data and actual visual receiving remain explicit.
