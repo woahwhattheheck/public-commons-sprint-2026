@@ -457,10 +457,60 @@ render();
 """
 
 
+
+def _retained_profiles(workspace, scope, experiment_id):
+    """Recover the original report context from this received experiment."""
+    from model.common import digest, read_json, verify_file
+    context = scope / "study-report-context.json"
+    if context.is_file():
+        value = read_json(context)
+        payload = {name: item for name, item in value.items() if name != "id"}
+        if (value.get("schema") != "upstate.study-report-context/v1"
+                or value.get("experiment_id") != experiment_id
+                or value.get("workspace_id") != workspace.project["id"]
+                or value.get("id") != digest(payload)
+                or not isinstance(value.get("source_profiles"), dict)):
+            raise ValueError("The retained study report context differs from this experiment.")
+        return value["source_profiles"]
+    marker_path = scope / "study-report.json"
+    if not marker_path.is_file():
+        return None
+    marker = read_json(marker_path)
+    if (marker.get("schema") != "upstate.study-report-downloads/v1"
+            or marker.get("experiment_id") != experiment_id
+            or marker.get("workspace_id") != workspace.project["id"]):
+        raise ValueError("The retained study report belongs to another experiment.")
+    descriptors = [
+        item for item in marker.get("files", {}).values()
+        if isinstance(item, dict) and item.get("path") == "study-report/study-summary.json"
+    ]
+    if len(descriptors) != 1:
+        raise ValueError("Retain the original study summary before rebuilding its report.")
+    previous = read_json(verify_file(scope, descriptors[0]))
+    if (previous.get("schema") != "upstate.published-study-report/v1"
+            or previous.get("experiment_id") != experiment_id
+            or previous.get("workspace_id") != workspace.project["id"]
+            or previous.get("experiment_summary", {}).get("sha256") != marker.get("summary_sha256")
+            or not isinstance(previous.get("source_profiles"), dict)):
+        raise ValueError("The original study summary differs from its retained report marker.")
+    return previous["source_profiles"]
+
+
+def refresh_existing(workspace, experiment_id):
+    """Refresh an existing complete study report after summary publication."""
+    from model.common import identifier
+    experiment_id = identifier(experiment_id)
+    scope = workspace.root / "experiments" / experiment_id
+    if not any((scope / name).is_file() for name in
+               ("study-report-context.json", "study-report.json")):
+        return None
+    return build(workspace, experiment_id)
+
+
 def build(workspace, experiment_id, *, profiles=None):
     """Render values from one locked summary and register the retained outputs."""
     from model import experiments, study_decisions, study_execution, study_interpretation
-    from model.common import atomic_bytes, atomic_json, describe_file, held, identifier, verify_file
+    from model.common import atomic_bytes, atomic_json, describe_file, digest, held, identifier, verify_file
     experiment_id = identifier(experiment_id)
     scope = workspace.root / "experiments" / experiment_id
     # The same lock guards summary publication in the experiment engine and
@@ -472,11 +522,23 @@ def build(workspace, experiment_id, *, profiles=None):
         if summary["id"] != experiment_id or summary["workspace_id"] != workspace.project["id"]:
             raise ValueError("Select the current workspace's original experiment")
         summary_source = describe_file(scope, scope / "summary.json")
+        if profiles is None:
+            profiles = _retained_profiles(workspace, scope, experiment_id)
+        if profiles is not None and not isinstance(profiles, dict):
+            raise ValueError("The study report programme context must be an object.")
         rows = _source_rows(summary, profiles)
         execution = study_execution.collect(workspace, summary)
         decisions = study_decisions.analyse(summary)
         interpretation = study_interpretation.collect(workspace, summary, profiles=profiles)
         published_context = _published_context(interpretation)
+        context = {
+            "schema": "upstate.study-report-context/v1",
+            "experiment_id": experiment_id, "workspace_id": workspace.project["id"],
+            "source_profiles": profiles or {},
+        }
+        # Retain validated source context before replacing report bodies. This
+        # survives interrupted rendering and the ordinary complete-study archive.
+        atomic_json(scope / "study-report-context.json", {**context, "id": digest(context)})
         directory = scope / "study-report"
         directory.mkdir(parents=True, exist_ok=True)
         with held(directory / ".report.lock", blocking=False):
