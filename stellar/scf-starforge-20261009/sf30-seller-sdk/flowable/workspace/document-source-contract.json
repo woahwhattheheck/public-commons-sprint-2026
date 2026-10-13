@@ -1,0 +1,46 @@
+{
+  "schema": "stellar-forge.document-intake-source-contract.v1",
+  "provider": "Alfresco REST v1",
+  "repository": "Alfresco/rest-api-explorer",
+  "commit": "fddee4de42f85487a1b8b327e5c55ad3af15ffa6",
+  "sourcePath": "src/main/webapp/definitions/alfresco-core.yaml",
+  "sourceGitBlob": "ee9d547443afcf71740cc110a82142109e8c2f70",
+  "sourceURL": "https://github.com/Alfresco/rest-api-explorer/blob/fddee4de42f85487a1b8b327e5c55ad3af15ffa6/src/main/webapp/definitions/alfresco-core.yaml",
+  "operations": [
+    "getNode",
+    "listVersionHistory",
+    "getVersion",
+    "getVersionContent"
+  ],
+  "minimumVersionForVersions": "5.2",
+  "readOnly": true,
+  "requestSequence": [
+    "node metadata",
+    "all observed offset history pages",
+    "selected version metadata",
+    "selected version full content",
+    "same selected version metadata"
+  ],
+  "permissions": [
+    "read the selected file node",
+    "read its version metadata/history",
+    "read selected version content"
+  ],
+  "fullContent": {
+    "status": 200,
+    "range": false,
+    "conditional": false,
+    "redirect": false,
+    "maximumBytes": 4194304
+  },
+  "consistency": "Version labels are selected explicitly. Equal before/after metadata and complete observed pages are consistency observations; this API provides no atomic history/content snapshot or immutable content attestation. No fallback to current node content.",
+  "nativeProcess": {
+    "action": "start",
+    "selector": "processDefinitionId",
+    "request": "Original exact bodyText via saved programme and native process owner",
+    "recovery": "Reconcile the original dispatched operation; no replacement process start",
+    "history": "Original complete saved portfolio and exact process-instance ID from native reconciliation"
+  },
+  "sourceNumbers": "Long and double mapped repository properties use exact decimal-text source values. Numeric JSON properties outside safe integral representation are rejected for mapping.",
+  "authoredExamples": "All examples are authored implementation inputs, not native Alfresco/Flowable results or customer policies."
+}
