@@ -364,6 +364,11 @@ async function stopServer(service){
   }
 }
 export async function runSourceVersionReceiving(options){
+  if(options.chapter==='observation-editions'){
+    const {runObservationEditionReceiving}=await import('./observation-edition-receiving.mjs');
+    return runObservationEditionReceiving(options,{prepareSourceVersionReceiving,assertOwnedTree,exact,atomic,regular,captureDownload,startServer,stopServer});
+  }
+  assert(!options.chapter||options.chapter==='source-versions','Choose source-versions or observation-editions.');
   const prepared=await prepareSourceVersionReceiving(options),done=path.join(prepared.root,'COMPLETE.json');
   if(await exists(done)){
     const result=JSON.parse(await fs.readFile(done,'utf8'));
@@ -410,7 +415,7 @@ export async function runSourceVersionReceiving(options){
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const input={};for(let i=2;i<process.argv.length;i+=2){assert(process.argv[i].startsWith('--')&&process.argv[i+1]&&!process.argv[i+1].startsWith('--'),'Use --name value pairs.');const key=process.argv[i].slice(2);assert(!Object.hasOwn(input,key),'Repeated option: '+key);input[key]=process.argv[i+1];}
-  const allowed=['portable','output','reviewer','reason','group-id','record-id','exercise-selection','reaches','playwright','chromium'];for(const key of Object.keys(input))assert(allowed.includes(key),'Unknown option: '+key);
-  try{console.log(json(await runSourceVersionReceiving({portableFile:input.portable,output:input.output,reviewer:input.reviewer,reason:input.reason,groupId:input['group-id'],recordId:input['record-id'],exerciseSelection:input['exercise-selection'],reachesFile:input.reaches,playwright:input.playwright,chromium:input.chromium})));}
+  const allowed=['portable','output','reviewer','reason','group-id','record-id','exercise-selection','reaches','playwright','chromium','chapter','observation-choices','observation-collections'];for(const key of Object.keys(input))assert(allowed.includes(key),'Unknown option: '+key);
+  try{console.log(json(await runSourceVersionReceiving({portableFile:input.portable,output:input.output,reviewer:input.reviewer,reason:input.reason,groupId:input['group-id'],recordId:input['record-id'],exerciseSelection:input['exercise-selection'],reachesFile:input.reaches,playwright:input.playwright,chromium:input.chromium,chapter:input.chapter,observationChoices:input['observation-choices'],observationCollections:input['observation-collections']})));}
   catch(error){console.error(error.stack||String(error));process.exitCode=1;}
 }
