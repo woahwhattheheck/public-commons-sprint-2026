@@ -2,36 +2,37 @@
   "schema": "upstate.eighteenmile-decision-interpretation/v1",
   "inputs": [
     {
-      "path": "../continuous_monthly_ph.csv",
+      "path": "../report_context/continuous_monthly_ph.csv",
       "bytes": 2166,
       "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05"
     },
     {
-      "path": "../surface_ranges.csv",
+      "path": "../report_context/surface_ranges.csv",
       "bytes": 1234,
       "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b"
     },
     {
-      "path": "../study.json",
+      "path": "../report_context/study.json",
       "bytes": 2697,
       "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8"
     },
     {
-      "path": "../wqp/derived/selected_chlorophyll.csv",
+      "path": "../report_context/wqp/derived/selected_chlorophyll.csv",
       "bytes": 98672,
       "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
     },
     {
-      "path": "../wqp/study_flow_dates.csv",
+      "path": "../report_context/wqp/study_flow_dates.csv",
       "bytes": 27050,
       "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
     },
     {
-      "path": "../wqp/flow_context_methods.json",
+      "path": "../report_context/wqp/flow_context_methods.json",
       "bytes": 3338,
       "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
     }
   ],
+  "original_study_root": "../report_context",
   "observed_scope": {
     "huc10": "0306010106",
     "report_area_acres": 38112,
