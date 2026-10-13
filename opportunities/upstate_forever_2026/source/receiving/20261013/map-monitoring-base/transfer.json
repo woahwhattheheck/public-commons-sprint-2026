@@ -1,0 +1,28 @@
+{
+  "schema": "commons.source-bank-transfer/v1",
+  "operation_id": "ES-20261012-ASTRA-S1-map1755-base-dependencies",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "file_count": 14,
+  "source_bytes": 276395,
+  "banks": [
+    {
+      "name": "map1755-base-dependencies",
+      "original_git_blob": "bc39da421031a6d8aa4b5d066c71181343c3fd19",
+      "original_bytes": 299146,
+      "original_sha256": "f16456d7fb28ddfe7d193aeaf90066a16516c7801c2b7f4da1360a6f539b124c",
+      "gzip_bytes": 87190,
+      "gzip_sha256": "319f32767a4fd48d7ac2fa3e544461cf5d558d7f2d137ef96547b29f2663a0ac",
+      "parts": [
+        {
+          "git_blob": "741e55c78cbce468fc58072703664c7bd207e3e8",
+          "json_bytes": 116478,
+          "json_sha256": "af161793c734988a1806ff252ee32fbdba67fc5ac406f68955687e9d1d0abeae",
+          "index": 0,
+          "offset": 0,
+          "bytes": 87190,
+          "sha256": "319f32767a4fd48d7ac2fa3e544461cf5d558d7f2d137ef96547b29f2663a0ac"
+        }
+      ]
+    }
+  ]
+}
