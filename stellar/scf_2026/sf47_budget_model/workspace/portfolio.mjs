@@ -1,4 +1,6 @@
 /** Portfolio allocation over one original saved SF47 operating forecast. */
+import {createPortfolioWorkingCopyStore} from './portfolio-working-copy-store.mjs';
+import {PORTFOLIO_SESSION_SCHEMA,PORTFOLIO_WORKING_LIMITS,portfolioSignature,portfolioSourceMetadata,portfolioUnfinishedFields,validatePortfolioSession,completePortfolioAttachments} from './portfolio-working-copies.mjs';
 const SCHEMA='stellar-forge.sf47-portfolio.v1';
 const CACHE='stellar-forge.sf47-portfolio-ui.v1';
 const SCALE=100000000n;
@@ -11,7 +13,7 @@ const num=value=>value===null||value===undefined?'—':String(value);
 const json=value=>JSON.stringify(value,null,2)+'\n';
 const uid=prefix=>prefix+'-'+crypto.randomUUID();
 const optional=value=>value.trim()===''?null:value.trim();
-const integer=value=>value===''?null:Number(value);
+const integer=value=>/^[+-]?\d+$/.test(value)&&Number.isSafeInteger(Number(value))?Number(value):null;
 const textList=value=>value.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
 const list=value=>Array.isArray(value)?value:[];
 function quantity(value){const m=String(value??'').match(/^(\d+)(?:\.(\d{0,8}))?$/);return m?BigInt(m[1])*SCALE+BigInt((m[2]||'').padEnd(8,'0')):null;}
@@ -19,7 +21,7 @@ function decimal(value){return (value/SCALE).toString()+((value%SCALE)?'.'+(valu
 function table(head,rows){return '<div class="portfolio-table"><table><thead><tr>'+head.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';}
 const empty=value=>'<p class="portfolio-muted">'+esc(value)+'</p>';
 const button=(label,action,attrs='')=>'<button type="button" data-portfolio-action="'+action+'" '+attrs+'>'+esc(label)+'</button>';
-function input(label,value,attrs='',type='text',help=''){return '<label>'+esc(label)+'<input type="'+type+'" value="'+esc(value??'')+'" '+attrs+'>'+(help?'<small>'+esc(help)+'</small>':'')+'</label>';}
+function input(label,value,attrs='',type='text',help=''){const numeric=type==='number',date=type==='date';return '<label>'+esc(label)+'<input type="'+(numeric||date?'text':type)+'"'+(numeric?' inputmode="decimal" data-portfolio-numeric':date?' inputmode="numeric" placeholder="YYYY-MM-DD" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"':'')+' value="'+esc(value??'')+'" '+attrs+'>'+(help?'<small>'+esc(help)+'</small>':'')+'</label>';}
 function area(label,value,attrs='',help=''){return '<label class="portfolio-wide">'+esc(label)+'<textarea rows="3" '+attrs+'>'+esc(value??'')+'</textarea>'+(help?'<small>'+esc(help)+'</small>':'')+'</label>';}
 function select(label,value,options,attrs='',multiple=false){return '<label>'+esc(label)+'<select '+attrs+(multiple?' multiple size="4"':'')+'>'+options.map(([id,name])=>'<option value="'+esc(id)+'"'+((multiple?list(value).includes(id):String(value??'')===String(id))?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select></label>';}
 function download(value,filename,type='application/json'){const url=URL.createObjectURL(value instanceof Blob?value:new Blob([value],{type}));const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
@@ -43,26 +45,141 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
   if(!document.querySelector('link[data-sf47-portfolio-style]')){const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./portfolio.css',import.meta.url).href;style.dataset.sf47PortfolioStyle='true';document.head.append(style);}
   const root=document.createElement('section');root.className='portfolio';root.setAttribute('aria-label','Portfolio delivery allocation');container.replaceChildren(root);
   const caseId=current.program.id,path='/api/operations/'+caseId,cacheKey='sf47.portfolio.'+caseId;
-  const s={active:true,generation:0,busy:false,hostBusy:false,recoveryRaw:null,draft:null,sourceTasks:[],baseForecast:null,preview:null,saved:null,portfolios:[],profile:'base',resultProfile:'base',tab:'inputs',dirty:false,pending:null,lastRejected:null,requestNonce:'',sourceChoice:'',savedChoice:initialPortfolioId||'',error:'',message:'',storageWarning:'',dailyPage:0,allocationPage:0};
+  const s={active:true,generation:0,busy:false,hostBusy:false,recoveryRaw:null,draft:null,sourceTasks:[],installationCandidates:[],installationSource:null,installationChoices:{},baseForecast:null,preview:null,saved:null,portfolios:[],profile:'base',resultProfile:'base',tab:'inputs',dirty:false,pending:null,lastRejected:null,requestNonce:'',sourceChoice:'',savedChoice:initialPortfolioId||'',error:'',message:'',storageWarning:'',dailyPage:0,allocationPage:0,cashPage:0,rawFields:{},resourceDialogs:{},openDialogKey:null,attachments:[],copyName:'',checkpointLabel:'',historyChoice:'',archivedChoice:''};
   const available=()=>s.active&&root.isConnected;
   const $=selector=>root.querySelector(selector);
   function ensure(g=s.generation){if(!available()||g!==s.generation){const error=new Error('This portfolio view has changed. Reopen the retained case.');error.code='PORTFOLIO_VIEW_CLOSED';throw error;}}
   async function api(url,body,options){const g=s.generation;ensure(g);const value=await transport(url,body,options);ensure(g);return value;}
+  let copies=null,storeOpened=false,storeFailed=false,autosaveTimer=null,workingWrite=Promise.resolve(),adopting=false,recoveryCollection=null;
+  const validateWorking=(value,options={})=>validatePortfolioSession(value,{caseId,originCaseId:current.program.origin?.programId??null,validateInputs:inputShape,...options});
+  const copyStore=createPortfolioWorkingCopyStore('sf47.portfolio-working.'+caseId,{validateSession:validateWorking});
+  const currentCopy=()=>copies?.copies.find(row=>row.id===copies.selectedCopyId)||null;
+  function checkpointsFor(copy=currentCopy(),trail=[],depth=0){if(!copy||depth>32)return [];return [...copy.checkpoints.map(row=>({key:JSON.stringify([...trail,row.id]),row,label:copy.name+' · '+row.label,sourceCopy:copy})),...copy.lineage.flatMap(origin=>checkpointsFor(origin.sourceCopy,[...trail,origin.id],depth+1))];}
+  function sessionSnapshot(){
+    captureDialog();
+    const state={draft:s.draft,profile:s.profile,resultProfile:s.resultProfile,tab:s.tab,dirty:s.dirty,pending:s.pending,lastRejected:s.lastRejected,requestNonce:s.requestNonce,sourceChoice:s.sourceChoice,savedChoice:s.savedChoice,baseForecast:s.baseForecast,sourceTasks:s.sourceTasks,installationCandidates:s.installationCandidates,installationSource:s.installationSource,installationChoices:s.installationChoices,preview:s.preview,saved:s.saved,rawFields:s.rawFields,resourceDialogs:s.resourceDialogs,openDialogKey:s.openDialogKey,attachments:s.attachments,recoveryRaw:s.recoveryRaw,copyName:s.copyName,checkpointLabel:s.checkpointLabel,historyChoice:s.historyChoice};
+    const originals=new Map(s.attachments.map(row=>[row.metadata.id,row]));
+    state.attachments=portfolioSourceMetadata(state).map(metadata=>({metadata,contentBase64:originals.get(metadata.id)?.contentBase64??null}));
+    return clone({schema:PORTFOLIO_SESSION_SCHEMA,caseId,originCaseId:current.program.origin?.programId??null,caseVersion:current.program.version,capturedAt:new Date().toISOString(),state});
+  }
+  function contextFor(profile=s.profile){
+    if(!s.draft)return null;
+    const a=profile==='base'?null:s.draft.alternatives.find(row=>row.id===profile);
+    return a?{...s.draft,resources:a.resources??s.draft.resources,tasks:a.tasks??s.draft.tasks,installationPlans:a.installationPlans??s.draft.installationPlans??[]}:s.draft;
+  }
+  function rawKey(el){
+    if(!el.matches('input,textarea,select')||el.closest('dialog'))return null;
+    const d=el.dataset,p=contextFor(),parts=[s.profile];
+    for(const key of ['portfolioInput','portfolioAltKey','portfolioCalendar','portfolioDates','portfolioWeekday','portfolioPhasePlan','phaseId','phasePlanKey','phaseKey','phaseResource','phaseBoundary','phaseDependencies','portfolioInstallationChoice'])if(Object.hasOwn(d,key))parts.push(key+':'+d[key]);
+    if(Object.hasOwn(d,'portfolioResource')){parts.push('resource:'+p?.resources[Number(d.portfolioResource)]?.id);for(const key of ['resourceKey','capacityDay'])if(Object.hasOwn(d,key))parts.push(key+':'+d[key]);}
+    if(Object.hasOwn(d,'portfolioTask')){parts.push('task:'+p?.tasks[Number(d.portfolioTask)]?.id);for(const key of ['taskKey','taskDependencies','effortResource'])if(Object.hasOwn(d,key))parts.push(key+':'+d[key]);}
+    return parts.length>1?JSON.stringify(parts):null;
+  }
+  function rawValue(el){return el.multiple?{values:[...el.selectedOptions].map(x=>x.value)}:el.type==='checkbox'?{checked:el.checked}:{value:el.value};}
+  function captureControls(){if(adopting||!available())return;for(const el of root.querySelectorAll('input,textarea,select')){const key=rawKey(el);if(key)s.rawFields[key]=rawValue(el);}captureDialog();}
+  function restoreControls(){for(const el of root.querySelectorAll('input,textarea,select')){const key=rawKey(el),row=key&&s.rawFields[key];if(!row||el.closest('fieldset')?.disabled)continue;if(Object.hasOwn(row,'checked'))el.checked=row.checked;else if(row.values)for(const o of el.options)o.selected=row.values.includes(o.value);else el.value=row.value;}}
+  function captureDialog(){const dialog=$('dialog');if(!dialog?.open||!s.openDialogKey)return;const retained=s.resourceDialogs[s.openDialogKey];if(!retained)return;for(const el of dialog.querySelectorAll('input[name]'))retained.values[el.name]=el.value;}
+  async function adoptWorking(value){
+    const checked=await validateWorking(value);ensure();adopting=true;
+    try{for(const [key,v]of Object.entries(checked.state))s[key]=clone(v);s.error='';s.message='';s.dailyPage=0;s.allocationPage=0;s.cashPage=0;onSelection(s.saved?.id||null);}
+    finally{adopting=false;}
+  }
+  function acceptCopies(result){copies=result.collection||result;return result.copy||currentCopy();}
   function retain(){
-    if(!available())return;
-    try{sessionStorage.setItem(cacheKey,json({schema:CACHE,caseId,draft:s.draft,profile:s.profile,resultProfile:s.resultProfile,dirty:s.dirty,pending:s.pending,lastRejected:s.lastRejected,requestNonce:s.requestNonce,savedChoice:s.savedChoice,sourceChoice:s.sourceChoice,recoveryRaw:s.recoveryRaw}));s.storageWarning='';}
-    catch{s.storageWarning='This browser could not retain the draft. Download it before closing the view.';}
+    if(!available()||adopting||!storeOpened||storeFailed)return;
+    captureDialog();clearTimeout(autosaveTimer);
+    autosaveTimer=setTimeout(()=>{persistWorking().catch(error=>{s.storageWarning=error.message;status(error.message,true);});},250);
+  }
+  async function fetchOriginal(metadata){const response=await api(path+'/sources/'+metadata.id,undefined,{download:true});return new Uint8Array(await response.arrayBuffer());}
+  async function persistWorking({complete=false}={}){
+    clearTimeout(autosaveTimer);if(!storeOpened||storeFailed)throw new Error('Open the retained working-copy store before saving. Download the complete working file if this browser cannot retain it.');
+    const selected=currentCopy();if(!selected||selected.archived)throw new Error('Select an active working copy before editing or saving.');
+    let snapshot=sessionSnapshot();const identity=selected.id,originalSignature=portfolioSignature(snapshot.state);
+    if(complete){snapshot=await completePortfolioAttachments(snapshot,{validate:validateWorking,fetchSource:fetchOriginal});ensure();
+      if(currentCopy()?.id!==identity||portfolioSignature(sessionSnapshot().state)!==originalSignature)throw new Error('This working copy changed while its sources downloaded. Keep the current work and export again.');
+      s.attachments=clone(snapshot.state.attachments);
+    }
+    const task=workingWrite.catch(()=>{}).then(async()=>{const result=await copyStore.updateHead(identity,snapshot);acceptCopies(result);s.storageWarning='';return snapshot;});workingWrite=task;return task;
+  }
+  function workingCopiesHtml(){
+    const selected=currentCopy(),rows=copies?.copies||[],history=checkpointsFor(selected);
+    return '<section class="portfolio-working" aria-label="Complete working copies"><h4>Working copies</h4><p>Keep named drafts and checkpoints beside the original saved allocations. Each copy retains its source, alternatives, unfinished forms and original pending request.</p>'+
+      '<div class="portfolio-fields">'+select('Current working copy',selected?.id||'',[['','Choose a working copy'],...rows.filter(row=>!row.archived).map(row=>[row.id,row.name])],'data-working-copy data-pending-allowed')+
+      input('Copy name',s.copyName||selected?.name||'','data-working-name data-pending-allowed')+'</div>'+
+      '<div class="portfolio-actions">'+button('New copy from this draft','working-new','data-pending-allowed')+button('Rename copy','working-rename','data-pending-allowed')+button('Archive copy','working-archive','data-pending-allowed')+
+      button('Download complete working copy','working-export','data-pending-allowed')+button('Receive complete working copy','working-import','data-pending-allowed')+button('Reload stored copies','working-reload','data-pending-allowed')+'</div>'+
+      '<div class="portfolio-fields">'+input('Checkpoint note',s.checkpointLabel,'data-working-checkpoint-label data-pending-allowed')+select('Retained checkpoints',s.historyChoice,[['','Choose an original checkpoint'],...history.map(item=>[item.key,item.label+' · '+item.row.createdAt])],'data-working-history data-pending-allowed')+'</div>'+
+      '<div class="portfolio-actions">'+button('Save complete checkpoint','working-checkpoint','data-pending-allowed')+button('Open checkpoint as another copy','working-fork','data-pending-allowed'+(!s.historyChoice?' disabled data-portfolio-disabled="true"':''))+'</div>'+
+      (rows.some(row=>row.archived)?'<div class="portfolio-fields">'+select('Archived working copies',s.archivedChoice,[['','Choose an archived copy'],...rows.filter(row=>row.archived).map(row=>[row.id,row.name])],'data-working-archived data-pending-allowed')+button('Restore selected copy','working-restore','data-pending-allowed')+'</div>':'')+
+      (selected?'<p class="portfolio-muted">'+history.length+' retained checkpoints. '+(selected.archived?'This copy is archived; restore it to continue.':'Changes are retained automatically in this browser. Complete downloads include every original source byte.')+'</p>':'')+
+      (s.openDialogKey?button('Resume unfinished capacity form','working-dialog','data-pending-allowed'):'')+
+      (s.recoveryRaw?button('Download previous browser text','download-recovery','data-pending-allowed')+button('Receive previous session draft','working-legacy','data-pending-allowed'):'')+
+      (recoveryCollection?button('Download retained store recovery','working-recovery','data-pending-allowed'):'')+
+      '<input type="file" accept=".json,application/json" data-working-file hidden></section>';
+  }
+  async function fullPortable(value){
+    const out=clone(value);
+    async function completeCopy(c){
+      c.head=await completePortfolioAttachments(c.head,{validate:validateWorking,fetchSource:fetchOriginal});
+      for(const h of c.checkpoints||[])h.session=await completePortfolioAttachments(h.session,{validate:validateWorking,fetchSource:fetchOriginal});
+      for(const origin of c.lineage||[])await completeCopy(origin.sourceCopy);
+    }
+    await completeCopy(out.copy);return out;
+  }
+  async function validatePortableCopy(copy,depth=0){
+    if(depth>32)throw new Error('Keep the complete source-copy lineage within the receiving limit.');
+    await validateWorking(copy.head,{requireComplete:true});
+    for(const h of copy.checkpoints||[])await validateWorking(h.session,{requireComplete:true});
+    for(const origin of copy.lineage||[])await validatePortableCopy(origin.sourceCopy,depth+1);
+  }
+  async function workingAction(action){
+    if(action==='working-recovery'){download(json(recoveryCollection),'portfolio-store-recovery.json');return;}
+    if(action==='working-reload'){if(!window.confirm('Reload the stored collection? Download this complete current copy first if it contains changes from a conflicting window.'))return;clearTimeout(autosaveTimer);await workingWrite.catch(()=>{});copies=await copyStore.read();storeOpened=true;storeFailed=false;recoveryCollection=null;if(currentCopy())await adoptWorking(currentCopy().head);render();status('Reopened the stored copies without replacing the other window’s changes.');return;}
+    if(action==='working-export'){
+      const selected=currentCopy(),now=new Date().toISOString();
+      const copy=selected?clone(selected):{id:'pwc-'+crypto.randomUUID().replaceAll('-',''),name:s.copyName||'Recovered current Portfolio session',createdAt:now,updatedAt:now,archived:false,head:null,checkpoints:[],lineage:[]};
+      copy.head=sessionSnapshot();
+      const complete=await fullPortable({schema:'stellar-forge.portfolio-working-copy.v1',exportedAt:now,copy}),text=json(complete);
+      if(new TextEncoder().encode(text).length>PORTFOLIO_WORKING_LIMITS.fileBytes)throw new Error('This complete lineage exceeds the 128 MiB receiving limit. Retain the browser copy and export an earlier named copy separately.');
+      download(text,'portfolio-working-copy-'+copy.id+'.json');status('Downloaded this exact current copy, checkpoints and original source bytes without changing stored copies.');return;
+    }
+    if(action==='working-import'){$('[data-working-file]').value='';$('[data-working-file]').click();return;}
+    if(action==='working-dialog'){const d=s.resourceDialogs[s.openDialogKey],p=contextFor(d?.profile);if(!d||!p)throw new Error('Open the original unfinished form in its retained alternative.');s.profile=d.profile;render();showResourceDialog(p.resources.findIndex(r=>r.id===d.resourceId),d.kind,d.originalDate);return;}
+    if(action==='working-legacy'){if(!s.recoveryRaw)return;const cached=JSON.parse(s.recoveryRaw);if(cached.schema!==CACHE||cached.caseId!==caseId)throw new Error('Use the complete original Portfolio browser record.');const next=sessionSnapshot();for(const k of ['draft','profile','resultProfile','dirty','pending','lastRejected','requestNonce','sourceChoice','savedChoice','installationCandidates','installationSource','installationChoices'])if(Object.hasOwn(cached,k))next.state[k]=cached[k];next.state.baseForecast=null;next.state.preview=null;next.state.saved=null;next.state.rawFields={};next.state.resourceDialogs={};next.state.openDialogKey=null;next.state.attachments=[];next.state.recoveryRaw=null;await validateWorking(next);ensure();acceptCopies(await copyStore.create({name:'Recovered previous session',session:next}));await adoptWorking(next);if(s.draft)await attachSource(s.draft.forecastId);await persistWorking();render();return;}
+    if(action==='working-restore'){if(currentCopy())await persistWorking();acceptCopies(await copyStore.setArchived(s.archivedChoice,false));acceptCopies(await copyStore.select(s.archivedChoice));await adoptWorking(currentCopy().head);s.archivedChoice='';s.copyName='';s.historyChoice='';render();return;}
+    const selected=currentCopy();if(!selected){if(action==='working-new'){acceptCopies(await copyStore.create({name:s.copyName||'New Portfolio draft',session:sessionSnapshot()}));await adoptWorking(currentCopy().head);render();return;}throw new Error('Choose or restore an original working copy first.');}
+    if(action==='working-archive'){await persistWorking();acceptCopies(await copyStore.setArchived(selected.id,true));if(currentCopy())await adoptWorking(currentCopy().head);else{for(const k of ['draft','baseForecast','preview','saved','installationSource','pending','lastRejected','openDialogKey'])s[k]=null;for(const k of ['rawFields','resourceDialogs','installationChoices'])s[k]={};for(const k of ['attachments','sourceTasks','installationCandidates'])s[k]=[];s.profile='base';s.resultProfile='base';s.savedChoice='';s.requestNonce='';s.dirty=false;}s.copyName='';s.historyChoice='';render();return;}
+    if(action==='working-rename'){acceptCopies(await copyStore.rename(selected.id,(s.copyName||selected.name).trim()));s.copyName='';render();return;}
+
+    if(action==='working-new'){const snapshot=selected.archived?clone(selected.head):await persistWorking({complete:true});acceptCopies(await copyStore.create({name:(s.copyName||selected.name)+' — copy',session:snapshot,fromCopyId:selected.id}));await adoptWorking(currentCopy().head);s.copyName='';s.historyChoice='';render();return;}
+    if(action==='working-checkpoint'){const snapshot=await persistWorking({complete:true});acceptCopies(await copyStore.checkpoint(selected.id,{label:s.checkpointLabel.trim()||'Reviewed working checkpoint',session:snapshot}));s.checkpointLabel='';render();status('Retained the complete checkpoint. Later edits continue in this working copy.');return;}
+    if(action==='working-fork'){if(!selected.archived)await persistWorking();const chosen=checkpointsFor(selected).find(item=>item.key===s.historyChoice);if(!chosen)throw new Error('Choose an original retained checkpoint.');acceptCopies(chosen.sourceCopy.id===selected.id?await copyStore.forkCheckpoint(selected.id,chosen.row.id,{name:selected.name+' — checkpoint copy'}):await copyStore.create({name:selected.name+' — retained checkpoint',session:chosen.row.session,fromCopyId:selected.id}));await adoptWorking(currentCopy().head);s.historyChoice='';s.copyName='';render();status('Opened the original checkpoint as a new copy. Prior head and history remain retained.');return;}
   }
   function status(message,error=false){if(!available())return;s.message=error?'':message;s.error=error?message:'';const node=$('[data-portfolio-status]');if(node){node.textContent=message;node.setAttribute('role',error?'alert':'status');}const note=$('[data-portfolio-storage]');if(note)note.textContent=s.storageWarning;}
-  function busy(value){s.busy=value;if(!available())return;root.setAttribute('aria-busy',String(value));root.querySelectorAll('button,input,select,textarea').forEach(node=>node.disabled=value||s.hostBusy||node.dataset.portfolioDisabled==='true'||Boolean(s.pending&&!node.hasAttribute('data-pending-allowed')));}
+  function busy(value){s.busy=value;if(!available())return;root.setAttribute('aria-busy',String(value));root.querySelectorAll('button,input,select,textarea').forEach(node=>node.disabled=value||s.hostBusy||node.dataset.portfolioDisabled==='true'||Boolean((s.pending||currentCopy()?.archived)&&!node.hasAttribute('data-pending-allowed')));}
   async function run(task){
     if(s.busy||s.hostBusy||!available())return;
     const g=s.generation;busy(true);
-    try{await task();}catch(error){if(available()&&g===s.generation)status(error.message||String(error),true);}
+    try{await task();}catch(error){if(available()&&g===s.generation){render();status(error.message||String(error),true);}}
     finally{if(available()&&g===s.generation)busy(false);}
   }
+  function pruneRemovedReferences(){
+    const profiles=new Set(['base',...(s.draft?.alternatives||[]).map(a=>a.id)]);
+    for(const [key,row]of Object.entries(s.resourceDialogs)){const plan=profiles.has(row.profile)?contextFor(row.profile):null;if(!plan?.resources.some(r=>r.id===row.resourceId))delete s.resourceDialogs[key];}
+    if(s.openDialogKey&&!s.resourceDialogs[s.openDialogKey])s.openDialogKey=null;
+    for(const key of Object.keys(s.rawFields)){
+      const parts=JSON.parse(key),profile=parts[0],plan=profiles.has(profile)?contextFor(profile):null;
+      const get=name=>{const x=parts.find(v=>v.startsWith(name+':'));return x===undefined?undefined:x.slice(name.length+1);};
+      if(!plan){delete s.rawFields[key];continue;}
+      const resource=get('resource')??get('effortResource')??get('phaseResource'),task=get('task')??get('portfolioPhasePlan')??get('portfolioInstallationChoice');
+      const phaseTask=get('portfolioPhasePlan'),phase=get('phaseId'),installation=phaseTask?(plan.installationPlans||[]).find(x=>x.taskId===phaseTask):null;
+      if(resource&&!plan.resources.some(r=>r.id===resource)||task&&!plan.tasks.some(r=>r.id===task)||phaseTask&&!installation||phase&&!installation?.phases.some(r=>r.phaseId===phase))delete s.rawFields[key];
+    }
+    for(const key of Object.keys(s.installationChoices)){const at=key.indexOf('|'),profile=key.slice(0,at),task=key.slice(at+1);if(!profiles.has(profile)||!contextFor(profile)?.tasks.some(r=>r.id===task))delete s.installationChoices[key];}
+  }
   function invalidate(renderAll=false){
-    s.dirty=true;s.preview=null;s.saved=null;s.savedChoice='';s.dailyPage=0;s.allocationPage=0;onSelection(null);retain();
+    pruneRemovedReferences();
+    s.dirty=true;s.preview=null;s.saved=null;s.savedChoice='';if(s.resultProfile!=='base'&&!s.draft?.alternatives.some(a=>a.id===s.resultProfile))s.resultProfile='base';s.dailyPage=0;s.allocationPage=0;s.cashPage=0;onSelection(null);retain();
     if(renderAll){render();return;}
     const report=$('[data-portfolio-analysis]');if(report)report.innerHTML=empty('Preview the current inputs to calculate delivery and cash alternatives.');
     const save=$('[data-portfolio-action=save]');if(save){save.disabled=true;save.dataset.portfolioDisabled='true';}
@@ -147,8 +264,9 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
   }
   function render(){
     if(!available())return;
+    captureDialog();
     const forecasts=list(current.forecasts),selectedName=s.baseForecast?.inputs?.name||s.baseForecast?.name||s.draft?.forecastId||'';
-    root.innerHTML='<div class="portfolio-heading"><div><h3>Portfolio delivery allocation</h3><p>Allocate the same remaining grant and customer work, then compare its dated cash needs.</p></div><div class="portfolio-actions">'+button('Download draft','download-draft','data-pending-allowed'+(!s.draft?' disabled data-portfolio-disabled="true"':''))+button('Import plan JSON','import')+'</div></div><p data-portfolio-status role="'+(s.error?'alert':'status')+'" aria-live="polite">'+esc(s.error||s.message)+'</p><p class="portfolio-note" data-portfolio-storage>'+esc(s.storageWarning)+'</p>'+pendingHtml()
+    root.innerHTML='<div class="portfolio-heading"><div><h3>Portfolio delivery allocation</h3><p>Allocate the same remaining grant and customer work, then compare its dated cash needs.</p></div><div class="portfolio-actions">'+button('Download draft','download-draft','data-pending-allowed'+(!s.draft?' disabled data-portfolio-disabled="true"':''))+button('Import plan JSON','import')+'</div></div><p data-portfolio-status role="'+(s.error?'alert':'status')+'" aria-live="polite">'+esc(s.error||s.message)+'</p><p class="portfolio-note" data-portfolio-storage>'+esc(s.storageWarning)+'</p>'+workingCopiesHtml()+pendingHtml()
       +'<div class="portfolio-source-bar">'+select('Original saved operating forecast',s.sourceChoice,forecasts.map(r=>[r.id,(r.name||r.id)+' · '+(r.asOfDate||'')]),'data-portfolio-source')+button('Create plan from this forecast','seed',forecasts.length?'':'disabled data-portfolio-disabled="true"')+select('Saved allocations',s.savedChoice,[['','Choose a saved allocation'],...s.portfolios.map(r=>[r.id,r.name||r.inputs?.name||r.id])],'data-portfolio-saved')+'</div>'
       +(selectedName?'<p class="portfolio-source-note">Source: <strong>'+esc(selectedName)+'</strong>'+ (s.baseForecast?.inputs?.asOfDate?' · as of '+esc(s.baseForecast.inputs.asOfDate):'')+'. '+s.sourceTasks.length+' original remaining-work entries.</p>':'')
       +(current.program.state==='CLOSED'?'<p class="portfolio-note">This case is closed. Read and preview the allocation, or reopen the case in its original controls before saving.</p>':'')
@@ -157,7 +275,7 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
       +(s.tab==='inputs'?'<div class="portfolio-editor">'+(s.saved?'<div class="portfolio-actions">'+button('Edit a new allocation from this saved input','edit-saved')+'</div><p class="portfolio-muted">The saved inputs remain immutable. Create a new allocation to change them.</p>':editor())+'</div>':'')
       +(s.draft&&!s.saved?'<div class="portfolio-review-bar"><p data-portfolio-draft-state>'+esc(s.preview?'Reviewed input and source ready to save.':'Draft — preview before saving.')+'</p>'+button('Preview allocation and cash','preview')+button(s.pending?'Resolve retained request':'Save reviewed allocation','save',s.preview&&current.program.state!=='CLOSED'?'':'disabled data-portfolio-disabled="true"')+'</div>':'')
       +'<div data-portfolio-analysis>'+(s.tab==='results'||s.preview||s.saved?analysisHtml():'')+'</div><input type="file" accept=".json,application/json" data-portfolio-file hidden><dialog class="portfolio-dialog" aria-label="Resource availability editor"><form method="dialog" data-portfolio-dialog><h4 data-dialog-title></h4><div data-dialog-fields class="portfolio-fields"></div><p data-dialog-error role="alert"></p><div class="portfolio-actions"><button type="button" data-portfolio-action="cancel-dialog">Cancel</button><button type="submit">Apply to this draft</button></div></form></dialog>';
-    busy(s.busy);
+    restoreControls();busy(s.busy);
   }
   async function attachSource(forecastId){
     const original=await api(path+'/forecasts/'+forecastId);s.baseForecast=original;
@@ -169,6 +287,7 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
     if(!s.sourceChoice)throw new Error('Select an original saved operating forecast.');
     if(s.dirty&&!window.confirm('Replace the current editable draft with a plan from the selected saved forecast?'))return;
     const value=await api(path+'/portfolio-seed',{expectedVersion:current.program.version,forecastId:s.sourceChoice});
+    s.rawFields={};s.resourceDialogs={};s.openDialogKey=null;s.attachments=[];
     s.draft=inputShape(value.inputs);s.sourceTasks=list(value.sourceTasks);s.baseForecast=value.baseForecast;s.saved=null;s.preview=null;s.pending=null;s.profile='base';s.resultProfile='base';s.savedChoice='';s.dirty=false;s.requestNonce='';onSelection(null);
     if(!s.baseForecast?.report)await attachSource(s.draft.forecastId);
     retain();render();status('Created a draft from the original remaining work. Enter daily availability and any unassigned effort.');
@@ -176,13 +295,14 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
   async function loadSaved(id){
     if(s.pending)throw new Error('Resolve the original pending save request first.');
     if(s.dirty&&!window.confirm('Open the saved allocation and replace the current editable draft?')){render();return;}
-    const value=await api(path+'/portfolios/'+id);s.saved=value;s.preview=null;s.draft=inputShape(value.inputs);s.sourceTasks=list(value.report?.sourceTasks);s.sourceChoice=s.draft.forecastId;s.savedChoice=value.id;s.profile='base';s.resultProfile='base';s.dirty=false;s.pending=null;s.tab='results';s.dailyPage=0;s.allocationPage=0;await attachSource(s.draft.forecastId);onSelection(value.id);retain();render();status('Reopened the original saved allocation and its source-bound cash comparison.');
+    const value=await api(path+'/portfolios/'+id);s.rawFields={};s.resourceDialogs={};s.openDialogKey=null;s.attachments=[];s.saved=value;s.preview=null;s.draft=inputShape(value.inputs);s.sourceTasks=list(value.report?.sourceTasks);s.sourceChoice=s.draft.forecastId;s.savedChoice=value.id;s.profile='base';s.resultProfile='base';s.dirty=false;s.pending=null;s.tab='results';s.dailyPage=0;s.allocationPage=0;await attachSource(s.draft.forecastId);onSelection(value.id);retain();render();status('Reopened the original saved allocation and its source-bound cash comparison.');
   }
   async function preview(){
     if(s.pending)throw new Error('Resolve the original pending save request first.');
     if(!s.draft)throw new Error('Create or import a portfolio draft first.');
+    if(portfolioUnfinishedFields(sessionSnapshot()).length)throw new Error('Finish the partly typed numeric values before previewing. Their exact text remains in this working copy, including other alternatives.');
     const value=await api(path+'/portfolio-preview',{expectedVersion:current.program.version,inputs:clone(s.draft)});
-    s.draft=inputShape(value.inputs);s.preview=value;s.saved=null;s.savedChoice='';s.sourceTasks=list(value.report?.sourceTasks);s.tab='results';s.resultProfile=resultRows().some(r=>r.id===s.resultProfile)?s.resultProfile:'base';s.dailyPage=0;s.allocationPage=0;onSelection(null);retain();render();status('Calculated the original work, explicit capacity and dated cash alternatives. Incomplete plans can be retained for further work.');
+    s.draft=inputShape(value.inputs);s.rawFields={};s.preview=value;s.saved=null;s.savedChoice='';s.sourceTasks=list(value.report?.sourceTasks);s.tab='results';s.resultProfile=resultRows().some(r=>r.id===s.resultProfile)?s.resultProfile:'base';s.dailyPage=0;s.allocationPage=0;onSelection(null);retain();render();status('Calculated the original work, explicit capacity and dated cash alternatives. Incomplete plans can be retained for further work.');
   }
   async function save(){
     if(!s.pending){
@@ -193,11 +313,12 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
       s.pending={payload,createdAt:new Date().toISOString(),rejected:false};retain();render();
     }
     if(s.pending.rejected)throw new Error('The original request was rejected. Keep the draft and explicitly prepare a new request.');
+    await persistWorking();
     let result;
     try{result=await api(path+'/command',clone(s.pending.payload));}
     catch(error){if(available()&&rejected(error)){s.pending.rejected=true;s.pending.rejection={code:error.code||null,status:error.status||null,message:error.message};retain();render();}throw error;}
     if(result.id!==caseId||result.action!=='portfolio.save'||result.kind!=='portfolio'||typeof result.recordId!=='string'||!result.recordId.startsWith('portfolio-'))throw new Error('Reopen the original save request: its returned operation identity needs reconciliation.');
-    s.pending=null;s.dirty=false;s.savedChoice=result.recordId;onSelection(result.recordId);retain();
+    s.pending=null;s.dirty=false;s.savedChoice=result.recordId;onSelection(result.recordId);await persistWorking();
     await onSaved(result);
   }
   function showResourceDialog(index,kind,dateValue=''){
@@ -207,11 +328,12 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
     dialog.dataset.resourceIndex=String(index);dialog.dataset.kind=kind;dialog.dataset.originalDate=dateValue;
     $('[data-dialog-title]').textContent=kind==='spread'?'Distribute an entered weekly total':'Dated resource capacity';
     $('[data-dialog-fields]').innerHTML=kind==='spread'?input('Weekly hours',hint?.weeklyHours??'','name="weekly" required min="0" max="7000000000" step="0.00000001"','number','Applied across the selected weekly working days: '+days.map(i=>DAYS[i]).join(', ')+'. Other weekdays become explicitly unavailable (0).'):input('Date',dateValue,'name="date" required','date')+input('Available hours',dateValue?r.hoursByDate?.[dateValue]:'','name="hours" required min="0" max="1000000000" step="0.00000001"','number');
-    $('[data-dialog-error]').textContent='';dialog.showModal();
+    const key=JSON.stringify([s.profile,r.id,kind,dateValue]);s.resourceDialogs[key]||={profile:s.profile,resourceId:r.id,kind,originalDate:dateValue,values:{}};s.openDialogKey=key;for(const el of dialog.querySelectorAll('input[name]'))if(Object.hasOwn(s.resourceDialogs[key].values,el.name))el.value=s.resourceDialogs[key].values[el.name];
+    $('[data-dialog-error]').textContent='';dialog.showModal();captureDialog();retain();
   }
   function editEvent(event){
-    if(s.busy||s.hostBusy||s.pending||!s.draft)return;
-    const el=event.target,p=effective();let touched=false;
+    if(s.busy||s.hostBusy||s.pending||currentCopy()?.archived||!s.draft)return;
+    const el=event.target;if(el.closest('dialog')){captureDialog();retain();return;}const fieldKey=rawKey(el);if(fieldKey)s.rawFields[fieldKey]=rawValue(el);const p=effective();let touched=false;
     if(el.dataset.portfolioInput){s.draft[el.dataset.portfolioInput]=el.value;touched=true;}
     else if(el.dataset.portfolioAltKey){const a=selectedAlternative();if(a){a[el.dataset.portfolioAltKey]=el.value;touched=true;}}
     else if(el.dataset.portfolioCalendar&&editable('calendar')){p.calendar[el.dataset.portfolioCalendar]=el.dataset.portfolioCalendar==='horizonDays'?integer(el.value):el.value;touched=true;}
@@ -230,16 +352,20 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
     }
     if(touched){invalidate();if(el.hasAttribute('data-effort-resource')){const task=p.tasks[Number(el.dataset.portfolioTask)],amounts=Object.values(task.effortHours||{}).map(quantity),total=amounts.every(v=>v!==null)?amounts.reduce((a,b)=>a+b,0n):null;const summary=el.closest('.portfolio-task')?.querySelector('summary small');if(summary)summary.textContent=total===null?'Assignments incomplete':decimal(total)+' / '+num(taskHours(task.id))+' source hours'+(quantity(taskHours(task.id))!==total?' — reconcile total':'');}}
   }
-  root.addEventListener('input',editEvent);
+  root.addEventListener('input',event=>{const el=event.target;if(el.hasAttribute('data-working-name')){s.copyName=el.value;retain();return;}if(el.hasAttribute('data-working-checkpoint-label')){s.checkpointLabel=el.value;retain();return;}editEvent(event);});
   root.addEventListener('change',event=>{
     const el=event.target;
+    if(el.hasAttribute('data-working-copy')){const id=el.value;run(async()=>{if(currentCopy()&&!currentCopy().archived)await persistWorking();acceptCopies(await copyStore.select(id));await adoptWorking(currentCopy().head);s.copyName='';s.historyChoice='';render();status('Opened the complete retained working copy. Preview against the current case before preparing a new save.');});return;}
+    if(el.hasAttribute('data-working-archived')){s.archivedChoice=el.value;return;}
+    if(el.hasAttribute('data-working-history')){s.historyChoice=el.value;retain();render();return;}
+    if(el.hasAttribute('data-working-file')){const file=el.files[0];if(!file)return;run(async()=>{if(file.size>PORTFOLIO_WORKING_LIMITS.fileBytes)throw new Error('Choose a complete working file within 128 MiB.');const value=JSON.parse(await file.text());ensure();if(value.schema!=='stellar-forge.portfolio-working-copy.v1'||!value.copy)throw new Error('Choose the complete Portfolio working-copy file.');await validatePortableCopy(value.copy);ensure();if(currentCopy()&&!currentCopy().archived)await persistWorking();acceptCopies(await copyStore.importCopy(value));await adoptWorking(currentCopy().head);s.copyName='';s.historyChoice='';render();status('Received the complete original copy as a new local identity. Prior working copies remain intact.');});return;}
     if(el.hasAttribute('data-portfolio-source')){s.sourceChoice=el.value;retain();return;}
     if(el.hasAttribute('data-portfolio-saved')){const id=el.value;if(id)run(()=>loadSaved(id));return;}
     if(el.hasAttribute('data-portfolio-profile')){s.profile=el.value;retain();render();return;}
-    if(el.hasAttribute('data-portfolio-override')&&!s.busy&&!s.pending){const a=selectedAlternative(),field=el.dataset.portfolioOverride;if(a){if(el.checked)a[field]=clone(s.draft[field]);else delete a[field];invalidate(true);}return;}
+    if(el.hasAttribute('data-portfolio-override')&&!s.busy&&!s.pending){const a=selectedAlternative(),field=el.dataset.portfolioOverride;if(a){for(const key of Object.keys(s.rawFields))if(JSON.parse(key)[0]===s.profile)delete s.rawFields[key];if(el.checked)a[field]=clone(s.draft[field]);else delete a[field];invalidate(true);}return;}
     if(el.hasAttribute('data-portfolio-file')){
       const file=el.files[0];if(!file)return;
-      run(async()=>{if(s.pending)throw new Error('Resolve the original retained save first.');if(file.size>2*1024*1024)throw new Error('Choose a complete portfolio input smaller than 2 MiB.');const value=inputShape(JSON.parse(await file.text()));ensure();if(s.dirty&&!window.confirm('Replace the current editable draft with this imported portfolio input?'))return;s.draft=value;s.sourceChoice=value.forecastId;s.sourceTasks=[];s.baseForecast=null;s.saved=null;s.preview=null;s.profile='base';s.resultProfile='base';s.savedChoice='';s.dirty=true;await attachSource(value.forecastId);onSelection(null);retain();render();status('Loaded the complete source-bound draft. Preview it against this current case before saving.');});return;
+      run(async()=>{if(s.pending)throw new Error('Resolve the original retained save first.');if(file.size>2*1024*1024)throw new Error('Choose a complete portfolio input smaller than 2 MiB.');const value=inputShape(JSON.parse(await file.text()));ensure();if(s.dirty&&!window.confirm('Replace the current editable draft with this imported portfolio input?'))return;s.draft=value;s.rawFields={};s.resourceDialogs={};s.openDialogKey=null;s.attachments=[];s.sourceChoice=value.forecastId;s.sourceTasks=[];s.baseForecast=null;s.saved=null;s.preview=null;s.profile='base';s.resultProfile='base';s.savedChoice='';s.dirty=true;await attachSource(value.forecastId);onSelection(null);retain();render();status('Loaded the complete source-bound draft. Preview it against this current case before saving.');});return;
     }
     editEvent(event);
   });
@@ -259,18 +385,19 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
         r.hoursByDate||={};if(d!==dialog.dataset.originalDate&&Object.hasOwn(r.hoursByDate,d))throw new Error('That date already has an override. Edit its original row.');
         if(dialog.dataset.originalDate)delete r.hoursByDate[dialog.dataset.originalDate];r.hoursByDate[d]=decimal(h);
       }
-      dialog.close();invalidate(true);
+      delete s.resourceDialogs[s.openDialogKey];s.openDialogKey=null;dialog.close();for(const key of Object.keys(s.rawFields)){const parts=JSON.parse(key);if(parts[0]===s.profile&&parts.includes('resource:'+r.id))delete s.rawFields[key];}invalidate(true);
     }catch(error){$('[data-dialog-error]').textContent=error.message;}
   });
   root.addEventListener('click',event=>{
     const el=event.target.closest('[data-portfolio-action]');if(!el||el.disabled)return;
     const action=el.dataset.portfolioAction;
-    if(action==='cancel-dialog'){$('dialog').close();return;}
+    if(action==='cancel-dialog'){captureDialog();$('dialog').close();retain();return;}
+    if(action.startsWith('working-')){if(s.busy||s.hostBusy)return;run(()=>workingAction(action));return;}
     if(action==='download-draft'){if(s.draft)download(json(s.draft),'portfolio-inputs.json');return;}
     if(action==='download-recovery'){if(s.recoveryRaw)download(s.recoveryRaw,'portfolio-browser-recovery.json');return;}
     if(action==='download-request'){if(s.pending||s.lastRejected)download(json(s.pending||s.lastRejected),'portfolio-save-request.json');return;}
     if(action==='tab'){s.tab=el.dataset.id;render();return;}
-    if(s.busy||s.hostBusy)return;
+    if(s.busy||s.hostBusy||currentCopy()?.archived)return;
     if(s.pending&&!['retry-save','new-request','reload','download-analysis','result-alternative','page-daily','page-allocations'].includes(action))return;
     if(action==='import'){$('[data-portfolio-file]').value='';$('[data-portfolio-file]').click();return;}
     if(action==='result-alternative'){s.resultProfile=el.dataset.id;s.dailyPage=0;s.allocationPage=0;retain();render();return;}
@@ -284,7 +411,7 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
         if(!s.pending?.rejected)throw new Error('Retain the unresolved original request.');
         s.lastRejected=clone(s.pending);s.draft=inputShape(s.pending.payload.data.inputs);s.pending=null;s.preview=null;s.saved=null;s.savedChoice='';s.requestNonce=crypto.randomUUID();s.dirty=true;s.tab='inputs';retain();render();status('Retained the rejected request and editable draft. Reload the current case if its version changed, then preview before the new save.');return;
       }
-      if(action==='edit-saved'){s.draft=inputShape(s.saved.inputs);s.draft.name+=' — revised';s.saved=null;s.savedChoice='';s.preview=null;s.dirty=true;s.profile='base';s.tab='inputs';onSelection(null);retain();render();return;}
+      if(action==='edit-saved'){s.draft=inputShape(s.saved.inputs);s.draft.name+=' — revised';s.rawFields={};s.resourceDialogs={};s.openDialogKey=null;s.saved=null;s.savedChoice='';s.preview=null;s.dirty=true;s.profile='base';s.tab='inputs';onSelection(null);retain();render();return;}
       if(action==='add-alternative'){if(!s.draft)return;const a={id:uid('alternative'),name:'New alternative',note:''};s.draft.alternatives.push(a);s.profile=a.id;invalidate(true);return;}
       if(action==='remove-alternative'){const a=selectedAlternative();if(a&&window.confirm('Remove this editable alternative?')){s.draft.alternatives=s.draft.alternatives.filter(x=>x.id!==a.id);s.profile='base';invalidate(true);}return;}
       const p=effective(),index=Number(el.dataset.index);
@@ -307,25 +434,23 @@ export function mountPortfolio({container,current,api:transport,mutationId,recor
       }
     });
   });
-  function recoverDraft(){
-    let raw=null,cached=null;
-    try{raw=sessionStorage.getItem(cacheKey);if(raw)cached=JSON.parse(raw);}catch(error){s.recoveryRaw=raw;s.error='The previous browser record could not be opened. Its exact text remains downloadable.';return;}
-    if(!cached)return;
-    try{
-      if(cached.schema!==CACHE||cached.caseId!==caseId)throw new Error('The retained browser record belongs to a different input format or case.');
-      const draft=cached.draft?inputShape(cached.draft):null,pending=cached.pending||null;
-      if(pending&&(!plain(pending.payload)||pending.payload.action!=='portfolio.save'||!plain(pending.payload.data)||typeof pending.payload.requestId!=='string'||!Number.isInteger(pending.payload.expectedVersion)||!draft||json(pending.payload.data.inputs)!==json(draft)))throw new Error('The retained save request needs its original complete case input.');
-      s.draft=draft;s.profile=cached.profile||'base';s.resultProfile=cached.resultProfile||'base';s.dirty=Boolean(cached.dirty);s.pending=pending;s.lastRejected=cached.lastRejected||null;s.requestNonce=cached.requestNonce||'';s.sourceChoice=cached.sourceChoice||draft?.forecastId||'';s.savedChoice=cached.savedChoice||'';s.recoveryRaw=cached.recoveryRaw||null;
-      if(s.profile!=='base'&&!s.draft?.alternatives.some(a=>a.id===s.profile))s.profile='base';
-    }catch(error){s.recoveryRaw=raw;s.error=error.message+' Download its retained text and review the original saved receipts.';}
+  function retainLegacyText(){
+    try{const raw=sessionStorage.getItem(cacheKey);if(raw)s.recoveryRaw=raw;}catch{}
   }
-  recoverDraft();render();
+  render();
   const ready=run(async()=>{
+    try{
+      copies=await copyStore.open();ensure();storeOpened=true;
+      if(currentCopy())await adoptWorking(currentCopy().head);
+      else{retainLegacyText();acceptCopies(await copyStore.create({name:'Current Portfolio draft',session:sessionSnapshot()}));}
+    }catch(error){storeFailed=true;recoveryCollection=error.recovery||null;s.error=error.message;s.storageWarning='The prior working store remains unchanged. Download its retained recovery before replacing browser data.';}
     s.portfolios=list((await api(path+'/portfolios')).portfolios);
     s.sourceChoice||=list(current.forecasts)[0]?.id||'';
-    if(initialPortfolioId&&!s.pending&&!s.dirty&&!s.recoveryRaw){await loadSaved(initialPortfolioId);return;}
-    if(s.draft){await attachSource(s.draft.forecastId);render();status(s.pending?'Recovered the exact retained save request.':'Recovered the editable source-bound draft.');}
-    else{render();if(!s.error)status('Choose a saved operating forecast to begin.');}
+    if(initialPortfolioId&&!s.pending&&!s.dirty&&!s.recoveryRaw&&!s.draft&&!storeFailed){await loadSaved(initialPortfolioId);return;}
+    if(s.draft){
+      if(!s.baseForecast)await attachSource(s.draft.forecastId);
+      render();status(s.pending?'Recovered the original pending save. Retry preserves its exact request identity.':'Recovered the complete editable working copy. Current case version '+current.program.version+'; the retained source and saved calculations remain original.');
+    }else{render();if(!s.error)status('Choose a saved operating forecast to begin.');}
   });
-  return {root,ready,setHostBusy(value){s.hostBusy=Boolean(value);busy(s.busy);},dispose(){if(!s.active)return;retain();s.active=false;s.generation++;const dialog=root.querySelector('dialog');if(dialog?.open)dialog.close();}};
+  return {root,ready,setHostBusy(value){s.hostBusy=Boolean(value);busy(s.busy);},dispose(){if(!s.active)return;clearTimeout(autosaveTimer);if(storeOpened&&!storeFailed)persistWorking().catch(()=>{}).finally(()=>copyStore.close());else copyStore.close();s.active=false;s.generation++;const dialog=root.querySelector('dialog');if(dialog?.open)dialog.close();}};
 }
