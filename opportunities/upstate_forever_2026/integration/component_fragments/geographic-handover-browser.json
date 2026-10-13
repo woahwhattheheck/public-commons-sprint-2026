@@ -9,7 +9,8 @@
         "source_tools/geographic_review_browser.mjs",
         "docs/GEOGRAPHIC_HANDOVER_BROWSER.md",
         "source_tools/geographic_browser_course.mjs",
-        "source_tools/geographic_allocation_browser.mjs"
+        "source_tools/geographic_allocation_browser.mjs",
+        "source_tools/geographic_programme_browser.mjs"
       ],
       "requires": [
         "geographic-native-receiving"
