@@ -44,13 +44,13 @@ async function shot(name){
  const bytes=await readFile(file);journal.screenshots.push({path:relative(output,file),bytes:bytes.length,sha256:hash(bytes)});
 }
 async function readPlan(workspace,id){
- return json(await page.request.get(origin+'/api/source-refresh/plan?'+new URLSearchParams({workspace,id})),'Retained source update');
+ return json(await page.request.get(origin+'/api/source-refresh/plan?'+new URLSearchParams({workspace,id}),{headers:{Authorization:'Bearer '+capability}}),'Retained source update');
 }
 async function waitTask(id){
  const seconds=Number(args['task-timeout-seconds']);required(Number.isFinite(seconds)&&seconds>0,'Choose a positive task observation period.');
  const until=Date.now()+seconds*1000;
  while(Date.now()<until){
-  const task=await json(await page.request.get(origin+'/api/task?id='+encodeURIComponent(id)),'Original queued operation');
+  const task=await json(await page.request.get(origin+'/api/task?id='+encodeURIComponent(id),{headers:{Authorization:'Bearer '+capability}}),'Original queued operation');
   required(task.id===id,'The operator returned another task.');
   if(task.state==='complete')return task;
   if(['failed','interrupted','cancelled'].includes(task.state))throw Error(task.action+' is '+task.state+': '+redact(task.error?.message||'Open its original operation for continuation.'));
@@ -124,6 +124,7 @@ async function main(){
  privateURL=(await readFile(resolve(args['url-file']),'utf8')).trim();
  const parsed=new URL(privateURL);required(['http:','https:'].includes(parsed.protocol),'Choose the original HTTP/HTTPS operator URL.');
  origin=parsed.origin;capability=new URLSearchParams(parsed.hash.slice(1)).get('token')||'';
+ required(capability,'Choose the original operator startup URL containing its capability fragment.');
  browser=await chromium.launch({headless:!args.headed,...(args['browser-channel']?{channel:args['browser-channel']}:{})});
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,...(args.video?{recordVideo:{dir:join(output,'video'),size:{width:1440,height:1000}}}:{})});
  page=await context.newPage();page.setDefaultTimeout(60000);

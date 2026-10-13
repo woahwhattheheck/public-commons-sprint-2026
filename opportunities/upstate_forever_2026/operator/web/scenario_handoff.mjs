@@ -1,3 +1,4 @@
+import {nativeModelVersions,nativeModelsForOutputs,nativeCommonVersionIssues} from './native_versions.mjs';
 /** Native selection handoff into the maintained fixed-scale scenario-analysis form.
  * Scope contract: OP12 selected-model V3 and model/model_selection.py.
  */
@@ -75,9 +76,7 @@ export function buildScenarioAnalysisSeed({
   baselineIssues.push(...runReasons(baseline));
   const gridId = id(baseline && baseline.selection && baseline.selection.grid_id);
   const baselineVersion = scenarioNativeVersion(baseline);
-  const modelVersion = baselineVersion.comparison_version;
   if (baseline && !gridId) baselineIssues.push("The selected baseline has no retained model-grid identity.");
-  if (baseline && !modelVersion) baselineIssues.push("The selected baseline has no observed or retained requested InVEST version.");
   const baselineOutputs = nativeOutputs(baseline);
   const selectedCaseIds = unique(rows(state.alternative_ids).map(id).filter(value => value && value !== id(state.baseline_id)));
   const accepted = [],rejected = [];
@@ -90,14 +89,14 @@ export function buildScenarioAnalysisSeed({
     if (run && runId === baselineRunId) reasons.push("The baseline reference is outside the alternative choice set.");
     if (run && id(run.selection && run.selection.grid_id) !== gridId) reasons.push("The native run uses a different model grid from the baseline.");
     const version = scenarioNativeVersion(run);
-    if (run && version.comparison_version !== modelVersion) reasons.push("The native run has a different observed InVEST version from the baseline, using the saved requested version only for legacy records without execution metadata.");
     const available = nativeOutputs(run);
     if (baselineOutputs.length && available.length && !baselineOutputs.some(metric => available.includes(metric))) {
       reasons.push("The native run and selected baseline have no shared nutrient or sediment output.");
     }
     const row = {
       case_id:caseId,run_id:runId,label:id(item && item.label) || caseId,
-      available_metric_ids:available,native_version:version
+      available_metric_ids:available,native_version:version,
+      native_model_versions:run?nativeModelVersions(run):{}
     };
     if (reasons.length) rejected.push({...row,reasons:unique(reasons)});
     else accepted.push(row);
@@ -105,6 +104,8 @@ export function buildScenarioAnalysisSeed({
   const scenarioRunIds = unique(accepted.map(item => item.run_id));
   const shared = commonOutputs([baseline,...scenarioRunIds.map(runId => runs.get(runId))]);
   const cohortIssues = [];
+  const versionIssues=shared.length?nativeCommonVersionIssues([baseline,...scenarioRunIds.map(runId=>runs.get(runId))],nativeModelsForOutputs(shared)):[];
+  cohortIssues.push(...versionIssues);
   if (scenarioRunIds.length && !shared.length) {
     cohortIssues.push("The accepted runs have no native output shared by the entire cohort. Choose an explicit nutrient or sediment continuation.");
   }
@@ -117,15 +118,16 @@ export function buildScenarioAnalysisSeed({
     selection:{title:requestTitle,baseline_run_id:baselineRunId,scenario_run_ids:runIds.slice()}
   });
   const compatibleCohorts = [];
-  if (!baselineIssues.length && scenarioRunIds.length && !shared.length) {
+  if (!baselineIssues.length && scenarioRunIds.length && (!shared.length||versionIssues.length)) {
     for (const model of ["ndr","sdr"]) {
       const wanted = OUTPUT_IDS.filter(metric => OUTPUTS[metric].model === model);
       if (!wanted.every(metric => baselineOutputs.includes(metric))) continue;
-      const coveredCases = accepted.filter(item => wanted.every(metric => item.available_metric_ids.includes(metric)));
+      const coveredCases = accepted.filter(item => wanted.every(metric => item.available_metric_ids.includes(metric))&&
+        !nativeCommonVersionIssues([baseline,runs.get(item.run_id)],[model]).length);
       const runIds = unique(coveredCases.map(item => item.run_id));
       if (!runIds.length) continue;
       const metricIds = commonOutputs([baseline,...runIds.map(runId => runs.get(runId))]);
-      if (!metricIds.length) continue;
+      if (!metricIds.length||nativeCommonVersionIssues([baseline,...runIds.map(runId=>runs.get(runId))],nativeModelsForOutputs(metricIds)).length) continue;
       const cohortTitle = model === "ndr" ? "Nutrient scenarios" : "Sediment scenarios";
       compatibleCohorts.push({
         id:model,title:cohortTitle,metric_ids:metricIds,
@@ -150,6 +152,7 @@ export function buildScenarioAnalysisSeed({
       metric_ids:rows(state.metric_ids).map(id),catchment_ids:rows(state.catchment_ids).map(id)
     },
     target_metric_ids:shared,baseline_native_version:baselineVersion,
+    baseline_native_model_versions:baseline?nativeModelVersions(baseline):{},
     method:"The target form uses the cohort's actual shared native outputs, fixed baseline caps, explicit planning weights and retained source areas."
   };
 }

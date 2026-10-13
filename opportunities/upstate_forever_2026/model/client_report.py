@@ -16,10 +16,11 @@ from typing import Any, Mapping
 
 from .common import INVEST_VERSION
 from . import native_study
-from .model_selection import MODEL_LABELS, run_scope
+from .model_selection import MODEL_LABELS, MODEL_OUTPUTS, run_scope
+from .native_versions import POLICY as EXECUTION_VERSION_POLICY, model_versions, models_for_outputs
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-8"
+REPORT_EDITION = "2026-10-13-client-report-9"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -154,6 +155,30 @@ def _text(value: Any) -> str:
     if isinstance(value, (list, tuple)):
         return "; ".join(_text(item) for item in value) or "None selected"
     return str(value)
+
+def _execution_source(record):
+    """Describe the shared resolver's retained basis without choosing a version."""
+    labels = {
+        "completed_stage_runtime": "Completed model stage",
+        "observed_run_fallback": "Observed run fallback; stage version absent",
+        "requested_legacy": "Requested legacy version; observed version absent",
+        "unavailable": "Version not recorded",
+    }
+    parts = [labels.get(record["basis"], str(record["basis"]).replace("_", " "))]
+    if record.get("differs_from_requested"):
+        parts.append("requested " + str(record["requested_version"]))
+    if record.get("reused_from"):
+        parts.append("retained reused stage")
+    return "; ".join(parts)
+
+
+def _execution_summary(versions):
+    return "; ".join(
+        model.upper() + " " + _text(record["comparison_version"]) +
+        " (" + _execution_source(record) + ")"
+        for model, record in versions.items()
+    ) or "No producing-model version is recorded"
+
 
 def _safe_path(value: Any) -> str | None:
     if isinstance(value, Mapping):
@@ -365,6 +390,14 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
     """
     baseline_name, baseline_scenario = _run_name(workspace, baseline)
     model_scopes = {run["id"]: run_scope(run) for run in [baseline] + alternatives}
+    execution_models = {
+        run["id"]: models_for_outputs(model_scopes[run["id"]]["available_artifacts"])
+        for run in [baseline] + alternatives
+    }
+    execution_versions = {
+        run["id"]: model_versions(run, execution_models[run["id"]])
+        for run in [baseline] + alternatives
+    }
     selected_models = model_scopes[baseline["id"]]["selected_models"]
     study_mode = native_study.mode(selection) == "native_study"
     study = dict(state.get("native_study") or selection.get("native_study") or {})
@@ -437,13 +470,15 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         ["Upstream context buffer", _fmt(grid_spec.get("upstream_buffer_m")) + " m"],
         ["Profile", _text(profile.get("title")) + " | " + _text(profile.get("id"))],
         ["Alternatives in this edition", str(len(alternatives))],
-    ]), _table(["Run", "Selected models", "Available exports", "Model version"], [
-        [run["id"],
-         "; ".join(MODEL_LABELS.get(model, model.upper()) for model in model_scopes[run["id"]]["selected_models"]),
-         "; ".join(model_scopes[run["id"]]["available_artifacts"]) or "None recorded",
-         _text(run.get("model_version") or INVEST_VERSION)]
+    ]), _table(["Run", "Model", "Available exports", "Version", "Version source"], [
+        [run["id"], MODEL_LABELS.get(model, model.upper()),
+         "; ".join(name for name in model_scopes[run["id"]]["available_artifacts"]
+                   if name in MODEL_OUTPUTS[model]) or "None recorded",
+         _text(execution_versions[run["id"]][model]["comparison_version"]),
+         _execution_source(execution_versions[run["id"]][model])]
         for run in [baseline] + alternatives
-    ])]))
+        for model in execution_models[run["id"]]
+    ], "Producing-model execution provenance; each fallback keeps its original retained basis.")]))
 
     sections.append(_section("current", "Current annual nutrient and sediment exports", [
         "The values below reuse the sums recorded with the delivered reporting-mask mass rasters for the selected models. Each layer retains its declared annual units, valid-cell count and represented area.",
@@ -536,7 +571,9 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
 
     model_names = [MODEL_LABELS.get(model, model.upper()) for model in selected_models]
     methods = [
-        "The selected original InVEST " + INVEST_VERSION + " models (" + "; ".join(model_names) + ") use the retained inputs, aligned grid, parameter profile and scenario selections. The working project carries native arguments, source files, intermediate outputs and run history.",
+        "The selected original InVEST models (" + "; ".join(model_names) + ") use the retained inputs, aligned grid, parameter profile and scenario selections. The working project carries native arguments, source files, intermediate outputs and run history.",
+        "Baseline execution versions: " + _execution_summary(execution_versions[baseline["id"]]) + ". Each alternative's producing-model version and retained basis appear separately in the run table.",
+        "Execution provenance uses the recorded runtime of each completed model stage. When that version is absent, the shared resolver labels an observed run runtime as fallback, or labels a retained requested version as requested legacy. Missing version metadata remains not recorded. Reused-stage lineage and the original completion time are retained in the report data.",
         "The physical output rasters preserve the original reporting-mask conversion and NoData. Scenario changes preserve paired native output support. Source vintages, coefficients, grid alignment and selected overlay relationships accompany interpretation.",
         "Original E. coli, cyanotoxin, concentration and sampling observations retain their measured quantity, unit, station and period. Those observations supply direct measurement context for microbial and algal concerns; model outputs retain their annual nutrient or sediment quantity.",
         "Channel-bank erosion, mass wasting, in-stream and reservoir processes, point sources and impoundment effects have their own scientific interpretation alongside the represented overland processes."
@@ -577,7 +614,7 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
          "The RFP's final mapping deliverables are listed on PDF page 2; the final/working-file and presentation requirements are on PDF page 3. Appendix PDF pages 6-9 provide the utility and broader sampling context.")
     ], [_table(["Source role", "Vintage", "Original URI"], source_rows),
         _table(["Scientific reference", "Original URI"], [
-            ["InVEST " + INVEST_VERSION + " " + MODEL_LABELS.get(model, model.upper()) + " guide",
+            ["InVEST " + INVEST_VERSION + " " + MODEL_LABELS.get(model, model.upper()) + " reference guide",
              MODEL_GUIDES[model]] for model in selected_models
         ])]))
 
@@ -637,7 +674,15 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         "schema": SCHEMA, "title": title, "report_edition": REPORT_EDITION,
         "grid_context": grid_context,
         "model_scopes": model_scopes,
-        "scientific_references": [{"model": model, "version": INVEST_VERSION, "url": MODEL_GUIDES[model]}
+        "native_execution": {
+            "schema": "upstate.client-native-execution/v1",
+            "policy": EXECUTION_VERSION_POLICY,
+            "run_order": [run["id"] for run in [baseline] + alternatives],
+            "models": {key: list(value) for key, value in execution_models.items()},
+            "runs": execution_versions,
+        },
+        "scientific_references": [{"model": model, "version": INVEST_VERSION,
+                                   "purpose": "Retained reference guide", "url": MODEL_GUIDES[model]}
                                   for model in selected_models],
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "project": dict(workspace.project),
@@ -804,6 +849,8 @@ def render_pdf(path, report):
             weights = [1] * count
             if count == 2:
                 weights = [1, 2.3]
+            elif section["id"] == "study" and count == 5:
+                weights = [1.1, .75, 1.15, .5, 1.4]
             elif section["id"] == "atlas" and count == 4:
                 weights = [.85, 1.25, 1.7, 1.2]
             elif section["id"] == "atlas-files" and count == 3:

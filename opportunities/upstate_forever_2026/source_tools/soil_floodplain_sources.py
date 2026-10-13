@@ -1236,14 +1236,16 @@ def _bindings(manifest, edition_id, names):
     return result
 
 
-def _edition_metadata(workspace, result, *, implementation=None, successors=None):
+def _edition_metadata(workspace, result, *, implementation=None, successors=None,
+                      state=None, states=None):
     folder = workspace.root / "soil-floodplain-sources" / identifier(result["id"])
-    selected = read_json(folder / "selection.json")
+    state = read_json(folder / "state.json") if state is None else state
+    selected = state["selection"]
     implementation = _implementation() if implementation is None else implementation
     successors = source_response_reuse.children(folder.parent) if successors is None else successors
     result = {**result, "implementation_changed": selected["implementation"] != implementation,
               "continued_as": successors.get(result["id"], [])}
-    continuation = source_response_reuse.details(folder)
+    continuation = source_response_reuse.details(folder, state=state, states=states)
     if continuation is not None:
         result["continuation"] = continuation
     return result
@@ -1260,7 +1262,7 @@ def inspect(workspace, operation_id):
                   "updated_at": state.get("updated_at")}
     else:
         result = state
-    return _edition_metadata(workspace, result)
+    return _edition_metadata(workspace, result, state=state)
 
 
 def _state_summary(state):
@@ -1280,16 +1282,19 @@ def _state_summary(state):
 def overview(workspace):
     root = workspace.root / "soil-floodplain-sources"
     implementation = _implementation()
-    successors = source_response_reuse.children(root)
+    states = {
+        path.parent.name: read_json(path) for path in sorted(root.glob("*/state.json"))
+        if re.fullmatch(r"[0-9a-f]{64}", path.parent.name)
+    } if root.exists() else {}
+    successors = source_response_reuse.children(root, states=states)
     return {
         "schema": "upstate.soil-floodplain-overview/v1",
         "operations": [
-            _edition_metadata(workspace, _state_summary(read_json(folder / "state.json")),
-                              implementation=implementation, successors=successors)
-            for folder in sorted(root.iterdir())
-            if folder.is_dir() and re.fullmatch(r"[0-9a-f]{64}", folder.name)
-            and (folder / "state.json").exists()
-        ] if root.exists() else [],
+            _edition_metadata(workspace, _state_summary(state),
+                              implementation=implementation, successors=successors,
+                              state=state, states=states)
+            for state in states.values()
+        ],
         "families": ["soils", "floodplains"],
         "hydric_interpretations": [
             {"id": "full", "title": "Fully hydric map units with original component confirmation", "default": True},
@@ -1483,7 +1488,7 @@ def capture(workspace, value, *, retry_failed=False):
             result = read_json(directory / "result.json")
             for descriptor in result["files"].values():
                 verify_file(workspace.root, descriptor)
-            return _edition_metadata(workspace, result)
+            return _edition_metadata(workspace, result, state=state)
         state.update(state="running", updated_at=now())
         atomic_json(state_path, state)
 
@@ -1553,7 +1558,7 @@ def capture(workspace, value, *, retry_failed=False):
                           **continuation_descriptors},
             }
             atomic_json(directory / "result.json", result)
-            return _edition_metadata(workspace, result)
+            return _edition_metadata(workspace, result, state=state)
         progress("import_original_sources", len(completed), len(request["families"]))
         original_manifest = _original_manifest(
             state, directory, completed, continuation_files +
@@ -1615,7 +1620,7 @@ def capture(workspace, value, *, retry_failed=False):
                      source_collection_id=criterion["id"], original_source_collection_id=original["id"],
                      progress={"stage": status, "completed": len(completed), "total": len(request["families"])})
         atomic_json(state_path, state)
-        return _edition_metadata(workspace, result)
+        return _edition_metadata(workspace, result, state=state)
 
 
 def prepare(workspace, value):

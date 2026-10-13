@@ -8,13 +8,30 @@ The delivery retains the original atlas, linked watershed report, receptor geogr
 
 ## Use the operator
 
-1. Build and save an Economic desk edition from the completed watershed report and its chosen reporting zone.
-2. In the completed Economic desk edition, choose **Prepare client report**. This opens the original atlas form with its saved native cohort and economic edition selected. You can also open the same watershed report and select the edition under **Map release**. Both routes preserve the exact native report bytes and ordered baseline and alternative cohort.
-3. From the watershed-report route, choose **Build map release**. Complete the source context, map settings and responsible metadata contact in the atlas builder.
+1. In **Watershed reports → Build report**, select the completed reference and alternatives, pollutants and any additional original watershed polygons. Choose **Delivery context**. For **Original native study**, enter the original study title, purpose and optional reference before **Build and save report**. The report retains these fields with its original run and source selection. Then build and save an Economic desk edition from that completed report and its chosen reporting zone.
+2. In the completed Economic desk edition, choose **Prepare client report**. This opens the atlas with the saved report’s declared delivery mode and original study fields, its exact native cohort and the economic edition selected. You can also open the same watershed report and select the edition under **Map release**. Both routes preserve the original report bytes and ordered baseline and alternative cohort.
+3. From the watershed-report route, check **Delivery mode** and choose **Build map release**. The saved report’s explicit mode is preselected. In the atlas, complete the source context and map settings for that mode. Regional RFP delivery requires its regional source overlays and responsible metadata contact. Native-study delivery retains the original grid and reporting domain; regional overlays and contact are optional. For a saved report created before delivery context was retained, choose **Original native study** in this selector or the atlas and enter its original study title and purpose there.
 4. In Review and build, use **Refresh compatible economic editions** to inspect or replace the optional edition without rebuilding the prepared selection. Choose its original watershed report when the draft has no report link, then choose an edition and press **Use selected economic edition**. Submit through the original delivery.build queue.
 5. Open the completed release. Download the PDF, offline HTML, Markdown or structured report, the complete economic decision package, or the complete GIS delivery.
 
-Leaving the economic choice at Physical report and maps produces the complete scientific report and seven-map decision guide. The optional edition selector reads completed original economic editions for the exact ordered cohort. A linked report restricts the choices to its original ID and bytes. The atlas re-reads the original release before applying an edition; an unavailable or changed edition leaves the previous binding intact and asks the operator to refresh.
+Leaving the economic choice at Physical report and maps produces the scientific report and the selected mode’s map guide: seven regional RFP families, or five native-study families plus any optional source-water families actually selected. The optional edition selector reads completed original economic editions for the exact ordered cohort. A linked report restricts the choices to its original ID and bytes. The atlas re-reads the original release before applying an edition; an unavailable or changed edition leaves the previous binding intact and asks the operator to refresh.
+
+## Retained report delivery context
+
+A newly declared `delivery_mode` and `native_study` belong to the watershed report’s original selection and therefore its existing identity hash. Native-study metadata uses the same validator as the delivery builder: original `title` and `purpose`, with optional `reference`. The report, economic edition, release selection and restored project retain those values. No study mode is inferred from a project name, coordinate system, grid resolution or geographic location.
+
+Older report selections without these fields keep their original identity and regional default. Choosing a different mode in **Map release** or the atlas creates a release draft; it does not rewrite the saved report or economic edition. A native-study draft prepared from an older report leaves its purpose for the operator to supply. Changing to regional mode removes study metadata from the new release selection while retaining its original report and economic bindings.
+
+The existing CLI supports the same retained declaration:
+
+```sh
+python -m model.scenario_decisions --workspace WORKSPACE --baseline-run BASELINE_ID \
+  --alternative-run ALTERNATIVE_ID --delivery-mode native_study \
+  --study-title "Original study title" --study-purpose "Original study purpose" \
+  --study-reference "Original study reference"
+```
+
+Use these context flags with `--baseline-run`. A `--selection` JSON file carries its own optional `delivery_mode` and `native_study` fields. Supplying no declaration preserves the legacy selection shape. The original model, pollutant and watershed selections remain unchanged.
 
 ## Revise a map release
 
