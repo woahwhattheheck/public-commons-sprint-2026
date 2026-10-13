@@ -492,7 +492,10 @@ def include_source(closure, collection_id, entry):
     map_members = _map_members(closure, identity, recipe, members, network, prepared, summary)
     if set(requested) != set(originals) | map_members | {"summary.json", "provenance.json"}:
         raise ValueError("The source geography report changed its complete original input inventory")
-    local = project == closure.workspace.project["id"]
+    same_project = project == closure.workspace.project["id"]
+    # Earlier selected-source archives retained the complete capture without
+    # editable producer roots. Preserve their source-only reading behavior.
+    local = same_project and (closure.root / "receptor-report-sources" / key).exists()
     required = []
     capture_sha = None
     original_choice = None
@@ -533,7 +536,7 @@ def include_source(closure, collection_id, entry):
         "source_body_sha256": entry["body"]["sha256"], "source_project_id": project,
         "report_source_id": key, "network_result_id": network_id, "preparation_id": prepared_id,
         "capture_record_sha256": capture_sha, "capture_source": original_choice,
-        "relationship": "same_project" if local else "external_project",
+        "relationship": ("same_project" if local else "source_only" if same_project else "external_project"),
         "required_records": required,
     }
     token = (collection_id, entry["id"])
@@ -651,3 +654,68 @@ def catalogue(workspace, kind):
             row["error"] = {"type": type(error).__name__, "message": str(error)}
         result.append(row)
     return result
+
+def verify_received(workspace, report_id=None):
+    """Reopen retained editable products after the normal selected Study restore."""
+    from .common import read_json
+    from . import receptor_report_source, receptor_scenarios, study_transfer
+
+    if report_id is not None:
+        report_id = identifier(report_id)
+    studies = study_transfer.verify_received_studies(workspace)
+    rows = []
+    seen = set()
+    for study in studies:
+        receipt = read_json(workspace.root / "study-transfers" / (study["id"] + ".json"))
+        for binding in receipt["identity"].get("scientific_report_sources", []):
+            if binding.get("report_context_kind") != "receptor-source-geography":
+                continue
+            key = identifier(binding["report_source_id"])
+            if report_id is not None and key != report_id:
+                continue
+            token = (study["id"], binding["source_collection_id"], binding["source_id"])
+            if token in seen:
+                continue
+            seen.add(token)
+            row = {"study_id": study["id"], "report_id": key,
+                   "relationship": binding["relationship"],
+                   "editable_products": (binding["relationship"] == "same_project"),
+                   "source_collection_id": binding["source_collection_id"],
+                   "source_id": binding["source_id"],
+                   "network_result_id": binding["network_result_id"],
+                   "preparation_id": binding["preparation_id"],
+                   "identity": "MATCH"}
+            if (binding["relationship"] == "same_project"):
+                result = receptor_report_source.inspect(workspace, key)
+                _, network, _ = receptor_scenarios._network(workspace, binding["network_result_id"])
+                preparation = (receptor_scenarios.inspect(workspace, binding["preparation_id"])
+                               if binding["preparation_id"] is not None else None)
+                row.update(source_choice=result["source_choice"],
+                           original_source_binding=network["source_binding"],
+                           prepared_source_collection_id=(preparation["source_collection_id"]
+                                                          if preparation else None),
+                           areas=[{"id": area["id"], "huc12_count": area["huc12_count"]}
+                                  for area in (preparation or network)["areas"]])
+            rows.append(row)
+    if report_id is not None and not rows:
+        raise ValueError("No retained typed source-water Study receipt selects that report")
+    return {"schema": "upstate.source-water-study-receiving/v1",
+            "project_id": workspace.project["id"], "workspace": str(workspace.root),
+            "studies": studies, "source_water_reports": rows}
+
+
+def main(argv=None):
+    import argparse
+    import json
+    from .workspace import Workspace
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--workspace", required=True, help="Normally restored selected Study Workspace")
+    parser.add_argument("--report-id", help="Require this exact retained source-water report")
+    args = parser.parse_args(argv)
+    print(json.dumps(verify_received(Workspace(args.workspace), args.report_id),
+                     indent=2, sort_keys=True, allow_nan=False))
+
+
+if __name__ == "__main__":
+    main()
