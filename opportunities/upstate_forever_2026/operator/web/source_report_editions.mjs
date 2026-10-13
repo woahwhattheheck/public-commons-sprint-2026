@@ -1,3 +1,4 @@
+import {attachScientificSourceReader} from './scientific_source_reader.mjs';
 /** Prepare ordered scientific reports through the original retained task queue. */
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=row=>JSON.stringify([row.source_collection_id,row.source_id]);
@@ -25,7 +26,10 @@ export function attachScientificReportEditions(host) {
   let preview=null,opened=null,busy=false,error='',pending=null,storageIssue='';
   let briefingPreview=null,briefingOpened=null;
   let capturedReports=[],captureIssues=[],capturePreview=null,captureGeneration=0;
-  const briefingFrames=new Map();
+  const briefingFrames=new Map(),reportFrames=new Map();
+  let sourceIntent=0,catalogGeneration=0,catalogRead=null;
+  const sourceReader=attachScientificSourceReader({...host,compose:value=>openForSources(value),
+    returnToSelection:()=>panel?.querySelector('[data-scientific-report-main]')?.scrollIntoView({block:'start'})});
   const valid=(ws,turn)=>workspace===ws&&host.getWorkspace()===ws&&generation===turn;
   const request=(path,values={})=>host.api(host.endpoint(path,values));
   const payload=()=>({sources:selected.map(choice),...(title.trim()?{title:title.trim()}:{}),contact:{...contact}});
@@ -53,7 +57,7 @@ export function attachScientificReportEditions(host) {
     if(!panel){
       panel=document.createElement('section');panel.className='scientific-report-editions';
       panel.setAttribute('aria-label','Prepare and reopen scientific reports');
-      panel.innerHTML='<div data-scientific-report-main></div><section data-scientific-report-detail hidden></section><section data-scientific-report-briefing-host hidden></section><section data-scientific-report-files hidden></section>';
+      panel.innerHTML='<div data-scientific-report-main></div><section data-scientific-report-detail hidden></section><section data-scientific-report-document-host class="source-report-frame-shell" hidden></section><section data-scientific-report-briefing-host hidden></section><section data-scientific-report-files hidden></section>';
       panel.addEventListener('click',event=>{
         const button=event.target.closest('[data-scientific-report-action]');
         if(!button||!panel.contains(button))return;
@@ -74,12 +78,14 @@ export function attachScientificReportEditions(host) {
     }
     if(panel.parentNode!==container)container.append(panel);
     panel.hidden=false;
+    sourceReader.mount(panel);
   }
   function sourceActions(row,reportId=''){
     const native=row.native_study,available=typeof host.openGISStudy==='function'&&host.hasView?.('gis-projects');
     const attributes=' data-collection="'+esc(row.source_collection_id)+'" data-source="'+esc(row.source_id)+'"'+
       (reportId?' data-report="'+esc(reportId)+'"':'');
     return '<div class="inline-actions">'+
+      '<button type="button" data-scientific-report-action="read-source"'+attributes+'>Read original study</button>'+
       (typeof host.openItem==='function'?'<button type="button" data-scientific-report-action="source"'+attributes+'>Open original source files</button>':'')+
       (native&&available?'<button type="button" data-scientific-report-action="gis"'+attributes+
         (!native.local_project||busy||pending?' disabled':'')+'>Prepare editable native GIS</button>':'')+'</div>'+
@@ -108,7 +114,7 @@ export function attachScientificReportEditions(host) {
         '<input data-scientific-report-field="'+field+'" value="'+esc(contact[field])+'"'+(locked?' disabled':'')+'></label>').join('')+'</div>'+
       '<label class="source-reports-document">Add a saved scientific study<select data-scientific-report-source>'+
         '<option value="">Choose an original report source</option>'+remaining.map(row=>'<option value="'+esc(key(row))+'">'+esc(row.title)+' · '+esc(row.vintage)+'</option>').join('')+
-        '</select></label><button type="button" data-scientific-report-action="add"'+(!remaining.length||locked?' disabled':'')+'>Add study</button>'+
+        '</select></label><button type="button" data-scientific-report-action="add"'+(!remaining.length||locked?' disabled':'')+'>Add study</button><button type="button" data-scientific-report-action="inspect-available"'+(!remaining.length?' disabled':'')+'>Read original study before adding</button>'+
       (selected.length?'<ol class="scientific-report-order">'+selected.map((row,index)=>{
         const original=sources.find(item=>key(item)===key(row));
         return '<li><div><strong>'+esc(original?.title||row.source_id)+'</strong><small>'+esc(original?.vintage||'Retained selection')+
@@ -130,6 +136,7 @@ export function attachScientificReportEditions(host) {
     panel.querySelector('[data-scientific-report-detail]').hidden=!opened;
     panel.querySelector('[data-scientific-report-files]').hidden=!opened;
     if(opened)renderDetail();
+    renderReportDocument();
     renderBriefingDocument();
   }
   function capturedReportsHTML(locked){
@@ -170,22 +177,28 @@ export function attachScientificReportEditions(host) {
   }
   async function refresh(){
     const ws=workspace,turn=generation;
-    const result=await request('/api/source-reports/scientific-catalog');
-    if(!valid(ws,turn))return;
-    if(result.workspace_key!==ws)throw Error('The scientific report catalogue belongs to another Workspace.');
-    sources=result.sources||[];editions=result.editions||[];
-    capturedReports=result.captured_reports||[];captureIssues=result.capture_issues||[];
-    if(capturePreview&&!capturedReports.some(row=>row.capture_id===capturePreview.capture_id&&
-        row.capture_sha256===capturePreview.capture_sha256&&row.edition_id===capturePreview.edition_id)){
-      captureGeneration++;capturePreview=null;
-    }
-    error='';render();
+    if(catalogRead&&catalogRead.workspace===ws&&catalogRead.generation===turn)return catalogRead.promise;
+    const ticket=++catalogGeneration,read={workspace:ws,generation:turn,promise:null};
+    read.promise=(async()=>{
+      const result=await request('/api/source-reports/scientific-catalog');
+      if(!active||!valid(ws,turn)||ticket!==catalogGeneration)return null;
+      if(result.workspace_key!==ws)throw Error('The scientific report catalogue belongs to another Workspace.');
+      sources=result.sources||[];editions=result.editions||[];
+      capturedReports=result.captured_reports||[];captureIssues=result.capture_issues||[];
+      if(capturePreview&&!capturedReports.some(row=>row.capture_id===capturePreview.capture_id&&
+          row.capture_sha256===capturePreview.capture_sha256&&row.edition_id===capturePreview.edition_id)){
+        captureGeneration++;capturePreview=null;
+      }
+      error='';render();return result;
+    })().finally(()=>{if(catalogRead===read)catalogRead=null;});
+    catalogRead=read;
+    return read.promise;
   }
   async function preparePreview(){
     const ws=workspace,turn=generation,version=revision,selection=payload();
     orderedReportSources(sources,selection.sources);
     const result=await host.api(host.endpoint('/api/source-reports/scientific-preview'),{method:'POST',body:selection});
-    if(!valid(ws,turn)||revision!==version)return;
+    if(!active||!valid(ws,turn)||revision!==version)return;
     if(result.workspace_key!==ws||JSON.stringify(result.sources.map(choice))!==JSON.stringify(selection.sources))
       throw Error('The preview returned a different ordered study selection.');
     preview=result;error='';render();
@@ -218,12 +231,31 @@ export function attachScientificReportEditions(host) {
       '<button type="button" data-scientific-report-action="backup">Back up Workspace with this report</button>'+
       (opened.archive?link(opened.archive.url,'Download report ZIP'):'')+'</div>'+
       '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. Study transfer also includes its ordered source collections and available original editable study history. The Workspace backup keeps the entire project.</p>'+
-      reportSourcesHTML()+briefingHTML()+
-      (opened.viewer_url?'<div class="source-report-frame-shell"><iframe title="'+esc(row.title)+
-        '" sandbox="allow-scripts allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" src="'+esc(opened.viewer_url)+'"></iframe></div>':'');
+      reportSourcesHTML()+briefingHTML();
     panel.querySelector('[data-scientific-report-files]').innerHTML='<div class="table-scroll"><table><thead><tr><th>File</th><th>Size / SHA256</th><th></th></tr></thead><tbody>'+
       opened.files.map(item=>'<tr><td>'+esc(item.path)+'</td><td>'+size(item.bytes)+'<small class="mono">'+esc(item.sha256)+
         '</small></td><td>'+link(item.url,'Download')+'</td></tr>').join('')+'</tbody></table></div>';
+  }
+  function renderReportDocument(){
+    const target=panel?.querySelector('[data-scientific-report-document-host]');
+    if(!target)return;
+    target.hidden=!opened?.viewer_url;
+    for(const frame of target.children)frame.hidden=true;
+    if(!opened?.viewer_url)return;
+    const id=opened.edition.id+':'+opened.viewer_url;
+    let frame=reportFrames.get(id);
+    if(!frame){
+      frame=document.createElement('iframe');frame.title=opened.edition.title;
+      frame.setAttribute('sandbox','allow-scripts allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox');
+      frame.referrerPolicy='no-referrer';frame.src=opened.viewer_url;reportFrames.set(id,frame);
+    }
+    if(frame.parentNode!==target)target.append(frame);
+    frame.hidden=false;
+  }
+  async function inspectSource(row){
+    if(!row)throw Error('Choose an original scientific source to read.');
+    const ws=workspace,turn=generation;
+    return sourceReader.open(row,{isCurrent:()=>active&&valid(ws,turn)});
   }
   function briefingHTML(){
     const row=opened.edition;
@@ -313,6 +345,10 @@ export function attachScientificReportEditions(host) {
   async function dispatch(button){
     const action=button.dataset.scientificReportAction;
     if(action==='recover')return recover();
+    if(action==='inspect-available'){
+      const value=panel.querySelector('[data-scientific-report-source]').value;
+      return inspectSource(sources.find(item=>key(item)===value));
+    }
     if(['add','up','down','remove','preview','render','revise','export','briefing-preview','briefing-prepare','capture-preview','capture-adopt'].includes(action)&&(busy||pending))
       throw Error('Recover the original report request before changing its selection or starting another.');
     if(action==='refresh'){await refresh();if(opened)await open(opened.edition.id);return;}
@@ -374,7 +410,7 @@ export function attachScientificReportEditions(host) {
       return host.prepareCustomerReview({workspace_key:ws,edition_id:original.edition.id,
         isCurrent:()=>valid(ws,turn)&&active&&opened===original&&detailGeneration===ticket});
     }
-    if(action==='source'||action==='gis'){
+    if(action==='source'||action==='gis'||action==='read-source'){
       const pair={source_collection_id:button.dataset.collection,source_id:button.dataset.source};
       const id=button.dataset.report||null,ws=workspace,turn=generation,ticket=++detailGeneration;
       if(action==='gis'&&(busy||pending))throw Error('Recover the original report request before opening another workflow.');
@@ -394,6 +430,7 @@ export function attachScientificReportEditions(host) {
         row=result.sources.find(item=>key(item)===key(pair));
       }
       if(!row)throw Error('Choose a source retained in the selected original report.');
+      if(action==='read-source')return inspectSource(row);
       if(action==='source')return host.openItem('sources',pair.source_collection_id);
       if(!row.native_study?.local_project||typeof host.openGISStudy!=='function'||!host.hasView?.('gis-projects'))
         throw Error('Open this native study in its restored original project with the editable GIS desk.');
@@ -424,13 +461,16 @@ export function attachScientificReportEditions(host) {
     const selectionMode=value.selection_mode??'append';
     if(!['append','replace'].includes(selectionMode))throw Error('Choose a supported scientific report source selection mode.');
     if(busy||pending)throw Error('Finish or recover the retained scientific report request before adding more sources.');
-    const ws=workspace,turn=generation,version=revision;
-    await refresh();
-    if(!valid(ws,turn))throw Error('The Workspace changed before its report sources opened.');
+    const ws=workspace,turn=generation,version=revision,intent=++sourceIntent;
+    const current=()=>active&&valid(ws,turn)&&intent===sourceIntent&&
+      (typeof value.isCurrent!=='function'||value.isCurrent());
+    if(!current())return null;
+    const catalogue=await refresh();
+    if(!current()||!catalogue)return null;
     if(busy||pending)throw Error('Finish or recover the retained scientific report request before adding more sources.');
     if(selectionMode==='replace'&&revision!==version)
       throw Error('The report draft changed before its prepared sources opened. Open the prepared selection again.');
-    const incoming=orderedReportSources(sources,value.sources).map(choice);
+    const incoming=orderedReportSources(catalogue.sources||[],value.sources).map(choice);
     if(selectionMode==='replace'){
       selected=incoming;
       title=typeof value.title==='string'?value.title:'';
@@ -444,10 +484,10 @@ export function attachScientificReportEditions(host) {
     panel.querySelector('[data-scientific-report-action="preview"]').focus?.();
     return {workspace_key:ws,sources:selected.map(choice)};
   }
-  function detach(){active=false;detailGeneration++;captureGeneration++;if(panel)panel.hidden=true;}
+  function detach(){active=false;sourceIntent++;catalogGeneration++;catalogRead=null;detailGeneration++;captureGeneration++;sourceReader.detach();if(panel)panel.hidden=true;}
   function reset(){
     generation++;revision++;detailGeneration++;if(panel)panel.remove();
-    briefingFrames.clear();
+    briefingFrames.clear();reportFrames.clear();sourceReader.reset();sourceIntent++;catalogGeneration++;catalogRead=null;
     panel=null;workspace=null;sources=[];editions=[];selected=[];title='';
     capturedReports=[];captureIssues=[];capturePreview=null;captureGeneration++;
     contact={name:'',organization:'',email:''};

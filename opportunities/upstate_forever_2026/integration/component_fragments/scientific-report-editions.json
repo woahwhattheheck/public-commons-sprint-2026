@@ -16,7 +16,10 @@
         "operator/web/source_reports.mjs",
         "source/observed-report-20261013/README.md",
         "source/observed-report-20261013/install.py",
-        "source/observed-report-20261013/render.py"
+        "source/observed-report-20261013/render.py",
+        "operator/scientific_source_reader.py",
+        "operator/web/scientific_source_reader.mjs",
+        "operator/SCIENTIFIC_SOURCE_READER.md"
       ],
       "requires": [
         "core",

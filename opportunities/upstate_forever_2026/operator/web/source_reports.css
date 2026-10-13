@@ -43,3 +43,17 @@
 .scientific-report-preview{padding:1rem;margin:1rem 0;border:1px solid #aaa;background:#f6f6f6}
 .scientific-report-editions [data-scientific-report-detail]{margin-top:1.5rem;padding-top:1rem;border-top:2px solid #555}
 @media(max-width:700px){.scientific-report-fields{grid-template-columns:1fr}.scientific-report-order .inline-actions{gap:.5rem}}
+
+/* Read original study members without replacing the report draft or its frames. */
+.scientific-source-reader{margin-block:1.5rem;padding:1rem;border:1px solid var(--border,#c9cdd1);background:var(--panel,#fff)}
+.scientific-source-reader label{display:block;margin-block:1rem}
+.scientific-source-reader input,.scientific-source-reader select{display:block;width:100%;max-width:64rem;margin-top:.4rem}
+.scientific-source-reader code{overflow-wrap:anywhere}
+.scientific-source-reader .source-original-cell{white-space:pre-wrap;overflow-wrap:anywhere}
+.scientific-source-reader .scientific-source-table{margin-block:1rem}
+.scientific-source-reader .table-scroll{max-height:36rem;overflow:auto}
+.scientific-source-reader .table-scroll:focus{outline:2px solid currentColor;outline-offset:2px}
+.scientific-source-reader [data-source-reader-status]:not(:empty){padding-block:.75rem}
+.scientific-source-reader [data-source-reader-document]>iframe{width:100%;height:70vh;min-height:24rem;border:1px solid var(--border,#c9cdd1)}
+.scientific-source-reader [data-source-reader-document]>iframe[hidden],.source-report-frame-shell>iframe[hidden]{display:none}
+@media(max-width:640px){.scientific-source-reader{padding:.65rem}.scientific-source-reader .inline-actions{display:flex;flex-wrap:wrap}.scientific-source-reader th,.scientific-source-reader td{min-width:7rem}}

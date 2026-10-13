@@ -591,6 +591,9 @@ class SourceReports:
                 "download": self.operator._ticket(workspace, destination, record, "Report and complete original source edition")}
 
     def read(self, workspace, operation, payload):
+        if operation == "scientific-source":
+            from scientific_source_reader import ScientificSourceReader
+            return ScientificSourceReader(self.operator, self.Fault).detail(workspace, payload)
         if operation.startswith("scientific-"):
             return self.scientific.read(workspace, operation, payload)
         if operation == "catalog":
@@ -614,6 +617,11 @@ class SourceReports:
 
     def decorate_task(self, task):
         return self.scientific.decorate_task(task)
+
+    def scientific_source_member(self, workspace, collection_id, source_key, name):
+        from scientific_source_reader import ScientificSourceReader
+        return ScientificSourceReader(self.operator, self.Fault).member(
+            workspace, collection_id, source_key, name)
 
     def scientific_member(self, workspace, key, name):
         ticket, path = self.scientific.member(workspace, key, name)
