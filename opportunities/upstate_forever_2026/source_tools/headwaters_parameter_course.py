@@ -42,7 +42,8 @@ def prepare(workspace, selection):
     bound["alternative_scenario_ids"] = list(alternatives)
     profile = workspace._get("profiles", bound["base_profile_id"])
     collection = workspace._get("sources", profile["source_collection_id"])
-    source_manifest = read_json(verify_file(workspace.root, collection["original_manifest"]))
+    original = collection["original_manifest"]
+    source_manifest = read_json(verify_file(workspace.root, {**original, "path": original["object"]}))
     classification = source_manifest.get("classification")
     if classification != "SIMULATED DEMONSTRATION INPUTS":
         raise ValueError("Choose the original explicitly simulated source edition")
