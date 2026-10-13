@@ -1105,6 +1105,12 @@ def _verify_restored_workspace(manifest, destination):
             or (restored.root / "delivery-preparation-operations").exists()):
         from .delivery_preparation import verify_all as verify_delivery_preparations
         details["delivery_preparations"] = verify_delivery_preparations(restored)
+    # Structural studies retain their exact native cases, original operation
+    # identities and complete first receipts. Verification does not render or run.
+    if ((restored.root / "structural-studies").exists()
+            or (restored.root / "structural-study-operations").exists()):
+        from .structural_studies import verify_all as verify_structural_studies
+        details["structural_studies"] = verify_structural_studies(restored)
     return details
 
 
