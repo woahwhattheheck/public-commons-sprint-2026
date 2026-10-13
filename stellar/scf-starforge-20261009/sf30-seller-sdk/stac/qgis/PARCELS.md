@@ -481,6 +481,9 @@ shows the publisher's recorded retry deadline and response. Refresh status after
 that deadline. A blocked request requires an explicit **Reason for retry** and
 **Record reviewed retry** before another Advance. Retrying preserves the original
 attempt evidence; it does not discard the body or rewrite a previous result.
+The retry freezes the displayed attempt SHA-256. If another operator advances or
+changes that attempt before the retry acquires its lock, refresh and review the
+new result before submitting another retry.
 
 When status is READY, **Prepare receiving edition** validates the complete output
 with the original parcel intake. If the publisher metadata changed between its
@@ -532,7 +535,7 @@ runtime and worker ownership.
 | --- | --- |
 | `init` | `directory, label` |
 | `advance` | `directory, maxRequests?, timeout?` |
-| `retry` | `directory, jobId, reason` |
+| `retry` | `directory, jobId, reason, expectedPreviousSha256` |
 | `finalize` | `directory, publisherChangeReason?` |
 | `checkpoint` | `directory` |
 | `restore` | `directory, checkpointRequestId` |
