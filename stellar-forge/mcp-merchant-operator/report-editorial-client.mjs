@@ -39,7 +39,7 @@ export async function callReportEditorial({action,args,directory,...options}={})
     need(same(decode(await readWorkflowSeriesPrivateFile(join(root,'intent.json'),2*1024*1024)),intent),
       'The retained complete request changed.','REPORT_REVIEW_INTENT_CHANGED');
     options.signal?.throwIfAborted();lease.assertHeld();
-    const value=await upstream.call(tool,args);returned=true;
+    const value=await upstream.call(tool,args,{requestSignal:options.signal});returned=true;
     await observation(root,action,value);
     return{directory:root,tool,result:value};
   }catch(error){
@@ -108,7 +108,7 @@ export async function receiveReportEditorialReturn({workspace,uploadId,returnedF
     need(request.schema==='stellar-forge.report-editorial-return.v1'&&REPORT_REVIEW_SHA.test(request.issue_sha256)&&
       REPORT_REVIEW_SHA.test(request.source_sha256),'Select the complete original attributed return.');
     upstream=await connected(options);
-    const state=await upstream.call(PREFIX+'state',{workspace});
+    const state=await upstream.call(PREFIX+'state',{workspace},{requestSignal:options.signal});
     need(state.workspaceId===request.workspace_id,'The recipient return belongs to another original Analysis workspace.','REPORT_REVIEW_SOURCE_CHANGED');
     const intent={schema:'stellar-forge.report-editorial-return-client.v1',endpoint:upstream.endpoint,workspace,workspaceId:state.workspaceId,
       uploadId,returnId:request.id,issueId:request.issue_id,issueSha256:request.issue_sha256,sourceSha256:request.source_sha256,
@@ -120,7 +120,7 @@ export async function receiveReportEditorialReturn({workspace,uploadId,returnedF
     await writeConsoleWorkflowFile(join(root,'returned-file.json'),raw);
     const call=async(action,args)=>{
       options.signal?.throwIfAborted();lease.assertHeld();
-      try{return await observation(root,action,await upstream.call(PREFIX+action,{workspace,...args}));}
+      try{return await observation(root,action,await upstream.call(PREFIX+action,{workspace,...args},{requestSignal:options.signal}));}
       catch(error){await observation(root,action,{error:{code:error.code??'REPORT_REVIEW_CLIENT',message:error.message,
         outcomeUnknown:error.outcomeUnknown??false}}).catch(e=>{error.preservationError=e;});throw error;}
     };
