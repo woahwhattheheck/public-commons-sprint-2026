@@ -7,13 +7,15 @@ import sys
 
 from .common import read_json
 from .workspace import Workspace
-from . import ensemble_consumers as consumers
+from . import ensemble_consumers as consumers, ensemble_references
 
 
 def parser():
     top = argparse.ArgumentParser(description=__doc__)
     top.add_argument("--workspace", required=True)
     commands = top.add_subparsers(dest="command", required=True)
+
+    commands.add_parser("annual-references", help="List imported original annual-load bindings and source periods")
 
     catalog = commands.add_parser("inspect", help="Read actual saved run states and usable scientific cohorts")
     catalog.add_argument("--ensemble-id", required=True)
@@ -35,8 +37,11 @@ def parser():
     calibration.add_argument("--ensemble-id", required=True)
     calibration.add_argument("--profile-id", action="append")
     calibration.add_argument("--pollutant", action="append", choices=consumers.MODELED_OUTPUTS)
-    calibration.add_argument("--references", required=True,
-                             help="Existing calibration JSON: original observation_id, catchments, groups, objective and periods")
+    reference = calibration.add_mutually_exclusive_group(required=True)
+    reference.add_argument("--references",
+                           help="Existing calibration JSON: original observation_id, catchments, groups, objective and periods")
+    reference.add_argument("--annual-import-id", help="Completed original annual-reference import in this workspace")
+    calibration.add_argument("--reference-options", help="Optional analysis choices JSON for the fixed original import binding")
     calibration.add_argument("--prepare-only", action="store_true")
     calibration.add_argument("--standard-errors", type=float,
                              help="Use the existing published-standard-error sensitivity after completed calibration")
@@ -55,7 +60,9 @@ def main(argv=None):
     args = parser().parse_args(argv)
     try:
         workspace = Workspace(args.workspace)
-        if args.command == "inspect":
+        if args.command == "annual-references":
+            result = ensemble_references.catalog(workspace, include_records=True)
+        elif args.command == "inspect":
             result = consumers.inspect(workspace, args.ensemble_id,
                                        profile_ids=args.profile_id, scenario_ids=args.scenario_id)
         elif args.command == "decision":
@@ -68,8 +75,10 @@ def main(argv=None):
                 result["result"] = consumers.build_decision(workspace, plan["id"], summary_only=args.summary_only)
         elif args.command == "calibration":
             plan = consumers.prepare_calibration(
-                workspace, args.ensemble_id, read_json(args.references),
-                profile_ids=args.profile_id, pollutants=args.pollutant)
+                workspace, args.ensemble_id, read_json(args.references) if args.references else None,
+                profile_ids=args.profile_id, pollutants=args.pollutant,
+                reference_import_id=args.annual_import_id,
+                reference_options=read_json(args.reference_options) if args.reference_options else None)
             result = {"plan": plan}
             if not args.prepare_only:
                 result["result"] = consumers.run_calibration(
