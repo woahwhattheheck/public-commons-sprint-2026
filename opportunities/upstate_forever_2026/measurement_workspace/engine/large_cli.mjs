@@ -13,7 +13,7 @@ export async function runLargeCLI(command,options,directory){
  try{
   if(command==='prepare'||command==='import'){
    if(!options.intake&&!options.file)throw new InputError('Select --file or a retained --intake');
-   const intake=options.intake?intakeStatus(w,options.intake):intakeFromFile(w,path.resolve(options.file),{kind:options.kind||'wqp',label:options.label||path.basename(options.file),mapping:options.mapping?JSON.parse(fs.readFileSync(options.mapping,'utf8')):{}});
+   const intake=options.intake?intakeStatus(w,options.intake):intakeFromFile(w,path.resolve(options.file),{id:options.id,sourceSha256:options['source-sha256'],kind:options.kind||'wqp',label:options.label||path.basename(options.file),mapping:options.mapping?JSON.parse(fs.readFileSync(options.mapping,'utf8')):{}});
    const prepared=prepareIntake(w,intake.id);value=command==='prepare'?{...prepared,workspaceRevision:w.revision()}:commitIntake(w,intake.id,{expectedRevision:options['expected-revision']===undefined?undefined:Number(options['expected-revision'])});
   }else if(command==='commit')value=commitIntake(w,options.intake,{expectedRevision:options['expected-revision']===undefined?undefined:Number(options['expected-revision'])});
   else if(command==='status')value=options.intake?intakeStatus(w,options.intake):{intakes:listIntakes(w),editions:listEditions(w)};

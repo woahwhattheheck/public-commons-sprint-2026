@@ -48,6 +48,72 @@ export function installLargeFileReads(Type){
  }
  Object.defineProperty(Type.prototype,'largeFileReadVersion',{value:2});
 }
+
+/** Finish the same staged local receive after interruption, under its intake lock. */
+function recoverLocalIntake(root,value){
+ const journal=path.join(root,'local-receiving.json');if(!fs.existsSync(journal))return value;
+ const intent=readJSON(journal),original=path.join(root,'original');
+ if(intent.format!=='upper-savannah-local-receiving/v1'||intent.id!==value.id||
+    !/^[.]local-[a-f0-9-]+[.]pending$/.test(intent.stage||'')||
+    !intent.before||!intent.after||intent.before.id!==value.id||intent.after.id!==value.id||
+    intent.target?.bytes!==value.bytes||!identifier(intent.target?.sha256)||
+    !Number.isSafeInteger(intent.originalBefore?.bytes)||!identifier(intent.originalBefore?.sha256)||
+    intent.after.offset!==value.bytes||intent.after.sourceSha256!==intent.target.sha256||
+    intent.after.phase!=='uploaded'||
+    stable({...intent.before,offset:value.bytes,phase:'uploaded',sourceSha256:intent.target.sha256})!==stable(intent.after))
+  throw new InputError('Retained local receiving intent is inconsistent; preserve its files',409);
+ const sameBefore=stable(value)===stable(intent.before),sameAfter=stable(value)===stable(intent.after);
+ if(!sameBefore&&!sameAfter)throw new InputError('The intake changed after its retained local receiving operation',409);
+ const stage=path.join(root,intent.stage),actual=regularDigest(original);
+ const targetMatches=actual.bytes===intent.target.bytes&&actual.sha256===intent.target.sha256;
+ if(!targetMatches){
+  if(sameAfter||actual.bytes!==intent.originalBefore.bytes||actual.sha256!==intent.originalBefore.sha256)
+   throw new InputError('Retained original differs from the saved local receiving operation',409);
+  const staged=regularDigest(stage);
+  if(staged.bytes!==intent.target.bytes||staged.sha256!==intent.target.sha256)
+   throw new InputError('Retained local receiving copy differs; preserve both original files',409);
+  fs.renameSync(stage,original);
+ }
+ if(!sameAfter)atomicJSON(path.join(root,'intake.json'),intent.after);
+ // Remove the intent last. A lost reply can repeat this exact recovery safely.
+ fs.rmSync(stage,{force:true});fs.rmSync(journal,{force:true});return intent.after;
+}
+function regularDigest(file){
+ const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink())throw new InputError('Retained originals must be regular files',409);
+ return fileDigest(file);
+}
+function prefixDigest(file,bytes){
+ const digest=createHash('sha256');let remaining=bytes;
+ for(const chunk of fileChunks(file)){
+  const n=Math.min(remaining,chunk.length);if(n)digest.update(chunk.subarray(0,n));remaining-=n;
+  if(!remaining)break;
+ }
+ if(remaining)throw new InputError('Retained original is shorter than its acknowledged prefix',409);
+ return digest.digest('hex');
+}
+function sameLocalDefinition(value,input){
+ const definition={kind:input.kind,label:clean(input.label),bytes:input.bytes,mapping:input.mapping||{},origin:input.origin||{type:'file'}};
+ for(const key of Object.keys(definition))if(stable(value[key])!==stable(definition[key]))
+  throw new InputError('This intake identifier already retains a different original definition',409);
+}
+/** Freeze the complete selected source without changing the acknowledged original. */
+function stageLocalFile(file,target,expectedBytes){
+ let source,output;const digest=createHash('sha256');let bytes=0;
+ try{
+  source=fs.openSync(file,'r');const before=fs.fstatSync(source);
+  if(!before.isFile()||before.size!==expectedBytes)throw new InputError('Selected source length changed before receiving',409);
+  output=fs.openSync(target,'wx',0o600);const buffer=Buffer.allocUnsafe(CHUNK);let n;
+  while((n=fs.readSync(source,buffer,0,buffer.length,null))){
+   bytes+=n;if(bytes>expectedBytes)throw new InputError('Selected source grew while receiving',409);
+   const chunk=buffer.subarray(0,n);writeAll(output,chunk);digest.update(chunk);
+  }
+  const after=fs.fstatSync(source);
+  if(bytes!==expectedBytes||['dev','ino','size','mtimeMs','ctimeMs'].some(key=>before[key]!==after[key]))
+   throw new InputError('Selected source changed while receiving; the retained original is preserved',409);
+  fs.fsyncSync(output);return {bytes,sha256:digest.digest('hex')};
+ }finally{try{if(output!==undefined)fs.closeSync(output);}finally{if(source!==undefined)fs.closeSync(source);}}
+}
+
 export function beginIntake(w,input){
  if(!['wqp','stations','portable'].includes(input.kind))throw new InputError('Large file kind must be wqp, stations or portable');
  if(!Number.isSafeInteger(input.bytes)||input.bytes<1)throw new InputError('Declare the complete nonempty original file size');
@@ -59,7 +125,7 @@ export function beginIntake(w,input){
   const stateFile=path.join(root,'intake.json');
   if(fs.existsSync(stateFile)){
    const old=readJSON(stateFile);for(const key of Object.keys(definition))if(stable(old[key])!==stable(definition[key]))throw new InputError('This intake identifier already retains a different original definition',409);
-   return old;
+   return recoverLocalIntake(root,old);
   }
   const original=path.join(root,'original');
   if(fs.existsSync(original)){if(fs.statSync(original).size!==0)throw new InputError('Interrupted initial intake has unexpected original bytes',409);}
@@ -70,7 +136,7 @@ export function beginIntake(w,input){
 }
 export function putChunk(w,id,{offset,base64,sha256,check=false}){
  const root=intakeRoot(w,id);return withDirectoryLock(root,()=>{
-  const value=descriptor(w,id),file=path.join(root,'original');
+  const value=recoverLocalIntake(root,descriptor(w,id)),file=path.join(root,'original');
   if(!Number.isSafeInteger(offset)||offset<0||offset>value.offset||offset%CHUNK!==0)throw new InputError('Use the returned contiguous upload offset',409);
   if(!identifier(sha256))throw new InputError('Every original chunk requires its SHA-256');
   const expected=Math.min(CHUNK,value.bytes-offset);if(expected<=0)throw new InputError('Upload is already complete',409);
@@ -107,7 +173,7 @@ export function* normalizedCSV(chunks,kind,mapping){
 const normalizerPin=()=>hash(['normalise.mjs','parse.mjs','stream_csv.mjs','large_intake.mjs'].map(name=>hash(fs.readFileSync(new URL('./'+name,import.meta.url)))).join('\n'));
 export function prepareIntake(w,id){
  const root=intakeRoot(w,id);return withDirectoryLock(root,()=>{
-  const value=descriptor(w,id);if(value.kind==='portable')throw new InputError('Use the complete-project receiving operation for this file');
+  const value=recoverLocalIntake(root,descriptor(w,id));if(value.kind==='portable')throw new InputError('Use the complete-project receiving operation for this file');
   if(value.offset!==value.bytes)throw new InputError('Finish receiving the complete original file first',409);
   const preparedFile=path.join(root,'prepared.json');if(fs.existsSync(preparedFile)){const old=readJSON(preparedFile);if(old.normalizerPin===normalizerPin()||value.phase==='committed')return old;}
   const original=path.join(root,'original'),digest=fileDigest(original);if(digest.bytes!==value.bytes)throw new InputError('Retained source length differs',409);
@@ -173,16 +239,43 @@ export function commitIntake(w,id,{expectedRevision,expectedSourceSha256,expecte
  });
 }
 export function intakeFromFile(w,file,input={}){
+ if(input.sourceSha256!==undefined&&!identifier(input.sourceSha256))throw new InputError('Expected original SHA-256 must be 64 lowercase hexadecimal characters');
  const stat=fs.statSync(file);if(!stat.isFile())throw new InputError('Select a regular original file');
- const value=beginIntake(w,{...input,bytes:stat.size,label:input.label||path.basename(file)}),root=intakeRoot(w,value.id),original=path.join(root,'original');
- const fd=fs.openSync(original,'w');try{for(const chunk of fileChunks(file))writeAll(fd,chunk);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}
- const actual=fileDigest(original);if(actual.bytes!==stat.size)throw new InputError('Original source length changed during intake',409);
- value.offset=actual.bytes;atomicJSON(path.join(root,'intake.json'),value);return value;
+ const selected={...input,bytes:stat.size,label:input.label||path.basename(file)};
+ const initial=beginIntake(w,selected),root=intakeRoot(w,initial.id);
+ return withDirectoryLock(root,()=>{
+  const value=recoverLocalIntake(root,descriptor(w,initial.id));sameLocalDefinition(value,selected);
+  const original=path.join(root,'original'),stageName='.local-'+randomUUID()+'.pending',stage=path.join(root,stageName);
+  let retainedIntent=false;
+  try{
+   const candidate=stageLocalFile(file,stage,value.bytes);
+   if(input.sourceSha256!==undefined&&candidate.sha256!==input.sourceSha256)throw new InputError('Selected original differs from its expected SHA-256',409);
+   const previous=regularDigest(original);
+   if(!Number.isSafeInteger(value.offset)||value.offset<0||value.offset>value.bytes||previous.bytes<value.offset||previous.bytes>value.bytes)
+    throw new InputError('Retained original length differs from its acknowledged receiving state',409);
+   if(value.offset===value.bytes||value.phase==='prepared'||value.phase==='committed'){
+    if(value.offset!==value.bytes||previous.bytes!==candidate.bytes||previous.sha256!==candidate.sha256||
+       (value.sourceSha256!==undefined&&value.sourceSha256!==candidate.sha256))
+     throw new InputError('This intake already retains a different complete original; select a new intake identifier',409);
+    return value;
+   }
+   if(value.phase!=='uploading')throw new InputError('This intake is no longer accepting original bytes',409);
+   if(prefixDigest(original,value.offset)!==prefixDigest(stage,value.offset))
+    throw new InputError('The selected file differs from the retained upload prefix; start a new intake',409);
+   const after={...value,offset:candidate.bytes,phase:'uploaded',sourceSha256:candidate.sha256};
+   const intent={format:'upper-savannah-local-receiving/v1',id:value.id,stage:stageName,before:value,after,originalBefore:previous,target:candidate};
+   atomicJSON(path.join(root,'local-receiving.json'),intent);retainedIntent=true;
+   return recoverLocalIntake(root,value);
+  }finally{
+   // Once the journal is durable its complete copy belongs to the same recovery.
+   if(!retainedIntent&&!fs.existsSync(path.join(root,'local-receiving.json')))fs.rmSync(stage,{force:true});
+  }
+ });
 }
 /** Re-review new column choices without uploading the complete original again. */
 export function reconfigureIntake(w,id,input){
  const root=intakeRoot(w,id);return withDirectoryLock(root,()=>{
-  const value=descriptor(w,id);if(value.phase==='committed')throw new InputError('The original import is immutable; make a new source edition for later changes',409);
+  const value=recoverLocalIntake(root,descriptor(w,id));if(value.phase==='committed')throw new InputError('The original import is immutable; make a new source edition for later changes',409);
   if(input.mapping!==undefined&&(!input.mapping||typeof input.mapping!=='object'||Array.isArray(input.mapping)))throw new InputError('Column mapping must be an object');
   if(input.mapping!==undefined)value.mapping=input.mapping;
   if(input.label!==undefined){const label=clean(input.label);if(!label)throw new InputError('Name the original file');value.label=label;}
