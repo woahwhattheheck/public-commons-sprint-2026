@@ -213,6 +213,29 @@ def _network(workspace, key):
                 **{name: source[name] for name in ("name", "tohuc_original", "hutype", "source_feature_id")}})
     result["memberships"] = memberships
     result["network"] = network
+    if result["files"].get("geography"):
+        import math
+        from xml.etree import ElementTree
+        item = result["files"]["geography"]
+        svg = ElementTree.fromstring(relative_file(directory, item["path"]).read_bytes())
+        namespace = "{http://www.w3.org/2000/svg}"
+        if svg.tag != namespace + "svg":
+            raise ValueError("The retained geography file is not an SVG watershed view")
+        view_box = [float(part) for part in svg.attrib["viewBox"].split()]
+        if (len(view_box) != 4 or not all(math.isfinite(value) for value in view_box)
+                or view_box[2] <= 0 or view_box[3] <= 0):
+            raise ValueError("The original watershed view has an invalid extent")
+        shapes = []
+        for path in svg.iter(namespace + "path"):
+            huc = path.attrib.get("data-huc")
+            if huc not in original:
+                raise ValueError("The geographic view contains an unknown original HUC12")
+            row = original[huc]
+            shapes.append({"huc12": huc, "path": path.attrib["d"], "name": row["name"],
+                "tohuc_original": row["tohuc_original"], "source_feature_id": row["source_feature_id"],
+                "area_ids": [area["id"] for area in network["areas"] if huc in area["huc12s"]],
+                "anchor_area_ids": [area["id"] for area in network["areas"] if huc in area["anchor_huc12s"]]})
+        result["geography_view"] = {"view_box": view_box, "shapes": shapes}
     result["files"] = {**result["files"], "result": describe_file(directory, directory / "result.json")}
     return result
 

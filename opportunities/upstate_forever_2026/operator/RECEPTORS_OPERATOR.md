@@ -53,6 +53,10 @@ source; it can finish while regional raster preparation continues.
 
 A saved network opens into:
 
+- An original-polygon geographic overview when the retained source result
+  includes its geography file. The complete package keeps the interactive
+  offline map with HUC lookup, area selection, zoom and pan.
+
 - Actual original, unique contributing and shared HUC12 counts.
 - A receiving-area table with original anchor identifiers.
 - Searchable, paged memberships carrying original watershed names, ToHUC

@@ -145,3 +145,15 @@
 .receptor-workbench .rc-metrics span { font-size: .85rem; color: var(--rc-muted); }
 .receptor-workbench .rc-path { border-left: 3px solid #555; padding: .25rem 0 .25rem 1rem; margin: 1rem 0 1.5rem; }
 .receptor-workbench [data-rc-path]:focus-visible { outline: 2px solid #111; outline-offset: 4px; }
+
+.receptor-workbench .rc-geography { margin: 1rem 0; border: 1px solid var(--rc-line); background: #fff; }
+.receptor-workbench .rc-geography svg { display: block; width: 100%; max-height: 560px; background: #fff; }
+.receptor-workbench .rc-geography .rc-toolbar { padding: 0 .85rem; }
+.receptor-workbench .rc-geography figcaption { padding: .6rem .85rem; font-size: .85rem; color: var(--rc-muted); border-top: 1px solid var(--rc-line); }
+
+.receptor-workbench .rc-unit { fill: #f1f1f1; fill-rule: evenodd; stroke: #999; stroke-width: .55; vector-effect: non-scaling-stroke; cursor: pointer; }
+.receptor-workbench .rc-unit.rc-member { fill: #bbb; stroke: #666; }
+.receptor-workbench .rc-unit.rc-anchor { fill: #555; stroke: #222; }
+.receptor-workbench .rc-unit.rc-quiet { opacity: .25; }
+.receptor-workbench .rc-unit.rc-chosen,
+.receptor-workbench .rc-unit:focus-visible { opacity: 1; stroke: #000; stroke-width: 2.2; outline: none; }
