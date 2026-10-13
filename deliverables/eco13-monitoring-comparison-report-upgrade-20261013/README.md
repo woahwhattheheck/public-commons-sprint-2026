@@ -24,9 +24,37 @@ The original 45,027,826-byte frontier archive has SHA256 `be799c9f0db7cd8d15c1aa
 Place this whole bank directory on the existing host. Choose an application directory containing `model/workspace.py` and a new stage outside it. Keep the host's existing scientific Python executable.
 
 ```sh
-python BANK/stage.py --application APP --source-root STAGE
-python STAGE/integrations/monitoring/install_monitoring.py APP --source-root STAGE --check
-python STAGE/integrations/monitoring/install_monitoring.py APP --source-root STAGE
+APP=/actual/complete-installed-application
+BANK=/actual/eco13-monitoring-comparison-report-upgrade-20261013
+STAGE=/actual/monitoring-comparison-source
+python -B "$BANK/stage.py" --application "$APP" --source-root "$STAGE"
+python -B "$STAGE/integrations/monitoring/install_monitoring.py" "$APP" --source-root "$STAGE" --check
+python -B "$STAGE/integrations/monitoring/install_monitoring.py" "$APP" --source-root "$STAGE"
+python - "$APP" "$STAGE" <<'PY'
+import os
+from pathlib import Path
+import sys
+import tempfile
+
+application, stage = (Path(value).resolve(strict=True) for value in sys.argv[1:])
+target = application / "AGENTS.md"
+if target.is_symlink():
+    raise ValueError("Retain the application's instructions as an ordinary file")
+current = target.read_text(encoding="utf-8") if target.exists() else ""
+instruction = (stage / "AGENTS.md").read_text(encoding="utf-8")
+if instruction not in current:
+    merged = current.rstrip() + ("\n\n" if current.strip() else "") + instruction
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=application,
+                                     prefix=".instructions-", delete=False) as stream:
+        pending = Path(stream.name)
+        stream.write(merged)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(pending, target)
+if instruction not in target.read_text(encoding="utf-8"):
+    raise ValueError("The installed application did not retain its current instructions")
+print("Current owner instruction retained:", target)
+PY
 ```
 
 `stage.py` first verifies both original bootstrap modules: `source_tools.application_assembly` and its matching `source_tools.application_components` companion from the same source commit. It loads this verified pair in a private package namespace, then delegates decoding, safe source paths, byte/hash validation and immutable file publication to the original assembler. The base application does not need to supply a matching staging API. The six original source parts and all 97 original member bodies remain unchanged. Repeating the same complete bank reuses identical staged files.
