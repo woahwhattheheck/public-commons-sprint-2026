@@ -1,3 +1,4 @@
+import {managementResultsMarkup,reconcileManagementView,managementGISRequest} from './climate_management_explorer.mjs';
 /* TokenJunkieLabs. Native management responses across explicitly mapped forcing periods. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=v=>structuredClone(v);
@@ -15,14 +16,14 @@ export function createClimateManagement(context){
   const {api,getState}=context;
   let root=null,workspace=null,epoch=0,serial=0,revision=0,listener=null,timer=null,busy=false,polling=false;
   let catalog=null,draft=fresh(),preview=null,report=null,selectedId='',control=false,pending=[],tasks=[];
-  let error='',notice='',storageNotice='';
+  let error='',notice='',storageNotice='',resultView={};
   const controllers=new Set();
   const $=s=>root?.querySelector(s),$$=s=>[...(root?.querySelectorAll(s)||[])];
   const current=(w,e)=>!!root&&workspace===w&&epoch===e&&getState()?.workspace_key===w;
   const storageKey=()=> 'upstate.climate-management.v1:'+workspace;
   const url=(op,values={})=>'/api/climate-management/'+op+'?'+new URLSearchParams({workspace,...values});
   function persist(){
-    try{sessionStorage.setItem(storageKey(),JSON.stringify({draft,control,selectedId,pending,tasks}));storageNotice='';}
+    try{sessionStorage.setItem(storageKey(),JSON.stringify({draft,control,selectedId,pending,tasks,resultView}));storageNotice='';}
     catch(_){storageNotice='Browser draft storage is unavailable. Keep this view open until pending operations are acknowledged; the operator retains submitted tasks.';}
   }
   function restore(){
@@ -30,6 +31,7 @@ export function createClimateManagement(context){
       const x=JSON.parse(sessionStorage.getItem(storageKey())||'null');
       if(!x)return;
       if(x.draft&&Array.isArray(x.draft.periods)&&x.draft.periods.length>=2&&x.draft.periods.every(p=>p.reference&&p.treatment))draft=x.draft;
+      resultView=x.resultView&&typeof x.resultView==='object'?x.resultView:{};
       control=x.control===true;selectedId=typeof x.selectedId==='string'?x.selectedId:'';
       pending=Array.isArray(x.pending)?x.pending.filter(t=>t?.workspace===workspace&&t.action==='climate-management.build'&&t.operation_id&&t.payload):[];
       tasks=Array.isArray(x.tasks)?x.tasks.filter(t=>t?.id&&(!t.workspace||t.workspace===workspace)&&t.action==='climate-management.build'):[];
@@ -85,18 +87,8 @@ export function createClimateManagement(context){
   }
   function reportMarkup(){
     if(!report)return '';
-    const cols=[['period','Period'],['area','Area'],['pollutant','Export'],['units','Annual units'],['reference_total','Reference'],['treatment_total','Treatment'],['benefit','Benefit: reference − treatment'],
-      ...(report.roles?.includes('control')?[['control_total','Control'],['control_adjusted_benefit','Control − treatment'],['control_adjusted_interaction','Change in control-adjusted benefit']]:[]),
-      ['interaction','Change in benefit'],['benefit_percent_of_reference','Benefit / reference (%)'],['common_hectares','Common hectares']];
-    return '<section><h2>3. Saved results</h2><h3>'+esc(report.title)+'</h3>'+
-      '<p>Positive benefit means lower modeled export with the treatment. Positive change in benefit means a larger reduction than in the selected reference period. A dash means the support or denominator cannot define the value.</p>'+
-      '<div class="cm-actions">'+(report._downloads||[]).map(f=>'<a href="'+esc(f.url+(f.url.includes('?')?'&':'?')+'download=1')+'" download="'+esc(f.filename)+'">'+esc(f.label||f.filename)+'</a>').join('')+
-      btn('export','Export editable comparison')+(report.source?btn('source','Open report source'):'')+'</div>'+
-      '<div class="cm-table"><table><thead><tr>'+cols.map(([,t])=>'<th>'+esc(t)+'</th>').join('')+'</tr></thead><tbody>'+
-      (report.rows||[]).map(r=>'<tr>'+cols.map(([k])=>'<td>'+esc(fmt(r[k]))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'+
-      detail('Finite support and exclusions',report.support)+detail('Independent full-area totals',report.independent_totals)+
-      detail('Original runs and forcing diagnostics',{cohort:report.cohort,forcing_diagnostics:report.forcing_diagnostics,native_versions:report.native_versions})+
-      (report.limitations?.length?'<ul>'+report.limitations.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>':'')+'</section>';
+    resultView=reconcileManagementView(report,resultView);
+    return managementResultsMarkup(report,resultView);
   }
   function operations(){
     if(!pending.length&&!tasks.length)return '';
@@ -121,6 +113,10 @@ export function createClimateManagement(context){
   }
   function changed(event){
     const el=event.target;
+    if(el.matches('[data-cm-view]')){
+      if(!report||!['area_id','pollutant'].includes(el.dataset.cmView))return;
+      resultView=reconcileManagementView(report,{...resultView,[el.dataset.cmView]:el.value});persist();render();return;
+    }
     if(el.matches('[data-saved]')){selectedId=el.value;persist();return;}
     let redraw=false;
     if(el.matches('[data-draft]'))draft[el.dataset.draft]=el.type==='checkbox'?el.checked:el.value;
@@ -224,6 +220,11 @@ export function createClimateManagement(context){
       else if(action==='task')await context.showTask(el.dataset.task);
       else if(action==='export'){if(!report)throw Error('Open a saved comparison.');await context.openDesk('study-transfer','openForStudies',{workspace_key:workspace,roots:[{kind:'climate-management-reports',id:report.id,title:report.title,state:'complete'}]});}
       else if(action==='source'&&report?.source)await context.openItem('sources',report.source.source_collection_id);
+      else if(action==='gis')await context.openDesk('gis-projects','createForSources',managementGISRequest(report,workspace));
+      else if(action==='run'){
+        if(!report?.cohort?.some(cell=>cell.run_id===el.dataset.run))throw Error('Choose a native run retained in this saved comparison.');
+        await context.openItem('runs',el.dataset.run);
+      }
     }catch(cause){if(current(w,e)&&cause.name!=='AbortError')error=cause.message||String(cause);}
     finally{if(current(w,e)){busy=false;render();schedule();}}
   }
@@ -246,7 +247,7 @@ export function createClimateManagement(context){
   function detach(){epoch++;serial++;for(const c of controllers)c.abort();controllers.clear();listener?.abort();listener=null;clearTimeout(timer);timer=null;root=null;busy=false;polling=false;}
   function mount(node,state){
     detach();root=node;workspace=(state||getState())?.workspace_key;
-    catalog=null;draft=fresh();control=false;preview=null;report=null;selectedId='';pending=[];tasks=[];error='';notice='';storageNotice='';revision++;
+    catalog=null;draft=fresh();control=false;preview=null;report=null;selectedId='';pending=[];tasks=[];error='';notice='';storageNotice='';resultView={};revision++;
     if(!workspace){root.textContent='Open a workspace to compare management responses.';return;}
     restore();listener=new AbortController();
     root.addEventListener('click',event=>{const el=event.target.closest('[data-cm]');if(el&&root.contains(el)){event.preventDefault();act(el.dataset.cm,el);}},{signal:listener.signal});
