@@ -103,3 +103,33 @@ For a selected Chemistry transfer, adopt-source reopens the binding already carr
 This component adds measurement_workspace/chemistry.py and its source fragment, joins the current MeasuredObservationExtension and descriptor, and uses the existing browser helper. Source normalization, streaming intake, Published Studies and global operator files retain their existing owners.
 
 Apply the repository's AGENTS.md requirement to the actual outgoing interface and scientific files: open and look at populated desktop/narrow views, operate inspection, preparation, case opening, native run, complete export and reopening, and repair visible defects. Source review alone does not establish the delivered product's rendered behavior.
+
+## Complete original collection companions
+
+When selected records belong to one or more retained Measurements collections,
+preparation resolves their original import IDs against those collections' native
+manifests. It uses the existing collection publisher and bundle exporter to
+preserve each complete immutable edition ZIP. The ZIP contains every original
+source and binary companion, the original collection manifest, the portable
+measurement project, native domain identifiers and the original reports.
+
+The edition must have the same source revision and complete portable project as
+the reviewed atomic snapshot; only the descriptive creation clock may differ.
+The exported native domain must also equal the inspected domain. A concurrent
+record review or domain change requires a fresh inspection. ZIP byte identities,
+embedded project/manifest identities and the complete member inventory are
+checked before the unchanged ZIP becomes a companion of the binding's native
+Workspace source.
+
+The saved binding and exported document list source_collections with original
+collection ID, edition ID, source revision, retained ZIP path, SHA256, byte count
+and every original member descriptor. Existing Chemistry editable export and
+receive carry these archives with the source. adopt-source preserves the same
+collection lineage in the receiving case. Original standalone imports remain
+available through the complete portable snapshot.
+
+The receiving operator should open the actual downloaded binding document and
+original ZIP as a recipient, inspect the project and source companions, and use
+the original Measurements collection receive command when reopening that
+collection into an independently selected measurement workspace. All native
+measurement and model changes continue through their existing engines.
