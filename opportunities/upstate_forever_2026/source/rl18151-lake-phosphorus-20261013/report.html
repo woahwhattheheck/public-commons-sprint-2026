@@ -327,10 +327,10 @@ function chart(rows){
  const times=usable.map(row=>Date.parse(row.date+'T12:00:00Z')),x0=Math.min(...times),x1=Math.max(...times);
  const lows=usable.map(row=>row.interval.lower),highs=usable.map(row=>row.interval.upper);
  const y0=Math.min(0,...lows),maximum=Math.max(...highs),y1=maximum===y0?maximum+1:maximum+(maximum-y0)*.08;
- const W=1040,H=330,L=82,R=25,T=25,B=57,x=value=>L+(value-x0)/(x1-x0||1)*(W-L-R),y=value=>H-B-(value-y0)/(y1-y0)*(H-T-B);
+ const W=1040,H=330,L=82,R=25,T=25,B=57,x=value=>x0===x1?L+(W-L-R)/2:L+(value-x0)/(x1-x0)*(W-L-R),y=value=>H-B-(value-y0)/(y1-y0)*(H-T-B);
  let svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Original observations over time. Circles are reported numeric results. Vertical lines and open triangles are published left-censor intervals."><rect width="'+W+'" height="'+H+'" fill="white"/>';
  for(let i=0;i<=4;i++){const value=y0+(y1-y0)*i/4,py=y(value);svg+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+py+'" y2="'+py+'" stroke="#ddd"/><text x="'+(L-10)+'" y="'+(py+4)+'" text-anchor="end">'+esc(value.toPrecision(4))+'</text>';}
- const labels=[x0,x0+(x1-x0)/2,x1];for(const value of labels){svg+='<text x="'+x(value)+'" y="'+(H-25)+'" text-anchor="middle">'+new Date(value).toISOString().slice(0,10)+'</text>';}
+ const labels=x0===x1?[x0]:[x0,x0+(x1-x0)/2,x1];for(const value of labels){svg+='<text x="'+x(value)+'" y="'+(H-25)+'" text-anchor="middle">'+new Date(value).toISOString().slice(0,10)+'</text>';}
  svg+='<text x="'+L+'" y="15">'+esc([usable[0].interval_unit||usable[0].unit,usable[0].method_specification].filter(Boolean).join(' '))+'</text>';
  for(const row of usable){
   const px=x(Date.parse(row.date+'T12:00:00Z')),py=y(row.interval.upper);
@@ -359,7 +359,7 @@ function render(){
   chart(selection);table();$('inspector').hidden=true;
  }catch(error){
   selection=[];page=0;$('download').disabled=true;$('error').textContent=error.message;
-  $('selection-summary').textContent='Correct the selected dates to inspect or these source records.';
+  $('selection-summary').textContent='Correct the selected dates to inspect these source records.';
   $('cohort-detail').textContent='';$('chart').replaceChildren();$('inspector').hidden=true;table();
  }
 }

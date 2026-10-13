@@ -12,7 +12,7 @@
       "uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RL-18151/",
       "vintage": "Original agency responses retained 2026-10-13",
       "bytes": 14430,
-      "sha256": "d336778b702f3c98b672cf98f7342baf0e95d9b80ef60917e59167a9bbff70cf",
+      "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1",
       "companions": [
         {
           "path": "README.md",
@@ -186,13 +186,13 @@
         },
         {
           "path": "render-report.mjs",
-          "bytes": 19363,
-          "sha256": "43c0f4e91489ea2f89905f5c064d97802672c382a4a1ad3ccef7d98169ac5b8d"
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
         },
         {
           "path": "report.html",
-          "bytes": 1251794,
-          "sha256": "07fb9df8de62a8a70603066d4185ac8a73556fc05fa229edbd84ade226bec462"
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
         },
         {
           "path": "supplemental-requests.json",
@@ -381,13 +381,13 @@
         },
         {
           "path": "render-report.mjs",
-          "bytes": 19363,
-          "sha256": "43c0f4e91489ea2f89905f5c064d97802672c382a4a1ad3ccef7d98169ac5b8d"
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
         },
         {
           "path": "report.html",
-          "bytes": 1251794,
-          "sha256": "07fb9df8de62a8a70603066d4185ac8a73556fc05fa229edbd84ade226bec462"
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
         },
         {
           "path": "supplemental-requests.json",
@@ -397,7 +397,7 @@
         {
           "path": "observed-report.json",
           "bytes": 14430,
-          "sha256": "d336778b702f3c98b672cf98f7342baf0e95d9b80ef60917e59167a9bbff70cf"
+          "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
         }
       ],
       "station_id": "21SC60WQ_WQX-RL-18151",
@@ -581,13 +581,13 @@
         },
         {
           "path": "render-report.mjs",
-          "bytes": 19363,
-          "sha256": "43c0f4e91489ea2f89905f5c064d97802672c382a4a1ad3ccef7d98169ac5b8d"
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
         },
         {
           "path": "report.html",
-          "bytes": 1251794,
-          "sha256": "07fb9df8de62a8a70603066d4185ac8a73556fc05fa229edbd84ade226bec462"
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
         },
         {
           "path": "supplemental-requests.json",
@@ -597,7 +597,7 @@
         {
           "path": "observed-report.json",
           "bytes": 14430,
-          "sha256": "d336778b702f3c98b672cf98f7342baf0e95d9b80ef60917e59167a9bbff70cf"
+          "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
         }
       ],
       "station_id": "21SC60WQ_WQX-RL-18151",
@@ -781,13 +781,13 @@
         },
         {
           "path": "render-report.mjs",
-          "bytes": 19363,
-          "sha256": "43c0f4e91489ea2f89905f5c064d97802672c382a4a1ad3ccef7d98169ac5b8d"
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
         },
         {
           "path": "report.html",
-          "bytes": 1251794,
-          "sha256": "07fb9df8de62a8a70603066d4185ac8a73556fc05fa229edbd84ade226bec462"
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
         },
         {
           "path": "supplemental-requests.json",
@@ -797,7 +797,7 @@
         {
           "path": "observed-report.json",
           "bytes": 14430,
-          "sha256": "d336778b702f3c98b672cf98f7342baf0e95d9b80ef60917e59167a9bbff70cf"
+          "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
         }
       ],
       "station_id": "21SC60WQ_WQX-RL-18151",
@@ -981,13 +981,13 @@
         },
         {
           "path": "render-report.mjs",
-          "bytes": 19363,
-          "sha256": "43c0f4e91489ea2f89905f5c064d97802672c382a4a1ad3ccef7d98169ac5b8d"
+          "bytes": 19383,
+          "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
         },
         {
           "path": "report.html",
-          "bytes": 1251794,
-          "sha256": "07fb9df8de62a8a70603066d4185ac8a73556fc05fa229edbd84ade226bec462"
+          "bytes": 1251821,
+          "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
         },
         {
           "path": "supplemental-requests.json",
@@ -997,7 +997,7 @@
         {
           "path": "observed-report.json",
           "bytes": 14430,
-          "sha256": "d336778b702f3c98b672cf98f7342baf0e95d9b80ef60917e59167a9bbff70cf"
+          "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
         }
       ],
       "station_id": "21SC60WQ_WQX-RL-18151",

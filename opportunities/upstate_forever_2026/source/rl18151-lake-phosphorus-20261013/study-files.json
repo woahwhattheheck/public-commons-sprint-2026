@@ -80,7 +80,7 @@
     {
       "path": "observed-report.json",
       "bytes": 14430,
-      "sha256": "d336778b702f3c98b672cf98f7342baf0e95d9b80ef60917e59167a9bbff70cf"
+      "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
     },
     {
       "path": "original-join-census.json",
@@ -174,13 +174,13 @@
     },
     {
       "path": "render-report.mjs",
-      "bytes": 19363,
-      "sha256": "43c0f4e91489ea2f89905f5c064d97802672c382a4a1ad3ccef7d98169ac5b8d"
+      "bytes": 19383,
+      "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
     },
     {
       "path": "report.html",
-      "bytes": 1251794,
-      "sha256": "07fb9df8de62a8a70603066d4185ac8a73556fc05fa229edbd84ade226bec462"
+      "bytes": 1251821,
+      "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
     },
     {
       "path": "SOURCE_CAPTURE.md",
@@ -190,7 +190,7 @@
     {
       "path": "sources.json",
       "bytes": 37597,
-      "sha256": "417528945dcf5cf9ec85579b24c0a804e7abe5099c5057efc7740a68e95b95c0"
+      "sha256": "a5735803cf7db14c6650268988cf5d5e29a2202e6c9b209ab76312cabc70c58f"
     },
     {
       "path": "supplemental-requests.json",
