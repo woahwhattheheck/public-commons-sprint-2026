@@ -125,3 +125,15 @@ Each new station edition exports assessment_links.csv, assessment_sites.geojson,
 The build imports its generated station points and assessment points through the original Workspace source registry. They therefore appear in the existing Spatial review catalogue as MONITORING_STATIONS and STATION_ASSESSMENTS, alongside the retained raster and watershed sources. The native geography ZIP carries the source inventory and assessment outputs; reopening rebuilds the same station and assessment selection in the receiving workspace.
 
 See PREPARED_STATION_STUDY.md for the complete native build and receive command.
+
+## Original JSON station inventories
+
+site_tables can select a complete upstate.water-quality-assessments/v1 JSON bank
+directly. Its source station field defaults to site. The complete producer JSON
+and companions remain retained; row references include original record-array
+index and pointer, native record ID and original publisher-source metadata.
+where and where_in accept exact typed field predicates. These select records
+without renaming fields, reclassifying causes or altering the original body.
+The known published 159-station preset prefers the two complete normalized banks
+and retains the existing accepted CSV inventory fallback. Portable receiving
+reuses the same reader and exact original array positions.

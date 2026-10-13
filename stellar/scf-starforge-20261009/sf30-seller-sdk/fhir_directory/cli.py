@@ -51,7 +51,8 @@ def main(argv=None):
         command(name).add_argument("--operation",required=True)
     c=command("source-import");c.add_argument("--file",required=True);c.add_argument("--input");c.add_argument("--import-profile")
     c=command("records");c.add_argument("--kind",required=True);c.add_argument("--id");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
-    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison","conformance-findings","conformance-rows","conformance-foreign-keys","conformance-foreign-key-candidates","conformance-foreign-key-matches","operating-return"],required=True);c.add_argument("--id",required=True)
+    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison","conformance-findings","conformance-rows","conformance-foreign-keys","conformance-foreign-key-candidates","conformance-foreign-key-matches","operating-return","correction"],required=True);c.add_argument("--id",required=True)
+    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections"])
     c.add_argument("--table");c.add_argument("--group",default="findings");c.add_argument("--state");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
     c.add_argument("--severity");c.add_argument("--code");c.add_argument("--finding-source");c.add_argument("--finding-record")
     c.add_argument("--rule");c.add_argument("--target-group");c.add_argument("--source-id");c.add_argument("--record-id");c.add_argument("--outcome");c.add_argument("--candidate")
@@ -60,7 +61,8 @@ def main(argv=None):
     c=command("conformance-finding");c.add_argument("--assessment",required=True);c.add_argument("--finding",required=True)
     c=command("row");c.add_argument("--source",required=True);c.add_argument("--record",required=True);c.add_argument("--edition")
     c=command("links");c.add_argument("--edition",required=True);c.add_argument("--record");c.add_argument("--source");c.add_argument("--link");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50)
-    c=command("file");c.add_argument("--kind",required=True,choices=["source","source-index","edition-index","comparison-index","row","changes","capture","export","guidance","workspace","handoff","conformance-assessment","conformance-review","conformance-comparison","operating-return"])
+    c=command("file");c.add_argument("--kind",required=True,choices=["source","source-index","edition-index","comparison-index","row","changes","capture","export","guidance","workspace","handoff","conformance-assessment","conformance-review","conformance-comparison","operating-return","correction"])
+    c.add_argument("--collection",choices=["correctionPlans","correctionPreviews","corrections"])
     c.add_argument("--id");c.add_argument("--record");c.add_argument("--member");c.add_argument("--out",required=True)
     for name in ["receive-workspace","receive-handoff"]:command(name).add_argument("--file",required=True)
     args=p.parse_args(argv)
@@ -79,7 +81,9 @@ def main(argv=None):
             result=getattr(ws,{"operating-return-review":"directory_operating_return_review","operating-return-comparison":"directory_operating_return_comparison","operating-return-input":"directory_operating_return_input"}[name])(args.id)
         elif name in operations:
             from directory_operating_returns import MAX_REQUEST as RETURN_REQUEST
-            result=getattr(ws,operations[name][0])(input_file(args.input,RETURN_REQUEST if name.startswith("operating-return-")else schema.MAX_RECORD))
+            from directory_corrections_schema import MAX_INPUT as CORRECTION_REQUEST
+            maximum=CORRECTION_REQUEST if name.startswith("correction-")else RETURN_REQUEST if name.startswith("operating-return-")else schema.MAX_RECORD
+            result=getattr(ws,operations[name][0])(input_file(args.input,maximum))
         elif name in {"discover","acquire"}:
             raw=input_file(args.input)
             import directory_source_schema as native
@@ -95,7 +99,10 @@ def main(argv=None):
             kind="acquisitions"if args.kind=="operations"else args.kind
             result=ws.directory_operation(args.id)if kind=="acquisitions"and args.id else ws.directory_record(kind,args.id)if args.id else ws.directory_records(kind,args.offset,args.limit,args.query)
         elif name=="rows":
-            if args.kind=="source":result=ws.directory_source_rows(args.id,args.offset,args.limit,args.table,args.query)
+            if args.kind=="correction":
+                if not args.collection:p.error("Correction rows require their exact --collection")
+                result=ws.directory_correction_rows(args.collection,args.id,args.offset,args.limit)
+            elif args.kind=="source":result=ws.directory_source_rows(args.id,args.offset,args.limit,args.table,args.query)
             elif args.kind=="edition":result=ws.directory_edition_rows(args.id,args.offset,args.limit,args.table,args.query)
             elif args.kind=="mapping-preview":result=ws.directory_preview_page(args.id,args.group,args.offset,args.limit)
             elif args.kind=="selection":result=ws.directory_selection_page(args.id,args.offset,args.limit,args.query)
@@ -117,7 +124,10 @@ def main(argv=None):
             if args.kind=="workspace":result=ws.export_workspace(args.out)
             elif args.kind=="handoff":result=ws.export_directory_handoff(args.id,args.out)
             else:
-                if args.kind.startswith("conformance-"):
+                if args.kind=="correction":
+                    if not args.collection:p.error("Correction files require their exact --collection")
+                    path,d=ws.directory_correction_file(args.collection,args.id,args.member or("input"if args.collection=="correctionPlans"else"changes"))
+                elif args.kind.startswith("conformance-"):
                     kind={"conformance-assessment":"conformanceAssessments","conformance-review":"conformanceReviews","conformance-comparison":"conformanceComparisons"}[args.kind]
                     path,d=ws.directory_conformance_file(kind,args.id,args.member or"package")
                 elif args.kind=="operating-return":path,d=ws.directory_operating_return_file(args.id,args.member or"review")

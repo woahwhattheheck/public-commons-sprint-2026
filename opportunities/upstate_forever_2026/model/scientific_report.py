@@ -792,8 +792,9 @@ def report_pdf(path, title, sections, *, contact, source_records):
             append(block)
     story.append(paragraph("Source editions", styles["Heading2"]))
     append(_source_block(source_records))
-    story.append(paragraph("Prepared by " + str(contact["name"]) + " · "
-                           + str(contact["organization"]) + " · " + str(contact["email"])))
+    prepared = " · ".join(str(contact[key]).strip() for key in ("name", "organization", "email") if contact.get(key))
+    if prepared:
+        story.append(paragraph("Prepared by " + prepared))
 
     def page_number(canvas, document):
         canvas.saveState()
@@ -894,7 +895,9 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
                       + html_escape(str(heading)) + "</h2>"
                       + "".join(_html_block(block) for block in blocks) + "</section>"
                       for index, (heading, blocks) in enumerate(all_sections))
-    prepared = "Prepared by " + str(contact["name"]) + " · " + str(contact["organization"]) + " · " + str(contact["email"])
+    supplied_contact = " · ".join(str(contact[key]).strip() for key in ("name", "organization", "email") if contact.get(key))
+    prepared = ("Prepared by " + supplied_contact if supplied_contact
+                else "Original scientific study, source editions and model selections retained with this report.")
     body = (
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"

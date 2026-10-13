@@ -70,10 +70,15 @@ function freshStudy() {
     method_category: "land_protection", method_source: "", method_format: "json",
     method_id_column: "id", method_native_classes: false, method_headwaters: "table31",
     method_order_field: "stream_orders",
-    method_interpretation: "",
+    method_interpretation: "", criterion_geometry: "whole_original_parcel",
     cost_source: "", cost_id_column: "", cost_value_column: "", currency: "", cost_reference: "",
     advanced_use: false, advanced_text: "",
   };
+}
+function freshSourceCapture(studyId = "") {
+  return { study_id: studyId, soils: true, floodplains: true, hydric_selection: "full",
+    soil_source: "", soil_layer: "", mukey_field: "MUKEY",
+    floodplain_source: "", floodplain_layer: "", criterion_geometry: "whole_original_parcel" };
 }
 function freshPortfolio() {
   return { title: "", mode: "manual", objective: "score", area: "", cost: "",
@@ -95,7 +100,7 @@ function sourceRef(raw, layer, label) {
 }
 
 export function attachConservation({
-  getState, api, endpoint, submitAction, showTask, toast,
+  getState, api, endpoint, submitAction, showTask, toast, fileList,
 } = {}) {
   const memories = new Map();
   let mounted = null;
@@ -114,6 +119,9 @@ export function attachConservation({
       retainedSelection: null, excludedIds: new Set(), selectedPage: new Set(),
       detailVersion: 0, detailRow: null, detailLoading: false,
       draft: freshStudy(), portfolio: freshPortfolio(), detailId: null,
+      acquisition: freshSourceCapture(), sourceCapture: null,
+      optimization: null, optimizationResult: null, optimizationPage: 1,
+      optimizationSearch: "", optimizationFilter: "all",
       notice: null, busy: false, pending: new Set(), selectionOrigin: null,
     });
     return memories.get(key);
@@ -197,7 +205,7 @@ export function attachConservation({
     return result;
   }
   function taskStamp(state) {
-    const source = state?.tasks;
+    const source = state?.data?.tasks ?? state?.tasks;
     const tasks = Array.isArray(source) ? source : Array.isArray(source?.tasks) ? source.tasks :
       Array.isArray(source?.items) ? source.items : source && typeof source === "object" ?
         Object.values(source).filter(item => item && typeof item === "object" && item.action) : [];
@@ -218,7 +226,13 @@ export function attachConservation({
       if (response && workspace() === key) {
         ui.overview = response;
         ui.taskStamp = requestedStamp;
-        const opened = ui.study, revision = ui.readVersion;
+        const openedSource = ui.sourceCapture, sourceId = sourceCaptureId(openedSource), revision = ui.readVersion;
+        if (sourceId) {
+          const updatedSource = await read("source-capture", { operation_id: sourceId });
+          if (updatedSource && workspace() === key && ui.readVersion === revision && ui.sourceCapture === openedSource)
+            ui.sourceCapture = updatedSource;
+        }
+        const opened = ui.study;
         const retained = opened && (response.studies || []).find(row => row.id === opened.id);
         if (retained && retained.state !== opened.state) {
           const updated = await catalogRead("study", { study_id: opened.id });
@@ -272,6 +286,52 @@ export function attachConservation({
       include_ids: [...ui.selectedIds].sort(), exclude_ids: [...ui.excludedIds].sort(),
       selected_only: selectedOnly,
     } : undefined;
+  }
+  async function checkedCandidateIds() {
+    const key = workspace(), ui = memory(key), studyId = ui.study?.id;
+    if (!ui.retainedSelection) return [...ui.selectedIds].sort();
+    const retained = retainedRequest(true, ui), identity = JSON.stringify(retained);
+    const selected = [], seen = new Set();
+    let offset = 0, sourceIdentity = null;
+    const wasBusy = ui.busy;
+    ui.busy = true; paint();
+    try {
+      while (true) {
+        const page = await catalogRead("query", { study_id: studyId, retained,
+          selection: { filters: {}, sort: "id", direction: "asc", offset, limit: 1000 } });
+        if (!page || workspace() !== key || ui.study?.id !== studyId) return null;
+        if (JSON.stringify(retainedRequest(true, ui)) !== identity) {
+          throw new Error("The checked cohort changed while its original IDs were opening. Use the current selection again.");
+        }
+        if (page.study_id !== studyId || !Number.isSafeInteger(page.total) || page.total < 0 ||
+            page.offset !== offset || !Array.isArray(page.candidates)) {
+          throw new Error("The retained candidate page differs from its original study or page.");
+        }
+        const original = JSON.stringify([page.index_id, page.source_inventory, page.total]);
+        if (sourceIdentity !== null && sourceIdentity !== original) {
+          throw new Error("The retained candidate inventory changed while its full selection was opening.");
+        }
+        sourceIdentity = original;
+        for (const row of page.candidates) {
+          if (typeof row.id !== "string" || !row.id.length || seen.has(row.id)) {
+            throw new Error("The complete retained cohort needs each original candidate ID exactly once.");
+          }
+          seen.add(row.id); selected.push(row.id);
+        }
+        if (page.next_offset === null) {
+          if (selected.length !== page.total) throw new Error("Open every page of the retained candidate selection.");
+          return selected;
+        }
+        if (!Number.isSafeInteger(page.next_offset) || page.next_offset !== offset + page.candidates.length ||
+            page.next_offset <= offset || page.next_offset >= page.total) {
+          throw new Error("The retained candidate page does not continue through its original inventory.");
+        }
+        offset = page.next_offset;
+      }
+    } finally {
+      ui.busy = wasBusy;
+      if (workspace() === key) paint();
+    }
   }
   function querySelection(ui = memory()) {
     const filters = { search: ui.search.trim(),
@@ -617,7 +677,8 @@ export function attachConservation({
       throw new Error("Choose the original parcel geometry and Parcel as the source unit type.");
     }
     return { schema: "upstate.parcel-criteria-selection/v1",
-      title: study.title + " — parcel criteria", study };
+      title: study.title + " — parcel criteria", study,
+      settings: { spatial_criteria_basis: memory().draft.criterion_geometry || "whole_original_parcel" } };
   }
   function buildPlanSpec() {
     const ui = memory(), p = ui.portfolio;
@@ -658,7 +719,7 @@ export function attachConservation({
       ui.study = result;
       if (!preserveSelection && !same) {
         clearChecked(ui); ui.plan = null; ui.selectionOrigin = null;
-        ui.portfolio = freshPortfolio(); ui.form = null; ui.page = 1;
+        ui.portfolio = freshPortfolio(); ui.optimization = null; ui.optimizationResult = null; ui.form = null; ui.page = 1;
         ui.displayAlternative = result.spec?.score?.alternative_run_id || "";
       }
       ui.detailId = null; ui.detailRow = null;
@@ -712,7 +773,7 @@ export function attachConservation({
       if (workspace() !== key) return;
       ui.form = null;
       ui.notice = { kind: "status", message:
-        "The workspace task is running. Its results and downloads will appear in Tasks." };
+        "Open the workspace task in Tasks for its progress, results and downloads." };
       ui.taskStamp = "";
       await refreshOverview(true);
     } catch (error) {
@@ -740,7 +801,10 @@ export function attachConservation({
     const categories = publishedCategories();
     if (!categories.length) return '<p class="cons-help">Loading the published practice definitions.</p>';
     const ranges = category?.priority || [];
-    return '<div class="cons-actions">' + button("prepare-criteria", "Build criteria from imported layers", "", memory().busy) +
+    return select("criterion_geometry", "Source criterion geometry", d.criterion_geometry || "whole_original_parcel",
+      [["whole_original_parcel", "Whole original parcel · published method"],
+       ["reporting_parcel", "Reporting intersection · regional adaptation"]]) +
+      '<div class="cons-actions">' + button("prepare-criteria", "Build criteria from imported layers", "", memory().busy) +
       '</div><p class="cons-help">Prepare the parcel criterion table from the selected geometry and the imported source layers. Use its completed task to attach the table here.</p><div class="cons-grid">' +
       select("method_category", "Published practice category", d.method_category,
         categories.map(item => [item.id, item.title + " · " + item.maximum + " points"])) +
@@ -774,11 +838,21 @@ export function attachConservation({
       '<ul class="cons-criterion-list">' + (category?.required_metrics || []).map(name =>
         "<li><code>" + h(name) + "</code></li>").join("") + "</ul></details>";
   }
+  function attainablePoints(values) {
+    return Array.isArray(values) ? [...new Set(values.filter(finite))].sort((a, b) => a - b) : [];
+  }
   function pointScore(candidate) {
     const isPoints = memory().study?.spec?.score?.basis === "published_method";
     if (!isPoints) return number(candidate.score);
-    return number(candidate.score) + " points" +
-      (candidate.point_priority ? '<span class="cons-metric-note">' + h(human(candidate.point_priority)) + " priority</span>" : "");
+    const options = attainablePoints(candidate.point_score?.score_options);
+    const score = finite(candidate.score) ? number(candidate.score) + " points" :
+      options.length ? options.map(number).join(", ") + " points" : "Unresolved";
+    return score + (options.length > 1 ?
+      '<span class="cons-metric-note">Possible point totals; unlisted intermediate values are not implied</span>' : "") +
+      (candidate.point_priority ? '<span class="cons-metric-note">' + h(human(candidate.point_priority)) + " priority</span>" :
+        Array.isArray(candidate.point_score?.priority_options) && candidate.point_score.priority_options.length ?
+          '<span class="cons-metric-note">Attainable priorities: ' +
+          h(candidate.point_score.priority_options.map(human).join(", ")) + "</span>" : "");
   }
   function criterionReference(reference) {
     if (!reference) return "Reference not recorded";
@@ -911,6 +985,310 @@ export function attachConservation({
       button("prepare-study", "Save inputs without building", "", ui.busy) +
       "</div></form>";
   }
+  function optimizationAxes(draft = memory().optimization) {
+    const study = memory().study, kind = draft?.kind || "source-context";
+    const bindings = study?.selection?.bindings || {};
+    if (kind === "published-method") {
+      return study?.spec?.score?.basis === "published_method" && bindings.published_method
+        ? [["published_points", "Published practice points", draft?.basis === "per-reporting-hectare" ? "points/reporting ha" : "points"]] : [];
+    }
+    if (kind === "source-context") {
+      const sources = bindings.sources || {};
+      return [["reporting_area_ha", "Reporting area", "ha"],
+        ...(sources.drinking_water ? [["source_water_area_ha", "Source-water area", "ha"]] : []),
+        ...(sources.protected_lands ? [["unprotected_area_ha", "Unprotected area", "ha"]] : []),
+        ...(sources.high_quality_waters ? [["high_quality_context", "High-quality-water context", "presence"]] : [])];
+    }
+    const baseline = bindings.runs?.[study?.spec?.baseline_run_id];
+    let available = new Set(Object.keys(baseline?.outputs || {}));
+    if (kind !== "current-export") {
+      const alternative = bindings.runs?.[draft?.scenario_run_id];
+      const shared = new Set(Object.keys(alternative?.outputs || {}));
+      available = new Set([...available].filter(axis => shared.has(axis)));
+    }
+    return POLLUTANTS.filter(([axis]) => available.has(axis)).map(([axis, label]) =>
+      [axis, label, axis === "sediment_export" ? "metric tonnes/year" : "kg/year"]);
+  }
+
+  function optimizationDraft(study, request = null) {
+    const kinds = { context: "source-context", current_export: "current-export",
+      scenario_reduction: "restoration", disturbance_increase: "avoided-conversion", published_method: "published-method" };
+    const kind = request?.objective?.kind || kinds[study?.spec?.score?.basis] ||
+      (study?.mode === "source_context" ? "source-context" : "current-export");
+    const draft = {
+      title: request?.title || (study?.title || "Conservation study") + " — optimized portfolio",
+      purpose: request?.purpose || "Select land priorities under explicit area, cost and coverage limits.",
+      kind, basis: request?.objective?.basis || "total",
+      scenario_run_id: request?.objective?.scenario_run_id || study?.spec?.score?.alternative_run_id ||
+        study?.spec?.alternative_run_ids?.[0] || "",
+      area: request?.constraints?.area_ha ?? "", budget: request?.constraints?.budget_usd ?? "",
+      count: request?.constraints?.max_count ?? "", area_basis: request?.constraints?.area_basis || "whole_units",
+      minimum_coverage: String(100 * (request?.filters?.min_coverage_fraction ??
+        study?.spec?.rules?.minimum_coverage_fraction ?? .95)),
+      maximum_protected: String(100 * (request?.filters?.max_protected_fraction ?? 1)),
+      source_water: request?.filters?.source_water || "any",
+      high_quality_water: request?.filters?.high_quality_water || "any",
+      include_ids: JSON.stringify(request?.filters?.include_ids || []),
+      exclude_ids: JSON.stringify(request?.filters?.exclude_ids || []),
+      include_ineligible: !!request?.include_ineligible,
+      solver: request?.solver || "deterministic",
+      solver_seconds: String(request?.solver_time_limit_seconds || 20),
+      stability: request?.stability?.enabled ?? true,
+      preference_profiles: request?.stability?.profiles?.length ? JSON.stringify(request.stability.profiles, null, 2) : "",
+    };
+    for (const [axis] of [...POLLUTANTS, ["reporting_area_ha"], ["source_water_area_ha"],
+      ["unprotected_area_ha"], ["high_quality_context"], ["published_points"]]) {
+      draft["weight_" + axis] = String(request?.weights?.[axis] ??
+        (kind === "published-method" ? (axis === "published_points" ? 1 : 0) :
+          kind === "source-context" ? (axis === "reporting_area_ha" ? 1 : 0) :
+          POLLUTANTS.some(([name]) => name === axis) ? 1 : 0));
+    }
+    return draft;
+  }
+
+  function optimizationIds(raw, label) {
+    if (!String(raw || "").trim()) return [];
+    let values;
+    try { values = JSON.parse(raw); } catch (_) { throw new Error(label + " must be a JSON array of original unit IDs."); }
+    if (!Array.isArray(values) || values.some(value => typeof value !== "string" || !value.length)) {
+      throw new Error(label + " must contain the original nonempty string IDs.");
+    }
+    return [...new Set(values)].sort();
+  }
+
+  function buildOptimizationSpec() {
+    const ui = memory(), d = ui.optimization, study = ui.study;
+    if (!study?.id || study.state !== "complete") throw new Error("Open a completed conservation inventory.");
+    if (!d?.title?.trim()) throw new Error("Give this portfolio decision a title.");
+    const axes = optimizationAxes(d);
+    if (!axes.length) throw new Error("Choose an available objective from the original study and its retained cases.");
+    const weights = Object.fromEntries(axes.map(([axis, label]) =>
+      [axis, numeric(d["weight_" + axis], label + " weight")]));
+    if (!Object.values(weights).some(weight => weight > 0)) throw new Error("Give at least one available objective a positive weight.");
+    const objective = { kind: d.kind, basis: d.kind === "source-context" ? "total" : d.basis };
+    if (["restoration", "avoided-conversion"].includes(d.kind)) {
+      if (!(study.spec?.alternative_run_ids || []).includes(d.scenario_run_id)) {
+        throw new Error("Choose an original alternative retained by this study.");
+      }
+      objective.scenario_run_id = d.scenario_run_id;
+    }
+    const constraints = { area_basis: d.area_basis };
+    for (const [key, value, label, integer] of [
+      ["area_ha", d.area, "Area limit", false], ["max_count", d.count, "Unit limit", true]]) {
+      const parsed = numeric(value, label, { optional: true, integer });
+      if (parsed !== null) constraints[key] = parsed;
+    }
+    if (String(d.budget ?? "").trim()) {
+      if (study.spec?.costs?.currency !== "USD") throw new Error("A USD budget needs this study's original USD cost table.");
+      const budget = String(d.budget).trim();
+      if (!/^\d+(?:\.\d{1,2})?$/.test(budget)) throw new Error("Enter the original USD budget with at most two decimal places.");
+      constraints.budget_usd = budget;
+    }
+    const include_ids = optimizationIds(d.include_ids, "Candidate universe"),
+      exclude_ids = optimizationIds(d.exclude_ids, "Excluded units");
+    // The native optimizer validates IDs against the complete original inventory.
+    // The candidate desk retains only the current visible page in this browser.
+    if (include_ids.some(id => exclude_ids.includes(id))) throw new Error("A unit cannot appear in both the candidate universe and exclusions.");
+    const stability = { enabled: !!d.stability };
+    if (d.stability && d.preference_profiles.trim()) {
+      try { stability.profiles = JSON.parse(d.preference_profiles); }
+      catch (_) { throw new Error("Named preference comparisons must be a JSON array."); }
+      if (!Array.isArray(stability.profiles)) throw new Error("Named preference comparisons must be a JSON array.");
+    }
+    return { study_id: study.id, title: d.title.trim(), purpose: d.purpose.trim(), objective, weights,
+      filters: { min_coverage_fraction: numeric(d.minimum_coverage, "Native coverage", { max: 100 }) / 100,
+        max_protected_fraction: numeric(d.maximum_protected, "Protected fraction", { max: 100 }) / 100,
+        source_water: d.source_water, high_quality_water: d.high_quality_water, include_ids, exclude_ids },
+      include_ineligible: !!d.include_ineligible, constraints, solver: d.solver,
+      solver_time_limit_seconds: numeric(d.solver_seconds, "Solver time per preference", { min: .001 }), stability };
+  }
+
+  function optimizationForm() {
+    const ui = memory(), study = ui.study;
+    ui.optimization ||= optimizationDraft(study);
+    const d = ui.optimization, native = study?.mode === "native_model",
+      paired = ["restoration", "avoided-conversion"].includes(d.kind), axes = optimizationAxes(d);
+    const choices = [["source-context", "Geographic source context"],
+      ...(study?.spec?.score?.basis === "published_method" && study?.selection?.bindings?.published_method
+        ? [["published-method", "Original published practice points"]] : []),
+      ...(native ? [["current-export", "Current modeled export"],
+        ["restoration", "Reduction from the selected restoration case"],
+        ["avoided-conversion", "Increase from the selected conversion case"]] : [])];
+    const textArea = (name, label, value, rows = 3) => '<label class="cons-field" for="' + fieldId(name) +
+      '"><span>' + h(label) + '</span><textarea id="' + fieldId(name) + '" data-field="' + h(name) +
+      '" rows="' + rows + '" spellcheck="false">' + h(value) + '</textarea></label>';
+    return '<form class="cons-editor" data-cons-form="optimization"><div class="cons-section-title">' +
+      '<h2>Optimize a portfolio</h2>' + button("close-form", "Close") + '</div><p>Compare the full retained inventory under ' +
+      'explicit resource limits. The saved portfolio recomputes areas and native quantities across the selected geometry union.</p>' +
+      '<div class="cons-grid">' + input("optimization.title", "Portfolio title", d.title, "required") +
+      input("optimization.purpose", "Decision purpose", d.purpose) +
+      select("optimization.kind", "Decision objective", d.kind, choices) +
+      (d.kind !== "source-context" ? select("optimization.basis", "Quantity basis", d.basis,
+        (d.kind === "published-method"
+          ? [["total", "Published points from the original practice rule"], ["per-reporting-hectare", "Published points per reporting hectare"]]
+          : [["total", "Annual quantity in the reporting footprint"], ["per-reporting-hectare", "Annual quantity per reporting hectare"]])) : "") +
+      (paired ? select("optimization.scenario_run_id", "Retained alternative case", d.scenario_run_id,
+        [["", "Choose a retained alternative"], ...(study.spec?.alternative_run_ids || []).map(id => {
+          const run = runs().find(row => row.id === id); return [id, (run?.title || id) + " · " + runQuantityLabel(run)];
+        })]) : "") + '</div><fieldset><legend>Objective weights</legend><div class="cons-grid">' +
+      axes.map(([axis,label,unit]) => input("optimization.weight_" + axis, label + " (" + unit + ")",
+        d["weight_" + axis], 'type="number" min="0" step="any"')).join("") +
+      '</div><p class="cons-help">' + (d.kind === "published-method"
+        ? 'The objective uses completed points from the original retained practice rule, with its prerequisites, source definitions and native criterion support. The result retains every criterion and its known or possible points.'
+        : 'Weights apply to normalized quantities from the retained inventory. Only outputs selected by the original cases are available; adverse modeled changes keep their sign.') + '</p></fieldset>' +
+      '<fieldset><legend>Resource limits</legend><div class="cons-grid">' +
+      input("optimization.area", "Maximum area (ha), optional", d.area, 'type="number" min="0" step="any"') +
+      select("optimization.area_basis", "Area limit measures", d.area_basis,
+        [["whole_units", "Full original planning units"], ["reporting", "Within the reporting area"]]) +
+      input("optimization.count", "Maximum units, optional", d.count, 'type="number" min="0" step="1"') +
+      input("optimization.budget", "Original USD budget, optional", d.budget,
+        'inputmode="decimal"' + (study.spec?.costs?.currency === "USD" ? "" : " disabled")) +
+      '</div><p class="cons-help">The solver uses additive source-unit area for resource feasibility; the result also reports ' +
+      'the actual union and removed overlap.' + (study.spec?.costs?.currency === "USD" ? "" :
+      " Add an original USD cost table to the study to enable a dollar budget.") + '</p></fieldset>' +
+      '<details class="cons-disclosure"><summary>Candidate and coverage filters</summary><div class="cons-grid">' +
+      input("optimization.minimum_coverage", "Minimum native coverage (%)", d.minimum_coverage, 'type="number" min="0" max="100" step="any"') +
+      input("optimization.maximum_protected", "Maximum protected share (%)", d.maximum_protected, 'type="number" min="0" max="100" step="any"') +
+      select("optimization.source_water", "Mapped source-water relation", d.source_water,
+        [["any", "Any"], ["yes", "Present"], ["no", "Absent in the retained mapping"]]) +
+      select("optimization.high_quality_water", "High-quality-water relation", d.high_quality_water,
+        [["any", "Any"], ["yes", "Present"], ["no", "Absent in the retained mapping"]]) +
+      '</div>' + check("optimization.include_ineligible", "Include units excluded by the original study rules", d.include_ineligible) +
+      textArea("optimization.include_ids", "Candidate universe: original IDs as JSON; [] uses the full inventory", d.include_ids) +
+      button("optimization-use-checked", "Use checked units as the candidate universe", "", ui.busy || !checkedCount(ui)) +
+      textArea("optimization.exclude_ids", "Excluded original IDs as JSON", d.exclude_ids) + '</details>' +
+      '<details class="cons-disclosure"><summary>Solver and preference comparisons</summary><div class="cons-grid">' +
+      select("optimization.solver", "Selection method", d.solver,
+        [["deterministic", "Deterministic selection with a retained bound"], ["scipy-milp", "SciPy mixed-integer optimization"]]) +
+      input("optimization.solver_seconds", "Solver time per preference (seconds)", d.solver_seconds, 'type="number" min="0.001" step="any"') +
+      '</div>' + check("optimization.stability", "Compare selection across named preferences", d.stability) +
+      '<p>Leaving the profile list empty compares the individual available objectives. Frequency means how often a unit ' +
+      'is selected across these decision preferences.</p>' +
+      textArea("optimization.preference_profiles", "Optional preference profiles: [{name, weights}]", d.preference_profiles, 5) +
+      '</details><div class="cons-actions">' + button("optimization-preview", "Preview portfolio selection", "", ui.busy || !axes.length) +
+      button("optimization-save", "Optimize and save portfolio", "", ui.busy || !axes.length) + '</div></form>';
+  }
+
+  async function openOptimization({ taskId = null, studyId = null, analysisId = null } = {}) {
+    const key = workspace(), ui = memory(key), version = ++ui.readVersion;
+    ui.busy = true; paint();
+    try {
+      let analysis, downloads = [], task = null;
+      if (taskId) {
+        task = await api(endpoint("/api/task", { id: taskId }));
+        if (workspace() !== key || version !== ui.readVersion) return;
+        if (task.workspace !== key || task.action !== "conservation.optimization.preview" ||
+            task.state !== "complete" || !task.result?.request) {
+          throw new Error("Open a completed portfolio optimization preview in this workspace.");
+        }
+        analysis = task.result;
+        studyId = analysis.input?.study_id;
+      } else {
+        const retained = await api(endpoint("/api/conservation-optimization/analysis",
+          { study_id: studyId, analysis_id: analysisId }));
+        if (workspace() !== key || version !== ui.readVersion) return;
+        analysis = retained.analysis; downloads = retained._downloads || [];
+      }
+      if (!analysis?.request || !studyId || analysis.input?.study_id !== studyId) {
+        throw new Error("The original analysis does not identify this conservation study.");
+      }
+      const study = await catalogRead("study", { study_id: studyId });
+      if (!study || workspace() !== key || version !== ui.readVersion) return;
+      if (ui.study?.id !== study.id) {
+        resetCatalog(ui); resetCatalogFilters(ui); clearChecked(ui); ui.plan = null;
+      }
+      ui.study = study;
+      ui.optimization = optimizationDraft(study, analysis.request);
+      ui.optimizationResult = { analysis, downloads, task_id: task?.id || null };
+      ui.optimizationPage = 1; ui.optimizationFilter = "all"; ui.optimizationSearch = "";
+      ui.form = "optimization-result"; ui.detailId = null; ui.detailRow = null; ui.notice = null;
+      if (study.state === "complete") await refreshCatalog(true);
+    } finally {
+      if (version === ui.readVersion) ui.busy = false;
+      if (workspace() === key) paint();
+    }
+  }
+
+  function optimizationRequestForSave() {
+    const result = memory().optimizationResult, analysis = result?.analysis;
+    if (!analysis?.selected_ids?.length || !result.task_id) {
+      throw new Error("Open the completed original preview before saving its selection.");
+    }
+    if (analysis.input?.study_id !== memory().study?.id) throw new Error("Reopen this decision's original study.");
+    return { preview_task_id: result.task_id };
+  }
+
+  function optimizationResultView() {
+    const ui = memory(), result = ui.optimizationResult, a = result?.analysis;
+    if (!a) return "";
+    const chosen = a.selection || {}, geometry = chosen.geometry || {}, outcome = a.optimization || {};
+    const search = (ui.optimizationSearch || "").toLocaleLowerCase(), mode = ui.optimizationFilter || "all";
+    const filteredRows = (a.candidates || []).filter(row =>
+      (mode === "all" || (mode === "selected" ? row.selected : mode === "eligible" ? row.eligible : !row.eligible)) &&
+      (!search || [row.feature_id, row.label].some(value => String(value || "").toLocaleLowerCase().includes(search))));
+    const pageCount = Math.max(1, Math.ceil(filteredRows.length / 25));
+    ui.optimizationPage = Math.min(Math.max(1, ui.optimizationPage || 1), pageCount);
+    const rows = filteredRows.slice((ui.optimizationPage - 1) * 25, ui.optimizationPage * 25);
+    const axes = (a.request.available_axes || []).filter(axis => a.request.weights?.[axis] > 0);
+    const label = axis => POLLUTANTS.find(([name]) => name === axis)?.[1] || human(axis);
+    const valueCell = (row, axis) => {
+      const support = row.axis_support?.[axis] || {};
+      return '<td>' + number(row.objective_values?.[axis]) + '<span class="cons-metric-note">' +
+        h(row.objective_units?.[axis] || "") +
+        (finite(support.coverage_fraction) ? " · " + h(percent(support.coverage_fraction)) + " coverage" : "") +
+        (!support.eligible_support ? " · " + h(support.availability_reason || human(support.availability || "Unavailable")) : "") +
+        '</span></td>';
+    };
+    const solver = '<dl class="cons-definitions"><dt>Selection method</dt><dd>' + h(outcome.algorithm || a.request.solver) +
+      '</dd><dt>Solver result</dt><dd>' + h(human(outcome.status || "")) +
+      '</dd><dt>Objective score</dt><dd>' + number(outcome.objective_score) +
+      '</dd><dt>Retained upper bound</dt><dd>' + number(outcome.upper_bound) +
+      '</dd><dt>Relative gap</dt><dd>' + h(percent(outcome.relative_gap)) + '</dd></dl>';
+    return '<section class="cons-editor" aria-label="Portfolio optimization result"><div class="cons-section-title"><div><h2>' +
+      h(a.request.title) + '</h2><p>' + h(a.methods?.objective_scope || human(a.request.objective.kind)) +
+      '</p></div>' + button("close-form", "Close analysis") + '</div><div class="cons-summary">' +
+      [["Retained units", a.counts?.inventory], ["Eligible units", a.counts?.eligible], ["Selected units", a.counts?.selected],
+        ["Full selected union (ha)", geometry.whole_unit_union_area_ha], ["Reporting union (ha)", geometry.reporting_union_area_ha],
+        ["Reporting overlap removed (ha)", geometry.reporting_overlap_area_ha]].map(([name,value]) =>
+          '<div><span>' + h(name) + '</span><strong>' + number(value) + '</strong></div>').join("") +
+      '</div>' + solver + '<p>Recorded cost: ' + (finite(chosen.supplied_cost_total) ?
+        number(chosen.supplied_cost_total) + " " + h(chosen.currency || "") :
+        "Known subtotal " + number(chosen.known_supplied_cost_subtotal) + " " + h(chosen.currency || "") +
+          "; " + number(chosen.units_without_supplied_cost) + " selected units have no recorded cost") + '.</p>' +
+      '<div class="cons-actions">' +
+      (result.task_id ? button("optimization-save-preview", "Save this decision as a portfolio", "", ui.busy || !a.selected_ids?.length) : "") +
+      button("optimization-adjust", "Adjust objectives and limits") +
+      button("optimization-select-results", "Show selected units in the inventory", "", !a.selected_ids?.length) +
+      '</div>' + (result.downloads?.length && fileList ? fileList(result.downloads) : "") +
+      '<details class="cons-disclosure"><summary>Preference comparisons</summary><p>' + h(a.stability?.interpretation || "") +
+      '</p><div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Preference</th><th>Eligible</th>' +
+      '<th>Selected</th><th>Solver result</th><th>Relative gap</th></tr></thead><tbody>' +
+      (a.stability?.profiles || []).map(profile => '<tr><th scope="row">' + h(profile.name) + '</th><td>' +
+        number(profile.eligible_count) + '</td><td>' + number(profile.selected_ids?.length) + '</td><td>' +
+        h(human(profile.optimization?.status)) + '</td><td>' + h(percent(profile.optimization?.relative_gap)) + '</td></tr>').join("") +
+      '</tbody></table></div></details><div class="cons-filters">' +
+      '<label class="cons-field"><span>Find an original unit</span><input data-optimization-filter="search" value="' +
+      h(ui.optimizationSearch || "") + '"></label><label class="cons-field"><span>Candidate view</span>' +
+      '<select data-optimization-filter="mode">' + [["all","All retained units"],["selected","Selected"],["eligible","Eligible"],["excluded","Excluded"]]
+        .map(([value,label]) => option(value,label,mode)).join("") + '</select></label></div>' +
+      '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Original unit</th><th>Selection</th><th>Rank</th>' +
+      axes.map(axis => '<th>' + h(label(axis)) + '</th>').join("") +
+      '<th>Preference frequency</th><th>Reasons</th></tr></thead><tbody>' +
+      rows.map(row => '<tr><th scope="row">' + button("candidate", row.label || row.feature_id,
+        'data-candidate="' + h(row.feature_id) + '"') + '<span class="cons-metric-note">' + h(row.feature_id) +
+        '</span></th><td>' + (row.selected ? "Selected" : row.eligible ? "Eligible" : "Excluded") + '</td><td>' +
+        number(row.rank) + '</td>' + axes.map(axis => valueCell(row,axis)).join("") + '<td>' +
+        number(row.preference_stability?.selected_profiles) + " / " + number(row.preference_stability?.profile_count) +
+        '</td><td>' + h((row.exclusions || []).join("; ")) + '</td></tr>').join("") +
+      '</tbody></table></div><div class="cons-actions">' +
+      button("optimization-previous", "Previous", "", ui.optimizationPage <= 1) +
+      '<span>' + number(filteredRows.length) + ' units · page ' + ui.optimizationPage + ' of ' + pageCount + '</span>' +
+      button("optimization-next", "Next", "", ui.optimizationPage >= pageCount) +
+      '</div><details class="cons-disclosure"><summary>Original decision and normalization</summary><pre>' +
+      h(JSON.stringify({ request:a.request, normalization:a.normalization, methods:a.methods }, null, 2)) +
+      '</pre></details></section>';
+  }
+
   function portfolioForm() {
     const ui = memory(), p = ui.portfolio;
     return '<form class="cons-editor" data-cons-form="portfolio"><div class="cons-section-title">' +
@@ -1147,11 +1525,11 @@ export function attachConservation({
       "</select></label></div>";
   }
   function portfolioView(plan) {
-    const summary = plan.summary || {}, study = memory().study;
+    const summary = plan.summary || {}, study = memory().study, optimization = plan.selection?.optimization;
     return '<section class="cons-detail" aria-label="Saved portfolio"><div class="cons-section-title"><div>' +
       "<h2>" + h(plan.title || plan.id) + '</h2><p class="cons-metric-note">Saved portfolio ' +
       h(plan.id) + "</p></div>" +
-      button("export-plan", "Export this saved portfolio", 'data-plan-id="' + h(plan.id) +
+      button(optimization ? "optimization-export" : "export-plan", "Export this saved portfolio", 'data-plan-id="' + h(plan.id) +
         '" data-study-id="' + h(plan.study_id) + '"', memory().busy) + "</div>" +
       '<div class="cons-summary"><div><span>Selected units</span><strong>' +
       h(summary.parcels ?? (plan.selected_ids || []).length) + "</strong></div>" +
@@ -1180,6 +1558,9 @@ export function attachConservation({
         plan.skipped.map(item => "<tr><td>" + h(item.id) + "</td><td>" +
           h((item.reasons || []).map(human).join("; ")) + "</td></tr>").join("") +
         "</tbody></table></div></details>" : "") +
+      (optimization?.analysis_id ? '<div class="cons-actions">' + button("optimization-open-analysis",
+        "Reopen portfolio decision", 'data-study-id="' + h(plan.study_id) + '" data-analysis-id="' +
+        h(optimization.analysis_id) + '"') + '</div>' : "") +
       '<div class="cons-actions">' + button("new-scenario", "Create land-cover scenario", "", memory().busy) +
       button("edit-selection", "Use these units in a new portfolio",
         'data-plan-id="' + h(plan.id) + '"') + "</div></section>";
@@ -1216,6 +1597,168 @@ export function attachConservation({
       }).join("") + '</tbody></table></div></section>';
   }
 
+  function sourceAcquisitionForm() {
+    const ui = memory(), d = ui.acquisition;
+    const studies = [...new Map([...(ui.overview?.studies || []), ...(ui.study ? [ui.study] : [])]
+      .map(row => [row.id, row])).values()];
+    return '<form class="cons-editor" data-cons-form="sources"><div class="cons-section-title">' +
+      '<div><h2>Acquire soil and floodplain sources</h2><p>Use the original study extent to import ' +
+      'soil map units, their hydric classifications and the mapped annual 1% floodplain.</p></div>' +
+      button("close-form", "Close", "", ui.busy) + '</div><div class="cons-grid">' +
+      select("acquisition.study_id", "Original study extent", d.study_id,
+        [["", "Choose a retained study"], ...studies.map(row =>
+          [row.id, row.title || row.spec?.title || row.id])]) +
+      '<fieldset class="cons-fieldset"><legend>Source families</legend>' +
+      check("acquisition.soils", "Soil map units and hydric classifications", d.soils) +
+      check("acquisition.floodplains", "Annual 1% floodplain", d.floodplains) + '</fieldset>' +
+      (d.soils ? select("acquisition.hydric_selection", "Hydric map-unit interpretation", d.hydric_selection, [
+        ["full", "Fully hydric map units"], ["predominant", "Predominantly hydric map units (at least 66%)"],
+        ["any_component", "Any hydric component"]]) : "") +
+      '</div><p class="cons-metric-note">Selected footprints and the area with a known classification ' +
+      'remain separate. Coverage records show where a parcel criterion can be resolved.</p>' +
+      '<details><summary>Use original layers already imported into this workspace</summary>' +
+      '<div class="cons-grid">' +
+      (d.soils ? sourceSelect("acquisition.soil_source", "Original soil map-unit source", d.soil_source, true) +
+        input("acquisition.soil_layer", "Soil layer, if the source contains several layers", d.soil_layer) +
+        input("acquisition.mukey_field", "Original map-unit key field", d.mukey_field) : "") +
+      (d.floodplains ? sourceSelect("acquisition.floodplain_source", "Original flood hazard source", d.floodplain_source, true) +
+        input("acquisition.floodplain_layer", "Flood hazard layer, if needed", d.floodplain_layer) : "") +
+      '</div></details><div class="cons-actions">' +
+      button("acquire-sources", "Acquire original sources", "", ui.busy || !d.study_id) +
+      '</div></form>';
+  }
+
+  function buildSourceCaptureSpec() {
+    const ui = memory(), d = ui.acquisition;
+    const study = [...(ui.overview?.studies || []), ...(ui.study ? [ui.study] : [])]
+      .find(row => row.id === d.study_id);
+    if (!study) throw new Error("Choose an original study retained in this workspace.");
+    const families = [];
+    if (d.soils) families.push("soils");
+    if (d.floodplains) families.push("floodplains");
+    if (!families.length) throw new Error("Choose at least one source family.");
+    if (!["full", "predominant", "any_component"].includes(d.hydric_selection)) {
+      throw new Error("Choose the hydric map-unit interpretation.");
+    }
+    const spec = { schema: "upstate.soil-floodplain-selection/v1", study_id: study.id, families };
+    if (d.soils) {
+      spec.soils = { hydric_selection: d.hydric_selection };
+      if (d.soil_source) {
+        spec.soils.reuse_source = sourceRef(d.soil_source, d.soil_layer, "original soil map unit");
+        if (!d.mukey_field.trim()) throw new Error("Name the original map-unit key field.");
+        spec.soils.mukey_field = d.mukey_field.trim();
+      }
+    }
+    if (d.floodplains && d.floodplain_source) {
+      spec.floodplains = { reuse_source:
+        sourceRef(d.floodplain_source, d.floodplain_layer, "original flood hazard") };
+    }
+    return spec;
+  }
+
+  function sourceCaptureId(value) {
+    return value?.operation_id || value?.id || "";
+  }
+
+  function sourceFamilies(value) {
+    const raw = value?.families || {};
+    return Array.isArray(raw) ? raw.map(row => typeof row === "string" ? [row, {}] : [row.family || row.name, row]) :
+      Object.entries(raw);
+  }
+
+  function sourceFamilyTable(value) {
+    const rows = sourceFamilies(value);
+    if (!rows.length) return "";
+    return '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Original source family</th>' +
+      '<th>State</th><th>Recorded source counts</th><th>Acquisition detail</th></tr></thead><tbody>' +
+      rows.map(([name, row]) => {
+        if (!row || typeof row !== "object") row = { state: row };
+        const counts = Object.entries(row.counts || {}).filter(([,count]) => finite(count))
+          .map(([label,count]) => h(human(label)) + ": " + number(count)).join("<br>");
+        const error = row.error || row.last_error;
+        const detail = error ? (typeof error === "string" ? error : error.message || error.type || "") :
+          row.message || row.progress?.stage || "";
+        return '<tr><th scope="row">' + h(name === "soils" ? "Soil map units and hydric classifications" :
+          name === "floodplains" ? "Annual 1% floodplain" : human(name)) + '</th><td>' +
+          h(human(row.state || row.status || "prepared")) + '</td><td>' + (counts || "—") +
+          '</td><td>' + h(detail) + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
+  }
+
+  function sourceCaptureButtons(row) {
+    const id = sourceCaptureId(row);
+    if (!id) return "";
+    let result = button("open-source-capture", "Open sources and coverage",
+      'data-operation-id="' + h(id) + '"', memory().busy);
+    if (row.parcel_criteria_selection || row.criteria_ready) {
+      result += button("criteria-from-sources", "Prepare parcel criteria",
+        'data-operation-id="' + h(id) + '"', memory().busy);
+    }
+    if (row.state !== "complete") result += button("resume-sources", "Continue acquisition",
+      'data-operation-id="' + h(id) + '"', memory().busy);
+    return result;
+  }
+
+  function sourceAcquisitionsView() {
+    const ui = memory(), rows = ui.overview?.source_acquisitions || [];
+    if (!rows.length) return "";
+    return '<section class="cons-source-acquisitions"><h2>Original soil and floodplain acquisitions</h2>' +
+      '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Study extent</th>' +
+      '<th>State</th><th>Current stage</th><th>Continue</th></tr></thead><tbody>' +
+      rows.map(row => '<tr><th scope="row">' + h(row.title || row.study_title || row.study_id || sourceCaptureId(row)) +
+        '</th><td>' + h(human(row.state || "prepared")) + '</td><td>' +
+        h(human(row.progress?.stage || "")) +
+        (finite(row.progress?.completed) ? '<span class="cons-metric-note">' + number(row.progress.completed) +
+          (finite(row.progress?.total) ? " / " + number(row.progress.total) : "") + '</span>' : "") +
+        '</td><td><div class="cons-actions">' + sourceCaptureButtons(row) + '</div></td></tr>').join("") +
+      '</tbody></table></div></section>';
+  }
+
+  function sourceCoverageFacts(value) {
+    const rows = [];
+    function visit(item, label, depth) {
+      if (item === null || item === undefined || depth > 3) return;
+      if (["number", "string", "boolean"].includes(typeof item)) {
+        if (typeof item === "string" && item.length > 700) return;
+        rows.push([label, typeof item === "number" ? number(item) :
+          typeof item === "boolean" ? (item ? "Yes" : "No") : item]);
+      } else if (Array.isArray(item)) {
+        if (item.length > 12) rows.push([label + " · records", number(item.length)]);
+        else for (const [index, child] of item.entries()) visit(child, label + " " + (index + 1), depth + 1);
+      } else if (typeof item === "object") {
+        for (const [key, child] of Object.entries(item)) {
+          if (["sha256", "path", "source_collection_id", "source_id", "operation_id"].includes(key)) continue;
+          visit(child, (label ? label + " · " : "") + human(key), depth + 1);
+        }
+      }
+    }
+    visit(value, "", 0);
+    return rows.length ? '<dl class="cons-definitions">' + rows.map(([label,value]) =>
+      '<dt>' + h(label) + '</dt><dd>' + h(value) + '</dd>').join("") + '</dl>' : "";
+  }
+
+  function sourceCaptureView() {
+    const ui = memory(), row = ui.sourceCapture;
+    if (!row) return "";
+    const id = sourceCaptureId(row), error = row.error || row.last_error;
+    return '<section class="cons-detail cons-source-capture"><div class="cons-section-title"><div>' +
+      '<h2>Original soils and floodplain coverage</h2><p>' + h(row.title || row.study_title || row.study_id || id) +
+      ' · ' + h(human(row.state || "prepared")) + '</p></div>' +
+      button("close-form", "Close", "", ui.busy) + '</div>' +
+      (error ? '<div class="cons-notice cons-error" role="alert">' +
+        h(typeof error === "string" ? error : error.message || error.type || "") + '</div>' : "") +
+      sourceFamilyTable(row) +
+      (row.coverage ? '<h3>Source coverage and interpretation</h3>' + sourceCoverageFacts(row.coverage) : "") +
+      (row.counts ? '<h3>Retained source quantities</h3>' + sourceCoverageFacts(row.counts) : "") +
+      '<p class="cons-metric-note">Parcel criteria use the retained selected footprints and known-classification ' +
+      'coverage. Areas outside that coverage retain an unknown criterion when presence cannot be established.</p>' +
+      select("acquisition.criterion_geometry", "Source criterion geometry", ui.acquisition.criterion_geometry || "whole_original_parcel",
+        [["whole_original_parcel", "Whole original parcel · published method"],
+         ["reporting_parcel", "Reporting intersection · regional adaptation"]]) +
+      '<div class="cons-actions">' + sourceCaptureButtons(row) + '</div>' +
+      (row._downloads?.length && fileList ? fileList(row._downloads) : "") + '</section>';
+  }
+
   function criteriaOperationsView() {
     const ui = memory(), operations = ui.overview?.criteria_operations || [];
     if (!operations.length) return "";
@@ -1240,7 +1783,7 @@ export function attachConservation({
     const ui = memory(), overview = ui.overview || {};
     const studies = Array.isArray(overview.studies) ? overview.studies : [];
     const plans = Array.isArray(overview.plans) ? overview.plans : [];
-    return '<section class="cons-overview">' + criteriaOperationsView() + "<h2>Retained studies</h2>" +
+    return '<section class="cons-overview">' + sourceAcquisitionsView() + criteriaOperationsView() + "<h2>Retained studies</h2>" +
       (studies.length ? '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Study</th>' +
         "<th>Mode</th><th>State</th><th>Open</th></tr></thead><tbody>" +
         studies.map(study => "<tr><th scope=\"row\">" + h(study.title || study.spec?.title || study.id) +
@@ -1269,16 +1812,21 @@ export function attachConservation({
       "Use retained planning units, source context and native model quantities to build a reproducible portfolio." +
       '</p></div><div class="cons-actions">' +
       button("new-study", "New study", "", ui.busy) +
+      button("new-source-capture", "Acquire source layers", "", ui.busy || !(ui.overview?.studies?.length || ui.study)) +
       button("refresh", "Refresh records", "", ui.overviewLoading || ui.busy) + "</div></header>" +
       (ui.notice ? '<div class="cons-notice' + (ui.notice.kind === "error" ? " cons-error" : "") +
         '" role="' + (ui.notice.kind === "error" ? "alert" : "status") + '">' +
         h(ui.notice.message) + "</div>" : "") +
       (ui.form === "study" ? studyForm() : "") +
+      (ui.form === "sources" ? sourceAcquisitionForm() : "") +
+      (ui.form === "source-result" ? sourceCaptureView() : "") +
       (ui.form === "scenario" && ui.scenario?.conservation_scenario_id ? scenarioForm() : "") +
       (study ? '<section class="cons-study"><div class="cons-section-title"><div><h2>' +
         h(study.title || study.spec?.title || study.id) + '</h2><p class="cons-metric-note">' +
         h(study.id) + " · " + h(human(study.state || "")) + "</p></div><div class=\"cons-actions\">" +
+        button("new-source-capture", "Acquire soils and floodplains", 'data-study-id="' + h(study.id) + '"', ui.busy) +
         button("new-portfolio", "Create portfolio", "", ui.busy || study.state !== "complete") +
+        button("optimization-new", "Optimize portfolio", "", ui.busy || study.state !== "complete") +
         button("export-study", "Export candidate inventory", 'data-study-id="' + h(study.id) + '"', ui.busy) +
         (study.state !== "complete" ? button("build-study", "Build this inventory",
           'data-study-id="' + h(study.id) + '"', ui.busy) : "") +
@@ -1291,56 +1839,86 @@ export function attachConservation({
           "</div>" : "") + studyLineage(study) +
         (ui.plan ? portfolioView(ui.plan) : "") +
         (ui.form === "portfolio" ? portfolioForm() : "") +
+        (ui.form === "optimization" ? optimizationForm() : "") +
+        (ui.form === "optimization-result" ? optimizationResultView() : "") +
         (ui.form === "scenario" && !ui.scenario?.conservation_scenario_id ? scenarioForm() : "") +
         (ui.detailLoading ? '<p role="status">Opening the complete original candidate…</p>' : "") +
         (selected ? candidateDetail(selected) : "") +
         candidateTable() + scenarioBridgesView(study.id) + "</section>" : overviewView());
   }
 
-  function scenarioDraft(bridge = null) {
-    const ui = memory(), baseline = runs().find(run => run.id === ui.study?.spec?.baseline_run_id);
+  function scenarioDraft(bridge = null, originalBaseline = null) {
+    const ui = memory(), baseline = originalBaseline || ((!bridge || bridge.study_id === ui.study?.id) ?
+      runs().find(run => run.id === ui.study?.spec?.baseline_run_id) : null);
     const prepared = bridge?.prepare_run || baseline?.selection || {};
-    const chosen = bridge?.models || prepared.models || (baseline ? runModels(baseline) : []);
-    return { for_plan_id: bridge?.plan_id || ui.plan?.id || null,
-      conservation_scenario_id: bridge?.id || "", title: bridge?.title || "",
+    const chosen = bridge?.models?.length ? bridge.models : prepared.models || (baseline ? runModels(baseline) : []);
+    return { conservation_scenario_id: bridge?.id || "", title: bridge?.title || "",
       reason: "", from_codes: "", to_code: "",
       output: bridge || baseline ? "experiment" : "scenario",
       grid_id: prepared.grid_id || "", profile_id: prepared.profile_id || "",
-      models: ["ndr", "sdr"].filter(model => chosen.includes(model)), models_explicit: false,
-      preferred_models: ["ndr", "sdr"].filter(model => chosen.includes(model)),
-      preferred_grid_id: prepared.grid_id || "", preferred_profile_id: prepared.profile_id || "",
+      models: chosen.join(","), models_explicit: chosen.length > 0, for_plan_id: bridge?.plan_id || ui.plan?.id || "",
       baseline_run_id: "",
       experiment_title: bridge?.title ? bridge.title + " — paired experiment" : "",
       experiment_profile_ids: [], design: "one_at_a_time", axes_text: "" };
   }
   function scenarioNativeScope() {
-    const ui = memory(), data = { ...(ui.overview?.available || {}), ...(getState?.()?.data || {}) };
-    if (!ui.scenario || (!ui.scenario.conservation_scenario_id &&
-        (ui.scenario.for_plan_id || null) !== (ui.plan?.id || null))) ui.scenario = scenarioDraft();
-    const d = ui.scenario;
-    const grids = (data.grids || []).filter(row => row.state === "complete");
-    const profiles = data.profiles || [];
-    const grid = grids.find(row => row.id === d.grid_id);
-    const profile = profiles.find(row => row.id === d.profile_id);
+    const ui = memory();
+    ui.scenario ||= scenarioDraft();
+    const d = ui.scenario, current = getState?.()?.data || {}, retained = ui.overview?.available || {};
+    const mergeRows = name => [...new Map([...(current[name] || []), ...(retained[name] || [])]
+      .map(row => [row.id, row])).values()];
+    const data = { grids: mergeRows("grids"), profiles: mergeRows("profiles"), runs: mergeRows("runs"),
+      scenarios: mergeRows("scenarios"), invest_version: retained.invest_version || getState?.()?.invest_version };
+    const grids = data.grids.filter(row => row.state === "complete"), profiles = data.profiles;
+    const grid = grids.find(row => row.id === d.grid_id), profile = profiles.find(row => row.id === d.profile_id);
     const gridModels = grid ? runModels({ selection: grid.spec || {} }) : [];
     const profileModels = new Set(profile ? runModels({ selection: profile }) : []);
-    const available = ["ndr", "sdr"].filter(model => gridModels.includes(model) && profileModels.has(model));
-    if (!d.models_explicit) {
-      const preferred = d.grid_id === d.preferred_grid_id && d.profile_id === d.preferred_profile_id &&
-        d.preferred_models.length ? d.preferred_models : available;
-      d.models = available.filter(model => preferred.includes(model));
-    } else d.models = available.filter(model => (d.models || []).includes(model));
-    return { draft: d, data, grids, profiles, grid, profile, available };
+    const available = gridModels.filter(model => profileModels.has(model));
+    const selected = Array.isArray(d.models) ? d.models : String(d.models || "").split(",").filter(Boolean);
+    const retainedModels = available.filter(model => selected.includes(model));
+    const models = d.models_explicit ? retainedModels : retainedModels.length ? retainedModels : available;
+    d.models = models.join(",");
+    return { draft: d, data, grids, profiles, grid, profile, available, models };
   }
+
+  function scenarioNativeFields(scope) {
+    const d = scope.draft, labels = { ndr: "Nitrogen and phosphorus (NDR)", sdr: "Sediment (SDR)" };
+    const choices = (rows, noun) => [["", "Choose an existing " + noun], ...rows.map(row =>
+      [row.id, (row.title || row.spec?.title || row.id) + " · " + row.id])];
+    return '<div class="cons-grid">' +
+      select("scenario.grid_id", "Complete analysis grid", d.grid_id, choices(scope.grids, "complete grid")) +
+      select("scenario.profile_id", "Existing model profile", d.profile_id, choices(scope.profiles, "profile")) +
+      '</div><fieldset><legend id="conservation-scenario-models">Native model scope</legend>' +
+      '<div role="group" aria-labelledby="conservation-scenario-models">' +
+      ["ndr", "sdr"].map(model => '<label class="cons-check"><input type="checkbox" data-scenario-model="' +
+        model + '"' + (scope.models.includes(model) ? " checked" : "") +
+        (scope.available.includes(model) ? "" : " disabled") + '> <span>' + h(labels[model]) +
+        (scope.available.includes(model) ? "" : " — unavailable for the selected grid and profile") +
+        '</span></label>').join("") + '</div><p class="cons-help">' +
+      (scope.models.length ? "The prepared native cases will measure " +
+        scope.models.map(model => h(labels[model])).join(" and ") + " using the selected grid and profile." :
+        "Choose a complete grid and a compatible profile, then select at least one supported native model.") +
+      '</p></fieldset>';
+  }
+
+  function scenarioRunSelection() {
+    const scope = scenarioNativeScope(), d = scope.draft;
+    if (!scope.grid || !scope.profile) throw new Error("Choose a completed analysis grid and a retained model profile.");
+    if (!scope.models.length) throw new Error("Choose a native model supported by both the selected grid and profile.");
+    const selection = { grid_id: d.grid_id, profile_id: d.profile_id };
+    if (scope.models.length !== 2) selection.models = [...scope.models];
+    return selection;
+  }
+
   function experimentBaselines(scope) {
     const { draft: d, data } = scope;
-    if (!scope.grid || !scope.profile || !d.models.length || !data.invest_version) return [];
+    if (!scope.grid || !scope.profile || !scope.models.length || !data.invest_version) return [];
     const original = new Set((data.scenarios || []).filter(row => row.kind === "baseline").map(row => row.id));
     return runs().filter(run => {
       const value = run.selection || {};
       return value.grid_id === d.grid_id && value.profile_id === d.profile_id &&
         value.invest_version === data.invest_version && original.has(value.scenario_id) &&
-        runModels(run).join(",") === d.models.join(",");
+        runModels(run).join(",") === scope.models.join(",");
     });
   }
   function experimentFields(d, scope) {
@@ -1364,7 +1942,7 @@ export function attachConservation({
       (profiles.length ? '<fieldset class="cons-profile-choices"><legend>Additional retained profiles</legend>' +
         profiles.map(profile => {
           const selected = d.experiment_profile_ids.includes(profile.id);
-          const supported = d.models.length && d.models.every(model =>
+          const supported = scope.models.length && scope.models.every(model =>
             runModels({ selection: profile }).includes(model));
           return '<label class="cons-check"><input type="checkbox" data-scenario-profile="' +
             h(profile.id) + '"' + (selected ? " checked" : "") + (!supported && !selected ? " disabled" : "") +
@@ -1383,11 +1961,11 @@ export function attachConservation({
       '</details></details>';
   }
   function scenarioForm() {
-    const ui = memory(), scope = scenarioNativeScope(), d = scope.draft;
-    const continuation = !!d.conservation_scenario_id;
-    const choices = (rows, noun) => [["", "Choose an existing " + noun], ...rows.map(row =>
+    const ui = memory(), scope = scenarioNativeScope();
+    const d = scope.draft, continuation = !!d.conservation_scenario_id;
+    const data = scope.data;
+    const choices = (rows, noun) => [["", "Choose an existing " + noun], ...(rows || []).map(row =>
       [row.id, (row.title || row.spec?.title || row.id) + " · " + row.id])];
-    const modelLabels = { ndr: "Nitrogen and phosphorus (NDR)", sdr: "Sediment (SDR)" };
     return '<form class="cons-editor" data-cons-form="scenario"><div class="cons-section-title">' +
       "<h2>" + (continuation ? "Prepare a paired experiment" : "Create land-cover scenario") + "</h2>" +
       button("close-form", "Close") + "</div>" +
@@ -1404,35 +1982,21 @@ export function attachConservation({
           ["run", "Prepare its native model run"],
           ["experiment", "Prepare a paired baseline and alternative experiment"],
         ])) + "</div>" +
-      (d.output !== "scenario" ? '<div class="cons-grid">' +
-        select("scenario.grid_id", "Complete analysis grid", d.grid_id, choices(scope.grids, "complete grid")) +
-        select("scenario.profile_id", "Existing model profile", d.profile_id, choices(scope.profiles, "profile")) +
-        '</div><fieldset><legend id="conservation-scenario-models">Native model scope</legend>' +
-        '<div role="group" aria-labelledby="conservation-scenario-models">' +
-        ["ndr", "sdr"].map(model => '<label class="cons-check"><input type="checkbox" data-scenario-model="' +
-          model + '"' + (d.models.includes(model) ? " checked" : "") +
-          (scope.available.includes(model) ? "" : " disabled") + "> <span>" + h(modelLabels[model]) +
-          (scope.available.includes(model) ? "" : " — unavailable for the selected grid and profile") +
-          "</span></label>").join("") + "</div>" +
-        '<p class="cons-help">' + (d.models.length ?
-          "The prepared cases will measure " + d.models.map(model => h(modelLabels[model])).join(" and ") +
-          " using the selected grid and profile." :
-          "Choose a complete grid and a compatible profile, then select at least one available native model.") +
-        " Start the prepared work in Runs or Paired experiments to calculate the selected footprint's model effect.</p></fieldset>" : "") +
+      (d.output !== "scenario" ? scenarioNativeFields(scope) : "") +
       (d.output === "experiment" ? experimentFields(d, scope) : "") +
       '<div class="cons-actions">' + button("save-scenario",
         continuation ? "Prepare experiment" : d.output === "experiment" ? "Create scenario and paired experiment" :
           d.output === "run" ? "Create scenario and prepare run" : "Create scenario", "", ui.busy) +
       "</div></form>";
   }
-  function experimentSelection(d, scope) {
+  function experimentSelection(d, scope = scenarioNativeScope()) {
     const value = { title: (d.experiment_title || d.title + " — paired experiment").trim(),
       reason: String(d.reason || "").trim(), design: d.design || "one_at_a_time",
       profile_ids: [...new Set(d.experiment_profile_ids || [])].filter(id => id !== d.profile_id) };
     if (!value.title || !value.reason) throw new Error("Give the paired experiment a title and purpose.");
     for (const id of value.profile_ids) {
       const profile = scope.profiles.find(row => row.id === id);
-      if (!profile || !d.models.every(model => runModels({ selection: profile }).includes(model))) {
+      if (!profile || !scope.models.every(model => runModels({ selection: profile }).includes(model))) {
         throw new Error("Additional profile " + id + " does not support the selected native models. Choose a compatible profile or remove it.");
       }
     }
@@ -1456,20 +2020,17 @@ export function attachConservation({
     return value;
   }
   function buildScenarioSpec() {
-    const ui = memory(), scope = scenarioNativeScope(), d = scope.draft;
-    const nativeSelection = () => {
-      if (!scope.grid || !scope.profile) throw new Error("Choose both a completed analysis grid and a retained model profile.");
-      if (!d.models.length) throw new Error("Choose a native model supported by both the selected grid and profile.");
-      const value = { grid_id: d.grid_id, profile_id: d.profile_id };
-      if (d.models.length !== 2) value.models = [...d.models];
+    const ui = memory(), d = ui.scenario;
+    if (d?.conservation_scenario_id) {
+      const value = { conservation_scenario_id: d.conservation_scenario_id, ...experimentSelection(d) };
+      if (d.grid_id || d.profile_id) {
+        if (!d.grid_id || !d.profile_id) throw new Error("Choose both an existing grid and profile for this saved footprint.");
+        value.prepare_run = scenarioRunSelection();
+      }
       return value;
-    };
-    if (d.conservation_scenario_id) {
-      return { conservation_scenario_id: d.conservation_scenario_id,
-        prepare_run: nativeSelection(), ...experimentSelection(d, scope) };
     }
     if (!ui.plan?.id) throw new Error("Open the saved portfolio whose footprint defines this scenario.");
-    if (!d.title?.trim() || !d.reason?.trim()) throw new Error("Give the scenario a title and purpose.");
+    if (!d?.title?.trim() || !d.reason?.trim()) throw new Error("Give the scenario a title and purpose.");
     const tokens = d.from_codes.split(/[\s,]+/).filter(Boolean);
     if (!tokens.length || tokens.some(value => !/^\d+$/.test(value))) {
       throw new Error("Source land-cover codes must be comma-separated nonnegative integers.");
@@ -1479,8 +2040,11 @@ export function attachConservation({
     if (from.includes(to)) throw new Error("Exclude the destination class from the source land-cover codes.");
     const spec = { plan_id: ui.plan.id, title: d.title.trim(), reason: d.reason.trim(),
       from_codes: from, to_code: to };
-    if (d.output !== "scenario") spec.prepare_run = nativeSelection();
-    if (d.output === "experiment") spec.prepare_experiment = experimentSelection(d, scope);
+    if (d.output !== "scenario") {
+      if (!d.grid_id || !d.profile_id) throw new Error("Choose both an existing analysis grid and model profile.");
+      spec.prepare_run = scenarioRunSelection();
+    }
+    if (d.output === "experiment") spec.prepare_experiment = experimentSelection(d);
     return spec;
   }
   function captureView() {
@@ -1490,7 +2054,7 @@ export function attachConservation({
       node.querySelector(":scope > summary")?.textContent?.trim()).filter(Boolean));
     const active = document.activeElement;
     if (!active || !mounted.contains(active)) return null;
-    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile", "data-catalog-range", "data-catalog-metric"].find(name => active.hasAttribute?.(name));
+    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile", "data-optimization-filter", "data-catalog-range", "data-catalog-metric"].find(name => active.hasAttribute?.(name));
     if (!key) return null;
     return { key, value: active.getAttribute(key),
       start: typeof active.selectionStart === "number" ? active.selectionStart : null,
@@ -1504,7 +2068,7 @@ export function attachConservation({
       if (ui.openDetails?.has(title)) node.open = true;
     }
     if (!focus) return;
-    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile],[data-catalog-range],[data-catalog-metric]")]
+    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile],[data-optimization-filter],[data-catalog-range],[data-catalog-metric]")]
       .find(node => node.getAttribute(focus.key) === focus.value);
     if (target) {
       target.focus({ preventScroll: true });
@@ -1541,10 +2105,10 @@ export function attachConservation({
     }
     if (target.hasAttribute("data-scenario-model") && event.type === "change") {
       const scope = scenarioNativeScope(), model = target.getAttribute("data-scenario-model");
-      const selected = new Set(scope.draft.models);
+      const selected = new Set(scope.models);
       if (scope.available.includes(model) && target.checked) selected.add(model);
       else selected.delete(model);
-      scope.draft.models = ["ndr", "sdr"].filter(name => selected.has(name));
+      scope.draft.models = ["ndr", "sdr"].filter(name => selected.has(name)).join(",");
       scope.draft.models_explicit = true;
       paint();
       return;
@@ -1562,6 +2126,11 @@ export function attachConservation({
       if (target.checked) values.add(id); else values.delete(id);
       ui.draft.alternative_run_ids = [...values];
       return;
+    }
+    const optimizationFilter = target.getAttribute("data-optimization-filter");
+    if (optimizationFilter) {
+      ui[optimizationFilter === "search" ? "optimizationSearch" : "optimizationFilter"] = target.value;
+      ui.optimizationPage = 1; paint(); return;
     }
     const range = target.getAttribute("data-catalog-range");
     if (range) { ui.ranges[range] = target.value; return; }
@@ -1583,6 +2152,29 @@ export function attachConservation({
     const name = target.getAttribute("data-field");
     if (!name) return;
     const value = target.type === "checkbox" ? target.checked : target.value;
+    if (name.startsWith("optimization.")) {
+      const field = name.slice("optimization.".length);
+      ui.optimization[field] = value;
+      if (event.type === "change" && ["kind", "scenario_run_id"].includes(field)) {
+        const axes = optimizationAxes(ui.optimization);
+        if (axes.length && !axes.some(([axis]) => Number(ui.optimization["weight_" + axis]) > 0)) {
+          for (const [axis] of axes) ui.optimization["weight_" + axis] =
+            ui.optimization.kind === "source-context" ? (axis === "reporting_area_ha" ? "1" : "0") : "1";
+        }
+      }
+      if (event.type === "change" && ["kind", "scenario_run_id", "stability"].includes(field)) paint();
+      return;
+    }
+    if (name.startsWith("acquisition.")) {
+      const field = name.slice("acquisition.".length);
+      ui.acquisition[field] = value;
+      if (event.type === "change" && field.endsWith("_source")) {
+        const declared = entry(value);
+        ui.acquisition[field.slice(0, -7) + "_layer"] = declared?.layer || "";
+      }
+      if (event.type === "change") paint();
+      return;
+    }
     if (event.type === "change" && name.endsWith("_source")) {
       const declared = entry(value), prefix = name.slice(0, -7);
       if (Object.prototype.hasOwnProperty.call(ui.draft, prefix + "_layer"))
@@ -1633,6 +2225,61 @@ export function attachConservation({
     try {
       if (!workspace()) throw new Error("Open a workspace before using conservation planning.");
       switch (name) {
+        case "optimization-new":
+          ui.optimization = optimizationDraft(ui.study); ui.form = "optimization"; ui.notice = null; paint(); break;
+        case "optimization-use-checked": {
+          if (!checkedCount(ui)) throw new Error("Check original candidate units first.");
+          const ids = await checkedCandidateIds();
+          if (ids === null) return true;
+          ui.optimization.include_ids = JSON.stringify(ids); paint(); break;
+        }
+        case "optimization-preview":
+          await queue("conservation.optimization.preview", { spec: buildOptimizationSpec() }); break;
+        case "optimization-save":
+          await queue("conservation.optimization.save", { spec: buildOptimizationSpec() }); break;
+        case "optimization-save-preview":
+          await queue("conservation.optimization.save", optimizationRequestForSave()); break;
+        case "optimization-open-preview":
+          await openOptimization({ taskId: node.dataset.taskId }); break;
+        case "optimization-open-analysis":
+          await openOptimization({ studyId: node.dataset.studyId, analysisId: node.dataset.analysisId }); break;
+        case "optimization-adjust":
+          if (!ui.optimizationResult?.analysis) throw new Error("Open an original decision analysis.");
+          ui.optimization = optimizationDraft(ui.study, ui.optimizationResult.analysis.request);
+          ui.form = "optimization"; paint(); break;
+        case "optimization-select-results":
+          clearChecked(ui); resetCatalogFilters(ui);
+          ui.selectedIds = new Set((ui.optimizationResult?.analysis?.selected_ids || []).map(String));
+          ui.form = null;
+          ui.notice = { kind:"status", message:ui.selectedIds.size + " original units selected from the decision analysis." };
+          await refreshCatalog(true); paint(); break;
+        case "optimization-previous":
+          ui.optimizationPage = Math.max(1, (ui.optimizationPage || 1) - 1); paint(); break;
+        case "optimization-next":
+          ui.optimizationPage = (ui.optimizationPage || 1) + 1; paint(); break;
+        case "optimization-export":
+          await queue("conservation.optimization.export", { plan_id: node.dataset.planId || ui.plan?.id }); break;
+        case "new-source-capture": {
+          const key = workspace();
+          if (!ui.overview) await refreshOverview(true);
+          if (workspace() !== key) return true;
+          ui.acquisition = freshSourceCapture(node.dataset.studyId || ui.study?.id || "");
+          ui.form = "sources"; ui.notice = null; paint(); break;
+        }
+        case "acquire-sources":
+          await queue("conservation.sources.capture", buildSourceCaptureSpec()); break;
+        case "resume-sources":
+          if (!node.dataset.operationId) throw new Error("Choose the retained source acquisition.");
+          await queue("conservation.sources.capture", { operation_id: node.dataset.operationId }); break;
+        case "criteria-from-sources":
+          if (!node.dataset.operationId) throw new Error("Choose the retained source acquisition.");
+          await queue("conservation.criteria.prepare", { source_operation_id: node.dataset.operationId,
+            settings: { spatial_criteria_basis: ui.acquisition.criterion_geometry || "whole_original_parcel" } }); break;
+        case "open-source-capture": {
+          const result = await read("source-capture", { operation_id: node.dataset.operationId });
+          if (result) { ui.sourceCapture = result; ui.form = "source-result"; paint(); }
+          break;
+        }
         case "prepare-criteria":
           await queue("conservation.criteria.prepare", buildCriteriaSpec()); break;
         case "resume-criteria":
@@ -1695,6 +2342,7 @@ export function attachConservation({
           await openPlan(node.dataset.planId); break;
         case "close-study":
           resetCatalog(ui); ui.readVersion++; clearChecked(ui);
+          resetCatalog(ui); clearChecked(ui);
           ui.study = null; ui.plan = null; ui.detailId = null; ui.form = null; paint(); break;
         case "populate-json": {
           const original = ui.draft.advanced_use;
@@ -1783,9 +2431,21 @@ export function attachConservation({
           if (!ui.plan) throw new Error("Open a saved portfolio first.");
           ui.scenario = scenarioDraft(); ui.form = "scenario"; paint(); break;
         case "new-experiment": {
-          const bridge = (ui.overview?.scenario_bridges || []).find(row => row.id === node.dataset.bridgeId);
+          const key = workspace();
+          let bridge = (ui.overview?.scenario_bridges || []).find(row => row.id === node.dataset.bridgeId);
+          if (!bridge) {
+            await refreshOverview(true);
+            if (workspace() !== key) return true;
+            bridge = (ui.overview?.scenario_bridges || []).find(row => row.id === node.dataset.bridgeId);
+          }
           if (!bridge) throw new Error("Refresh the retained conservation scenarios and reopen this record.");
-          ui.scenario = scenarioDraft(bridge); ui.form = "scenario"; ui.notice = null; paint(); break;
+          let baseline = null;
+          if (!bridge.prepare_run && bridge.study_id) {
+            const original = await read("study", { study_id: bridge.study_id });
+            if (workspace() !== key) return true;
+            baseline = runs().find(run => run.id === original?.spec?.baseline_run_id) || null;
+          }
+          ui.scenario = scenarioDraft(bridge, baseline); ui.form = "scenario"; ui.notice = null; paint(); break;
         }
         case "save-scenario":
           await queue(ui.scenario?.conservation_scenario_id ? "conservation.experiment.prepare" :
@@ -1811,6 +2471,20 @@ export function attachConservation({
       return button("open-study", "Use complete retained selection", 'data-study-id="' + h(result.study_id) +
         '" data-selection-id="' + h(result.selection_id) + '"') +
         "<p>" + number(result.count) + " original units retained across all candidate pages.</p>";
+    }
+    if (task.action === "conservation.optimization.preview" && task.state === "complete" && result.request) {
+      return '<p>' + number(result.counts?.selected) + ' selected from ' + number(result.counts?.inventory) +
+        ' retained units · ' + h(human(result.optimization?.status)) + '</p><div class="cons-actions">' +
+        button("optimization-open-preview", "Review portfolio decision", 'data-task-id="' + h(task.id) + '"') + '</div>';
+    }
+    if (task.action === "conservation.optimization.save" && result.plan?.id) {
+      return '<div class="cons-actions">' + button("open-plan", "Open optimized portfolio",
+        'data-plan-id="' + h(result.plan.id) + '"') +
+        button("optimization-open-analysis", "Open retained decision analysis",
+          'data-study-id="' + h(result.plan.study_id) + '" data-analysis-id="' + h(result.analysis?.id || "") + '"') + '</div>';
+    }
+    if (task.action === "conservation.sources.capture") {
+      return '<div class="cons-actions">' + sourceCaptureButtons(result) + "</div>";
     }
     if (task.action === "conservation.criteria.prepare" && result.state === "complete" &&
         result.source_collection_id && result.source_id) {
@@ -1863,8 +2537,10 @@ export function attachConservation({
         const form = event.target?.closest?.("[data-cons-form]");
         if (!form) return;
         event.preventDefault();
-        const name = form.dataset.consForm === "portfolio" ? "save-plan" :
-          form.dataset.consForm === "scenario" ? "save-scenario" : "submit-study";
+        const name = form.dataset.consForm === "optimization" ? "optimization-preview" :
+          form.dataset.consForm === "portfolio" ? "save-plan" :
+          form.dataset.consForm === "scenario" ? "save-scenario" :
+          form.dataset.consForm === "sources" ? "acquire-sources" : "submit-study";
         const control = form.querySelector('[data-action="conservation-' + name + '"]');
         if (control) void dispatch(control);
       }, { signal: listener.signal });
@@ -1881,5 +2557,5 @@ export function attachConservation({
     if (mounted && activeWorkspace === workspace()) captureView();
     listener?.abort(); listener = null; mounted = null; activeWorkspace = null;
   }
-  return { render, mount, detach, dispatch, taskActions };
+  return { render, mount, detach, dispatch, taskActions, integratedOptimization: true };
 }

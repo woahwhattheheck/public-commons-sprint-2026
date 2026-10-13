@@ -490,6 +490,12 @@ export function attachPairedEnsembles(context) {
       '<div class="pe-actions">'+(detail._report_url?'<a href="'+esc(detail._report_url)+'" target="_blank" rel="noopener">Open full quantitative report</a>':'')+
       action('export','Export complete result ZIP',id,detail.state!=='complete')+
       (native.can_resume?action('resume-product','Resume from retained native pairs',id):'')+'</div>';
+    if(native.can_resume&&detail.execution_settings){
+      const settings=detail.execution_settings;
+      html+='<p><strong>Retained execution controls:</strong> '+number(settings.memory_mb)+' MiB for tile arrays, '+
+        number(settings.tile_size)+'-pixel requested tile edge and '+number(settings.max_open_datasets)+
+        ' open raster handles. Resume continues the saved tile layout with these controls.</p>';
+    }
     if(!native.can_resume)html+=s.input_kind==='original Workspace native run artifacts'?
       '<p>The result project retains its quantitative outputs and original source references. Open the scientific Workspace backup to continue calculations from its original native runs.</p>':
       '<p>The original raster members and quantitative outputs remain available below. Continue this analysis through its retained source workflow.</p>';

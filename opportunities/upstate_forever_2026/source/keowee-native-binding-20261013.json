@@ -11,7 +11,24 @@
   },
   "evaluator": {
     "path": "source/keowee/20261013/keowee-evaluator.mjs",
-    "sha256": "5b766947caf409026b4ea141a17b3c0a376021bf3ac51701ec94f5eb83f2cd65"
+    "sha256": "8267a1b4d90e15d05f089191be25894bac179f53b0568514a1e071f23128c5e1",
+    "bytes": 24920,
+    "original_source_sha256": "5b766947caf409026b4ea141a17b3c0a376021bf3ac51701ec94f5eb83f2cd65",
+    "original_source_bytes": 20040,
+    "implementation_edition": "closed-source-intervals-20261013",
+    "observation_extension": {
+      "path": "observations.<numeric_field>.interval",
+      "closed": true,
+      "fields": [
+        "lower",
+        "upper",
+        "unit",
+        "method",
+        "reference"
+      ],
+      "exact_value": "Remains null when source coverage establishes only a numeric interval",
+      "scope": "Original numeric source bins; full source profile and thresholds unchanged"
+    }
   },
   "current_native_method_id": "lake-keowee-2020-published-scorecards",
   "category_ids": {
