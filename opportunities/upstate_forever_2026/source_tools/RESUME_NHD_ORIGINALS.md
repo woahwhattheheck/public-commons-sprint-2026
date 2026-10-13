@@ -8,7 +8,7 @@ Run from the Upstate application root containing model/ and source_tools/. The a
 
 Python uses the existing project dependencies. Exact polygon selection requires Shapely; the existing source intake/native model uses the application's GDAL/PROJ environment. This utility adds no dependency and no Actions workflow.
 
-The current original-response bank is Slack Canvas F0C8UD4L25S, revision 2. Save its complete JSON code block, without Markdown fences, as nhd-original-progress.json. Verify the bank against the SHA256 printed with that exact revision. The receiver independently verifies the bank and every decoded member.
+The retained source operation is indexed from Slack Canvas F0C8UD4L25S and the canonical Eco thread. Its expanded revision 2 original-response bank is F0C8UNL563E: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8UNL563E . Join that carrier's numbered base64 parts, decode base64, then decompress gzip into nhd-original-progress.json. Verify the exact JSON byte count and SHA256 printed with the selected carrier. The receiver independently verifies the bank and every decoded member.
 
 The exact target is 217 original HUC12 IDs with SHA256 ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52. Supply the retained original domain ZIP whose members include model-domain.esri.json.gz, feature-bindings.json and domain-summary.json.
 
@@ -20,9 +20,9 @@ https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e
 
 Resolve those stable references through the authorized Notion file-download tool and download the original response under its recorded filename. The download tool returns temporary signed URLs; retain the stable references in work records. Never rewrite or format the original JSON bodies.
 
-You can instead create a local JSON mapping from each recorded filename to its downloaded path or a freshly resolved HTTPS URL. Pass that file with --downloads. The receiver checks each response's original byte count, native-ID equality, full native fields, EPSG:3857, Z/M flags and coordinate dimensions, then records its own content hash for later resumes. It preserves each full original response.
+You can instead create a local JSON mapping from each recorded filename to its downloaded path or a freshly resolved HTTPS URL. Pass that file with --downloads. The receiver checks each response's original byte count, available original content hash, native-ID equality, full native fields, EPSG:3857, Z/M flags and coordinate dimensions, then records its own content hash for later resumes. It preserves each full original response.
 
-Revision 2 contains three geometry references: first 100 IDs, next 500 IDs and a 50-ID response, totaling 2,177,267 original bytes for 650 requested IDs. The receiving process performs the feature-level checks before admitting them. The diagnostic XY-only singleton remains a separate companion; it is excluded from native Z/M pages.
+Revision 2 contains six geometry references, totaling 2,751,164 original bytes for 775 requested IDs. The complete final 25-feature response is also embedded in the bank with its verified source hash. The receiving process performs the feature-level checks before admitting them. The diagnostic XY-only singleton remains a separate companion; it is excluded from native Z/M pages.
 
 ## Run through complete source import
 
@@ -31,7 +31,7 @@ From the application root:
 ~~~sh
 python -m source_tools.resume_nhd_originals \
   --bank /data/nhd-original-progress.json \
-  --bank-sha256 127777b1cd8978872c2a397bc2081db94763cdadb9c2a0a8ab57dbd505be3e0a \
+  --bank-sha256 83efb8d6612881ab11f91fe89284cba8c17cfa1a1324c57a02767d26af53ff8c \
   --domain-archive /data/dbc61-upstate-model-domain-20261012.zip \
   --download-directory /data/nhd-original-downloads \
   --output /data/nhd-source-capture \

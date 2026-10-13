@@ -116,6 +116,7 @@ def original_inventory(root, retained, entry):
         raise ValueError("Unexpected NHD native object-ID field")
     requests = []
     observed_scope = None
+    observed_relation = None
     for kind in ("count", "ids"):
         record = entry[kind]
         path = member(retained, record["path"])
@@ -135,7 +136,10 @@ def original_inventory(root, retained, entry):
         scope = bounds(parameters["geometry"])
         if scope != bounds(entry["envelope"]) or (observed_scope and scope != observed_scope):
             raise ValueError("Inventory metadata differs from its exact query envelope")
+        if observed_relation is not None and parameters["spatialRel"] != observed_relation:
+            raise ValueError("Original count and ID requests use different spatial relations")
         observed_scope = scope
+        observed_relation = parameters["spatialRel"]
         query_key = "returnCountOnly" if kind == "count" else "returnIdsOnly"
         if str(parameters.get(query_key)).lower() != "true":
             raise ValueError("Inventory request has the wrong response type")
@@ -303,7 +307,7 @@ def resume(args):
                 or params.get("outFields") != "*"
                 or any(str(params.get(k)).lower() != "true" for k in ("returnGeometry", "returnZ", "returnM"))):
             raise ValueError("Original native page request omitted fields or geometry dimensions")
-        accept(path, record["requested_ids"], relative(root, request_path))
+        accept(path, record["requested_ids"], relative(root, request_path), record.get("sha256"))
     if page_progress.exists():
         for record in json_file(page_progress)["pages"]:
             if record["path"] in descriptor["pages"]:
