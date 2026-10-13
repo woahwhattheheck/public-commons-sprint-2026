@@ -29,7 +29,7 @@ Select **Build original E. coli study**. The task imports or reuses the complete
 
 The desk retains its queued operation when closed. Reopen its saved task or choose the edition in **Saved station geography**. The task's **Open station geography** button checks the original Workspace and also works when this desk has not previously been opened. Failed or interrupted tasks retain the existing resume control.
 
-The initial source import uses the installed `source/ecoli_utility_context/20261013/source-manifest.json`. A transferred Workspace can reuse that already imported exact source without an installed data directory. Full native build requires the application's normal GIS environment. The preparation-only command and exact source contracts are documented in `model/UTILITY_MICROBIAL_STUDY.md`.
+The initial source import uses the installed `source/ecoli_utility_context/20261013/source-manifest.json`. A transferred Workspace can reuse a complete supported source edition without an installed data directory. The card and native adapter recognize the same known manifest/report identities: when both are retained, the adapter chooses its current presentation edition; when only the original edition is retained, that complete edition remains available. An explicitly installed manifest selects its exact edition. The saved preparation records the actual manifest, report and source collection identities. Full native build requires the application's normal GIS environment. The preparation-only command and exact source contracts are documented in `model/UTILITY_MICROBIAL_STUDY.md`.
 
 ## Source and implementation
 
