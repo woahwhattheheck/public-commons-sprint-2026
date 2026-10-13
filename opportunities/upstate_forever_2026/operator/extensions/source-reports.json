@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-reports",
   "title": "Retained source reports",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "order": 56,
   "assets": [
     "source_reports.mjs",
@@ -14,7 +14,8 @@
       "handler": "SourceReports",
       "args": [
         "operator",
-        "fault"
+        "fault",
+        "source_roots"
       ]
     },
     "routes": [

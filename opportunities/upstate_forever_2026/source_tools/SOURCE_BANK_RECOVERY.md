@@ -106,6 +106,25 @@ Slack's exported JSON indentation can contain non-breaking spaces. Parsing norma
 
 The original [17-file priority and assessment source bank](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KECMA4V) uses the same envelope schema with the `gzip_bytes`/`gzip_sha256` pair and `encoding: "gzip+base64"`. The ordinary inspector/extractor accepts its complete original Canvas response. It recovers all 5,787,182 source bytes, including the full original normalized 2024 and July 2026 banks, the 217-HUC comparison and its actual 192-record CSV. Its compressed identity is 532,533 bytes / SHA-256 `c12c4d5af49f0a61636266a32d31e53d33661e39f5f500efe0c1000729f9ed4b`; its decoded source bank is 6,398,128 bytes / SHA-256 `38d107f670cd69b6b259600af54cfd06cc51da9b4541e5675922326292d7847d`.
 
+## Receive the complete 53-file station family
+
+The original [station, assessment and microbial source family](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C9KGS3K40) carries 53 complete files in 49 numbered base64 parts. The current edition includes the maintained 164-station / 293-record selection, the multi-inventory assessment context and its native report producers.
+
+Save the complete carrier Markdown, including its introductory identities and every part:
+
+```sh
+node source_tools/source_bank_cli.mjs inspect native-station-family.md
+node source_tools/source_bank_cli.mjs extract native-station-family.md /absolute/new/native-station-family
+```
+
+This carrier declares gzip length 434,497 bytes and SHA-256 `6dbeb87f8947e57042ee915a487b2fa450351723490dc508096ba16b0807a4d8`; its complete decoded JSON is 2,634,598 bytes and SHA-256 `bfc124913387832c10a3b65378d157a5bc6a58ae01ffd06c83b160950503b4b7`. Every recovered original member matches its declared bytes and SHA-256.
+
+The decoder recognizes this numbered carrier only when the introductory `Complete JSON:`, `Gzip:` and `Parts:` identities are present exactly once, all base64 fences belong to the cohort, and every `## Part NN of TOTAL` header forms the complete one-based sequence. The original compressed and decoded hashes are checked before its source files are returned. JSON-fenced source envelopes retain precedence.
+
+This native bank uses `commons.source-map/1` with `files` as an array of descriptors. Each descriptor must carry `path`, original `bytes`, `sha256` and supported content. Optional regular-file modes are `100644` or `100755`. Its original `git_blob` and other descriptor metadata remain in the recovery inventory; source text is stored only in the recovered file. Array descriptors carry their own metadata and cannot also supply a separate `file_metadata` map. Existing source-map files/metadata mappings remain supported with their same exact-key checks.
+
+After extraction, use the included maintained `operator/install_station_geography.py` against the existing complete application. Its original 45-member install plan and backups remain authoritative. The complete original assessment inputs are available through [the native 164-station receiving workflow](NATIVE_STATION164_RECEIVING.md); its ready-import source ZIP retains all eight typed entries and the original publisher records.
+
 ## Pure JavaScript use
 
 In a normal ES-module environment:

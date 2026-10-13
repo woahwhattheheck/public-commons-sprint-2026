@@ -108,7 +108,20 @@ export function createSourceBankToolkit(options = {}) {
           "upstate.source-files/v1", "eco-source-text-v1"].includes(schema))
       fail("unsupported source-bank schema");
     let entries;
-    if (schema === "commons.source-map/1") {
+    if (schema === "commons.source-map/1" && Array.isArray(bank.files)) {
+      if (bank.file_metadata !== undefined)
+        fail("source-map array descriptors must contain their own metadata");
+      if (bank.files.length > limits.maxMembers) fail("source bank member limit exceeded");
+      entries = bank.files.map(entry => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry) ||
+            !Number.isSafeInteger(entry.bytes) || entry.bytes < 0 ||
+            typeof entry.sha256 !== "string" || !shaPattern.test(entry.sha256) ||
+            (entry.mode !== undefined && !["100644", "100755"].includes(entry.mode)))
+          fail("source-map array descriptors need original bytes, SHA-256 and an optional regular-file mode");
+        const { content, content_base64, ...metadata } = entry;
+        return { ...entry, declaredMetadata: metadata };
+      });
+    } else if (schema === "commons.source-map/1") {
       if (!bank.files || typeof bank.files !== "object" || Array.isArray(bank.files) ||
           !bank.file_metadata || typeof bank.file_metadata !== "object" || Array.isArray(bank.file_metadata))
         fail("source map needs files and file_metadata mappings");
@@ -429,7 +442,31 @@ export function createSourceBankToolkit(options = {}) {
         return carrierJson(match[1].replace(/\\([\\/"\x60*_{}\[\]()#+\-.!>])/g, "$1"));
       }
     });
-    if (!blocks.length) fail("carrier contains no supported JSON fences");
+    if (!blocks.length) {
+      // Original native component carriers use numbered base64 fences plus
+      // explicit compressed and decoded identities in the introductory header.
+      const parts = [...text.matchAll(/(?:^|\n)## Part ([0-9]+) of ([0-9]+)[ \t]*\r?\n\s*\x60{3}base64[ \t]*\r?\n([A-Za-z0-9+/=\s]+?)\r?\n[ \t]*\x60{3}[ \t]*(?=\r?\n|$)/g)];
+      const fences = [...text.matchAll(/(?:^|\n)[ \t]*\x60{3}base64[ \t]*\r?\n/g)];
+      if (!parts.length || parts.length !== fences.length || parts.length > limits.maxMembers)
+        fail("carrier needs one complete numbered base64 cohort");
+      const count = Number(parts[0][2]);
+      if (count !== parts.length || parts.some((part, index) =>
+          Number(part[1]) !== index + 1 || Number(part[2]) !== count))
+        fail("numbered source parts must form the complete original sequence");
+      const header = text.slice(0, parts[0].index);
+      const jsonIdentity = [...header.matchAll(/Complete JSON:[ \t]*([0-9]+) bytes[ \t]*\/[ \t]*SHA256[ \t]+([a-f0-9]{64})\b/g)];
+      const gzipIdentity = [...header.matchAll(/Gzip:[ \t]*([0-9]+) bytes[ \t]*\/[ \t]*SHA256[ \t]+([a-f0-9]{64})\b/g)];
+      const declaredParts = [...header.matchAll(/Parts:[ \t]*([0-9]+)\b/g)];
+      if (jsonIdentity.length !== 1 || gzipIdentity.length !== 1 ||
+          declaredParts.length !== 1 || Number(declaredParts[0][1]) !== count)
+        fail("numbered source carrier needs exact JSON, gzip and part-count identities");
+      return gzipEnvelope({
+        schema: "commons.gzip-source-bank/v1", encoding: "gzip+base64",
+        decoded_bytes: Number(jsonIdentity[0][1]), decoded_sha256: jsonIdentity[0][2],
+        gzip_bytes: Number(gzipIdentity[0][1]), gzip_sha256: gzipIdentity[0][2],
+        chunks: parts.map(part => part[3].replace(/\s/g, ""))
+      }, depth);
+    }
     if (blocks.every(b => b?.schema === "upstate.application-source-part/v1")) return packets(blocks);
     if (blocks.length !== 1) fail("carrier must contain one bank/envelope or one ordered packet cohort");
     return unwrapJson(blocks[0], depth + 1);
