@@ -37,3 +37,11 @@
 .mf .mf-row-filter{max-width:460px}.mf[aria-busy=true]>.mf-status{font-style:italic}
 @media(max-width:700px){.mf .mf-grid{grid-template-columns:1fr}.mf .mf-card{padding:15px}.mf .mf-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.mf .mf-actions>button{flex:1 1 145px}.mf .mf-heading>button{flex:none}.mf h2{font-size:20px}.mf .mf-tabs button{flex:1 1 130px}.mf .mf-source>div:first-child{flex-basis:100%}}
 @media print{.mf button,.mf input,.mf select,.mf form{display:none!important}.mf .mf-card{break-inside:avoid}.mf .mf-scroll{overflow:visible}.mf table{min-width:0;font-size:9px}.mf .mf-status{display:none}}
+
+/* Scientific contract authoring stays inside the existing industrial Flow desk. */
+.mf .mf-contract-controls{min-width:0}.mf .mf-contract-controls details{border-top:1px solid #ddd;padding-top:12px}
+.mf .mf-contract-controls label{margin:10px 0}.mf .mf-contract-row{display:flex;gap:12px;align-items:end;flex-wrap:wrap;border-bottom:1px solid #eee;padding:8px 0}
+.mf .mf-contract-row>label{flex:1 1 260px}.mf .mf-contract-row>button{margin-bottom:10px}
+.mf .mf-contract-block{border:1px solid #ccc;padding:16px;margin:14px 0;min-width:0}
+.mf .mf-contract-advanced textarea{font:12px/1.6 ui-monospace,monospace}
+@media(max-width:700px){.mf .mf-contract-block{padding:12px}.mf .mf-contract-row>button{width:100%}}
