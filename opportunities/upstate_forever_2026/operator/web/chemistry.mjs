@@ -1,3 +1,4 @@
+import * as reportSourceSelection from './source_report_editions.mjs';
 /** Original-operator reach chemistry. No second app, queue, auth or workspace. */
 const esc = x => String(x ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pretty = x => JSON.stringify(x,null,2);
@@ -120,7 +121,7 @@ export function attachChemistry(host){
    <p class="chemistry-muted">Use the original Sources intake for project JSON, observation files and editable ZIPs. Original file identities remain attached to the scenario.</p></section>
    <section><h2>Retained analyses</h2><div data-chemistry-runs>${catalog.runs.map(r=>`<div class="chemistry-run">${button('run-open',`${r.mode} · ${r.state} · ${r.id.slice(0,10)}`,r.id)}<span>${esc(r.title)}</span></div>`).join('')||'<p>No analysis yet.</p>'}</div></section></div>
    <section><h2>Saved scientific reports</h2><div data-chemistry-reports>${reportList()}</div></section>
-   <section><h2>Sources for scientific reports</h2><p>Open a retained Chemistry source in the existing ordered report composer, alongside other selected scientific studies.</p><div data-chemistry-report-sources>${sourceList()}</div></section>
+   <section><h2>Sources for scientific reports</h2><p>Open only the retained Chemistry source, or deliberately add it to the current ordered scientific report.</p><div data-chemistry-report-sources>${sourceList()}</div></section>
    <section data-chemistry-editor hidden></section><section data-chemistry-result hidden></section></section>`;
   root.querySelector('[data-case]').addEventListener('change',e=>{selectedCase=e.target.value});
  }
@@ -129,9 +130,11 @@ export function attachChemistry(host){
  }
  function sourceList(reportId=null){
   const rows=(catalog.report_sources||[]).filter(value=>!reportId||value.report_id===reportId);
-  return rows.map(value=>`<div class="chemistry-run"><div class="chemistry-actions">${button('source-compose','Open scientific report',value.id)}${button('source-open','Inspect retained source',value.id)}</div><span>${esc(value.title)} · ${esc(value.mode)} · ${esc(value.figure_count)} figures · ${esc(value.companion_count)} companions</span></div>`).join('')||'<p>No report source prepared yet. Open a saved scientific report to prepare its original figures and companions.</p>';
+  return rows.map(value=>`<div class="chemistry-run"><div class="chemistry-actions">${button('source-compose','Open this report only',value.id)}${button('source-append','Add to current report',value.id)}${button('source-open','Inspect retained source',value.id)}</div><span>${esc(value.title)} · ${esc(value.mode)} · ${esc(value.figure_count)} figures · ${esc(value.companion_count)} companions</span></div>`).join('')||'<p>No report source prepared yet. Open a saved scientific report to prepare its original figures and companions.</p>';
  }
- async function openSource(id,compose=false){
+ async function openSource(id,compose=false,selectionMode='replace'){
+  if(!['replace','append'].includes(selectionMode))throw Error('Choose how this prepared source opens in Scientific Reports.');
+  if(compose&&selectionMode==='replace'&&reportSourceSelection.SCIENTIFIC_REPORT_SOURCE_SELECTION!=='replace-v1')throw Error('Receive the current Scientific Reports composer before opening this report alone. Add to current report is still available.');
   const current=++sourceGeneration,selectedWorkspace=liveWorkspace();reportGeneration++;runGeneration++;
   if(selectedWorkspace!==workspace())throw Error('Reopen Chemistry in the original workspace.');
   const value=await read('report-source',{source_record_id:id});
@@ -144,13 +147,13 @@ export function attachChemistry(host){
      ||selected.sources[0]?.source_id!==choice.source_id){
    throw Error('The report source response differs from the selected original workspace or source edition.');
   }
-  if(compose)return await host.openScientificReport(selected);
+  if(compose)return await host.openScientificReport({...selected,selection_mode:selectionMode});
   const target=root.querySelector('[data-chemistry-result]');target.hidden=false;
   target.innerHTML=`<h2>Retained Chemistry report source</h2><p>${esc(value.title)}</p><p class="chemistry-mono">${esc(value.id)} · ${esc(value.edition)}</p>
    ${table([{mode:value.mode,original_report:value.report_id,original_run:value.run_id,figures:value.figure_count,companions:value.companion_count}],['mode','original_report','original_run','figures','companions'])}
-   <p>This source retains the saved Chemistry result, declared physical units and scientific figure recipe. Open the scientific report composer to preview, order and publish it with other saved studies. The original analysis and editable project remain available.</p>
+   <p>This source retains the saved Chemistry result, declared physical units and scientific figure recipe. Open this report only replaces the draft source selection and title. Add to current report preserves its existing sources and title so you can combine studies deliberately. The original analysis and editable project remain available.</p>
    <p class="chemistry-mono">Source edition ${esc(value.source_collection_id)} / ${esc(value.source_id)}</p>
-   <div class="chemistry-actions">${button('source-compose','Open scientific report',value.id)}${button('report-open','Open original saved report',value.report_id)}${button('run-open','Open original analysis',value.run_id)}</div>
+   <div class="chemistry-actions">${button('source-compose','Open this report only',value.id)}${button('source-append','Add to current report',value.id)}${button('report-open','Open original saved report',value.report_id)}${button('run-open','Open original analysis',value.run_id)}</div>
    ${fileList(value._downloads||[])}`;
  }
  async function openReport(id){
@@ -235,7 +238,7 @@ export function attachChemistry(host){
    if(action==='open'||action==='case-open'){const key=id||root.querySelector('[data-case]').value;if(!key)throw new Error('Choose a saved scenario.');return await editor(null,key);}
    if(action==='run-open')return await openRun(id);
    if(action==='report-open')return await openReport(id);
-   if(action==='source-open'||action==='source-compose')return await openSource(id,action==='source-compose');
+   if(['source-open','source-compose','source-append'].includes(action))return await openSource(id,action!=='source-open',action==='source-append'?'append':'replace');
    if(action==='source-prepare')return await perform('report.source.prepare',{report_id:id});
    if(action==='report-prepare')return await perform('report.prepare',{run_id:id});
    if(action==='from-source'||action==='receive'){const v=root.querySelector('[data-source]').value;if(!v)throw new Error('Choose an original retained source.');return await perform(action==='from-source'?'case.from-source':'receive',JSON.parse(v));}
@@ -278,7 +281,7 @@ export function attachChemistry(host){
  taskActions(task){
   const r=task.result||{},key=workspace();if(task.state!=='complete'||!task.action?.startsWith('chemistry.')||(task.workspace&&task.workspace!==key))return '';
   const isSource=['chemistry.report.source.prepare','chemistry.report.source.get'].includes(task.action);
-  const control=isSource&&r.id&&r.source_collection_id&&r.source_id?button('source-compose','Open scientific report',r.id)+button('source-open','Inspect retained source',r.id):r.schema==='upstate.chemistry-run/v1'?button('run-open','Open chemical results',r.id):r.schema==='upstate.chemistry-scientific-report/v1'?button('report-open','Open scientific report',r.id):'';
+  const control=isSource&&r.id&&r.source_collection_id&&r.source_id?button('source-compose','Open this report only',r.id)+button('source-append','Add to current report',r.id)+button('source-open','Inspect retained source',r.id):r.schema==='upstate.chemistry-run/v1'?button('run-open','Open chemical results',r.id):r.schema==='upstate.chemistry-scientific-report/v1'?button('report-open','Open scientific report',r.id):'';
   return control.replaceAll('data-id=',`data-workspace="${esc(key)}" data-id=`);
  }};
 }
