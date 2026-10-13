@@ -1,3 +1,4 @@
+import {flowComparisonOperation} from './flow_comparison.mjs';
 import {sedimentOperation,readSedimentStudy} from './sediment_workspace.mjs';
 import {sedimentHTML,sedimentCSV} from './sediment_reports.mjs';
 import {observationEditionOperation,observationEditionCSV,observationCalibration} from './observation_editions.mjs';
@@ -82,6 +83,7 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
         send(response,200,reconciliationOperation(s,method,parts.slice(1),query,method==='POST'?await readBody(request):{}));return;
       }
       if(parts[0]==='flow'){
+        if(method==='POST'&&parts.length===2&&['comparison-report','comparison-bundle','comparison-csv'].includes(parts[1])){send(response,200,flowComparisonOperation(s,method,parts.slice(1),await readBody(request)));return;}
         if(method==='GET'&&parts.length===4&&parts[3]==='bundle'){
           if(parts[1]==='studies'){send(response,200,flowStudyBundle(s,parts[2]));return;}
           if(parts[1]==='load-results'){send(response,200,flowLoadBundle(s,parts[2]));return;}
