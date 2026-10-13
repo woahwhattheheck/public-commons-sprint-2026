@@ -27,6 +27,13 @@ import sys
 import tempfile
 import zipfile
 
+try:
+    from .application_components import (CATALOG_PATH, MODULE_PATH,
+        inspect as inspect_components, require_complete as require_components)
+except ImportError:
+    from application_components import (CATALOG_PATH, MODULE_PATH,
+        inspect as inspect_components, require_complete as require_components)
+
 MAX_BYTES = 256 * 1024 * 1024
 MAX_FILES = 10000
 INLINE_ASSET_BYTES = 8 * 1024 * 1024
@@ -922,7 +929,7 @@ def layer_from_document(document, receipt=None):
     return Layer(document, files, checked, receipt)
 
 
-def compose(layers, *, edition, operation_id=None, include_receiver=True):
+def compose(layers, *, edition, operation_id=None, include_receiver=True, inspect_only=False):
     """Apply caller-selected complete layers in order; never edit an input tree."""
     if not layers:
         raise ValueError("Choose a complete application base")
@@ -930,8 +937,11 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
     complete_map = base.get("schema") == MAP_SCHEMA and base.get("kind") == MAP_KIND
     recovered_map = (document_schema(base) == "upstate.source-map/v1"
                      and {"model/workspace.py", "operator/server.py"} <= set(layers[0].files))
-    if not (complete_map or recovered_map):
-        raise ValueError("First layer must be a complete application map or recovered application source")
+    native_map = (document_schema(base) == "upstate.complete-application-transport/v1"
+                  and {"model/workspace.py", "operator/server.py"} <= set(layers[0].files))
+    if not (complete_map or recovered_map or native_map):
+        raise ValueError("First layer must be a complete application map, native transport, "
+                         "or recovered application source")
     if not isinstance(edition, str) or not edition.strip():
         raise ValueError("Choose an application edition")
     files, metadata, changes, externals, references = {}, {}, [], {}, {}
@@ -999,11 +1009,16 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
                                          for key in ("bytes", "sha256")):
                 raise ValueError("External source path selects different original bytes: " + name)
             externals[name] = dict(original)
-    if include_receiver and SELF_NAME not in files:
-        body = Path(__file__).read_bytes()
-        files[SELF_NAME] = body.decode("utf-8")
-        metadata[SELF_NAME] = {"bytes": len(body), "sha256": sha256(body), "git_blob": None,
-                               "mode": "100755", "origins": ["assembly-receiver"]}
+    if include_receiver:
+        receiver_root = Path(__file__).resolve().parents[1]
+        for name in (SELF_NAME, MODULE_PATH, CATALOG_PATH):
+            if name in files:
+                continue
+            body = receiver_root.joinpath(*PurePosixPath(name).parts).read_bytes()
+            files[name] = body.decode("utf-8")
+            metadata[name] = {"bytes": len(body), "sha256": sha256(body), "git_blob": None,
+                              "mode": "100755" if name == SELF_NAME else "100644",
+                              "origins": ["assembly-receiver"]}
     check_layout(files)
     if len(files) > MAX_FILES or sum(item["bytes"] for item in metadata.values()) > MAX_BYTES:
         raise ValueError("Combined source exceeds the receiving limit")
@@ -1012,8 +1027,12 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
             if any(metadata[name][key] != original[key] for key in ("bytes", "sha256")):
                 raise ValueError("Embedded source conflicts with declared original: " + name)
             del externals[name]
+    component_inventory = inspect_components({"files": files, "file_metadata": metadata})
+    if not inspect_only:
+        require_components({"files": files, "file_metadata": metadata})
     composition = {
         "schema": "upstate.application-assembly/v1",
+        "component_inventory": component_inventory,
         "edition": edition, "operation_id": operation_id,
         "layers": [layer.receipt for layer in layers],
         "changes": changes,
@@ -1028,10 +1047,12 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
         "repository": base.get("repository", "woahwhattheheck/public-commons-sprint-2026"),
         "source_ref": "assembly:" + assembly_id,
         "prefix": base.get("prefix", "opportunities/upstate_forever_2026"),
-        "state": "source_stage_complete_application",
+        "state": ("source_stage_complete_application" if component_inventory["ready"]
+                  else "source_stage_incomplete_application"),
         "files": dict(sorted(files.items())), "file_metadata": dict(sorted(metadata.items())),
         "assembly": composition, "external_sources": composition["external_sources"],
         "external_references": composition["external_references"],
+        "component_inventory": component_inventory,
     }
 
 
@@ -1047,6 +1068,7 @@ def source_receipt(document, payload):
 
 
 def expected_files(document, receipt):
+    require_components(document)
     result = {}
     for name, content in document["files"].items():
         metadata = document["file_metadata"][name]
@@ -1263,7 +1285,8 @@ def main(argv=None):
                 raise ValueError("Invalid or duplicate --expect INDEX:SHA256")
             pins[index] = expected
         layers = [read_layer(path, payload_sha256=pins.get(index)) for index, path in enumerate(paths)]
-        document = compose(layers, edition=args.edition, operation_id=args.operation_id)
+        document = compose(layers, edition=args.edition, operation_id=args.operation_id,
+                           inspect_only=args.inspect)
         payload = canonical(document)
         receipt = source_receipt(document, payload)
         result = {**receipt, "edition": args.edition,
@@ -1273,10 +1296,12 @@ def main(argv=None):
                                if change["action"] == "replaced"],
                   "external_sources": document["external_sources"],
                   "local_dependencies": local_dependencies(document),
+                  "component_inventory": document["component_inventory"],
                   "component_integrations": [
                       {"layer": index, "installation": layer.document["installation"]}
                       for index, layer in enumerate(layers) if "installation" in layer.document]}
         if not args.inspect:
+            require_components(document)
             if not (args.output or args.source_map or args.archive_path):
                 parser.error("Choose --output, --source-map or --zip, or use --inspect")
             if args.source_map:
@@ -1289,8 +1314,10 @@ def main(argv=None):
         print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
         return 0
     except (OSError, ValueError, TypeError, KeyError, UnicodeError, EOFError) as error:
-        print(json.dumps({"state": "error", "type": type(error).__name__, "message": str(error)},
-                         ensure_ascii=False), file=sys.stderr)
+        failure = {"state": "error", "type": type(error).__name__, "message": str(error)}
+        if getattr(error, "component_closure", None) is not None:
+            failure["component_inventory"] = error.component_closure
+        print(json.dumps(failure, ensure_ascii=False), file=sys.stderr)
         return 1
 
 

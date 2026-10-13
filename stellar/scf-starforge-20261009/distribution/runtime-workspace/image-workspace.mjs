@@ -1,6 +1,6 @@
 // MIT. Image operations compose the original image engine and runtime worker.
 import { constants } from 'node:fs';
-import { open, mkdir, readdir, lstat, link, unlink } from 'node:fs/promises';
+import { open, readdir, lstat, link, unlink } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { PLAN_SCHEMA, CONTEXT_SCHEMA, RECEIPT_SCHEMA, PORTABLE_SCHEMA, inspectPlan,
@@ -9,7 +9,7 @@ import { lockImage, buildImage, imageStatus, exportImage, importImage } from '..
 import { inspectRuntimeInstall } from '../runtime-install.mjs';
 import { verifyRuntimeSource } from '../runtime-profile.mjs';
 import { plain, need, now, digest, canonical, json, recordId, operationId, absolute,
-  privateDirectory, makePrivate, regular, readJSON, saveJSON, operationLease, operationRunning, workerAlive } from './storage.mjs';
+  privateDirectory, optionalPrivateEntries, makePrivate, regular, readJSON, saveJSON, operationLease, operationRunning, workerAlive } from './storage.mjs';
 
 export const IMAGE_WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.images.v1';
 export const IMAGE_TRANSFER_MAX_BYTES = 16 * 1024 * 1024 * 1024;
@@ -38,11 +38,12 @@ async function exists(path) {
   try { await lstat(path); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; }
 }
 async function ensureDirectory(path) {
-  try { await mkdir(path, { mode: 0o700 }); } catch (error) { if (error.code !== 'EEXIST') throw error; }
+  try { await makePrivate(path); } catch (error) { if (error.code !== 'EEXIST') throw error; }
   return privateDirectory(path);
 }
-async function rootFor(root) {
+async function rootFor(root, create = true) {
   await privateDirectory(root);
+  if (!create) return join(root, 'images');
   const base = await ensureDirectory(join(root, 'images'));
   for (const name of directories) await ensureDirectory(join(base, name));
   return base;
@@ -55,7 +56,7 @@ async function immutable(path, value) {
   return value;
 }
 async function records(base, area) {
-  const names = (await readdir(join(base, area))).filter(x => /^[a-f0-9]{24}\.json$/.test(x));
+  const names = (await optionalPrivateEntries(join(base, area))).filter(x => /^[a-f0-9]{24}\.json$/.test(x));
   return Promise.all(names.map(name => readJSON(join(base, area, name))));
 }
 function label(value, fallback) {
@@ -174,10 +175,10 @@ async function transferView(base, record) {
   } catch (error) { return { ...record, phase: 'UNAVAILABLE', error: errorView(error) }; }
 }
 export async function imageWorkspaceState(root) {
-  const base = await rootFor(root);
+  const base = await rootFor(root, false);
   const [images, transfers, reviewNames, deploymentNames] = await Promise.all([
     records(base, 'entries'), records(base, 'transfer-records'),
-    readdir(join(base, 'reviews')), readdir(join(base, 'deployment-reviews')),
+    optionalPrivateEntries(join(base, 'reviews')), optionalPrivateEntries(join(base, 'deployment-reviews')),
   ]);
   const readReviews = (names, area) => Promise.all(names.filter(x => /^[a-f0-9]{64}\.json$/.test(x))
     .map(name => readJSON(join(base, area, name))));
@@ -319,7 +320,7 @@ export async function receiveWorkspaceImageChunk(root, { transferId, offset, bod
   } finally { await handle?.close(); await lease.close(); }
 }
 export async function openWorkspaceImageDownload(root, { transferId, file }) {
-  const base = await rootFor(root), record = await transferEntry(base, transferId);
+  const base = await rootFor(root, false), record = await transferEntry(base, transferId);
   const manifest = portable(await readJSON(join(record.directory, 'image-bundle.json')));
   need(['image-bundle.json', 'image.tar'].includes(file), 'RUNTIME_IMAGE_DOWNLOAD_FILE_INVALID');
   const handle = await open(join(record.directory, file), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);

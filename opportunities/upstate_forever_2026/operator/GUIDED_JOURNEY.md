@@ -217,14 +217,23 @@ workspace retains the selected baseline, grid, profile, scenario, run,
 comparison, saved map view, map pack, delivery and operating notes in
 `operator-session.json`. The saved time appears beside the project identity.
 
-Create the complete native backup through the original workspace form. Its
-retained request captures this journey selection, and the archive includes the
-operator snapshot together with the scientific records, original source files,
-native results and application. Open the completed backup task and download
-the archive.
+Choose **Save view and transfer project**. This saves the current selection and
+notes, then opens **Project continuity**. Choose **Create complete project**,
+review the selected completed and unfinished operations, and choose a complete
+ZIP or incremental handover. Keep native intermediate files when model stages
+need to continue. The form identifies the saved view that accompanies the
+project. Its original request freezes that view revision with the selected work.
 
-Restore the archive with the existing restore form and open the returned
-workspace. The saved analysis and notes open automatically in a new browser or
+For a ZIP, open the completed operation and download the scientific-workspace
+archive. In the receiving operator, choose **Receive a project**, upload that
+archive and choose **Open received project** in the completed operation row.
+For incremental delivery, receive its original manifest and missing parts, then
+choose **Receive independent project**. Both routes register a separate working
+copy and recover the selected original tasks and their required inputs.
+
+Choose **Save or continue the selected analysis** in the received project to return
+to this guide. Review its completed results, then use **Project continuity →
+Resume unfinished work** for the retained operations you want to continue. The saved analysis and notes open automatically in a new browser or
 receiving workspace. The guide resolves each saved ID against the actual
 project and checks the selected run's grid, profile and scenario and native model scope, the
 comparison's runs, the delivery's runs and the map pack's saved review.
@@ -289,12 +298,26 @@ print styling.
 
 ## Complete transfer of operator task history
 
-Use the existing original project-transfer component when the receiving operator
-also needs task history and unfinished original inputs. Its
-`operator/project_transfer_cli.py` owns that transfer. Keep its original queue,
-workspace and task references with the receiving operation. The journey importer
-checks the restored scientific project and selected records, clears the imported
-runtime request state, and retains the selected tour and notes in that project.
+Use **Save view and transfer project** and the installed **Project continuity**
+panel to carry task history and unfinished original inputs. Its command-line
+entry point is `operator/project_continuity_cli.py` (the historical
+`operator/project_transfer_cli.py` delegates to that same command); the maintained
+`python -m model.project_transfer_cli` supplies the underlying incremental block
+transport. The continuity command uses the existing queue and native archive;
+the lower-level protocol command works with the retained block inventory.
+
+On the receiving computer, **Open received project** selects the new workspace.
+**Save or continue the selected analysis** opens its saved guide, and **Resume
+unfinished work** explicitly selects the retained tasks to continue. Completed
+native outputs remain available immediately. Cancelled operations remain
+unchecked until you choose them.
+
+**Create scientific workspace backup** and **Restore workspace archive** remain
+available for the scientific workspace and saved guide alone. Use Project
+continuity when the handoff also needs original operator requests, attempt
+history, unimported uploads or source previews. The separate journey importer
+checks the scientific project and selected records and retains the selected tour
+and notes; the transfer service restores the operating history.
 
 ## Save the operating view with the project
 
@@ -302,9 +325,16 @@ The Reopen step includes **Save view and notes**. This saves the selected scient
 
 Use **Save view and notes** after choosing the analysis and recording decisions. The view displays when it was saved and the original project identity. A save retains the server revision observed by that browser. If another browser has saved a newer view, refresh before saving again; notes from the other saved revision remain available in the notes history.
 
-**Create complete native backup** captures the current journey selection and notes as part of the existing backup request. The server saves that view and creates the workspace archive while holding the same session lock, so another view save cannot intervene between those operations. The archive carries the original scientific workspace, source, records, outputs, application and saved operator view. Restore the archive through the existing operator controls, open the restored workspace, and return to the guided journey to continue the retained analysis.
+**Create scientific workspace backup** captures the current journey selection and notes as part of the existing backup request. The server saves that view and creates the workspace archive while holding the same session lock, so another view save cannot intervene between those operations. The archive carries the original scientific workspace, source, records, outputs, application and saved operator view. Restore the archive through the existing operator controls, open the restored workspace, and return to the guided journey to continue the retained analysis.
 
 The separate **Download journey selections** file remains useful for moving a view between browsers that already have the same original project. Its import checks every selected record and the native model selection against that project. Existing browsers retain their own unfinished local request recovery; a received saved view supplies the starting selection for a browser without a matching local view.
+
+A complete Project continuity capture freezes the saved guide revision in its
+original transfer record. Ordinary and incremental capture save that selected
+view under the existing session lock while making the original archive. An
+interrupted transfer reuses its already frozen archive; replay never replaces a
+newer local view with an older captured one. If another browser changes the view
+before the archive is first created, refresh and create a new project selection.
 
 ### Source integration
 

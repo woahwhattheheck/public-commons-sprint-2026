@@ -280,14 +280,17 @@ try{
       if(!await exists(retainedOptions))await atomicJSON(retainedOptions,input);
       if(options['sdk-module'])input.sdk=await import(pathToFileURL(resolve(options['sdk-module'])).href);
       if(registry)input.registrySource=registry;
+      const {CaptureCheckpointStore,readCaptureCheckpoint}=await moduleAt('cfce-givecredit-statements','checkpoint.mjs');
       const checkpointPath=join(output,'givecredit-ledger-capture-checkpoint.json');
+      const checkpointStore=await CaptureCheckpointStore.open(join(output,'givecredit-ledger-checkpoints'),{legacyPath:checkpointPath,expectedKind:'ledger'});
       const checkpointSelection=options['capture-checkpoint']?resolve(options['capture-checkpoint']):
+        recovery.resume&&await exists(checkpointStore.manifestPath)?checkpointStore.directory:
         recovery.resume&&await exists(checkpointPath)?checkpointPath:null;
       let checkpointIssue=null;
       if(checkpointSelection){
-        try{input.checkpoint=await readJSON(checkpointSelection);}
+        try{input.checkpoint=await readCaptureCheckpoint(checkpointSelection);}
         catch(error){
-          if(options['capture-checkpoint']||!input.originalLedgerSources?.length)throw error;
+          if(options['capture-checkpoint']||checkpointSelection===checkpointStore.directory||!input.originalLedgerSources?.length)throw error;
           const original=await readFile(checkpointSelection),name='recovery/incomplete-ledger-checkpoint-'+sha256(original)+'.json';
           await save(name,original);
           checkpointIssue={path:checkpointSelection,retained:name,bytes:original.length,sha256:sha256(original),message:error.message,
@@ -296,20 +299,22 @@ try{
       }
       result.capture={options:options['capture-options']?resolve(options['capture-options']):retainedOptions,checkpoint:checkpointSelection,checkpointIssue,status:'running'};
       await observation({stage:'GiveCredit source capture',phase:'before-capture',checkpoint:checkpointSelection});await checkpoint();
+      input.checkpointMode='borrowed';
       input.onProgress=async progress=>{
-        if(progress.checkpoint)await atomicJSON(checkpointPath,progress.checkpoint);
+        if(progress.checkpoint){result.capture.storage=await checkpointStore.save(progress.checkpoint,{phase:progress.phase});result.capture.checkpoint=checkpointStore.manifestPath;}
         const context={stage:'GiveCredit source capture',phase:progress.phase,rows:progress.rows||null,
           hash:progress.hash||null,account:progress.account||null,ledger:progress.ledger||null};
         await observation(context);await checkpoint();console.log(JSON.stringify({operation,...context,at:new Date().toISOString()}));
       };
       try{
         if(input.checkpoint?.metadata?.status==='complete'){
-          giveSource.validateSourceEdition(input.checkpoint);ledger=input.checkpoint;
+          giveSource.validateSourceEdition(input.checkpoint);await giveLedger.validateLedgerCheckpointSelection(input.checkpoint,input);ledger=input.checkpoint;
+          result.capture.storage=await checkpointStore.save(ledger,{phase:'complete-reused'});result.capture.checkpoint=checkpointStore.manifestPath;
         }else ledger=await giveLedger.captureLedger(input);
       }catch(error){
-        if(error.checkpoint)await atomicJSON(checkpointPath,error.checkpoint);
+        if(error.checkpoint){result.capture.storage=await checkpointStore.save(error.checkpoint,{phase:'interrupted'});result.capture.checkpoint=checkpointStore.manifestPath;}
         result.capture.status='interrupted';throw error;
-      }
+      }finally{checkpointStore.releaseMemory();}
       result.capture.status='complete';await observation({stage:'GiveCredit source capture',phase:'complete'});await checkpoint();
     }
     const imported=await giveImport(ledger,'Complete native GiveCredit ledger edition');

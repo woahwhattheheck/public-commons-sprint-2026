@@ -27,8 +27,9 @@ class ParameterStudyAPI:
             return experiments.inspect(workspace, experiment_id)
         raise self.fault("PARAMETER_STUDY_ACTION", "Choose a supported parameter-study operation.")
 
-    def list(self, workspace_id):
-        return experiments.list_experiments(self.operator.ws(workspace_id))
+    def list(self, workspace_id, *, catalogue=None):
+        ws = self.operator.ws(workspace_id)
+        return experiments.list_experiments(ws) if catalogue is None else catalogue.parameter_studies(ws)
 
     def inspect(self, workspace_id, experiment_id):
         return experiments.inspect(self.operator.ws(workspace_id), identifier(experiment_id))

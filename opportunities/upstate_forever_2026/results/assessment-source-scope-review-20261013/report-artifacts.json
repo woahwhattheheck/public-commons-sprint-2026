@@ -1,0 +1,86 @@
+{
+  "schema": "commons.artifacts/v1",
+  "source_id": "assessment-source-scope-14da35a62ab5628477a8",
+  "files": [
+    {
+      "path": "assessment-station-source-audit.json",
+      "bytes": 6193236,
+      "sha256": "14da35a62ab5628477a8d31a767ec3956988fed568f72a3444df36357a203621"
+    },
+    {
+      "path": "source-audit-summary.json",
+      "bytes": 1010,
+      "sha256": "ad19fce1d70585e77a9ab121820c4a83e462445532f4f48d826a7a03400a6226"
+    },
+    {
+      "path": "all-statewide-assessment-source-associations.csv",
+      "bytes": 915607,
+      "sha256": "e31f6931e4e3f0a51a1f2e4bf57f4040465d2c13110a8b96f732fda0f5e4e458"
+    },
+    {
+      "path": "publisher-huc-differences.csv",
+      "bytes": 4575,
+      "sha256": "a4bd99e849200dc08a564ca77485770e3a8715c23e77fec8486491a6bd09e7a8"
+    },
+    {
+      "path": "all-native-station-source-coverage.csv",
+      "bytes": 153074,
+      "sha256": "6330c0463d88231c3b07b0478f72ab29159cf85c34b5ca7a8526b845717e1299"
+    },
+    {
+      "path": "artifacts.json",
+      "bytes": 1848,
+      "sha256": "954d2109427884e43edacf14dcb7ed7e1303fefc27e980bfb559867edc8a78e2"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/scdes-savannah705-native.esri.json",
+      "bytes": 1043696,
+      "sha256": "14b1a945ee8d5f172f63435b4fd955e9dada6894fcbca2964160c6e2e52d79f0"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/inputs/303d-2024-pdf-table-normalized.json",
+      "bytes": 2674649,
+      "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/inputs/tmdl-attainment-native-20260728.json",
+      "bytes": 1260570,
+      "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/inputs/domain-huc12s.json",
+      "bytes": 3257,
+      "sha256": "a8e83c835b97440f21077fd09d41dcd48d3b07711f371bb839f9c483ecca314f"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/sources.json",
+      "bytes": 1525,
+      "sha256": "4f586bfe326c485ce917622e5d091082c17e407b0d5005ae9fe2f79a39dd273a"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/source-provenance.json",
+      "bytes": 931,
+      "sha256": "f7c7c2e6eb9ef1992380f605afcda599e7cccbbd925956132d91ac585b31b2fc"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/original-count-response.html",
+      "bytes": 41,
+      "sha256": "d110bed49ce5c04505eba11c314a48b8d6615417ab68e11882526aaabe0a9487"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/sources.json",
+      "bytes": 2155,
+      "sha256": "353b4fac9e1f2cecd694aef14a0e41ab468c75bbe6cd13fb7b7d2ed4ef0dc60f"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/inputs/303d-2024-publisher-pdf-table-text.json",
+      "bytes": 688155,
+      "sha256": "9be7679b79ca2a8a4d4d21227ad57371b88fd6082e8b29c7efc6d9a18ab0edce"
+    },
+    {
+      "path": "OPEN_SOURCE_SCOPE.html",
+      "bytes": 6228297,
+      "sha256": "51d1779036aa20282ccc972c085c98f013d3ade10c5a8d0f1091120632e3c4db"
+    }
+  ]
+}

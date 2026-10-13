@@ -28,6 +28,13 @@ SHARED = ("operator/server.py", "operator/web/app.mjs",
           "operator/web/index.html", "model/portable.py")
 
 
+def component_inventory(root, *, allow_embedded=False):
+    helper = runpy.run_path(str(Path(__file__).resolve().parents[1]
+                                 / "source_tools/application_components.py"),
+                            run_name="_application_component_closure")
+    return helper["inspect_directory"](root, required=True, allow_embedded=allow_embedded)
+
+
 def sha(body):
     return hashlib.sha256(body).hexdigest()
 
@@ -53,10 +60,21 @@ def owned_inventory(root):
         if path.is_symlink():
             raise ValueError("Application source contains a file alias: " + str(relative))
         if path.is_file():
-            body = path.read_bytes()
+            digest = hashlib.sha256()
+            size = 0
+            with path.open("rb") as stream:
+                first = os.fstat(stream.fileno())
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(block)
+                    size += len(block)
+                last = os.fstat(stream.fileno())
+            fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+            if (any(getattr(first, field) != getattr(last, field) for field in fields)
+                    or size != first.st_size):
+                raise ValueError("Application source changed while being inventoried: " + str(relative))
             entries[relative.as_posix()] = {
-                "bytes": len(body), "sha256": sha(body),
-                "mode": "100755" if path.stat().st_mode & 0o111 else "100644",
+                "bytes": size, "sha256": digest.hexdigest(),
+                "mode": "100755" if first.st_mode & 0o111 else "100644",
             }
     return entries
 
@@ -245,7 +263,40 @@ def compose(root, records=None):
             ("operator/web/app.mjs", investigations["patch_app"]),
         ], "Native Investigations and scientific interpretation", records)
     registered_desks_join(root, records)
+    context_desks_join(root, records)
+    continuity_join(root, records)
     return records
+
+
+def continuity_join(root, records):
+    """Compose the complete continuity family through its original installers."""
+    if not (root / "operator/extensions/project-continuity.json").is_file():
+        return
+    required = (
+        "operator/project_continuity.py",
+        "operator/extension_modules/project_continuity.py",
+        "operator/project_transfer.py",
+        "operator/extensions/project-transfer.json",
+        "model/project_transfer.py",
+        "model/project_transfer_workspace.py",
+        "model/project_transfer_install.py",
+        "source_tools/install_project_continuity.py",
+        "source_tools/apply_dependency_startup.py",
+    )
+    missing = [name for name in required if not (root / name).is_file()]
+    if missing:
+        raise ValueError("Complete project continuity source is missing: " + ", ".join(missing))
+    transport = module(root, "model/project_transfer_install.py")
+    source = (root / "operator/server.py").read_text("utf-8")
+    if not transport["registry_registration"](root, source):
+        raise ValueError("Complete project continuity requires the maintained transfer descriptor and original shared provider.")
+    apply_function(root, [
+        ("operator/server.py", transport["registry_patch"]),
+    ], "Single registered original transfer provider", records)
+    result = module(root, "source_tools/install_project_continuity.py")["apply"](root)
+    records.append({"component": "Complete project archive scope", "result": result})
+    result = module(root, "source_tools/apply_dependency_startup.py")["apply"](root)
+    records.append({"component": "Dependency-aware original extension startup", "result": result})
 
 
 def registered_desks_join(root, records):
@@ -273,6 +324,8 @@ def registered_desks_join(root, records):
                    "model/calibration.py", "model/CALIBRATION.md",
                    "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md",
                    "model/calibration_maps.py", "model/CALIBRATION_MAPS.md",
+                   "model/calibration_review.py", "model/CALIBRATION_REVIEW.md",
+                   "operator/web/calibration_review.mjs",
                    "operator/calibration.py", "operator/CALIBRATION.md",
                    "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs",
                    "operator/web/calibration.css", "operator/extensions/calibration.json")
@@ -312,9 +365,248 @@ def registered_desks_join(root, records):
             raise ValueError("Select the original annual-reference descriptor")
         # The maintained registry discovers this received descriptor. Its provider
         # uses the original queue, SourcePreparation roots, uploads and file tickets.
+        if descriptor.get("version") == "2":
+            complete("Southeast annual reference source", (
+                "source/usgs-southeast-sparrow-2012/nitrogen-calibration.json",
+                "source/usgs-southeast-sparrow-2012/phosphorus-calibration.json",
+                "source/usgs-southeast-sparrow-2012/sediment-calibration.json",
+                "source/usgs-southeast-sparrow-2012/P9A682GW-original-metadata.xml",
+                "source/usgs-southeast-sparrow-2012/service-definition.json",
+                "source/usgs-southeast-sparrow-2012/flowline-definition.json",
+                "source/usgs-southeast-sparrow-2012/reach-crosswalk-1.json",
+                "source/usgs-southeast-sparrow-2012/reach-crosswalk-2.json",
+                "source/usgs-southeast-sparrow-2012/reach-crosswalk-3.json",
+                "source/usgs-southeast-sparrow-2012/reach-crosswalk-4.json",
+                "source/usgs-southeast-sparrow-2012/reach-crosswalk-5.json",
+                "source/usgs-southeast-sparrow-2012/nldi/comid-6280111.json",
+                "source/usgs-southeast-sparrow-2012/nldi/basin-comid-6280111.json",
+                "source/usgs-southeast-sparrow-2012/nldi/comid-6269342.json",
+                "source/usgs-southeast-sparrow-2012/nldi/basin-comid-6269342.json",
+                "source/usgs-southeast-sparrow-2012/nldi/comid-11730084.json",
+                "source/usgs-southeast-sparrow-2012/nldi/basin-comid-11730084.json",
+                "source/usgs-southeast-sparrow-2012/nldi/comid-22724211.json",
+                "source/usgs-southeast-sparrow-2012/nldi/basin-comid-22724211.json",
+                "source_tools/sparrow_reference.py",
+                "source_tools/SPARROW_REFERENCE.md",
+                "source/usgs-southeast-sparrow-2012/nldi/comid-22726623.json",
+                "source/usgs-southeast-sparrow-2012/nldi/basin-comid-22726623.json",
+                "source/usgs-southeast-sparrow-2012/upper-savannah-all-targets-selection.json",
+                "source/usgs-southeast-sparrow-2012/upper-savannah-tributaries-selection.json",
+                "source/usgs-southeast-sparrow-2012/geometry-review.json",
+            ))
         records.append({"component": "Original annual references",
                         "registration": "maintained extension registry",
                         "paths": list(annual)})
+
+
+def context_desks_join(root, records):
+    """Join complete original study and geography sources to the maintained host."""
+    def complete(label, paths):
+        present = [(root / name).is_file() for name in paths]
+        if not any(present):
+            return False
+        missing = [name for name, exists in zip(paths, present) if not exists]
+        if missing:
+            raise ValueError(label + " source cohort is incomplete: " + ", ".join(missing))
+        return True
+
+    def manifest(relative):
+        path = root / relative
+        document = json.loads(path.read_text("utf-8-sig"))
+        if document.get("schema") != "upstate.sources/v1" or not document.get("entries"):
+            raise ValueError("Receive the populated original source manifest: " + relative)
+        members = {}
+        for entry in document["entries"]:
+            for item in (entry, *entry.get("companions", [])):
+                name = item.get("path")
+                if not isinstance(name, str) or not name or "\\" in name or "\0" in name:
+                    raise ValueError("The original manifest has an invalid member: " + relative)
+                original = path.parent / name
+                resolved = original.resolve(strict=True)
+                if not resolved.is_relative_to(root.resolve()):
+                    raise ValueError("Source member leaves the complete application: " + relative)
+                current = root
+                for part in original.relative_to(root).parts:
+                    current = current / part
+                    if current.is_symlink():
+                        raise ValueError("Source member uses a filesystem alias: " + str(original))
+                if not resolved.is_file():
+                    raise ValueError("Source member is not an ordinary file: " + str(original))
+                body = resolved.read_bytes()
+                if item.get("bytes") is not None and len(body) != item["bytes"]:
+                    raise ValueError("Original source member length differs: " + str(original))
+                if item.get("sha256") is not None and sha(body) != item["sha256"]:
+                    raise ValueError("Original source member hash differs: " + str(original))
+                key = resolved.relative_to(root.resolve()).as_posix()
+                members[key] = {"path": key, "bytes": len(body), "sha256": sha(body)}
+        return {"path": relative, "sha256": sha(path.read_bytes()),
+                "entries": len(document["entries"]), "members": len(members),
+                "source_bytes": sum(item["bytes"] for item in members.values())}
+
+    design_path = "operator/install_conservation_design.py"
+    namespace_helper = None
+    if (root / design_path).is_file():
+        namespace_helper = module(root, design_path)
+        if complete("Scenario design", namespace_helper["FILES"]):
+            result = namespace_helper["install"](root, root)
+            records.append({"component": "Scenario design", "result": result})
+
+    water_path = "operator/install_receiving_waters.py"
+    if (root / water_path).is_file():
+        complete("Receiving waters", (
+            "docs/receiving_water_catalog.md",
+            "model/RECEIVING_WATERS.md",
+            "model/receiving_water_cli.py",
+            "model/receiving_water_delivery.py",
+            "model/receiving_water_journey.py",
+            "model/receiving_water_spatial.py",
+            "model/receiving_waters.py",
+            "operator/RECEIVING_WATERS_OPERATOR.md",
+            "operator/extensions/receiving-waters.json",
+            "operator/install_receiving_waters.py",
+            "operator/receiving_water_actions.py",
+            "operator/receiving_water_browser.mjs",
+            "operator/receiving_water_operate.py",
+            "operator/receiving_waters.extension.json",
+            "operator/web/receiving_water_spatial.mjs",
+            "operator/web/receiving_waters.css",
+            "operator/web/receiving_waters.mjs",
+            "operator/web/receiving_waters_extension.mjs",
+            "source/water_context/20261012/public-water/README.md",
+            "source/water_context/20261012/public-water/metadata/public-water-0.json",
+            "source/water_context/20261012/public-water/metadata/public-water-2.json",
+            "source/water_context/20261012/public-water/raw/public-intakes.esri.json",
+            "source/water_context/20261012/public-water/raw/scdes-arjws-prwd-source-water-protection-original.json",
+            "source/water_context/20261012/public-water/receiving-waters.public-spec.json",
+            "source/water_context/20261012/public-water/sources.public-native.json",
+            "source_tools/PUBLIC_SOURCE_WATER_NATIVE.md",
+            "source_tools/prepare_public_source_water.py",
+            "source_tools/receiving_water_catalog.py",
+            "source_tools/receiving_water_selection.schema.json",
+        ))
+        water = module(root, water_path)
+        result = water["install"](root)
+        records.append({"component": "Receiving waters", "result": result})
+
+    study_path = "install_published_studies.py"
+    if (root / study_path).is_file():
+        study = module(root, study_path)
+        required = tuple(study["CODE_FILES"]) + (
+            "measurement_workspace/__init__.py",
+            "observations/eighteenmile_2023/study.json",
+            "observations/eighteenmile_2023/model-sources.json",
+        )
+        complete("Published studies", required)
+        root_manifests = (
+            "eighteenmile_chlorophyll_reconciled.sources.json",
+            "eighteenmile_lake_observation_report.sources.json",
+            "eighteenmile_lake_paired_analysis.sources.json",
+            "eighteenmile_lake_microcystin_reconciliation.sources.json",
+        )
+        data_manifests = (
+            "model-sources.json", "wqp/flow-context-sources.json",
+            "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json",
+            "figures/model-sources.json",
+        )
+        manifests = list(root_manifests) + [
+            "observations/eighteenmile_2023/" + name for name in data_manifests]
+        source_records = [manifest(name) for name in manifests if (root / name).is_file()]
+        result = subprocess.run(
+            [sys.executable, "-B", str(root / study_path), "--application", str(root)],
+            cwd=root, capture_output=True, text=True, check=True)
+        records.append({"component": "Published studies", "result": json.loads(result.stdout),
+                        "original_source_manifests": source_records})
+
+    station_path = "operator/install_station_geography.py"
+    if (root / station_path).is_file():
+        station = module(root, station_path)
+        complete("Station geography", station["FILES"])
+        source_records = []
+        assessment = "source/station-assessment-context/sources.json"
+        if (root / assessment).is_file():
+            source_records.append(manifest(assessment))
+        result = station["install"](root, root)
+        records.append({"component": "Station geography", "result": result,
+                        "original_source_manifests": source_records})
+
+    soil = (
+        "source_tools/soil_sources.py", "source_tools/soil_region.py",
+        "source_tools/soil_coverage.py", "source_tools/SOIL_SOURCE.md",
+        "source_tools/SOIL_REGION.md", "source_tools/SOIL_COVERAGE.md",
+        "operator/regional_soil.py", "operator/REGIONAL_SOIL_DESK.md",
+        "operator/extensions/regional-soil.json", "operator/web/regional_soil.mjs",
+        "source/capture_upstream_network.py",
+        "source/soil-interpretation-20261012/soil-erodibility-rule-form.body",
+        "source/soil-interpretation-20261012/soil-erodibility-rule-form.capture.json",
+    )
+    if (root / "operator/extensions/regional-soil.json").is_file():
+        complete("Regional soil", soil)
+        descriptor = json.loads((root / "operator/extensions/regional-soil.json").read_text("utf-8"))
+        if descriptor.get("schema") != "upstate.operator-extension/v1" or descriptor.get("id") != "regional-soil":
+            raise ValueError("Receive the maintained Regional soil descriptor")
+        records.append({"component": "Regional soil",
+                        "registration": "maintained extension registry", "paths": list(soil)})
+
+    context_path = "source/install_observed_context.py"
+    if (root / context_path).is_file():
+        complete("Original observed measurements", (
+            context_path, "source/import_observed_context.py",
+            "source/OBSERVED_CONTEXT.md", "source/observed_context_patch.json",
+            "operator/web/observed_series.mjs",
+        ))
+        context = module(root, context_path)
+        result = context["install"](
+            root, root / "source/observed-context-install.json")
+        records.append({"component": "Original observed measurements", "result": result})
+
+    observed = "source_tools/receive_observed_context.py"
+    if (root / observed).is_file():
+        complete("Observed regional context", (
+            observed, "source_tools/OBSERVED_CONTEXT.md",
+            "source_tools/operate_assessment_context.py",
+            "source_tools/prepare_public_source_water.py",
+            "model/receiving_waters.py",
+            "assessment/operate_assessment_maps.py",
+            "source/water_context/20261012/public-water/receiving-waters.public-spec.json",
+        ))
+        names = (
+            "assessment/geography-model-sources.json",
+            "observations/observed_hydrology_20261013/model-sources.json",
+            "observations/eighteenmile_2023/model-sources.json",
+            "source/water_context/20261012/public-water/sources.public-native.json",
+        )
+        nutrient = "observations/observed_hydrology_20261013/nutrient_flow_contrasts/model-sources.json"
+        if (root / nutrient).is_file():
+            names += (nutrient,)
+        records.append({"component": "Observed regional context",
+                        "receiver": observed,
+                        "original_source_manifests": [manifest(name) for name in names]})
+
+    # Use the maintained collector composition once on the actual receiving
+    # source. Newer assemblers read these names from portable; older complete
+    # source editions keep their original literal inventory.
+    directories = tuple(name for name in (
+        "scenario-design", "measurement_workspace", "observations",
+        "assessment", "source_data", "wqp", "docs") if (root / name).is_dir())
+    if directories:
+        if namespace_helper is None:
+            raise ValueError("Receive the maintained source inventory installer")
+        names = ["model/portable.py", "source_tools/application_assembly.py"]
+        original = {name: (root / name).read_text("utf-8")
+                    for name in names if (root / name).is_file()}
+        proposed = namespace_helper["inventory_sources"](original, directories=directories)
+        changes = []
+        for name, text in proposed.items():
+            ast.parse(text, filename=name)
+            if (root / name).read_text("utf-8") != original[name]:
+                raise ValueError("Application source collector changed during composition: " + name)
+            if text != original[name]:
+                write(root / name, text)
+                changes.append({"path": name, "before": sha(original[name].encode("utf-8")),
+                                "after": sha(text.encode("utf-8"))})
+        records.append({"component": "Complete received source inventories",
+                        "directories": list(directories), "changes": changes})
+
 
 
 def guided_join(root, records):
@@ -362,7 +654,43 @@ def check_sources(root):
     return {"python_modules": python, "javascript": javascript}
 
 
+def archive_record(path):
+    """Describe a completed ZIP without loading the compressed payload in RAM."""
+    digest = hashlib.sha256()
+    size = 0
+    with path.open("rb") as stream:
+        before = os.fstat(stream.fileno())
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+            size += len(block)
+        after = os.fstat(stream.fileno())
+    identity = lambda info: (info.st_dev, info.st_ino, info.st_size,
+                             info.st_mtime_ns, info.st_ctime_ns)
+    if identity(before) != identity(after) or size != before.st_size:
+        raise ValueError("Application archive changed while its identity was recorded")
+    return {"path": str(path), "bytes": size, "sha256": digest.hexdigest()}
+
+
+def same_archive_members(current, proposed):
+    """Compare original uncompressed members with bounded working memory."""
+    names = current.namelist()
+    if names != proposed.namelist():
+        return False
+    for name in names:
+        if current.getinfo(name).file_size != proposed.getinfo(name).file_size:
+            return False
+        with current.open(name) as left, proposed.open(name) as right:
+            while True:
+                first, second = left.read(1024 * 1024), right.read(1024 * 1024)
+                if first != second:
+                    return False
+                if not first:
+                    break
+    return True
+
+
 def archive_application(root, destination):
+    component_inventory(root)
     destination = Path(destination).absolute()
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
@@ -376,18 +704,18 @@ def archive_application(root, destination):
                         part.startswith(".") or part == "__pycache__"
                         for part in path.relative_to(root).parts):
                     archive.write(path, "upper-savannah-application/" + path.relative_to(root).as_posix())
-        data = temporary.read_bytes()
         if destination.exists():
             # Compressed transport can differ across zlib versions. Existing
             # output is compared by its complete retained uncompressed members.
             with zipfile.ZipFile(destination) as current, zipfile.ZipFile(temporary) as proposed:
-                if current.namelist() != proposed.namelist() or any(
-                        current.read(name) != proposed.read(name) for name in current.namelist()):
+                if not same_archive_members(current, proposed):
                     raise ValueError("Another complete application owns " + str(destination))
-            data = destination.read_bytes()
-        else:
-            os.link(temporary, destination)
-        return {"path": str(destination), "bytes": len(data), "sha256": sha(data)}
+            return archive_record(destination)
+        record = archive_record(temporary)
+        with temporary.open("rb") as stream:
+            os.fsync(stream.fileno())
+        os.link(temporary, destination)
+        return {**record, "path": str(destination)}
     finally:
         if temporary:
             temporary.unlink(missing_ok=True)
@@ -400,13 +728,16 @@ def install(source, output, archive):
     if output == source or output.is_relative_to(source) or source.is_relative_to(output):
         raise ValueError("Choose an independent receiving directory")
     original = owned_inventory(source)
+    source_components = component_inventory(source, allow_embedded=True)
     source_identity = identity(original)
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
         marker = json.loads((output / RECORD).read_text("utf-8"))
         if marker.get("source_sha256") != source_identity or marker.get("installed_files") != owned_inventory(output):
             raise ValueError("The existing receiving edition has different source; choose its own output directory")
-        result = {"state": "current", "application": str(output), "source_sha256": source_identity}
+        installed_components = component_inventory(output)
+        result = {"state": "current", "application": str(output), "source_sha256": source_identity,
+                  "component_inventory": installed_components}
         if archive:
             result["archive"] = archive_application(output, archive)
         return result
@@ -418,6 +749,9 @@ def install(source, output, archive):
     try:
         shutil.copytree(source, root, ignore=shutil.ignore_patterns(
             "__pycache__", ".git", ".venv", "venv", "node_modules", "*.pyc", "*.pyo", "*.lock"))
+        phase = "verify_copied_source"
+        if owned_inventory(root) != original:
+            raise ValueError("Copied application source differs from its retained inventory")
         sys.path[:0] = [str(root / "operator"), str(root)]
         phase = "compose_application"
         compose(root, steps)
@@ -425,10 +759,15 @@ def install(source, output, archive):
         inputs = restore_inputs(root)
         phase = "check_application_sources"
         validation = check_sources(root)
+        installed_components = component_inventory(root)
+        validation["component_inventory"] = installed_components
+        if installed_components["catalog_sha256"] != source_components["catalog_sha256"]:
+            raise ValueError("A component installer changed the selected edition catalogue")
         if owned_inventory(source) != original:
             raise ValueError("The retained input source changed during installation")
         record = {"schema": "upstate.cumulative-installation/v1", "operation_id": OPERATION,
                   "source_sha256": source_identity, "steps": steps, "restored_inputs": inputs,
+                  "source_component_inventory": source_components,
                   "validation": validation, "installed_files": owned_inventory(root)}
         write(root / RECORD, json.dumps(record, ensure_ascii=False, indent=2) + "\n")
         phase = "publish_application"
@@ -444,6 +783,8 @@ def install(source, output, archive):
                    "retained_stage": str(staging),
                    "retained_application": str(root) if root.is_dir() else None,
                    "completed_steps": steps, "traceback": traceback.format_exc()}
+        if getattr(error, "component_closure", None) is not None:
+            details["component_inventory"] = error.component_closure
         try:
             retained = owned_inventory(root) if root.is_dir() else {}
             details["changed_files"] = [
@@ -488,6 +829,8 @@ def main(argv=None):
         if details is None:
             details = {"state": "error", "error": type(error).__name__,
                        "message": str(error), "traceback": traceback.format_exc()}
+        if getattr(error, "component_closure", None) is not None:
+            details["component_inventory"] = error.component_closure
         print(json.dumps(details, ensure_ascii=False), file=sys.stderr)
         return 1
 

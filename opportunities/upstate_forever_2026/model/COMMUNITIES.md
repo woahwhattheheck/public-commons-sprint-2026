@@ -121,3 +121,62 @@ If the original domain archive has been received locally but its source collecti
 To attach existing model results, pass `--baseline-run ACTUAL_BASELINE_ID` and repeat `--scenario-run ACTUAL_ALTERNATIVE_ID` as needed. The Workspace applies its existing grid and model-context checks.
 
 The original WBD capture remains in its published EPSG:3857 source CRS. The walkthrough retains its geometry and attributes directly. Population and household values remain the original whole-block-group context described by the RFP table.
+
+### Acquire the public focus geometry and open a working project
+
+When the original study workspace is not present on the receiving host, the
+maintained public-source entrypoint can create an actual working project, acquire
+the four original RFP HUC12 features directly from the authoritative USGS WBD
+service, and run the same saved-plan CSV workflow:
+
+```sh
+python operator/community_public_source.py \
+  --workspace /actual/upper-savannah-community-workspace \
+  --create-workspace \
+  --capture-output /actual/retained-usgs-four-focus \
+  --output /actual/community-csv-output
+```
+
+Omit `--create-workspace` to use an existing project. The capture reuses the
+maintained `source/capture_upstream_network.py` response collector. It retains the
+complete native Esri JSON response as gzip, the exact request URL, HTTP response
+metadata, acquisition time, encoded and decoded hashes, and the original HUC12
+and object-ID fields. The response must contain exactly the four RFP watersheds:
+030601010703, 030601010704, 030601020502 and 030601020507, each with native polygon
+geometry and a published spatial reference.
+
+The fresh source edition uses its actual acquisition date and decoded SHA.
+The source manifest and all response companions are imported through the normal
+Workspace importer. The Community plan records that exact source collection
+alongside the retained RFP demographic table, and the exported workflow includes
+the complete unchanged native geometry file and all original source identities.
+The proposed ARJWS programme and its CSV revision then use the same functions and
+CLI as an existing retained project. Existing model runs can be bound with
+`--baseline-run` and repeatable `--scenario-run` options.
+
+The walkthrough also accepts `--geometry-source-id EXACT_ID` together with
+`--geometry-manifest /actual/sources.json` for an explicitly selected fresh WBD
+edition. Its default still reuses the original upstream-domain collection or the
+retained four-focus edition when available.
+
+## Native coverage in report editions
+
+The printable HTML, editable Markdown and browser plan distinguish two spatial
+supports: each original run's reporting-area total and each retained comparison's
+common valid cells. The report displays original valid-cell counts and pixel area
+in hectares when those fields exist. The scientific-context CSV retains the same
+coverage fields, units, run/grid/profile/scenario identifiers and comparison ID.
+Missing coverage metadata remains unspecified.
+
+Community and intervention filters select whole source block groups. They leave
+the original model reporting area unchanged. A native alternative-minus-baseline
+difference is summed on cells valid in both runs; it can differ from subtracting
+the two separately reported full-run totals. Negative change means lower modeled
+export on that common support, and positive change means higher export. A changed
+parameter profile remains a sensitivity comparison. These selections provide
+scientific context alongside the communities.
+
+Rebuilding the same saved plan with report format version 3 creates a new report
+edition while preserving earlier reports. The original intervention CSV import,
+plan revision lineage, received CSV and import record remain in their existing
+report and portable Workspace paths.

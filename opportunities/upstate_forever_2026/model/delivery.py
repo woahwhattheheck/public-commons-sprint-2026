@@ -23,8 +23,8 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_EDITION = "2026-10-13-integrated-report-2"
-DELIVERY_FORMAT_VERSION = "retained-grid-study-analysis-economic-report-9"
+DELIVERY_EDITION = "2026-10-13-integrated-native-study-report-11"
+DELIVERY_FORMAT_VERSION = "retained-grid-study-observed-client-report-11"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -607,6 +607,7 @@ def build(workspace, selection):
                 atomic_json(state_path, state)
             else:
                 verify_file(directory, state["files"]["native_grid_record"])
+            working_relative = "working/scientific-workspace.zip"
             if not all(name in state["files"] for name in ("report", "report_html", "report_markdown", "report_data")):
                 sections = [
                     ("Study scope", [selection.get("title", workspace.project["title"]),
@@ -705,18 +706,8 @@ def build(workspace, selection):
                 if observed_product is not None:
                     sections.extend(observed_product["sections"])
                 sections.extend(scientific_report.economic_coverage_sections(economic_decision))
-                sections.extend(scientific_report.delivery_sections(state))
-                if "working_archive" not in state["files"]:
-                    # The final package target is fixed, but its actual descriptor is
-                    # registered only after these final report bytes enter the snapshot.
-                    sections.append(("Complete scientific workspace", [
-                        "The completed delivery includes the original application, inputs, "
-                        "native outputs and these reports at the package-relative link below. "
-                        "Keep the extracted delivery folder structure when opening it.",
-                        scientific_report.link(
-                            "Open complete scientific workspace",
-                            "working/scientific-workspace.zip"),
-                    ]))
+                sections.extend(scientific_report.delivery_sections(
+                    state, working_archive_path=working_relative))
                 target = directory / "report.pdf"
                 scientific_report.report_pdf(target, selection.get("title", workspace.project["title"]),
                                              sections, contact=contact, source_records=records)
@@ -752,12 +743,12 @@ def build(workspace, selection):
                     observation_results=observation_results, comparison=comparison,
                     scenario_summary=summary,
                     additional_sections=receiving_water_delivery.report_section(water_product),
-                    output_stem="client-report", file_key_prefix="client_")
+                    output_stem="client-report", file_key_prefix="client_",
+                    working_archive_path=working_relative)
                 for name, relative in generated.items():
                     state["files"][name] = describe_file(directory, directory / relative)
                 state["client_companion_edition"] = client_report.REPORT_EDITION
                 atomic_json(state_path, state)
-            working_relative = "working/scientific-workspace.zip"
             archive_roles = {"working_archive", "manifest", "package_index", "delivery_archive"}
             manifest = {"schema": native_study.SCHEMA if study_mode else "upstate-ec-sdc-2026/delivery-v1",
                 "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
@@ -771,6 +762,7 @@ def build(workspace, selection):
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
                 "report_edition": CLIENT_REPORT_EDITION,
                 "report_renderer_version": scientific_report.REPORT_VERSION,
+                "client_companion_edition": client_report.REPORT_EDITION,
                 "delivery_edition": DELIVERY_EDITION,
                 "project_assets": [state["files"]["combined_priority"]["path"],
                                    working_relative,
@@ -794,6 +786,9 @@ def build(workspace, selection):
                 "edition": CLIENT_REPORT_EDITION, "renderer": scientific_report.REPORT_VERSION,
                 **{name: state["files"][name]["path"] for name in
                    ("report", "report_html", "report_markdown", "report_data")}}
+            manifest["client_companion"] = {
+                "edition": client_report.REPORT_EDITION,
+                **{name: state["files"][name]["path"] for name in companion_keys}}
             if study_mode:
                 manifest["delivery_mode"] = "native_study"
                 manifest["native_study"] = state["native_study"]
@@ -804,6 +799,9 @@ def build(workspace, selection):
                 report_path = state["files"][report_name]["path"]
                 if report_path not in manifest["project_assets"]:
                     manifest["project_assets"].append(report_path)
+            # A stable, unique inventory also keeps retries of the final snapshot identical.
+            manifest["project_assets"] = sorted(set(
+                manifest["project_assets"] + [atlas_browser.BROWSER_PATH]))
             # The browser includes the final scientific/client/analysis inventory.
             # Omit derived package descriptors from its view: a previous working ZIP
             # checksum would change this captured HTML again on every retry.
@@ -821,7 +819,7 @@ def build(workspace, selection):
             working.parent.mkdir(parents=True, exist_ok=True)
             snapshot = {
                 **{name: item for name, item in state["files"].items()
-                   if name not in archive_roles},
+                   if name not in archive_roles and item["path"] != working_relative},
                 "manifest": state["files"]["manifest"],
                 **{"map_" + name: item for name, item in state["maps"].items()}}
             registered = state["files"].get("working_archive")

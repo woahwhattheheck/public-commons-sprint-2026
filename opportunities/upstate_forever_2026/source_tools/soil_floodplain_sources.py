@@ -19,7 +19,7 @@ import sys
 
 from model import conservation, keowee_priority, rasters
 from model.common import atomic_json, atomic_bytes, digest, describe_file, held, identifier, now, read_json
-from source_tools import parcel_criteria
+from source_tools import parcel_criteria, source_response_reuse
 
 SCHEMA = "upstate.soil-floodplain-selection/v1"
 VERSION = 1
@@ -195,12 +195,13 @@ def _esri_mask(row):
 
 
 class SDA:
-    def __init__(self, root, retry_failed):
+    def __init__(self, root, retry_failed, response_reuse=None):
         from source_tools.soil_sources import Sda
         # Reuse the current original soil client and its native column decoder.
         # Completed response bodies are verified and reused; transient attempts
         # follow that client's preserved status/Retry-After rules.
-        self.client = Sda(root / "sda", resume=True)
+        self.client = (response_reuse.sda(root / "sda") if response_reuse is not None
+                       else Sda(root / "sda", resume=True))
 
     def query(self, name, sql):
         return self.client.query("hydric/" + name, sql, maximum_bytes=64 * 1024 * 1024)
@@ -326,9 +327,15 @@ def _capture_polygons(request, geometry, directory, progress):
     client = Sda(capture_root, resume=True)
     destination = directory / "original-geometry-capture"
     destination.mkdir(parents=True, exist_ok=True)
-    copyfile(capture_root / "geometry-capture.json", destination / "geometry-capture.json")
+    def copy_original(source, target):
+        # A relocated same-edition acquisition can already own these exact
+        # originals; reading them still follows the native response validation.
+        if source.resolve() != target.resolve():
+            copyfile(source, target)
+
+    copy_original(capture_root / "geometry-capture.json", destination / "geometry-capture.json")
     if (capture_root / "plan.json").is_file():
-        copyfile(capture_root / "plan.json", destination / "plan.json")
+        copy_original(capture_root / "plan.json", destination / "plan.json")
     pages = [(tile, page) for tile in captured["tiles"] for page in tile.get("pages", [])]
     output, native_keys, copied = [], set(), set()
     for index, (tile, page) in enumerate(pages):
@@ -381,7 +388,7 @@ def _capture_polygons(request, geometry, directory, progress):
                 if original.is_file():
                     target = destination / "original" / name / original.relative_to(original_folder)
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    copyfile(original, target)
+                    copy_original(original, target)
             copied.add(name)
         progress("reuse_original_soil_geometry", index + 1, len(pages),
                  {"polygons": len(output), "mapunits": len(native_keys)})
@@ -578,11 +585,15 @@ def _soil_polygons(workspace, request, geometry, directory, sda, progress):
     }
     return rows, source
 
-def _soils(workspace, request, geometry, directory, retry_failed, progress):
+def _soils(workspace, request, geometry, directory, retry_failed, progress, response_reuse=None):
     folder = directory / "soils"
     folder.mkdir(parents=True, exist_ok=True)
-    sda = SDA(folder, retry_failed)
+    sda = SDA(folder, retry_failed, response_reuse)
     polygons, source = _soil_polygons(workspace, request, geometry, folder, sda, progress)
+    if source.get("mode") == "retained_original_sda_wkb" and request.get("_retained_capture_root"):
+        # Physical resolution is a runtime concern; original source metadata
+        # continues to name the exact capture selected by this acquisition.
+        source["capture_root"] = request["_retained_capture_root"]
     keys = sorted({_key(row["properties"]["mukey"]) for row in polygons}, key=int)
     attributes, components = {}, {}
     for start in range(0, len(keys), 100):
@@ -726,7 +737,7 @@ def _field_name(fields, name, *, required=True):
     return None
 
 
-def _floodplains(workspace, request, geometry, directory, retry_failed, progress):
+def _floodplains(workspace, request, geometry, directory, retry_failed, progress, response_reuse=None):
     from pyproj import CRS
     folder = directory / "floodplains"
     folder.mkdir(parents=True, exist_ok=True)
@@ -764,7 +775,11 @@ def _floodplains(workspace, request, geometry, directory, retry_failed, progress
         masks = {"reporting": [_esri_mask(row) for row in tiles]}
         atomic_json(folder / "query-masks.json", masks)
         progress("floodplain_original_capture", 0, len(tiles))
-        capture = _overlays().capture_layer(
+        collector = _overlays()
+        responses = (response_reuse.overlay(collector.OriginalResponses,
+                     folder / "original-nfhl" / "responses", uri, retry_failed)
+                     if response_reuse is not None else None)
+        capture = collector.capture_layer(
             directory, "floodplains/original-nfhl",
             {"url": uri, "title": "Original FEMA NFHL mapped flood hazard polygons",
              "role": "FEMA_FLOOD_HAZARD_AREAS", "scope": "reporting",
@@ -773,7 +788,8 @@ def _floodplains(workspace, request, geometry, directory, retry_failed, progress
                           "and original domain/source identities remain with the capture."),
              "page_size": request.get("page_size", 50)},
             masks, retry_failed=retry_failed,
-            metadata_root=Path(request["metadata_root"]).resolve() if request.get("metadata_root") else None)
+            metadata_root=Path(request["metadata_root"]).resolve() if request.get("metadata_root") else None,
+            responses=responses)
         rows, native = _native_polygon_rows(directory / capture["path"], capture["id_field"])
         fields = native["fields"]
         source = {
@@ -984,7 +1000,7 @@ def _companions(directory, folder, exclude=()):
     return result
 
 
-def _original_manifest(state, directory, completed):
+def _original_manifest(state, directory, completed, continuation_files=()):
     entries = []
     source_scope = {
         "operation_id": state["id"], "domain": state["selection"]["domain"],
@@ -1045,7 +1061,9 @@ def _original_manifest(state, directory, completed):
         "uri": "urn:upstate:soil-floodplain-source-acquisition:" + state["id"],
         "vintage": state["created_at"], "path": "selection.json",
         "sha256": _file(directory, "selection.json")["sha256"],
-        "companions": [_file(directory, "domain.geojson")],
+        "companions": [_file(directory, "domain.geojson"),
+                       *[_file(directory, path.relative_to(directory).as_posix())
+                         for path in continuation_files]],
         "scope": source_scope,
     })
     return {
@@ -1172,6 +1190,8 @@ def _implementation():
     capture_path = Path(_overlays().__file__)
     result = {
         "source_tools.soil_floodplain_sources": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "source_tools.source_response_reuse": hashlib.sha256(
+            Path(source_response_reuse.__file__).read_bytes()).hexdigest(),
         "source.capture_original_overlays": hashlib.sha256(capture_path.read_bytes()).hexdigest(),
         "source.capture_upstream_network": hashlib.sha256(
             (capture_path.parent / "capture_upstream_network.py").read_bytes()).hexdigest(),
@@ -1216,18 +1236,33 @@ def _bindings(manifest, edition_id, names):
     return result
 
 
+def _edition_metadata(workspace, result, *, implementation=None, successors=None,
+                      state=None, states=None):
+    folder = workspace.root / "soil-floodplain-sources" / identifier(result["id"])
+    state = read_json(folder / "state.json") if state is None else state
+    selected = state["selection"]
+    implementation = _implementation() if implementation is None else implementation
+    successors = source_response_reuse.children(folder.parent) if successors is None else successors
+    result = {**result, "implementation_changed": selected["implementation"] != implementation,
+              "continued_as": successors.get(result["id"], [])}
+    continuation = source_response_reuse.details(folder, state=state, states=states)
+    if continuation is not None:
+        result["continuation"] = continuation
+    return result
+
+
 def inspect(workspace, operation_id):
     key = identifier(operation_id)
     folder = workspace.root / "soil-floodplain-sources" / key
     state = read_json(folder / "state.json")
     if state["state"] == "running":
-        return _state_summary(state)
-    result_path = folder / "result.json"
-    if result_path.exists():
-        return {**read_json(result_path), "progress": state.get("progress"),
-                "updated_at": state.get("updated_at")}
-    return state
-
+        result = _state_summary(state)
+    elif (folder / "result.json").exists():
+        result = {**read_json(folder / "result.json"), "progress": state.get("progress"),
+                  "updated_at": state.get("updated_at")}
+    else:
+        result = state
+    return _edition_metadata(workspace, result, state=state)
 
 
 def _state_summary(state):
@@ -1246,13 +1281,20 @@ def _state_summary(state):
 
 def overview(workspace):
     root = workspace.root / "soil-floodplain-sources"
+    implementation = _implementation()
+    states = {
+        path.parent.name: read_json(path) for path in sorted(root.glob("*/state.json"))
+        if re.fullmatch(r"[0-9a-f]{64}", path.parent.name)
+    } if root.exists() else {}
+    successors = source_response_reuse.children(root, states=states)
     return {
         "schema": "upstate.soil-floodplain-overview/v1",
         "operations": [
-            _state_summary(read_json(folder / "state.json")) for folder in sorted(root.iterdir())
-            if folder.is_dir() and re.fullmatch(r"[0-9a-f]{64}", folder.name)
-            and (folder / "state.json").exists()
-        ] if root.exists() else [],
+            _edition_metadata(workspace, _state_summary(state),
+                              implementation=implementation, successors=successors,
+                              state=state, states=states)
+            for state in states.values()
+        ],
         "families": ["soils", "floodplains"],
         "hydric_interpretations": [
             {"id": "full", "title": "Fully hydric map units with original component confirmation", "default": True},
@@ -1261,6 +1303,134 @@ def overview(workspace):
         ],
         "references": [SDA_URI, SDA_HELP, SDA_SCHEMA, SDA_SPATIAL, HYDRIC_REFERENCE, FEMA_URI],
     }
+
+
+def _resolved_geometry_capture(workspace, selection, family):
+    """Locate the same complete original WKB capture after Workspace transfer."""
+    from urllib.parse import urlencode
+    original = selection["reused_sources"][family]
+    request = selection["request"][family]
+    root = workspace.root / "soil-floodplain-sources"
+    directory = root / digest(selection)
+    donors = source_response_reuse._lineage(root, selection)
+    candidates = [Path(request["reuse_capture_root"]).expanduser(),
+                  directory / "soils" / "original-geometry-capture",
+                  *[folder / "soils" / "original-geometry-capture" for folder, _ in donors]]
+    expected = {key: value for key, value in original.items() if key != "capture_root"}
+    seen, failures = set(), []
+    for candidate in candidates:
+        candidate = candidate.resolve()
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        try:
+            current = _capture_binding(candidate)
+            if {key: value for key, value in current.items() if key != "capture_root"} != expected:
+                continue
+            captured = read_json(candidate / "geometry-capture.json")
+            for tile in captured["tiles"]:
+                for page in tile.get("pages", []):
+                    name, sql = page.get("request"), page.get("sql")
+                    if not isinstance(name, str) or not name or not isinstance(sql, str) or not sql:
+                        raise ValueError("An original geometry page has no retained request and SQL")
+                    folder = source_response_reuse._safe(candidate / "original",
+                                                         candidate / "original" / name)
+                    fields = {"QUERY": sql, "FORMAT": "JSON+COLUMNNAME+METADATA"}
+                    payload = urlencode(sorted(fields.items())).encode("utf-8")
+                    intent = {
+                        "schema": "upstate.sda-request/v1", "url": SDA_URI, "method": "POST",
+                        "content_type": "application/x-www-form-urlencoded", "fields": fields,
+                        "request_sha256": hashlib.sha256(payload).hexdigest(),
+                        "maximum_response_bytes": 64 * 1024 * 1024,
+                    }
+                    if read_json(folder / "request.json") != intent:
+                        raise ValueError("An original geometry page selects another native query")
+                    receipts = sorted(folder.glob("[0-9][0-9][0-9][0-9].capture.json"))
+                    if not receipts:
+                        raise ValueError("An original geometry page has no retained response")
+                    receipt = read_json(receipts[-1])
+                    if (receipt.get("state") != "complete" or receipt.get("status") != 200
+                            or any(receipt.get(key) != value for key, value in intent.items()
+                                   if key != "schema")):
+                        raise ValueError("An original geometry page needs its complete successful response")
+                    if receipt.get("receipt_file") != receipts[-1].name:
+                        raise ValueError("An original geometry receipt has another file identity")
+                    stored = receipt.get("stored_file")
+                    if not isinstance(stored, str) or Path(stored).name != stored:
+                        raise ValueError("An original geometry body has another file identity")
+                    body = source_response_reuse._safe(folder, folder / stored)
+                    source_response_reuse._verify(body, receipt.get("stored_bytes"),
+                                                  receipt.get("stored_sha256"))
+                    source_response_reuse._gzip_identity(body, receipt.get("bytes"), receipt.get("sha256"))
+            return candidate
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            failures.append(str(error))
+    detail = "; ".join(dict.fromkeys(failures))[:1000]
+    raise ValueError("The retained acquisition needs its byte-identical complete original SDA geometry capture. "
+                     "Reopen a Workspace containing soils/original-geometry-capture and all original pages"
+                     + (": " + detail if detail else "."))
+
+
+def _retained_domain(workspace, selection, resolved_captures=None):
+    from shapely import wkt
+    request = selection["request"]
+    geometry = wkt.loads(selection["query_domain_wkt"])
+    if hashlib.sha256(geometry.wkb).hexdigest() != selection["query_domain_sha256"]:
+        raise ValueError("The retained source acquisition query geometry differs")
+    _, current_domain = _domain(workspace, request)
+    if current_domain != selection["domain"]:
+        raise ValueError("The retained source acquisition domain differs")
+    for family, binding in selection["reused_sources"].items():
+        if binding.get("mode") == "retained_sda_geometry_capture":
+            resolved = _resolved_geometry_capture(workspace, selection, family)
+            if resolved_captures is not None:
+                resolved_captures[family] = resolved
+            current = {**_capture_binding(resolved), "capture_root": binding["capture_root"]}
+        else:
+            _, current = conservation._source(workspace, request[family]["reuse_source"])
+        if current != binding:
+            raise ValueError("The reused original " + family + " source edition differs")
+    return geometry
+
+
+def _publish_acquisition(workspace, directory, selection, geometry):
+    from shapely.geometry import mapping
+    # Backup holds this lock before enumerating acquisition locks. Release it
+    # before taking target/donor locks so the maintained import order is intact.
+    with held(workspace.root / ".workspace.lock", blocking=False):
+        directory.mkdir(parents=True, exist_ok=True)
+        atomic_json(directory / "selection.json", selection, immutable=True)
+        atomic_json(directory / "domain.geojson", {
+            "type": "FeatureCollection",
+            "crs": {"type": "name", "properties": {"name": "EPSG:4326"}},
+            "features": [{"type": "Feature", "id": "original-query-domain",
+                          "properties": {"source_operation_id": directory.name},
+                          "geometry": mapping(geometry)}],
+        }, immutable=True)
+
+
+def continue_capture(workspace, operation_id, *, retry_failed=False):
+    """Continue the original selection with current source tools and exact HTTP reuse.
+
+    Repeated calls from the same predecessor and current implementation select
+    the same successor. Original source choices are already resolved and are
+    never run through the new-capture automatic source picker.
+    """
+    from shapely.geometry import mapping
+    key = identifier(operation_id)
+    root = workspace.root / "soil-floodplain-sources"
+    previous = read_json(root / key / "selection.json")
+    if digest(previous) != key:
+        raise ValueError("The retained source acquisition identity differs")
+    implementation = _implementation()
+    if previous["implementation"] == implementation:
+        return capture(workspace, key, retry_failed=retry_failed)
+    geometry = _retained_domain(workspace, previous)
+    selected = {**_copy(previous), "implementation": implementation, "continued_from": key}
+    successor = digest(selected)
+    directory = root / successor
+    _publish_acquisition(workspace, directory, selected, geometry)
+    return capture(workspace, successor, retry_failed=retry_failed)
 
 
 def capture(workspace, value, *, retry_failed=False):
@@ -1273,6 +1443,7 @@ def capture(workspace, value, *, retry_failed=False):
     from model.common import verify_file
     from shapely import wkt
     from shapely.geometry import mapping
+    resolved_captures = {}
     if isinstance(value, str):
         key = identifier(value)
         directory = workspace.root / "soil-floodplain-sources" / key
@@ -1280,20 +1451,9 @@ def capture(workspace, value, *, retry_failed=False):
         if digest(selection) != key:
             raise ValueError("The retained source acquisition identity differs")
         if selection["implementation"] != _implementation():
-            raise ValueError("The source implementation changed; capture the retained request to create its current source edition")
-        geometry = wkt.loads(selection["query_domain_wkt"])
+            return continue_capture(workspace, key, retry_failed=retry_failed)
+        geometry = _retained_domain(workspace, selection, resolved_captures)
         request = selection["request"]
-        # Reopen each actual source selection; compare with the saved identities.
-        _, current_domain = _domain(workspace, request)
-        if current_domain != selection["domain"]:
-            raise ValueError("The retained source acquisition domain differs")
-        for family, binding in selection["reused_sources"].items():
-            if binding.get("mode") == "retained_sda_geometry_capture":
-                current = _capture_binding(request[family]["reuse_capture_root"])
-            else:
-                _, current = conservation._source(workspace, request[family]["reuse_source"])
-            if current != binding:
-                raise ValueError("The reused original " + family + " source edition differs")
     else:
         request, requested_retry, reuse_bindings = _source_spec(workspace, value)
         retry_failed = retry_failed or requested_retry
@@ -1307,18 +1467,10 @@ def capture(workspace, value, *, retry_failed=False):
         }
         key = digest(selection)
         directory = workspace.root / "soil-floodplain-sources" / key
-        directory.mkdir(parents=True, exist_ok=True)
-        atomic_json(directory / "selection.json", selection, immutable=True)
-        atomic_json(directory / "domain.geojson", {
-            "type": "FeatureCollection",
-            "crs": {"type": "name", "properties": {"name": "EPSG:4326"}},
-            "features": [{"type": "Feature", "id": "original-query-domain",
-                          "properties": {"source_operation_id": key},
-                          "geometry": mapping(geometry)}],
-        }, immutable=True)
+        _publish_acquisition(workspace, directory, selection, geometry)
     if not isinstance(retry_failed, bool):
         raise ValueError("retry_failed must be true or false")
-    with held(directory / ".capture.lock", blocking=False):
+    with source_response_reuse.locked(workspace, directory, selection) as response_reuse:
         state_path = directory / "state.json"
         if state_path.exists():
             state = read_json(state_path)
@@ -1336,7 +1488,7 @@ def capture(workspace, value, *, retry_failed=False):
             result = read_json(directory / "result.json")
             for descriptor in result["files"].values():
                 verify_file(workspace.root, descriptor)
-            return result
+            return _edition_metadata(workspace, result, state=state)
         state.update(state="running", updated_at=now())
         atomic_json(state_path, state)
 
@@ -1361,7 +1513,15 @@ def capture(workspace, value, *, retry_failed=False):
             progress(family, 0, 1)
             try:
                 function = _soils if family == "soils" else _floodplains
-                result = function(workspace, request[family], geometry, directory, retry_failed, progress)
+                effective = dict(request[family])
+                effective.pop("_retained_capture_root", None)
+                original_binding = selection["reused_sources"].get(family, {})
+                if original_binding.get("mode") == "retained_sda_geometry_capture":
+                    effective["_retained_capture_root"] = original_binding["capture_root"]
+                if family in resolved_captures:
+                    effective["reuse_capture_root"] = str(resolved_captures[family])
+                result = function(workspace, effective, geometry, directory, retry_failed, progress,
+                                  response_reuse=response_reuse)
                 result["captured_at"] = now()
                 _family_record(directory, family, result)
                 completed[family] = result
@@ -1377,6 +1537,11 @@ def capture(workspace, value, *, retry_failed=False):
                 }
             state["updated_at"] = now()
             atomic_json(state_path, state)
+        continuation_files = response_reuse.snapshot() if response_reuse is not None else []
+        continuation_descriptors = {
+            "continuation_" + str(index): describe_file(workspace.root, path)
+            for index, path in enumerate(continuation_files)
+        }
         status = "complete" if len(completed) == len(request["families"]) else "partial" if completed else "failed"
         if not completed:
             state.update(state=status, updated_at=now(), progress={
@@ -1389,12 +1554,15 @@ def capture(workspace, value, *, retry_failed=False):
                 "original_source_collection_id": None, "builder_sources": {}, "coverage": {},
                 "families": state["families"],
                 "files": {"selection": describe_file(workspace.root, directory / "selection.json"),
-                          "domain": describe_file(workspace.root, directory / "domain.geojson")},
+                          "domain": describe_file(workspace.root, directory / "domain.geojson"),
+                          **continuation_descriptors},
             }
             atomic_json(directory / "result.json", result)
-            return result
+            return _edition_metadata(workspace, result, state=state)
         progress("import_original_sources", len(completed), len(request["families"]))
-        original_manifest = _original_manifest(state, directory, completed)
+        original_manifest = _original_manifest(
+            state, directory, completed, continuation_files +
+            (response_reuse.unpublished_companions(completed) if response_reuse is not None else []))
         atomic_json(directory / "original-sources.json", original_manifest)
         original = workspace.import_sources(directory / "original-sources.json")
         criterion_manifest, names, coverage = _criteria_manifest(
@@ -1413,6 +1581,7 @@ def capture(workspace, value, *, retry_failed=False):
             "domain": describe_file(workspace.root, directory / "domain.geojson"),
             "original_manifest": describe_file(workspace.root, original_path),
             "criterion_manifest": describe_file(workspace.root, criterion_path),
+            **continuation_descriptors,
         }
         builder_selection = {"sources": source_bindings}
         if request.get("study_id"):
@@ -1451,7 +1620,7 @@ def capture(workspace, value, *, retry_failed=False):
                      source_collection_id=criterion["id"], original_source_collection_id=original["id"],
                      progress={"stage": status, "completed": len(completed), "total": len(request["families"])})
         atomic_json(state_path, state)
-        return result
+        return _edition_metadata(workspace, result, state=state)
 
 
 def prepare(workspace, value):
@@ -1466,7 +1635,7 @@ def parser():
     action = commands.add_parser("capture", help="Capture/import actual original source selection")
     action.add_argument("selection", type=Path)
     action.add_argument("--retry-failed", action="store_true")
-    action = commands.add_parser("resume", help="Reuse original responses and finish a retained acquisition")
+    action = commands.add_parser("resume", help="Continue the retained acquisition with current source tools and exact original responses")
     action.add_argument("operation_id")
     action.add_argument("--retry-failed", action="store_true")
     action = commands.add_parser("inspect", help="Read actual source state, bindings and coverage")
@@ -1482,7 +1651,7 @@ def main(argv=None):
     if args.command == "capture":
         result = capture(workspace, read_json(args.selection), retry_failed=args.retry_failed)
     elif args.command == "resume":
-        result = capture(workspace, args.operation_id, retry_failed=args.retry_failed)
+        result = continue_capture(workspace, args.operation_id, retry_failed=args.retry_failed)
     elif args.command == "inspect":
         result = inspect(workspace, args.operation_id)
     else:

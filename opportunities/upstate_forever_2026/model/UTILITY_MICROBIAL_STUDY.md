@@ -1,6 +1,6 @@
 # Utility-focus microbial study in the scientific Workspace
 
-The received source edition contains **730 original E. coli activities at 36 stations**, covering the 2021–2025 query period. The maintained Station geography service links those observations to their original WQP map points and, when selected, the original 217-HUC watershed domain. This receiver supplies the complete native selection, imports the source companions and saves the resulting study in the existing desk.
+The received source edition contains **730 original E. coli activities at 36 stations**, covering the 2021–2025 query period. The maintained Station geography service links those observations to their original WQP coordinate records and, when selected, the original 217-HUC watershed domain. This receiver supplies the complete native selection, imports the source companions and saves the resulting study in the existing desk.
 
 The complete manifest, raw publisher responses, reproducible Node compiler, offline map and record explorer were delivered together in [PR 2988](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2988), under source/ecoli_utility_context/20261013/.
 
@@ -54,6 +54,16 @@ utility-microbial-studies/<operation-id>/
 ~~~
 
 The receiving.json record appears when the native build completes. The Station geography engine owns the actual saved maps, report and complete portable ZIP.
+
+## Preserve the original station coordinate systems
+
+The native study reads the source's original station CSV coordinate strings. Its 34 WGS84 stations use EPSG:4326. USGS-02177000 and 21GAEPD_WQX-RV_01_266 declare NAD83 and use EPSG:4269. The maintained Station geography reader performs the CRS transformation for each source group before any original watershed membership calculation.
+
+Preparation retains two ordinary vector sources, one per declared datum. The source GeoJSON preserves the original numeric positions at the precision represented by the CSV, every original station attribute, the original coordinate strings and source row. Its `coordinate-derivation.json` records the 36 exact identifiers, original CSV body hash, fields and datum grouping. All 22 original microbial files travel as companions under `original/`, keeping the offline report and its source links intact. The native coordinate collection is recorded in `selection.microbial_context.coordinate_source_collection_id`.
+
+The complete source edition remains unchanged. Its independent offline map retains the original WQP display positions. A native study uses the datum-specific coordinate sources, so a new operation identity distinguishes this selection from an earlier common-display-point selection. Existing saved editions reopen with their own retained original selections.
+
+The native coordinate working material is retained in `utility-microbial-coordinate-sources/<identity>/`. An ordinary full Workspace backup includes this directory and the imported source objects. A repeated preparation reconstructs the same native sources from the already retained original CSV and source collection.
 
 ## Select the original watershed domain
 
@@ -132,10 +142,16 @@ The original utility-focus assignments and any subsequently selected full-domain
 
 The normal Station geography ZIP carries its selected station/result source bindings and their complete companions, including the independent original microbial explorer and all of its relative files. The generated spatial collection lets the existing GIS workflow select the mapped stations through its ordinary source catalogue. A complete Workspace backup also retains the microbial preparation/receiving folder and the native saved edition.
 
-The source edition manifest is pinned to SHA256:
+The retained predecessor source edition manifest is pinned to SHA256:
 
 ~~~text
 ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23
 ~~~
 
 Its expected original result table SHA256 is b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8; its selected original station GeoJSON SHA256 is 533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907. These are the same complete bodies delivered in the source edition.
+
+## Original comments and presentation editions
+
+The current complete source edition displays original result, activity and laboratory comments beside each result and in plot descriptions. Exactly 72 original result comments contain Information Only or the publisher's Infomation Only spelling. The original 24,000 MPN/100mL result at RV_01_14 on 24 March 2025 carries that comment about analysis after eight hours. Its value remains the publisher's measured value. The source-comments control can retain all records, exclude that explicit marker, select only that marker, or select records with any original comment. Every printed view states this choice; the selection JSON and selected original-field CSV retain it alongside the actual source identities.
+
+The source manifest declares presentation edition `20261013-comments-v2` and pins the complete predecessor at commit `817335bc6d2a9130e203a48e63ecab91e0094003`. Its 19 original data and science members are unchanged; the compiler, HTML and full companion manifest are a coordinated presentation successor. A receiver with an explicit manifest selects that exact known edition. Retained-only receiving prefers the current edition if present and otherwise reuses the original retained edition. Each native selection records its actual source-manifest hash, and the report body is verified against that edition's hash. Existing retained studies continue to use their own original collection and report.

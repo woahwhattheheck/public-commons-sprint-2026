@@ -1,3 +1,4 @@
+import {validateProductSourceAuthoring,productSourceSelectionOf,restoreProductSourceSelection} from './grant-product-authoring-core.mjs';
 import {validatePlanningUpdateState,selectPlanningRevision} from './grant-plan-update-core.mjs';
 import {validateHandover,handoverSelectionOf,restoreHandoverSelection} from './grant-handover-core.mjs';
 import {validatePlanSources, validatePlanningState, newPlanReview} from './grant-plan-core.mjs';
@@ -134,11 +135,12 @@ export function validateDraft(input){
     validateState(version,input.sources,input.planSources||[]);
   }
   validateHandover(input);
+  validateProductSourceAuthoring(input);
   need(measureText(JSON.stringify(input)).utf8Bytes<=MAX_BYTES,'This draft exceeds 16 MiB. The current editor remains open. Copy any oversized unsaved answer text, then reduce the unsaved addition before saving.');
   return input;
 }
 function stateOf(draft){
-  return clone({title:draft.title,currentSource:draft.currentSource,answers:draft.answers,form:draft.form,fields:draft.fields,reviews:draft.reviews,planningReview:draft.planningReview??null,planningTargets:draft.planningTargets||[],planningUpdate:draft.planningUpdate??null,handoverSelection:handoverSelectionOf(draft)});
+  return clone({title:draft.title,currentSource:draft.currentSource,answers:draft.answers,form:draft.form,fields:draft.fields,reviews:draft.reviews,planningReview:draft.planningReview??null,planningTargets:draft.planningTargets||[],planningUpdate:draft.planningUpdate??null,handoverSelection:handoverSelectionOf(draft),productSourceSelection:productSourceSelectionOf(draft)});
 }
 export function retainVersion(draft,label='Saved version',now=new Date().toISOString()){
   const result=clone(validateDraft(draft));result.updatedAt=now;
@@ -152,6 +154,7 @@ export function restoreVersion(draft,id,now=new Date().toISOString()){
   const result=retainVersion(draft,'Before restoring '+version.label,now);
   Object.assign(result,clone({title:version.title,currentSource:version.currentSource,answers:version.answers,form:version.form,fields:version.fields,reviews:version.reviews,planningReview:version.planningReview??null,planningTargets:version.planningTargets||[],planningUpdate:version.planningUpdate??null}));
   restoreHandoverSelection(result,version);
+  restoreProductSourceSelection(result,version);
   result.folder='SCF submission — '+result.title;return validateDraft(result);
 }
 export function compareSource(draft,source){

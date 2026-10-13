@@ -6,10 +6,49 @@ it does not open every native run or submit an execution action.
 """
 from __future__ import annotations
 
+from model.record_catalog import ProjectedFileCache
+
 class ProgrammeActivity:
     def __init__(self, operator, fault):
         self.operator = operator
         self.fault = fault
+        self.catalogue = ProjectedFileCache()
+
+    def _record(self, manager, key):
+        from model.common import identifier
+        key = identifier(key)
+
+        def project(value):
+            value = manager._check_record(key, value)
+            return {
+                "id": value["id"], "workspace_id": value["workspace_id"],
+                "title": value["title"],
+                "selection": {"baseline_run": value["selection"]["baseline_run"]},
+                "runs": [{"key": row["key"], "run_id": row["run_id"],
+                          "native_selection": row["native_selection"]}
+                         for row in value["runs"]],
+            }
+
+        value = self.catalogue.read(manager._directory(key) / "programme.json", project)
+        if value["workspace_id"] != manager.workspace.project["id"]:
+            raise ValueError("Programme identity differs from this retained workspace")
+        return value
+
+    def _progress(self, manager, key):
+        def project(value):
+            value = manager._check_state(key, value)
+            result = {name: value[name] for name in
+                      ("schema", "programme_id", "workspace_id", "state", "phase", "updated_at")
+                      if name in value}
+            if "attempts" in value:
+                result["attempts"] = {
+                    name: rows[-1:] for name, rows in value["attempts"].items()
+                }
+            return result
+
+        value = self.catalogue.read(manager._directory(key) / "progress.json", project)
+        # Check the current project even on an unchanged checkpoint cache hit.
+        return manager._check_state(key, value)
 
     def read(self, workspace_key, operation, payload):
         if operation != "activity":
@@ -26,7 +65,7 @@ class ProgrammeActivity:
             manager = ComputeProgrammes(self.operator.ws(workspace_key))
             # These are the maintained manager's identity and workspace checks.
             # _load verifies both immutable selection and original run bindings.
-            record = manager._load(key)
+            record = self._record(manager, key)
             progress = manager._state(key)
             active = manager._active(key)
             control = manager._control(key)
@@ -118,11 +157,13 @@ class ProgrammeActivity:
             return value
 
         summaries = []
-        for path in sorted(manager.root.glob("*/programme.json")):
+        paths = sorted(manager.root.glob("*/programme.json"))
+        self.catalogue.retain_paths(paths + [path.with_name("progress.json") for path in paths])
+        for path in paths:
             key = path.parent.name
             try:
-                record = manager._load(key)
-                progress = manager._state(key)
+                record = self._record(manager, key)
+                progress = self._progress(manager, key)
                 active = manager._active(key)
                 control = manager._control(key)
                 counts = {"total": len(record["runs"]), "complete": 0,

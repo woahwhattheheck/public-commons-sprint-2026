@@ -43,6 +43,8 @@ from .analysis_synthesis import AnalysisSynthesis
 from . import synthesis_http
 from .analysis_lineage import AnalysisLineage
 from . import lineage_http
+from .analysis_publication import AnalysisPublications
+from . import publication_http, analysis_publication_cli
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
 from .storage import digest, dump, parse, private_directory, read
@@ -130,7 +132,7 @@ class AnalysisWorkspace:
     their imports and activations. Source registration is an operator action.
     """
 
-    def __init__(self, directory, *, checkout=None, node="node", research_connections=None, lineage_connections=None):
+    def __init__(self, directory, *, checkout=None, node="node", research_connections=None, lineage_connections=None, publication_connections=None):
         self.database = DatasetDatabase(directory)
         self.checkout = str(Path(checkout).expanduser().resolve()) if checkout else None
         self.node = node
@@ -176,6 +178,7 @@ class AnalysisWorkspace:
             self.archives = WorkspaceArchives(self.database, identity=self.identity, read_job=self._job)
             self.archives.recover_completed()
             self.lineage = AnalysisLineage(self, connections=lineage_connections)
+            self.publications = AnalysisPublications(self, connections=publication_connections)
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
         except BaseException:
             os.close(self._owner)
@@ -186,6 +189,7 @@ class AnalysisWorkspace:
             if self._closed:
                 return
             self._closed = True
+        self.publications.close()
         self.lineage.close()
         self.synthesis.close()
         self.research.close()
@@ -301,13 +305,17 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "query-export", "workbook", "backup", "workspace-export", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile", "research-capture", "synthesis", "lineage-publish"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "query-export", "workbook", "backup", "workspace-export", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile", "research-capture", "synthesis", "lineage-publish", "dataset-package", "dataset-source"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
             raise StateError("ANALYSIS_REQUEST_ID_REQUIRED")
         spec = {"id": job_id}
-        if kind == "lineage-publish":
+        if kind == "dataset-source":
+            spec.update(self.publications.sources.prepare(request))
+        elif kind == "dataset-package":
+            spec.update(self.publications.prepare(request))
+        elif kind == "lineage-publish":
             spec.update(self.lineage.prepare(request))
         elif kind == "synthesis":
             spec.update(self.synthesis.prepare(request))
@@ -362,14 +370,18 @@ class AnalysisWorkspace:
                     if old["kind"] != kind or old["request"] != raw:
                         raise StateError("ANALYSIS_REQUEST_ID_REUSED")
                     resumable = (
-                        kind in {"workspace-export", "research-capture", "synthesis", "lineage-publish"} and
+                        kind in {"workspace-export", "research-capture", "synthesis", "lineage-publish", "dataset-package", "dataset-source"} and
                         old["status"] in {"INTERRUPTED", "FAILED", "CANCELLED"}) or (
                         kind in {"response-preview", "response-import"} and
                         old["status"] == "INTERRUPTED")
                     if resumable:
                         if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                             raise StateError("ANALYSIS_JOB_RUNNING")
-                        if kind == "lineage-publish":
+                        if kind == "dataset-source":
+                            self.publications.sources.resume(db, spec)
+                        elif kind == "dataset-package":
+                            self.publications.resume(db, spec)
+                        elif kind == "lineage-publish":
                             self.lineage.resume(db, spec)
                         elif kind == "synthesis":
                             self.synthesis.validate(db, spec)
@@ -398,7 +410,11 @@ class AnalysisWorkspace:
                     return self.job(job_id)
                 if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                     raise StateError("ANALYSIS_JOB_RUNNING")
-                if kind == "lineage-publish":
+                if kind == "dataset-source":
+                    self.publications.sources.validate(db, spec)
+                elif kind == "dataset-package":
+                    self.publications.validate(db, spec)
+                elif kind == "lineage-publish":
                     self.lineage.validate(db, spec)
                 elif kind == "synthesis":
                     self.synthesis.validate(db, spec)
@@ -434,6 +450,10 @@ class AnalysisWorkspace:
             if kind == "profile":
                 self.profiles.run(job_id, spec)
                 return
+            elif kind == "dataset-source":
+                result = self.publications.sources.run(job_id, spec)
+            elif kind == "dataset-package":
+                result = self.publications.run(job_id, spec)
             elif kind == "lineage-publish":
                 result = self.lineage.run(job_id, spec)
             elif kind == "synthesis":
@@ -504,7 +524,8 @@ class AnalysisWorkspace:
                 status = "CANCELLED" if ((kind == "workspace-export" and code == "WORKSPACE_ARCHIVE_CANCELLED") or
                     (kind == "research-capture" and code == "ANALYSIS_RESEARCH_CANCELLED") or
                     (kind == "synthesis" and code == "ANALYSIS_SYNTHESIS_CANCELLED") or
-                    (kind == "lineage-publish" and code == "ANALYSIS_LINEAGE_CANCELLED")) else "FAILED"
+                    (kind == "lineage-publish" and code == "ANALYSIS_LINEAGE_CANCELLED") or
+                    (kind in {"dataset-package", "dataset-source"} and code == "ANALYSIS_PUBLICATION_CANCELLED")) else "FAILED"
                 db.execute("UPDATE sf_analysis_jobs SET status=?,error=?,finished_at=? WHERE id=? AND status='RUNNING'", (status, str(code)[:256], _now(), job_id))
 
     def _job(self, job_id):
@@ -530,6 +551,8 @@ class AnalysisWorkspace:
         elif job["kind"] == "report" and job["result"] is not None:
             with self.database._connection(readonly=True) as db:
                 job["result"] = self.reports._report(db, job_id)
+        elif job["kind"] in {"dataset-package", "dataset-source"}:
+            job["progress"] = self.publications.progress(job_id)
         elif job["kind"] == "lineage-publish":
             job["progress"] = self.lineage.progress(job_id)
         elif job["kind"] == "synthesis":
@@ -667,6 +690,7 @@ def serve(workspace, *, port=0):
             assets = {"/": (_analysis_ui.HTML, "text/html;charset=utf-8"), "/app.js": (_analysis_ui.JS, "text/javascript;charset=utf-8"), "/style.css": (_analysis_ui.CSS, "text/css;charset=utf-8")}
             assets.update(synthesis_http.assets())
             assets.update(lineage_http.assets())
+            assets.update(publication_http.assets())
             assets.update({"/profiles": (_analysis_profiles_ui.HTML, "text/html;charset=utf-8"),
                            "/profiles.js": (_analysis_profiles_ui.JS, "text/javascript;charset=utf-8"),
                            "/profiles.css": (_analysis_profiles_ui.CSS, "text/css;charset=utf-8")})
@@ -683,6 +707,8 @@ def serve(workspace, *, port=0):
             if synthesis_http.get(self, workspace, url, query, parts):
                 return
             if lineage_http.get(self, workspace, url, query, parts):
+                return
+            if publication_http.get(self, workspace, url, query, parts):
                 return
             if (self.command in {"GET", "HEAD"} and len(parts) == 4
                     and parts[:2] == ["api", "workbook-runs"] and parts[3] == "file"):
@@ -848,6 +874,8 @@ def serve(workspace, *, port=0):
                     return
                 if lineage_http.post(self, workspace, url, parts, body):
                     return
+                if publication_http.post(self, workspace, url, parts, body):
+                    return
                 if url.path in {"/api/research-dossiers", "/api/research-sources", "/api/research-review", "/api/research-elements"}:
                     return self._reply(200, workspace.research.read(url.path.removeprefix("/api/research-"), body))
                 if len(parts) == 4 and parts[:2] == ["api", "research-captures"] and parts[3] == "cancel":
@@ -936,7 +964,9 @@ def main():
     parser.add_argument("--node", default="node")
     parser.add_argument("--research-connections", help="Private named original Research connections; browser requests select aliases only")
     parser.add_argument("--lineage-connections", help="Named original OpenLineage startup/token files; browser requests select aliases only")
+    parser.add_argument("--publication-connections", help="Private aliases for the original Frictionless workbench and publisher; no token enters the browser")
     commands = parser.add_subparsers(dest="command", required=True)
+    analysis_publication_cli.configure(commands)
     launch = commands.add_parser("serve", help="Open the local browser application")
     launch.add_argument("--port", type=int, default=0)
     launch.add_argument("--open", action="store_true")
@@ -978,13 +1008,18 @@ def main():
     commands.add_parser("archive-review", help="Review complete portable workspace outputs and missing retained files")
     commands.add_parser("status", help="Read saved sources, queries, views and work")
     args = parser.parse_args()
+    if analysis_publication_cli.offline(args):
+        return
     if args.command == "status":
         print(_json(AnalysisWorkspace.read_state(args.database)))
         return
     workspace = AnalysisWorkspace(args.database, checkout=args.checkout, node=args.node,
                                   research_connections=args.research_connections,
-                                  lineage_connections=args.lineage_connections)
+                                  lineage_connections=args.lineage_connections,
+                                  publication_connections=args.publication_connections)
     try:
+        if analysis_publication_cli.execute(workspace, args):
+            return
         if args.command == "research-read":
             request = parse(read(Path(args.request).expanduser().absolute(), _MAX_BODY)) if args.request else {}
             if args.action == "connections":

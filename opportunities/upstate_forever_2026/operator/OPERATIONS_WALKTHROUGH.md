@@ -58,7 +58,9 @@ In the spatial and delivery views, use the selected saved run to explain the dis
 
 **Download run selection** saves the checked grid/profile/scenario matrix and its retained run references. **Open run selection** restores that selection into the corresponding complete study. The operator resolves every referenced grid, profile and scenario from the restored workspace.
 
-The normal whole-workspace backup carries the study's source editions, native scientific records and completed prepared-source banks. After restoring it on another operator, completed banks remain selectable in the source-composition section even when the receiving operator has a different task queue. Reopen the complete study before its saved run-selection file.
+The whole-workspace backup carries the study's source editions, native scientific records and completed prepared-source banks. For a handoff that also carries queued or interrupted work, use **Guided journey → Save view and transfer project → Create complete project**. Select the completed and unfinished scientific operations to retain and keep intermediate files when model stages need to continue. Choose the complete ZIP or the installed incremental handover.
+
+Receive that original edition in the destination operator and choose **Open received project**. Completed source banks and scientific results are immediately available in the received workspace. **Save or continue the selected analysis** opens its saved guide and notes. Open the complete study before importing its separate run-selection file; the run desk resolves the retained grid/profile/scenario identities against that received study. In **Project continuity**, inspect the recovered task history and choose **Resume unfinished work** for the desired original operations. Closing and reopening the operator uses the same receiving workspace and operator-state directory.
 
 ## Walkthrough for the product review
 

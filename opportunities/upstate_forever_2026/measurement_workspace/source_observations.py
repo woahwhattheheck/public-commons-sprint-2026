@@ -52,12 +52,28 @@ def load_observations(files, parser):
         first, last = entry.get("date_start"), entry.get("date_end")
         if not isinstance(first, str) or not isinstance(last, str) or first > last:
             raise ValueError("Observation queries must retain their date interval.")
-        if any(first <= end and last >= start for start, end in intervals):
-            raise ValueError("Observation query intervals must not overlap.")
-        intervals.append((first, last))
+        declared = entry.get("station_ids")
+        if declared is not None:
+            if (not isinstance(declared, list) or not declared
+                    or any(not isinstance(value, str) or not value for value in declared)
+                    or len(set(declared)) != len(declared)):
+                raise ValueError("An observation station scope requires distinct original IDs.")
+            scope = set(declared)
+        else:
+            scope = None
+        for start, end, previous_scope in intervals:
+            if first <= end and last >= start and (
+                    scope is None or previous_scope is None or not scope.isdisjoint(previous_scope)):
+                raise ValueError("Overlapping observation dates require disjoint declared station scopes.")
+        intervals.append((first, last, scope))
         rows = parser(data, path, raw_wqp=True)
         if len(rows) != entry.get("record_count"):
             raise ValueError("Original observation source row count changed: " + path)
+        if scope is not None and {row["monitoring_location_id"] for row in rows} != scope:
+            raise ValueError("Original observation rows differ from their declared station scope.")
+        sample_support = index.get("sample_support", "Original stream sampling activities")
+        if not isinstance(sample_support, str) or not sample_support.strip():
+            raise ValueError("Original observation sampling support must be named.")
         for row in rows:
             raw = row["raw_cells"]
             if not first <= row["date"] <= last:
@@ -73,6 +89,7 @@ def load_observations(files, parser):
                 result_particle_size_basis=raw.get("ResultParticleSizeBasisText", ""),
                 support_unit=row["unit"] or row["detection_limit_unit"],
                 source_observation=True,
+                source_sample_support=sample_support,
             )
             row["series_key"] = json.dumps(
                 [row.get(key, "") for key in SERIES_FIELDS],
@@ -101,6 +118,7 @@ def series_metadata(records):
         return {}
     first = records[0]
     return {"series_key": first["series_key"], "source_observation": True,
+            "source_sample_support": first.get("source_sample_support", "Original sampling activities"),
             **{key: first.get(key, "") for key in SERIES_FIELDS},
             "series_dimensions": list(SERIES_FIELDS)}
 

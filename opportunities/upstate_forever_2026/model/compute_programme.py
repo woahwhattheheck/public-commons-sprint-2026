@@ -321,6 +321,10 @@ class ComputeProgrammes:
     def _load(self, key):
         key = identifier(key)
         value = read_json(self._directory(key) / "programme.json")
+        return self._check_record(key, value)
+
+    def _check_record(self, key, value):
+        """Verify the same original programme before full or catalogue use."""
         if (value.get("schema") != PROGRAMME_SCHEMA or value.get("id") != key
                 or value.get("workspace_id") != self.workspace.project["id"]
                 or digest(value.get("identity")) != key):
@@ -334,6 +338,10 @@ class ComputeProgrammes:
 
     def _state(self, key):
         state = read_json(self._directory(key) / "progress.json")
+        return self._check_state(key, state)
+
+    def _check_state(self, key, state):
+        """Bind full progress or its activity projection to this programme."""
         if (state.get("schema") != STATE_SCHEMA or state.get("programme_id") != key
                 or state.get("workspace_id") != self.workspace.project["id"]):
             raise ValueError("Programme progress belongs to another retained selection")

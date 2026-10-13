@@ -430,6 +430,58 @@ def source_register(state):
     return records
 
 
+def native_execution_register(state):
+    """Present supplied execution records without reopening or resolving a run."""
+    if isinstance(state.get("native_execution"), dict):
+        return state["native_execution"]
+    return {key: bound["execution"]
+            for key, bound in state["selection"]["bindings"].get("runs", {}).items()
+            if isinstance(bound.get("execution"), dict)}
+
+
+def _native_execution_section(state):
+    executions = native_execution_register(state)
+    if not executions:
+        return ""
+    spec = state["selection"]["spec"]
+    basis_labels = {
+        "completed_stage_runtime": "Completed model stage",
+        "observed_run_fallback": "Last observed run runtime (fallback)",
+        "requested_legacy": "Requested version (legacy fallback)",
+        "unavailable": "Unavailable",
+    }
+    rows, adapters = [], []
+    for run_id, execution in executions.items():
+        role = "Baseline" if run_id == spec.get("baseline_run_id") else (
+            "Alternative" if run_id in spec.get("alternative_run_ids", []) else "Selected native run")
+        adapters.append([role, run_id, execution.get("unit_contract_version"),
+                         execution.get("supported")])
+        for model, record in execution.get("model_versions", {}).items():
+            basis = record.get("basis")
+            rows.append([role, run_id, model.upper(), record.get("comparison_version"),
+                         basis_labels.get(basis, basis), record.get("requested_version"),
+                         record.get("observed_run_version"), record.get("stage_completed_at")])
+    return (
+        "<h2>Native model execution</h2><p>Each row identifies the version associated with an "
+        "original selected model. A completed stage's observed runtime takes precedence over "
+        "the latest run-level runtime. A resumed run can therefore retain different execution "
+        "versions for NDR and SDR. When stage provenance is absent, the recorded fallback is "
+        "shown explicitly; a requested legacy version is a declaration rather than an observed "
+        "execution.</p>" +
+        _table(["Case", "Original run ID", "Model", "Resolved execution version", "Provenance basis",
+                "Requested version", "Last observed run version", "Stage completed at"], rows) +
+        "<p>The quantity adapter uses the retained output-unit contract below. Its compatibility "
+        "result applies to the selected model versions. N, P and sediment keep their separate "
+        "physical units and coverage in the scientific results.</p>" +
+        _table(["Case", "Original run ID", "Quantity adapter version", "Selected models compatible"], adapters) +
+        "<details><summary>Original execution, stage reuse and runtime history</summary><pre>" +
+        _e(json.dumps(executions, indent=2, ensure_ascii=False, allow_nan=False)) +
+        "</pre></details><p>The <a href=\"source-register.json\">complete source register</a> "
+        "retains these typed execution records with the original native selections and source "
+        "identities.</p>"
+    )
+
+
 def _source_rows(state):
     for source in source_register(state):
         yield {
@@ -448,6 +500,13 @@ def dictionary():
         "schema": "upstate.conservation-report-dictionary/v1",
         "presentation": identity(),
         "metric_meanings": METRIC_MEANINGS,
+        "native_execution": {
+            "model_versions": "Per selected original run/model execution metadata, supplied by study bindings or the maintained native read-through.",
+            "comparison_version": "Completed-stage runtime first, otherwise observed-run runtime, otherwise explicitly labeled requested legacy version.",
+            "basis": "The actual provenance source used for that model; stage completion and reuse remain in the same original record.",
+            "unit_contract_version": "Version of the quantity adapter's physical output-unit contract, kept separate from the original requested run selection.",
+            "runtime_history": "Original retained sequence of runtime observations; it does not override completed-model provenance.",
+        },
         "areas": {
             "whole_parcel_acres": "Full original selected parcel geometry: area_ha * 10000 / 4046.8564224.",
             "reporting_parcel_acres": "Original parcel intersected with the retained reporting boundary, in acres.",
@@ -536,6 +595,7 @@ def write_supplements(workspace, directory, state, candidates, *, plan=None):
         "plan_id": plan["id"] if plan else None, "presentation": identity(),
         "sources": records, "native_bindings": state["selection"]["bindings"].get("runs"),
         "native_grid": state["selection"]["bindings"].get("grid"),
+        "native_execution": native_execution_register(state),
         "geometry_context": state["selection"]["bindings"].get("published_method", {}).get("geometry_context"),
         "criterion_metadata": state.get("normalization", {}).get("criterion_table", {}).get("metadata"),
         "published_method": state["selection"]["bindings"].get("published_method"),
@@ -771,6 +831,9 @@ def extend_report(base, state, candidates, *, plan=None):
     supplier_section = supplier_tables(state["selection"]["bindings"]["sources"], registry="source-register.json")
     if supplier_section:
         sections.append(supplier_section)
+    native_section = _native_execution_section(state)
+    if native_section:
+        sections.append(native_section)
     sources = source_register(state)
     source_rows = []
     for source in sources:

@@ -1,9 +1,9 @@
 """Join complete project transfer and recovery to the shared operator registry."""
-from project_transfer import ACTIONS, READS, ProjectTransfers
+from project_continuity import ACTIONS, READS, ProjectContinuity
 
 
 def create(context):
-    service = ProjectTransfers(context.operator, context.Fault,
+    service = ProjectContinuity(context.operator, context.Fault,
                                supported_actions=context.actions)
 
     def current():

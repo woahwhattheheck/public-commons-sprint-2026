@@ -1,0 +1,30 @@
+{
+  "1.0.0": {
+    "src/opportunities/upstate_forever_2026/model/monitoring_campaign.py": "ee96f98f65567ceb53dc18b466ede95a1546f29b3365d9e704eb948f8efada04",
+    "src/opportunities/upstate_forever_2026/model/monitoring_cli.py": "8008bb97be2172f061f6c01c2c18e23029bcb1f3653a4e0633a3c21f38aaade5",
+    "src/opportunities/upstate_forever_2026/model/monitoring_design.py": "5fd274ca15cdd164163ec515c056b64117f97510fd789f805f7054f4d69c3725",
+    "src/opportunities/upstate_forever_2026/model/monitoring_network.py": "c8280108d0d87d98aa8e19bde94e8d2ae9192fbc7f41717788e22bcc24962c92",
+    "src/opportunities/upstate_forever_2026/model/monitoring_workspace.py": "dc209ca729e2ab6dfd13e5eecd0472f08113ee6b49c201760f8d999cf430d063",
+    "src/opportunities/upstate_forever_2026/operator/monitoring.py": "0a71ffbb5f6a5e06a8a6e42f7d28aeaa1db1434d8581a2222096348f67acfc4d",
+    "src/opportunities/upstate_forever_2026/operator/static/monitoring.js": "3fa7629a04bbaad4859b4a368d32c9d92a04c44285e9293da6117b188ab420f8"
+  },
+  "1.1.0": {
+    "src/opportunities/upstate_forever_2026/model/MONITORING.md": "d6f474e0f5f79b350407b56efa4e6e52e9c31d9c239953e27e2e76738c175ab2",
+    "src/opportunities/upstate_forever_2026/model/monitoring_actions.py": "08d839c96b1fb2dff7f641b36b3689dbb281846e200d64489139d948cdbe1b84",
+    "src/opportunities/upstate_forever_2026/model/monitoring_campaign.py": "9e6ad6d5590c6200236211e59b6098c3fafb5db93ec1fbeb12061fe7ea89ac36",
+    "src/opportunities/upstate_forever_2026/model/monitoring_cli.py": "a6849dfdc19121a0b49fcd127dbe4bb1c9b2500c27db63c04aa67dfa6f89633f",
+    "src/opportunities/upstate_forever_2026/model/monitoring_common.py": "a25fce18c6f7da1c0db7f1e3ec926610b86206348b83e4be3813e14ef027ba2f",
+    "src/opportunities/upstate_forever_2026/model/monitoring_design.py": "ff755941cf4529874fa954278d0143c774069e23a362c4cc9d35f14e69694a18",
+    "src/opportunities/upstate_forever_2026/model/monitoring_network.py": "9e4e57f104a805a939c96f93984c5245c2a5b3e4ddddb234f927a92d5f7da122",
+    "src/opportunities/upstate_forever_2026/model/monitoring_sources.py": "16f988793211baee79f69de0e46c3e8b3a30cdac752ff7e4c8cbc957225c3ddb",
+    "src/opportunities/upstate_forever_2026/model/monitoring_workspace.py": "c780edc6b0c3d26fa3877e4db4c7e621f81725c4d387e0fc363d5e3544637b8d",
+    "src/opportunities/upstate_forever_2026/operator/MONITORING_API.md": "a35273d7f8425707bcc5e721e5965eda9f852237df9d41e2f9ef4fe97c44f635",
+    "src/opportunities/upstate_forever_2026/operator/monitoring.py": "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea",
+    "src/opportunities/upstate_forever_2026/operator/monitoring_native.py": "5cd34408719f94105a09cc68cb962dfb736f6123c7957a2562f430298af3dfb9",
+    "src/opportunities/upstate_forever_2026/operator/monitoring_receiving.py": "effc45a7d192869aee755be46f23c3534388ed98ef80f740c2c2de3d2bb73f34",
+    "src/opportunities/upstate_forever_2026/operator/static/monitoring.js": "a67a3f5fa5a79054614dd579dd8fd1a5ad171d9ed559d7b99329fc9f23ab6699",
+    "src/opportunities/upstate_forever_2026/operator/web/monitoring-component.mjs": "7cebb6b7add875aaf2094629b12b43da5f6945504f8491344ed4b9b45e33c586",
+    "src/opportunities/upstate_forever_2026/operator/web/monitoring.css": "a2bc999bad6bee6f9f6c6c849c3e39f617b8e5344529f5f17a509b3d5bc2cd93",
+    "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs": "d4a81dc0134496805d65fe5ecc20facdbc57ec4eed4fd4e36be9acde73ed630e"
+  }
+}

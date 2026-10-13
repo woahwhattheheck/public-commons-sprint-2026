@@ -172,3 +172,40 @@ The same delivery also builds the separate ED6E client companion under `client-r
 ## Current complete delivery inspection
 
 The maintained delivery inspector owns the original report, source-context navigation, map/atlas actions and full file search. The client review controller adds the separately retained client companion and revision/received-copy controls to that same screen. Both use the current workspace and original delivery identity. Closing or replacing the detail view cancels the old inspector; returning from a companion preview reopens the same delivery.
+
+## Compact catalogue, original companion and figure preview
+
+The live delivery list and the open inspector share a small view of the same
+original delivery record. That view contains its canonical revision, available
+scientific/client report roles and report edition. An unchanged polling response
+keeps the selected file page and open preview intact. A changed original record
+refreshes the detail; the underlying full record and exact file inventory remain
+available from the existing inspector.
+
+The client companion controls use the inspector's declared file inventory.
+They remain available with compact polling and do not require creating tickets
+for the full GIS collection. Report reading creates at most the fixed ten
+scientific/client report tickets. Local report references use the declared
+member routes and receive their original ticket when opened.
+
+The linked scientific HTML preview embeds its actual declared local images from
+the original verified bytes. The isolated frame can therefore display retained
+SVG and raster figures without a second authenticated request. This derived
+preview preserves the authored report body and inline atlas scripts; the policy
+admits the exact navigation bridge and embedded image data as needed. Original
+HTML, SVG, raster and complete-archive downloads keep their exact contents.
+
+Inline preview capacity is 16 MiB for the original HTML, 16 MiB per image and
+64 MiB of image bytes across all rendered image occurrences. The complete
+offline delivery and original downloads remain available for larger documents.
+Paths resolve relative to the selected original report and must name a declared
+member inside that same delivery. Original file hashes and sizes are verified
+before their bytes are used.
+
+Receiving should open both scientific and client HTML, follow one nested local
+reference, view the retained observed SVG figures, change the original delivery
+state, and leave an unchanged report open across a normal polling interval.
+The source review executed the current JavaScript controller with 25,006 declared
+files, complete report availability, stable and changed revisions, an older report
+edition, and the original legacy response. Native report rendering continues in
+the existing scientific Workspace.

@@ -7,7 +7,7 @@ import json
 import math
 from pathlib import Path
 from .common import atomic_json, digest, finite, now, read_json, retain_file, verify_file
-from . import rasters
+from . import rasters, observation_support, observation_diagnostics
 
 NATIVE = {"nitrogen": ("ndr", "n_total_export", "kg/year"),
           "phosphorus": ("ndr", "p_surface_export", "kg/year"),
@@ -35,15 +35,16 @@ def ingest(workspace, path, metadata):
                                     "parameter", "value", "unit", "period_start",
                                     "period_end", "qualifier", "method",
                                     "uncertainty", "source_records")}
+    columns.update({key: key for key in observation_support.FIELDS})
     columns.update(metadata.get("columns", {}))
     original = retain_file(workspace.root, path, metadata.get("sha256"))
     raw = (workspace.root / original["object"]).read_text(encoding="utf-8-sig")
     table = csv.DictReader(io.StringIO(raw))
-    required_keys = ("catchment_id", "parameter", "value", "unit") if annual else ("parameter", "value", "unit")
+    required_keys = ("parameter", "value", "unit")
     required = [columns[k] for k in required_keys if k not in constants]
     if (not table.fieldnames or len(table.fieldnames) != len(set(table.fieldnames))
             or set(required) - set(table.fieldnames)):
-        raise ValueError("Observation CSV requires distinct headers and the selected parameter, value and unit columns; annual loads also require catchment identifiers")
+        raise ValueError("Observation CSV requires distinct headers and the selected parameter, value and unit columns; catchment load rows also require original catchment identifiers")
     parameter_names = {"nitrogen": "nitrogen", "phosphorus": "phosphorus", "sediment": "sediment"}
     parameter_names.update(metadata.get("parameter_mapping", {}))
     if annual and not metadata.get("annualization_method"):
@@ -81,6 +82,10 @@ def ingest(workspace, path, metadata):
                "uncertainty": retained_detail("uncertainty"),
                "source_records": retained_detail("source_records"),
                "admitted": False, "issues": []}
+        row.update(observation_support.attributes(cell, metadata, parameter))
+        row["native_comparison_issues"] = observation_support.comparison_issues(row, metadata)
+        if annual:
+            row["issues"].extend(row["native_comparison_issues"])
         try:
             row["value"] = finite(row["value_text"], "Observed value", minimum=0 if annual else None)
         except (ValueError, TypeError) as error:
@@ -89,7 +94,7 @@ def ingest(workspace, path, metadata):
             else:
                 row["numeric_status"] = "Original value is not quantified numerically"
         if annual:
-            if not row["catchment_id"]:
+            if row["measurement_support"] == "catchment_export" and not row["catchment_id"]:
                 row["issues"].append("No original catchment ID")
             if parameter not in NATIVE:
                 row["issues"].append("This measurement is outside the native N/P/sediment annual-load comparison")
@@ -125,6 +130,7 @@ def ingest(workspace, path, metadata):
         "metadata": metadata, "original": original, "columns": table.fieldnames,
         "rows": rows, "admitted_count": sum(r["admitted"] for r in rows),
         "context_count": sum(not r["admitted"] for r in rows),
+        "support_summary": observation_support.summarize(rows),
     })
 
 def catchment_load(path, geometry, stream_path, *, stream_source=None):
@@ -295,10 +301,15 @@ def compare(workspace, run_id, observation_id, catchments):
                               "export_registry_id": output_id, "export_file": item,
                               "native_module": stage.get("runtime", state.get("runtime", {})).get("modules", {}).get(model)},
         }
-    comparisons, exclusions, cached = [], [], {}
+    comparisons, exclusions, cached, context = [], [], {}, []
     for observed in observations["rows"]:
-        if not observed["admitted"]:
-            exclusions.append({"observation_id": observed["id"], "issues": observed["issues"]})
+        support_issues = observation_support.comparison_issues(observed, observations["metadata"])
+        if not observed["admitted"] or support_issues:
+            retained = observation_support.context_record(observed, observations["metadata"])
+            context.append(retained)
+            exclusions.append({"observation_id": observed["id"], "issues": retained["comparison_issues"],
+                               "measurement_support": retained["measurement_support"],
+                               "species": retained["species"]})
             continue
         geometry = indexed.get(observed["catchment_id"])
         if geometry is None:
@@ -326,6 +337,10 @@ def compare(workspace, run_id, observation_id, catchments):
         complete = modeled["complete_catchment"]
         comparisons.append({
             "observation_id": observed["id"], "parameter": parameter,
+            "measurement_support": "catchment_export",
+            "species": observation_support.source_species(observed, observations["metadata"]),
+            "original_parameter": observed.get("original_parameter"),
+            "support_origin": observed.get("support_origin", "legacy_catchment_import_contract"),
             "catchment_id": observed["catchment_id"], "station_id": observed["station_id"],
             "period_start": observed["period_start"], "period_end": observed["period_end"],
             "observed_annual_mass": expected, "modeled_annual_mass": predicted,
@@ -364,7 +379,7 @@ def compare(workspace, run_id, observation_id, catchments):
         }
     profile = workspace._get("profiles", state["selection"]["profile_id"])
     value = {
-        "comparison_version": 3, "run_id": run_id, "observation_id": observation_id, "catchment_selection": catchments,
+        "comparison_version": 6, "run_id": run_id, "observation_id": observation_id, "catchment_selection": catchments,
         "model_scope": scope,
         "catchment_source": {"uri": entry["uri"], "vintage": entry["vintage"],
                              "sha256": entry["body"]["sha256"]},
@@ -372,6 +387,10 @@ def compare(workspace, run_id, observation_id, catchments):
         "model_period": profile.get("model_period"),
         "model_source_vintages": workspace.get_grid(state["selection"]["grid_id"])["inputs"],
         "comparisons": comparisons, "exclusions": exclusions, "metrics": metrics,
+        "context_rows": context, "support_summary": observation_support.summarize(observations["rows"]),
+        "measurement_support_basis": "Residuals use annual receiving-water catchment loads of the "
+                                     "same species. Facility/outfall discharges and concentrations "
+                                     "retain their source quantities separately.",
         "metrics_exclusions": [{"observation_id": row["observation_id"],
                                 "issues": row["spatial_coverage"]["coverage_issues"]}
                                for row in comparisons if not row["included_in_metrics"]],
@@ -386,4 +405,5 @@ def compare(workspace, run_id, observation_id, catchments):
                           "remain with every row. Review reservoir and point-source influences, model/source vintages "
                           "and repeated station periods when interpreting the descriptive comparison.",
     }
+    value["diagnostics"] = observation_diagnostics.build(value)
     return workspace._save("observation-comparisons", value)

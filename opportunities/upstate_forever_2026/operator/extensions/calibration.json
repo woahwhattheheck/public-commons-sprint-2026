@@ -2,12 +2,14 @@
   "schema": "upstate.operator-extension/v1",
   "id": "calibration",
   "title": "Calibration and validation",
-  "version": "6",
+  "version": "7+source-design1",
   "order": 65,
   "assets": [
     "calibration.mjs",
     "calibration.css",
-    "calibration_maps.mjs"
+    "calibration_maps.mjs",
+    "calibration_review.mjs",
+    "calibration_design.mjs"
   ],
   "backend": {
     "module": "calibration",
@@ -25,7 +27,8 @@
       "calibration.uncertainty",
       "calibration.uncertainty.export",
       "calibration.maps.prepare",
-      "calibration.maps.review"
+      "calibration.maps.review",
+      "calibration.review.prepare"
     ],
     "invoke": {
       "handler": "invoke",
@@ -111,6 +114,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/review",
+        "operation": "review",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "state": {
@@ -160,6 +176,16 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "kind": "calibration-reviews",
+        "operation": "review",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
@@ -173,7 +199,19 @@
       "args": [
         "workspace"
       ]
-    }
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/calibration-review/{workspace_key}/{review_id}/{member_path...}",
+        "handler": "review_member",
+        "args": [
+          "route.workspace_key",
+          "route.review_id",
+          "route.member_path"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
   },
   "client": {
     "module": "/web/calibration.mjs",

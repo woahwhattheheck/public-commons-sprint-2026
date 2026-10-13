@@ -1,3 +1,17 @@
+/** Small retained metadata shared by the delivery list and open inspector. */
+export function reportRoles(row) {
+  return new Set(row?._delivery_view?.report_roles || Object.keys(row?.files || {}));
+}
+export function deliveryRevision(row) {
+  const value = row?._delivery_view?.revision;
+  return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value) ? value : null;
+}
+export function deliveryChanged(row, context) {
+  if (row.state !== context.state) return true;
+  const next = deliveryRevision(row);
+  return next !== null && context.deliveryRevision != null && next !== context.deliveryRevision;
+}
+
 /** Client report and registered downloads on the original delivery screen. */
 export function createDeliveryReview(ctx) {
   const {esc, button, bytes, number, when, runTitle, mapFamilies, mapTitles,
@@ -46,7 +60,10 @@ export function createDeliveryReview(ctx) {
     return matches.find(file => file.filename === filename) || matches[0] || null;
   }
 
-  function fileEntries(row) {
+  function fileEntries(row, declared = []) {
+    if (declared.length) return declared.flatMap(file =>
+      (file.keys || []).filter(key => /^files\.(?:client_)?report(?:_|$)/.test(key)).map(key =>
+        ({...file, role: key.slice(6), filename: base(file.path), relative_path: file.path})));
     return Object.entries(row.files || {}).flatMap(([role, descriptor]) => {
       const file = ticket(row, descriptor);
       return file ? [{...file, role, relative_path: descriptor.path}] : [];
@@ -102,7 +119,8 @@ export function createDeliveryReview(ctx) {
       table(['Delivery', 'State', 'Study cases', 'Report / maps', ''], rows.map(row => {
         const selection = row.selection || {};
         const count = (selection.scenario_run_ids || selection.alternative_run_ids || []).length;
-        const reports = row.files?.report_html && (row.files?.report_data || row.files?.report_model)
+        const roles = reportRoles(row);
+        const reports = roles.has('report_html') && (roles.has('report_data') || roles.has('report_model'))
           ? 'Scientific report included' : 'Report preparation available';
         return '<tr><td class="name-cell"><strong>' +
           esc(selection.title || 'Scientific delivery') + '</strong><small>' +
@@ -138,9 +156,10 @@ export function createDeliveryReview(ctx) {
     const entries = fileEntries(row), byRole = Object.fromEntries(entries.map(file => [file.role, file]));
     const used = new Set(), selection = row.selection || {};
     const hasReport = Boolean(byRole.report_html && (byRole.report_data || byRole.report_model));
-    const savedEdition = (selection.client_report_edition || row.report_edition || '') + '|' +
-      (selection.report_renderer_version || row.report_renderer_version || '') + '|' +
-      (selection.client_companion_edition || row.client_companion_edition || '');
+    const savedEdition = row._delivery_view?.report_edition ??
+      ((selection.client_report_edition || row.report_edition || '') + '|' +
+       (selection.report_renderer_version || row.report_renderer_version || '') + '|' +
+       (selection.client_companion_edition || row.client_companion_edition || ''));
     const olderEdition = row._current_report_edition && savedEdition !== row._current_report_edition;
     let html = '<div class="delivery-review"><div class="meta"><span>' +
       esc(status(row.state)) + '</span><span>' +
@@ -208,13 +227,14 @@ export function createDeliveryReview(ctx) {
     return html;
   }
 
-  function continuation(row) {
-    const entries = fileEntries(row), byRole = Object.fromEntries(entries.map(file => [file.role, file]));
+  function continuation(row, declared = []) {
+    const entries = fileEntries(row, declared), byRole = Object.fromEntries(entries.map(file => [file.role, file]));
     const selection = row.selection || {};
     const hasReport = Boolean(byRole.report_html && (byRole.report_data || byRole.report_model));
-    const savedEdition = (selection.client_report_edition || row.report_edition || '') + '|' +
-      (selection.report_renderer_version || row.report_renderer_version || '') + '|' +
-      (selection.client_companion_edition || row.client_companion_edition || '');
+    const savedEdition = row._delivery_view?.report_edition ??
+      ((selection.client_report_edition || row.report_edition || '') + '|' +
+       (selection.report_renderer_version || row.report_renderer_version || '') + '|' +
+       (selection.client_companion_edition || row.client_companion_edition || ''));
     const olderEdition = row._current_report_edition && savedEdition !== row._current_report_edition;
     let html = '<section class="delivery-review"><h3 class="subheading">Client companion and delivery choices</h3><div class="delivery-actions">';
     if (byRole.client_report_html && byRole.client_report_model)
@@ -235,9 +255,9 @@ export function createDeliveryReview(ctx) {
   }
 
   async function preview(id, report = 'scientific') {
-    const workspace = ctx.getWorkspace();
+    const workspace = ctx.getWorkspace(), request = ctx.beginDetailRequest();
     const info = await ctx.api(ctx.endpoint('/api/deliveries/report', {id, report}));
-    if (workspace !== ctx.getWorkspace()) return;
+    if (workspace !== ctx.getWorkspace() || !ctx.isDetailRequest(request)) return;
     if (!info.preview_url) throw Error('Create the current report edition before opening the report.');
     const files = Object.values(info.files || {});
     const selected = info.selected_files || info.files || {};
@@ -246,7 +266,7 @@ export function createDeliveryReview(ctx) {
       button('item', 'Back to delivery', 'data-kind="deliveries" ' + attrs(id)) +
       openPDF(pdf) + download(pdf, 'Download PDF') +
       download(selected.report_markdown, 'Download editable report') +
-      '</div><iframe class="delivery-report-frame" title="Client report" ' +
+      '</div><iframe class="delivery-report-frame" title="Retained report" ' +
       'sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads" ' +
       'referrerpolicy="no-referrer" src="' + esc(info.preview_url) + '"></iframe></div>';
     ctx.detail(info.title || 'Client report', body, {kind: 'delivery-report', id, state: info.state});

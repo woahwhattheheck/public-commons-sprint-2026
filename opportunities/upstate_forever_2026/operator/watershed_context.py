@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from model.common import atomic_bytes, atomic_json, describe_file, digest, held, identifier, now, read_json
 from source_tools.watershed_source_entry import capture_source_entry, retain_source_entry
 from model import watershed_context as context_model
+from model.utility_watershed_context import utility_selections, PROFILE_NAME
 from model.watershed_brief import (
     BRIEF_FORMAT, selection_with_contributing_context, write_selection_brief,
 )
@@ -215,6 +216,33 @@ class WatershedContextActions:
         ))
         return downloads
 
+
+    def _utility_choices(self, report):
+        """Resolve the retained original profile once per distinct source edition."""
+        profiles, seen, bodies = [], set(), {}
+        application = Path(__file__).resolve().parents[1]
+        roots = [application, *self.roots.values()]
+        for root in roots:
+            candidates = ([root / "source" / "receptor-topology" / "20261013" / PROFILE_NAME]
+                          if root == application else sorted(root.rglob(PROFILE_NAME)))
+            for found in candidates:
+                if not found.is_file():
+                    continue
+                path = found.resolve()
+                if not path.is_relative_to(root.resolve()):
+                    raise ValueError("The utility profile leaves its registered source directory")
+                body = path.read_bytes()
+                source_hash = _hash(body)
+                if source_hash in seen:
+                    continue
+                seen.add(source_hash)
+                original = json.loads(body)
+                identity = {"filename": PROFILE_NAME, "bytes": len(body), "sha256": source_hash,
+                            "schema": original.get("schema"), "title": original.get("title")}
+                profiles.extend(utility_selections(report, original, identity))
+                bodies[source_hash] = body
+        return profiles, bodies
+
     def read(self, workspace, operation, value=None):
         value = value or {}
         ws = self.operator.ws(workspace)
@@ -256,6 +284,7 @@ class WatershedContextActions:
             raise self.Fault("WATERSHED_READ", "Choose a regional watershed view.", 404)
         return {
             **record, "report": report,
+            "_utility_selections": self._utility_choices(report)[0],
             "_downloads": self._downloads(
                 workspace, directory, record, "operator-report.json", "Regional watershed source manifest",
             ),
@@ -542,6 +571,16 @@ class WatershedContextActions:
         value = task.get("payload") or {}
         directory, record, report = self._report(ws, value)
         chosen = value.get("huc12s")
+        utility, utility_body = None, None
+        if value.get("utility_key"):
+            choices, profile_bodies = self._utility_choices(report)
+            utility = next((row for row in choices if row["key"] == value["utility_key"]), None)
+            if utility is None or not utility["available"]:
+                raise ValueError("Refresh and select an available original utility footprint")
+            if chosen is not None and sorted(set(chosen)) != utility["huc12s"]:
+                raise ValueError("The requested utility membership differs from its original network")
+            chosen = utility["huc12s"]
+            utility_body = profile_bodies[utility["profile_source"]["sha256"]]
         if not isinstance(chosen, list) or not chosen or any(not isinstance(key, str) for key in chosen):
             raise ValueError("Choose one or more watershed records to export.")
         selected = sorted(set(chosen))
@@ -554,11 +593,20 @@ class WatershedContextActions:
             Path(__file__).resolve().parents[1] / "outputs" / "watershed-connectivity-20261013",
         )
         supporting_references = self._supporting_source_references(record)
+        if utility is not None:
+            selection["utility_selection"] = utility
+            supporting_references.append({
+                "source_id": "original_utility_profile", "reference": utility["reference"],
+                "sha256": utility["profile_source"]["sha256"],
+                "source_member": "original-utility-profile.json",
+            })
         identity = {
             "report_id": record["id"], "report_sha256": report_sha, "huc12s": selected,
             "csv_format": CSV_FORMAT, "csv_columns": list(context_model.HUC_COLUMNS),
             "brief_format": BRIEF_FORMAT,
         }
+        if utility is not None:
+            identity["utility_selection_sha256"] = utility["key"]
         if supporting_references:
             identity["brief_source_sha256"] = _hash(json.dumps(
                 supporting_references, sort_keys=True, separators=(",", ":"),
@@ -588,12 +636,15 @@ class WatershedContextActions:
                 "source_edition_report_id": record["id"],
                 "supporting_source_references": supporting_references,
             }
+            if utility_body is not None:
+                atomic_bytes(target / "original-utility-profile.json", utility_body, immutable=True)
             atomic_json(target / "selected-watersheds.json", selection)
             (target / "selected-watersheds.csv").write_bytes(_csv(rows))
             brief_files = write_selection_brief(target, selection)
             result = {
                 "schema": "upstate.watershed-context-export/v1", "id": key,
-                "title": "Regional watershed selection", "state": "complete", "created_at": now(),
+                "title": utility["title"] if utility is not None else "Regional watershed selection",
+                "state": "complete", "created_at": now(),
                 **identity, "watershed_count": len(rows), "summary": selection.get("summary", {}),
                 "source_fingerprint": record["source_fingerprint"], "files": {
                     name: describe_file(target, target / name)
@@ -602,6 +653,10 @@ class WatershedContextActions:
             }
             if selection.get("contributing_context") is not None:
                 result["contributing_summary"] = selection["contributing_context"]["summary"]
+            if utility is not None:
+                result["utility_selection"] = utility
+                result["files"]["original-utility-profile.json"] = describe_file(
+                    target, target / "original-utility-profile.json")
             result["files"].update(brief_files)
             atomic_json(path, result)
         return result

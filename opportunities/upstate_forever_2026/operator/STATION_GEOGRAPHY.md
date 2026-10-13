@@ -8,7 +8,7 @@ Materialize the station contribution files under a source directory, then run:
 
     python SOURCE_ROOT/operator/install_station_geography.py --application APPLICATION --source-root SOURCE_ROOT
 
-The installer copies the station contribution files, preserves prior versions and invokes the existing install_extensions.py when the application has not yet installed its extension host. Restart the existing operator to discover operator/extensions/station-geography.json. Run the model commands below from APPLICATION, the directory containing model and operator.
+The installer copies all 45 station, assessment and microbial application members, including the complete 22-file original microbial source directory. Before changing the application, it checks each selected source manifest's primary bodies and companions against the available files and declared original hashes. The dry-run receipt includes these original-source identities. It preserves prior versions and invokes the existing install_extensions.py when the application has not yet installed its extension host. Restart the existing operator to discover operator/extensions/station-geography.json. Run the model commands below from APPLICATION, the directory containing model and operator.
 
 Runtime dependencies are the application's existing pyproj, shapely and fiona stack. The browser uses the existing local host and an SVG map. Model observations, measurement imports, chemistry and annual-load calculations keep their existing interfaces.
 
@@ -116,7 +116,7 @@ Authored by TokenJunkieLabs. Scientific interpretation: Needs expert review. The
 
 The same station engine also serves the complete 159-station published assessment inventory. Select **Upper Savannah published assessments — 159 monitoring stations** from Prepared studies after importing its native sources.json. The original 87-station 2026 draft study stays available as a separate preset.
 
-This inventory has 192 source records: 108 records from the published 2024 303(d) listing and 84 from the July 28, 2026 TMDL attainment table. Exact station identifiers link each record to the existing retained 705-feature SCDES monitoring layer and eight-feature WQP supplement. Candidate handling, explicit location choices, point transformation, and polygon membership use the maintained station engine.
+This inventory has 192 source records: 108 records from the published 2024 303(d) listing and 84 from the July 28, 2026 TMDL attainment table. Exact station identifiers link each record to the existing retained 705-feature SCDES monitoring layer, eight-feature WQP supplement and the additional RS-21038/RS-22075 WQP source. The published study has 152 exact Atlas locations, five from the eight-site WQP source and two from the additional source. Candidate handling, explicit location choices, point transformation, and polygon membership use the maintained station engine.
 
 The panel offers an assessment-edition filter and expanded cause labels. **TN in assessment causes means Total nitrogen; TN in classified-reach H2OCLASS means Trout Natural.** Source HUC12 assignments remain per edition. RS-06190 retains 030601030602 for its 2024 BIO record and 030601030502 for its July 2026 ECOLI record. The mapped HUC is derived independently from the retained station point and watershed polygons.
 

@@ -237,3 +237,10 @@ actual original raster; `--expected-resolution-m` is an optional check. Context
 remains independently selectable and permits zero. A partial intake reuses its
 saved grid's resolution and context, and source updates reuse an already saved
 programme whose scientific source matches before registering another edition.
+
+
+### Retain study context across automatic reports
+
+The early original-reference report and the full class-comparison report now carry the saved plan’s original study title, purpose and source reference as an explicit native-study delivery context. The source report created by `receive_gura_study.py` uses the same declaration as its native delivery. This context follows the saved report into the Economic desk and atlas; it is independent of the actual grid resolution and selected model scope.
+
+Continuing a partially completed comparison preserves its first `report-selection.json`, verifies the same ordered runs, pollutants and watershed selections, and retains the current context-bearing selection under `report-selections/<selection-sha256>.json`. The current selection descriptor is recorded in progress. Existing completed report and economic editions reopen unchanged. See [Original study context through reports and client delivery](GURA_COMPARISON.md#original-study-context-through-reports-and-client-delivery) for the operator route.

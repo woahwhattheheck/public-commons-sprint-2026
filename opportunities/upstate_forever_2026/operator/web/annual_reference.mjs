@@ -153,7 +153,8 @@ export function createAnnualReferences(host) {
         const binding=row.binding;
         const open=row.action==='annual-reference.inventory' && row.state==='complete'?
           action('open-inventory','Select records',row.task_id):'';
-        const calibrate=binding?action('calibrate','Open calibration',row.task_id):'';
+        const calibrate=binding?action('calibrate','Open calibration',row.task_id)+
+          action('study-calibration','Evaluate saved study',row.task_id):'';
         const sourceTitle=editions().find(value=>value.id===(row.source_edition||'f7dn436b'))?.title||row.source_edition;
         return '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.task_id))+'</small><small>'+
           esc(sourceTitle)+'</small></td><td>'+
@@ -256,6 +257,12 @@ export function createAnnualReferences(host) {
         chosen.set(row.record_id,chosen.get(row.record_id)||row.catchment_choices[0].id);
       }
       save();return render();
+    }
+    if(name==='study-calibration'){
+      const entry=operationById(id);
+      if(!entry?.binding)throw Error('This operation has not imported an observation edition.');
+      return host.openExtension('ensembles','annualReference',{
+        workspace_key:workspace,annual_import_id:id,title:entry.title});
     }
     if(name==='calibrate'){
       const entry=operationById(id), binding=entry?.binding;

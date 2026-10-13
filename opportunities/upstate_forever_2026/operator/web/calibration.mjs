@@ -1,4 +1,6 @@
+import {createCalibrationReviews} from './calibration_review.mjs';
 import {createCalibrationMaps} from './calibration_maps.mjs';
+import {analyzeCalibrationDesign,calibrationDesignHTML} from './calibration_design.mjs';
 /* Calibration and validation against original retained annual loads. */
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
@@ -43,6 +45,9 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   const mapsDesk=createCalibrationMaps({current,read,submitAction,openForm,fileList,detail,repaint,
     getReport:()=>activeReport,getUncertainty:()=>activeUncertainty,getData:calibrationData,
     openReport,openUncertainty,activate:()=>{if(!mounted)location.hash='calibration';else repaint();}});
+  const reviewsDesk=createCalibrationReviews({current,read,submitAction,openForm,detail,fileList,
+    getReport:()=>activeReport,getData:calibrationData,repaint,openReport,
+    activate:()=>{mapsDesk.reset();activeUncertainty=null;if(!mounted)location.hash='calibration';}});
   async function read(operation,values={}){
     const workspace=current(),ticket=generation;
     const result=await api(endpoint('/api/calibration/'+operation,values));
@@ -56,6 +61,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return '<header class="page-header"><div><p class="eyebrow">ORIGINAL OBSERVATIONS · NATIVE MODELS</p><h1>'+esc(title)+'</h1><p>'+esc(description)+'</p></div><div class="page-actions">'+actions+'</div></header>';
   }
   function render(){
+    if(reviewsDesk.active())return reviewsDesk.render();
     if(mapsDesk.active())return mapsDesk.render();
     if(activeReport?.workspace_key!==current()){activeReport=null;activeUncertainty=null;}
     if(activeUncertainty)return renderUncertainty();
@@ -79,14 +85,16 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     repaint();
   }
   function update(){
+    const reviewChanged=reviewsDesk.sync();
     const mapChanged=mapsDesk.sync();
     if(!mounted)return;
+    if(reviewsDesk.active()){if(reviewChanged)repaint();return;}
     if(mapsDesk.active()){if(mapChanged)repaint();return;}
     if(activeReport){
       if(activeReport.workspace_key!==current()){activeReport=null;activeUncertainty=null;}
       else{
         let changed=mapChanged;
-        for(const [source,key] of [['calibration_uncertainties','uncertainties'],['calibration_maps','maps']]){
+        for(const [source,key] of [['calibration_uncertainties','uncertainties'],['calibration_maps','maps'],['calibration_reviews','reviews']]){
           const latest=calibrationData()[source];
           if(!Array.isArray(latest))continue;
           const rows=latest.filter(row=>row.calibration_id===activeReport.report.id);
@@ -103,11 +111,12 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   }
   function detach(){
     mounted=null;lastMarkup=null;
-    generation++;mapsDesk.invalidate();
+    generation++;mapsDesk.invalidate();reviewsDesk.invalidate();
   }
   function repaint(){
     if(!mounted)return;
     lastMarkup=render();mounted.innerHTML=lastMarkup;
+    if(reviewsDesk.active())return;
     if(mapsDesk.active())mapsDesk.bind(mounted);
     else if(activeReport)bindReport();
   }
@@ -249,6 +258,13 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       activeDraft.raw=[...form().elements].filter(node=>node.name?.startsWith('calibration_')).map(node=>({name:node.name,value:node.value,type:node.type,checked:node.checked}));
     }
     retainDraft();
+    renderSourceDesign();
+  }
+  function renderSourceDesign(){
+    const target=$('#calibration-design-review');if(!target)return;
+    if(!previewResult){target.replaceChildren();return;}
+    try{target.innerHTML=calibrationDesignHTML(analyzeCalibrationDesign(previewResult,collectSelection({split:true})));}
+    catch(error){target.innerHTML='<p class="note">'+esc(error.message||String(error))+'</p>';}
   }
   function invalidatePreview(){
     previewResult=null;
@@ -305,7 +321,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return newForm(null,handoff);
   }
   async function newForm(planId=null,handoff=null){
-    mapsDesk.invalidate();
+    reviewsDesk.invalidate();mapsDesk.invalidate();
     const workspace=current(),request=++formRequest;
     const catalog=await read('catalog');
     if(current()!==workspace||request!==formRequest)return;
@@ -382,7 +398,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       field('Observation period weighting',select('calibration_temporal_weighting',[['whole_years','Complete years · equal annual weight'],['elapsed_days','Elapsed days · derived annual period rates']],selection.temporal_weighting||'whole_years'),'Use the original annual-estimation method. Complete calendar or water years receive equal weight, including leap years.',true)+
       '<fieldset class="full"><legend>Parameter-selection objective</legend><p class="note">A zero weight excludes a pollutant from profile selection. Automatic normalization uses calibration observations only. Supply an explicit positive annual-load scale when the study requires one.</p><p class="note" id="calibration-output-support"></p>'+
       table(['Pollutant','Relative weight','Annual mass scale','Scale source or rationale'],pollutants.map(name=>'<tr><th scope="row">'+esc(human(name))+'<small>'+esc(units[name])+'</small></th><td>'+input('calibration_weight_'+name,objective[name]?.weight??(selection.observation_id?0:1),'number','min="0" step="any" required aria-label="'+name+' weight"')+'</td><td>'+input('calibration_scale_'+name,objective[name]?.normalization_scale??'','number','min="0" step="any" placeholder="From calibration observations" aria-label="'+name+' annual normalization scale"')+'</td><td>'+input('calibration_scale_reference_'+name,objective[name]?.scale_reference??'','text','aria-label="'+name+' scale source or rationale"')+'</td></tr>'))+'</fieldset>'+
-      '<fieldset class="full"><legend>Calibration and validation groups</legend><p class="note" id="calibration-preview-note">Inspect the original catchments to assign calibration and validation groups.</p><div id="calibration-group-body"></div></fieldset>'+
+      '<fieldset class="full"><legend>Calibration and validation groups</legend><p class="note" id="calibration-preview-note">Inspect the original catchments to assign calibration and validation groups.</p><div id="calibration-group-body"></div><div id="calibration-design-review" aria-live="polite"></div></fieldset>'+
       field('Interpretation notes',textArea('calibration_notes',(selection.notes??[]).join('\n')),'Retain period assumptions and relevant reservoir, point-source or source-edition context.',true)+
       '<details class="technical full"><summary>Delivered external loads and candidate selection</summary><p class="note">Retain a measured or otherwise source-supported annual load already delivered to the observed catchment outlet when the study adds that contribution to the native diffuse-load prediction.</p><div id="calibration-external-loads">'+Object.entries(selection.delivered_external_loads??{}).map(([id,row])=>externalRow(id,row)).join('')+'</div>'+button('external-add','Add original delivered load')+
       field('Reference candidate for an exact score tie',select('calibration_reference_run',(catalog.candidate_groups.find(group=>groupKey(group)===draft.group)?.runs??[]).map(row=>[row.id||row.run_id,row.title]),selection.reference_run_id||'',false),'Optional. It must remain one of the selected candidates.',true)+
@@ -395,11 +411,16 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
           $('#form-progress').textContent='Reading original catchment groups and observation support…';
           const value=await api('/api/calibration/preview',{method:'POST',body:{workspace,selection:selected}});
           if(!isCurrentDraft(token))return;
+          let currentSelection;
+          try{currentSelection=collectSelection();}catch{return;}
+          if(JSON.stringify(currentSelection)!==JSON.stringify(selected))return;
           renderPreview(value,selected);
           $('#form-progress').textContent='Catchment groups are ready. Choose the validation groups, then save the selection.';
           return;
         }
         const finalSelection=collectSelection({split:true});
+        const sourceDesign=analyzeCalibrationDesign(previewResult,finalSelection);
+        if(!sourceDesign.training_ready)throw Error('The calibration partition needs original references for every selected pollutant and a positive training normalization. Review Source support for this evaluation.');
         activeDraft.selection=finalSelection;retainDraft();
         const task=await submitAction('calibration.prepare',{selection:finalSelection});
         if(activeDraft?.workspace===workspace&&formToken===token){
@@ -529,7 +550,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     detail(plan.selection.title,body,{kind:'calibration-plan',id});
   }
   async function openReport(id){
-    mapsDesk.reset();
+    reviewsDesk.reset();mapsDesk.reset();
     const request=++resultRequest;
     const packet=await read('report',{id});
     if(request!==resultRequest)return;
@@ -621,7 +642,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       (view.observations.length?section('Observed and modeled annual loads','The dashed diagonal marks equal observed and modeled load. Circles show calibration catchments; outlined squares show validation catchments.',
         '<div class="calibration-plots">'+pollutants.map(name=>scatter(view.observations,name)).join('')+'</div>'):'')+
       uncertaintyList()+
-      (report.selected_run_id?mapsDesk.summary(report.id):'')+
+      (report.selected_run_id?mapsDesk.summary(report.id)+reviewsDesk.summary(report.id):'')+
       section('Results','Search and sort the retained rows; downloaded files contain the complete selection and results.',
         '<div class="calibration-tabs" role="tablist" aria-label="Calibration results">'+Object.entries(tabTitles).map(([key,title])=>'<button type="button" role="tab" aria-selected="'+(key===activeTab)+'" data-action="calibration-tab" data-tab="'+key+'">'+esc(title)+' <small>'+number((view[key]??[]).length)+'</small></button>').join('')+'</div>'+
         '<div class="calibration-table-controls">'+field('Find a result',input('calibration_result_search',query,'search','id="calibration-result-search" placeholder="Profile, catchment or pollutant"'))+'</div><div id="calibration-result-table">'+resultTable()+'</div>')+
@@ -696,7 +717,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         '<p class="calibration-empty">A completed sensitivity analysis will appear here beside this unchanged nominal calibration.</p>'));
   }
   function uncertaintyForm(reportId){
-    mapsDesk.invalidate();
+    reviewsDesk.invalidate();mapsDesk.invalidate();
     if(!reportId)throw Error('Open a completed calibration before analyzing its observation errors.');
     const workspace=current(),request=++formRequest;
     const retained=activeUncertainty?.analysis;
@@ -715,7 +736,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       });
   }
   async function openUncertainty(id){
-    mapsDesk.reset();
+    reviewsDesk.reset();mapsDesk.reset();
     const workspace=current(),request=++resultRequest;
     const packet=await read('uncertainty',{id});
     if(request!==resultRequest||current()!==workspace)return;
@@ -784,20 +805,42 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return '<div class="page-actions">'+(value.plan_id?button('plan','Open calibration selection',value.plan_id):'')+
       (value.report_id?button('report','Open calibration results',value.report_id):'')+
       (value.uncertainty_id?button('uncertainty','Open observation sensitivity',value.uncertainty_id):'')+
-      (value.map_id?button('maps-open','Open catchment residual maps',value.map_id):'')+'</div>';
+      (value.map_id?button('maps-open','Open catchment residual maps',value.map_id):'')+
+      (value.calibration_review_id?button('review-open','Open complete review',value.calibration_review_id):'')+'</div>';
   }
   async function dispatch(node){
-    if(node.dataset.action?.startsWith('calibration-maps-')){resultRequest++;return mapsDesk.dispatch(node);}
+    if(node.dataset.action?.startsWith('calibration-review-')){resultRequest++;return reviewsDesk.dispatch(node);}
+    if(node.dataset.action?.startsWith('calibration-maps-')){reviewsDesk.reset();resultRequest++;return mapsDesk.dispatch(node);}
     const action=node.dataset.action?.replace(/^calibration-/,''),id=node.dataset.id;
     if(action==='new')return newForm();
     if(action==='revise')return newForm(id);
     if(action==='plan')return openPlan(id);
     if(action==='report')return openReport(id);
-    if(action==='back'){mapsDesk.reset();activeReport=null;activeUncertainty=null;resultRequest++;return repaint();}
+    if(action==='back'){reviewsDesk.reset();mapsDesk.reset();activeReport=null;activeUncertainty=null;resultRequest++;return repaint();}
     if(action==='uncertainty-new')return uncertaintyForm(id);
     if(action==='uncertainty')return openUncertainty(id);
     if(action==='uncertainty-nominal')return openReport(id);
     if(action==='uncertainty-export')return submitAction('calibration.uncertainty.export',{uncertainty_id:id});
+    if(action==='design-holdout'){
+      if(!previewResult||!isCurrentDraft(formToken))throw Error('Inspect the original catchments in the current draft first.');
+      const review=analyzeCalibrationDesign(previewResult,collectSelection({split:true}));
+      const choice=review.single_group_holdouts.find(row=>row.held_group_id===id);
+      if(!choice?.training_ready)throw Error('This holdout has no complete training source support.');
+      for(const node of $$('[data-calibration-group]',form())){
+        const label=$('[data-calibration-group-label="'+CSS.escape(node.dataset.calibrationGroup)+'"]',form()).value.trim();
+        node.value=label===id?'validation':'calibration';
+      }
+      captureDraft();
+      $('#calibration-design-review')?.scrollIntoView({block:'nearest'});
+      return;
+    }
+    if(action==='design-download'){
+      if(!previewResult||!isCurrentDraft(formToken))throw Error('Inspect the original catchments in the current draft first.');
+      const review=analyzeCalibrationDesign(previewResult,collectSelection({split:true}));
+      const url=URL.createObjectURL(new Blob([JSON.stringify(review,null,2)+'\n'],{type:'application/json'}));
+      const anchor=document.createElement('a');anchor.href=url;anchor.download='calibration-source-design.json';anchor.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);return;
+    }
     if(action==='inspect-source')return inspectSource();
     if(action==='inspect-observation'){
       const observation=val('calibration_observation');

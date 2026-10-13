@@ -13,7 +13,7 @@ if __package__ in (None, ""):
 
 from .common import atomic_json, file_digest
 from .workspace import Workspace
-from . import reviews
+from . import reviews, review_handback
 
 
 def parser():
@@ -67,6 +67,28 @@ def parser():
     restore = commands.add_parser("workspace-restore", help="Use original workspace restore, then reopen customer reviews")
     restore.add_argument("archive", type=Path)
     restore.add_argument("destination", type=Path)
+    handbacks = commands.add_parser("handbacks", help="List engineering editions attached to original customer requests")
+    handbacks.add_argument("--review-id")
+    draft = commands.add_parser("handback-template", help="Prepare actual requests and original revised evidence choices")
+    draft.add_argument("review_id")
+    draft.add_argument("destination", type=Path)
+    draft.add_argument("--response-id")
+    draft.add_argument("--handback-id")
+    draft.add_argument("--revised-review-id")
+    save = commands.add_parser("handback-save", help="Save an immutable engineering assignment or ready handback")
+    save.add_argument("draft", type=Path)
+    show = commands.add_parser("handback-show", help="Reopen engineering response, actual requests and edition history")
+    show.add_argument("handback_id")
+    export = commands.add_parser("handback-export", help="Export complete original and revised desks with engineering history")
+    export.add_argument("handback_id")
+    export.add_argument("destination", type=Path)
+    export.add_argument("--zip", dest="archive", type=Path)
+    inspect = commands.add_parser("handback-inspect", help="Verify a complete engineering handback independently")
+    inspect.add_argument("packet", type=Path)
+    receive = commands.add_parser("handback-receive", help="Receive both review desks and all engineering editions")
+    receive.add_argument("packet", type=Path)
+    receive.add_argument("destination", type=Path)
+    receive.add_argument("--join", action="store_true", help="Join records to their original restored --workspace")
     return root
 
 
@@ -104,6 +126,13 @@ def _catalogue(workspace):
 
 
 def perform(args):
+    if args.command == "handback-inspect":
+        inspected = review_handback.inspect_packet(args.packet)
+        return {"manifest": inspected["manifest"], "handback": inspected["handback"],
+                "engineering_editions": len(inspected["document"]["history"]),
+                "review_generations": len(inspected["document"]["reviews"])}
+    if args.command == "handback-receive" and not args.join:
+        return review_handback.receive_packet(args.packet, args.destination)
     if args.command == "packet-inspect":
         inspected = reviews.inspect_packet(args.packet)
         return {"manifest": inspected["manifest"], "title": inspected["packet"]["review"]["title"],
@@ -120,6 +149,23 @@ def perform(args):
     if args.workspace is None:
         raise ValueError("--workspace is required for this operation")
     workspace = Workspace(args.workspace)
+    if args.command == "handbacks":
+        return {"project": workspace.project, "handbacks": review_handback.list_handbacks(workspace, args.review_id)}
+    if args.command == "handback-template":
+        kwargs = {key: getattr(args, key) for key in ("response_id", "handback_id", "revised_review_id")
+                  if getattr(args, key) is not None}
+        result = review_handback.template(workspace, args.review_id, **kwargs)
+        atomic_json(args.destination, result["draft"], immutable=True)
+        return {**result, "draft_path": str(args.destination)}
+    if args.command == "handback-save":
+        value = reviews._read_json_file(args.draft)
+        return review_handback.save(workspace, value.get("draft", value))
+    if args.command == "handback-show":
+        return review_handback.show(workspace, args.handback_id)
+    if args.command == "handback-export":
+        return review_handback.export_handback(workspace, args.handback_id, args.destination, archive=args.archive)
+    if args.command == "handback-receive":
+        return review_handback.receive_packet(args.packet, args.destination, workspace=workspace)
     if args.command == "catalogue":
         return _catalogue(workspace)
     if args.command == "list":

@@ -133,8 +133,13 @@ export function attachConservation({
       collection_title: collection.title || collection.id,
     })));
   };
-  const runs = () => (getState?.()?.data?.runs || memory().overview?.available?.runs || [])
-    .filter(run => run.state === "complete");
+  const runs = () => {
+    const retained = new Map((memory().overview?.available?.runs || []).map(run => [run.id, run]));
+    return (getState?.()?.data?.runs || [...retained.values()])
+      .filter(run => run.state === "complete")
+      .map(run => ({ ...retained.get(run.id), ...run,
+        execution: retained.get(run.id)?.execution || run.execution }));
+  };
   const publishedMethod = () => memory().overview?.published_methods || {};
   const publishedCategories = () => publishedMethod().categories || [];
   const methodCategory = id => publishedCategories().find(category => category.id === id);
@@ -150,8 +155,12 @@ export function attachConservation({
   }
   function runQuantityLabel(run) {
     const models = runModels(run);
-    return [models.includes("ndr") ? "nitrogen + phosphorus" : "",
+    const quantities = [models.includes("ndr") ? "nitrogen + phosphorus" : "",
       models.includes("sdr") ? "sediment" : ""].filter(Boolean).join(" · ") || "No selected native outputs";
+    const versions = Object.entries(run?.execution?.model_versions || {}).map(([model, value]) =>
+      model.toUpperCase() + " " + (value.comparison_version || "version not recorded")).join(", ");
+    return quantities + (versions ? " · " + versions : "") +
+      (run?.execution?.supported === false ? " · Outside the quantity adapter" : "");
   }
   function scoreOutputs(draft = memory().draft) {
     const available = runs();
@@ -210,11 +219,20 @@ export function attachConservation({
       Array.isArray(source?.items) ? source.items : source && typeof source === "object" ?
         Object.values(source).filter(item => item && typeof item === "object" && item.action) : [];
     const experimentActions = new Set(["experiment.save", "experiment.run", "experiment.summarize"]);
-    return tasks.filter(task => String(task.action || "").startsWith("conservation.") ||
+    const operations = tasks.filter(task => String(task.action || "").startsWith("conservation.") ||
       experimentActions.has(task.action))
       .map(task => JSON.stringify([task.id, task.state || task.status,
         task.updated_at || null, task.progress || null]))
-      .sort().join("|");
+      .sort();
+    const nativeRuns = (state?.data?.runs || []).map(run => JSON.stringify([
+      run.id, run.state, run.selection?.invest_version || null,
+      run.runtime?.version || null, run.selection?.models || null,
+      ["ndr", "sdr"].map(model => {
+        const stage = run.stages?.[model];
+        return [model, stage?.completed_at || null, stage?.runtime?.version || null];
+      }),
+    ])).sort();
+    return JSON.stringify([operations, nativeRuns]);
   }
   async function refreshOverview(force = false) {
     const key = workspace(), ui = memory(key), requestedStamp = taskStamp(getState?.());
@@ -912,7 +930,10 @@ export function attachConservation({
           '<label class="cons-check"><input type="checkbox" data-alt-id="' + h(run.id) + '"' +
           (d.alternative_run_ids.includes(run.id) ? " checked" : "") + "> <span>" +
           h(run.title || run.selection?.title || run.id) + " · " + h(runQuantityLabel(run)) + " · " + h(run.id) + "</span></label>").join("") :
-          "<p>No additional completed runs are available.</p>") + "</div></fieldset>" :
+          "<p>No additional completed runs are available.</p>") + "</div>" +
+        nativeExecution({spec: d, native_execution: Object.fromEntries(availableRuns.filter(run =>
+          run.id === d.baseline_run_id || d.alternative_run_ids.includes(run.id))
+          .filter(run => run.execution).map(run => [run.id, run.execution]))}) + "</fieldset>" :
         '<fieldset><legend>Reporting area</legend><p class="cons-help">Area and overlap calculations use ' +
         "these retained boundaries. A reporting watershed becomes drinking-water context only when it has that documented role.</p>" +
         '<div class="cons-grid">' +
@@ -1367,6 +1388,49 @@ export function attachConservation({
       alternatives.map(id => "<th>Alternative " + h(id) + "</th>").join("") +
       "</tr></thead><tbody>" + rows + "</tbody></table></div>";
   }
+  function nativeExecution(study) {
+    const entries = Object.entries(study?.native_execution || {});
+    if (!entries.length) return "";
+    const spec = study.spec || {}, basis = {
+      completed_stage_runtime: "Recorded on the completed model stage",
+      observed_run_fallback: "Observed run runtime; stage version not recorded",
+      observed_runtime: "Observed run runtime",
+      requested_legacy: "Requested version retained by a legacy record",
+      unavailable: "No version recorded",
+    };
+    const version = value => h(value || "Not recorded");
+    return '<details class="cons-disclosure"><summary>Native execution versions</summary>' +
+      '<p class="cons-help">Each model keeps the execution version used to interpret its outputs. ' +
+      'A completed stage takes precedence over the observed run runtime; a requested-only legacy record is labelled explicitly.</p>' +
+      entries.map(([id, execution]) => {
+        const role = id === spec.baseline_run_id ? "Baseline" :
+          (spec.alternative_run_ids || []).includes(id) ? "Alternative" : "Retained run";
+        const models = Object.entries(execution.model_versions || {});
+        const support = execution.supported === true ? "Supported by this quantity adapter" :
+          execution.supported === false ? "Outside this quantity adapter's supported version" :
+          "Adapter compatibility not recorded";
+        const rows = models.map(([model, value]) => '<tr><th scope="row">' + h(model.toUpperCase()) +
+          "</th><td>" + version(value.comparison_version) + "</td><td>" +
+          h(basis[value.basis] || value.basis || "No version recorded") + "</td><td>" +
+          version(value.requested_version) + "</td><td>" + version(value.observed_run_version) +
+          "</td><td>" + h(value.stage_completed_at || "Not recorded") + "</td><td>" +
+          (value.reused_from ? '<details><summary>Original reused stage</summary><pre>' +
+            h(JSON.stringify(value.reused_from, null, 2)) + "</pre></details>" : "No reuse recorded") +
+          "</td></tr>").join("");
+        return '<section aria-label="' + h(role + " native execution") + '"><div class="cons-section-title"><h4>' +
+          h(role) + " · " + h(id) + '</h4><button type="button" data-action="item" data-kind="runs" data-id="' +
+          h(id) + '">Open original run</button></div><p>' +
+          "Quantity adapter " + version(execution.unit_contract_version) + " · " + h(support) +
+          '</p><div class="cons-table-wrap"><table class="cons-table"><caption>Retained execution source for each selected model</caption>' +
+          "<thead><tr><th>Model</th><th>Version used for quantities</th><th>Recorded basis</th>" +
+          "<th>Requested version</th><th>Observed run version</th><th>Stage completed</th><th>Stage source</th></tr></thead>" +
+          "<tbody>" + (rows || '<tr><td colspan="7">Per-model execution was not recorded.</td></tr>') +
+          "</tbody></table></div>" +
+          (execution.runtime_history?.length ? '<details><summary>Original run runtime history</summary><pre>' +
+            h(JSON.stringify(execution.runtime_history, null, 2)) + "</pre></details>" : "") + "</section>";
+      }).join("") + "</details>";
+  }
+
   function studyLineage(study) {
     const spec = study?.spec || {};
     return '<details class="cons-disclosure"><summary>Sources and saved choices</summary><dl class="cons-definitions">' +
@@ -1685,6 +1749,52 @@ export function attachConservation({
       }).join("") + '</tbody></table></div>';
   }
 
+  function sourceSuccessors(row) {
+    const id = sourceCaptureId(row);
+    return (Array.isArray(row?.continued_as) ? row.continued_as : [])
+      .filter(item => sourceCaptureId(item) && sourceCaptureId(item) !== id)
+      .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")) ||
+        sourceCaptureId(a).localeCompare(sourceCaptureId(b)));
+  }
+
+  function sourceContinuationView(row) {
+    const prior = row.continuation, successors = sourceSuccessors(row);
+    if (!prior && !successors.length && !row.implementation_changed) return "";
+    let html = '<section class="cons-source-continuation"><h3>Acquisition history</h3>';
+    if (prior?.previous_operation_id) {
+      html += '<p>This acquisition continues the original study extent, source choices and provider requests ' +
+        'from an earlier saved acquisition.</p><div class="cons-actions">' +
+        button("open-source-capture", "Open previous acquisition",
+          'data-operation-id="' + h(prior.previous_operation_id) + '"', memory().busy) + '</div>';
+      if (finite(prior.reused_requests)) {
+        html += '<p>' + number(prior.reused_requests) + ' retained provider responses reused' +
+          (finite(prior.reused_bytes) ? ' · ' + number(prior.reused_bytes) + ' bytes' : '') +
+          '. Coverage and parcel-source classifications are recalculated by the current application.</p>';
+        if (finite(prior.successful_responses) || finite(prior.retained_failures)) {
+          html += '<p class="cons-metric-note">' +
+            (finite(prior.successful_responses) ? number(prior.successful_responses) + ' successful responses' : '') +
+            (finite(prior.successful_responses) && finite(prior.retained_failures) ? ' · ' : '') +
+            (finite(prior.retained_failures) ? number(prior.retained_failures) + ' retained failed attempts' : '') +
+            '</p>';
+        }
+      }
+    }
+    if (row.implementation_changed) {
+      html += '<p>A newer version of the source-processing application is installed. ' +
+        'Continue from the saved requests to create an updated acquisition.</p>';
+    }
+    if (successors.length) {
+      html += '<div class="cons-table-wrap"><table class="cons-table"><thead><tr>' +
+        '<th>Continued acquisition</th><th>State</th><th>Open</th></tr></thead><tbody>' +
+        successors.map(item => '<tr><th scope="row">' + h(item.title || sourceCaptureId(item)) +
+          '</th><td>' + h(human(item.state || "prepared")) + '</td><td>' +
+          button("open-source-capture", "Open continued acquisition",
+            'data-operation-id="' + h(sourceCaptureId(item)) + '"', memory().busy) +
+          '</td></tr>').join("") + '</tbody></table></div>';
+    }
+    return html + '</section>';
+  }
+
   function sourceCaptureButtons(row) {
     const id = sourceCaptureId(row);
     if (!id) return "";
@@ -1694,8 +1804,17 @@ export function attachConservation({
       result += button("criteria-from-sources", "Prepare parcel criteria",
         'data-operation-id="' + h(id) + '"', memory().busy);
     }
-    if (row.state !== "complete") result += button("resume-sources", "Continue acquisition",
-      'data-operation-id="' + h(id) + '"', memory().busy);
+    const current = memory().overview?.source_acquisitions?.find(item => sourceCaptureId(item) === id);
+    if (current) row = { ...row, ...current };
+    const continued = sourceSuccessors(row)[0];
+    if (continued) {
+      result += button("open-source-capture", "Open continued acquisition",
+        'data-operation-id="' + h(sourceCaptureId(continued)) + '"', memory().busy);
+    } else if (row.state !== "complete" || row.implementation_changed) {
+      result += button("resume-sources", row.implementation_changed ?
+        "Continue with current application" : "Continue acquisition",
+        'data-operation-id="' + h(id) + '"', memory().busy);
+    }
     return result;
   }
 
@@ -1708,6 +1827,9 @@ export function attachConservation({
       rows.map(row => '<tr><th scope="row">' + h(row.title || row.study_title || row.study_id || sourceCaptureId(row)) +
         '</th><td>' + h(human(row.state || "prepared")) + '</td><td>' +
         h(human(row.progress?.stage || "")) +
+        (row.continuation?.previous_operation_id ?
+          '<span class="cons-metric-note">Continues a saved acquisition</span>' :
+          row.implementation_changed ? '<span class="cons-metric-note">Application updated</span>' : "") +
         (finite(row.progress?.completed) ? '<span class="cons-metric-note">' + number(row.progress.completed) +
           (finite(row.progress?.total) ? " / " + number(row.progress.total) : "") + '</span>' : "") +
         '</td><td><div class="cons-actions">' + sourceCaptureButtons(row) + '</div></td></tr>').join("") +
@@ -1747,6 +1869,7 @@ export function attachConservation({
       button("close-form", "Close", "", ui.busy) + '</div>' +
       (error ? '<div class="cons-notice cons-error" role="alert">' +
         h(typeof error === "string" ? error : error.message || error.type || "") + '</div>' : "") +
+      sourceContinuationView(row) +
       sourceFamilyTable(row) +
       (row.coverage ? '<h3>Source coverage and interpretation</h3>' + sourceCoverageFacts(row.coverage) : "") +
       (row.counts ? '<h3>Retained source quantities</h3>' + sourceCoverageFacts(row.counts) : "") +
@@ -1836,7 +1959,7 @@ export function attachConservation({
           "Native model quantities: pollutant units, valid coverage and alternative differences remain visible for each planning unit.") +
         "</p>" + (study.error ? '<div class="cons-notice cons-error" role="alert">' +
           h(typeof study.error === "string" ? study.error : study.error.message || JSON.stringify(study.error)) +
-          "</div>" : "") + studyLineage(study) +
+          "</div>" : "") + studyLineage(study) + nativeExecution(study) +
         (ui.plan ? portfolioView(ui.plan) : "") +
         (ui.form === "portfolio" ? portfolioForm() : "") +
         (ui.form === "optimization" ? optimizationForm() : "") +
@@ -1918,6 +2041,7 @@ export function attachConservation({
       const value = run.selection || {};
       return value.grid_id === d.grid_id && value.profile_id === d.profile_id &&
         value.invest_version === data.invest_version && original.has(value.scenario_id) &&
+        run.execution?.supported === true &&
         runModels(run).join(",") === scope.models.join(",");
     });
   }

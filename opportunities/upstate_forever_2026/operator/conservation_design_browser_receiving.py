@@ -6,23 +6,86 @@ Explicit land-cover codes/reason define this receiving alternative. The script
 prepares the already-saved plan, opens its original embedded Scenario Design
 project, creates/reopens one named alternative, downloads the complete native
 handover, receives that ZIP through the real binary upload and original queue,
-then reloads its saved scenario and optional prepared run. Native execution stays
+then reloads its saved scenario and optional prepared run. It captures the complete
+Workspace through its existing backup form, receives that original archive into
+an independent Workspace, and reopens the exact editor Store project/revision,
+alternative and native records captured in the archive. Native execution stays
 with the existing run owner.
 """
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import hashlib
 import json
 import math
 from pathlib import Path
+import sqlite3
 import time
 from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.request import Request, urlopen
 import zipfile
 
 from conservation_browser_receiving import file_record, read_json, require
 
 SCHEMA = "upstate.conservation-design-browser-receiving/v1"
+
+
+def captured_editor(archive_path, output, project_id, alternative_id, expected_baseline):
+    """Read the exact original Store record from the retained Workspace snapshot."""
+    member = "workspace/conservation-design/editor/projects.sqlite"
+    with zipfile.ZipFile(archive_path) as archive:
+        manifest = json.loads(archive.read("ARCHIVE.json"))
+        require(manifest.get("schema") == "upstate.scientific-workspace-archive/v1",
+                "Use the original full scientific Workspace archive.")
+        expected = manifest.get("members", {}).get(member)
+        snapshot = manifest.get("database_snapshots", {}).get(member)
+        require(isinstance(expected, dict) and isinstance(snapshot, dict),
+                "The archive must retain the original editor database and its snapshot record.")
+        require(snapshot.get("method") in ("sqlite-online-backup", "verified-frozen-snapshot"),
+                "The editor database must use the original committed SQLite snapshot path.")
+        require(not any(member + suffix in manifest["members"] for suffix in ("-wal", "-shm", "-journal")),
+                "The original editor snapshot must be self-contained.")
+        database = output / "captured-editor.sqlite"
+        pending = database.with_suffix(".sqlite.pending")
+        digest = hashlib.sha256()
+        size = 0
+        try:
+            with archive.open(member) as source, pending.open("wb") as target:
+                for block in iter(lambda: source.read(1024 * 1024), b""):
+                    target.write(block)
+                    digest.update(block)
+                    size += len(block)
+            require(size == expected["bytes"] and digest.hexdigest() == expected["sha256"],
+                    "The captured original editor database differs from its archive member identity.")
+            pending.replace(database)
+        finally:
+            pending.unlink(missing_ok=True)
+    uri = database.resolve().as_uri() + "?mode=ro&immutable=1"
+    with closing(sqlite3.connect(uri, uri=True)) as connection:
+        row = connection.execute("SELECT revision,body FROM projects WHERE id=?", (project_id,)).fetchone()
+        require(row is not None, "The original prepared editor project is absent from the captured Store.")
+        revision, body = row
+        project = json.loads(body)
+        history_body = connection.execute(
+            "SELECT body FROM revisions WHERE project_id=? AND revision=?", (project_id, revision)).fetchone()
+        require(history_body is not None and json.loads(history_body[0]) == project,
+                "The captured current project differs from its original saved revision.")
+        history = [{"revision": item[0], "saved_at": item[1], "bytes": item[2]} for item in
+                   connection.execute(
+                       "SELECT revision,saved,LENGTH(body) FROM revisions WHERE project_id=? ORDER BY revision DESC",
+                       (project_id,))]
+    require(project.get("id") == project_id and project.get("baseline") == expected_baseline,
+            "The captured project changed its original saved-plan geometry or project identity.")
+    alternatives = [row for row in project.get("alternatives", []) if row.get("id") == alternative_id]
+    require(len(alternatives) == 1, "The exact received alternative is absent from the captured original project.")
+    return {
+        "manifest_project": manifest["project"],
+        "database_member": member, "database": file_record(database),
+        "database_snapshot": snapshot,
+        "editor": {"revision": revision, "project": project},
+        "history": history, "alternative": alternatives[0],
+    }
 
 
 def main():
@@ -100,14 +163,21 @@ def main():
         print(clean(json.dumps({"state": report["state"], "plan_id": plan_id, "study_id": study_id,
               "preparation_id": report.get("preparation_id"), "receiving_id": report.get("receiving_id"),
               "scenario_id": report.get("scenario_id"), "run_id": report.get("run_id"),
-              "handover": report.get("handover"), "receiving_path": str(report_path)})), flush=True)
+              "handover": report.get("handover"),
+              "restored_workspace": report.get("workspace_transfer", {}).get("workspace_key"),
+              "captured_editor_revision": report.get("workspace_transfer", {}).get("captured_editor", {}).get("revision"),
+              "workspace_archive": report.get("workspace_transfer", {}).get("archive"),
+              "receiving_path": str(report_path)})), flush=True)
 
-    if report["state"] == "complete":
+    if report["state"] == "complete" and report.get("workspace_transfer", {}).get("state") == "complete":
         for field in ("editable_project", "handover"):
             expected = report[field]
             actual = file_record(expected["path"])
             require(actual["bytes"] == expected["bytes"] and actual["sha256"] == expected["sha256"],
                     "The retained original " + field + " changed.")
+        for field in ("archive",):
+            expected = report["workspace_transfer"][field]
+            require(file_record(expected["path"]) == expected, "The retained complete Workspace archive changed.")
         complete_output()
         return
 
@@ -117,7 +187,7 @@ def main():
         report.setdefault("earlier_attempts", []).append({
             "state": report["state"], "error": report["error"],
             "console_errors": report.get("console_errors", []), "page_errors": report.get("page_errors", [])})
-    report.update(state="running", console_errors=[], page_errors=[])
+    report.update(state="running", receiving_workflow_version=2, console_errors=[], page_errors=[])
     report.pop("error", None)
     persist()
 
@@ -140,7 +210,8 @@ def main():
                 return
             value = request.post_data_json
             if (isinstance(value, dict) and value.get("workspace") == workspace
-                    and value.get("action") in ("conservation.design.prepare", "conservation.design.receive")):
+                    and value.get("action") in ("conservation.design.prepare", "conservation.design.receive",
+                                              "workspace.backup", "workspace.restore")):
                 report["pending_operations"][value["action"]] = value
                 persist()
 
@@ -153,7 +224,9 @@ def main():
             response = (context.request.get(url, headers=headers, timeout=45000) if value is None else
                         context.request.post(url, headers=headers, data=value, timeout=45000))
             body = response.json()
-            require(response.ok, body.get("error", {}).get("message", "Original operator request failed."))
+            if not response.ok:
+                message = body.get("error", {}).get("message") if isinstance(body, dict) else None
+                raise ValueError(message or "Original operator request failed.")
             return body
 
         def task(task_id, expected_action):
@@ -227,11 +300,211 @@ def main():
                 require(archive.testzip() is None, "An original ZIP member failed CRC verification.")
             return actual
 
+
+        def close_dialogs():
+            form_close = page.locator('#form-dialog[open] [data-action="form-close"]')
+            if form_close.count():
+                form_close.click()
+                expect(page.locator("#form-dialog[open]")).to_have_count(0)
+            detail_close = page.locator('#detail-dialog[open] [data-action="detail-close"]')
+            if detail_close.count():
+                detail_close.click()
+                expect(page.locator("#detail-dialog[open]")).to_have_count(0)
+            panel = page.locator("#task-panel")
+            if panel.count() and panel.is_visible():
+                page.locator('#task-panel [data-action="tasks-close"]').click()
+
+        def download_archive(completed):
+            expected = completed["result"]
+            tickets = [item for item in completed.get("_downloads", [])
+                       if item.get("bytes") == expected["bytes"] and item.get("sha256") == expected["sha256"]]
+            require(len(tickets) == 1, "Choose the original completed Workspace archive ticket.")
+            ticket = tickets[0]
+            target = urlsplit(origin + ticket["url"])
+            require(target.scheme + "://" + target.netloc == origin
+                    and target.path.startswith("/api/file/"),
+                    "Use the original same-operator archive download.")
+            archive_path = output / "scientific-workspace.zip"
+            retained = report.get("workspace_transfer", {}).get("archive")
+            if retained:
+                require(file_record(retained["path"]) == retained
+                        and retained["bytes"] == expected["bytes"] and retained["sha256"] == expected["sha256"],
+                        "The retained original Workspace archive changed.")
+                return retained
+            close_dialogs()
+            page.locator('.top-actions [data-action="tasks"]').click()
+            control = page.locator('[data-action="task-open"][data-id=' + json.dumps(completed["id"]) + "]")
+            if control.count():
+                control.click()
+                link = page.locator('#detail-dialog a[href=' + json.dumps(ticket["url"] + "?download=1") + "]")
+                expect(link).to_be_visible()
+                with page.expect_download() as pending:
+                    link.click()
+                download = pending.value
+                require(download.failure() is None, "The complete original Workspace archive download failed.")
+                download.save_as(str(archive_path))
+                report["workspace_transfer"]["download_route"] = "original_task_file_control"
+            else:
+                # An old task can be outside the current visible task window.
+                # Its original authenticated file ticket still resolves the same archive.
+                request = Request(origin + ticket["url"], headers={"Authorization": "Bearer " + capability})
+                pending = archive_path.with_suffix(".zip.pending")
+                try:
+                    with urlopen(request, timeout=args.task_timeout) as source, pending.open("wb") as target_file:
+                        for block in iter(lambda: source.read(1024 * 1024), b""):
+                            target_file.write(block)
+                    pending.replace(archive_path)
+                finally:
+                    pending.unlink(missing_ok=True)
+                report["workspace_transfer"]["download_route"] = "original_authenticated_task_ticket"
+            actual = file_record(archive_path)
+            require(actual["bytes"] == expected["bytes"] and actual["sha256"] == expected["sha256"],
+                    "The downloaded Workspace archive differs from its retained native result.")
+            return actual
+
+        def retain_workspace():
+            transfer = report.setdefault("workspace_transfer", {"state": "ready"})
+            close_dialogs()
+            if report["task_ids"].get("workspace_backup"):
+                captured = task(report["task_ids"]["workspace_backup"], "workspace.backup")
+            else:
+                page.locator('.sidebar-footer [data-action="backup"]').click()
+                form = page.locator("#operation-form")
+                expect(form).to_be_visible()
+                form.locator('[name="include_intermediates"]').check()
+                captured = action(form.locator('button[type="submit"]'), "workspace.backup", "workspace_backup")
+            require(captured["result"]["project_id"] == original_state["data"]["project"]["id"],
+                    "The archive belongs to another original scientific project.")
+            transfer.update(state="captured", capture_task_id=captured["id"])
+            persist()
+            transfer["archive"] = download_archive(captured)
+            snapshot = captured_editor(
+                transfer["archive"]["path"], output, preparation["project_id"],
+                received["alternative_id"], original_project["baseline"])
+            require(snapshot["manifest_project"] == original_state["data"]["project"],
+                    "The captured Workspace changed its original scientific project identity.")
+            require(snapshot["alternative"]["title"] == alternative_title
+                    and snapshot["alternative"]["description"] == args.reason.strip(),
+                    "The captured alternative differs from this original design course.")
+            editor_file = output / "captured-editor-project.json"
+            editor_file.write_text(json.dumps({
+                "editor": snapshot["editor"], "history": snapshot["history"],
+                "alternative": snapshot["alternative"]}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            transfer["captured_editor"] = {
+                "project_id": preparation["project_id"], "revision": snapshot["editor"]["revision"],
+                "alternative_id": received["alternative_id"], "record": file_record(editor_file),
+                "history_count": len(snapshot["history"]),
+                "database_member": snapshot["database_member"], "database": snapshot["database"],
+                "database_snapshot": snapshot["database_snapshot"],
+            }
+            persist()
+            screenshot("06-original-workspace-archive.png")
+            close_dialogs()
+            if report["task_ids"].get("workspace_restore"):
+                restored_task = task(report["task_ids"]["workspace_restore"], "workspace.restore")
+            else:
+                limit = int(original_state.get("limits", {}).get("upload_bytes") or 0)
+                require(limit == 0 or transfer["archive"]["bytes"] <= limit,
+                        "The complete archive exceeds this operator's configured original upload limit.")
+                page.locator('.sidebar-footer [data-action="restore"]').click()
+                form = page.locator("#operation-form")
+                expect(form).to_be_visible()
+                form.locator('[name="restore_file"]').set_input_files(transfer["archive"]["path"])
+                restored_task = action(form.locator('button[type="submit"]'), "workspace.restore", "workspace_restore")
+            restored = restored_task["result"]
+            restored_key = restored.get("workspace_key")
+            require(restored.get("schema") == "upstate.scientific-workspace-receiving/v1"
+                    and restored.get("identity") == "MATCH" and restored_key and restored_key != workspace
+                    and restored.get("archive_sha256") == transfer["archive"]["sha256"]
+                    and restored.get("project") == snapshot["manifest_project"],
+                    "The independent Workspace receiving differs from the original archive.")
+            transfer.update(state="received", restore_task_id=restored_task["id"],
+                            workspace_key=restored_key, workspace=restored["workspace"],
+                            application=restored["application"], directory=restored["directory"],
+                            archive_sha256=restored["archive_sha256"])
+            persist()
+            close_dialogs()
+            page.locator("#workspace-select").select_option(restored_key)
+            expect(page.locator("#workspace-select")).to_have_value(restored_key)
+            page.locator('[data-view="conservation-design"]').click()
+            expect(page.locator(".cd-root")).to_be_visible()
+            restored_state = api("/api/state", workspace=restored_key)
+            require(restored_state.get("workspace_key") == restored_key
+                    and restored_state["data"]["project"] == snapshot["manifest_project"],
+                    "The registered receiving Workspace changed the captured project identity.")
+            restored_plan = api("/api/conservation/plan", plan_id=plan_id, workspace=restored_key)
+            require(restored_plan["selected_ids"] == report["original_selected_ids"]
+                    and restored_plan["summary"] == report["original_plan_summary"],
+                    "The independent Workspace changed the original saved Conservation plan.")
+            restored_preparation = api("/api/conservation-design/preparation",
+                                       id=preparation["id"], workspace=restored_key)
+            require(all(restored_preparation.get(name) == preparation.get(name) for name in
+                        ("id", "project_id", "plan_id", "study_id", "binding_id", "geometry_role", "files")),
+                    "The restored editable preparation differs from its original saved reference.")
+            restored_receiving = api("/api/conservation-design/receiving", id=received["id"], workspace=restored_key)
+            require(before == {name: restored_receiving.get(name) for name in before},
+                    "The independent Workspace changed the retained native design receiving.")
+            editor_record = api("/api/conservation-design/editor",
+                                {"workspace": restored_key, "path": "/api/projects/" + preparation["project_id"]},
+                                workspace=restored_key)
+            history = api("/api/conservation-design/editor",
+                          {"workspace": restored_key, "path": "/api/projects/" + preparation["project_id"] + "/history"},
+                          workspace=restored_key)
+            require(editor_record == snapshot["editor"] and history == snapshot["history"],
+                    "The restored editor differs from the exact project/revision/history captured in its SQLite snapshot.")
+            open_operation("preparation", preparation["id"])
+            page.locator('[data-design-action="edit"]').click()
+            restored_editor = page.frame_locator("iframe[data-design-editor]")
+            expect(restored_editor.locator("#project-title")).to_have_value(snapshot["editor"]["project"]["title"])
+            alternative = restored_editor.locator("#alternative-list button.alternative").filter(
+                has=restored_editor.get_by_text(snapshot["alternative"]["title"], exact=True))
+            require(alternative.count() == 1, "Reopen the exact retained receiving alternative in the restored editor.")
+            alternative.click()
+            expect(restored_editor.locator("#alt-title")).to_have_value(snapshot["alternative"]["title"])
+            expect(restored_editor.locator("#alt-description")).to_have_value(snapshot["alternative"]["description"])
+            screenshot("07-restored-original-editor-revision.png")
+            # Re-read after opening: opening the retained project must not create a replacement revision.
+            reopened_editor = api("/api/conservation-design/editor",
+                                  {"workspace": restored_key, "path": "/api/projects/" + preparation["project_id"]},
+                                  workspace=restored_key)
+            require(reopened_editor == snapshot["editor"],
+                    "Opening the restored original editor changed its captured saved revision.")
+            page.reload(wait_until="domcontentloaded")
+            page.locator("#workspace-select").select_option(restored_key)
+            expect(page.locator("#workspace-select")).to_have_value(restored_key)
+            page.locator('[data-view="conservation-design"]').click()
+            open_operation("receiving", received["id"])
+            scenario_button = page.locator('[aria-label="Retained design result"] [data-action="item"]'
+                                           '[data-kind="scenarios"][data-id=' + json.dumps(received["scenario_id"]) + "]")
+            expect(scenario_button).to_be_visible()
+            scenario_button.click()
+            expect(page.locator("#detail-dialog[open]")).to_be_visible()
+            restored_scenario = api("/api/item", kind="scenarios", id=received["scenario_id"], workspace=restored_key)
+            require(restored_scenario["id"] == scenario["id"],
+                    "The restored native scenario changed its original identity.")
+            if received.get("run_id"):
+                restored_run = api("/api/item", kind="runs", id=received["run_id"], workspace=restored_key)
+                require(restored_run["id"] == received["run_id"]
+                        and restored_run["selection"] == run["selection"],
+                        "The restored native run changed its original prepared selection.")
+            screenshot("08-restored-native-design.png")
+            transfer.update(state="complete", reopened_project_id=preparation["project_id"],
+                            reopened_revision=editor_record["revision"],
+                            reopened_alternative_id=received["alternative_id"],
+                            reopened_preparation_id=preparation["id"], reopened_plan_id=plan_id,
+                            reopened_scenario_id=received["scenario_id"], reopened_run_id=received.get("run_id"),
+                            history_matches=True, snapshot_project_matches=True,
+                            completed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+            persist()
+
+
         try:
             page.goto(connection["operator_url"], wait_until="domcontentloaded")
             expect(page.locator("#workspace-select")).to_have_value(workspace)
             page.locator('[data-view="conservation-design"]').click()
             expect(page.locator(".cd-root")).to_be_visible()
+            original_state = api("/api/state")
+            require(original_state.get("workspace_key") == workspace, "Use the original selected Workspace.")
             plan = api("/api/conservation/plan", plan_id=plan_id)
             require(plan["id"] == plan_id and plan["study_id"] == study_id and plan["state"] == "complete",
                     "Continue the completed original saved portfolio.")
@@ -394,6 +667,7 @@ def main():
                         "The prepared original run belongs to another scenario.")
                 report["reopened_run_id"] = run["id"]
                 screenshot("05-original-prepared-run.png")
+            retain_workspace()
             report["page_errors"] = list(dict.fromkeys(report["page_errors"]))
             require(not report["page_errors"], "Inspect the retained JavaScript exception before continuing.")
             report["state"] = "complete"

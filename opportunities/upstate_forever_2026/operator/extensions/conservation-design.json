@@ -100,7 +100,13 @@
           "route.member_path"
         ]
       }
-    ]
+    ],
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
   },
   "client": {
     "module": "/web/conservation_design.mjs",

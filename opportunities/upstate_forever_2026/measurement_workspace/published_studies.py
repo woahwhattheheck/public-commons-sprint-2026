@@ -26,10 +26,10 @@ import zipfile
 
 if __package__:
     from .observation_support import enrich_observation_context, report_html as support_report_html
-    from .source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata
+    from .source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata, builtin_companion
 else:
     from observation_support import enrich_observation_context, report_html as support_report_html
-    from source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata
+    from source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata, builtin_companion
 
 STORE_SCHEMA = "upstate.published-study-record/v1"
 EXPORT_SCHEMA = "upstate.published-study-export/v1"
@@ -96,6 +96,8 @@ UNIT_DEFINITIONS = {
     "FNU": "Formazin nephelometric units",
     "degC": "Degrees Celsius",
     "uS/cm": "Microsiemens per centimetre",
+    "MPN/100mL": "Most probable number per 100 millilitres; original source spelling",
+    "MPN/100 ml": "Most probable number per 100 millilitres; original source spelling",
 }
 SURFACE_PARAMETERS = {
     "ph": ("ph_min_su", "ph_max_su", "SU"),
@@ -306,6 +308,13 @@ def decode_companion(data: bytes) -> tuple[dict[str, bytes], dict[str, Any]]:
 
 def companion_from_directory(directory: Path) -> tuple[dict[str, bytes], dict[str, Any]]:
     directory = directory.resolve(strict=True)
+    if (directory / "study-files.json").is_file():
+        companion, _ = builtin_companion(directory)
+        files, origin = decode_companion(companion)
+        return files, {
+            **origin, "source_format": "declared_original_observation_inventory",
+            "original_directory": str(directory),
+        }
     files = {}
     for path in sorted(directory.rglob("*")):
         if path.is_symlink():
@@ -327,6 +336,14 @@ COHORT_MANIFEST = "eighteenmile_chlorophyll_reconciled.sources.json"
 REPORT_MANIFEST = "eighteenmile_lake_observation_report.sources.json"
 PAIRED_MANIFEST = "eighteenmile_lake_paired_analysis.sources.json"
 MICROCYSTIN_MANIFEST = "eighteenmile_lake_microcystin_reconciliation.sources.json"
+STREAM_STUDY_ID = "scdes-eighteenmile-streams-2020-2025"
+STREAM_CONTEXT_MANIFEST = "eighteenmile_stream_nutrient_analysis.sources.json"
+STREAM_CONTEXT_ROOT = "application-context/stream-nutrients"
+STREAM_RETAINED_MANIFEST = STREAM_CONTEXT_ROOT + "/" + STREAM_CONTEXT_MANIFEST
+STREAM_SOURCE_PREFIXES = (
+    "observations/eighteenmile_stream_nutrients_2020_2025/analysis/",
+    "source/eighteenmile-stream-nutrients-20261013/original/",
+)
 INSTALLED_CONTEXT_MANIFESTS = (COHORT_MANIFEST, REPORT_MANIFEST, PAIRED_MANIFEST, MICROCYSTIN_MANIFEST)
 INSTALLED_CONTEXT_PATHS = INSTALLED_CONTEXT_MANIFESTS + tuple(
     "observations/eighteenmile_2023/" + name for name in (
@@ -506,7 +523,7 @@ def _dated_context(complete, sites, parameters, observation_context):
         "calendar": complete["wqp_calendar"], "flow_rows": flow,
         "flow_methods": complete["flow_methods"],
         "dates_without_flow_context": [] if generic else sorted(observed_dates - {row["sampling_date"] for row in complete["flow_rows"]}),
-        "selection_notes": ([
+        "selection_notes": (complete["study"].get("observation_selection_notes") or [
             "Station, characteristic, year and month filters select original dated WQP result rows. Original source CSVs remain complete in every study export.",
             "Series keep their own fraction, analytical method, result value type, basis fields and support unit. Calculated source nitrogen remains a distinct characteristic and result type.",
             "Whole-basin point membership is source context; it does not establish location upstream of a gauge within the same unsplit reach.",
@@ -542,37 +559,79 @@ def _manifest_path(manifest_name, value):
     return _name("/".join(parts))
 
 
+def installed_context_paths(study_id: str) -> tuple[str, ...]:
+    if study_id == "scdes-eighteenmile-lake-2023":
+        return INSTALLED_CONTEXT_PATHS
+    if study_id == STREAM_STUDY_ID:
+        return (STREAM_CONTEXT_MANIFEST,)
+    return ()
+
+
+def _stream_context(application: Path, manifest_path: Path) -> dict[str, bytes]:
+    """Keep the complete original application layout beneath one retained root."""
+    application = application.resolve(strict=True)
+    manifest_path = manifest_path.resolve(strict=True)
+    if manifest_path != application / STREAM_CONTEXT_MANIFEST or not manifest_path.is_file():
+        raise ValueError("Choose the original application-root stream analysis manifest.")
+    native_bytes = manifest_path.read_bytes()
+    native = _json(native_bytes)
+    if native.get("schema") != "upstate.sources/v1" or not isinstance(native.get("entries"), list):
+        raise ValueError("The stream analysis manifest must use upstate.sources/v1.")
+    retained = {STREAM_RETAINED_MANIFEST: native_bytes}
+    for entry in native["entries"]:
+        for item in [entry, *entry.get("companions", [])]:
+            relative = _name(item["path"])
+            if not any(relative.startswith(prefix) for prefix in STREAM_SOURCE_PREFIXES):
+                raise ValueError("A stream analysis source is outside its declared original source families.")
+            target = (application / relative).resolve(strict=True)
+            if not target.is_relative_to(application) or not target.is_file():
+                raise ValueError("A stream analysis source is outside the application.")
+            raw = target.read_bytes()
+            if item.get("sha256") != _hash(raw) or item.get("bytes") != len(raw):
+                raise ValueError("An original stream analysis source changed: " + relative)
+            name = STREAM_CONTEXT_ROOT + "/" + relative
+            if name in retained and retained[name] != raw:
+                raise ValueError("The stream analysis assigns conflicting source bodies.")
+            retained[name] = raw
+    return retained
+
+
 def add_installed_context(files: dict[str, bytes], manifests: list[Path]) -> tuple[dict[str, bytes], list[dict[str, Any]]]:
     """Compose explicit native report/cohort context without replacing the primary edition."""
-    if _json(files["study.json"]).get("study_id") != "scdes-eighteenmile-lake-2023":
-        raise ValueError("The installed Eighteenmile context belongs to its original study identity.")
+    study_id = _json(files["study.json"]).get("study_id")
+    allowed = installed_context_paths(study_id)
+    if not allowed:
+        raise ValueError("This study has no registered installed context family.")
     additions, origins = {}, []
     for supplied in manifests:
         path = Path(supplied).resolve(strict=True)
-        relative = next((name for name in INSTALLED_CONTEXT_PATHS
+        relative = next((name for name in allowed
                          if path.parts[-len(PurePosixPath(name).parts):] == PurePosixPath(name).parts), None)
         if relative is None or not path.is_file():
             raise ValueError("Choose a supported original study context manifest.")
         application = path.parents[len(PurePosixPath(relative).parts) - 1]
-        root = (application / "observations" / "eighteenmile_2023").resolve(strict=True)
-        manifest_name = relative.removeprefix("observations/eighteenmile_2023/")
         native_bytes = path.read_bytes()
         native = _json(native_bytes)
-        if native.get("schema") != "upstate.sources/v1" or not isinstance(native.get("entries"), list):
-            raise ValueError("A study context manifest must use upstate.sources/v1.")
-        retained = {manifest_name: native_bytes}
-        for entry in native["entries"]:
-            for item in [entry, *entry.get("companions", [])]:
-                name = _manifest_path(manifest_name, item["path"])
-                target = (root / name).resolve(strict=True)
-                if not target.is_relative_to(root) or not target.is_file():
-                    raise ValueError("Original study context must remain inside its study directory.")
-                raw = target.read_bytes()
-                if item.get("sha256", _hash(raw)) != _hash(raw) or item.get("bytes", len(raw)) != len(raw):
-                    raise ValueError("An original study context source changed: " + name)
-                if name in retained and retained[name] != raw:
-                    raise ValueError("A native context assigns conflicting source bytes: " + name)
-                retained[name] = raw
+        if study_id == STREAM_STUDY_ID:
+            retained = _stream_context(application, path)
+        else:
+            root = (application / "observations" / "eighteenmile_2023").resolve(strict=True)
+            manifest_name = relative.removeprefix("observations/eighteenmile_2023/")
+            if native.get("schema") != "upstate.sources/v1" or not isinstance(native.get("entries"), list):
+                raise ValueError("A study context manifest must use upstate.sources/v1.")
+            retained = {manifest_name: native_bytes}
+            for entry in native["entries"]:
+                for item in [entry, *entry.get("companions", [])]:
+                    name = _manifest_path(manifest_name, item["path"])
+                    target = (root / name).resolve(strict=True)
+                    if not target.is_relative_to(root) or not target.is_file():
+                        raise ValueError("Original study context must remain inside its study directory.")
+                    raw = target.read_bytes()
+                    if item.get("sha256", _hash(raw)) != _hash(raw) or item.get("bytes", len(raw)) != len(raw):
+                        raise ValueError("An original study context source changed: " + name)
+                    if name in retained and retained[name] != raw:
+                        raise ValueError("A native context assigns conflicting source bytes: " + name)
+                    retained[name] = raw
         for name, raw in retained.items():
             if name in additions and additions[name] != raw:
                 raise ValueError("Installed study context manifests disagree at " + name)
@@ -649,7 +708,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
             basis += " Original result qualifiers are retained: " + ", ".join(qualifiers) + "."
         metadata = series_metadata(records)
         if metadata:
-            support = "Original stream sampling activities"
+            support = metadata.get("source_sample_support", "Original sampling activities")
             basis += " Fraction, method authority and identifier, result value type, original basis fields and effective support unit define separate series."
         series.append({
             **metadata,
@@ -692,7 +751,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
 def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: str, version_id: str):
     """Register original map/table identities and every retained study document."""
     manifest_entries, source_entries, seen_ids, native_ids = [], {}, set(), {}
-    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", FIGURE_MANIFEST, *INSTALLED_CONTEXT_MANIFESTS) if name in files]
+    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", FIGURE_MANIFEST, *INSTALLED_CONTEXT_MANIFESTS, STREAM_RETAINED_MANIFEST) if name in files]
     for manifest_name in manifest_names:
         parent = PurePosixPath(manifest_name).parent
         native = _json(files[manifest_name])
@@ -722,6 +781,12 @@ def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: s
                     raise ValueError("Study map companion bytes changed: " + companion_name)
                 companion.update(path="source/" + companion_name, sha256=_hash(body), bytes=len(body))
                 companions.append(companion)
+            if manifest_name != name and not any(item["path"] == "source/" + manifest_name for item in companions):
+                manifest_body = files[manifest_name]
+                companions.append({
+                    "path": "source/" + manifest_name, "sha256": _hash(manifest_body),
+                    "bytes": len(manifest_body),
+                })
             entry.update(path="source/" + name, sha256=_hash(raw), bytes=len(raw), companions=companions)
             entry["metadata"] = {
                 **entry.get("metadata", {}), "study_id": study_id,
@@ -778,6 +843,15 @@ def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: s
             if vector.get("type") != "FeatureCollection":
                 raise ValueError("Study GeoJSON sources must be FeatureCollections.")
             source_crs = vector.get("crs", {}).get("properties", {}).get("name")
+            if not source_crs:
+                declarations = {
+                    item["source_crs"] for item in manifest_entries
+                    if item.get("kind") == "vector" and item.get("source_crs")
+                    and item.get("sha256") == _hash(raw)
+                }
+                if len(declarations) == 1:
+                    source_crs = declarations.pop()
+                    entry["metadata"]["coordinate_reference_basis"] = "Identical original body registered by an original native vector manifest."
             if not isinstance(source_crs, str) or not source_crs:
                 raise ValueError("A study vector must retain its explicit original coordinate reference system.")
             entry["source_crs"] = source_crs
@@ -835,6 +909,7 @@ class PublishedStudyStore:
         evidence: dict[str, bytes] | None = None,
         operation_id: str | None = None,
         context_manifests: list[Path] | None = None,
+        context_application: str | Path | None = None,
     ) -> dict[str, Any]:
         if isinstance(source, bytes):
             files, origin = decode_companion(source)
@@ -854,6 +929,14 @@ class PublishedStudyStore:
         if study.get("schema") != STUDY_SCHEMA:
             raise ValueError("Unsupported published study metadata schema.")
         study_id = _safe_id(study["study_id"])
+        context_manifests = list(context_manifests or [])
+        if context_application is not None:
+            application = Path(context_application).resolve(strict=True)
+            context_manifests.extend(
+                application / name for name in installed_context_paths(study_id)
+                if (application / name).is_file()
+            )
+        context_manifests = list(dict.fromkeys(path.resolve() for path in context_manifests))
         if context_manifests:
             files, context_origins = add_installed_context(files, context_manifests)
             origin = {**origin, "installed_context": context_origins}
@@ -926,7 +1009,7 @@ class PublishedStudyStore:
                 if staging.exists():
                     shutil.rmtree(staging)
         record = _json(record_path.read_bytes())
-        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v8":
+        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v9":
             source_manifest, source_entries = _source_manifest(files, study, study_id, version_id)
             manifest_path = final / "sources.json"
             _atomic(manifest_path, _json_bytes(source_manifest))
@@ -938,7 +1021,7 @@ class PublishedStudyStore:
             }
             record["counts"] = {**{name: len(rows) for name, rows in tables.items()}, **result_counts}
             record["source_collection_id"] = collection["id"]
-            record["source_registration_schema"] = "upstate.published-study-sources/v8"
+            record["source_registration_schema"] = "upstate.published-study-sources/v9"
             record["source_entries"] = source_entries
             _atomic(record_path, _json_bytes(record))
         _atomic(
@@ -1238,6 +1321,39 @@ class PublishedStudyStore:
             writer.writeheader()
             writer.writerows(row["raw_cells"] for row in selected_rows)
             _atomic(destination / filename, output.getvalue().encode("utf-8"))
+            written.append(filename)
+
+        registered_rows = {}
+        for row in context["observations"]["rows"]:
+            if row.get("source_observation"):
+                registered_rows.setdefault(row["source_file"], []).append(row)
+        selected_sources = []
+        for source_file, selected_rows in sorted(registered_rows.items()):
+            source, descriptor = self.source_file(study_id, source_file, context["record"]["version_id"])
+            headers = csv.DictReader(io.StringIO(source.read_text(encoding="utf-8-sig"))).fieldnames or []
+            output = io.StringIO(newline="")
+            writer = csv.DictWriter(output, fieldnames=headers, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(row["raw_cells"] for row in selected_rows)
+            filename = "selected-activities/" + _name(source_file)
+            _atomic(destination / filename, output.getvalue().encode("utf-8"))
+            written.append(filename)
+            selected_sources.append({
+                "path": filename, "original_source_path": source_file,
+                "original_source_sha256": selected_rows[0]["original_source_sha256"],
+                "original_source_url": selected_rows[0].get("original_source_url", ""),
+                "record_count": len(selected_rows),
+                "rows": [{"selected_csv_row": number, "original_csv_row": row["source_csv_row"],
+                          "record_id": row["record_id"], "activity_id": row["activity_id"]}
+                         for number, row in enumerate(selected_rows, 2)],
+            })
+        if selected_sources:
+            filename = "selected-activities/index.json"
+            _atomic(destination / filename, _json_bytes({
+                "schema": "upstate.selected-original-observations/v1",
+                "study_id": study_id, "version_id": context["record"]["version_id"],
+                "sources": selected_sources,
+            }))
             written.append(filename)
 
         for key, filename in (
@@ -1588,13 +1704,11 @@ def main() -> None:
                 parser.error("--evidence requires RELATIVE_NAME=FILE")
             evidence[_name(name)] = Path(filename).read_bytes()
         context_manifests = list(args.context_manifest)
-        if args.with_installed_context:
-            application = Path(args.application).resolve()
-            context_manifests.extend(application / name for name in INSTALLED_CONTEXT_PATHS if (application / name).is_file())
         context_manifests = list(dict.fromkeys(path.resolve() for path in context_manifests))
         result = store.import_source(
             args.source, evidence=evidence, operation_id=args.operation_id,
             context_manifests=context_manifests,
+            context_application=args.application if args.with_installed_context else None,
         )
     elif args.command == "list":
         result = store.list_studies()

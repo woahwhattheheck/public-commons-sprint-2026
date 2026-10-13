@@ -110,6 +110,32 @@ The Applications overview displays `RECONCILED` or `OUTCOME_UNAVAILABLE` for tho
 
 The terminal endpoint preserves its existing `result` from `terminal-exit.json`. Its additional `managedOutcome` contains the three fields above, so a terminal without a retained exit receipt can still show the original managed recovery. Terminal readiness, input delivery and active-lease checks keep their existing meanings.
 
+## Read operation status when a native probe is unavailable
+
+A runtime refresh retains each operation's original phase and result. It observes up to four operations at a time and shares simultaneous reads of the same operation. Completed observations are refreshed on the next request. If the native lease probe fails, the remaining rows in that refresh still read their records and visible process identities; they defer additional native probes.
+
+An unavailable observation belongs to its operation. Other runtimes, application navigation, retained requests and output remain readable. **OBSERVATION_UNAVAILABLE** means the current worker or command could not be observed. The record's original phase remains available separately. An operation is shown as **INTERRUPTED** only after its running record has been observed without an active worker or command.
+
+Use **Refresh operation status** in either the Operations or Managed releases view to recheck that original UUID directly. **Status check detail** shows its observation source, time and error. The command label distinguishes a running process, an ended process and unavailable status. **Open retained output** remains available in all three cases. A worker log that has not been created is shown explicitly; an unreadable log reports its actual error while preserving the operation selection.
+
+The **Applications** view uses the same observation reader for its runtime connection, current launch, paged history, output and terminal. **Refresh applications** reloads those original records. An unknown process keeps the application's saved settings, retained output and original saved addresses visible with an explicit status note. A new start or settings edit waits for that process to become observable. Terminal output and input receipts remain readable while input controls require an observed active terminal. Actual input submission still performs its own original strict lease check.
+
+Status observation does not authorize recovery, stop, activation, installation or another launch. Those actions retain their existing process checks, source comparisons and original exclusive lease. The workspace never changes an operation's persisted phase merely because its status probe failed. After an operation becomes observable again, its existing recovery controls follow its actual retained phase.
+
+The capability-protected browser API supplies:
+- `GET /api/state`: the original runtime state plus `operationObservation` with `CURRENT` or `PARTIAL`, total rows and unavailable operation IDs.
+- `GET /api/operation-status?operationId=UUID`: one freshly observed original operation, without refreshing the whole workspace.
+- `GET /api/log?operationId=UUID`: the original log tail, or `available: false` with `NOT_CREATED` or `UNAVAILABLE` and its error.
+
+Each observed row has `observation.status` (`CURRENT` or `UNAVAILABLE`), `source` (`RETAINED`, `PROCESS`, `LEASE` or `RECORD`), `checkedAt` and an optional error. `workerActive` and `commandActive` are nullable: `null` means the status is unknown. Consumers must not treat `null` as evidence that the original process ended. The existing strict internal mutation checks continue to throw when their authoritative observation fails.
+
+~~~sh
+starforge runtime-workspace operation-status --workspace /srv/starforge/operator --operation-id UUID
+starforge runtime-workspace operation-log --workspace /srv/starforge/operator --operation-id UUID
+~~~
+
+Programmatic consumers use `workspace.operationStatus({ operationId })` and `workspace.logs({ operationId })` on the same object returned by `openRuntimeWorkspace`.
+
 ## Headless commands
 
 ~~~sh

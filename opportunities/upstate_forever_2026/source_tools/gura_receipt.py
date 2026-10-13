@@ -127,6 +127,8 @@ def prepare(workspace, *, run_id=None, receiving_state=None, output=None):
             raise ValueError("Retained original arguments differ from the receiving source record")
         native = {name: document["args"][name] for name in PARAMETERS[model]}
         native["flow_dir_algorithm"] = str(native["flow_dir_algorithm"]).lower()
+        if model == "ndr" and document["args"].get("runoff_proxy_av"):
+            native["runoff_proxy_av"] = document["args"]["runoff_proxy_av"]
         parameters[model] = native
         argument_sources[model] = {"source_id": argument_id,
                                    "sha256": file_digest(argument_path),

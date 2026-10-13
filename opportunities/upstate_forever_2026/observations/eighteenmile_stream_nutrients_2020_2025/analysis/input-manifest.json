@@ -1,0 +1,94 @@
+{
+  "schema": "eighteenmile.stream-nutrient-inputs/v1",
+  "retained_at": "2026-10-13",
+  "source_page": "https://app.notion.com/p/3f7dd77231008147bfb0d97e296fda3b",
+  "hydrology_carrier": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QAH0AQ2",
+  "files": [
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+      "bytes": 69221,
+      "sha256": "90ca40a8697c6bc301e97e394452235ecf0ea0653024b93a2dc61f60ef1f6733",
+      "role": "nutrient_results",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-233%3B21SC60WQ_WQX-SV-245%3B21SC60WQ_WQX-SV-375%3B21SC60WQ_WQX-SV-376&startDateLo=01-01-2020&startDateHi=12-31-2022&characteristicType=Nutrient&mimeType=csv&zip=no"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+      "bytes": 153018,
+      "sha256": "6c36b486618b4569454ecc8e531c4b4adbd739c5f6f726f97f8e5ceafe7a7f03",
+      "role": "nutrient_results",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-233%3B21SC60WQ_WQX-SV-245%3B21SC60WQ_WQX-SV-375%3B21SC60WQ_WQX-SV-376&startDateLo=01-01-2023&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+      "bytes": 14616,
+      "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "role": "nutrient_station_catalogue",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?huc=03060101&startDateLo=01-01-2020&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_nldi_reference.json",
+      "bytes": 601,
+      "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8",
+      "role": "gage_network_reference",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702?f=json"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_station_metadata.json",
+      "bytes": 3671,
+      "sha256": "24585cb3c63a1e92e38e371d3741628abd8cb7f8e08a8a84f205e35e0c407a56",
+      "role": "station_metadata",
+      "uri": "https://api.waterdata.usgs.gov/ogcapi/v0/collections/monitoring-locations/items/USGS-02186702?f=json"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+      "bytes": 13935,
+      "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
+      "role": "gage_basin",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2020_2020.json",
+      "bytes": 29226,
+      "sha256": "9e2e9bb3ea640d84bca1b1cf1a90b1073ec5506f58461cf8012330dfad4fbd4c",
+      "role": "daily_flow",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2020-01-01&endDT=2020-12-31&parameterCd=00060&statCd=00003&siteStatus=all"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2021_2021.json",
+      "bytes": 29353,
+      "sha256": "8fb74ba84877b38995350ecd4120c8437ada515893d12af7d52d6d93a23bc933",
+      "role": "daily_flow",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2021-01-01&endDT=2021-12-31&parameterCd=00060&statCd=00003&siteStatus=all"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2022_2022.json",
+      "bytes": 29216,
+      "sha256": "8428422778feb5b07534db9b49f55ec4eab19b1297451b8a82ff41b094e07b32",
+      "role": "daily_flow",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2022-01-01&endDT=2022-12-31&parameterCd=00060&statCd=00003&siteStatus=all"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2023_2023.json",
+      "bytes": 29226,
+      "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9",
+      "role": "daily_flow",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2023-01-01&endDT=2023-12-31&parameterCd=00060&statCd=00003&siteStatus=all"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2024_2024.json",
+      "bytes": 29295,
+      "sha256": "03f7561b6e5a41948e97934a74c300645ba70f10b574148b56050115e4e98650",
+      "role": "daily_flow",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2024-01-01&endDT=2024-12-31&parameterCd=00060&statCd=00003&siteStatus=all"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2025_2025.json",
+      "bytes": 29522,
+      "sha256": "2247249df5fe769f9cec48479e61646d0b3fd5d90398c46a9ad4f35099bb848e",
+      "role": "daily_flow",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2025-01-01&endDT=2025-12-31&parameterCd=00060&statCd=00003&siteStatus=all"
+    }
+  ],
+  "path_base": "application root",
+  "maintained_nutrient_source": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3064"
+}

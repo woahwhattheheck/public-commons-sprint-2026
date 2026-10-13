@@ -1,4 +1,4 @@
-"""Readable client reporting for the retained Upper Savannah delivery.
+"""Readable client reporting for a retained regional or original native study.
 
 This module consumes completed workspace objects. It does not run a model,
 resample a raster, replace a scenario, or modify accepted scientific results.
@@ -15,10 +15,12 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .common import INVEST_VERSION
-from .model_selection import MODEL_LABELS, run_scope
+from . import native_study
+from .model_selection import MODEL_LABELS, MODEL_OUTPUTS, run_scope
+from .native_versions import POLICY as EXECUTION_VERSION_POLICY, model_versions, models_for_outputs
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-6"
+REPORT_EDITION = "2026-10-13-client-report-9"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -153,6 +155,30 @@ def _text(value: Any) -> str:
     if isinstance(value, (list, tuple)):
         return "; ".join(_text(item) for item in value) or "None selected"
     return str(value)
+
+def _execution_source(record):
+    """Describe the shared resolver's retained basis without choosing a version."""
+    labels = {
+        "completed_stage_runtime": "Completed model stage",
+        "observed_run_fallback": "Observed run fallback; stage version absent",
+        "requested_legacy": "Requested legacy version; observed version absent",
+        "unavailable": "Version not recorded",
+    }
+    parts = [labels.get(record["basis"], str(record["basis"]).replace("_", " "))]
+    if record.get("differs_from_requested"):
+        parts.append("requested " + str(record["requested_version"]))
+    if record.get("reused_from"):
+        parts.append("retained reused stage")
+    return "; ".join(parts)
+
+
+def _execution_summary(versions):
+    return "; ".join(
+        model.upper() + " " + _text(record["comparison_version"]) +
+        " (" + _execution_source(record) + ")"
+        for model, record in versions.items()
+    ) or "No producing-model version is recorded"
+
 
 def _safe_path(value: Any) -> str | None:
     if isinstance(value, Mapping):
@@ -353,7 +379,7 @@ def _receptor_section(state, inventory):
 
 def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
                    profile, source_records, observation_results, comparison=None,
-                   scenario_summary=None):
+                   scenario_summary=None, working_archive_path=None):
     """Return a JSON-serializable report model from original retained objects.
 
     baseline.artifacts are the existing rate_to_mass REPORTING-MASK outputs.
@@ -362,11 +388,27 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
     changes. The optional existing scenario_summary supplies its richer support
     labels directly, without traversing any regional raster.
     """
-    title = selection.get("title") or workspace.project.get("title") or "Source-water assessment"
     baseline_name, baseline_scenario = _run_name(workspace, baseline)
     model_scopes = {run["id"]: run_scope(run) for run in [baseline] + alternatives}
+    execution_models = {
+        run["id"]: models_for_outputs(model_scopes[run["id"]]["available_artifacts"])
+        for run in [baseline] + alternatives
+    }
+    execution_versions = {
+        run["id"]: model_versions(run, execution_models[run["id"]])
+        for run in [baseline] + alternatives
+    }
     selected_models = model_scopes[baseline["id"]]["selected_models"]
+    study_mode = native_study.mode(selection) == "native_study"
+    study = dict(state.get("native_study") or selection.get("native_study") or {})
+    title = (selection.get("title") or (study.get("title") if study_mode else None)
+             or workspace.project.get("title")
+             or ("Original native study" if study_mode else "Source-water assessment"))
     maps = _map_rows(state, selected_models)
+    expected_families = set(native_study.MAP_FAMILIES) if study_mode else {item[0] for item in MAPS}
+    if study_mode:
+        expected_families.update(item["role"] for item in maps if item["files"])
+        maps = [item for item in maps if item["role"] in expected_families]
     grid_context = _grid_context(grid)
     inventory = state.get("parcel_priorities") or {}
     scenario_rows, scenario_selections, supports = _scenario_rows(
@@ -378,15 +420,34 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
                            if isinstance(overlay_choices, Mapping) else {})
     source_water_label = (source_water_choice.get("label")
                           if isinstance(source_water_choice, Mapping) else None)
-    source_water_label = source_water_label or "Drinking-water source areas"
+    source_water_label = source_water_label or ("Drinking-water source areas" if source_water_choice else "No source-water overlay selected")
     map_count = sum(bool(item["files"]) for item in maps)
     sections = []
 
     sections.append(_section("decisions", "How to use this assessment", [
         "This assessment supports two related land decisions in the selected study area: protecting land where a defined future disturbance increases pollutant delivery, and restoring land that has high modeled exports under current land cover.",
         "Start with the current nitrogen, phosphorus and sediment maps to identify restoration questions. Then use the explicit alternatives to examine protection and management choices. Review source-water and high-quality-water context before assembling a parcel shortlist.",
-        str(map_count) + " of the seven RFP map families are present in this edition. The available maps, physical GIS layers, source metadata, scenario comparisons and retained working project form one delivery. The map guide explains each map family and its current availability."
+        str(map_count) + " of " + str(len(expected_families)) +
+        (" selected native-study map families" if study_mode else " regional RFP map families") +
+        " are present in this edition. The available maps, physical GIS layers, source metadata, scenario comparisons and retained working project form one delivery. The map guide explains each map family and its current availability."
     ]))
+
+    if study_mode:
+        sections[0]["paragraphs"] = [
+            "This report describes the original selected study and its retained baseline and land-cover alternatives.",
+            "Start with the annual physical exports and their valid reporting support. Compare each alternative on the recorded common cells, then inspect its original land-cover changes and selected spatial context.",
+            sections[0]["paragraphs"][-1],
+        ]
+        sections.insert(0, _section("native-study", "Original native study",
+            [_text(study.get("title")), _text(study.get("purpose"))] +
+            ([str(study["reference"])] if study.get("reference") else []) +
+            [str(item) for item in study.get("methods", [])]))
+        context_path = _safe_path((state.get("files") or {}).get("native_study_context"))
+        if context_path:
+            sections[0]["assets"] = [{
+                "title": "Original study metadata and retained selections",
+                "path": context_path,
+            }]
 
     sections.append(_section("study", "Study area and retained selections", [
         "The selected reporting area is retained separately from the hydrologic modeling domain. The original model uses upstream context to represent contributing flow; delivered annual-mass artifacts and their totals use the reporting mask.",
@@ -409,13 +470,15 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         ["Upstream context buffer", _fmt(grid_spec.get("upstream_buffer_m")) + " m"],
         ["Profile", _text(profile.get("title")) + " | " + _text(profile.get("id"))],
         ["Alternatives in this edition", str(len(alternatives))],
-    ]), _table(["Run", "Selected models", "Available exports", "Model version"], [
-        [run["id"],
-         "; ".join(MODEL_LABELS.get(model, model.upper()) for model in model_scopes[run["id"]]["selected_models"]),
-         "; ".join(model_scopes[run["id"]]["available_artifacts"]) or "None recorded",
-         _text(run.get("model_version") or INVEST_VERSION)]
+    ]), _table(["Run", "Model", "Available exports", "Version", "Version source"], [
+        [run["id"], MODEL_LABELS.get(model, model.upper()),
+         "; ".join(name for name in model_scopes[run["id"]]["available_artifacts"]
+                   if name in MODEL_OUTPUTS[model]) or "None recorded",
+         _text(execution_versions[run["id"]][model]["comparison_version"]),
+         _execution_source(execution_versions[run["id"]][model])]
         for run in [baseline] + alternatives
-    ])]))
+        for model in execution_models[run["id"]]
+    ], "Producing-model execution provenance; each fallback keeps its original retained basis.")]))
 
     sections.append(_section("current", "Current annual nutrient and sediment exports", [
         "The values below reuse the sums recorded with the delivered reporting-mask mass rasters for the selected models. Each layer retains its declared annual units, valid-cell count and represented area.",
@@ -448,7 +511,7 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
     sections.append(_section("alternatives", "Land-cover alternatives and modeled change",
                              scenario_paragraphs, scenario_tables))
 
-    sections.append(_section("atlas", "Seven-map decision guide", [
+    sections.append(_section("atlas", "Map decision guide" if study_mode else "Seven-map decision guide", [
         "Use the map titles, legends, scale bars and north arrows in the accompanying publication PDFs. The current-export maps show physical annual quantities; the combined planning map uses the saved normalization and weights. The future-map files retain each selected alternative.",
         "The file index below lists each publication map separately, including every selected alternative."
     ], [_table(["Map family", "Decision", "How to read it", "Availability"],
@@ -508,7 +571,9 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
 
     model_names = [MODEL_LABELS.get(model, model.upper()) for model in selected_models]
     methods = [
-        "The selected original InVEST " + INVEST_VERSION + " models (" + "; ".join(model_names) + ") use the retained inputs, aligned grid, parameter profile and scenario selections. The working project carries native arguments, source files, intermediate outputs and run history.",
+        "The selected original InVEST models (" + "; ".join(model_names) + ") use the retained inputs, aligned grid, parameter profile and scenario selections. The working project carries native arguments, source files, intermediate outputs and run history.",
+        "Baseline execution versions: " + _execution_summary(execution_versions[baseline["id"]]) + ". Each alternative's producing-model version and retained basis appear separately in the run table.",
+        "Execution provenance uses the recorded runtime of each completed model stage. When that version is absent, the shared resolver labels an observed run runtime as fallback, or labels a retained requested version as requested legacy. Missing version metadata remains not recorded. Reused-stage lineage and the original completion time are retained in the report data.",
         "The physical output rasters preserve the original reporting-mask conversion and NoData. Scenario changes preserve paired native output support. Source vintages, coefficients, grid alignment and selected overlay relationships accompany interpretation.",
         "Original E. coli, cyanotoxin, concentration and sampling observations retain their measured quantity, unit, station and period. Those observations supply direct measurement context for microbial and algal concerns; model outputs retain their annual nutrient or sediment quantity.",
         "Channel-bank erosion, mass wasting, in-stream and reservoir processes, point sources and impoundment effects have their own scientific interpretation alongside the represented overland processes."
@@ -544,10 +609,12 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
     sections.append(_section("sources", "Source editions and lineage", [
         "The source inventory identifies the editions used in this delivery. The full working archive retains the original bodies, associated sidecars, saved selections and preparation lineage.",
         "Parameter references: " + _text(profile_references),
-        "The RFP's final mapping deliverables are listed on PDF page 2; the final/working-file and presentation requirements are on PDF page 3. Appendix PDF pages 6-9 provide the utility and broader sampling context."
+        ("The original study reference, reporting area, model domain, biophysical table and selected source editions are retained with this delivery."
+         if study_mode else
+         "The RFP's final mapping deliverables are listed on PDF page 2; the final/working-file and presentation requirements are on PDF page 3. Appendix PDF pages 6-9 provide the utility and broader sampling context.")
     ], [_table(["Source role", "Vintage", "Original URI"], source_rows),
         _table(["Scientific reference", "Original URI"], [
-            ["InVEST " + INVEST_VERSION + " " + MODEL_LABELS.get(model, model.upper()) + " guide",
+            ["InVEST " + INVEST_VERSION + " " + MODEL_LABELS.get(model, model.upper()) + " reference guide",
              MODEL_GUIDES[model]] for model in selected_models
         ])]))
 
@@ -557,6 +624,11 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
                 "parcel_csv", "parcel_geopackage", "parcel_scenario_csv", "parcel_inventory",
                 "working_archive"):
         path = _safe_path(files.get(key))
+        if key == "working_archive" and working_archive_path is not None:
+            planned = _safe_path(working_archive_path)
+            if planned is None or (path is not None and path != planned):
+                raise ValueError("The planned working archive must retain its package-relative path")
+            path = planned
         if path:
             handoff_rows.append([key.replace("_", " "), path])
     sections.append(_section("handoff", "Open, review and reuse the delivery", [
@@ -565,6 +637,34 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         "Receive the full working archive through the existing restore workflow into a new directory. Reopen the original study, inspect the same retained inputs and result identifiers, and build a later delivery edition from the selected runs when a reviewed source, scenario or planning choice changes.",
         "The final handoff includes publication maps, physical GIS layers, source/method metadata, this readable report and its editable forms, the complete scientific working project, and the operating guide used by the receiving team."
     ], [_table(["Delivered item", "Relative path"], handoff_rows)] if handoff_rows else []))
+    sections[-1]["assets"] = [{"title": title, "path": path} for title, path in handoff_rows]
+
+    scientific_assets = []
+    asset_titles = {
+        "report": "Complete scientific report (PDF)",
+        "report_html": "Complete scientific report (HTML)",
+        "report_markdown": "Editable scientific report (Markdown)",
+        "report_data": "Scientific quantities, source editions and bindings (JSON)",
+    }
+    seen_scientific_paths = set()
+    for role, item in files.items():
+        if role not in asset_titles and not role.startswith(("economic_", "observed_context_")):
+            continue
+        path = _safe_path(item)
+        if path and path not in seen_scientific_paths:
+            scientific_assets.append({"title": asset_titles.get(role, role.replace("_", " ")),
+                                      "path": path})
+            seen_scientific_paths.add(path)
+    if scientific_assets:
+        section = _section("scientific-evidence", "Scientific report and decision evidence", [
+            "The scientific report retains the complete model parameters, annual quantities, comparison "
+            "support, source editions and economic-analysis coverage for this same delivery. Its "
+            "economic tables distinguish available estimates from alternatives without a recorded cost.",
+            "Open the retained reports and selected evidence below from the extracted delivery folder. "
+            "Keep the folder structure when sharing the study."
+        ])
+        section["assets"] = scientific_assets
+        sections.append(section)
 
     if selection.get("notes"):
         sections.append(_section("project-notes", "Project-specific interpretation",
@@ -574,7 +674,15 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         "schema": SCHEMA, "title": title, "report_edition": REPORT_EDITION,
         "grid_context": grid_context,
         "model_scopes": model_scopes,
-        "scientific_references": [{"model": model, "version": INVEST_VERSION, "url": MODEL_GUIDES[model]}
+        "native_execution": {
+            "schema": "upstate.client-native-execution/v1",
+            "policy": EXECUTION_VERSION_POLICY,
+            "run_order": [run["id"] for run in [baseline] + alternatives],
+            "models": {key: list(value) for key, value in execution_models.items()},
+            "runs": execution_versions,
+        },
+        "scientific_references": [{"model": model, "version": INVEST_VERSION,
+                                   "purpose": "Retained reference guide", "url": MODEL_GUIDES[model]}
                                   for model in selected_models],
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "project": dict(workspace.project),
@@ -583,10 +691,16 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         "alternative_run_ids": [r["id"] for r in alternatives],
         "contact": selection.get("contact"),
         "map_families_present": map_count,
-        "map_families_expected": 7,
+        "map_families_expected": len(expected_families),
+        "delivery_mode": native_study.mode(selection),
+        "native_study": study if study_mode else None,
+        "native_study_context": ((state.get("files") or {}).get("native_study_context")
+                                 if study_mode else None),
+        "selected_map_families": [item["role"] for item in maps if item["files"]],
+        "report_kind_label": "Original native study" if study_mode else "Source-water assessment",
         "maps": maps, "sections": sections,
         "sources": list(source_records),
-        "rfp_source": {"url": RFP_URL, "sha256": RFP_SHA256,
+        "rfp_source": None if study_mode else {"url": RFP_URL, "sha256": RFP_SHA256,
                        "requirement_pages": [1, 2, 3, 4],
                        "version_note": "This retained 18-page PDF is distinct from the earlier 04313cdd source edition."},
         "quantity_provenance": {
@@ -624,8 +738,9 @@ def render_markdown(report):
             if path:
                 title = str(asset.get("title") or path).replace("[", "\\[").replace("]", "\\]")
                 lines.extend(["[" + title + "](<" + path + ">)", ""])
-    lines.extend(["## RFP source", "", "[Official RFP and appendix](" + RFP_URL + "), PDF pages 1-4.",
-                  "", "Retained source SHA-256: " + RFP_SHA256, ""])
+    if report.get("rfp_source"):
+        lines.extend(["## RFP source", "", "[Official RFP and appendix](" + RFP_URL + "), PDF pages 1-4.",
+                      "", "Retained source SHA-256: " + RFP_SHA256, ""])
     return "\n".join(lines)
 
 def render_html(report):
@@ -673,15 +788,19 @@ th{background:#edf0f2;font-weight:bold}caption{text-align:left;font-weight:bold;
 tbody tr:nth-child(even){background:#fafbfc}footer{border-top:1px solid #cdd2d7;font-size:11px;overflow-wrap:anywhere}
 @media(max-width:650px){header,main,footer{padding:22px 18px}h1{font-size:25px}table{min-width:600px}}
 @media print{body{background:white;font-size:10pt}header,main,footer{max-width:none;padding:0}nav{display:none}section{padding-bottom:16px}h2{break-after:avoid}thead{display:table-header-group}tr{break-inside:avoid}table{font-size:8pt}.table-scroll{overflow:visible}a{color:inherit;text-decoration:none}}"""
+    source_footer = (
+        '<a href="' + esc(RFP_URL, quote=True) + '">Official RFP and appendix</a>, PDF pages 1-4.'
+        '<p>Retained RFP SHA-256: ' + RFP_SHA256 + '</p>'
+        if report.get("rfp_source") else
+        "Original study source editions, native model selections and working files are retained with this report.")
     return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
             "<title>" + esc(report["title"]) + "</title><style>" + style + "</style></head><body>"
-            "<header><div class=\"label\">Source-water assessment</div><h1>" + esc(report["title"]) +
+            "<header><div class=\"label\">" + esc(report.get("report_kind_label", "Source-water assessment")) + "</div><h1>" + esc(report["title"]) +
             "</h1><div class=\"meta\">Delivery " + esc(str(report.get("delivery_id") or "working edition")) +
             " | Baseline " + esc(report["baseline_run_id"]) + "</div><nav aria-label=\"Report sections\">" +
             nav + "</nav></header><main>" + "".join(sections) +
             ("<section><h2>Open the publication maps</h2><ul>" + "".join(map_links) + "</ul></section>" if map_links else "") +
-            "</main><footer><a href=\"" + esc(RFP_URL, quote=True) + "\">Official RFP and appendix</a>, PDF pages 1-4."
-            "<p>Retained RFP SHA-256: " + RFP_SHA256 + "</p></footer></body></html>")
+            "</main><footer>" + source_footer + "</footer></body></html>")
 
 def render_pdf(path, report):
     """Render a sober, paginated report; keep all quantities as supplied."""
@@ -709,9 +828,12 @@ def render_pdf(path, report):
     doc = SimpleDocTemplate(str(path), pagesize=(8.5*inch, 11*inch),
                             leftMargin=.675*inch, rightMargin=.675*inch,
                             topMargin=.65*inch, bottomMargin=.65*inch,
-                            title=report["title"], author="TokenJunkie Labs")
+                            title=report["title"],
+                            author=(str((report.get("contact") or {}).get("organization") or "")
+                                    if report.get("delivery_mode") == "native_study"
+                                    else "TokenJunkie Labs"))
     p = lambda value, sty="ClientBody": Paragraph(html.escape(str(value)).replace("\n", "<br/>"), styles[sty])
-    story = [p("SOURCE-WATER ASSESSMENT", "ClientMeta"),
+    story = [p(report.get("report_kind_label", "Source-water assessment").upper(), "ClientMeta"),
              p(report["title"], "ClientTitle"),
              p("Delivery " + str(report.get("delivery_id") or "working edition") +
                " | Baseline " + report["baseline_run_id"], "ClientMeta"), Spacer(1, 10)]
@@ -727,6 +849,8 @@ def render_pdf(path, report):
             weights = [1] * count
             if count == 2:
                 weights = [1, 2.3]
+            elif section["id"] == "study" and count == 5:
+                weights = [1.1, .75, 1.15, .5, 1.4]
             elif section["id"] == "atlas" and count == 4:
                 weights = [.85, 1.25, 1.7, 1.2]
             elif section["id"] == "atlas-files" and count == 3:
@@ -748,17 +872,26 @@ def render_pdf(path, report):
                 ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f8f9fa")])
             ]))
             story.extend([tbl, Spacer(1, 12)])
-    story.extend([p("RFP source", "ClientHeading"),
-                  Paragraph('<link href="' + html.escape(RFP_URL, quote=True) +
-                            '">Official RFP and appendix</link>, PDF pages 1-4.', styles["ClientBody"]),
-                  p("Retained source SHA-256: " + RFP_SHA256, "ClientMeta")])
+        for asset in section.get("assets", []):
+            relative = _safe_path(asset.get("path"))
+            if relative:
+                label = str(asset.get("title") or relative)
+                story.append(Paragraph(
+                    '<link href="' + html.escape(relative, quote=True) + '">' +
+                    html.escape(label) + '</link>', styles["ClientBody"]))
+                story.append(p(relative, "ClientMeta"))
+    if report.get("rfp_source"):
+        story.extend([p("RFP source", "ClientHeading"),
+                      Paragraph('<link href="' + html.escape(RFP_URL, quote=True) +
+                                '">Official RFP and appendix</link>, PDF pages 1-4.', styles["ClientBody"]),
+                      p("Retained source SHA-256: " + RFP_SHA256, "ClientMeta")])
     def footer(canvas, _doc):
         canvas.saveState()
         canvas.setStrokeColor(colors.HexColor("#c9d0d7"))
         canvas.line(.675*inch, .43*inch, 7.825*inch, .43*inch)
         canvas.setFont("Helvetica", 7)
         canvas.setFillColor(colors.HexColor("#59636e"))
-        canvas.drawString(.675*inch, .28*inch, "Source-water assessment")
+        canvas.drawString(.675*inch, .28*inch, report.get("report_kind_label", "Source-water assessment"))
         canvas.drawRightString(7.825*inch, .28*inch, str(_doc.page))
         canvas.restoreState()
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
@@ -800,7 +933,7 @@ def write_report(directory, report, *, pdf_name="report.pdf", output_stem=None,
 def build_report(*, workspace, directory, selection, state, baseline, alternatives,
                  grid, profile, records, observation_results, comparison=None,
                  scenario_summary=None, additional_sections=(),
-                 output_stem=None, file_key_prefix=""):
+                 output_stem=None, file_key_prefix="", working_archive_path=None):
     """Drop-in report hook for the existing delivery.py report branch."""
     from .client_receiving_waters import build_sections, LEGACY_SECTION_TITLE
 
@@ -808,7 +941,8 @@ def build_report(*, workspace, directory, selection, state, baseline, alternativ
                             baseline=baseline, alternatives=alternatives, grid=grid,
                             profile=profile, source_records=records,
                             observation_results=observation_results, comparison=comparison,
-                            scenario_summary=scenario_summary)
+                            scenario_summary=scenario_summary,
+                            working_archive_path=working_archive_path)
     run_names = {run["id"]: _run_name(workspace, run)[0]
                  for run in [baseline] + list(alternatives)}
     water_report = build_sections(

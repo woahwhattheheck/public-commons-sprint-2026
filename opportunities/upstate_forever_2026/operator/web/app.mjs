@@ -1,9 +1,12 @@
+// ES-SUPERVISION-20261012
+import {attachNativeJobs} from './jobs.mjs';
 import {attachDeliveryInspection} from './delivery_inspection.mjs';
 import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
 import {mountObservedSeries} from './observed_series.mjs';
 import {observedValueMarkup} from './observed_series.mjs';
-import {createDeliveryReview} from './delivery_review.mjs';
+import {supportFields,supportOptions,observationSupportMarkup,observationSupportSummary,observationContextMarkup,observationDiagnosticsMarkup} from './observation_support.mjs';
+import {createDeliveryReview,deliveryRevision,deliveryChanged} from './delivery_review.mjs';
 import {attachCommunity} from './community.mjs';
 import {attachCustomerReviews} from './reviews.mjs';
 import {attachReceivingWaters} from './receiving_waters.mjs';
@@ -69,7 +72,7 @@ async function rehearsalOpenControl(control){
  return dispatch(button);
 }
 const rehearsal=attachRehearsal({getState:()=>state,api,endpoint,openItem,showTask,fileList,toast,refreshState:()=>refresh({force:true}),navigate,openControl:rehearsalOpenControl});
-const portfolio=attachPortfolio({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,executeAction,showTask,openExtension:(...args)=>extensions.openExtension(...args)});
+const portfolio=attachPortfolio({getState:()=>state,refreshState:()=>refresh({force:true}),api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,executeAction,showTask,openExtension:(...args)=>extensions.openExtension(...args)});
 const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true})});
 const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem});
 const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;}});
@@ -103,7 +106,9 @@ const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>worksp
  getProgramme:()=>typeof programmes==='undefined'?null:programmes});
 const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle,mapFamilies,mapTitles,section,pageHeader,table,
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,detail,refresh,showTask,revise:deliveryForm,
- setDetailFiles:files=>{if(detailContext)detailContext.files=files;}});
+ setDetailFiles:files=>{if(detailContext)detailContext.files=files;},
+ beginDetailRequest:()=>++itemRequest,isDetailRequest:request=>request===itemRequest&&detailDialog.open});
+const nativeJobs=attachNativeJobs({api,endpoint,detail,refresh,getWorkspace:()=>workspace,getDetailContext:()=>detailContext,openItem,toast,getState:()=>state});
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,5500);}
 function globalError(error){$('#global-error').textContent=error.message||String(error);$('#global-error').hidden=false;}
 function clearError(){$('#global-error').hidden=true;$('#global-error').textContent='';}
@@ -135,7 +140,7 @@ async function refresh({force=false}={}){
     const fingerprint=JSON.stringify({conservation_tasks:view==='conservation'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')||['experiment.save','experiment.run','experiment.summarize'].includes(t.action)).map(t=>[t.id,t.state,t.updated_at||null,t.progress||null]):undefined,rehearsal_tasks:view==='rehearsal'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('rehearsal.')).map(t=>[t.id,t.state]):undefined,view,workspace,data:data.data});
     if(force||fingerprint!==lastRendered){render();lastRendered=fingerprint;}
     if(detailContext?.kind==='task')await showTask(detailContext.id,false);
-    if(['runs','spatial_exports','deliveries'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&(row.state!==detailContext.state||(kind==='deliveries'&&JSON.stringify({files:row.files,maps:row.maps})!==detailContext.deliveryRevision)))await openItem(kind,row.id,false);}
+    if(['runs','spatial_exports','deliveries'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&(kind==='deliveries'?deliveryChanged(row,detailContext):row.state!==detailContext.state))await openItem(kind,row.id,false);}
   }catch(error){
     if(workspace===requestedWorkspace){$('#connection-state').textContent='Connection interrupted. Retained task state is preserved.';if(force)globalError(error);}
   }finally{
@@ -304,16 +309,18 @@ async function openItem(kind,id,focus=true){
     content+=table(['Export','Annual reporting total','Valid cells'],Object.entries(row.artifacts||{}).map(([name,item])=>'<tr><td>'+esc(human(name))+'</td><td>'+sumCell(item)+'</td><td>'+number(item.valid_cells)+'</td></tr>'));
     content+=completedModelOrigins(row);
     content+='<div class="page-actions">'+(['prepared','failed'].includes(row.state)?button('run-start',row.state==='failed'?'Resume original models':'Run original models','data-id="'+id+'"','primary'):'')+(canSelectCompletedModels(row)?button('run-completed-models','Use completed models','data-id="'+id+'"'):'')+button('run-log','Read native log','data-id="'+id+'"')+'</div><pre id="native-log" class="logs" hidden></pre>';
+    content+=nativeJobs.runActions(row);
   }else if(kind==='comparisons'){
     content=defs({baseline:runTitle(row.baseline_run_id),direction:row.direction,compared_outputs:row.common_artifacts||Object.keys(row.alternatives?.[0]?.artifacts||{})})+table(['Alternative','Export','Annual change','Valid cells','Profile also changes'],row.alternatives.flatMap(alt=>Object.entries(alt.artifacts).map(([name,item])=>'<tr><td>'+esc(runTitle(alt.run_id))+'</td><td>'+esc(human(name))+'</td><td>'+number(item.sum_change)+' '+esc((item.units||'').replace('/pixel',''))+'</td><td>'+number(item.valid_cells)+'</td><td>'+esc(alt.profile_changed?'Yes':'No')+'</td></tr>')));
   }else if(kind==='observations'){
-    content=defs({source_uri:row.metadata.source_uri,value_basis:row.metadata.value_basis,annualization_method:row.metadata.annualization_method||'Context observations',rows:row.rows.length,admitted:row.admitted_count,context:row.context_count})+'<div id="observed-series"></div><div class="filters"><label>Find a record<input id="observation-search" placeholder="Station, catchment, parameter or qualifier"></label><label>Rows<select id="observation-filter"><option value="">All original rows</option value="admitted">Annual loads admitted</option><option value="context">Context and exclusions</option></select></label></div><div id="observation-records"></div>';
+    content=defs({source_uri:row.metadata.source_uri,value_basis:row.metadata.value_basis,annualization_method:row.metadata.annualization_method||'Context observations',rows:row.rows.length,admitted:row.admitted_count,context:row.context_count})+observationSupportSummary(row)+'<div id="observed-series"></div><div class="filters"><label>Find a record<input id="observation-search" placeholder="Station, catchment, parameter or qualifier"></label><label>Rows<select id="observation-filter"><option value="">All original rows</option value="admitted">Annual loads admitted</option><option value="context">Context and exclusions</option></select></label></div><div id="observation-records"></div>';
   }else if(kind==='observation_comparisons'){
      content='<p class="note">'+esc(row.interpretation)+'</p>'+defs({run:runTitle(row.run_id),observations:named('observations',row.observation_id),catchment_source:row.catchment_source,model_period:row.model_period||'Review original source vintages',selected_models:row.model_scope?.selected_models||'Review the retained run selection'});
      content+='<p class="note">'+esc(row.metrics_basis||'This retained comparison predates the complete-catchment coverage check. Create a comparison on the same retained run and observations to calculate current coverage.')+'</p>';
      content+=table(['Parameter',row.comparison_version>=2?'Complete comparisons':'Retained comparisons','Mean bias','RMSE','Nash–Sutcliffe efficiency','Catchments / periods'],Object.entries(row.metrics).map(([name,m])=>'<tr><td>'+esc(name)+'<br><small>'+esc(m.units)+'</small></td><td>'+m.n+'</td><td>'+number(m.mean_bias)+'</td><td>'+number(m.rmse)+'</td><td>'+number(m.nash_sutcliffe_efficiency)+'</td><td>'+number(m.unique_catchments??m.n)+' catchments<br><small>'+esc(m.repeated_catchments?'Includes repeated station periods':'Distinct catchments')+'</small></td></tr>'));
+     content+=observationDiagnosticsMarkup(row);
      content+='<div class="filters"><label>Parameter<select id="comparison-parameter"></select></label><label>Station / catchment<select id="comparison-station"></select></label><label>Coverage<select id="comparison-coverage"><option value="">Every retained comparison</option><option value="complete">Complete catchments</option><option value="partial">Partial or legacy coverage</option></select></label></div><div id="observation-comparison-view"></div>';
-     content+='<div class="page-actions">'+button('observation-comparison-csv','Download selected comparison rows')+'</div>';
+     content+='<div class="page-actions">'+button('observation-comparison-csv','Download selected comparison rows')+(row.diagnostics?button('observation-diagnostics-json','Download complete cohort review'): '')+'</div>';
      if(row.exclusions.length)content+='<details class="technical"><summary>'+row.exclusions.length+' original context or excluded rows</summary><pre class="json-view">'+esc(pretty(row.exclusions))+'</pre></details>';
    }else if(kind==='spatial_exports'){
     content='<div class="meta">'+badge(row.state)+'</div>'+defs({saved_review:row.review_id,paper:row.selection?.paper,resolution_dpi:row.selection?.dpi,created_at:row.created_at});
@@ -322,14 +329,14 @@ async function openItem(kind,id,focus=true){
     if(row.summary)content+=defs({map_mode:row.summary.mode,coordinate_system:row.summary.view?.crs,extent:row.summary.view?.bounds,annotations:row.summary.marker_count});
     content+=customerReviews.mapActions(row);
    }else if(kind==='deliveries'){
-    content=deliveryReview.continuation(row)+inspected.html;
+    content=deliveryReview.continuation(row,inspected.files)+inspected.html;
   }
   if(kind==='comparisons')content+='<div class="page-actions">'+button('comparison-delivery','Build delivery from this comparison','data-id="'+id+'"')+'</div>';
   if(kind==='runs'&&row.state==='complete')content+='<div class="page-actions">'+button('run-compare-selection','Compare this run','data-id="'+id+'"')+'</div>';
   if(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].includes(kind))content='<div class="page-actions">'+button('spatial-item','Open in spatial review','data-kind="'+kind+'" data-id="'+id+'"')+'</div>'+content;
   if(kind!=='deliveries')content+='<h3 class="subheading">Retained files</h3>'+fileList(row._downloads)+'<details class="technical"><summary>Original record, selection and provenance</summary><pre class="json-view">'+esc(pretty(Object.fromEntries(Object.entries(row).filter(([key])=>key!=='_downloads'))))+'</pre></details>';
   detail(row.title||row.metadata?.title||row.spec?.title||row.selection?.title||viewLabels[kind]||human(kind),content,{kind,id,state:row.state});detailContext.files=row._downloads;
-  if(kind==='deliveries'){detailContext.deliveryRevision=JSON.stringify({files:row.files,maps:row.maps});deliveryInspection.mount($('#detail-body'));}
+  if(kind==='deliveries'){detailContext.deliveryRevision=deliveryRevision(row);deliveryInspection.mount($('#detail-body'));}
   if(kind==='portfolios'||kind==='portfolio_reports'){detailContext.portfolio=row;mountPortfolioDetail();}
   if(kind==='observations'){detailContext.observation=row;mountObservedSeries($('#observed-series'),row);renderObservationRows();$('#observation-search').addEventListener('input',renderObservationRows);$('#observation-filter').addEventListener('change',renderObservationRows);}
   if(kind==='observation_comparisons'){
@@ -344,7 +351,7 @@ async function openItem(kind,id,focus=true){
 function renderObservationRows(){
   const row=detailContext.observation,q=$('#observation-search').value.trim().toLowerCase(),type=$('#observation-filter').value;
   const all=row.rows.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!type||(type==='admitted')===r.admitted));
-  $('#observation-records').innerHTML='<p class="note">'+Math.min(150,all.length)+' of '+all.length+' matching retained rows. The original CSV download contains every source row.</p>'+table(['Record','Catchment / station','Parameter','Original value / unit','Period','Method / uncertainty','Disposition'],all.slice(0,150).map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(r.catchment_id)+'<br><small>'+esc(r.station_id)+'</small></td><td>'+esc(r.parameter)+'</td><td>'+observedValueMarkup(r,row.metadata)+'</td><td>'+esc(r.period_start)+'<br>'+esc(r.period_end)+'</td><td>'+observationMethod(r)+'</td><td>'+badge(r.admitted?'admitted':'context')+'<small>'+esc(r.issues.join('; '))+'</small></td></tr>'));
+  $('#observation-records').innerHTML='<p class="note">'+Math.min(150,all.length)+' of '+all.length+' matching retained rows. The original CSV download contains every source row.</p>'+table(['Record','Catchment / station','Measurement support','Parameter','Original value / unit','Period','Method / uncertainty','Disposition'],all.slice(0,150).map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(r.catchment_id)+'<br><small>'+esc(r.station_id)+'</small></td><td>'+observationSupportMarkup(r,row.metadata)+'</td><td>'+esc(r.parameter)+'</td><td>'+observedValueMarkup(r,row.metadata)+'</td><td>'+esc(r.period_start)+'<br>'+esc(r.period_end)+'</td><td>'+observationMethod(r)+'</td><td>'+badge(r.admitted?'admitted':'context')+'<small>'+esc(r.issues.join('; '))+'</small></td></tr>'));
 }
 function observationMethod(row){
  const method=row.method||'Original source method retained',uncertainty=row.uncertainty;
@@ -376,10 +383,17 @@ function renderObservationComparison(){
    const grid=c.valid_fraction_of_selected_cells==null?'No selected grid cells':number(c.valid_cells)+' valid export cells of '+number(c.selected_cells)+' selected';
    const support=c.native_support_fraction==null?'':number(c.native_support_fraction*100)+'% expected native support; '+number(c.structural_stream_omission_cells)+' original stream omissions; '+number(c.unexpected_missing_cells)+' unexpected missing cells';
    return '<tr><td>'+esc(r.station_id||r.catchment_id)+'<br><small>'+esc(r.catchment_id)+'</small></td><td>'+esc(r.period_start)+'<br>'+esc(r.period_end)+'</td><td>'+number(r.observed_annual_mass)+'<br><small>'+esc(r.units)+'</small></td><td>'+number(r.modeled_annual_mass)+(r.included_in_metrics===false?'<small>Partial native total</small>':'')+'</td><td>'+(r.included_in_metrics===true?number(r.residual):'—')+'</td><td>'+badge(legacy?'legacy':r.coverage_status||'partial')+'<small>'+esc(extent)+'</small><small>'+esc(grid)+'</small>'+(support?'<small>'+esc(support)+'</small>':'')+'<small>'+esc((c.coverage_issues||[]).join('; '))+'</small></td><td>'+observationMethod(r)+'</td></tr>';
- }));
+ }))+observationContextMarkup(detailContext.observationComparison.context_rows||[]);
+}
+function downloadObservationDiagnostics(){
+ const comparison=detailContext?.observationComparison;
+ if(!comparison?.diagnostics)return;
+ const payload={comparison_id:comparison.id,diagnostics:comparison.diagnostics};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)+'\n'],{type:'application/json;charset=utf-8'})),a=document.createElement('a');
+ a.href=url;a.download='annual-load-cohort-review-'+short(comparison.id)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function downloadObservationComparison(){
- const selected=comparisonRows(),fields=['observation_id','station_id','catchment_id','parameter','period_start','period_end','period_days','observed_annual_mass','modeled_annual_mass','units','residual','relative_residual','partial_catchment_difference','included_in_metrics','coverage_status','method','uncertainty','source_records','observed_value_text','observed_source_unit','observed_qualifier','spatial_coverage'];
+ const selected=comparisonRows(),fields=['observation_id','station_id','catchment_id','parameter','measurement_support','species','support_origin','period_start','period_end','period_days','observed_annual_mass','modeled_annual_mass','units','residual','relative_residual','partial_catchment_difference','included_in_metrics','coverage_status','method','uncertainty','source_records','observed_value_text','observed_source_unit','observed_qualifier','spatial_coverage'];
  const cell=value=>'"'+String(value===undefined||value===null?'':typeof value==='object'?JSON.stringify(value):value).replaceAll('"','""')+'"';
  const text=[fields.map(cell).join(','),...selected.map(r=>fields.map(k=>cell(r[k])).join(','))].join('\r\n')+'\r\n';
  const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');
@@ -392,7 +406,7 @@ async function showTask(id,focus=true){
   const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
-  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+programmes.taskActions(row)+receivingWaters.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+parameterStudies.taskActions(row)+registeredActions+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
+  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+programmes.taskActions(row)+receivingWaters.taskActions(row)+nativeJobs.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+parameterStudies.taskActions(row)+registeredActions+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
   detail(actionLabels[row.action]||row.action,body,{kind:'task',id,state:row.state});detailContext.files=row._downloads||[];
   if(focus)$('#detail-body').scrollTop=0;
 }
@@ -806,11 +820,12 @@ function parameterRow(from='',to='nitrogen'){
  return '<div class="repeat-row" data-parameter-row>'+field('Original parameter label',input('parameter_from','text',from,'required'))+field('Native annual-load parameter',select('parameter_to',[['nitrogen','Nitrogen'],['phosphorus','Phosphorus'],['sediment','Sediment']],to))+button('row-remove','Remove','','small')+'</div>';
 }
 function observationForm(){
- const keys=['record_id','station_id','catchment_id','parameter','value','unit','period_start','period_end','qualifier','method','uncertainty','source_records'];
+ const keys=['record_id','station_id','catchment_id','parameter','value','unit','period_start','period_end','qualifier','method','uncertainty','source_records',...supportFields];
  openForm('Import original water-quality observations','Keep every original CSV row and its source provenance. The native comparison admits explicitly derived annual N/P/sediment mass rates; other measurements remain available as context.',
  '<div class="form-grid">'+field('Original observation CSV',input('observation_file','file','','required accept=".csv,text/csv"'),'The complete original file is retained.',true)+
   field('Prepared source-method JSON',input('observation_metadata','file','','accept=".json,application/json"'),'Optional. Loads the original source, annualization, column mapping and qualifier choices; its exact bytes stay with the edition.',true)+
  field('Observation title',input('title','text','','required'))+field('Original source URI',input('source_uri','url','','required'))+
+ field('Physical measurement support',select('measurement_support',supportOptions,'other_context'),'Choose the original measurement quantity; per-row source columns can describe mixed editions.')+
  field('Measurement basis',select('basis',[['context','Original contextual measurements'],['annual_mass_rate','Derived annual mass-rate observations']],'context'))+
  field('Original annualization method',area('annualization_method'),'Required for derived annual loads; retain the source method, period and assumptions.',true)+
  field('Fallback period start',input('period_start','date'))+field('Fallback period end',input('period_end','date'),'Used when those period columns are absent.')+
@@ -832,7 +847,7 @@ function observationForm(){
    for(const node of $$('[data-parameter-row]',form)){
     const key=val('parameter_from',node).trim();if(Object.hasOwn(parameter_mapping,key))throw Error('An original parameter label is mapped twice.');parameter_mapping[key]=val('parameter_to',node);
    }
-   const metadata={...(context.observationMetadata||{}),title:val('title'),source_uri:val('source_uri'),value_basis:val('basis'),annualization_method:val('annualization_method'),columns,parameter_mapping,accepted_qualifiers:[...(form.elements.namedItem('blank_qualifier').checked?['']:[]),...lines(val('qualifiers'))]};
+   const metadata={...(context.observationMetadata||{}),title:val('title'),source_uri:val('source_uri'),value_basis:val('basis'),measurement_support:val('measurement_support'),annualization_method:val('annualization_method'),columns,parameter_mapping,accepted_qualifiers:[...(form.elements.namedItem('blank_qualifier').checked?['']:[]),...lines(val('qualifiers'))]};
    if(val('period_start'))metadata.period_start=val('period_start');else delete metadata.period_start;if(val('period_end'))metadata.period_end=val('period_end');else delete metadata.period_end;
    if(context.observationMetadataFile)metadata.source_metadata_document=context.observationMetadataFile;
    if(metadata.value_basis==='annual_mass_rate'&&!metadata.annualization_method.trim())throw Error('Describe the original method that produced the annual mass-rate values.');
@@ -843,8 +858,9 @@ function observationForm(){
   if(formContext!==context||workspace!==selectedWorkspace||csvControl.files[0]!==file||methodControl.files[0]!==methodFile||context.observationCSVToken!==csvToken||context.observationMetadataToken!==methodToken||JSON.stringify(readMetadata())!==selectedMetadata)throw Error('The observation selection changed during upload. Review the current CSV, source method and mapping, then import again.');
   return submitAction('observation.import',{upload_id:uploaded.id,metadata});
  },()=>{
-  const syncContextColumns=()=>{const annual=val('basis')==='annual_mass_rate',constants=annual?{}:(formContext.observationMetadata?.constants||{});form.elements.namedItem('annualization_method').required=annual;for(const key of ['catchment_id','parameter','value','unit'])form.elements.namedItem('column_'+key).required=key==='catchment_id'?annual:!Object.hasOwn(constants,key);};
-  form.elements.namedItem('basis').addEventListener('change',syncContextColumns);syncContextColumns();
+  const syncContextColumns=()=>{const annual=val('basis')==='annual_mass_rate',constants=annual?{}:(formContext.observationMetadata?.constants||{});form.elements.namedItem('annualization_method').required=annual;for(const key of ['catchment_id','parameter','value','unit'])form.elements.namedItem('column_'+key).required=key==='catchment_id'?(annual&&val('measurement_support')==='catchment_export'):!Object.hasOwn(constants,key);};
+  form.elements.namedItem('basis').addEventListener('change',syncContextColumns);
+  form.elements.namedItem('measurement_support').addEventListener('change',syncContextColumns);syncContextColumns();
    form.elements.namedItem('observation_metadata').addEventListener('change',async()=>{
     const context=formContext,selectedWorkspace=workspace,control=form.elements.namedItem('observation_metadata'),file=control.files[0],token=crypto.randomUUID();context.observationMetadataToken=token;context.observationMetadataLoading=true;context.observationMetadataError=null;
     const current=()=>formContext===context&&workspace===selectedWorkspace&&context.observationMetadataToken===token&&control.files[0]===file;
@@ -855,6 +871,7 @@ function observationForm(){
      const value=JSON.parse(new TextDecoder().decode(data));
      if(!value||typeof value!=='object'||Array.isArray(value))throw Error('The source-method file must contain an observation metadata object.');
      for(const key of ['title','source_uri','annualization_method','period_start','period_end'])if(value[key]!==undefined){if(typeof value[key]!=='string')throw Error('Source metadata '+key+' must be text.');}
+     if(value.measurement_support!==undefined&&!supportOptions.some(row=>row[0]===value.measurement_support))throw Error('Choose an original physical measurement support.');
      if(value.value_basis!==undefined){if(!['context','annual_mass_rate'].includes(value.value_basis))throw Error('The source method must declare context or annual_mass_rate.');}
      if(value.constants!==undefined&&(!value.constants||typeof value.constants!=='object'||Array.isArray(value.constants)||Object.values(value.constants).some(v=>typeof v!=='string')))throw Error('Context constants must be explicit source field values.');
      if(value.series_dimensions!==undefined&&(!Array.isArray(value.series_dimensions)||value.series_dimensions.some(v=>typeof v!=='string')))throw Error('Source series groups must name original CSV fields.');
@@ -866,6 +883,7 @@ function observationForm(){
      if(!current())return;
      for(const key of ['title','source_uri','annualization_method','period_start','period_end'])if(value[key]!==undefined)form.elements.namedItem(key).value=value[key];
      if(value.value_basis!==undefined)form.elements.namedItem('basis').value=value.value_basis;
+     form.elements.namedItem('measurement_support').value=value.measurement_support||(value.value_basis==='annual_mass_rate'?'catchment_export':'other_context');
      context.observationMetadata=value;context.observationMetadataFile={filename:file.name,bytes:data.length,sha256:hash,encoding:'base64',content:btoa(binary)};
      if(value.parameter_mapping)$('#parameter-rows').innerHTML=Object.entries(value.parameter_mapping).map(([from,to])=>parameterRow(from,to)).join('');
      if(value.accepted_qualifiers){form.elements.namedItem('blank_qualifier').checked=value.accepted_qualifiers.includes('');form.elements.namedItem('qualifiers').value=value.accepted_qualifiers.filter(Boolean).join('\n');}
@@ -895,8 +913,8 @@ function observationForm(){
  });
 }
 function observationCompareForm(id){
- requireSources();const complete=state.data.runs.filter(x=>x.state==='complete'),observations=state.data.observations;
- if(!complete.length||!observations.length)throw Error('Complete a native model run and retain the original observation CSV first.');
+ requireSources();const complete=state.data.runs.filter(x=>x.state==='complete'),observations=state.data.observations.filter(x=>x.admitted_count>0);
+ if(!complete.length||!observations.length)throw Error('Complete a native model run and import receiving-water annual catchment loads. Original outfall quantities and concentration records are available in the observation detail.');
  const collection=collectionDefault();
  openForm('Compare original annual loads','Aggregate the actual native model output over each full source catchment and preserve modeled-versus-observed residuals, coverage and excluded contextual records.',
  '<div class="form-grid">'+field('Completed native run',select('run',complete.map(x=>[x.id,runTitle(x.id)])))+
@@ -1065,6 +1083,7 @@ async function navigate(next){
  view=next;operatingJourney?.updateRail(next);history.replaceState(null,'','#'+next);lastRendered='';render();$('#main').focus();
 }
 async function selectWorkspace(id){
+ nativeJobs.detach();
  if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
  rehearsal.detach();
@@ -1074,6 +1093,7 @@ async function selectWorkspace(id){
 }
 async function dispatch(button){
  const action=button.dataset.action,id=button.dataset.id;
+ if(action?.startsWith('native-job-'))return nativeJobs.dispatch(button);
  if(await extensions.dispatch(button))return;
  if(action?.startsWith('delivery-inspection-'))return deliveryInspection.dispatch(button);
  if(action?.startsWith('parameter-study-'))return parameterStudies.dispatch(button);
@@ -1107,6 +1127,7 @@ async function dispatch(button){
  if(action==='observation-new')return observationForm();
  if(action==='observation-compare')return observationCompareForm(id);
  if(action==='observation-comparison-csv')return downloadObservationComparison();
+ if(action==='observation-diagnostics-json')return downloadObservationDiagnostics();
  if(['delivery-report','delivery-client-report','delivery-report-refresh','delivery-revise'].includes(action))return deliveryReview.handle(action,id);
  if(action==='delivery-new')return deliveryForm();
  if(action==='delivery-resume'){const row=await api(endpoint('/api/item',{kind:'deliveries',id}));return executeAction('delivery.build',row.selection);}

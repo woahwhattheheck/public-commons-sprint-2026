@@ -5,6 +5,7 @@ import csv
 import html
 import io
 import json
+import urllib.parse
 from pathlib import Path
 import zipfile
 
@@ -13,11 +14,12 @@ from model.common import (atomic_bytes, atomic_json, describe_file,
 from model import calibration as science
 from model import calibration_uncertainty as uncertainty_science
 from model import calibration_maps as map_science
+from model import calibration_review as review_science
 
 ACTIONS = frozenset({"calibration.prepare", "calibration.analyze", "calibration.export",
                      "calibration.uncertainty", "calibration.uncertainty.export",
-                     "calibration.maps.prepare", "calibration.maps.review"})
-READS = frozenset({"catalog", "plan", "report", "uncertainty", "maps"})
+                     "calibration.maps.prepare", "calibration.maps.review", "calibration.review.prepare"})
+READS = frozenset({"catalog", "plan", "report", "uncertainty", "maps", "review"})
 UNITS = {"nitrogen": "kg/year", "phosphorus": "kg/year", "sediment": "metric_tonnes/year"}
 COLUMNS = {
     "ranking": ("rank", "run_id", "profile_id", "title", "selected_models", "available_parameters",
@@ -260,6 +262,17 @@ UNCERTAINTY_TITLES = {
 }
 
 
+REVIEW_POLICY = ("sandbox allow-downloads allow-same-origin; default-src 'none'; style-src 'unsafe-inline'; "
+                 "img-src data:; object-src 'none'; base-uri 'none'; form-action 'none'; "
+                 "frame-ancestors 'self'")
+
+
+def _review_summary(record):
+    return {key: record.get(key) for key in (
+        "id", "title", "state", "calibration_id", "plan_id", "uncertainty_id", "map_id",
+        "selected_run_id", "selected_profile_id", "file_count")}
+
+
 def _map_summary(record):
     return {**{key: record.get(key) for key in (
         "id", "calibration_id", "plan_id", "created_at", "title", "state",
@@ -364,7 +377,8 @@ class CalibrationOperations:
         return {"calibration_plans": plans, "calibrations": reports,
                 "calibration_uncertainties": [_uncertainty_summary(row) for row in ws._list(UNCERTAINTY_KIND)],
                 "calibration_maps": [_map_summary(row) for row in ws._list("calibration-maps")],
-                "calibration_map_reviews": ws._list("calibration-map-reviews")}
+                "calibration_map_reviews": ws._list("calibration-map-reviews"),
+                "calibration_reviews": [_review_summary(row) for row in ws._list("calibration-reviews")]}
 
     def read(self, workspace, operation, value=None):
         value = value or {}
@@ -395,7 +409,16 @@ class CalibrationOperations:
                     "uncertainties": [_uncertainty_summary(row) for row in ws._list(UNCERTAINTY_KIND)
                                       if row.get("calibration_id") == key],
                     "maps": [_map_summary(row) for row in ws._list("calibration-maps")
-                             if row.get("calibration_id") == key]}
+                             if row.get("calibration_id") == key],
+                    "reviews": [_review_summary(row) for row in ws._list("calibration-reviews")
+                                if row.get("calibration_id") == key]}
+        if operation == "review":
+            key = self._id(value, "id")
+            review = review_science.inspect(ws, key)
+            prefix = "/api/file/calibration-review/" + "/".join(
+                urllib.parse.quote(str(part), safe="") for part in (workspace, key)) + "/"
+            return {"workspace_key": workspace, "review": review, "viewer_url": prefix + "index.html",
+                    "_downloads": self._review_downloads(workspace, review)}
         if operation == "maps":
             key = self._id(value, "id")
             result = map_science.inspect(ws, key)
@@ -453,6 +476,15 @@ class CalibrationOperations:
                     "selection_sensitivity": result["selection_sensitivity"]}
         if task["action"] == "calibration.uncertainty.export":
             return self._uncertainty_export(workspace, self._id(payload, "uncertainty_id"))
+        if task["action"] == "calibration.review.prepare":
+            report_id = self._id(payload, "report_id")
+            result = review_science.prepare(
+                ws, report_id, uncertainty_id=payload.get("uncertainty_id") or None,
+                map_id=payload.get("map_id") or None, title=payload.get("title"),
+                notes=payload.get("notes", ""))
+            return {"report_id": report_id, "plan_id": result["plan_id"],
+                    "calibration_review_id": result["id"], "state": result["state"],
+                    "uncertainty_id": result["uncertainty_id"], "map_id": result["map_id"]}
         if task["action"] == "calibration.maps.prepare":
             report_id = self._id(payload, "report_id")
             uncertainty_id = payload.get("uncertainty_id")
@@ -642,6 +674,24 @@ class CalibrationOperations:
                               "download": self.operator._ticket(workspace, path, expected, expected["path"])})
         return artifacts
 
+    def _review_downloads(self, workspace, review):
+        ws = self.operator.ws(workspace)
+        directory = ws.root / review["directory"]
+        downloads = []
+        for label, expected in (
+                ("Complete calibration review ZIP", review["archive"]),
+                ("Readable calibration review", review["files"]["index.html"]),
+                ("Complete review file inventory", review["manifest"])):
+            path = verify_file(directory, expected)
+            downloads.append(self.operator._ticket(workspace, path, expected, label))
+        return downloads
+
+    def review_member(self, workspace, review_id, member_path):
+        """Serve one verified original member through authenticated file transport."""
+        ws = self.operator.ws(workspace)
+        path, expected = review_science.member(ws, identifier(review_id), member_path)
+        return self.operator._ticket(workspace, path, expected, expected["path"]), REVIEW_POLICY
+
     def verify_workspace(self, workspace):
         """Reopen retained sensitivity dependencies using the scientific validator."""
         verified = []
@@ -669,10 +719,14 @@ class CalibrationOperations:
                         or review.get("reference", {}).get("where") not in (None, {})):
                     raise ValueError("The saved calibration spatial review uses a different original layer")
                 links.append({"id": link["id"], "map_id": record["id"], "review_id": review["id"]})
-        return {"calibration_uncertainties": verified,
+        reviews = []
+        for row in workspace._list("calibration-reviews"):
+            value = review_science.inspect(workspace, row["id"])
+            reviews.append({"id": value["id"], "calibration_id": value["calibration_id"]})
+        return {"calibration_reviews": reviews, "calibration_uncertainties": verified,
                 "calibration_maps": [{"id": row["id"], "calibration_id": row["calibration_id"]}
                                      for row in maps.values()],
-                "calibration_map_reviews": links, "verified_count": len(verified) + len(maps) + len(links)}
+                "calibration_map_reviews": links, "verified_count": len(verified) + len(maps) + len(links) + len(reviews)}
 
     def decorate_task(self, task):
         if task["state"] != "complete" or task["action"] not in ACTIONS:
@@ -701,4 +755,8 @@ class CalibrationOperations:
         if result.get("review_id"):
             downloads.append(self._document(task["workspace"], "spatial-reviews",
                                             result["review_id"], "Original saved spatial review"))
+        if result.get("calibration_review_id"):
+            review = review_science.inspect(self.operator.ws(task["workspace"]),
+                                            result["calibration_review_id"])
+            downloads.extend(self._review_downloads(task["workspace"], review))
         return {**task, "_downloads": downloads}
