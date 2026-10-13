@@ -13,7 +13,7 @@ The selected source identity passed to the commands below comes from the deliver
 
 Run from the directory containing model/, operator/, source_tools/ and source/. Set UPSTATE_PYTHON to the accepting host's equipped interpreter and use it consistently for every stage below. Keep the complete original source and prepared input archives available beside the working project. Use an ordinary disk-backed operation directory for retained national archives, working rasters and the final archive.
 
-The demonstrated paired receiving operation uses application root `/workspace/scratch/790ee23f7efd/ensemble-recovery-operation` and interpreter `/workspace/scratch/790ee23f7efd/ensemble-recovery-venv/bin/python`. Its completed archive receive, inspect, export and independent reopen retained 51 files and 36 original GeoTIFF identities. Use the paths supplied by the currently accepting process when continuing on another host.
+The demonstrated paired receiving operation uses its original authored-array computational case, application root `/workspace/scratch/790ee23f7efd/ensemble-recovery-operation` and interpreter `/workspace/scratch/790ee23f7efd/ensemble-recovery-venv/bin/python`. Its completed archive receive, inspect, export and independent reopen retained 51 files and 36 original GeoTIFF identities. Use the paths supplied by the currently accepting process when continuing on another host.
 
 The native InVEST operation and its actual prepared grid remain on the existing GURA-NATIVE-01 continuation. Gura is the separate original Kenya model case used for native pipeline commissioning. Upper Savannah calibration selects its actual regional grid, native runs, observation catchments and source periods; its USGS annual references belong to that regional cohort. The completed profile-only receiver establishes profile/source receiving for its selected inputs. Regional model outputs and physical calibration results come from the corresponding regional native operation. Source comparison and completed watershed adoption can execute with the standard-library application before the GIS/native dependency environment is ready. Native model execution uses the saved original grid, source edition and required InVEST 3.20 environment. Read the selected raster’s own resolution and CRS; the Gura source owners are reconciling distinct original archive editions, so a resolution from one edition must not be applied to another.
 
@@ -833,14 +833,16 @@ Choose an existing delivery to preserve its original runs, overlays, map setting
 contact fields and other scientific sources, or start a new report selection.
 The completed operation offers **Open prepared report form**.
 
-The same preparation and source import are available from the command line:
+The same preparation, source import and standalone scientific report rendering are available from the command line:
 
 ```sh
 "$UPSTATE_PYTHON" -B -m model.gauge_report_context --workspace "$UPSTATE_WORKSPACE" --edition-id "$UPSTATE_GAUGE_EDITION_ID"
 ```
 
 Add `--delivery-id "$UPSTATE_SAVED_DELIVERY_ID"` to append to an explicit saved
-delivery, or `--prepare-only` to retain the complete report source before import.
+delivery. Select `--source-only` for native source import and combined delivery
+selection, `--prepare-only` to retain the complete source before import, or
+`--inspect` to reopen the saved standalone output.
 Use the original Gauge receiving result's `phases.support_build.edition_id`
 when continuing the existing build.
 
@@ -896,3 +898,77 @@ See [source_tools/NLDI_SPLIT_CAPTURE.md](../source_tools/NLDI_SPLIT_CAPTURE.md) 
 all seven requests, journal recovery, native source import and the existing4959
 operation. The current native worker continues these requests alongside the
 original scientific report, source and archive receiving.
+
+## 20. Read and deliver the complete scientific report
+
+### Direct saved Gauge report
+
+Open an existing Gauge support edition and choose **Download scientific report**.
+The existing report operation prepares a scientific PDF, offline HTML, Markdown,
+structured report data and a complete source ZIP. The edition keeps the same
+original station, catchment, regional and daily-flow records. Its retained maps
+and original geometries remain linked from the report and packaged beside it.
+The standalone report uses the saved source directly; its selection is the same
+one available through **Use in scientific report** and **Open prepared report form**.
+
+The default Gauge command in section18 now renders these outputs. Reopen them
+with the same Workspace and original saved edition:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.gauge_report_context --workspace "$UPSTATE_WORKSPACE" --edition-id "$UPSTATE_GAUGE_EDITION_ID" --inspect
+```
+
+The operation retains completed formats as it proceeds. If PDF rendering raises
+an actual dependency or input error, the existing report read returns that error
+and the completed HTML, Markdown, data and original source. Repair the reported
+cause in the same accepting environment and repeat the same report operation.
+The source and exact formatter, collector and vector-renderer identities select
+the saved render. Verified completed releases reopen through the ordinary
+operator download transport and are preserved in the Workspace archive.
+
+### Figures from the original saved calibration
+
+**Prepare scientific report** now includes the available original numerical
+plots, an independent monochrome SVG for each figure, the complete numeric
+specification and a CSV of plotted coordinates and source pointers. The PDF
+uses the maintained vector renderer; offline HTML embeds the original SVGs.
+Both formats and their full source ZIP preserve the same original values.
+
+| Figure | Original quantity and interpretation |
+| --- | --- |
+| Selected candidate against observations | Original observed and predicted annual constituent mass, separated by physical unit. Validation units use their distinct marker; the diagonal is the1:1 reference. |
+| Physical residuals | Saved predicted-minus-observed annual mass, retaining original constituent units, catchment, spatial partition and period aggregation. |
+| Candidate ranking | Saved dimensionless objective and original rank for every eligible native candidate, with the selected run identified. |
+| Reference-period flow coverage | Original numeric-day and outside-capture counts divided by that observation's full requested exclusive-end date interval. |
+| Original flow qualifiers | Approved, estimated and provisional day counts as separate percentages of the same requested interval. These categories may overlap. |
+| Source-error objective gaps | Saved minimum, maximum and nominal objective gaps under the original published-source-error calculation, with its selected multiplier, direction and missing-record coverage. |
+
+The plot producer reads the saved results. It preserves physical units and
+original model runs, temporal aggregation and spatial support. Source-error
+bounds retain their original sensitivity meaning. Missing coordinates retain
+their original source location and reason in the specification. The full original
+plan, results, observations, native run/profile/scenario records and selected
+flow source are delivered alongside the figures.
+
+Every coordinate records its original packaged JSON path and record pointer;
+flow percentages additionally retain their original count and denominator.
+Open `calibration-figure-coordinates.csv` for ordinary data processing and
+`calibration-figure-spec.json` for the complete record context and supplied
+axis metadata. The existing saved-study report and source-only CLI routes remain
+the entrypoints; no separate plotting operation or Workspace is needed.
+
+### Complete source installation
+
+The current inventory contains248 paths in12 full families. The study consumer
+has15 files, Gauge support9, source/profile comparison12 and regional reporting96.
+The regional family includes the original utility-observation manifest and all
+its physical companions, plus the native utility-source receiver's own input
+manifest, original topology result and original USGS topology network. Its
+regional context, coverage and utility profile remain the same selected originals.
+
+Compose these full families with `integration/application_components.json`.
+The catalogue preserves the existing peer components and selects the complete
+report producers, scientific figure module and utility-source dependency set.
+The guide, exact file inventory and canonical catalogue are delivered together
+in the existing master source package. Continue the original source/native
+receiving operations and their current actual Workspace identities.
