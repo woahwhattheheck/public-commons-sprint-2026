@@ -424,7 +424,7 @@ def report(record):
             "<th>Land cover</th><th>Parameter</th><th>Value</th><th>Units</th><th>Load basis</th><th>Evidence kind</th>"
             "</tr></thead><tbody>" + "".join(body) + "</tbody></table><h2>Inherited inputs</h2><p>" +
             e(record["retained_preview"]["inherited_fields"]) + "</p><h2>Complete retained selection</h2><pre>" +
-            e(json.dumps(record, ensure_ascii=False, indent=2)) + "</pre></html>").encode("utf-8")
+            e(json.dumps(record, ensure_ascii=False, indent=2)) + "</pre><footer><p>Prepared with the TokenJunkieLabs scientific workbench. Original publications and source attributions are retained above; scientific review and interpretation remain with the receiving practice.</p></footer></html>").encode("utf-8")
 
 def export(workspace, ident):
     with held(workspace.root / ".workspace.lock", blocking=False):
