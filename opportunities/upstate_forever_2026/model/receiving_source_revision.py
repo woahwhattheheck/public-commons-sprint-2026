@@ -241,15 +241,20 @@ def draft(workspace, values):
             parent = selection
             for token in tokens[:-1]:
                 parent = parent[token]
+            source_changed = digest(parent[tokens[-1]]) != digest(updated)
             parent[tokens[-1]] = updated
             if relation is not None:
+                previous_relation = deepcopy(parent.get("relation"))
                 original_relation = parent.setdefault("relation", {})
                 original_relation.update({key: deepcopy(value) for key, value in relation.items() if key != "buffer_m"})
                 if "buffer_m" in relation:
                     original_relation["buffer_m"] = relation["buffer_m"]
                 else:
                     original_relation.pop("buffer_m", None)
-            changed.append(binding["path"])
+                if digest(previous_relation) != digest(original_relation):
+                    changed.append(_path(tuple(tokens[:-1]) + ("relation",)))
+            if source_changed:
+                changed.append(binding["path"])
             validations.append(validation)
         missing = []
     else:
@@ -263,8 +268,11 @@ def draft(workspace, values):
             if not checked["compatible"]:
                 raise ValueError(checked.get("message") or "The saved successor cohort is unavailable")
             ids = [row["successor_id"] for row in checked["runs"]]
+            if selection["baseline_run_id"] != ids[0]:
+                changed.append("selection.baseline_run_id")
+            if selection["alternative_run_ids"] != ids[1:]:
+                changed.append("selection.alternative_run_ids")
             selection["baseline_run_id"], selection["alternative_run_ids"] = ids[0], ids[1:]
-            changed.extend(["selection.baseline_run_id", "selection.alternative_run_ids"])
         plan_id = identifier(values.get("plan_id") or selection["plan_id"])
         plan = waters.inspect_plan(workspace, plan_id, verify=False)
         if plan["state"] != "complete":
