@@ -275,13 +275,13 @@ function restoreDraft(){
   }
   renderPatches();syncNativeOptions();
 }
-async function showSection(section){await flushDraft();S.section=section;all("[data-panel]").forEach(node=>node.hidden=node.dataset.panel!==section);all("[data-section]").forEach(node=>node.setAttribute("aria-current",node.dataset.section===section?"page":"false"));scheduleAnalysisRefresh();if(section==="corrections")await correctionDesk.open();}
+async function showSection(section){await flushDraft();S.section=section;all("[data-panel]").forEach(node=>node.hidden=node.dataset.panel!==section);all("[data-section]").forEach(node=>node.setAttribute("aria-current",node.dataset.section===section?"page":"false"));scheduleAnalysisRefresh();if(section==="corrections")await correctionDesk.open();if(section==="review-following")await revisionDesk.open();}
 function showInspector(view){S.inspector=view;all("[data-inspector-panel]").forEach(node=>node.hidden=node.dataset.inspectorPanel!==view);all("[data-inspector]").forEach(node=>node.setAttribute("aria-current",node.dataset.inspector===view?"page":"false"));}
 function sourceBinding(){return S.detail?S.detail.source.name+" · revision "+S.detail.revision.number+" · "+S.detail.revision.id:"Open a source revision in Inspect and correct.";}
 function clearDetailView(){
   S.activeEntity=null;S.activeField=null;S.analysisPreview=null;S.projectionPreview=null;S.analysisInput=null;S.projectionInput=null;S.comparison=null;S.dirtyForms.clear();
   for(const file of ["import","replace","weather","receive"]){S[file+"File"]=null;$(file+"-file").value="";}
-  for(const form of all("form"))if(form.id!=="connect-form")form.reset();
+  for(const form of all("form"))if(form.id!=="connect-form"&&!form.closest("#revision-review-panel"))form.reset();
   for(const id of ["entities-table","fields-table","patches-table","references-table","series-table","validation-summary","validation-table","revision-table","comparison-table","edition-sources","analysis-readings","projection-tables"])empty(id,"Open a source revision to view its retained records.");
   for(const id of ["entity-detail","field-form","edition-detail","analysis-preview","analysis-result","projection-preview","receive-result","reference-comparison"])$(id).hidden=true;
   $("source-context").replaceChildren(el("p","Select a source document."));$("xml-text").value="";

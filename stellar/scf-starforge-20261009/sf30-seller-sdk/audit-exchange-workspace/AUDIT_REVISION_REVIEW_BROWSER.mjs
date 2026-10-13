@@ -121,7 +121,7 @@ try{
    await page.reload();await connect();await openWorking('Unfinished_Reviewed_Working.json');
    await download(()=>page.locator('#revision-review-download').click(),'Reopened_Reviewed_Working.json');
    need(same(await read('Unfinished_Reviewed_Working.json'),await read('Reopened_Reviewed_Working.json')),'Complete unfinished review did not reopen.');
-   const details=page.locator('#revision-review-native details');for(let i=0;i<await details.count();i++){await details.nth(i).locator('summary').click();await page.waitForFunction(i=>document.querySelectorAll('#revision-review-native details')[i].querySelector('pre').textContent.length>0,i);}
+   const details=page.locator('#revision-review-native details');for(let i=0;i<await details.count();i++){await details.nth(i).locator('summary').click();await page.waitForFunction(i=>document.querySelectorAll('#revision-review-native details')[i].querySelector('pre').textContent.length>0,i);await details.nth(i).locator('summary').click();await page.waitForFunction(i=>document.querySelectorAll('#revision-review-native details')[i].querySelector('pre').textContent==='',i);}
    await shot('02-complete-reviewed-impact');
  }
  const applied=await transaction('apply','review.transition.apply',()=>page.locator('#revision-review-apply').click(),'Audit_Revision_Review.zip',true);

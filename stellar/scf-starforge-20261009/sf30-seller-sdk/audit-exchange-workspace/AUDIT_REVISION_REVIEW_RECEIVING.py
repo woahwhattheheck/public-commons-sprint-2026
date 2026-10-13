@@ -62,7 +62,7 @@ def main(argv=None):
             and specification["workspaceId"] == run["input"]["workspaceId"],
             "revision_selection", "Select complete explicit review decisions in the original author.")
         for name, maximum in (("title", 500), ("note", 5000), ("actor", 240)):
-            recipient.string(specification[name], maximum, name != "note")
+            recipient.string(specification[name], maximum, name == "note")
         require(isinstance(specification["reviewIds"], list) and 1 <= len(specification["reviewIds"]) <= 250
                 and len(set(specification["reviewIds"])) == len(specification["reviewIds"])
                 and isinstance(specification["decisions"], list)
@@ -124,6 +124,9 @@ def main(argv=None):
                     name: specification[name] for name in ("sourceId", "toRevisionId", "reviewIds")}})["result"]
                 selection = {"workspaceId": state["workspaceId"], "specification": specification, "preview": preview}
                 original.put(selection_path, selection)
+            require(selection["preview"]["version"] == before["workspace"]["version"]
+                    and selection["preview"]["workspaceId"] == before["workspace"]["workspaceId"],
+                    "revision_before", "The selected preview differs from the first retained author observation.")
             browser_root = root / "browser"
             if not (browser_root / "BROWSER_RESULT.json").exists():
                 port_path = root / "SERVER.json"
@@ -168,7 +171,7 @@ def main(argv=None):
             current = installed.snapshot(author)
             require(all({r["id"]: r for r in current["operations"]}.get(r["id"]) == r for r in after["operations"]),
                     "revision_history", "The retained accepted operation history differs.")
-            require(reviews(after) == reviews(current), "revision_history", "The author reviews changed after the retained decision.")
+            require(after["records"] == current["records"], "revision_history", "The original author records changed after the retained decision.")
             after_reviews = reviews(after)
             selected_ids = set(specification["reviewIds"])
             require({k: v for k, v in before_reviews.items() if k not in selected_ids}
