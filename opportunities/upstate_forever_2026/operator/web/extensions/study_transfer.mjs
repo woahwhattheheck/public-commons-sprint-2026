@@ -1,4 +1,4 @@
-import {retainedStudyControl,openRetainedStudyRecord,studyReviewPreview} from '../study_report_navigation.mjs';
+import {retainedStudyControl,openRetainedStudyRecord,studyReviewPreview,reportComparisonHTML} from '../study_report_navigation.mjs';
 import {receivedGaugePreview} from '../gauge_received_studies.mjs';
 import {receivedNativeEnsemblePreview} from '../ensemble_received_studies.mjs';
 import {attachReceivedStudies,receivedFieldworkPreview} from '../received_studies.mjs';
@@ -245,8 +245,6 @@ export function attachStudyTransfer(host) {
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
               ?button('open-paired','Open paired analysis','data-study-open="'+escapeHTML(key)+'"'):'')+
-            (row.state!=='unreadable'&&row.kind==='scientific-report-comparisons'&&typeof host.openDesk==='function'
-              ?button('open-report-comparison','Open report comparison','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
             '<td><span class="st-state">'+escapeHTML(row.state||'Saved')+'</span></td>'+
             '<td>'+escapeHTML(when(row.updated_at))+'</td></tr>';
@@ -306,6 +304,8 @@ export function attachStudyTransfer(host) {
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
       plan.related_result_issues.map(row=>'<li>'+escapeHTML(row.path)+': '+escapeHTML(row.message)+'</li>').join('')+'</ul></details>';
+    if(plan.report_comparisons?.length)html+='<section class="st-details"><h4>Included report comparisons</h4>'+
+      plan.report_comparisons.map(row=>'<article class="st-export">'+reportComparisonHTML(host,row)+'</article>').join('')+'</section>';
     html+=studyReviewPreview(host,plan.customer_reviews);
     html+=receivedFieldworkPreview(plan.implementation_report_sources);
     html+=receivedGaugePreview(plan.scientific_report_sources);
@@ -489,7 +489,8 @@ export function attachStudyTransfer(host) {
         const kind=target.dataset.recordKind,id=target.dataset.recordId;
         const available=[...visiblePage().items,...(plan?.nodes||[]),
           ...(plan?.scientific_report_editions||[]).map(row=>({...row,kind:'scientific-report-editions'})),
-          ...(plan?.customer_reviews||[]).map(row=>({...row,kind:'reviews'}))]
+          ...(plan?.customer_reviews||[]).map(row=>({...row,kind:'reviews'})),
+          ...(plan?.report_comparisons||[]).map(row=>({...row,kind:'scientific-report-comparisons'}))]
           .find(row=>row.kind===kind&&row.id===id&&row.state!=='unreadable');
         if(!available)throw Error('Refresh the original saved report or review before opening it.');
         const captured=stamp(),serial=++retainedRecordRequest;
@@ -499,13 +500,6 @@ export function attachStudyTransfer(host) {
       }
       else if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
-      else if(action==='open-report-comparison'){
-        const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
-        if(!row||row.state==='unreadable'||row.kind!=='scientific-report-comparisons')
-          throw new Error('Choose an original saved report comparison.');
-        if(typeof host.openDesk!=='function')throw new Error('Open the maintained Report changes desk.');
-        await host.openDesk('report-changes','openForStudy',{workspace_key:workspace,id:row.id});
-      }
       else if(action==='open-paired'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
         if(!row||row.state==='unreadable'||row.kind!=='ensemble-products')

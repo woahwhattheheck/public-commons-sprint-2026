@@ -1,5 +1,5 @@
 import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';
-import {retainedStudyControl,openRetainedStudyRecord,receivedReviewHTML} from './study_report_navigation.mjs';
+import {retainedStudyControl,openRetainedStudyRecord,receivedReviewHTML,reportComparisonHTML} from './study_report_navigation.mjs';
 import {receivedGaugeHTML,openReceivedGauge} from './gauge_received_studies.mjs';
 import {receivedNativeEnsembleHTML,openReceivedNativeEnsemble} from './ensemble_received_studies.mjs';
 import {receivedComparabilityHTML,openReceivedComparability} from './comparability_received_studies.mjs';
@@ -45,10 +45,10 @@ export function attachReceivedStudies(host) {
       '<p>Open a saved study, its scientific reports, original editable plans, customer feedback, Gauge geography and selected watershed comparisons.</p></div>'+
       button('refresh','Refresh received studies')+'</div>'+
       (error?'<p class="st-row-error" role="alert">'+esc(error)+'</p>':'')+
-      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Editable plans</th><th>Gauge studies</th><th>Model studies</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
+      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Report comparisons</th><th>Editable plans</th><th>Gauge studies</th><th>Model studies</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
       page.items.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.captured_at||'')+'</small>'+
         (row.error?'<p class="st-row-error">'+esc(row.error)+'</p>':'')+'</td><td>'+esc(row.report_count??'')+
-        '</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
+        '</td><td>'+esc(row.report_comparison_count??0)+'</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
         (row.state==='unreadable'?'Saved record needs repair':button('open',row.id===selected?'Reopen study':'Open study','data-id="'+esc(row.id)+'"'))+
         '</td></tr>').join('')+'</tbody></table></div>'+
       (!page.items.length?'<p class="st-empty">'+(loading?'Reading retained Study transfers…':'Receive a Study archive, switch to its restored Workspace, and open its saved study here.')+'</p>':'')+
@@ -93,6 +93,19 @@ export function attachReceivedStudies(host) {
           allFiles(packet._downloads)+'</details>';
       }
       html+='</article>';
+    }
+    if(list(value.report_comparisons).length){
+      html+='<section aria-label="Retained scientific report comparisons"><h4>Original report comparisons</h4>';
+      for(const comparison of value.report_comparisons){
+        html+='<article class="st-export">'+reportComparisonHTML(host,comparison,{prefix:'received',disabled:!!disabled})+
+          '<div>'+files(comparison._downloads,new Set(['changes.csv','summary.json']))+
+          (list(comparison._archive_downloads).length?'<p>'+
+            (comparison.archive_captured?'Complete comparison ZIP retained with this Study.':'Complete comparison ZIP prepared after this Study was captured.')+'</p>'+files(comparison._archive_downloads):
+            '<p>Open the report comparison and choose Prepare full comparison ZIP for offline handover.</p>')+
+          '<p>For offline use, extract the complete ZIP and open index.html; it keeps both report folders and every change page together.</p>'+
+          allFiles(comparison._downloads,'Every original comparison and report member')+'</div></article>';
+      }
+      html+='</section>';
     }
     html+=receivedReviewHTML(host,value,!!disabled);
     html+=receivedGaugeHTML(value,!!disabled);
@@ -146,8 +159,10 @@ export function attachReceivedStudies(host) {
       if(!value||value.id!==selected||value.workspace_key!==ws)
         throw Error('Reopen the original received Study.');
       const kind=target.dataset.recordKind,id=target.dataset.recordId;
-      const available=kind==='reviews'?list(value.customer_reviews).some(row=>row.id===id):
+      const available=kind==='scientific-report-comparisons'?list(value.report_comparisons).some(row=>row.id===id):
+        kind==='reviews'?list(value.customer_reviews).some(row=>row.id===id):
         kind==='scientific-report-editions'&&(list(value.reports).some(row=>row.id===id)||
+          list(value.report_comparisons).some(row=>list(row.edition_links).some(edition=>edition.id===id))||
           list(value.customer_reviews).some(row=>list(row.scientific_reports).some(source=>
             !source.external&&source.scientific_report_edition_id===id)));
       if(!available)throw Error('Choose a report or review retained with this Study.');
