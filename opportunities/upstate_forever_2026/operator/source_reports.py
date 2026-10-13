@@ -86,6 +86,10 @@ def document_policy(body):
 # These are ordinary source manifests shipped with the installed application.
 # Additional editions use the existing --source-manifest or --source-root options.
 BUNDLED_REPORT_MANIFESTS = (
+    "observations/landcover_2023_2025/report-2023/source-manifest.json",
+    "observations/landcover_2023_2025/report-2025/source-manifest.json",
+    "observations/landcover_2023_2025/scientific-report/source-manifest.json",
+    "observations/landcover_2023_2025/focal-report/source-manifest.json",
     "results/assessment-association-review-20261013/sources.json",
     "results/assessment-source-scope-review-20261013/sources.json",
     "results/assessment-association-review-20261013/observed-sources.json",
