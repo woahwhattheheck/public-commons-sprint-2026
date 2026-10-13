@@ -1,0 +1,45 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "sampling-field-protocol",
+  "components": {
+    "sampling-field-protocol": {
+      "title": "Sampling requirements through Monitoring, crew deployment, native field return and complete Study transfer",
+      "paths": [
+        "model/monitoring_sampling_protocol.py",
+        "model/monitoring_implementation.py",
+        "model/monitoring_recommendations.py",
+        "model/monitoring_workspace.py",
+        "model/monitoring_field_return.py",
+        "model/field_deployment.py",
+        "model/implementation_report_transfer.py",
+        "integration/SAMPLING_FIELDWORK_HANDOVER.md",
+        "integration/component_fragments/sampling-field-protocol.json"
+      ],
+      "requires": [
+        "monitoring-recommendations",
+        "implementation",
+        "study-transfer"
+      ]
+    }
+  },
+  "extend_components": {
+    "monitoring": {
+      "paths": [
+        "model/monitoring_sampling_protocol.py"
+      ]
+    },
+    "implementation": {
+      "paths": [
+        "model/monitoring_sampling_protocol.py"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/monitoring_sampling_protocol.py"
+      ]
+    }
+  },
+  "required_components": [
+    "sampling-field-protocol"
+  ]
+}

@@ -657,12 +657,21 @@ def report_html(record, native_designs=None):
         "<h2>Operator notes</h2><p>" + esc(record["selection"]["notes"]) + "</p></main></body></html>")
 
 
-def export_members(workspace, recommendation_id):
+def export_members(workspace, recommendation_id, *, design_ids=None):
     from .monitoring_packet import bytes_member, add_member
     from .monitoring_sources import source_export_members
     from .monitoring_workspace import MonitoringWorkspace, csv_text
     record = inspect(workspace, recommendation_id)
-    native = designs(workspace, recommendation_id)
+    if design_ids is None:
+        native = designs(workspace, recommendation_id)
+    else:
+        if (not isinstance(design_ids, list) or not design_ids
+                or any(not isinstance(key, str) for key in design_ids)
+                or len(set(design_ids)) != len(design_ids)):
+            raise ContractError("Select distinct exact original Sampling design IDs")
+        native = [inspect_design(workspace, key) for key in design_ids]
+        if any(row["recommendation_id"] != recommendation_id for row in native):
+            raise ContractError("Selected native designs must belong to this exact Sampling proposal")
     files = {}
     def add(name, body):
         add_member(files, name, bytes_member(body))
@@ -703,7 +712,7 @@ def export_members(workspace, recommendation_id):
         if digest(plan) != result["plan_digest"]:
             raise ContractError("The selected native design differs from its retained result")
         add("native-plans/" + plan["id"] + ".json", canonical_bytes(plan))
-    add("README.txt", ("Open sampling-review.html for the proposed programme. Historical observations, original sources, complete proposal history, explicit editable selection and all native designs are included.\n"
+    add("README.txt", ("Open sampling-review.html for the proposed programme. Historical observations, original sources, complete proposal history, explicit editable selection and selected native designs are included.\n"
         "Monthly date targets apply across the chosen historical window. Proposed visits and costs are operator planning inputs. Native calendars do not promise storm occurrence or laboratory suitability.\n"
         "Use the original complete Workspace export/import for editable application receiving. This report bundle retains original scientific files and is not a replacement Workspace.\n").encode("utf-8"))
     add("manifest.json", canonical_bytes({"schema": "upstate.monitoring-recommendation-export/v1",

@@ -411,6 +411,23 @@ def _native_sources(closure, plan, previous_links, event):
                 if {**original, "id": key} != revision:
                     raise ValueError("The fieldwork snapshot differs from the native Monitoring revision.")
                 closure.need("monitoring_revisions", key, "Original saved fieldwork campaign")
+                if "sampling_protocols" in snapshot:
+                    protocols = snapshot["sampling_protocols"]
+                    if not isinstance(protocols, dict):
+                        raise ValueError("The fieldwork snapshot lost its exact Sampling protocol roster.")
+                    from .monitoring_sampling_protocol import selection as sampling_selection
+                    for plan_id, protocol in protocols.items():
+                        plan_id = identifier(plan_id)
+                        raw_plan = closure.read("monitoring_plans/" + plan_id + ".json")
+                        if (not isinstance(protocol, dict)
+                                or raw_plan.get("schema") != "upstate.monitoring_plans/v1"
+                                or digest(raw_plan) != plan_id
+                                or protocol.get("monitoring_design_id") != plan_id
+                                or sampling_selection(closure.workspace, {**raw_plan, "id": plan_id}) != protocol):
+                            raise ValueError("The fieldwork Sampling protocol changed its original design or requirements.")
+                        closure.need("monitoring_recommendation_designs",
+                                     identifier(protocol.get("recommendation_design_id")),
+                                     "Exact saved Sampling design behind the original field protocol")
                 campaign_id = identifier(revision.get("campaign_id"))
                 closure.need("monitoring_heads", campaign_id, "Editable original fieldwork campaign",
                              required=False)
