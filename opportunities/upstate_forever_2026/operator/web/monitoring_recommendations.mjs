@@ -85,7 +85,61 @@ export function attachMonitoringRecommendations(host){
         ])+detail('Source identity and original station binding',{selection:selected,native_source:choice||null,station:station||null})+
         '<p class="sampling-note">Matching station/catchment support and constituent, fraction or time-scale equivalence are not established. Annual modeled mass is not a measured concentration. Explain applicability above.</p>':'<p class="sampling-note">The authored sensitivity rationale remains available without attaching model evidence.</p>')+'</section>';
   }
+  function conservationEvidenceTables(native){
+    const d=native.decision||{},summary=d.summary||{},units=native.selected_quantity?.units;
+    const rows=Array.isArray(native.rows)?native.rows:[],paired=rows.filter(row=>row.support_kind!=='baseline_own');
+    const own=rows.filter(row=>row.support_kind==='baseline_own');
+    const o=d.optimization,request=o?.request||{};
+    let result='<h5>Saved Conservation decision · original selected union</h5><p>'+esc(d.title)+' — '+esc(d.study_title)+'</p>'+
+      '<p>The original selected reporting union counts overlapping land once. The selected unit identities and modeled case definitions inform the scientist’s question; station support and measured constituent equivalence remain explicit.</p>'+
+      table(['Saved decision and geographic meaning','Retained original'],[
+        ['Purpose',d.purpose],['Planning-unit label',d.planning_unit_label],
+        ['Selected original IDs',d.selected_ids],['Reporting union (ha)',summary.union_area_ha],
+        ['Whole-unit union (ha)',summary.whole_unit_union_area_ha],['Overlap removed from union (ha)',summary.overlap_area_ha],
+        ['Original geometry layer',native.geometry?.selected_union?.layer],['Original CRS',native.geometry?.analysis_crs],
+        ['Saved plan',d.plan_id],['Original study',d.study_id]])+
+      '<h5>Baseline on its own retained support</h5>'+
+      table(['Baseline run','Annual mass','Unit','Valid / structural / missing ha','Coverage','Availability'],own.map(row=>[
+        row.baseline_run_id,row.baseline_own_total,units,
+        text(row.baseline_own_valid_area_ha)+' / '+text(row.baseline_own_structural_area_ha)+' / '+text(row.baseline_own_missing_area_ha),
+        row.baseline_own_coverage_fraction,row.availability_reason||row.availability]));
+    for(const kind of ['fixed_baseline_pair','all_family_common']){
+      const selected=paired.filter(row=>row.support_kind===kind);if(!selected.length)continue;
+      result+='<h5>'+esc(kind==='all_family_common'?'All declared matched families · one original footprint for this pollutant':'Original fixed-baseline alternatives · each pair’s common footprint')+'</h5>'+
+        '<p>Annual signed change is alternative minus baseline. Reduction is baseline minus alternative. Null mass stays unavailable, including structural-only coverage. Pollutants retain independent original support.</p>'+
+        table(['Family / pair','Baseline mass','Alternative mass','Signed change','Reduction','Unit','Common valid / structural ha','Common coverage','Availability'],selected.map(row=>[
+          row.label,row.common_baseline,row.common_alternative,row.delta,row.reduction,row.units,
+          text(row.common_valid_area_ha)+' / '+text(row.common_structural_stream_area_ha),
+          row.common_coverage_fraction,row.comparison_availability_reason||row.comparison_availability]))+
+        table(['Family / pair','Original baseline','Original alternative','Scientific reason / reference','Support mask SHA256'],selected.map(row=>[
+          row.label,row.baseline_run_id,row.alternative_run_id,
+          [row.scientific_reason,row.reference].filter(Boolean).join(' · '),row.support_sha256]));
+      if(kind==='fixed_baseline_pair')result+='<h5>Alternative own-support context</h5>'+
+        table(['Alternative run','Own annual mass','Unit','Own valid / structural / missing ha','Own coverage','Availability'],selected.map(row=>[
+          row.alternative_run_id,row.value,row.units,
+          text(row.valid_area_ha)+' / '+text(row.structural_stream_area_ha)+' / '+text(row.missing_area_ha),
+          row.coverage_fraction,row.availability_reason||row.availability]));
+    }
+    if(o){
+      result+='<h5>Saved land-decision preferences and case interpretation</h5>'+
+        table(['Authored setting','Original saved value'],[
+          ['Objective',request.objective],['Explicit weights',request.weights],
+          ['Original constraints',request.constraints],['Analysis identity',o.id],
+          ['Original detail availability',o.detail_reason||o.detail_availability]])+
+        table(['Criterion','Kind / axis','Direction','Weight','Original unit','Selected family / alternative'],(request.objective?.criteria||[]).map(c=>[
+          c.label||c.id,c.kind+' / '+(c.axis||c.field||''),c.direction,request.weights?.[c.id],c.unit,c.family_id||c.scenario_run_id]))+
+        '<p>Weights and deterministic case-selection frequencies describe this saved decision. They are not field observations, calibrated uncertainty, sampling power or a predicted benefit of a future visit.</p>'+
+        detail('Original preference profiles, case comparisons and frozen normalization',o);
+    }
+    result+='<details><summary>Selected original land units · '+(d.selected_units||[]).length+'</summary>'+
+      '<p>These original unit rows may overlap. Their masses are not added to create the selected-union quantities above.</p>'+
+      table(['Original unit ID','Label','Whole area (ha)','Reporting area (ha)','Original eligibility'],(d.selected_units||[]).map(row=>[
+        row.id,row.label,row.area_ha,row.reporting_area_ha,row.eligible]))+
+      detail('Complete original selected-unit rows',d.selected_units||[])+'</details>';
+    return result;
+  }
   function nativeQuantityTables(native){
+    if(native.family==="conservation_portfolio")return conservationEvidenceTables(native);
     const rows=Array.isArray(native.rows)?native.rows:[],pollutant=native.selected_quantity?.pollutant;
     if(native.family==='terrain_response'){
       return '<h5>Terrain variants · original shared cells</h5><p>The signed change is alternative minus baseline. Conditioning depth is the terrain input edit, not final elevation. Original full-support totals are retained in the source details.</p>'+

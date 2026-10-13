@@ -71,6 +71,10 @@ def _source_files(source):
         "response/native-response.csv": "Open the original terrain response quantities",
         "original-native-response.json": "Open the complete original terrain response",
         "assessment.json": "Open the complete original outcome assessment",
+        "decision-packet.zip": "Download the saved Conservation decision and editable geography",
+        "records/portfolio.json": "Open the original selected-land and union quantities",
+        "optimization/index.html": "Open the saved land-priority decision report",
+        "conservation-report.json": "Open the original scientific report recipe",
     }
     preferred = []
     remaining = []
@@ -232,6 +236,101 @@ def _terrain(native):
     return result
 
 
+
+def _conservation(native):
+    decision = native["decision"]
+    units = native["selected_quantity"]["units"]
+    result = ("<h4>Saved Conservation decision</h4><p>The quantities below describe the "
+              "original selected reporting-area union. Overlapping planning units are counted "
+              "once in these union totals. The decision's selected land, native scenarios and "
+              "scientist-authored sampling hypothesis remain separate records.</p>")
+    result += _table("Original selected decision and geography", [
+        ("Saved portfolio", decision["title"]), ("Saved study", decision["study_title"]),
+        ("Scientific purpose", decision["purpose"]), ("Original planning-unit label", decision["planning_unit_label"]),
+        ("Selected original unit IDs", ", ".join(decision["selected_ids"])),
+        ("Selected reporting union, hectares", decision["summary"].get("union_area_ha")),
+        ("Selected whole-unit union, hectares", decision["summary"].get("whole_unit_union_area_ha")),
+        ("Overlap excluded from union, hectares", decision["summary"].get("overlap_area_ha")),
+        ("Original analysis CRS", native["geometry"]["analysis_crs"]),
+        ("Original footprint layer", native["geometry"]["selected_union"]["layer"]),
+        ("Saved plan ID", decision["plan_id"]), ("Original study ID", decision["study_id"]),
+    ])
+    for row in native["rows"]:
+        if row["support_kind"] == "baseline_own":
+            result += _table("Original baseline on its own valid support", [
+                ("Baseline run", row["baseline_run_id"]),
+                ("Baseline annual mass (" + units + ")", row["baseline_own_total"]),
+                ("Own-support coverage fraction", row["baseline_own_coverage_fraction"]),
+                ("Own-support valid area, hectares", row["baseline_own_valid_area_ha"]),
+                ("Own-support structural stream area, hectares", row["baseline_own_structural_area_ha"]),
+                ("Own-support missing area, hectares", row["baseline_own_missing_area_ha"]),
+                ("Availability", row.get("availability")),
+                ("Availability explanation", row.get("availability_reason")),
+            ])
+            continue
+        matched = row["support_kind"] == "all_family_common"
+        title = ("All-declared-family common support: " if matched else
+                 "Original fixed-baseline pair support: ") + row["label"]
+        result += _table(title, [
+            ("Scientific family reason", row.get("scientific_reason")),
+            ("Scientific reference", row.get("reference")),
+            ("Baseline run", row["baseline_run_id"]), ("Alternative run", row["alternative_run_id"]),
+            ("Baseline annual mass on comparison support (" + units + ")", row.get("common_baseline")),
+            ("Alternative annual mass on comparison support (" + units + ")", row.get("common_alternative")),
+            ("Alternative − baseline (" + units + ")", row.get("delta")),
+            ("Baseline − alternative (" + units + ")", row.get("reduction")),
+            ("Common valid area, hectares", row.get("common_valid_area_ha")),
+            ("Verified structural stream area, hectares", row.get("common_structural_stream_area_ha")),
+            ("Covered area, hectares", row.get("common_covered_area_ha")),
+            ("Missing area on comparison support, hectares", row.get("missing_area_ha") if matched else None),
+            ("Common coverage fraction", row.get("common_coverage_fraction")),
+            ("Availability", row.get("comparison_availability")),
+            ("Availability explanation", row.get("comparison_availability_reason")),
+            ("Original profile changed in this pair", row.get("profile_changed")),
+            ("Original per-pollutant support ID", row.get("support_id")),
+            ("Original support mask SHA256", row.get("support_sha256")),
+        ])
+        if not matched:
+            result += _table("Original alternative on its own support", [
+                ("Alternative own-support annual mass (" + units + ")", row.get("value")),
+                ("Own-support coverage fraction", row.get("coverage_fraction")),
+                ("Own-support valid area, hectares", row.get("valid_area_ha")),
+                ("Own-support structural area, hectares", row.get("structural_stream_area_ha")),
+                ("Own-support missing area, hectares", row.get("missing_area_ha")),
+                ("Availability", row.get("availability")),
+                ("Availability explanation", row.get("availability_reason")),
+            ])
+    result += ("<p>Each pollutant retains its own support. Fixed-baseline pair coverage and "
+               "all-family coverage are different original comparisons. Structural stream omissions "
+               "remain distinct from finite mass-bearing cells; absent finite mass remains unavailable. "
+               "Annual source-pixel exports, selected-area treatments and station observations are "
+               "not converted into one another.</p>")
+    optimization = decision.get("optimization")
+    if optimization:
+        request = optimization["request"]
+        result += _table("Authored land-decision settings retained with this sampling question", [
+            ("Analysis ID", optimization["id"]), ("Objective", request.get("objective")),
+            ("Original selected weights", request.get("weights")),
+            ("Planning constraints", request.get("constraints")),
+        ])
+        for criterion in request.get("objective", {}).get("criteria", []):
+            result += _table("Authored criterion: " + str(criterion.get("id", criterion.get("kind"))), [
+                ("Quantity kind", criterion.get("kind")), ("Original quantity axis", criterion.get("axis")),
+                ("Weight", request.get("weights", {}).get(criterion["id"])), ("Matched family", criterion.get("family_id")),
+                ("Alternative run", criterion.get("scenario_run_id")),
+                ("Source attribute", criterion.get("field")),
+                ("Original criterion units", criterion.get("unit")),
+                ("Preference direction", criterion.get("direction")),
+            ])
+        result += ("<p>Preference weights and deterministic case-selection frequencies "
+                   "describe the saved land decision. They are not measured uncertainty, "
+                   "sampling power or a calculated benefit of a future field visit.</p>")
+        result += _detail("Original priority request, fixed normalization and complete case results", optimization)
+    result += _detail("Selected original planning-unit rows (overlapping rows are not additive)",
+                      decision["selected_units"])
+    return result
+
+
 def render(value):
     """Return one escaped HTML chapter from a frozen per-target evidence record."""
     if value is None:
@@ -261,6 +360,8 @@ def render(value):
         result += _controls(native)
     elif native["family"] == "terrain_response":
         result += _terrain(native)
+    elif native["family"] == "conservation_portfolio":
+        result += _conservation(native)
     else:
         raise ValueError("Use a supported completed native evidence family")
     result += ("<h4>Scientific interpretation</h4><ul>"
