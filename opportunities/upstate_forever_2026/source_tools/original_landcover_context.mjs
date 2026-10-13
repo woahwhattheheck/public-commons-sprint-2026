@@ -87,7 +87,9 @@ function originalMetadata(result,entry) {
   }
   if(metadata.source_urls!==undefined){
     if(!Array.isArray(metadata.source_urls)||!metadata.source_urls.length)throw Error("Retain original source URLs");
-    urls.push(...metadata.source_urls.map(value=>httpUrl(value,"Source URL")));
+    const listed=metadata.source_urls.map(value=>httpUrl(value,"Source URL"));
+    if(!listed.includes(entry.uri))throw Error("Original source URL is absent from source_urls");
+    urls.push(...listed);
   }
   if(!urls.length)throw Error("Retain an original source URL");
   return [...new Set(urls)];
