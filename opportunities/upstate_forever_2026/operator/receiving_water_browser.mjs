@@ -145,6 +145,22 @@ async function readyMap() {
   const message = await page.locator('[data-spatial-error]').evaluate(node => node.hidden ? '' : node.textContent);
   assert.equal(message, '', message);
 }
+async function openSavedReview(id, review) {
+  const rendered = page.waitForResponse(response => {
+    if (new URL(response.url()).pathname !== '/api/spatial/frame') return false;
+    try {
+      const request = response.request().postDataJSON();
+      assert.deepEqual(request.reference, review.reference);
+      assert.deepEqual(request.primary, review.primary);
+      assert.deepEqual(request.view, review.view);
+      return true;
+    } catch { return false; }
+  }, {timeout: deadlineSeconds * 1000});
+  const [response] = await Promise.all([rendered,
+    page.locator('[data-spatial-action="review-open"]' + attr('data-id', id)).click()]);
+  assert.ok(response.ok(), 'The reopened original review frame failed to render.');
+  await readyMap();
+}
 async function taskResult(stage) {
   const until = Date.now() + deadlineSeconds * 1000;
   for (;;) {
@@ -346,8 +362,7 @@ try {
     verifyReview(review, target, catalog);
     row.bindings = review.bindings; row.view = review.view;
     await navigate('spatial');
-    await page.locator('[data-spatial-action="review-open"]' + attr('data-id', row.review_id)).click();
-    await readyMap();
+    await openSavedReview(row.review_id, review);
     await page.locator('[data-spatial-input="export-review"]').selectOption(row.review_id);
     await page.locator('[data-spatial-input="export-paper"]').selectOption(selection.paper);
     await page.locator('[data-spatial-input="export-dpi"]').selectOption(String(selection.dpi));
@@ -367,9 +382,8 @@ try {
   const reopenedCatalog = await api(endpoint('/api/spatial/catalog'));
   await navigate('spatial');
   for (const row of Object.values(report.cases)) {
-    await page.locator('[data-spatial-action="review-open"]' + attr('data-id', row.review_id)).click();
-    await readyMap();
     const review = await api(endpoint('/api/item', {kind: 'spatial_reviews', id: row.review_id}));
+    await openSavedReview(row.review_id, review);
     verifyReview(review, row.target, reopenedCatalog);
     assert.deepEqual(review.bindings, row.bindings);
     assert.deepEqual(review.view, row.view);
