@@ -436,6 +436,36 @@ def operate_locked(args, output):
          fieldwork_plan_id=campaign["plan_id"], fieldwork=campaign)
     atomic_json(output / "fieldwork-campaign.json", campaign)
 
+    # A previously selected adoption remains selected on resume. An explicit
+    # different ID creates another archive edition; historical choices stay.
+    prior_adoption = receipt.get("field_report_adoption")
+    adoption_id = getattr(args, "field_presentation_adoption", None)
+    if adoption_id is None and prior_adoption is not None:
+        adoption_id = prior_adoption["operation_id"]
+    field_adoption, field_adoption_binding = None, None
+    if adoption_id is not None:
+        from model import field_report_adoption
+        field_adoption = phase("inspect_field_presentation_adoption",
+                               lambda: field_report_adoption.inspect_adoption(ws, adoption_id))
+        if (field_adoption.get("status") != "complete"
+                or field_adoption["field_operation_id"] != campaign["operation_id"]
+                or field_adoption["plan_id"] != campaign["plan_id"]
+                or field_adoption["project_id"] != ws.project["id"]):
+            raise ValueError("Select the completed report adoption for this original field campaign")
+        field_adoption_binding = field_report_adoption.archive_binding(ws, adoption_id)
+        adoption_editions = receipt.setdefault("field_presentation_adoption_editions", {})
+        for value in (prior_adoption, field_adoption):
+            if value is None:
+                continue
+            old = adoption_editions.get(value["operation_id"])
+            if old is not None and old != value:
+                raise ValueError("Preserve the original field presentation adoption edition")
+            adoption_editions[value["operation_id"]] = value
+        save(field_report_adoption=field_adoption,
+             field_report_adoption_archive=field_adoption_binding,
+             field_presentation_adoption_editions=adoption_editions)
+        atomic_json(output / ("field-presentation-adoption-" + adoption_id + ".json"), field_adoption)
+
     from model import simulated_qc_comparison
     qc_comparison = phase("field_qc_comparison", lambda:
         simulated_qc_comparison.continue_comparison(ws, campaign["operation_id"]))
@@ -654,6 +684,15 @@ def operate_locked(args, output):
     }
     archive_selection = simulated_qc_comparison.attach_to_archive(
         ws, qc_comparison["operation_id"], archive_selection)
+    field_presentation_sources = []
+    if field_adoption is not None:
+        archive_selection = field_report_adoption.attach_to_archive(
+            ws, field_adoption["operation_id"], archive_selection)
+        if archive_selection["field_report_adoption"] != field_adoption_binding:
+            raise ValueError("The selected adoption changed before archive selection")
+        field_presentation_sources = [descriptor(APP, APP / name) for name in (
+            "model/field_report_adoption.py", "model/field_report_presentation.py")]
+        archive_selection["field_presentation_sources"] = field_presentation_sources
     edition_suffix = hashlib.sha256(json.dumps(
         archive_selection, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
     edition_id = delivery["id"] + "-" + edition_suffix
@@ -699,6 +738,11 @@ def operate_locked(args, output):
 
     ]
 
+    if field_adoption is not None:
+        required_members.extend("workspace/" + item["path"]
+                                for item in field_adoption_binding["retained_files"])
+        required_members.extend("application/" + item["path"] for item in field_presentation_sources)
+
     def inspect_selected_archive():
         manifest = portable.inspect_archive(archive, verify=True)
         if manifest["project"] != ws.project:
@@ -716,6 +760,17 @@ def operate_locked(args, output):
                 retained = manifest["members"].get(scope + item["path"], {})
                 if any(retained.get(name) != item[name] for name in ("bytes", "sha256")):
                     raise ValueError("Archive changed the selected Programme opening: " + item["path"])
+        if field_adoption is not None:
+            if field_report_adoption.archive_binding(ws, field_adoption["operation_id"]) != field_adoption_binding:
+                raise ValueError("The selected adoption changed while exporting the whole project")
+            for scope, items in (("workspace/", field_adoption_binding["retained_files"]),
+                                 ("application/", field_presentation_sources)):
+                for item in items:
+                    retained = manifest["members"].get(scope + item["path"], {})
+                    if any(retained.get(name) != item[name] for name in ("bytes", "sha256")):
+                        raise ValueError("Archive changed an adopted presentation member: " + item["path"])
+            if [descriptor(APP, APP / item["path"]) for item in field_presentation_sources] != field_presentation_sources:
+                raise ValueError("Field presentation receiving source changed during archive publication")
         return manifest
 
     if record.get("backup"):
@@ -735,6 +790,9 @@ def operate_locked(args, output):
         saved = phase("archive", lambda: ws.backup(archive, include_intermediates=True))
         manifest = inspect_selected_archive()
     record["backup"] = saved
+    if field_adoption is not None:
+        record["field_report_adoption"] = field_adoption
+        record["field_report_adoption_archive"] = field_adoption_binding
     save(backup=saved, archive_edition_id=edition_id, archive_editions=records)
     restored_root = output / "reopened" / edition_id
     if restored_root.exists() or restored_root.is_symlink():
@@ -776,6 +834,14 @@ def operate_locked(args, output):
     if received_qc_snapshot != original_qc_snapshot:
         raise ValueError("Reopen the same complete original field/QC comparison")
     save(received_qc_comparison=received_qc_comparison)
+    if field_adoption is not None:
+        received_adoption = field_report_adoption.inspect_adoption(
+            reopened, field_adoption["operation_id"])
+        if (received_adoption != field_adoption
+                or field_report_adoption.archive_binding(
+                    reopened, field_adoption["operation_id"]) != field_adoption_binding):
+            raise ValueError("Reopen the exact original adopted field presentation and its full retained bytes")
+        save(received_field_report_adoption=received_adoption)
     from model.ensembles import Ensembles
     received_ensemble = Ensembles(reopened).inspect(parameter_plan["ensemble_id"])
     if (received_ensemble["grid_id"] != receipt["grid_id"]
@@ -791,6 +857,8 @@ def operate_locked(args, output):
     from source_tools.simulated_headwaters_receiving import cold_reopen
     cold_receiving = phase("cold_reopen", lambda: cold_reopen(
         restored, manifest, receipt, output / "cold-reopen", extra_checks=[
+            *([{"kind": "field_report_adoption", "operation_id": field_adoption["operation_id"],
+                "expected": field_adoption_binding}] if field_adoption is not None else []),
             {"kind": "compute_programme", **programme},
             {"kind": "customer_review", "operation_id": customer["operation_id"],
              "expected": {**customer_identity, "project_id": ws.project["id"],
@@ -954,6 +1022,8 @@ def main(argv=None):
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--recipe", type=Path, default=EDITION / "input-recipe.json")
+    parser.add_argument("--field-presentation-adoption",
+                        help="Explicit completed native field-report adoption ID; prior selection persists on resume.")
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--prepare-only", action="store_true",
                         help="Retain actual inputs/grid/scenarios and prepared runs before native execution.")
