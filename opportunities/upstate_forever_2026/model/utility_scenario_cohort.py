@@ -17,6 +17,7 @@ if __package__ in (None, ""):
 from .common import (INVEST_VERSION, atomic_bytes, atomic_json, canonical, describe_file, digest,
                      file_digest, held, identifier, now, read_json, verify_file)
 from . import rasters
+from . import native_versions
 from .workspace import Workspace
 
 SCHEMA = "upstate.utility-scenario-cohort/v1"
@@ -85,6 +86,28 @@ def _weights_grid(planning, divisions, pollutants):
                     "meaning": "Declared planning-weight alternatives; each ratio sums to one after normalization"}
 
 
+def native_cohort(runs, pollutants=None):
+    """Resolve observed execution versions for the actual common native outputs."""
+    from .model_selection import common_comparison_outputs
+    common = common_comparison_outputs(runs)
+    selected = tuple(common if pollutants is None else pollutants)
+    if not selected or set(selected) - set(common):
+        raise ValueError("Select outputs retained by every completed native run")
+    result = native_versions.comparison_versions(
+        runs, native_versions.models_for_outputs(selected))
+    for run in runs:
+        for model, version in result["runs"][run["id"]].items():
+            observed = version["observed_stage_version"] or version["observed_run_version"]
+            if not observed:
+                raise ValueError("Run " + run["id"] + " lacks an observed " + model.upper() +
+                                 " execution version; retain its original completed-stage or run runtime")
+            if version["comparison_version"] != INVEST_VERSION:
+                raise ValueError("Utility " + model.upper() + " comparisons require original InVEST " +
+                                 INVEST_VERSION + "; run " + run["id"] + " records " +
+                                 str(version["comparison_version"]))
+    return result
+
+
 def prepare(workspace, requested):
     """Bind retained source features and one real run cohort for both producers."""
     if not isinstance(requested, dict):
@@ -106,13 +129,11 @@ def prepare(workspace, requested):
     if any(run.get("state") != "complete" for run in runs):
         raise ValueError("Complete the selected native runs before launching the utility cohort")
     grid_ids = {run["selection"]["grid_id"] for run in runs}
-    versions = {run["selection"]["invest_version"] for run in runs}
-    if len(grid_ids) != 1 or len(versions) != 1:
-        raise ValueError("The utility cohort requires one retained grid and InVEST edition")
-    if any(run.get("runtime", {}).get("version") != INVEST_VERSION for run in runs):
-        raise ValueError("The native decision producer requires original InVEST " + INVEST_VERSION + " runs")
+    if len(grid_ids) != 1:
+        raise ValueError("The utility cohort requires one retained reporting/model grid")
     from .model_selection import common_comparison_outputs
     comparison_pollutants = common_comparison_outputs(runs)
+    execution = native_cohort(runs, comparison_pollutants)
     from .scenario_decisions import available_pollutants
     for run in runs:
         native = set(available_pollutants(run))
@@ -213,6 +234,7 @@ def prepare(workspace, requested):
         "report_kind": report_kind,
         "baseline_run_id": ids[0], "grid_id": grid["id"],
         "comparison_pollutants": list(comparison_pollutants),
+        "native_execution": execution,
         "source": {"source_collection_id": collection["id"], "source_id": source["id"],
                    "title": source["title"], "uri": source["uri"], "vintage": source["vintage"],
                    "body": source["body"], "role": source.get("role"),
@@ -228,6 +250,7 @@ def prepare(workspace, requested):
              if report_kind == "reference_totals" else
              "Both producers use the same ordered baseline and alternative cohort."),
             "Native physical quantities retain their pollutant units; original stream and missing-data counts remain visible.",
+            "Each compared model retains its completed-stage execution version, with observed run runtime used only when the stage has no retained version. Original requested versions remain provenance.",
             "Weight-grid points are declared planning alternatives; they do not assign probabilities to preferences.",
         ],
     }
@@ -309,7 +332,15 @@ def _joined_rows(plan, analysis, report):
                     "region_id", "title", "utility", "pws_id", "intake_id", "system",
                     "object_id", "buffer_ft", "rank_group", "scope", "source_collection_id",
                     "source_id", "source_sha256")}
+                model = native_versions.models_for_outputs([pollutant])[0]
+                executed = plan["native_execution"]["runs"][run_id][model]
                 row.update({
+                    "native_model": model,
+                    "native_execution_version": executed["comparison_version"],
+                    "native_version_basis": executed["basis"],
+                    "native_stage_version": executed["observed_stage_version"],
+                    "native_run_version": executed["observed_run_version"],
+                    "native_requested_version": executed["requested_version"],
                     "baseline_run_id": plan["baseline_run_id"], "run_id": run_id,
                     "comparison_kind": details[run_id]["comparison_kind"],
                     "report_kind": plan.get("report_kind", "scenario_comparison"),
@@ -375,6 +406,7 @@ def build(workspace, requested, *, progress=None):
     viewer = Path(scenario_decisions.__file__).resolve().parent.parent / "operator" / "web" / "scenario_decisions.html"
     implementation = {
         "cohort_sha256": file_digest(Path(__file__)),
+        "native_versions_sha256": file_digest(Path(native_versions.__file__)),
         "analysis_sha256": file_digest(Path(scenario_analysis.__file__)),
         "decisions_sha256": file_digest(Path(scenario_decisions.__file__)),
         "decision_viewer_sha256": file_digest(viewer),
