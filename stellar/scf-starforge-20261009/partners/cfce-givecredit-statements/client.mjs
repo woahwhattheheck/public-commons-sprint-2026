@@ -34,6 +34,8 @@ export class GiveCreditClient{
   capture(kind,value,label,options){return this.request('capture/'+kind,{body:{value,label,...this.options(options)}});}
   stopCapture(kind){return this.request('capture/'+kind+'/stop',{body:{}});}
   captureStatus(kind){return this.request('capture/'+kind);}
+  importCheckpoint(kind,source,options){return this.request('capture/'+kind+'/checkpoint',{body:{source,...this.options(options)}});}
+  checkpointURL(kind){return this.url('capture/'+kind+'/checkpoint');}
   statement(id,version){return this.request('statements/'+encodeURIComponent(id),{query:{version}});}
   compare(beforeId,afterId){return this.request('compare',{query:{beforeId,afterId}});}
   statementFileURL(id,filename,version){return this.url('statements/'+encodeURIComponent(id)+'/files/'+encodeURIComponent(filename),{version});}
