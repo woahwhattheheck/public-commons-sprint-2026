@@ -16,6 +16,7 @@ import re
 import stat
 import tempfile
 import zipfile
+from .common import _sync_directory as _sync_original_directory, _path_stat, _fd_stat
 
 from .common import (atomic_json, canonical, digest, file_digest,
                      held, identifier, now, read_json, retain_file)
@@ -44,7 +45,7 @@ def locked_recipes(root, *, blocking=False):
 
 def _plain(path):
     path = Path(path)
-    value = path.lstat()
+    value = _path_stat(path)
     need(stat.S_ISREG(value.st_mode), "Keep each complete recipe member as a regular file.")
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
@@ -61,11 +62,7 @@ def _regular(root, relative):
 
 
 def _fsync_directory(path):
-    handle = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(handle)
-    finally:
-        os.close(handle)
+    _sync_original_directory(path)
 
 
 def _object_expectations(descriptors):
@@ -248,7 +245,7 @@ def _read_archive(source, extraction=None):
     before = _plain(source)
     metadata = {}
     with Path(source).open("rb") as opened:
-        opened_stat = os.fstat(opened.fileno())
+        opened_stat = _fd_stat(opened.fileno())
         need((opened_stat.st_dev, opened_stat.st_ino, opened_stat.st_size,
               opened_stat.st_mtime_ns, opened_stat.st_ctime_ns) == before,
              "The selected archive changed before it was opened.")
@@ -408,7 +405,8 @@ def export_recipe(ws, recipe_id, output, *, operation_id):
                         need(_plain(source) == before and hashed.hexdigest() == key and size == objects[key],
                              "An original scientific source changed during export.")
                     archive.writestr("ARCHIVE.json", _json_bytes(manifest))
-                with temporary.open("rb") as saved:
+                # The original Windows file flush requires a writable handle.
+                with temporary.open("r+b") as saved:
                     os.fsync(saved.fileno())
                 if archive_path.exists():
                     # A crash before candidate publication leaves an unselected
