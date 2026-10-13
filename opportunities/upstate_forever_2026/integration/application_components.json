@@ -2244,7 +2244,12 @@
         "source/implementation/20261013/greenwood-review-plan.json",
         "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
         "source/keowee-native-receiving-20261013/source-interval-journey.json",
-        "source_tools/receive_implementation.py"
+        "source_tools/receive_implementation.py",
+        "model/implementation_outcomes.py",
+        "operator/implementation_outcomes.py",
+        "operator/extensions/implementation-outcomes.json",
+        "operator/web/implementation_outcomes.mjs",
+        "model/IMPLEMENTATION_OUTCOMES_METHOD.md"
       ],
       "requires": [
         "core"
