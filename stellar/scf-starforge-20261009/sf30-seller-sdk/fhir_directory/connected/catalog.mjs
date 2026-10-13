@@ -8,6 +8,50 @@ import {TOOL_PREFIX,SHA,ALIAS,plain,need,canonical} from './contracts.mjs';
 export const directoryNativeContract=JSON.parse(readFileSync(new URL('../directory-schema.json',import.meta.url),'utf8'));
 export const directorySourceContract=JSON.parse(readFileSync(new URL('../directory-source-schema.json',import.meta.url),'utf8'));
 export const directoryConformanceContract=JSON.parse(readFileSync(new URL('../directory-conformance-schema.json',import.meta.url),'utf8'));
+export const directoryOperatingPlansContract=JSON.parse(readFileSync(new URL('../directory-operating-plans-schema.json',import.meta.url),'utf8'));
+export const directoryForeignKeyQueries=Object.freeze([
+  {
+    "key": "conformance_foreign_keys",
+    "action": "directory_conformance_foreign_keys",
+    "route": "foreign-keys",
+    "filters": [
+      "table",
+      "state",
+      "ruleId",
+      "sourceId",
+      "recordId"
+    ],
+    "description": "Read every original declared foreign-key outcome, keeping existence, ambiguity, physical values and selected coverage separate."
+  },
+  {
+    "key": "conformance_foreign_key_candidates",
+    "action": "directory_conformance_foreign_key_candidates",
+    "route": "foreign-key-candidates",
+    "filters": [
+      "table",
+      "state",
+      "groupId",
+      "sourceId",
+      "recordId"
+    ],
+    "description": "Read every retained target candidate, including null, invalid and non-tabular original rows; do not choose an ambiguous candidate."
+  },
+  {
+    "key": "conformance_foreign_key_matches",
+    "action": "directory_conformance_foreign_key_matches",
+    "route": "foreign-key-matches",
+    "filters": [
+      "outcomeId",
+      "candidateId"
+    ],
+    "description": "Read every original outcome-to-candidate match with both unchanged source references and exact key identity."
+  }
+].map(row=>{
+  const schemaValue=directoryConformanceContract.querySchemas?.[row.key];
+  need(schemaValue?.type==='object'&&schemaValue.additionalProperties===false&&schemaValue.properties?.offset&&schemaValue.properties?.limit,
+    'HUMAN_SERVICES_DIRECTORY_FOREIGN_KEY_CONTRACT','Install the complete source-owned foreign-key catalogue with this client.');
+  return Object.freeze({...row,schemaValue});
+}));
 export const directoryInputSchemas=directoryNativeContract.inputSchemas;
 export const directorySourceInputSchemas=directorySourceContract.inputSchemas;
 const sourceRoutes=[
@@ -66,7 +110,7 @@ export const directoryBodyRoutes=Object.freeze([
   ...sourceRoutes.map(row=>({...row,schemaValue:directorySourceInputSchemas[row.schema],target:'/api/directory/'+row.path})),
   ...directoryNativeContract.actions.map(row=>({
     action:'directory_'+row.id.replaceAll('-','_'),key:row.input,schema:row.input,
-    schemaValue:directoryInputSchemas[row.input],target:row.path,
+    schemaValue:directoryInputSchemas[row.input],target:row.path,readOnly:row.readOnly===true,
     description:'Apply the complete native '+row.id+' input to the selected original directory workspace.'
   }))
 ]);
@@ -81,7 +125,7 @@ const selected={workspace:alias};
 export const directoryCollections=Object.freeze([
   'connections','discoveries','requests','importProfiles','sources','editions','comparisons','operations',
   'mappings','mappingPreviews','sourceConversions','selections','referralJoins','handoffs','exports','receivingReviews','receives',
-  ...directoryConformanceContract.recordKinds
+  ...directoryConformanceContract.recordKinds,'operatingPlans'
 ]);
 function tool(action,description,properties={},required=[],options={}){
   return {name:TOOL_PREFIX+action,description,
@@ -107,7 +151,7 @@ const added=[
   },['collection','recordId']),
   ...directoryBodyRoutes.map(row=>tool(row.action,row.description,{
     [row.key]:{...row.schemaValue,description:'Complete native '+row.schema+' input; source semantics remain with the original workspace.'}
-  },[row.key],{mutates:true,external:!!row.external})),
+  },[row.key],{mutates:!row.readOnly,external:!!row.external})),
   ...['advance','pause','resume'].map(action=>tool('directory_'+action,
     action==='advance'?'Continue the same directory acquisition and retain its exact provider response and pagination state.':
       action==='pause'?'Pause local progress of the same original directory acquisition.':
@@ -180,11 +224,23 @@ const added=[
     assessmentId:hash('Saved conformance assessment ID.'),offset:page.offset,limit:page.limit,
     table:str('Exact original table or resource type.',{maxLength:128})
   },['assessmentId']),
+  ...directoryForeignKeyQueries.map(row=>tool(row.action,row.description,{
+    assessmentId:hash('Exact saved immutable conformance assessment ID.'),...row.schemaValue.properties
+  },['assessmentId'])),
   tool('directory_conformance_file','Retain the full selected report, finding index, original row file, rule catalogue or complete conformance package.',{
     collection:str('Original conformance file collection.',{enum:['assessments','reviews','comparisons']}),
     recordId:hash('Exact saved conformance record ID.'),
     fileKind:str('Select a file declared in this record’s files map.',{enum:directoryConformanceContract.fileKinds})
   },['collection','recordId','fileKind']),
+  tool('directory_operating_catalog','Read the complete original command registration catalogue used by the selected Directory product.'),
+  ...['document','draft','input','basis'].map(kind=>tool('directory_operating_'+kind,
+    {document:'Read every saved revision of the complete original OperatingPlan.',
+      draft:'Reopen the selected original revision as an editable draft with its native base revision.',
+      input:'Read the complete accepted or prepared procedure input with its original request identity.',
+      basis:'Read the exact original Directory record basis, hashes and observation time.'}[kind],
+    {recordId:hash('Exact original native operatingPlans record ID.'),
+      ...(kind==='draft'?{revision:{...directoryInputSchemas.operating_plan_compare.properties.revision,description:'Selected saved original revision; omission uses the current document revision.'}}:{})},
+    ['recordId'])),
   tool('directory_handoff_file','Retain the full selected directory handoff with editable workspace and original source custody.',{
     handoffId:hash('Original handoff ID.')
   },['handoffId']),

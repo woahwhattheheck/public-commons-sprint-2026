@@ -12,7 +12,7 @@ import { sourceBuildOperationFields } from './source-build-workspace.mjs';
 import { PRODUCT_PLAN_MAX_BYTES } from './source-product-plans.mjs';
 import { openRuntimeWorkspace } from './model.mjs';
 import { OPENAPI_SETUP_ROUTES, openApiSetupBodyLimit } from './openapi-connection-setup.mjs';
-import { plain, need, fail } from './storage.mjs';
+import { plain, need, fail, runtimeWorkspaceError } from './storage.mjs';
 
 const HOST = '127.0.0.1';
 const security = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
@@ -382,9 +382,9 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
       fail('RUNTIME_WORKSPACE_ROUTE_NOT_FOUND', undefined, 404);
     } catch (error) {
       if (res.headersSent) { res.destroy(); return; }
-      const code = error.code ?? 'RUNTIME_WORKSPACE_ERROR';
+      const diagnostic = runtimeWorkspaceError(error), code = diagnostic.code;
       send(error.status ?? (/(?:CHANGED|BUSY|RUNNING|EXIST)/.test(code) ? 409 : 400),
-        { error: code, message: String(error.message ?? error).slice(0, 2000) });
+        { error: code, message: diagnostic.message, ...(diagnostic.flock ? { flock: diagnostic.flock } : {}) });
     }
   });
   server.on('connection', socket => { sockets.add(socket); socket.once('close', () => sockets.delete(socket)); });

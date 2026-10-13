@@ -1,0 +1,60 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "map-atlas",
+  "title": "Map atlas and delivery",
+  "version": "2",
+  "order": 90,
+  "assets": [
+    "map_atlas.mjs",
+    "map_atlas.css"
+  ],
+  "requires_actions": [
+    "delivery.build"
+  ],
+  "client": {
+    "module": "/web/map_atlas.mjs",
+    "factory": "attachMapAtlas",
+    "requires": [
+      "getState",
+      "api",
+      "navigate",
+      "refreshState",
+      "openItem",
+      "showTask",
+      "openExtension"
+    ],
+    "styles": [
+      "/web/map_atlas.css"
+    ],
+    "view": {
+      "id": "map-atlas",
+      "title": "Map atlas",
+      "after": "deliveries"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  },
+  "backend": {
+    "module": "map_atlas",
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/map-atlas/source-context",
+        "operation": "source-context",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      }
+    ]
+  }
+}

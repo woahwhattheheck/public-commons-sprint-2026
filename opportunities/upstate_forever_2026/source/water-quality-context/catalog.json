@@ -1,0 +1,154 @@
+{
+  "schema": "upstate.water-quality-catalog/v1",
+  "title": "Upper Savannah official water-quality context",
+  "scope": {
+    "reporting_area": "South Carolina Upper Savannah",
+    "focus_huc12": [
+      "030601010703",
+      "030601010704",
+      "030601020502",
+      "030601020507"
+    ],
+    "model_domain": "Select the retained original 217-HUC upstream domain",
+    "source_policy": "Preserve named-reach selection and provisional classification geometry; retain current/draft source editions."
+  },
+  "entries": [
+    {
+      "id": "scdes-303d-published-2024",
+      "title": "South Carolina 2024 303(d) list",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.xlsx",
+      "vintage": "2024",
+      "kind": "table",
+      "role": "WATER_QUALITY_ASSESSMENT",
+      "evidence_kind": "303d_listing",
+      "publication_status": "published",
+      "assessment_period": "2018-2022",
+      "max_bytes": 30000000,
+      "publisher_index": "https://www.des.sc.gov/programs/bureau-water/south-carolina-303d-list-impaired-waters-tmdls",
+      "cause_encoding": "scdes_303d_codes",
+      "cause_code_guide_uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf",
+      "cause_code_guide_pages": [
+        8,
+        9
+      ],
+      "table_defaults": {
+        "sheet": "303D LIST FOR WEB",
+        "header_row": 1,
+        "bindings": {
+          "site": "SITE",
+          "huc12": "HUC 12",
+          "cause": "CAUSE",
+          "description": "DESCRIPTION",
+          "county": "COUNTY",
+          "use": "IMPAIRED USE"
+        }
+      }
+    },
+    {
+      "id": "scdes-tmdl-attainment-20260728",
+      "title": "Sites covered under approved TMDLs and use support status",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf",
+      "vintage": "2026-07-28",
+      "status_date": "2026-07-28",
+      "kind": "document",
+      "role": "WATER_QUALITY_ASSESSMENT",
+      "evidence_kind": "tmdl_attainment",
+      "publication_status": "published",
+      "max_bytes": 30000000
+    },
+    {
+      "id": "scdes-classified-waters-r6169",
+      "title": "SCDES R.61-69 classified waters",
+      "uri": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-69.pdf",
+      "vintage": "2023-05-26 amendment",
+      "kind": "document",
+      "role": "WATER_CLASSIFICATION_RULES",
+      "publication_status": "promulgated",
+      "max_bytes": 30000000
+    },
+    {
+      "id": "scdes-water-quality-standards-r6168",
+      "title": "SCDES R.61-68 water classifications and standards",
+      "uri": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf",
+      "vintage": "current publisher compilation",
+      "kind": "document",
+      "role": "WATER_CLASSIFICATION_RULES",
+      "publication_status": "promulgated",
+      "max_bytes": 30000000
+    },
+    {
+      "id": "scdes-classification-context-current",
+      "title": "SCDES published water-classification geometry",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Classifications/MapServer/0",
+      "transport": "arcgis",
+      "vintage": "current service capture",
+      "kind": "vector",
+      "role": "WATER_CLASSIFICATION",
+      "classification_status": "provisional",
+      "publication_status": "published",
+      "page_size": 100,
+      "where": "1=1",
+      "source_fields": {
+        "object_id": "OBJECTID_1",
+        "class": "H2OCLASS",
+        "waterbody": "HYDNAME",
+        "hydro_type": "HYDTYPE",
+        "huc12": "HUC_12",
+        "county": "Cnty_Name",
+        "basin": "Basin",
+        "main_stem": "MainStem"
+      },
+      "acquire_by_default": false,
+      "selection_note": "Use the retained original classification capture when present; explicit --source-id enables this complete statewide capture.",
+      "object_id_field": "OBJECTID_1"
+    },
+    {
+      "id": "scdes-hydro24k-classification-context-current",
+      "title": "SCDES hydro_24k classified streams",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+      "transport": "arcgis",
+      "vintage": "current service capture",
+      "kind": "vector",
+      "role": "WATER_CLASSIFICATION",
+      "classification_status": "provisional",
+      "publication_status": "published",
+      "page_size": 100,
+      "where": "1=1",
+      "source_fields": {
+        "object_id": "OBJECTID",
+        "class": "H2OCLASS",
+        "waterbody": "HYDNAME",
+        "huc12": "HUC_12",
+        "county": "Cnty_Name",
+        "basin": "Basin",
+        "main_stem": "MainStem",
+        "hydro_type": "HYDTYPE"
+      },
+      "acquire_by_default": false,
+      "selection_note": "Reuse the existing ECO-SOURCE12 original capture. Explicit --source-id enables complete statewide capture into this distinct source ID; preserve older Water_Classifications editions under their original IDs.",
+      "regulatory_reference": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-69.pdf",
+      "object_id_field": "OBJECTID",
+      "classification_field": "H2OCLASS",
+      "publisher_huc_field": "HUC_12",
+      "discovery_uri": "https://gis.des.sc.gov/stormwater/js/a_settings.js",
+      "retained_source_id": "scdes-classified-streams-upper-savannah-20261012"
+    }
+  ],
+  "current_source_status_as_of": "2026-10-13",
+  "edition_context": {
+    "draft_2026_303d": {
+      "status": "draft",
+      "comment_deadline": "2026-10-15T17:00:00-04:00",
+      "included_by_default": false,
+      "publisher_index": "https://www.des.sc.gov/programs/bureau-water/south-carolina-303d-list-impaired-waters-tmdls"
+    },
+    "proposed_2026_standards": {
+      "status": "proposed",
+      "published": "2026-09-25",
+      "comment_deadline": "2026-10-26",
+      "included_as_effective": false,
+      "publisher_index": "https://des.sc.gov/programs/bureau-water/water-quality-standards"
+    }
+  },
+  "preferred_retained_classification_source": "scdes-classified-streams-upper-savannah-20261012"
+}

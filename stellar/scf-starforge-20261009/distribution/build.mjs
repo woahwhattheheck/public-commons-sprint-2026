@@ -17,15 +17,15 @@ export { inspectDistributionBuild };
 
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|pyi|rb|rbs|erb|php|go|rs|java|dmn|dmn11|json|jsonl|ndjson|toml|md|html|css|txt|sql|csv|tsv|xml|xsd|dtd|yaml|yml|svg|png|woff2|service|proto)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|pyi|rb|rbs|erb|php|go|rs|java|dmn|dmn11|cmmn|json|jsonl|ndjson|toml|md|html|css|txt|sql|csv|tsv|xml|xsd|dtd|yaml|yml|svg|png|woff2|service|proto)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
 function isRuntimeFile(path, explicitRuntime = false) {
   const parts = path.split('/');
   // Retained source data can have an original fixtures path. Only explicitly
-  // declared data and native XML/DMN models get this exception; executable fixtures stay excluded.
-  const declaredData = explicitRuntime && /\.(?:csv|json|txt|parquet|xml|dmn|dmn11)$/i.test(path);
+  // declared data and native XML/DMN/CMMN models get this exception; executable fixtures stay excluded.
+  const declaredData = explicitRuntime && /\.(?:csv|json|txt|parquet|xml|dmn|dmn11|cmmn)$/i.test(path);
   // An explicit original file is an exact source selection, not a directory
   // expansion hint. Its extension cannot override that declaration. Keep the
   // heuristic format list for automatic component/import discovery; all paths
@@ -76,6 +76,82 @@ process.stdout.write(JSON.stringify(result));
   }
   flush();
   return requests;
+}
+
+// Read-only closure check for a retained immutable source inventory. This uses
+// the builder's parser and browser/physical resolution without running a build.
+export function inspectDistributionSourceImports({ sources, browserAssets, nodeEntrypoints = [] } = {}) {
+  if (!(sources instanceof Map) || !sources.size || typeof browserAssets?.resolve !== 'function' ||
+      !Array.isArray(nodeEntrypoints) || nodeEntrypoints.some(path => typeof path !== 'string' || !path) ||
+      [...sources].some(([path, bytes]) => typeof path !== 'string' || !Buffer.isBuffer(bytes)))
+    throw new TypeError('Source import inspection requires original source bytes and the maintained browser asset index');
+  const parsed = staticModuleRequests(sources), requestsByPath = new Map(parsed), missing = [], external = new Set();
+  let staticSpecifiers = 0, physicalRelativeImports = 0, browserImports = 0;
+  const required = (importer, specifier, target, kind) => {
+    if (!sources.has(target)) missing.push({ importer, specifier, target, kind });
+  };
+  const nodeReachable = new Set(), queue = [];
+  for (const path of new Set(nodeEntrypoints)) {
+    required('declared Node entrypoint', path, path, 'node-entrypoint');
+    if (sources.has(path)) { nodeReachable.add(path); queue.push(path); }
+  }
+  // A module can serve both Node and browser callers. A browser route must not
+  // hide its physical dependency from an original Node/provider import chain.
+  for (let index = 0; index < queue.length; index++) {
+    const importer = queue[index];
+    for (const request of requestsByPath.get(importer) ?? []) {
+      if (!request.startsWith('.')) continue;
+      const target = posix.normalize(posix.join(posix.dirname(importer), request));
+      if (sources.has(target) && !nodeReachable.has(target)) { nodeReachable.add(target); queue.push(target); }
+    }
+  }
+  for (const [path, requests] of parsed) {
+    for (const request of requests) {
+      staticSpecifiers++;
+      if (/^file:/i.test(request)) {
+        missing.push({ importer: path, specifier: request, target: request, kind: 'absolute-local-import' });
+        continue;
+      }
+      let served;
+      try { served = browserAssets.resolve(path, request); }
+      catch (cause) {
+        const error = new TypeError('Unresolved original browser import: ' + path + ' -> ' + request + ': ' + cause.message);
+        error.code = 'DISTRIBUTION_SOURCE_IMPORTS_MISSING';
+        error.imports = [{ importer: path, specifier: request, target: request, kind: 'unserved-browser-import' }];
+        throw error;
+      }
+      if (request.startsWith('.')) {
+        const target = posix.normalize(posix.join(posix.dirname(path), request));
+        // Preserve the builder's physical-file precedence and browser route
+        // resolution. A retained inventory can only validate existing targets.
+        if (sources.has(target) || served === null || nodeReachable.has(path)) {
+          physicalRelativeImports++;
+          required(path, request, target, 'physical-relative-import');
+        }
+      } else if (request.startsWith('/') && (served === null || nodeReachable.has(path))) {
+        missing.push({ importer: path, specifier: request, target: request, kind: 'absolute-local-import' });
+      } else if (served === null) external.add(request);
+      for (const target of served ?? []) {
+        browserImports++;
+        required(path, request, target, 'served-browser-import');
+      }
+    }
+  }
+  if (missing.length) {
+    const error = new TypeError('Original source imports are missing from the retained inventory:\n' +
+      missing.map(row => row.importer + ' -> ' + row.specifier + ' => ' + row.target).join('\n'));
+    error.code = 'DISTRIBUTION_SOURCE_IMPORTS_MISSING';
+    error.imports = missing;
+    throw error;
+  }
+  return { schema: 'stellar-forge.distribution-source-imports.v1',
+    status: 'STATIC_ESM_AND_BROWSER_IMPORTS_CHECKED', sourceFiles: sources.size,
+    parsedModules: parsed.length, staticSpecifiers, physicalRelativeImports, browserImports,
+    nodeEntrypoints: new Set(nodeEntrypoints).size, nodeReachableFiles: nodeReachable.size,
+    nodeReachableModules: [...nodeReachable].filter(path => requestsByPath.has(path)).length,
+    externalSpecifiers: [...external].sort(),
+    unscannedModuleKinds: ['dynamic-import', 'commonjs-require'],
+    runtimeStatus: 'PARSED_WITHOUT_APPLICATION_EVALUATION_OR_DEPENDENCY_INSTALLATION' };
 }
 
 export async function buildDistribution({ repository = fileURLToPath(new URL('../../../', import.meta.url)), ref, output,

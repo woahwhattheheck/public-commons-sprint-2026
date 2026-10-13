@@ -401,3 +401,12 @@ workspace closure. The complete installed merchant carries the paid-output
 and MCP/SF88 source and dependencies. The generic object descriptor change
 preserves the existing S3 descriptor contract and uses the same original
 native object engine.
+
+## Browser merchant operation
+
+The original authoring workspace now includes the complete [paid map delivery panel](BROWSER.md)
+when opened through its configured merchant. It retains offer drafts, reads original
+saved records, manages seller selection and ownership, receives original customer
+objects and continues their accounting. The same native receiving phase reopens
+those original operations through the browser and preserves its dirty price draft
+through merchant close/open.

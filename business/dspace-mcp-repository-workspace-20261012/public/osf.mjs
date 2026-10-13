@@ -1,6 +1,6 @@
 const $=id=>document.getElementById(id),token=document.querySelector('meta[name=workspace-token]').content;
 const clone=value=>structuredClone(value),json=value=>JSON.stringify(value,null,2);
-const C={state:null,source:null,mapping:null,entries:{},node:null,comparison:null,native:null,execution:null,archive:null,busy:false,restoring:false,seq:0,reads:{},requests:[],db:null,slot:null,saveTimer:null,nativeNotes:{},handoverDrafts:{},handoverContext:null};
+const C={state:null,source:null,mapping:null,entries:{},node:null,comparison:null,native:null,execution:null,archive:null,busy:false,restoring:false,loading:true,ready:false,seq:0,reads:{},requests:[],db:null,slot:null,saveTimer:null,nativeNotes:{},executionDrafts:{},executionContext:null,handoverDrafts:{},handoverContext:null};
 const key=value=>encodeURIComponent(String(value));
 function element(tag,text,props={}){const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);Object.assign(e,props);return e;}
 function notice(message,error=false){$('notice').textContent=message;$('notice').hidden=!message;$('notice').classList.toggle('error',error);}
@@ -52,7 +52,7 @@ function rawEntry(){
  files:[...$('entry-files').querySelectorAll('[data-file-key]')].map(row=>({key:row.dataset.fileKey,action:row.querySelector('select').value,note:row.querySelector('input').value}))};
 }
 function retainEntry(){if(C.mapping&&C.node)C.entries[C.node]=rawEntry();}
-function snapshot(){retainEntry();return {schema:'osf-transition-browser/v1',workspace_id:C.state.workspace.id,created_at:new Date().toISOString(),form:values(),mapping:clone(C.mapping),entries:clone(C.entries),node:C.node,source:clone(C.source),comparison:clone(C.comparison),native:clone(C.native),execution:clone(C.execution),archive:clone(C.archive),nativeNotes:clone(C.nativeNotes),handoverDrafts:clone(C.handoverDrafts),handoverContext:C.handoverContext,review_checks:[...$('review-findings').querySelectorAll('input:checked')].map(e=>e.value),comparison_choices:[...$('comparison-fields').querySelectorAll('[data-field-key]')].map(e=>({key:e.dataset.fieldKey,side:e.querySelector('select').value,raw:e.querySelector('textarea').value})),absent_nodes:[...$('comparison-fields').querySelectorAll('[data-node-choice]:checked')].map(e=>e.dataset.nodeChoice),page:document.querySelector('[data-page][aria-current=page]')?.dataset.page||'source'};}
+function snapshot(){retainEntry();retainExecutionDraft();return {schema:'osf-transition-browser/v1',workspace_id:C.state.workspace.id,created_at:new Date().toISOString(),form:values(),mapping:clone(C.mapping),entries:clone(C.entries),node:C.node,source:clone(C.source),comparison:clone(C.comparison),native:clone(C.native),execution:clone(C.execution),archive:clone(C.archive),nativeNotes:clone(C.nativeNotes),executionDrafts:clone(C.executionDrafts),executionContext:C.executionContext,handoverDrafts:clone(C.handoverDrafts),handoverContext:C.handoverContext,review_checks:[...$('review-findings').querySelectorAll('input:checked')].map(e=>e.value),comparison_choices:[...$('comparison-fields').querySelectorAll('[data-field-key]')].map(e=>({key:e.dataset.fieldKey,side:e.querySelector('select').value,raw:e.querySelector('textarea').value})),absent_nodes:[...$('comparison-fields').querySelectorAll('[data-node-choice]:checked')].map(e=>e.dataset.nodeChoice),page:document.querySelector('[data-page][aria-current=page]')?.dataset.page||'source'};}
 async function checkpoint(name){if(!C.state||C.restoring)return;const value=snapshot();await put('editions',{id:crypto.randomUUID(),workspace_id:C.state.workspace.id,name,created_at:value.created_at,snapshot:value});}
 let writes=Promise.resolve();
 function schedule(){
@@ -64,6 +64,7 @@ function persist(){
  writes=writes.catch(()=>{}).then(()=>put('current',{id:C.slot,workspace_id:C.state.workspace.id,sequence,snapshot:value})).then(()=>{$('draft-status').textContent='Complete current forms saved in this browser.';});return writes;
 }
 async function operate(fn,{archive='Before changing this workspace view'}={}){
+ if(C.loading||!C.ready)throw Error('The original workspace is still opening. Use Refresh to finish loading its retained forms.');
  if(C.busy)return;C.busy=true;const oldInert=$('main').inert;$('main').inert=true;
  const controls=[...document.querySelectorAll('button,input,select,textarea')],disabled=controls.map(e=>e.disabled);controls.forEach(e=>e.disabled=true);document.body.setAttribute('aria-busy','true');
  try{if(archive)await checkpoint(archive);return await fn();}
@@ -141,7 +142,18 @@ async function fullNative(){
  if(C.native?.binding.id!==binding.id){if(C.native)C.nativeNotes[C.native.binding.id]={note:$('native-note').value,decision:$('native-decision').value};const draft=C.nativeNotes[binding.id];$('native-note').value=draft?.note||'';$('native-decision').value=draft?.decision||'APPROVED';}
  C.native={binding,plan};$('native-detail').textContent=json(C.native);return C.native;
 }
-async function openExecution(){C.execution=await read('executions',required($('execution-select').value,'Choose an original execution.'));$('execution-detail').textContent=json(C.execution);return C.execution;}
+function retainExecutionDraft(){
+ if(C.executionContext)C.executionDrafts[C.executionContext]={resolutions:$('execution-resolutions').value};
+}
+function selectExecutionContext(id){
+ if(C.executionContext!==id){retainExecutionDraft();C.executionContext=id;$('execution-resolutions').value=C.executionDrafts[id]?.resolutions??'[]';}
+ $('execution-select').value=id??'';
+}
+async function openExecution(){
+ const id=required($('execution-select').value,'Choose an original execution.'),value=await read('executions',id);
+ if(value.id!==id)throw Error('The original execution identity changed.');
+ selectExecutionContext(id);C.execution=value;$('execution-detail').textContent=json(value);return value;
+}
 async function openComparison(id){
  C.comparison=await read('osf_comparisons',required(id,'Choose a saved comparison.'));const c=C.comparison;$('comparison-select').value=c.id;$('comparison-json').textContent=json(c);
  facts($('comparison-facts'),[['Original mapping',c.mapping_id],['Incoming source',c.incoming_source_id],['Overlapping metadata edits',c.conflict_count],['Comparison SHA256',c.comparison_sha256]]);
@@ -183,12 +195,21 @@ async function restoreDraft(value,{received=false}={}){
  if(value.workspace_id!==C.state.workspace.id&&!received)throw Error('This draft belongs to another original workspace. Receive its complete institutional archive first.');
  C.restoring=true;
  try{
-  C.nativeNotes=clone(value.nativeNotes||{});C.handoverDrafts=clone(value.handoverDrafts||{});C.handoverContext=value.handoverContext||null;
+  C.nativeNotes=clone(value.nativeNotes||{});C.executionDrafts=clone(value.executionDrafts||{});C.executionContext=value.executionContext||value.execution?.id||null;
+  if(C.executionContext&&!C.executionDrafts[C.executionContext])C.executionDrafts[C.executionContext]={resolutions:value.form['execution-resolutions']??'[]'};
+  C.handoverDrafts=clone(value.handoverDrafts||{});C.handoverContext=value.handoverContext||null;
   if(value.mapping){await read('osf_sources',value.mapping.source_id);await loadMapping(value.mapping,{entryDrafts:value.entries,nodeId:value.node});}else{C.mapping=null;C.entries={};C.node=null;}
   C.source=clone(value.source);C.comparison=clone(value.comparison);C.native=clone(value.native);C.execution=clone(value.execution);C.archive=received?null:clone(value.archive);
   if(C.source)await openSource(C.source.id);
   if(C.comparison)await openComparison(C.comparison.id);
-  setValues(value.form);
+  const form={...value.form};
+  const originalSelections={'source-select':value.source?.id,'mapping-select':value.mapping?.id,
+   'native-mapping':value.native?.binding?.mapping_id,'native-review':value.native?.binding?.review_id,'native-plan':value.native?.binding?.id,
+   'execution-select':value.execution?.id,'compare-mapping':value.comparison?.mapping_id,'compare-source':value.comparison?.incoming_source_id,
+   'comparison-select':value.comparison?.id,'handover-mapping':value.handoverContext};
+  for(const [id,selection]of Object.entries(originalSelections))if(!Object.hasOwn(form,id)&&selection)form[id]=selection;
+  setValues(form);
+  if(C.executionContext)$('execution-resolutions').value=C.executionDrafts[C.executionContext]?.resolutions??'[]';
   for(const e of $('review-findings').querySelectorAll('input'))e.checked=(value.review_checks||[]).includes(e.value);
   for(const e of $('comparison-fields').querySelectorAll('[data-field-key]')){const v=(value.comparison_choices||[]).find(v=>v.key===e.dataset.fieldKey);if(v){e.querySelector('select').value=v.side;e.querySelector('textarea').value=v.raw;}}
   for(const e of $('comparison-fields').querySelectorAll('[data-node-choice]'))e.checked=(value.absent_nodes||[]).includes(e.dataset.nodeChoice);
@@ -199,9 +220,9 @@ async function restoreDraft(value,{received=false}={}){
  }finally{C.restoring=false;}
  await persist();notice('The complete retained draft is open. Its original requests remain under their own saved identities.');
 }
-document.querySelectorAll('[data-page]').forEach(button=>button.addEventListener('click',()=>{show(button.dataset.page);if(button.dataset.page==='history')history().catch(e=>notice(e.message,true));}));
+document.querySelectorAll('[data-page]').forEach(button=>button.addEventListener('click',()=>{if(!C.ready||C.loading)return;show(button.dataset.page);if(button.dataset.page==='history')history().catch(e=>notice(e.message,true));}));
 document.addEventListener('input',schedule);document.addEventListener('change',schedule);
-on('refresh','click',refresh);
+$('refresh').addEventListener('click',()=>{if(C.loading)return;if(!C.ready)initialize().catch(e=>notice(e.message,true));else operate(refresh).catch(()=>{});});
 on('capture-form','submit',async()=>{
  const keys=$('capture-keys').value.trim();const result=await mutate('osf-capture',{root_ids:$('capture-roots').value.split(/[\s,]+/).filter(Boolean),name:$('capture-name').value,recursive:$('capture-recursive').checked,include_versions:$('capture-versions').checked,download_files:$('capture-files').checked,...(keys?{download_file_keys:array(keys,'Selected original keys')}:{}) ,...($('capture-env').value?{token_env:$('capture-env').value}:{}),...($('capture-previous').value?{previous_source_id:$('capture-previous').value}:{})});
  await openSource(result.source_id);
@@ -233,7 +254,7 @@ on('map-json-open','click',()=>{$('mapping-json').value=json(mappingInput());$('
 on('map-json-apply','click',()=>loadMapping(object($('mapping-json').value,'Mapping')));
 on('review-form','submit',async()=>{
  required(C.mapping?.id,'Save the complete mapping before review.');
- if(json(mappingInput().entries)!==json(C.mapping.entries)||$('map-name').value!==C.mapping.name||$('map-profile').value!==C.mapping.profile_id)throw Error('Save the current mapping fields before reviewing their exact edition.');
+ if(json(mappingInput().entries)!==json(C.mapping.entries)||$('map-name').value!==C.mapping.name||($('map-profile').value||null)!==C.mapping.profile_id)throw Error('Save the current mapping fields before reviewing their exact edition.');
  const r=await mutate('osf-review-mapping',{mapping_id:C.mapping.id,mapping_sha256:C.mapping.mapping_sha256,decision:$('review-decision').value,note:$('review-note').value,acknowledged_findings:[...$('review-findings').querySelectorAll('input:checked')].map(e=>e.value)});
  $('native-mapping').value=C.mapping.id;$('native-review').value=r.review_id;selectHandoverMapping(C.mapping.id,{reviewId:r.review_id});notice('Saved the exact source and mapping review.');
 });
@@ -253,6 +274,7 @@ on('export-native','click',async()=>{const p=await fullNative();await download('
 on('native-review-form','submit',async()=>{const p=await fullNative();await mutate('review-plan',{plan_id:p.plan.id,decision:$('native-decision').value,note:$('native-note').value});await fullNative();});
 on('execute-native','click',async()=>{const p=await fullNative();if(p.plan.status!=='APPROVED')throw Error('Save the original native plan approval first.');const r=await mutate('execute-plan',{plan_id:p.plan.id});$('execution-select').value=r.execution_id;await openExecution();});
 on('open-execution','click',openExecution);
+on('execution-select','change',openExecution);
 on('recover-execution','click',async()=>{const e=await openExecution();const r=await mutate('recover-execution',{execution_id:e.id,resolutions:array($('execution-resolutions').value,'Original native subject resolutions')});$('execution-select').value=r.execution_id;await openExecution();});
 on('adopt-execution','click',async()=>{const p=await fullNative(),e=await openExecution();if(e.plan_id!==p.plan.id)throw Error('Choose the execution belonging to this original transition plan.');const r=await mutate('osf-adopt-execution',{native_plan_id:p.binding.id,execution_id:e.id});notice('Retained '+r.accepted_steps+' accepted original native steps and '+r.pending_steps+' pending steps.');});
 on('compare-form','submit',async()=>{const m=await read('osf_mappings',required($('compare-mapping').value,'Choose the saved local mapping.')),r=await mutate('osf-compare',{mapping_id:m.id,mapping_sha256:m.mapping_sha256,incoming_source_id:$('compare-source').value});await openComparison(r.comparison_id);});
@@ -288,4 +310,19 @@ on('save-draft','click',async()=>{const body=snapshot(),context='mapping:'+(C.ma
 on('download-draft','click',()=>downloadBlob(json(snapshot())+'\n','OSF_Transition_Working_Draft.json'));
 on('import-draft','click',async()=>{const file=required($('draft-file').files[0],'Choose the original draft JSON.');const v=JSON.parse(await file.text());await restoreDraft(v.body||v);await history();});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist().catch(()=>{});});
-(async()=>{await refresh();await db();let tab;try{tab=sessionStorage.getItem('osf-transition-tab')||crypto.randomUUID();sessionStorage.setItem('osf-transition-tab',tab);}catch{tab=crypto.randomUUID();}C.slot=C.state.workspace.id+':'+tab;const old=await get('current',C.slot);if(old)await operate(()=>restoreDraft(old.snapshot),{archive:null});else await persist();await history();notice('Original institutional workspace opened.');})().catch(e=>notice(e.message,true));
+async function initialize(){
+ C.loading=true;C.ready=false;document.body.inert=true;document.body.setAttribute('aria-busy','true');
+ try{
+  await refresh();await db();let tab;
+  try{tab=sessionStorage.getItem('osf-transition-tab')||crypto.randomUUID();sessionStorage.setItem('osf-transition-tab',tab);}catch{tab=crypto.randomUUID();}
+  C.slot=C.state.workspace.id+':'+tab;const old=await get('current',C.slot);
+  if(old)await restoreDraft(old.snapshot);else await persist();
+  await history();C.ready=true;notice('Original institutional workspace opened.');
+ }catch(error){notice('The original workspace has not finished opening. Use Refresh to retry its saved head. '+error.message,true);throw error;}
+ finally{
+  C.loading=false;document.body.inert=false;$('main').inert=!C.ready;$('actor').disabled=!C.ready;
+  document.querySelectorAll('[data-page]').forEach(button=>button.disabled=!C.ready);
+  document.body.removeAttribute('aria-busy');
+ }
+}
+initialize().catch(()=>{});

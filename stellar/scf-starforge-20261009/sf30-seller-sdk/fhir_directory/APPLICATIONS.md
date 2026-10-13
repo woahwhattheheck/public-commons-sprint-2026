@@ -78,3 +78,20 @@ Native operation and the connected SDK share the same original workspace. A conn
 The **Conformance** section is part of the same Human Services Directory application. Open its saved workspace, select standards and source scope, run complete assessments, review findings and compare results. All records and retained files travel with the normal editable workspace export and receiving flow.
 
 The [complete conformance guide](CONFORMANCE.md) covers source and profile selection, finding groups, review successors, report packages and connected SDK/MCP operation.
+
+
+## Operating Plans in the same managed application
+
+Open **Operating Plans** after starting the saved Human Services Directory workspace. Prepare a procedure from the exact selected edition and native records, inspect its complete preview, and accept that same preview. Edit and reorder steps, open an earlier revision, append a reviewed draft, copy the whole history and receive complete original JSON histories through the existing application.
+
+The source basis and all saved procedures remain in the same Directory workspace. Opening a historical revision is read-only until an explicit save; closing and reopening Applications preserves the native saved-head chain and complete original inputs. The connected client can read the same document, draft, basis and accepted input while borrowing this running application.
+
+The [complete Operating Plans guide](OPERATING_PLANS.md) contains the exact native/connected inputs, complete operating drivers, JSON/Markdown/HTML downloads and fresh editable-workspace receiving. Working browser drafts remain distinct from native saved revisions. Full workspace receiving preserves the original OperatingPlan model, every saved revision and all selected native source files.
+
+## Original relationship results
+
+In **Conformance → Assessments**, open a saved current HSDS relationship assessment. The same managed application displays all original outcomes, candidates, matching edges and coverage. Complete details reopen the original row and its retained physical values. Existence and identity resolution remain separate, so an ambiguous passing relationship keeps every eligible target visible.
+
+The **Original table domains** panel shows which original tables belong to the selected edition, the exact coverage state and the original table row count. Explicit zero-row tables display **0**. Tables outside the edition remain identified separately. Complete-file buttons receive the original JSONL datasets and coverage JSON rather than only the displayed page.
+
+Earlier assessments retain their original implementation and applicable files. The same application's stop/reopen lifecycle and complete editable export carry these immutable assessments alongside source records, referral choices and Operating Plans. The [complete relationship receiving guide](CONFORMANCE_FOREIGN_KEY_CLIENTS.md) describes the full browser/SDK/Merchant journey, original history reopening and a separately received customer workspace.

@@ -6,12 +6,15 @@ This adapter exposes the same persisted study through the existing task queue.
 from pathlib import Path
 
 from model import conservation as model
+from model.common import INVEST_VERSION
+from model import keowee_priority, conservation_scenarios
 
 
 class Conservation:
     ACTIONS = frozenset({
         "conservation.prepare", "conservation.build",
         "conservation.plan.save", "conservation.export", "conservation.scenario.create",
+        "conservation.criteria.prepare", "conservation.experiment.prepare",
     })
     READS = frozenset({"overview", "study", "plan"})
 
@@ -72,15 +75,24 @@ class Conservation:
         value = self._mapping(value)
         if operation == "overview":
             result = dict(model.overview(ws))
+            result["published_methods"] = keowee_priority.catalog()
+            result["scenario_bridges"] = conservation_scenarios.list_scenarios(ws)
+            from source_tools import parcel_criteria
+            result["criteria_operations"] = parcel_criteria.overview(ws)["operations"]
             existing = ws.overview()
             result["available"] = {
+                "invest_version": INVEST_VERSION,
+                "scenarios": [
+                    {key: row[key] for key in ("id", "title", "kind", "source_collection_id") if key in row}
+                    for row in existing.get("scenarios", []) if isinstance(row, dict)
+                ],
                 "sources": self._sources(existing.get("sources", [])),
                 "grids": [
                     {key: row[key] for key in ("id", "title", "state", "spec") if key in row}
                     for row in existing.get("grids", []) if isinstance(row, dict)
                 ],
                 "profiles": [
-                    {key: row[key] for key in ("id", "title", "state") if key in row}
+                    {key: row[key] for key in ("id", "title", "state", "models") if key in row}
                     for row in existing.get("profiles", []) if isinstance(row, dict)
                 ],
                 "runs": [
@@ -102,6 +114,14 @@ class Conservation:
                              "Unknown conservation action.", status=404)
         ws = self.operator.ws(task["workspace"])
         value = self._mapping(task.get("payload"))
+        if action == "conservation.criteria.prepare":
+            from source_tools import parcel_criteria
+            selected = (self._identifier(value, "operation_id") if value.get("operation_id")
+                        else self._mapping(value.get("spec", value), "Parcel criteria"))
+            return parcel_criteria.prepare(ws, selected)
+        if action == "conservation.experiment.prepare":
+            from model.conservation_scenarios import prepare_experiment
+            return prepare_experiment(ws, self._mapping(value.get("spec", value), "Paired experiment"))
         if action == "conservation.prepare":
             return model.prepare(ws, self._mapping(value.get("spec", value), "Study"))
         if action == "conservation.build":
@@ -138,6 +158,9 @@ class Conservation:
                        result.get("plan_id") or payload.get("plan_id"),
             "mode": result.get("mode"),
             "state": result.get("state"),
+            "conservation_scenario_id": result.get("conservation_scenario_id"),
+            "experiment_id": result.get("experiment_id") or
+                             (result.get("experiment") or {}).get("id"),
         }
         ws = self.operator.ws(task["workspace"])
         root = Path(ws.root).resolve()
@@ -181,6 +204,9 @@ class Conservation:
         if action == "conservation.export":
             add(result, "Conservation project packet")
         add(result.get("files"), "Conservation files")
+        handoff = result.get("experiment_handoff")
+        if isinstance(handoff, dict):
+            add(handoff.get("files"), "Paired experiment files")
         decorated["_downloads"] = downloads
         if unavailable:
             decorated["_conservation_download_errors"] = unavailable

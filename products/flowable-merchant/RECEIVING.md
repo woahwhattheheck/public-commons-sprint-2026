@@ -166,3 +166,7 @@ const received = await customerClient.adoptDelivery({
 Keep the original UUIDs and results across client restarts. The complete
 source file, inspected manifest and adoption transaction are the same
 ones used by the browser and command line.
+
+## Receive complete case history
+
+A case programme uses the same complete NDJSON handover. Export and cold receiving preserve every casePortfolio, caseRelease, caseInstance, casePlanItem and caseTask revision, together with original CMMN deployment resources, binary variable data, native exchanges and journals. The received workspace opens its saved Cases view and can continue against its actual named CMMN service. See the [complete case programme](CASES.md).

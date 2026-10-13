@@ -282,7 +282,7 @@ async function submissionView(id,g){
  metrics([["Normalized items",items.length,"Preserved item identities"],["Errors",counts.errors,"Must be resolved before approval"],["Warnings",counts.warnings,"Require explicit reviewer acknowledgment"],["Source revision",r.revision,"Decision uses this exact version"]])+
  '<nav class="tabs" aria-label="Submission detail">'+tabs.map(([t,title])=>'<a href="#submissions/'+enc(r.id)+'?tab='+t+'"'+(tab===t?' aria-current="page"':"")+'>'+h(title)+'</a>').join("")+'</nav><div class="grid-review"><div>'+body+'</div><aside class="stack review-sticky">'+review+
  card("Source identity",'<span class="mono small">'+h(r.source_sha256)+'</span><p class="muted small">Original bytes remain downloadable. Approved editions retain this source identity.</p>')+'</aside></div>',g);
- if(g!==state.generation)return;bindFilter();$("[data-item-index]").forEach(b=>b.onclick=()=>openItem(items[Number(b.dataset.itemIndex)]));
+ if(g!==state.generation)return;bindFilter();$$("[data-item-index]").forEach(b=>b.onclick=()=>openItem(items[Number(b.dataset.itemIndex)]));
  onForm("#review-form",async d=>{if(d.get("decision")==="approve"&&counts.errors)throw new Error("This source has errors. Approval is unavailable until a corrected submission resolves them.");if(d.get("decision")==="approve"&&counts.warnings&&!d.get("acknowledge_warnings"))throw new Error("Acknowledge the retained warnings before approving this revision.");
  await mutate("/submissions/"+enc(r.id)+"/review",{expected_revision:r.revision,decision:d.get("decision"),note:d.get("note"),acknowledge_warnings:!!d.get("acknowledge_warnings")},{name:"Review submission revision "+r.revision});toast("Decision saved with its source revision.");render();
  });

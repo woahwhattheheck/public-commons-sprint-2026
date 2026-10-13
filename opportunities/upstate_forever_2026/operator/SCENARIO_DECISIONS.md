@@ -2,6 +2,8 @@
 
 TokenJunkieLabs · Upper Savannah scientific workbench · ECSA-20261012
 
+Needs expert review: interpretation of modeled environmental outcomes and regulatory source applicability. The operator retains the selected inputs, physical units, geography and decision settings for that review.
+
 ## Open and assess the retained runs
 
 Open the normal operator URL printed by the existing server and choose **Scenario decisions**. The panel reads the completed native runs and their retained comparison artifacts from the selected scientific workspace.
@@ -67,3 +69,56 @@ The extension host package is a separate additive integration shared by the sour
 The initial receiving target named in the project thread is /mnt/data/eco12-source with /opt/pyvenv/bin/python. The actual workspace selected on that host determines the displayed results. Choose the completed regional workspace when its input owners publish that run.
 
 For source adoption, inspect one existing saved native comparison and one retained common-mask watershed report. Save an assessment, reopen it, change the objective and one case, and save a revision. Carry those two assessments through the normal portable export/restore and reopen them in the receiving application. This directly exercises the new user path.
+
+
+## Large assessments and live completed results
+
+The normal operator admits JSON requests up to 4 MiB. A large scenario assessment now uses resumable one-MiB transfer parts through the same authenticated operator. The browser compresses the original calculated JSON where supported, and the workspace retains the exact bytes and their SHA-256 identities. Selecting Save again after an interrupted transfer reuses completed parts. The final view save continues through the original task queue.
+
+Transferred calculations live under workspace/decision-transfers/ and travel with the ordinary workspace archive. Saved views keep the complete calculated comparison and its independent digest. Repeated views can reuse the same retained transfer. Saved source snapshots include the selected watershed reports; unrelated reports stay in the workspace catalog.
+
+Completing a native run, native comparison or watershed report in another desk refreshes the current report selectors. An open saved assessment keeps its original source snapshot. Selecting a new report is an explicit change of source and preserves the previous assessment as the revision parent. Current titles, purpose, criteria, pins and display choices remain attached to the draft.
+
+The shared extension host must include the current decisions manifest with POST /api/decisions/assessment/upload and decision_transfer.mjs in its static assets. Use the actual assembled application directory containing model/ and operator/ when running install_extensions.py; the cumulative receiving build may use a newer directory than the initial /mnt/data/eco12-source target.
+
+The transport check used 6,070,945 bytes of explicitly labeled test JSON. It continued after a lost response for an already stored part, reused every retained part, and reproduced the original bytes. Its largest JSON request was 1,398,592 bytes, within the original 4 MiB admission limit. The receiving operator also exercises the Python upload path on its actual selected assessment.
+
+
+## Responsive saved-assessment lists
+
+The operator now reads compact derived view summaries during its repeated state updates. Saving warms the summary immediately; existing assessments are indexed the first time they are listed. Each summary tracks the original view file size and modification time. Restoring, changing or removing an original view updates the listing naturally. Removing a derived summary simply rebuilds it from the content-verified original on the next read.
+
+Opening, revising and receiving an assessment still read and verify the original immutable calculation. The summary index under workspace/decision-view-summaries/ supplies labels and revision links; the full physical rows remain in decision-views/. A read-only workspace continues to list original views when it cannot write a derived summary.
+
+## Continue selected native runs in Scenario analysis
+
+The workbench now includes a complete continuation into the existing Scenario analysis form. It shows the current native availability of the selected assessment cases, then opens the original fixed-scale form with those original baseline and alternative run IDs. The target desk keeps its actual selected-model output intersection, model-version and grid requirements. A valid baseline-only analysis is available. When nutrient and sediment alternatives form separate compatible groups, the workbench presents explicitly named group actions with their native alternative counts; the operator chooses the intended group.
+
+Each group opens the existing form to choose fixed-baseline scales, planning weights and retained vector-source planning areas. The assessment's cohort normalization and reporting-scope identifiers remain attached to the saved workbench view. The current target analysis uses its own original model and retained outputs. A queued assessment save that completes while another desk is open persists its saved parent and reopens that exact saved record when the workbench is revisited.
+
+The current decisions descriptor includes scenario_handoff.mjs and the shared host's existing openExtension capability. The complete current selected-model producer and desk are carried in the same source overlay; the host and original scientific action queue remain the existing implementation. See SCENARIO_HANDOFF.md for the exact native intake contract.
+
+
+## Continue the same submission after reopening the browser
+
+The Decisions panel retains each save or native comparison request before it is sent. A compact browser journal records the workspace, a SHA-256 identity of the complete request, its original operation ID, the accepted task ID and its current result ID. Calculated assessments keep their existing authenticated multipart transport. A separate browser IndexedDB record retains the exact pending API request, including its original assessment transfer reference or direct assessment, until the original result has been received. These browser records contain no access capability.
+
+When this page reopens, it reads the existing original task before continuing. A response lost during submission retains the same payload-bound operation ID and exact request; the panel reconciles that original operation through the operator's idempotent queue. This uses the stored request without recalculating the assessment or choosing another compression format. Repeating the same choice uses that same retained operation. Changing the chosen cases, title, purpose or calculation produces a different explicit request. Switching workspaces preserves each workspace's own pending operation. A late response updates its original workspace record.
+
+A completed save reopens its original assessment and source snapshot. If the analyst changed the draft while the earlier task ran, that draft stays in place; the saved assessment remains available in the saved-assessment selector. The normal saved revision link is retained. A failed original task continues through **Resume interrupted task**, using its original task ID.
+
+The operator's existing state and task APIs remain the source of task outcomes. A retained task ID uses GET /api/task?id=ID; a lost acknowledgement first checks the workspace's original task list. If the core coalesces an identical active request, the panel verifies the complete returned payload and binds that existing native operation/task identity. The panel uses the existing authenticated queue and its workspace identity. Browser storage failures keep the current session usable and show a concrete message to keep the page open until the task appears.
+
+Receive this complete source edition together:
+
+- operator/web/decision_bridge.mjs
+- operator/web/decision_transfer.mjs
+- operator/web/decision_submission.mjs
+- operator/extensions/decisions.json
+- operator/SCENARIO_DECISIONS.md
+
+The version 4 Decisions manifest retains scenario_handoff.mjs and adds decision_submission.mjs to the existing explicit asset inventory. The full source receiver copies all five files into the actual application. Run the maintained extension installer against that composed application; no additional server is required.
+
+For the original operating journey, use the existing completed native comparison or common-mask watershed report. Save one actual assessment, reload while the existing task is still being received, and return to its original result. Switch to another existing workspace while its response is pending, then return and reopen the same assessment. Edit the draft while that save completes and confirm the edited draft stays in place. Continue a failed original save through its task resume control after its concrete source or input correction. The original task IDs, saved view IDs and complete result downloads identify the operation throughout.
+
+The displayed InVEST version now comes from each completed run's runtime.version. Any version declared in its selection remains separate source context. This carries the execution record into the comparison and its exports.

@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "pmtiles-commerce",
-  "description": "Paid immutable PMTiles output releases, original SF88 customer receiving and native accounting continuation.",
+  "description": "Paid immutable PMTiles output releases, the original browser merchant workbench, SF88 customer receiving and native accounting continuation.",
   "components": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce"
   ],
@@ -10,7 +10,9 @@
     "stellar-forge/mcp-merchant-operator/pmtiles-commerce.mjs",
     "stellar-forge/mcp-merchant-operator/catalog/pmtiles-commerce.mjs",
     "stellar-forge/mcp-merchant-operator/PMTILES_COMMERCE.md",
-    "stellar-forge/mcp-merchant-operator/pmtiles-commerce-native-receiving.mjs"
+    "stellar-forge/mcp-merchant-operator/pmtiles-commerce-native-receiving.mjs",
+    "stellar-forge/mcp-merchant-operator/pmtiles-commerce-workbench.mjs",
+    "stellar-forge/mcp-merchant-operator/pmtiles-commerce-browser-receiving.mjs"
   ],
   "commands": {
     "pmtiles-output": "stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/cli.mjs"

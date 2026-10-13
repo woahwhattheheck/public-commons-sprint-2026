@@ -12,7 +12,9 @@
     "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/client.d.mts",
     "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/capture.d.mts",
     "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/ledger.d.mts",
-    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/server.d.mts"
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/server.d.mts",
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/archive.d.mts",
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/history.d.mts"
   ],
   "commands": {
     "givecredit-statements": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/cli.mjs"
@@ -44,6 +46,14 @@
     "./givecredit/server": {
       "types": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/server.d.mts",
       "default": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/server.mjs"
+    },
+    "./givecredit/archive": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/archive.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/archive.mjs"
+    },
+    "./givecredit/history": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/history.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/history.mjs"
     }
   },
   "nativePeers": {
