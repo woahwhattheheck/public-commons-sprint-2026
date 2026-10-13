@@ -216,9 +216,10 @@ getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  restoreCommunityView:value=>community.restoreView(value),
  openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),
  openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},
- openScenario:id=>journeyForm(()=>scenarioForm(id)),
- openProfile:id=>journeyForm(()=>profileForm(id)),
- openGrid:id=>journeyForm(()=>gridForm(id)),
+ openJourneySource:options=>journeyForm(()=>sourceForm(options)),
+ openScenario:(id,selection)=>journeyForm(()=>scenarioForm(id,selection)),
+ openProfile:(id,selection)=>journeyForm(()=>profileForm(id,selection)),
+ openGrid:(id,selection)=>journeyForm(()=>gridForm(id,selection)),
  openRun:selection=>journeyForm(()=>runForm(selection)),
  openComparison:selection=>journeyForm(()=>compareForm(selection)),
  openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),
@@ -658,7 +659,11 @@ const chosen=(name,root=form)=>$$('[name="'+name+'"]:checked',root).map(x=>x.val
 const num=(name,root=form,optional=false)=>{const text=val(name,root).trim();if(!text&&optional)return undefined;const n=Number(text);if(!text||!Number.isFinite(n))throw Error('Enter a finite value for '+human(name)+'.');return n;};
 const lines=text=>text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
 const sources=()=>state.data.sources;
-const collectionDefault=row=>row?.source_collection_id||((sources().length===1)?sources()[0].id:'');
+const collectionDefault=(row,initialSource)=>{
+ if(row?.source_collection_id)return row.source_collection_id;
+ if(initialSource){if(!sources().some(source=>source.id===initialSource))throw Error('Choose a retained original source edition from this workspace.');return initialSource;}
+ return sources().length===1?sources()[0].id:'';
+};
 const sourceRows=(collection,kind=null)=>{const edition=sources().find(x=>x.id===collection);return (edition?.entries||[]).filter(x=>!kind||kind.split('|').includes(x.kind));};
 const requireSources=()=>{if(!sources().length)throw Error('Import an original source edition first.');};
 function setOptions(node,rows,selected=node.value){node.innerHTML=select('_',rows,selected,node.required).replace(/^<select[^>]*>|<\/select>$/g,'');}
@@ -914,13 +919,13 @@ function nativeOutputCell(row,model,artifact){
  return nativeModels(row.selection).includes(model)?sumCell(row.artifacts?.[artifact]):'<span class="muted">Not selected</span>';
 }
 
-async function profileForm(id){
+async function profileForm(id,initialSelection={}){
  requireSources();const current=formOpening('profile.save');
  let row;
  try{row=id?await api(endpoint('/api/item',{kind:'profiles',id})):null;}
  catch(error){if(current())throw error;return;}
  if(!current())return;
- const collection=collectionDefault(row);
+ const collection=collectionDefault(row,initialSelection.source_collection_id);
  const parameter=(group,key,label,note='',attrs='')=>field(label,input(group+'_'+key,'number',row?.[group]?.[key]??'','required step="any" '+attrs),note);
  openForm(row?'Revise parameter profile':'New parameter profile','Select the original biophysical table, the native models to calculate and their published parameters. Each saved revision retains the complete original table and its own identity.',
  '<div class="form-grid">'+field('Profile title',input('title','text',row?.title?row.title+' · revision':'','required'),'',true)+
@@ -976,13 +981,13 @@ function bindGridResolution(original){
  form.elements.namedItem('raster_NLCD').addEventListener('change',readReference);
  readReference();
 }
-async function gridForm(id){
+async function gridForm(id,initialSelection={}){
  requireSources();const current=formOpening('grid.prepare');
  let original;
  try{original=id?await api(endpoint('/api/item',{kind:'grids',id})):null;}
  catch(error){if(current())throw error;return;}
  if(!current())return;
- const row=original?.spec,collection=collectionDefault(row);
+ const row=original?.spec,collection=collectionDefault(row,initialSelection.source_collection_id);
  const rasterRoles=[['DEM','Elevation model','ndr sdr'],['NLCD','Original land cover','ndr sdr'],['PRECIPITATION','Precipitation','ndr'],['R_FACTOR','Rainfall erosivity','sdr'],['K_FACTOR','Soil erodibility','sdr']];
  const canReuse=original?.state==='complete',originalResolution=original?.grid?.resolution_m??row?.resolution_m??30;
  openForm(row?'Extend or revise native grid':'Prepare native model grid','Choose the native models and their original sources, reporting area and upstream context. A completed grid can supply its exact common inputs when the remaining model sources arrive.',
@@ -1047,13 +1052,13 @@ function patchRow(collection,row={}){
  field('Original land-cover codes',input('from_codes','text',(row.from_codes||[]).join(', '),'required'),'Separate the exact integer codes with commas.')+field('Replacement land-cover code',input('to_code','number',row.to_code??'','required step="1"'))+
  field('Reason for this change',area('patch_reason',row.reason||'','required'),'',true)+filterEditor('patch',row.where).replace('<fieldset','<fieldset data-patch-vector')+'</div></fieldset>';
 }
-async function scenarioForm(id){
+async function scenarioForm(id,initialSelection={}){
  requireSources();const current=formOpening('scenario.save');
  let row;
  try{row=id?await api(endpoint('/api/item',{kind:'scenarios',id})):null;}
  catch(error){if(current())throw error;return;}
  if(!current())return;
- const collection=collectionDefault(row);
+ const collection=collectionDefault(row,initialSelection.source_collection_id);
  openForm(row?'Revise land-cover scenario':'New land-cover scenario','Keep an unchanged baseline or define ordered changes using original polygon or aligned binary raster masks and land-cover codes. The model records the scenario separately from the source data.',
  '<div class="form-grid">'+field('Scenario title',input('title','text',row?.title?row.title+' · revision':'','required'))+field('Scenario type',select('kind',[['baseline','Unchanged source baseline'],['landcover','Explicit land-cover changes']],row?.kind||'baseline'))+
  field('Original source edition',select('collection',sources(),collection))+field('Scenario reason',area('reason',row?.reason||'','required'),'',true)+

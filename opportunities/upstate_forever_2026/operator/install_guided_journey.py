@@ -44,6 +44,16 @@ CURRENT_PREDECESSORS = {
     "operator/GUIDED_JOURNEY.md": "3a7dc94ad9e9cf575e21b71d4d07e53d6594e9fe24ec22ae70327d3d70d70ae5",
     "operator/Guided_Journey_Source.json": "fa263a69cf8b0e5590bfcbef01d37a27c4dd20d07e813f55847ed6e623147aa2"
 }
+# Exact complete maintained edition before the first-source journey join.
+FIRST_SOURCE_PREDECESSORS = {
+    "operator/install_guided_journey.py": "e10117bfd3a5c58a988546c57e2af5272c6ef475021459bfa71b0f3312d3a0fe",
+    "operator/Guided_Journey_Integration.json": "f1af6a86817ecc2ac6773807eecfd93cd578f18075e36a4f3b5653621fb2ce8e",
+    "operator/extensions/guided-journey.json": "2755b6dcd057097d980d85fa186fdc7d560a8bcf45678d56052bb9fe7f448734",
+    "operator/web/journey.mjs": "b035e3b3e60c4c254a0ed019fd8bf19f93ead03616721d83dbd74f0ca83d30bf",
+    "operator/web/journey.css": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a",
+    "operator/GUIDED_JOURNEY.md": "60f116de907383b8a4d2d85647b3e7998b0bfb00a669e207cba4b7242786fd19",
+    "operator/Guided_Journey_Source.json": "87d3d6a9047fb5c5f77bbc655d93ac44c7708871713f1e4f5523c207554008ae"
+}
 SHARED = ("operator/server.py", "operator/web/app.mjs")
 OPTIONAL_SHARED = ("install_extensions.py", "operator/web/index.html")
 
@@ -178,7 +188,9 @@ def prepare(application, files, integration):
         path = safe_path(application, name)
         before = read(path)
         if (before is not None and before != incoming
-                and hashlib.sha256(before).hexdigest() not in {PREDECESSORS.get(name), CURRENT_PREDECESSORS.get(name)}):
+                and hashlib.sha256(before).hexdigest() not in {
+                    PREDECESSORS.get(name), CURRENT_PREDECESSORS.get(name),
+                    FIRST_SOURCE_PREDECESSORS.get(name)}):
             raise ValueError("Preserve and compose the other installed journey edition at " + name)
         original[name], proposed[name] = before, incoming
         modes[name] = path.stat().st_mode & 0o777 if before is not None else 0o644

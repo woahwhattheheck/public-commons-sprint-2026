@@ -16,12 +16,12 @@ const nativeModels=record=>{const chosen=record?.models??['ndr','sdr'];return ['
 const modelLabel=record=>nativeModels(record).map(name=>name.toUpperCase()).join(' + ')||'Choose native models';
 const sameModels=(a,b)=>canonical(nativeModels(a))===canonical(nativeModels(b));
 const commonModels=(a,b)=>nativeModels(a?.selection).filter(name=>nativeModels(b?.selection).includes(name));
-const fields={baseline_run_id:'runs',grid_id:'grids',profile_id:'profiles',scenario_id:'scenarios',run_id:'runs',comparison_id:'comparisons',spatial_review_id:'spatial_reviews',spatial_export_id:'spatial_exports',delivery_id:'deliveries',calibration_review_id:'calibration_reviews'};
-const resultFields={'scenario.save':'scenario_id','profile.save':'profile_id','grid.prepare':'grid_id','run.prepare':'run_id','run.compare':'comparison_id','delivery.build':'delivery_id','spatial.review.save':'spatial_review_id','spatial.review.export':'spatial_export_id'};
+const fields={source_collection_id:'sources',baseline_run_id:'runs',grid_id:'grids',profile_id:'profiles',scenario_id:'scenarios',run_id:'runs',comparison_id:'comparisons',spatial_review_id:'spatial_reviews',spatial_export_id:'spatial_exports',delivery_id:'deliveries',calibration_review_id:'calibration_reviews'};
+const resultFields={'source.import':'source_collection_id','source.compose':'source_collection_id','scenario.save':'scenario_id','profile.save':'profile_id','grid.prepare':'grid_id','run.prepare':'run_id','run.compare':'comparison_id','delivery.build':'delivery_id','spatial.review.save':'spatial_review_id','spatial.review.export':'spatial_export_id'};
 const journeyRows=(state,kind)=>list(kind==='calibration_reviews'?state?.data?.calibration?.calibration_reviews:state?.data?.[kind]);
 const reviewContext=record=>record?Object.fromEntries(['id','calibration_id','plan_id','uncertainty_id','map_id','selected_run_id','selected_profile_id'].map(key=>[key,record[key]??null])):null;
 export const journeySteps=[
- {id:'study',title:'Choose a prepared study',view:'overview',do:'Choose the saved baseline you want to explain. Open its result before changing any inputs.',see:'The selected source grid, parameter profile, baseline scenario and actual run state.',meaning:'This fixes the starting point for every change and comparison in this journey.',say:'This is our saved starting point, and every result stays linked to the inputs that produced it.'},
+ {id:'study',title:'Open data or a saved study',view:'overview',do:'Open your original source files or choose a retained source edition. Prepare its grid, scientific profile and unchanged baseline using the original forms, or reopen an existing run.',see:'Original source records, chosen scientific inputs, the first retained run and its actual state.',meaning:'The first calculation and every later change keep the source editions and scientific choices that produced them.',say:'I can start with my own files, retain the original data and follow the same project through calculation and handover.'},
  {id:'inputs',title:'Explain inputs and geography',view:'sources',do:'Open the source edition, model grid and parameter profile. Inspect the reporting boundary in Spatial review.',see:'Original source editions and references, the coordinate system, resolution, upstream context and model period.',meaning:'The reporting area determines where quantities are summarized; the wider model domain supplies hydrologic context.',say:'We retain the original data and show exactly which geography and assumptions the model uses.'},
  {id:'change',title:'Make a case change',view:'scenarios',do:'Revise the baseline scenario with an actual retained polygon mask and explicit land-cover codes. Select the saved revision below.',see:'The original baseline beside a separate scenario, with the reason, masks and replacement codes recorded.',meaning:'A scenario describes a specific change. A profile change is a separate scientific assumption and remains visible in the comparison.',say:'I can change a defined part of the landscape while keeping the baseline available for comparison.'},
  {id:'calculate',title:'Calculate and recover',view:'runs',do:'Prepare the selected grid, profile and scenario, then start that retained run. Inspect the original task if it pauses or fails.',see:'The actual queue state, native stage times, retained log and physical output quantities.',meaning:'The original selected NDR, SDR or combined engines calculate the result. Resume uses the same task and its saved native stages.',say:'This control runs the original models, and I can see their progress and continue the same work after an interruption.'},
@@ -126,12 +126,14 @@ export function attachOperatingJourney(host){
   const rank=item=>Number.isFinite(item.request_order)?item.request_order:(stamp(item.requested_at)||stamp(item.created_at)||0);
   // Protect the fields a later operation writes, invalidates, or needs to keep
   // coherent. Independent input edits can still adopt their separate results.
-  const runFields=['run_id','grid_id','profile_id','scenario_id','models'];
+  const runFields=['source_collection_id','run_id','grid_id','profile_id','scenario_id','models'];
   const effects={
-   'scenario.save':['scenario_id','run_id','comparison_id','delivery_id'],
-   'profile.save':['profile_id','run_id','comparison_id','delivery_id'],
-   'grid.prepare':['grid_id','run_id','comparison_id','delivery_id'],
-   'run.prepare':[...runFields,'comparison_id','delivery_id'],
+   'source.import':['source_collection_id',...runFields,'baseline_run_id','comparison_id','delivery_id'],
+   'source.compose':['source_collection_id',...runFields,'baseline_run_id','comparison_id','delivery_id'],
+   'scenario.save':['source_collection_id','scenario_id','run_id','comparison_id','delivery_id'],
+   'profile.save':['source_collection_id','profile_id','run_id','comparison_id','delivery_id'],
+   'grid.prepare':['source_collection_id','grid_id','run_id','comparison_id','delivery_id'],
+   'run.prepare':[...runFields,'baseline_run_id','comparison_id','delivery_id'],
    'run.start':runFields,
    'run.compare':[...runFields,'baseline_run_id','comparison_id','delivery_id'],
    'delivery.build':[...runFields,'baseline_run_id','comparison_id','spatial_review_id','spatial_export_id','delivery_id'],
@@ -193,12 +195,17 @@ export function attachOperatingJourney(host){
  }
  function chooseBase(id){
   const base=row('runs',id);preferences.selection.baseline_run_id=id;
+  preferences.selection.source_collection_id=base?(row('grids',base.selection?.grid_id)?.spec?.source_collection_id||row('profiles',base.selection?.profile_id)?.source_collection_id||''):'';
   for(const key of ['grid_id','profile_id','scenario_id'])preferences.selection[key]=base?.selection?.[key]||'';
   preferences.selection.run_id=base?.id||'';
   preferences.selection.models=base?nativeModels(base.selection):[];
   for(const key of ['comparison_id','spatial_review_id','spatial_export_id','delivery_id'])preferences.selection[key]='';
  }
  function clearDownstream(field){
+  if(field==='source_collection_id'){
+   for(const key of ['baseline_run_id','grid_id','profile_id','scenario_id','run_id','comparison_id','delivery_id','spatial_review_id','spatial_export_id'])preferences.selection[key]='';
+   preferences.selection.models=[];
+  }
   if(['grid_id','profile_id'].includes(field)){
    const profile=selected('profile_id'),grid=selected('grid_id');
    const available=profile?nativeModels(profile):['ndr','sdr'];
@@ -209,17 +216,24 @@ export function attachOperatingJourney(host){
  }
  function adopt(task,pending){
   if(pending.applied||task.state!=='complete'||!task.result)return false;
-  const field=resultFields[task.action];
-  if(field&&!row(fields[field],task.result.id))return false;
+  const field=task.action==='source.compose'&&task.result.imported!==true?null:resultFields[task.action];
+  const resultId=task.action==='source.compose'?task.result.source_collection_id:task.result.id;
+  if(field&&!row(fields[field],resultId))return false;
   pending.applied=true;
   if(pending.generation!==preferences.generation||(field&&!currentIntent(field,pending)))return true;
   if(field){
    const previous=preferences.selection[field];
-   preferences.selection[field]=task.result.id;
-   if(previous!==task.result.id)clearDownstream(field);
+   if(field==='source_collection_id'&&previous!==resultId){preferences.browser_view_draft=exportValue();preferences.regional=null;}
+   preferences.selection[field]=resultId;
+   if(previous!==resultId)clearDownstream(field);
    if(field==='run_id'){
     for(const key of ['grid_id','profile_id','scenario_id'])preferences.selection[key]=task.result.selection?.[key]||preferences.selection[key];
     preferences.selection.models=nativeModels(task.result.selection);
+    const scenario=row('scenarios',preferences.selection.scenario_id);
+    if(!preferences.selection.baseline_run_id&&scenario?.kind==='baseline'&&currentIntent('baseline_run_id',pending)){
+     preferences.selection.baseline_run_id=task.result.id;
+     if(preferences.step==='study')preferences.step='calculate';
+    }
    }
   }
   return true;
@@ -344,21 +358,50 @@ export function attachOperatingJourney(host){
   if(history.length)html+=notice(history.length+' saved run'+(history.length===1?'':'s')+' on the same grid and profile recorded a native stage span of '+duration(Math.min(...history))+' to '+duration(Math.max(...history))+'.');
   return html;
  }
+ function firstStudy(){
+  const source=selected('source_collection_id'),grid=selected('grid_id'),profile=selected('profile_id'),scenario=selected('scenario_id');
+  const label=(kind,item)=>(item.title||item.spec?.title||short(item.id))+
+   ((item.spec?.source_collection_id||item.source_collection_id)?' · '+title('sources',item.spec?.source_collection_id||item.source_collection_id):'');
+  const compatibleModels=grid&&profile?nativeModels(profile).filter(name=>nativeModels(grid.spec).includes(name)):[];
+  const needs=[];
+  if(!source)needs.push('Choose or import an original source edition.');
+  if(!grid||grid.state!=='complete')needs.push('Prepare or select a completed model grid.');
+  if(!profile)needs.push('Save or select a scientific parameter profile.');
+  if(!scenario||scenario.kind!=='baseline')needs.push('Save or select an unchanged baseline scenario.');
+  if(grid&&profile&&!compatibleModels.length)needs.push('Choose a grid and profile with at least one common native model.');
+  let html='<section class="journey-first-study"><h3>Start with original data</h3>'+
+   notice('Select your retained files, then choose the scientific inputs for the first calculation. Each grid, profile and scenario keeps its own source edition. Original source preparation combines files when the selected models need several datasets.')+
+   '<div class="journey-fields">'+select('source_collection_id','Original source edition',rows('sources'))+'</div>'+
+   '<div class="page-actions">'+action('source','Open original files','',!source)+action('view','Prepare or combine source data','data-view-name="source-preparation"')+
+   open('sources',source?.id,'Inspect selected files')+'</div>';
+  if(source)html+=facts([['Original source edition',source.title||source.id],['Retained original entries',list(source.entries).length]])+
+   notice('Review original names, source dates and units in Inputs and geography before choosing model settings.');
+  html+='<div class="journey-fields">'+select('grid_id','Completed model grid',rows('grids').filter(item=>item.state==='complete'),item=>label('grids',item))+
+   select('profile_id','Scientific parameter profile',rows('profiles'),item=>label('profiles',item))+
+   select('scenario_id','Unchanged baseline scenario',rows('scenarios').filter(item=>item.kind==='baseline'),item=>label('scenarios',item))+'</div>'+
+   '<div class="page-actions">'+action('first-grid','Prepare model grid')+action('first-profile','Create parameter profile')+action('first-scenario','Create unchanged baseline')+'</div>';
+  if(needs.length)html+='<ul class="journey-note">'+needs.map(value=>'<li>'+esc(value)+'</li>').join('')+'</ul>';
+  else html+=facts([['Available native models',compatibleModels.map(name=>name.toUpperCase()).join(' + ')]])+
+   '<div class="page-actions">'+action('prepare-first','Prepare first baseline run','',true)+'</div>'+
+   notice('The original run form retains the exact selected inputs. After preparation, use Calculate and recover to start or resume that same run.');
+  return html+'</section>';
+ }
  function study(){
   const base=selected('baseline_run_id');
   let html=select('baseline_run_id','Saved baseline or prepared study',rows('runs'),run=>runTitle(run)+' · '+human(run.state));
-  if(!base)return html+notice('Select a prepared run, or use the existing source, grid, profile and scenario controls to prepare the first study.')+'<div class="page-actions">'+action('view','Open workspace overview','data-view-name="overview"')+action('prepare','Prepare a run')+'</div>';
+  if(!base)return html+firstStudy();
   html+=facts([['Scenario',title('scenarios',base.selection?.scenario_id)],['Grid',title('grids',base.selection?.grid_id)],['Parameter profile',title('profiles',base.selection?.profile_id)],['Native models',modelLabel(base.selection)],['Native model version',base.selection?.invest_version||'Not recorded']]);
-  html+='<div class="page-actions">'+open('runs',base.id,'Open saved result')+map('runs',base.id,'Open study map')+'</div>'+timingTable(base)+resultTable(base);
+  html+='<div class="page-actions">'+open('runs',base.id,'Open saved result')+map('runs',base.id,'Open study map')+action('new-study','Start another study from original data')+'</div>'+timingTable(base)+resultTable(base);
   return html;
  }
  function inputs(){
-  const base=selected('baseline_run_id'),grid=selected('grid_id')||row('grids',base?.selection?.grid_id),profile=selected('profile_id')||row('profiles',base?.selection?.profile_id),collection=row('sources',grid?.spec?.source_collection_id||profile?.source_collection_id);
-  if(!grid&&!profile)return notice('Select a saved scientific profile and model grid to inspect their original inputs.');
-  let html=facts([['Source edition',collection?.title||collection?.id],['Coordinate system',grid?.grid?.crs_name||grid?.grid?.crs],['Resolution',grid?.grid?.resolution_m!==undefined?number(grid.grid.resolution_m)+' m':null],['Grid dimensions',grid?.grid?number(grid.grid.width)+' × '+number(grid.grid.height):null],['Upstream context',grid?.spec?.upstream_buffer_m!==undefined?number(grid.spec.upstream_buffer_m)+' m':null],['Model period',typeof profile?.model_period==='object'?JSON.stringify(profile.model_period):profile?.model_period]]);
+  const base=selected('baseline_run_id'),grid=selected('grid_id')||row('grids',base?.selection?.grid_id),profile=selected('profile_id')||row('profiles',base?.selection?.profile_id),collection=selected('source_collection_id')||row('sources',grid?.spec?.source_collection_id||profile?.source_collection_id);
+  if(!grid&&!profile&&!collection)return firstStudy();
+  let html=facts([['Source edition',collection?.title||collection?.id],['Coordinate system',grid?.grid?.crs_name||grid?.grid?.crs],['Resolution',grid?.grid?.resolution_m!==undefined?number(grid.grid.resolution_m)+' m':null],['Grid dimensions',grid?.grid?number(grid.grid.width)+' × '+number(grid.grid.height):null],['Upstream context',grid?.spec?.upstream_buffer_m!==undefined?number(grid.spec.upstream_buffer_m)+' m':null],['Model period',typeof profile?.model_period==='object'?JSON.stringify(profile.model_period):profile?.model_period],['Grid source edition',grid?.spec?.source_collection_id?title('sources',grid.spec.source_collection_id):null],['Profile source edition',profile?.source_collection_id?title('sources',profile.source_collection_id):null]]);
   html+='<div class="page-actions">'+open('sources',collection?.id,'Open original sources')+open('grids',grid?.id,'Inspect grid and boundary')+open('profiles',profile?.id,'Inspect parameters')+map('grids',grid?.id,'Inspect geography')+'</div>';
   const entries=list(collection?.entries);
   if(entries.length)html+='<div class="table-scroll"><table><thead><tr><th>Original source</th><th>Edition</th><th>Units</th><th>Reference</th></tr></thead><tbody>'+entries.map(entry=>'<tr><td>'+esc(entry.title||entry.id)+'</td><td>'+esc(entry.vintage||'Not recorded')+'</td><td>'+esc(entry.units||'Not supplied')+'</td><td>'+(/^https?:\/\//i.test(entry.uri||'')?'<a href="'+esc(entry.uri)+'" target="_blank" rel="noopener noreferrer">Open original reference</a>':esc(entry.uri||'Not recorded'))+'</td></tr>').join('')+'</tbody></table></div>';
+  if(!grid||!profile)html+='<div class="page-actions">'+action('step','Continue first study preparation','data-step="study"',true)+'</div>';
   return html;
  }
  function change(){
@@ -377,6 +420,7 @@ export function attachOperatingJourney(host){
   if(run){
    const task=latestTask('run.start',run.id),label=['failed','interrupted','cancelled'].includes(task?.state)?'Resume original task':['queued','running'].includes(task?.state)?'Inspect running task':run.state==='complete'?'Open completed result':'Start original models';
    html+=action('start',label,'',true)+open('runs',run.id,'Inspect result and log');
+   if(run.id===selection.baseline_run_id&&run.state==='complete')html+=action('step','Create a separate case change','data-step="change"');
   }
   html+='</div>';
   return html+(run?timingTable(run)+resultTable(run):notice('Prepare this selection before starting the models. The original form lets you review the exact inputs.'));
@@ -505,7 +549,7 @@ export function attachOperatingJourney(host){
     const id=event.target.value;if(id&&!row(fields[field],id))throw Error('Choose an item from the current workspace.');
     preferences.generation=crypto.randomUUID();
     if(field==='baseline_run_id')chooseBase(id);
-    else{preferences.selection[field]=id;clearDownstream(field);if(field==='run_id'){const run=row('runs',id);if(run){for(const key of ['grid_id','profile_id','scenario_id'])preferences.selection[key]=run.selection[key];preferences.selection.models=nativeModels(run.selection);}}
+    else{if(field==='source_collection_id'&&preferences.selection[field]!==id)preferences.browser_view_draft=exportValue();preferences.selection[field]=id;clearDownstream(field);if(field==='run_id'){const run=row('runs',id);if(run){for(const key of ['grid_id','profile_id','scenario_id'])preferences.selection[key]=run.selection[key];preferences.selection.models=nativeModels(run.selection);}}
      if(field==='spatial_review_id'&&selected('spatial_export_id')?.review_id!==id)preferences.selection.spatial_export_id='';
      if(field==='spatial_export_id'){const pack=row('spatial_exports',id);if(pack&&row('spatial_reviews',pack.review_id))preferences.selection.spatial_review_id=pack.review_id;}}
     save();mount(container);updateRail(currentView);
@@ -553,6 +597,19 @@ export function attachOperatingJourney(host){
   lines.push('','## Project notes','',preferences.notes||'No project notes entered.','');
   for(const version of list(preferences.note_versions))lines.push('### Notes retained from another tab','',version.recorded_at||'','',version.text,'');
   return lines.join('\n');
+ }
+ function selectSourceCollection(value){
+  if(busy)throw Error('Wait for the current operation response before changing the source edition.');
+  if(value?.workspace_key!==workspace()||typeof value.source_collection_id!=='string'||!row('sources',value.source_collection_id))
+   throw Error('Open the retained source edition in its original workspace.');
+  const previous=exportValue();
+  preferences.generation=crypto.randomUUID();
+  preferences.selection.source_collection_id=value.source_collection_id;
+  clearDownstream('source_collection_id');
+  preferences.browser_view_draft=previous;preferences.regional=null;preferences.step='study';preferences.active=true;
+  save();if(mounted)mount(mounted);updateRail(currentView);
+  host.toast('Original source selected. Continue with its model grid, scientific profile and baseline.');
+  return host.navigate('journey');
  }
  async function selectOpening(value,{locked=false}={}){
   if(busy&&!locked)throw Error('Wait for the current operation response before importing a regional opening.');
@@ -659,9 +716,27 @@ export function attachOperatingJourney(host){
    if(name==='handoff')return host.navigate('project-continuity');
    return;
   }
-  if(name==='scenario')return form('scenario.save',()=>host.openScenario(preferences.selection.scenario_id));
-  if(name==='profile')return form('profile.save',()=>host.openProfile(preferences.selection.profile_id));
-  if(name==='grid')return form('grid.prepare',()=>host.openGrid(preferences.selection.grid_id));
+  if(name==='new-study'){
+   if(busy)throw Error('Wait for the current operation response before opening another study.');
+   preferences.browser_view_draft=exportValue();preferences.generation=crypto.randomUUID();
+   preferences.selection.source_collection_id='';clearDownstream('source_collection_id');preferences.regional=null;preferences.step='study';
+   save();if(mounted)mount(mounted);return;
+  }
+  if(name==='source'){
+   if(typeof host.openJourneySource!=='function')throw Error('Receive the current original application to open source files from this journey.');
+   return form('source.import',()=>host.openJourneySource());
+  }
+  if(name==='first-scenario')return form('scenario.save',()=>host.openScenario(undefined,{source_collection_id:preferences.selection.source_collection_id}));
+  if(name==='first-profile')return form('profile.save',()=>host.openProfile(undefined,{source_collection_id:preferences.selection.source_collection_id}));
+  if(name==='first-grid')return form('grid.prepare',()=>host.openGrid(undefined,{source_collection_id:preferences.selection.source_collection_id}));
+  if(name==='scenario')return form('scenario.save',()=>host.openScenario(preferences.selection.scenario_id,{source_collection_id:preferences.selection.source_collection_id}));
+  if(name==='profile')return form('profile.save',()=>host.openProfile(preferences.selection.profile_id,{source_collection_id:preferences.selection.source_collection_id}));
+  if(name==='grid')return form('grid.prepare',()=>host.openGrid(preferences.selection.grid_id,{source_collection_id:preferences.selection.source_collection_id}));
+  if(name==='prepare-first'){
+   const {source_collection_id,grid_id,profile_id,scenario_id}=preferences.selection;
+   if(!row('sources',source_collection_id)||row('grids',grid_id)?.state!=='complete'||!row('profiles',profile_id)||row('scenarios',scenario_id)?.kind!=='baseline')throw Error('Select the original source edition, completed grid, scientific profile and unchanged baseline.');
+   return form('run.prepare',()=>host.openRun({...preferences.selection}));
+  }
   if(name==='prepare')return form('run.prepare',()=>host.openRun({...preferences.selection}));
   if(name==='compare'){
    const base=selected('baseline_run_id'),run=matchingRun();
@@ -681,7 +756,7 @@ export function attachOperatingJourney(host){
   observe(next,hostView());
   if(mounted)mount(mounted,next);
  }
- const controller={observe,beforeSubmission,acceptTask,mount,update,detach,dispatch,updateRail,selectOpening,isBusy:()=>busy,activate:()=>{if(preferences&&!preferences.active){preferences.active=true;save();}},capture:exportValue};
+ const controller={observe,beforeSubmission,acceptTask,mount,update,detach,dispatch,updateRail,selectOpening,selectSourceCollection,isBusy:()=>busy,activate:()=>{if(preferences&&!preferences.active){preferences.active=true;save();}},capture:exportValue};
  function install(){
   if(!document.querySelector('link[data-operating-journey]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/web/journey.css';link.dataset.operatingJourney='';document.head.append(link);}
   if(!document.querySelector('[data-view="journey"]')){
