@@ -60,6 +60,10 @@ Select **Download complete comparison** after saving or reopening. The existing 
 - Full original source members and any attached observed-context source/report family.
 - A member manifest with original byte counts and hashes.
 
+Extract the complete ZIP and open **index.html**. The opening page links the printable comparison and CSV, each original plan, the retained observed-support reports and tables, and all original source files. Every listed member carries its byte count and SHA-256 from the archive's own source descriptors. Keep the directory structure intact when sharing the extracted packet.
+
+The indexed packet is export edition 2. Your saved comparison and original plan IDs stay the same. A new export receives its own edition-specific path, while any already completed export remains available through its original task.
+
 Use the application's full Workspace backup/restore for an editable received project. Reopen **Monitoring design → Saved comparison** in the receiving Workspace. The original comparison verifier reopens the exact retained plans and source/context identities.
 
 Queued preparation and export use the maintained Monitoring request ledger. If an HTTP reply is lost, retry the same operation to recover its original task. Failed or interrupted tasks remain visible in the native task panel for resumption. Unrelated task refreshes preserve the chosen title, baseline and per-plan context choices. Workspace switches keep each workspace's desk state separate.
