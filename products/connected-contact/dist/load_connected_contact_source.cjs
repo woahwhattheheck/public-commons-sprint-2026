@@ -1,0 +1,515 @@
+'use strict';
+const SOURCE_COMMIT="9bf3614333baad0e7b25ea7a7278c8669993dafe";
+const MANIFEST=[
+  {
+    "path": "AGENTS.md",
+    "bytes": 7593,
+    "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
+    "git_blob": "46be323017be913780d0d2850b7658861744508d"
+  },
+  {
+    "path": "commons-publication-policy.cjs",
+    "bytes": 30486,
+    "sha256": "1fd50181976b41e61405a63256b937ab4b546bfc6361e7f0000656ab1fad40aa",
+    "git_blob": "d0f8f80a0bb1fa71fc6da344ee18fef0c995d224"
+  },
+  {
+    "path": "connected_contact_continuation.cjs",
+    "bytes": 8201,
+    "sha256": "6e260b255558a42254e5926526b0b32667bbb864475b1c61b560dfb83fbca09b",
+    "git_blob": "85aac7f428f74fe0de616d70c6bf4b8ae238fe55"
+  },
+  {
+    "path": "connected_contact_operator_bridge.cjs",
+    "bytes": 29150,
+    "sha256": "e1a061aa09007467af40e441400f883393de30d747f631f5ee7a82d75d15130c",
+    "git_blob": "50e2c938f3f3845dfe060d7aaff66af9657196cb"
+  },
+  {
+    "path": "connected_contact_operator_relay.cjs",
+    "bytes": 27809,
+    "sha256": "06b52bf30548b9eff2c7b28fa0971606eab00312e518b8c97b036d8af28588e9",
+    "git_blob": "7c3f693263b834690c29007515a50385f2a836b6"
+  },
+  {
+    "path": "connected_contact_operator.cjs",
+    "bytes": 7603,
+    "sha256": "aafa42d3b8cfd3ed77bf2e2d0f2deff8de2e7b670922bd0a6f8a342ce0757ff0",
+    "git_blob": "7bddd242edb1f03e518d88b9e6e0caa95156eac8"
+  },
+  {
+    "path": "connected_contact_product.cjs",
+    "bytes": 11445,
+    "sha256": "654e48c18372d1c658996e679c451ddfbe9e6ad19c6ca39a9399c30da070825e",
+    "git_blob": "bf68c525337111238142ecbb61ee8e1a9852a03e"
+  },
+  {
+    "path": "FOREGROUND_ORIGINAL_CONTACT.md",
+    "bytes": 13113,
+    "sha256": "195d220ee46b02c9fae6534e4da3e39de284ea3d2a45f886a7dd5d468e58f12e",
+    "git_blob": "31f575b463fd1fc5ee3c6727df36e36ac789f76a"
+  },
+  {
+    "path": "FOREGROUND_PREPARATION_BRIDGE.md",
+    "bytes": 21809,
+    "sha256": "9b2dd2f794ad5020691117161cab79b4b27f53c7c8ae2e546580a32d38d52e0a",
+    "git_blob": "95f8756cd22c3409e91c292c610779b970ac3f20"
+  },
+  {
+    "path": "host/connected_archive_bytes.cjs",
+    "bytes": 5000,
+    "sha256": "34168cfbb40fa945caeed72b89aca5207ad2448c34debe027dd196101b33f3d0",
+    "git_blob": "111b78687c19ea35c5bc5000137099333114949d"
+  },
+  {
+    "path": "host/connected_case_mail.cjs",
+    "bytes": 13773,
+    "sha256": "82e571a56442654cb0e8842a6b3ed48f2eb58211187309f7c57be0683b71d03b",
+    "git_blob": "f9b719df80526efb0d01c3d39f739ce6d8b82ee4"
+  },
+  {
+    "path": "host/connected_contact_adoption_source_checks.cjs",
+    "bytes": 10034,
+    "sha256": "e08e801c5dbbcba2e6152e740dcb8b3ddc2b25381faa18ae89176bf3d6e8c00c",
+    "git_blob": "872e6825c45f60a93dfee61cea2ee5641981a847"
+  },
+  {
+    "path": "host/connected_contact_attachments.cjs",
+    "bytes": 35241,
+    "sha256": "67eb732c0dc172cd52cf66f432b6be4d15a22c07bd1071ba9ba8816bc581ccfd",
+    "git_blob": "5eea86090083901f0005cd8fea5669db15529de7"
+  },
+  {
+    "path": "host/connected_contact_checkpoint_local_source_checks.cjs",
+    "bytes": 9143,
+    "sha256": "7921d5139f6c8cc5f33f5f74057f56ad6309eef8b025b35414a9977279e09320",
+    "git_blob": "d37a86ddcd4f40d650dd10e30b1605aff67245f8"
+  },
+  {
+    "path": "host/connected_contact_draft_intake_source_checks.cjs",
+    "bytes": 4440,
+    "sha256": "59b4c222124c93f15ca84c7039dc6502b9e82dafabec6bb23975be00fe91df73",
+    "git_blob": "206c6dbe731781bc52f19e41178f02a99744f16b"
+  },
+  {
+    "path": "host/connected_contact_factory_local_quota_checks.cjs",
+    "bytes": 6808,
+    "sha256": "c634c4316cf770176b0b43587215286981456bf830e872190e2ca8ae12d4acad",
+    "git_blob": "6a34f8ffc82633ac39d69b870dfcadc710898f8f"
+  },
+  {
+    "path": "host/connected_contact_file_state.cjs",
+    "bytes": 8173,
+    "sha256": "852cc018d63802f37b45ee49fead0c4ad3b1c2ef4f36af4a9ddfc07f621f29fc",
+    "git_blob": "035c721233cdac3ff175c8b8dac5015e1e4b73c0"
+  },
+  {
+    "path": "host/connected_contact_loader_source_checks.cjs",
+    "bytes": 6202,
+    "sha256": "e66e8e42bc55b357561040d2957e7c858b6e37432a19af12a8d0c1d13d99bec0",
+    "git_blob": "23b7220289c31b938564508c04985ed1aab884be"
+  },
+  {
+    "path": "host/connected_contact_local_adoption.cjs",
+    "bytes": 22390,
+    "sha256": "f9a97e3a4cfdc6b5f4373a4eefdf263e7d172bc81b04e216dd8ced531b0ddd9e",
+    "git_blob": "26719c2bde7285bfc7d22469ff153f1cda9a6baf"
+  },
+  {
+    "path": "host/CONNECTED_CONTACT_LOCAL_ADOPTION.md",
+    "bytes": 11169,
+    "sha256": "c201a3a55bd33184a2daf55446c14083338c0ff26aa78d61160f7f87c66c7d8c",
+    "git_blob": "10be49749dc89de45c4978b2b36609b0c7847a89"
+  },
+  {
+    "path": "host/connected_contact_local_state.py",
+    "bytes": 29012,
+    "sha256": "6f40454bc82ef3ea885516cfc427bdf93e04f840014f1936a586b6e48dc06d57",
+    "git_blob": "d88612cf0f2a75cf87e85b8e2197297df8b47670"
+  },
+  {
+    "path": "host/connected_contact_session_adoption_source_checks.cjs",
+    "bytes": 8240,
+    "sha256": "0fe6e2ceb65ead27f7b0451a91c7690d1d5dbc2a095cd095716bcc799fc6b071",
+    "git_blob": "f50e6cf650c86fe4cd902ccc882af18e18d5b31b"
+  },
+  {
+    "path": "host/connected_contact_session_journal_source_checks.cjs",
+    "bytes": 5481,
+    "sha256": "9aaa9ab2e60fb3a56e258111618dde7f6d1f2684bb325015154e6d520d2f6872",
+    "git_blob": "2535c82828910627b845c7f13f0ab115ef69bc0c"
+  },
+  {
+    "path": "host/connected_contact_source_activation.cjs",
+    "bytes": 20230,
+    "sha256": "8409526de285aded82d8fbf3bae03c44a636b8e17cfeeef3d0de7efd65983547",
+    "git_blob": "677ff9d4e12c792a1bb28978a1d46f8037840230"
+  },
+  {
+    "path": "host/connected_delivery_notices.cjs",
+    "bytes": 11081,
+    "sha256": "1d47cf454ae172822ba2c41f55372a9532aed46e8332b3be5c90e375d36660a5",
+    "git_blob": "2458d1cbc71faa9b277942fb5a51405d655f6472"
+  },
+  {
+    "path": "host/connected_first_contact_checkpoint.cjs",
+    "bytes": 224230,
+    "sha256": "a18f666e058380adb68c9f2d1fda7045316112e00dc6efad2772b6b68cc3c154",
+    "git_blob": "409a188600dfadfe36ba128eddb561e586c630be"
+  },
+  {
+    "path": "host/connected_first_contact_continuation.cjs",
+    "bytes": 13818,
+    "sha256": "63bb770ee5edc0c2c4d79cb3552bacf16f7859751c80f80d19a19d8716883ed2",
+    "git_blob": "d81fcb2cf7f3f803f4058f47bbc0b791ba7f498a"
+  },
+  {
+    "path": "host/connected_first_contact_draft.cjs",
+    "bytes": 9633,
+    "sha256": "93598089ebe1920951e5566d99108ec4a31d4dbe15ac1e42f03270487124869d",
+    "git_blob": "a05c40e239d57651d178bfeef0ea985891f26aa3"
+  },
+  {
+    "path": "host/connected_first_contact_original_input.cjs",
+    "bytes": 10648,
+    "sha256": "6cc335e2d2eb8a516869358cb67c48b1bab2c4fb3e176c2c5b4839032d072452",
+    "git_blob": "758ec20c69b8dda922760b9451c94450687f7dcc"
+  },
+  {
+    "path": "host/connected_first_contact_queue_drain.cjs",
+    "bytes": 15713,
+    "sha256": "540028149226501e4e8d4fa3ff4c5d479ad195ebf301aab497b40e783cd5be18",
+    "git_blob": "b50a03ec778d142914cab2c5e8f1aebe76a9e39c"
+  },
+  {
+    "path": "host/connected_first_contact.cjs",
+    "bytes": 367118,
+    "sha256": "3add54f309b4d24a503ff43b78fa535329f184eaf8328125f5874fcd3d317e10",
+    "git_blob": "e21c74de64c59d2748cdb55ba81f7cb0ca1146f0"
+  },
+  {
+    "path": "host/connected_github_app_resources.cjs",
+    "bytes": 28302,
+    "sha256": "529f94839c00e3f278ac5f84c355d42a25799d59fbf60a08ffe0e2b6aa6b1268",
+    "git_blob": "97a97f987edde9dc6cf19569ed9565a04035e58b"
+  },
+  {
+    "path": "host/connected_gmail_messages.cjs",
+    "bytes": 31697,
+    "sha256": "484203f75accb2b460a197ba71535e693027578e873e460f874b33ef6ae35018",
+    "git_blob": "e0eee60a15796925ef3ad1a2177ebb24bc6777f5"
+  },
+  {
+    "path": "host/connected_gmail_raw.cjs",
+    "bytes": 8375,
+    "sha256": "7eaac24e1549b64ad0896bef51abe4b983f2a2bbac19144b3452c39f281b18ed",
+    "git_blob": "1e90079a82e2fb2efb1a4708ce2f95920f25f671"
+  },
+  {
+    "path": "host/connected_gmail_search.cjs",
+    "bytes": 23525,
+    "sha256": "de48c6b45d406d9cda00bf4cfc61d0f327d1e154eead6551f32c0b3f72fc69d1",
+    "git_blob": "834a79dd1f2646681dd7b3df26ee03d2ce0901c5"
+  },
+  {
+    "path": "host/connected_mailbox_admission_local_source_checks.cjs",
+    "bytes": 13781,
+    "sha256": "c135f08f55a19bfeb00b2f08277a09742fb2cf67a4bd301f814e2069f175fb4a",
+    "git_blob": "9c7c41f7fe0224af3faac26cfd3c9a297242ed04"
+  },
+  {
+    "path": "host/connected_mailbox_admission.cjs",
+    "bytes": 151844,
+    "sha256": "f1d7a009f05686067f8a7e1f6c1962b9f729ca7553ef5497dc9b846a9281c715",
+    "git_blob": "fae7457dca0d1bd30be843d88b1e568713c522d4"
+  },
+  {
+    "path": "host/CONNECTED_MAILBOX_LOCAL_STORAGE.md",
+    "bytes": 8343,
+    "sha256": "9231c8715f61881176b275a01edfcc1f496934cce5e0dd7aa599edd5c88c76bd",
+    "git_blob": "6ac6eb0cf7e55a1a70cb21c563e6714e89d04f27"
+  },
+  {
+    "path": "host/connected_mime.cjs",
+    "bytes": 16222,
+    "sha256": "540f2aaf909550bdfe95e6b6adb902b95570ae2b1e42ad06dd381cc54b270ff5",
+    "git_blob": "e79d2929272dfe2662dab608d50966555e2a88b0"
+  },
+  {
+    "path": "host/connected_sha256.cjs",
+    "bytes": 18336,
+    "sha256": "023b01f089168605a6153b9e5f3ccd7a66a0d0487fab3e79522897a1df226cc2",
+    "git_blob": "00ea4654bc52f1025a04e9675e37d8c63cd40905"
+  },
+  {
+    "path": "host/contact_delivery_correction.cjs",
+    "bytes": 34792,
+    "sha256": "43db4cf959ebde54c86069273c9fc57d707d3b7c1dfd7390bca64e4a26289730",
+    "git_blob": "d2d43cf226987d4daacd1d4d99901a31e277d601"
+  },
+  {
+    "path": "host/first_contact_content.cjs",
+    "bytes": 503,
+    "sha256": "72b7332321103439ce371f34a942e4a2c98b53f6a012dad129be25cf06328e2d",
+    "git_blob": "5a6e72a122304deeb3563b3ec941fcb36b7c6cc3"
+  },
+  {
+    "path": "host/first_contact_gateway.cjs",
+    "bytes": 20373,
+    "sha256": "dada7a6921190ec74dfede9b40b857e41e9b8914a626ac2fda30c4d64a52144f",
+    "git_blob": "2e923801fd71d006dfe7ba909ca69e1149f2034e"
+  },
+  {
+    "path": "host/revenue_outbound_intent.cjs",
+    "bytes": 5421,
+    "sha256": "c74723827ccf40ae2c59625602a7add2cb51c4bb7d7fd887abca762bf852f148",
+    "git_blob": "cbefacad14182e8b2b305982e9e3ea7ad1149d01"
+  },
+  {
+    "path": "LICENSE",
+    "bytes": 11358,
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "git_blob": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+  },
+  {
+    "path": "make_source_capsule.cjs",
+    "bytes": 7494,
+    "sha256": "d7a8e5789c28d41f0d7f9ab92a142ceca8f9696e494df3b4c7b48afa11551829",
+    "git_blob": "a874717337cd325e6391033a4b94865643ddd451"
+  },
+  {
+    "path": "ORIGINAL_SAVED_DRAFTS.md",
+    "bytes": 7191,
+    "sha256": "332002840ff84add7e3525eaf98055a4090a6167a016cc6318fb2efa5a3cd9b9",
+    "git_blob": "468d683c94d5723816a4dffc7c924fe131f94672"
+  },
+  {
+    "path": "ORIGINAL_SESSION_JOURNALS.md",
+    "bytes": 6532,
+    "sha256": "610e2e2b3ca99742a67c591f39e598241f1a4eb460a165c10a3c604a40a5fead",
+    "git_blob": "9366e5f8a55ef3b738afa1dcf582a001ee8fc617"
+  },
+  {
+    "path": "PRIVATE_CONFIGURATION.template.json",
+    "bytes": 207,
+    "sha256": "db981cbdaee3fa87ae41cf1f8fb73710509daee4044fa7b2c3af1af1425ecae9",
+    "git_blob": "525aacbf01532d5c565d67a9825fc40263e8ff8e"
+  },
+  {
+    "path": "README.md",
+    "bytes": 17803,
+    "sha256": "3a5f73dab6128a182a4e66b49790f7d27ffeb26dbfc9e98cf442a72ed92cfbf8",
+    "git_blob": "92885b965885383ae7ba065e9ca36ea58e6bcb0a"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/capture/capture_core.cjs",
+    "bytes": 9998,
+    "sha256": "ab7c7ba6411f58f6fb6d15e20685fa3c75c090f3e6fc8bd6c88f7eaf2ce198f6",
+    "git_blob": "5578ceb4e0639df0a054a419a5f851449c050b8c"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/creator_programme_core.cjs",
+    "bytes": 84603,
+    "sha256": "419e8adbab9e26d2bfd061c6356a135f1ed0e59482623a44d19a5da07713a855",
+    "git_blob": "c241e5202e8cbb7f9435339d4f8e488dfcff10e0"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/first_contact_receipt_core.cjs",
+    "bytes": 10985,
+    "sha256": "37bd778a8b3ae5a429123f805363c6b5438a40524c67aa5392b861827131d6cf",
+    "git_blob": "71504f52ff0a06ff3cb4f720c11bba1dff294052"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/gmail_native_messages.cjs",
+    "bytes": 22579,
+    "sha256": "d2c2fe0adf905cfbe3b0230cd091f8fc78b4530957a52759c453d0065b21fe2e",
+    "git_blob": "7941cf97668b39f6934d24ee75c657ccc7f5df43"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_acquisition_intake.cjs",
+    "bytes": 34125,
+    "sha256": "dca0c64caa5ea12c748b30102283f51a7f6a4433f454279ed81b48112c2f4d6a",
+    "git_blob": "488db29602163f1c576029650cfed41f8d08aae8"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_capture_core.cjs",
+    "bytes": 12268,
+    "sha256": "75b949c45a4b848671fd78c7b631794d27691b092549e4259edb017c0474fae2",
+    "git_blob": "240cc83a12349b87fcd7461a8ae14ef9cecaf56e"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_customer_archive_core.cjs",
+    "bytes": 5922,
+    "sha256": "551422229c93505d9eb9afd913424b52ba884fc463b76e1995bc8756219e4d3f",
+    "git_blob": "67844f2219ac56fb908dbf28a6e7e07e36910ba7"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_customer_files.cjs",
+    "bytes": 24808,
+    "sha256": "e42a22b27e7d6cf14d76a4b6782be1ea57b05b7de3d8bead34b25f815d039c04",
+    "git_blob": "e2dfb7c4e6f211acfc343559da12c99d0a222cf7"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_customer_package_retention.cjs",
+    "bytes": 9820,
+    "sha256": "c02e3eb19fdea3ecf7460eb7298b33ba9cb3bc82fb535d36f81137fa0f282c8c",
+    "git_blob": "225567aaab43caf86d8dec3638dbcf948b8e7d49"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_customer_requests.cjs",
+    "bytes": 35457,
+    "sha256": "e93569600867bc3da48d8063b5d62c318472f04cb0d2cc08762ed20d649e6a7f",
+    "git_blob": "eeca9695ba7da268e7496030699515e453099ce5"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_delivery_feedback_core.cjs",
+    "bytes": 25983,
+    "sha256": "5fe5c29b3e17070817468f8ff53731af40acedb9d16600cbd41a312e8c259bd4",
+    "git_blob": "cfffea40870152af569cac8f3cbecf4d5623ba05"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_delivery_portable_gmail.cjs",
+    "bytes": 6888,
+    "sha256": "c6916b212379c34423cc4f06e639e76ee7fd8c903420e7f6bf22ca1e12bc6d26",
+    "git_blob": "9dff912c6cd6db5b80dab1773aeb3199305fb421"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_first_contact_core.cjs",
+    "bytes": 17248,
+    "sha256": "3549900a91fd60091b422a38d5621b511c46d38bfed62039c9cbb7062c616174",
+    "git_blob": "5d49d0384d31ff4b46f0711afe04b2663c98eb2b"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_first_contact_evidence_core.cjs",
+    "bytes": 9390,
+    "sha256": "78da4dcf90dd2c7ac3d530164ec8969f68240abc471cb8f729603c23e5c984d7",
+    "git_blob": "d52197f9652c2dff104a69ab9e578b1049704cfa"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
+    "bytes": 93579,
+    "sha256": "411242b80094267897f25c14f3d28fb58c2e6fd0d9be8769a2782aa9ab0d1099",
+    "git_blob": "cb89d521fd1b8054993d53ef52adc20ed6517b26"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_procurement_core.cjs",
+    "bytes": 30384,
+    "sha256": "96dbb7313928d5dd6dab644647f929230996c23c9ab99da47a63c691235b3d08",
+    "git_blob": "bb7f0e7916ea2e35be1ab056fad0b7149f71f9d6"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_reconciliation_core.cjs",
+    "bytes": 20121,
+    "sha256": "9225050eb8ea3a86fcc02e1845fbe0970473e7ae6bd08a858fb7c806f67562ad",
+    "git_blob": "5b46cc58e2f8a6db66331b984129652566616661"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/lead_source_time.cjs",
+    "bytes": 2263,
+    "sha256": "e1476a0f2a0529ce089a336493ee48cbf73132f5b3025b3cdd7318e45a9aa694",
+    "git_blob": "3a73a5c959241d35e3be1c1337134549b910581d"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/native_delivery_report_core.cjs",
+    "bytes": 31706,
+    "sha256": "242fde56fa8f377b0d1e5e4578f5f0b6ff59084a1d8c041576923619d7e67411",
+    "git_blob": "151d0de993421b6a66c26010019b678a8c10742f"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/native_google_attachment_failure.cjs",
+    "bytes": 2649,
+    "sha256": "6af80879341990038bc92b5d6aaa4e850282742528565652a858fe664d6aef96",
+    "git_blob": "e5853ce57032710e14b99f1ff21c08fe0645b953"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/native_google_groups_failure.cjs",
+    "bytes": 3101,
+    "sha256": "623194587399e889e8fc64bb7e002282218e13af2f7098a36f30bb327324ca8e",
+    "git_blob": "4583ee2df5d80c74c42555d3de7da40fc7319529"
+  },
+  {
+    "path": "tools/revenue_owner_console_20261010/native_google_sending_limit_failure.cjs",
+    "bytes": 2813,
+    "sha256": "7ffc282f16ff5dea27ebdb38b3e2ec8741df457e5b186fae868acd50fe5cedcd",
+    "git_blob": "09127ce3e80d66002273cd4d5e729a7edd43a1be"
+  },
+  {
+    "path": "SOURCE_MANIFEST.json",
+    "bytes": 18267,
+    "sha256": "55fd38e29b349e267073c46ad7b6c18df7150e48a5c6868dc02eed2cfe3ab61b",
+    "git_blob": "ad702ff644051af4cacfec77a389503987be818f"
+  }
+];
+function loadCurrentContactClosure(packet) {
+  if (!packet || packet.schema !== 'commons.connected-contact-required-source-closure.v1' ||
+      packet.repository !== 'woahwhattheheck/public-commons-sprint-2026' || packet.source_commit !== SOURCE_COMMIT ||
+      !Array.isArray(packet.files) || packet.files.length !== MANIFEST.length)
+    throw new TypeError('Receive the complete selected original contact-source closure');
+  const rows=new Map();
+  for(const row of packet.files){
+    if(!row || typeof row.path!=='string' || rows.has(row.path) || typeof row.content!=='string')
+      throw new TypeError('Unique complete repository-relative source bodies required');
+    rows.set(row.path,row);
+  }
+  const sourceMap={};
+  for(const expected of MANIFEST){
+    const row=rows.get(expected.path);
+    if(!row || row.bytes!==expected.bytes || row.sha256!==expected.sha256 || row.git_blob!==expected.git_blob)
+      throw new TypeError('Selected source identity changed: '+expected.path);
+    sourceMap[row.path]=row.content;
+  }
+  // Verify this entire capsule against its independently supplied SHA before
+  // evaluating this receiver. This selected maintained hash module supplies
+  // per-file UTF-8 verification; it does not replace that external identity.
+  const hash={exports:{}};
+  new Function('module','exports',sourceMap['host/connected_sha256.cjs'])(hash,hash.exports);
+  if(typeof hash.exports.sha256Utf8!=='function')throw new TypeError('Original hash export required');
+  for(const expected of MANIFEST){
+    const actual=hash.exports.sha256Utf8(sourceMap[expected.path]);
+    if(actual.bytes!==expected.bytes || actual.sha256!==expected.sha256)
+      throw new TypeError('Complete selected source bytes changed: '+expected.path);
+  }
+  const factory={exports:{}};
+  new Function('module','exports',sourceMap['host/connected_first_contact.cjs'])(factory,factory.exports);
+  const drafts={exports:{}};
+  new Function('module','exports',sourceMap['host/connected_first_contact_draft.cjs'])(drafts,drafts.exports);
+  if(typeof drafts.exports.createConnectedExistingFirstContactDraft!=='function')
+    throw new TypeError('Complete original saved-draft receiver required');
+  const carrier=factory.exports;
+  const selectedFactory=Object.freeze({...carrier,createConnectedFirstContact:options=>
+    options?.input?.native_draft!==undefined
+      ? drafts.exports.createConnectedExistingFirstContactDraft({...options,
+          createConnectedFirstContact:carrier.createConnectedFirstContact})
+      : carrier.createConnectedFirstContact(options)});
+  const keys={
+    hash:'host/connected_sha256.cjs',
+    intent:'host/revenue_outbound_intent.cjs',
+    gateway:'host/first_contact_gateway.cjs',
+    mailboxAdmission:'host/connected_mailbox_admission.cjs',
+    publicationPolicy:'commons-publication-policy.cjs',
+    attachments:'host/connected_contact_attachments.cjs',
+    deliveryCorrection:'host/contact_delivery_correction.cjs',
+    content:'host/first_contact_content.cjs',
+    deliveryNotices:'host/connected_delivery_notices.cjs'
+  };
+  const sources=Object.fromEntries(Object.entries(keys).map(([key,path])=>[key,sourceMap[path]]));
+  const modules=factory.exports.loadOriginalContactModules({
+    ...sources,deliveryNoticeSources:sourceMap
+  });
+  const checkpoint={exports:{}};
+  new Function('module','exports',sourceMap['host/connected_first_contact_checkpoint.cjs'])(checkpoint,checkpoint.exports);
+  if(typeof factory.exports.createConnectedFirstContact!=='function' ||
+      typeof checkpoint.exports.openConnectedContactCheckpoint!=='function' ||
+      typeof checkpoint.exports.readConnectedContactCheckpoint!=='function' ||
+      typeof modules.mailboxAdmission?.createConnectedMailboxAdmission!=='function' ||
+      typeof modules.deliveryNotices?.readDeliveryNotice!=='function' ||
+      typeof modules.deliveryNotices?.deliveryState!=='function')
+    throw new TypeError('Complete original factory, checkpoint, admission and delivery interfaces required');
+  return Object.freeze({
+    repository:packet.repository,sourceCommit:SOURCE_COMMIT,
+    manifest:Object.freeze(MANIFEST.map(row=>Object.freeze({...row}))),
+    factory:selectedFactory,drafts:drafts.exports,modules,checkpoint:checkpoint.exports,
+    sources:Object.freeze(sourceMap)
+  });
+}
+module.exports={loadCurrentContactClosure};
