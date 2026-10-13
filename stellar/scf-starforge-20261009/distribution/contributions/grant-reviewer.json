@@ -24,7 +24,11 @@
     "./grant/operating-plan/cli": "./source/stellar-forge/developer-site/grant-operating-plan.mjs",
     "./grant/issuer-context": "./source/stellar-forge/developer-site/grant-issuer-context.mjs",
     "./grant/issuer-context/source": "./source/stellar-forge/developer-site/dist/grant-issuer-source.mjs",
-    "./grant/issuer-context/core": "./source/stellar-forge/developer-site/dist/grant-issuer-core.mjs"
+    "./grant/issuer-context/core": "./source/stellar-forge/developer-site/dist/grant-issuer-core.mjs",
+    "./grant/companion-editions": "./source/stellar-forge/developer-site/dist/grant-companion-editions.mjs",
+    "./grant/companion-returns": "./source/stellar-forge/developer-site/dist/grant-companion-returns.mjs",
+    "./grant/catalog-review": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/catalog-review.mjs",
+    "./grant/publication-source": "./source/stellar-forge/developer-site/grant-publication-source.mjs"
   },
   "commands": {
     "grant-application": "stellar-forge/developer-site/grant.mjs",
@@ -56,6 +60,8 @@
     "operations/scf-submission-review-round-7108-20261012/README.md",
     "stellar-forge/developer-site/GRANT_ISSUER_CONTEXT.md",
     "stellar-forge/developer-site/GRANT_ISSUER_RECEIVING.mjs",
-    "stellar-forge/developer-site/GRANT_OPERATING_PLANS.md"
+    "stellar-forge/developer-site/GRANT_OPERATING_PLANS.md",
+    "stellar-forge/developer-site/GRANT_CATALOG.md",
+    "stellar-forge/developer-site/GRANT_PUBLIC_READER.md"
   ]
 }
