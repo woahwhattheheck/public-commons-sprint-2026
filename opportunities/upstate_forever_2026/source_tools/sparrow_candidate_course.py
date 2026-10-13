@@ -340,9 +340,9 @@ def operate(workspace_path, prepared, preset_path, output, *, ensemble_id=None,
                         "original_selection": selection, "native_execution": basis["native_execution"],
                         "model_inputs": inputs, "code_sha256": {p: _sha(ROOT / p) for p in CODE_PATHS}}
             identity["id"] = digest(identity)
-            atomic_json(output / "course-input.json", identity, immutable=True)
             if progress.get("course_id") not in (None, identity["id"]):
                 raise ValueError("This output retains another immutable course; select a fresh directory")
+            atomic_json(output / "course-input.json", identity, immutable=True)
             admitted = True
             progress.pop("error", None)
             progress.update(course_id=identity["id"], state="running", phase="original_comparisons")
