@@ -186,6 +186,8 @@ def main():
 
         spatial = operator.spatial_reviews[key]
         catalog = spatial.catalog()
+        frame_size = {"width": min(1200, catalog["limits"]["image_width"]),
+                      "height": min(800, catalog["limits"]["image_height"])}
         layers = catalog["layers"]
         def source_layer(source_id, source_collection_id):
             matches = [item for item in layers
@@ -251,7 +253,7 @@ def main():
         saved = []
         for suffix, title, selected_point, reference, expected, notes in selections:
             frame = spatial.frame({"reference": reference, "mode": "single",
-                                   "size": {"width": 1200, "height": 800}})
+                                   "size": frame_size})
             overlay = spatial.overlay({"selection": selected_point, "view": frame["view"],
                                        "limit": 500, "tolerance": 0})
             assert overlay["returned"] == expected and overlay.get("next_offset") is None, (
@@ -284,7 +286,7 @@ def main():
                                  "bounds": [cx - width * .75, cy - height * .75,
                                             cx + width * .75, cy + height * .75]}
                 frame = spatial.frame({"reference": reference, "mode": "single",
-                                       "view": measured_view, "size": {"width": 1200, "height": 800}})
+                                       "view": measured_view, "size": frame_size})
                 overlay = spatial.overlay({"selection": selected_point, "view": frame["view"],
                                            "limit": 500, "tolerance": 0})
                 assert overlay["returned"] == expected and overlay.get("next_offset") is None
@@ -316,7 +318,7 @@ def main():
             review = workspace._get("spatial-reviews", row["review_id"])
             validation = spatial.validate_saved(review)
             frame = spatial.frame({"reference": review["reference"], "mode": review["mode"],
-                                   "view": review["view"], "size": {"width": 1200, "height": 800}})
+                                   "view": review["view"], "size": frame_size})
             overlay = spatial.overlay({"selection": row["selection"], "view": frame["view"],
                                        "limit": 500, "tolerance": 0})
             assert overlay["returned"] == row["selected_count"] and overlay.get("next_offset") is None
