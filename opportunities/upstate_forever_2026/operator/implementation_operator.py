@@ -29,8 +29,9 @@ ACTIONS = frozenset({
     "implementation.evidence.import", "implementation.evidence.export",
     "implementation.observations.import", "implementation.lab.import", "implementation.briefing.import",
     "implementation.lab.dispatch", "implementation.lab.dispatch-report",
+    "implementation.reconciliation.apply",
 })
-READS = frozenset({"selection-preview", "list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "briefing-catalog", "briefing-preview"})
+READS = frozenset({"selection-preview", "list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "briefing-catalog", "briefing-preview", "reconciliation-conflicts", "reconciliation-preview"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -47,6 +48,7 @@ WRITE_ROUTES = {
     "briefing-import": "implementation.briefing.import",
     "dispatch": "implementation.lab.dispatch",
     "dispatch-report": "implementation.lab.dispatch-report",
+    "reconciliation-apply": "implementation.reconciliation.apply",
 }
 
 
@@ -236,6 +238,8 @@ class ImplementationOperator:
         payload = payload or {}
         if not isinstance(payload, dict):
             raise self.Fault("IMPLEMENTATION_INPUT", "Supply implementation read parameters.")
+        if operation in ("reconciliation-conflicts", "reconciliation-preview"):
+            return self._reconciliation(workspace, payload, operation=operation)
         if operation == "briefing-catalog":
             from model.briefing_implementation import delivery_catalog
             return delivery_catalog(self.operator.ws(workspace))
@@ -1034,6 +1038,66 @@ class ImplementationOperator:
             evidence=descriptor, _downloads=[download],
         )
 
+    def _reconciliation_result(self, workspace, value):
+        """Expose only verified retained files under the original plan bank."""
+        result = dict(value)
+        plan = validate_plan(result["plan"])
+        plan_id = self._id(result.get("plan_id", plan["id"]))
+        if plan_id != plan["id"]:
+            raise ImplementationError("The reconciliation receipt identifies another plan.")
+        store = self.store(workspace)
+        original = store.get(plan_id, plan["revision"])
+        if document_digest(original) != document_digest(plan):
+            raise ImplementationError("The reconciliation's applied native revision changed.")
+        current = store.get(plan_id)
+        result.update(workspace_key=workspace, id=plan_id, plan_id=plan_id,
+                      revision=plan["revision"], current_revision=current["revision"],
+                      current_sha256=document_digest(current))
+        downloads = [self._snapshot_download(workspace, plan)]
+        operation_id = result.get("operation_id")
+        if not isinstance(operation_id, str) or not re.fullmatch(r"[a-f0-9]{64}", operation_id):
+            raise ImplementationError("The reconciliation needs its original operation digest.")
+        bank = store._directory(plan_id) / "reconciliations" / operation_id
+        names = {"resolution.json", "incoming.json", "candidate-plan.json", "applied-plan.json", "receipt.json"}
+        for item in result.get("files", []):
+            if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+                raise ImplementationError("A retained reconciliation file descriptor is invalid.")
+            relative = Path(item["path"])
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ImplementationError("A reconciliation file must remain workspace-relative.")
+            path = store.root / relative
+            if (path.resolve() != path.absolute() or path.parent != bank
+                    or path.name not in names or item.get("name", path.name) != path.name):
+                raise ImplementationError("A reconciliation file leaves its original operation audit.")
+            downloads.append(self._ticket(workspace, path, path.name, item))
+        result["_downloads"] = downloads
+        return result
+
+    def _reconciliation(self, workspace, value, *, operation, actor=""):
+        from model import implementation_reconciliation as reconciliation
+
+        if not isinstance(value, dict):
+            raise ImplementationError("Supply an original returned-plan selection.")
+        store = self.store(workspace)
+        plan_id = self._id(value.get("id", value.get("plan_id")))
+        if operation == "reconciliation-conflicts":
+            result = reconciliation.list_conflicts(store, plan_id)
+        elif operation == "reconciliation-preview":
+            result = reconciliation.preview_reconciliation(
+                store, plan_id, value.get("conflict_id"), choices=value.get("choices"))
+        elif operation == "reconciliation-apply":
+            result = reconciliation.apply_reconciliation(
+                store, plan_id, value.get("conflict_id"),
+                choices=value.get("choices"),
+                expected_operation_id=value.get("expected_operation_id"),
+                expected_revision=self._integer(value.get("expected_revision"), "expected_revision"),
+                actor=actor,
+            )
+            return self._reconciliation_result(workspace, result)
+        else:
+            raise ImplementationError("Choose an original returned-plan review operation.")
+        return dict(result, workspace_key=workspace, plan_id=plan_id)
+
     def invoke(self, task):
         if task["action"] not in ACTIONS:
             raise self.Fault("IMPLEMENTATION_ACTION", "Choose a supported implementation action.")
@@ -1055,7 +1119,8 @@ class ImplementationOperator:
             plan_id = self._id(value.get("plan_id", value.get("id")))
         if (action not in ("implementation.plan.report", "implementation.evidence.export", "implementation.observations.import",
                            "implementation.lab.import", "implementation.lab.dispatch",
-                           "implementation.lab.dispatch-report", "implementation.briefing.import")
+                           "implementation.lab.dispatch-report", "implementation.briefing.import",
+                           "implementation.reconciliation.apply")
                 and (not task.get("attempts") or len(task["attempts"]) > 1)):
             replay = self._replay(store, plan_id, actor)
             if replay is not None:
@@ -1063,6 +1128,8 @@ class ImplementationOperator:
                     workspace, replay, status="reused", reused_completed_output=True,
                 )
         try:
+            if action == "implementation.reconciliation.apply":
+                return self._reconciliation(workspace, value, operation="reconciliation-apply", actor=actor)
             if action == "implementation.plan.create":
                 return self._plan_result(workspace, store.create(document, actor=actor),
                                          status="created")
@@ -1120,7 +1187,11 @@ class ImplementationOperator:
         workspace = task["workspace"]
         if task.get("state") == "complete":
             result = task.get("result", {})
-            if task["action"] == "implementation.lab.dispatch-report":
+            if task["action"] == "implementation.reconciliation.apply":
+                refreshed = self._reconciliation_result(workspace, result)
+                task["result"] = refreshed
+                task["_downloads"] = refreshed["_downloads"]
+            elif task["action"] == "implementation.lab.dispatch-report":
                 refreshed = self._dispatch_report_downloads(workspace, result)
                 task["result"] = refreshed
                 task["_downloads"] = refreshed["_downloads"]

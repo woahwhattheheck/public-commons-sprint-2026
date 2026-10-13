@@ -146,6 +146,7 @@ export function attachScientificReportEditions(host) {
       '<div class="inline-actions"><button type="button" data-scientific-report-action="revise"'+(busy||pending?' disabled':'')+'>Use these studies in another report</button>'+
       '<button type="button" data-scientific-report-action="export"'+(busy||pending?' disabled':'')+'>Prepare complete report ZIP</button>'+
       (typeof host.openStudy==='function'?'<button type="button" data-scientific-report-action="transfer"'+(busy?' disabled':'')+'>Transfer this report and its studies</button>':'')+
+      (typeof host.prepareCustomerReview==='function'?'<button type="button" data-scientific-report-action="review">Prepare customer review</button>':'')+
       '<button type="button" data-scientific-report-action="backup">Back up Workspace with this report</button>'+
       (opened.archive?link(opened.archive.url,'Download report ZIP'):'')+'</div>'+
       '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. Study transfer also includes its ordered source collections and available original editable study history. The Workspace backup keeps the entire project.</p>'+
@@ -270,6 +271,12 @@ export function attachScientificReportEditions(host) {
         throw Error('The completed report differs from the selected original edition.');
       return host.openStudy({workspace_key:ws,roots:[{kind:'scientific-report-editions',id,
         title:result.edition.title,state:'complete'}]});
+    }
+    if(action==='review'&&opened){
+      if(typeof host.prepareCustomerReview!=='function')throw Error('Open the complete application to prepare a customer review.');
+      const original=opened,ws=workspace,turn=generation,ticket=detailGeneration;
+      return host.prepareCustomerReview({workspace_key:ws,edition_id:original.edition.id,
+        isCurrent:()=>valid(ws,turn)&&active&&opened===original&&detailGeneration===ticket});
     }
     if(action==='backup')return host.openBackup();
   }

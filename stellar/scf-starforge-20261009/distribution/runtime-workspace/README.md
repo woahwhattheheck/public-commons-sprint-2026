@@ -356,3 +356,11 @@ browser, headless commands, independent receiving view and model/API contract.
 ## Operation status and retained output
 
 The Operations and Managed releases views expose **Refresh operation status** for each original request. If a native process check is unavailable, that row carries its error while installed runtimes and the rest of the workspace remain accessible. The displayed uncertainty preserves the original phase and source identity. Read [operation observation and recovery](MANAGED_OPERATIONS.md#read-operation-status-when-a-native-probe-is-unavailable) for the nullable activity fields, direct API and CLI reads, retained log states and original recovery controls.
+
+## Customer operating procedures
+
+**Operating procedures** keeps recurring customer work in the original Operating Plan format alongside explicitly selected Runtime source records. Edit instructions and carried files, preserve every saved revision, record a named operator's assessment with actual captured originals, review returned work through the maintained return engine, and export or independently receive the complete procedure history.
+
+The pane and `procedure-state`, `procedure-open`, `procedure-create`, `procedure-save`, `procedure-record`, `procedure-return`, `procedure-decide`, `procedure-apply`, `procedure-receive` and `procedure-export` commands use the existing Runtime workspace. They retain exact requests and compare the current record before changes. Runtime installation, application starts and archive restore remain explicit actions in their original controls.
+
+Read [Runtime operating procedures](RUNTIME_PROCEDURES.md) for complete source selection, browser request recovery, revision and returned-work review, carried files, full JSON/HTML delivery and original CLI request formats.

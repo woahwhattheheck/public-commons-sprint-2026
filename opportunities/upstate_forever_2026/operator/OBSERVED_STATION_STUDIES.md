@@ -118,4 +118,4 @@ The additive installer validates and installs every primary body and companion i
 
 ## Original WBD coordinate context
 
-Import `observations/wbd_station_join_20261013/station-context.sources.json` alongside the three study manifests. All nine choices retain their original site and measurement selections and attach the 184-row source table through the existing `site_tables` selection. Saved CSV, GeoJSON, printable report and portable receiving distinguish exact selected native coordinates from alternative original coordinates. The complete source and executed join are described in `observations/wbd_station_join_20261013/STATION_CONTEXT.md`.
+Import `observations/wbd_station_join_20261013/station-context.sources.json` alongside the three study manifests. All nine choices retain their original site and measurement selections and attach the 197-row source table through the existing `site_tables` selection. Saved CSV, GeoJSON, printable report and portable receiving distinguish exact selected native coordinates from alternative original coordinates. The complete source and executed join are described in `observations/wbd_station_join_20261013/STATION_CONTEXT.md`.

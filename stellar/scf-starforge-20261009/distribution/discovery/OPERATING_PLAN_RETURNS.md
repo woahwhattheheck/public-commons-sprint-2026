@@ -1,5 +1,7 @@
 # Review returned operating procedures
 
+The shared Plan/Return engines support the original Command finder and offline workbook described below, and the existing Runtime workspace's **Operating procedures**. See [Runtime workspace receiving](#runtime-workspace-receiving) for that host's complete-record commands and original request recovery. [Complete files in operating procedures](./OPERATING_PLAN_FILES.md) explains carried bytes and saved editions.
+
 A returned-procedure review brings another operator’s saved work back into the original customer procedure. It retains the complete current and returned histories, finds their last identical saved revision, and compares the work that each operator changed. The reviewed result remains a complete ordinary operating plan.
 
 Open **Returned procedures** from Operating plans. Use this when a receiving team has returned results, corrected instructions, added work or changed its operating order while the original team continued editing. The original Operating plans workspace remains the place to perform detailed procedure editing and record later work.
@@ -37,8 +39,8 @@ If the original procedure advanced during review, choose **Compare with latest s
 | Both added the same step ID differently | Reviews the complete colliding step |
 | One deleted a step that the other edited | Requires a complete-step choice |
 | Registration or command arguments changed | Reviews the complete selection and argument array together |
-| Progress or recorded result changed | Reviews status and recorded result together |
-| One changed the work while the other changed its progress or result | Requires review of the complete step |
+| Progress, recorded result or carried files changed | New reviews compare status, recorded result and complete files together |
+| One changed the work while the other changed its progress, result or files | Requires review of the complete step |
 | The two operating orders changed differently | Requires review of the complete final sequence |
 
 The comparison uses stable step IDs. A registration choice retains its original package, source records and declared runtime groups. Text, arguments and source selections remain complete; the model does not reduce long instructions or retain only a command name.
@@ -282,3 +284,124 @@ Each source plan keeps its original 32 MiB limit. The full review keeps its 128 
 The offline document embeds complete application sources and portable data using escaped JSON. Its original modules load from local Blob URLs. The document's content policy disables network connections, forms and external resource loading. Imported procedure text and file bytes remain data interpreted by the original models. The included guide and review text are rendered as text.
 
 The complete file can contain customer material and attachments from both branches, including work that is not selected for the final procedure. Send it through the same authorized customer handover as the original complete review.
+
+
+## Runtime workspace receiving
+
+This section describes the Runtime host separately from the original Command finder and offline workbook. Runtime stores the complete customer record with its selected source captures, plan history, return reviews and request identities. Use [Runtime operating procedures](../runtime-workspace/RUNTIME_PROCEDURES.md) for its full operating guide.
+
+### Receive returned work in the Runtime browser
+
+Open the customer's original Runtime workspace, choose **Operating procedures**, and select the original procedure.
+
+1. Retain or save any unfinished local editor changes. Read the complete current saved procedure.
+2. Choose the receiving operator's complete Operating Plan JSON or Runtime procedure JSON. The browser reads the plan from a Runtime record's `plan` property. Enter the reviewing operator and useful receiving notes, then prepare its return review.
+3. Open the resulting **Return review** and **Complete original return comparison**. Each changed value shows **Original base**, **Current local value** and **Returned value**.
+4. Set **Reviewed choice** to current, incoming, base or custom. For a custom choice, enter **Custom value (complete JSON)**. Add a **Decision note**, then choose **Save this decision**.
+5. Read every unresolved conflict and final operating order. **Remove explicit decision** restores the engine's original automatic proposal for that key.
+6. Choose **Apply reviewed returned work** when the comparison is ready and the procedure has no unfinished draft or pending request. The saved Runtime record retains the full review, original histories and applied result.
+
+The returned source must be the same original plan or a direct copy with the supported shared history. To receive a complete independent Runtime record, use **Receive this complete original record**; that retains its Runtime-level source captures and request history. Choosing a Runtime file for return comparison selects its plan for that comparison. These are distinct receiving actions.
+
+The procedure record's current SHA accompanies each write. If the current record changed while the review was open, retain the local work and reopen it before preparing a request against the new actual record. A return review retains its original current history; a diverged current plan requires a new comparison. An exact already-applied result, or a later plan containing that complete result, is recognized on replay.
+
+### Retain and resume in the Runtime host
+
+The complete procedure lives in the private Runtime workspace. Its record retains plan history, source captures, returned-work reviews and accepted request history. The browser retains exact pending requests and editor drafts under their original workspace, procedure and editor identity.
+
+**Open retained browser requests** lists the original requests. If a response is lost, choose **Continue retained request** to reconcile the same ID and input. **Download retained request** preserves its complete original body. A request deliberately set aside remains available for later selection through **Select original request for reconciliation**.
+
+If another editor has changed the saved record, **Keep draft and reopen saved record** preserves the local draft while reading the current source. Download drafts or pending requests that need independent preservation. Browser storage failure must be resolved before a request requiring that retained identity is dispatched.
+
+Completed return reviews are immutable. Their results are recomputed from the retained sources, choices and saved completion time when inspected. Later customer work belongs in the original procedure or a new review.
+
+| Runtime export format | Complete contents |
+| --- | --- |
+| `json` | Original Runtime record, plan histories, selected source captures, return reviews and accepted requests |
+| `html` | Readable Runtime handover with its complete editable source |
+| `plan-json` | Original Operating Plan, every saved revision and complete carried files |
+| `plan-html` | Readable selected plan revision and its original-file downloads |
+
+Keep the complete Runtime JSON for independent Runtime receiving. Keep its original plan export when handing work to another application using the plan schema. The pure `renderOperatingPlanReturnHTML` API provides the full comparison, recorded choices and embedded complete review for hosts that need a standalone review handover.
+
+### Installed command workflow
+
+Commands use the existing Runtime workspace and its private record transaction:
+
+~~~sh
+starforge runtime-workspace procedure-state \
+  --workspace /absolute/private/runtime-workspace
+
+starforge runtime-workspace procedure-open \
+  --workspace /absolute/private/runtime-workspace \
+  --procedure-id ORIGINAL_PROCEDURE_ID
+~~~
+
+Read the actual current response to obtain its procedure ID and `recordSha256`. Mutating commands take a complete request JSON file. Generate a new UUID once for each new request, and retain that exact file when reconciling a lost response. The example UUID below illustrates its required shape; replace it with the new request's own retained UUID.
+
+A return request has this shape; the incoming value is the complete Operating Plan object:
+
+~~~json
+{
+  "requestId": "2b0c4117-b773-4b9b-a7c0-57790c251646",
+  "procedureId": "ORIGINAL_PROCEDURE_ID",
+  "expectedSha256": "ACTUAL_CURRENT_RECORD_SHA256",
+  "incoming": { "schema": "stellar-forge.operating-plan.v1", "...": "complete original plan" },
+  "reviewer": "Customer operations",
+  "notes": "Continue the original reporting period."
+}
+~~~
+
+The displayed incoming value above is a shape illustration. Put every actual plan field and saved revision in the request. When the supplied file is a Runtime record, select its complete `plan` object rather than passing the Runtime wrapper as `incoming`.
+
+~~~sh
+starforge runtime-workspace procedure-return \
+  --workspace /absolute/private/runtime-workspace \
+  --request /absolute/private/return-request.json
+~~~
+
+Read the returned complete record and actual review comparison. A decision request contains `requestId`, `procedureId`, the latest `expectedSha256`, original `reviewId`, actual comparison `key`, and `decision`. A decision is `{ "take": "incoming", "note": "Use the returned correction." }`, or another displayed choice. Custom decisions additionally contain their full JSON `value`. Set `decision` to null to remove an explicit choice.
+
+~~~sh
+starforge runtime-workspace procedure-decide \
+  --workspace /absolute/private/runtime-workspace \
+  --request /absolute/private/decision-request.json
+~~~
+
+Prepare an apply request containing `requestId`, `procedureId`, latest `expectedSha256` and the retained `reviewId`. Every comparison issue must be resolved before application.
+
+~~~sh
+starforge runtime-workspace procedure-apply \
+  --workspace /absolute/private/runtime-workspace \
+  --request /absolute/private/apply-request.json
+
+starforge runtime-workspace procedure-export \
+  --workspace /absolute/private/runtime-workspace \
+  --procedure-id ORIGINAL_PROCEDURE_ID \
+  --format json \
+  --output /absolute/private/completed-runtime-procedure.json
+
+starforge runtime-workspace procedure-export \
+  --workspace /absolute/private/runtime-workspace \
+  --procedure-id ORIGINAL_PROCEDURE_ID \
+  --format plan-html \
+  --output /absolute/private/reviewed-operating-plan.html
+~~~
+
+To export one original recorded review with both source histories and all original file downloads, select its actual review ID:
+
+~~~sh
+starforge runtime-workspace procedure-export \
+  --workspace /absolute/private/runtime-workspace \
+  --procedure-id ORIGINAL_PROCEDURE_ID \
+  --review-id ORIGINAL_REVIEW_ID \
+  --format html \
+  --output /absolute/private/complete-return-review.html
+~~~
+
+On the receiving Runtime workspace, `procedure-receive` accepts a request containing `requestId` and `document`, where document is the full exported Runtime record. Use its existing workspace identity and original request file for replay. This receiving records the complete original procedure and history; ordinary runtime operations remain explicit.
+
+Plan inputs are limited to 32 MiB each and complete return reviews to 128 MiB. The Runtime record limit is 256 MiB and its request envelope 257 MiB. Strict original-file validation also applies to every carried file. Complete outputs use the installed command's original atomic file writer.
+
+
+New reviews record `reportingVersion: 2`, grouping status, recorded result and complete carried files. Previously saved unversioned reviews keep their compatible original interpretation and completed result; keep the original document's version field. The typed Plan/Return APIs are the same in all these hosts.

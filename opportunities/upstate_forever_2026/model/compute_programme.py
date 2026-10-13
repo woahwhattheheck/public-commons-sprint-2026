@@ -16,7 +16,7 @@ from .common import (INVEST_VERSION, ROLES, SOURCE_IDS, atomic_bytes, atomic_jso
                      now, read_json, verify_file)
 from .profiles import checked_parameters, scenario_spec
 from . import common as scientific_common
-from .native_execution import storage_exhausted
+from .native_execution import process_interrupted, storage_exhausted
 
 SELECTION_SCHEMA = "upstate.compute-programme-selection/v1"
 PROGRAMME_SCHEMA = "upstate.compute-programme/v1"
@@ -1094,7 +1094,7 @@ class ComputeProgrammes:
                         attempt.update(state="complete", completed_at=now(), reused=reused)
                     except Exception as exc:
                         attempt.update(state="failed", completed_at=now(), error=_error(exc))
-                        if storage_exhausted(exc):
+                        if storage_exhausted(exc) or process_interrupted(exc):
                             raise
                     self._write_state(key, state)
                 if state["state"] != "paused":
@@ -1128,7 +1128,7 @@ class ComputeProgrammes:
                             except Exception as exc:
                                 state["comparisons"].pop(name, None)
                                 state["comparison_errors"][name] = _error(exc)
-                                if storage_exhausted(exc):
+                                if storage_exhausted(exc) or process_interrupted(exc):
                                     raise
                             self._write_state(key, state)
                 if state["state"] != "paused":
@@ -1146,7 +1146,8 @@ class ComputeProgrammes:
                                       completed_at=(state.get("completed_at") or now()) if terminal == "complete" else None)
                 self.report(key, _locked=True)
             except BaseException as exc:
-                terminal = "interrupted" if isinstance(exc, (KeyboardInterrupt, SystemExit)) else "failed"
+                interrupted = isinstance(exc, (KeyboardInterrupt, SystemExit)) or process_interrupted(exc)
+                terminal = "interrupted" if interrupted else "failed"
                 current = state.get("current_run")
                 if current and state["attempts"].get(current) and state["attempts"][current][-1]["state"] == "running":
                     state["attempts"][current][-1].update(state=terminal, completed_at=now(), error=_error(exc))
@@ -1156,7 +1157,7 @@ class ComputeProgrammes:
                 except OSError:
                     if not capacity_failure:
                         raise
-                if not capacity_failure and not isinstance(exc, (KeyboardInterrupt, SystemExit)):
+                if not capacity_failure and not interrupted:
                     try:
                         self.report(key, _locked=True)
                     except Exception as report_error:

@@ -1,0 +1,44 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grant-source-tables",
+  "description": "Complete source-table authoring, editable saved-plan workbook handovers and native returned-workbook receiving",
+  "supportFiles": [
+    "stellar/scf_2026/sf47_budget_model/workspace/source_tables.py",
+    "stellar/scf_2026/sf47_budget_model/workspace/source-tables-core.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/source-tables.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/source-tables.css",
+    "stellar/scf_2026/sf47_budget_model/workspace/source-tables-cli.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/SOURCE_TABLES.md",
+    "stellar-forge/developer-site/dist/source-table-workspace.mjs",
+    "stellar-forge/developer-site/dist/onboarding.mjs",
+    "stellar-forge/developer-site/dist/offer.mjs",
+    "stellar-forge/developer-site/dist/grant-plan-core.mjs",
+    "stellar-forge/developer-site/dist/grant-plan-source.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/source_workbooks.py",
+    "stellar/scf_2026/sf47_budget_model/workspace/source-workbooks.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/current-budget.workbook.mapping.json",
+    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/receive-current-budget-workbook.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook/reader.py",
+    "stellar/scf_2026/sf47_budget_model/workspace/source-workbook-export.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/WORKBOOK_HANDOVER.md",
+    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/workbook-export.profile.json",
+    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/workbook-return.profile.json",
+    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/receive-current-budget-workbook-handover.mjs",
+    "stellar-forge/developer-site/dist/source-document-tables.mjs",
+    "stellar-forge/developer-site/dist/source-table-intake.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/receive-current-budget.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/current-reader-budget.csv",
+    "stellar/scf_2026/sf47_budget_model/workspace/examples/source-tables/current-reader-budget.binding.json"
+  ],
+  "commands": {
+    "grant-source-tables": "stellar/scf_2026/sf47_budget_model/workspace/source-tables-cli.mjs"
+  },
+  "commandDescriptions": {
+    "grant-source-tables": "Author and review original source tables, export editable saved-plan workbooks and receive their complete native revisions"
+  },
+  "exports": {
+    "./grant-source-tables": "./source/stellar/scf_2026/sf47_budget_model/workspace/source-tables-core.mjs",
+    "./grant-source-workbooks": "./source/stellar/scf_2026/sf47_budget_model/workspace/source-workbooks.mjs",
+    "./grant-source-workbook-export": "./source/stellar/scf_2026/sf47_budget_model/workspace/source-workbook-export.mjs"
+  }
+}
