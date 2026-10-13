@@ -15,6 +15,7 @@ import {admitGeographicCourse,operateGeographicCourse,selectGeographicReceivingE
 import {operateGeographicAllocation} from './geographic_allocation_browser.mjs';
 import {operateGeographicProgramme} from './geographic_programme_browser.mjs';
 import {admitMatchedControlChapter,operateMatchedControl} from './multivariate_control_browser.mjs';
+import {operateDeliveryPreparation} from '../operator/delivery_preparation_receiving.mjs';
 
 // Current direction .4 renews the full delivery. A caller may request its own deadline.
 let CUTOFF=Infinity;
@@ -45,10 +46,11 @@ async function main(argv){
  try{
   check();requireValue(argv.length===1&&isAbsolute(argv[0]),'Pass one absolute path to the complete receiving input JSON');
   const settings=await readJSON(argv[0]);
-  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action','cutoff','multivariate_control'];
+  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action','cutoff','multivariate_control','delivery_preparation'];
   requireValue(settings.schema===INPUT&&Object.keys(settings).every(k=>allowed.includes(k)),'Select the complete geographic browser input');
   safeId(settings.operation_id);
   const matchedControl=await admitMatchedControlChapter(settings.multivariate_control,{requireValue});
+  if(settings.delivery_preparation!==undefined)requireValue(typeof settings.delivery_preparation==='boolean','Choose an explicit saved preparation continuation');
   if(settings.cutoff!==undefined){requireValue(typeof settings.cutoff==='string'&&/T.*(?:Z|[+-]\d{2}:\d{2})$/.test(settings.cutoff)&&Number.isFinite(Date.parse(settings.cutoff)),'Use a complete caller-requested cutoff timestamp with timezone');CUTOFF=Date.parse(settings.cutoff);}
   check();
   if(settings.programme_action!==undefined)requireValue(['inspect','adopt_completed'].includes(settings.programme_action),'Choose inspect or adopt_completed for the original Programme');
@@ -123,7 +125,9 @@ async function main(argv){
   progress=await exists(progressPath)?await readJSON(progressPath):{schema:RESULT,binding,attempts:[],created_at:now()};
   requireValue(progress.schema===RESULT&&equal(progress.binding,binding),'This browser output belongs to a different original case');
   const id=now().replace(/[^0-9]/g,'')+'-'+randomUUID().slice(0,8);
-  attempt={id,started_at:now(),state:'running',actions:[],files:[],opened:[],errors:[]};progress.attempts.push(attempt);
+  attempt={id,started_at:now(),state:'running',actions:[],files:[],opened:[],errors:[]};
+  if(settings.delivery_preparation===true)attempt.delivery_preparation_selected=true;
+  progress.attempts.push(attempt);
   const attemptRoot=join(output,'attempts',id);for(const part of ['media','downloads','records','private'])await fs.mkdir(join(attemptRoot,part),{recursive:true,mode:0o700});
   checkpoint=async()=>{progress.updated_at=now();await atomic(progressPath,progress);};await checkpoint();
   if(Number.isFinite(CUTOFF)){const arm=()=>{const remaining=CUTOFF-Date.now();if(remaining<=0)stop();else timer=setTimeout(arm,Math.min(2147483647,remaining));};arm();}
@@ -134,7 +138,9 @@ async function main(argv){
   await fs.access(settings.executable,fsConstants.X_OK);
   const imported=await import(pathToFileURL(settings.playwright_module).href),chromium=imported.chromium||imported.default?.chromium;
   requireValue(chromium?.launchPersistentContext,'Use the installed Playwright Chromium module');
-  context=await chromium.launchPersistentContext(join(attemptRoot,'private','profile'),{
+  const browserProfile=settings.delivery_preparation===true?join(output,'private','delivery-preparation-profile'):join(attemptRoot,'private','profile');
+  if(settings.delivery_preparation===true)await fs.mkdir(join(output,'private'),{recursive:true,mode:0o700});
+  context=await chromium.launchPersistentContext(browserProfile,{
    executablePath:settings.executable,headless:true,acceptDownloads:true,viewport:{width:1440,height:1000}});
   context.setDefaultTimeout(30000);context.setDefaultNavigationTimeout(60000);
   const page=context.pages()[0]||await context.newPage();
@@ -447,6 +453,24 @@ async function main(argv){
   await page.reload({waitUntil:'domcontentloaded'});await navigate('geographic-headwaters');
   await waitFor(async()=>await page.locator('[data-geo-case="'+prepared.id+'"]').count()>0,'same case after actual reload');
   await click('[data-geo-case="'+prepared.id+'"]');await screenshot(page,'geographic-reopened',1440);await screenshot(page,'geographic-reopened',390);
+  if(settings.delivery_preparation===true){
+   async function preparationRequest({method,path,body,query}){
+    check();const target=new URL(path,operatorURL);
+    requireValue(target.origin===operatorURL.origin,'Use the original authenticated operator');
+    if(query)target.search=new URLSearchParams(query).toString();
+    const headers={Authorization:'Bearer '+token,'X-Workspace':connection.workspace_key,Origin:operatorURL.origin};
+    const response=method==='GET'?await context.request.get(target.href,{headers}):await context.request.post(target.href,{headers,data:body});
+    const value=await response.json();
+    requireValue(response.ok(),'The saved preparation operation failed: '+path+' HTTP '+response.status()+' '+(value.error?.message||''));
+    return value;
+   }
+   const preparationResult=await operateDeliveryPreparation({
+    page,workspaceKey:connection.workspace_key,projectId:project.id,deliveryId:record.delivery_id,
+    operationId:settings.operation_id,directory:join(output,'delivery-preparation'),
+    request:preparationRequest,screenshot,download,waitFor,check});
+   await saveRecord('delivery-preparation-browser',preparationResult);
+   action('delivery_preparation_complete',{preparation_id:preparationResult.preparation_id,revision:preparationResult.revision,delivery_id:preparationResult.delivery_id,original_build_operation_id:preparationResult.build_operation_id});
+  }
   await saveRecord('browser-errors',pageErrors);
   requireValue(!pageErrors.length,'An actual outgoing page raised a browser error; inspect retained diagnostics');
   attempt.state='browser_completed';attempt.completed_at=now();attempt.elapsed_seconds=(Date.parse(attempt.completed_at)-Date.parse(attempt.started_at))/1000;
