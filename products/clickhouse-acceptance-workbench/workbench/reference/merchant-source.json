@@ -1,0 +1,28 @@
+{
+  "schema": "stellar-forge.clickhouse-source.v1",
+  "endpointEnv": "CLICKHOUSE_MERCHANT_URL",
+  "userEnv": "CLICKHOUSE_MERCHANT_USER",
+  "passwordEnv": "CLICKHOUSE_MERCHANT_PASSWORD",
+  "database": "starforge_example",
+  "maxInFlight": 8,
+  "maxThreads": 2,
+  "maxMemoryBytes": 268435456,
+  "maxRowsToRead": 1000000,
+  "maxBytesToRead": 67108864,
+  "queries": {
+    "transfers": {
+      "sql": "SELECT record_id, ledger, account, amount, memo, successful, observed_at FROM transfers WHERE (ledger > $after_ledger OR (ledger = $after_ledger AND record_id > toUInt64($after_record_id))) AND account = $account AND amount >= $minimum_amount ORDER BY ledger, record_id",
+      "parameters": {
+        "after_ledger": { "type": "integer", "minimum": "0", "default": "0" },
+        "after_record_id": { "type": "decimal", "precision": 20, "scale": 0, "minimum": "0", "maximum": "18446744073709551615", "default": "0" },
+        "account": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "minimum_amount": { "type": "decimal", "precision": 38, "scale": 7, "minimum": "0", "default": "0" }
+      },
+      "columns": ["record_id", "ledger", "account", "amount", "memo", "successful", "observed_at"],
+      "maxRows": 100,
+      "maxBytes": 524288,
+      "timeoutMs": 3000,
+      "probe": { "account": "merchant-demo" }
+    }
+  }
+}
