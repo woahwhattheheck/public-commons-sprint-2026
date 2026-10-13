@@ -52,15 +52,18 @@ function sourceHistogram(body,entry,area) {
   same(bytes.length,original.bytes,"Original class-area byte count");
   same(digest(bytes),original.sha256,"Original class-area identity");
   const lines=codec.utf8Decode(bytes).trimEnd().split(/\r?\n/);
-  same(lines.shift(),"class_code,cells,area_ha,scope","Original class-area columns");
+  const header=lines.shift(),scoped=header==="class_code,cells,area_ha,scope";
+  if(!scoped && header!=="class_code,cells,area_m2,area_ha")
+    throw Error("Original class-area columns differ from the supported native source schemas");
   const result=new Map();
   for(const line of lines){
     const fields=line.split(",");
     if(fields.length!==4)throw Error("Original class-area row has changed columns");
-    const code=Number(fields[0]),cells=Number(fields[1]),hectares=Number(fields[2]);
+    const code=Number(fields[0]),cells=Number(fields[1]),hectares=Number(fields[scoped?2:3]);
     if(!CODES.includes(code)||result.has(code))throw Error("Unexpected/repeated original class-area code");
     integer(cells,"Original class count");near(hectares,cells*area/10000,"Original class hectares");
-    same(fields[3],"rectangular_native_source_grid","Original class-area scope");
+    if(scoped)same(fields[3],"rectangular_native_source_grid","Original class-area scope");
+    else near(Number(fields[2]),cells*area,"Original class square metres");
     result.set(code,cells);
   }
   same([...result.values()].reduce((a,b)=>a+b,0)+entry.metadata.nodata_cells,entry.metadata.cell_count,"Original class-area total");
