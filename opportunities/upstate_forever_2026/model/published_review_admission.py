@@ -6,9 +6,12 @@ retaining the original source and import lineage for later selected-Study export
 """
 from __future__ import annotations
 
+from collections import OrderedDict
 from copy import deepcopy
+import json
+import threading
 
-from .common import atomic_json, describe_file, digest, file_digest, held, identifier, now, read_json, verify_file
+from .common import atomic_json, canonical, describe_file, digest, file_digest, held, identifier, now, read_json, verify_file
 
 DIRECTORY = "published-review-admissions"
 SCHEMA = "upstate.published-review-admission/v1"
@@ -212,7 +215,115 @@ def get(workspace, key):
     return {**receipt, "interpretation_matches_snapshot": local["interpretation_matches_snapshot"]}
 
 
-def list_admissions(workspace, *, study_id=None, source=None, binding=None):
+# A listing may reuse prior retained-admission validation only while every
+# original dependency has the same ordinary-file identity. Full get/capture
+# paths below never use this cache. Budgets bound memory, not valid admissions.
+_LISTING_FIELDS = (
+    "id", "created_at", "title", "source_project_id", "original_source",
+    "review_id", "binding", "selection", "native",
+)
+_LISTING_MAX_ENTRIES = 128
+_LISTING_MAX_BYTES = 8 * 1024 * 1024
+_listing_entries = OrderedDict()
+_listing_bytes = 0
+_listing_lock = threading.RLock()
+
+
+def _listing_identity(root, relative):
+    from .study_transfer import _identity, _member
+    return _identity(_member(root, relative))
+
+
+def _listing_document(root, relative, dependencies):
+    from .study_transfer import _member
+    before = _listing_identity(root, relative)
+    if relative in dependencies and dependencies[relative] != before:
+        raise ValueError("The original admission changed during metadata reading: " + relative)
+    value = read_json(_member(root, relative))
+    if _listing_identity(root, relative) != before:
+        raise ValueError("The original admission changed during metadata reading: " + relative)
+    dependencies[relative] = before
+    return value
+
+
+def _listing_unchanged(root, dependencies):
+    return all(_listing_identity(root, name) == tuple(expected)
+               for name, expected in dependencies.items())
+
+
+def _listing_dependencies(workspace, key):
+    """Snapshot every raw dependency used by the original _retained reader."""
+    root = workspace.root.resolve()
+    dependencies = {}
+    receipt_path = DIRECTORY + "/" + identifier(key) + "/receipt.json"
+    receipt = _listing_document(root, receipt_path, dependencies)
+    source = receipt["identity"]["source"]
+    collection_id = identifier(source["source_collection_id"])
+    collection = _listing_document(root, "sources/" + collection_id + ".json", dependencies)
+    entries = [row for row in collection["entries"] if row["id"] == source["source_id"]]
+    _require(len(entries) == 1, "The admission needs its original captured source")
+    entry = entries[0]
+    paths = [row["path"] for row in receipt["files"].values()]
+    paths.extend(row["object"] for row in [entry["body"], *entry.get("companions", [])])
+    for relative in paths:
+        current = _listing_identity(root, relative)
+        if relative in dependencies and dependencies[relative] != current:
+            raise ValueError("The original admission changed during metadata reading: " + relative)
+        dependencies[relative] = current
+    _require(_listing_unchanged(root, dependencies),
+             "The original admission changed before metadata validation")
+    return dependencies
+
+
+def _listing_projection(workspace, key):
+    global _listing_bytes
+    root = workspace.root.resolve()
+    cache_key = (str(root), workspace.project["id"], identifier(key))
+    with _listing_lock:
+        encoded = _listing_entries.get(cache_key)
+    if encoded is not None:
+        cached = json.loads(encoded)
+        try:
+            unchanged = _listing_unchanged(root, cached["dependencies"])
+        except (OSError, ValueError):
+            unchanged = False
+        if unchanged:
+            with _listing_lock:
+                if _listing_entries.get(cache_key) is encoded:
+                    _listing_entries.move_to_end(cache_key)
+            return cached["summary"]
+        with _listing_lock:
+            removed = _listing_entries.pop(cache_key, None)
+            if removed is not None:
+                _listing_bytes -= len(removed)
+    dependencies = _listing_dependencies(workspace, key)
+    value = _retained(workspace, key)
+    _require(_listing_unchanged(root, dependencies),
+             "The original admission changed during full listing validation")
+    summary = {name: deepcopy(value[name]) for name in _LISTING_FIELDS}
+    encoded = canonical({"dependencies": dependencies, "summary": summary})
+    # Cache only canonical bytes: caller edits never change the retained value.
+    # A large valid projection simply uses its original uncached read.
+    with _listing_lock:
+        removed = _listing_entries.pop(cache_key, None)
+        if removed is not None:
+            _listing_bytes -= len(removed)
+        if _LISTING_MAX_ENTRIES and len(encoded) <= _LISTING_MAX_BYTES:
+            while _listing_entries and (
+                    len(_listing_entries) >= _LISTING_MAX_ENTRIES
+                    or _listing_bytes + len(encoded) > _LISTING_MAX_BYTES):
+                _, removed = _listing_entries.popitem(last=False)
+                _listing_bytes -= len(removed)
+            _listing_entries[cache_key] = encoded
+            _listing_bytes += len(encoded)
+    return summary
+
+
+def list_admissions(workspace, *, study_id=None, source=None, binding=None,
+                    sources=None, metadata_only=False):
+    """List exact admissions; opt-in UI metadata may reuse stable validation."""
+    if type(metadata_only) is not bool:
+        raise ValueError("Choose an explicit metadata listing mode")
     rows = []
     for path in sorted((workspace.root / DIRECTORY).glob("*/receipt.json")):
         receipt = read_json(path)
@@ -221,12 +332,15 @@ def list_admissions(workspace, *, study_id=None, source=None, binding=None):
             continue
         if source is not None and identity.get("source") != source:
             continue
+        if sources is not None and identity.get("source") not in sources:
+            continue
         if binding is not None and receipt.get("binding") != binding:
             continue
-        value = _retained(workspace, path.parent.name)
-        rows.append({name: deepcopy(value[name]) for name in (
-            "id", "created_at", "title", "source_project_id", "original_source",
-            "review_id", "binding", "selection", "native")})
+        if metadata_only:
+            value = _listing_projection(workspace, path.parent.name)
+        else:
+            value = _retained(workspace, path.parent.name)
+        rows.append({name: deepcopy(value[name]) for name in _LISTING_FIELDS})
     return rows
 
 
