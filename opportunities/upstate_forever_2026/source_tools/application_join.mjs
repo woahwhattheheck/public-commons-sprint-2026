@@ -177,11 +177,11 @@ function readSourceLayer(input, {label = "source", expectedPayloadSha256 = null}
     const trimmed = value.trim();
     if (trimmed.startsWith("{")) { document = transportJSON(value); raw = utf8Encode(value); }
     else {
-      const blocks = [...value.matchAll(/~~~json\s*([\s\S]*?)~~~/g), ...value.matchAll(/```json\s*([\s\S]*?)```/g)];
+      const blocks = [...value.matchAll(/^[ \t]*~~~json[ \t]*\r?\n([\s\S]*?)^[ \t]*~~~[ \t]*(?:\r?\n|$)/gm), ...value.matchAll(/^[ \t]*```json[ \t]*\r?\n([\s\S]*?)^[ \t]*```[ \t]*(?:\r?\n|$)/gm)];
       const documents = blocks.map(m => transportJSON(m[1]));
       const parts = documents.filter(d => d.schema === "upstate.application-source-part/v1");
       const transport = documents.filter(d => d.schema === "upstate.application-source-transport/v1");
-      const plainParts = [...value.matchAll(/```base64\s*([\s\S]*?)```/g)];
+      const plainParts = [...value.matchAll(/^[ \t]*```base64[ \t]*\r?\n([\s\S]*?)^[ \t]*```[ \t]*(?:\r?\n|$)/gm)];
       if (!documents.length && plainParts.length) {
         raw = fromBase64(plainParts.map(m => m[1].replace(/\s/g, "")).join(""));
         document = transportJSON(utf8Decode(raw));
