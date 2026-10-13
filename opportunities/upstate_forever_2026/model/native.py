@@ -16,6 +16,7 @@ from .reuse import native_companions, registry_snapshot, verify_stage
 from .stage_cache import runtime_environment, signature, recover, register, execution_slot
 from .native_arguments import build_native_arguments
 from .native_execution import NativeExecution
+from .verified_files import verified_operation
 from .native_stats import bounded_raster_statistics
 
 
@@ -41,6 +42,7 @@ def runtime(selection=None):
     return {name: loaded[name] for name in active}, source
 
 
+@verified_operation
 def execute_run(workspace, key, *, reuse_source_run_ids=None):
     directory = workspace.root / "runs" / key
     with held(directory / ".run.lock", blocking=False):
