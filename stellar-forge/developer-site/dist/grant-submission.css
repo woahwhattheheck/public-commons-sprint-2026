@@ -11,3 +11,12 @@
 
 /* Keep complete native planning values inside their available editor column. */
 .editor label.field,.editor .grid>*{min-width:0;max-width:100%}.editor label.field>select{display:block;min-width:0;width:100%}.editor .row>button,.editor .row>a{max-width:100%;overflow-wrap:anywhere}.plan-source-caption,.plan-revision-note{overflow-wrap:anywhere}.plan-scroll{max-width:100%}
+
+/* Unfinished preparation uses the original neutral application surface. */
+.working-recovery{border:1px solid #aaa;background:#fafafa;padding:.8rem 1rem;margin:0 0 1rem}
+.working-recovery p{margin:.3rem 0 .65rem;overflow-wrap:anywhere}
+.working-recovery .toolbar-row{gap:.5rem;flex-wrap:wrap}
+.working-copy-row{border-top:1px solid #ccc;padding:.8rem 0}
+.working-copy-row h4{overflow-wrap:anywhere;margin:.3rem 0}
+@media(max-width:690px){.working-recovery{padding:.75rem}.working-recovery button{flex:1 1 160px;white-space:normal}}
+@media print{.working-recovery{display:none!important}}
