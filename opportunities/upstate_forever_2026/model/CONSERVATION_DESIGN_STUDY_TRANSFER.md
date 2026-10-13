@@ -1,13 +1,13 @@
 # Keep saved Scenario design history in a selected study
 
-A selected Conservation transfer carries the original Scenario design projects bound to the selected local portfolio. Reopening the received Workspace preserves each original editor UUID, the current saved alternatives, the original baseline and every revision through the captured save.
+A selected Conservation transfer carries the original Scenario design projects bound to the selected local portfolio. Each captured editor reference also carries its required original native preparation packet, so the normal editor reopen path works when optional related-result discovery is disabled. Reopening the received Workspace preserves each original editor UUID, the current saved alternatives, the original baseline and every revision through the captured save.
 
 This extends the existing Study transfer and Workspace receiving workflow. The original editor Store remains the only project store. The whole-Workspace archive continues to use its existing online SQLite backup.
 
 ## Operator course
 
 1. In Scenario design, save the current alternative in the original embedded editor. Wait for its saved revision.
-2. Open Study transfer, choose the original Conservation portfolio, review the dependency closure, and export the selected study. A Scientific Report rooted in the same local portfolio may reach that portfolio through the existing report dependency closure.
+2. Open Study transfer, choose the original Conservation portfolio, review the dependency closure, and export the selected study. **Include related results** controls discovery of other saved results; required parent packets for the captured editor projects travel with their history. A Scientific Report rooted in the same local portfolio may reach that portfolio through the existing report dependency closure.
 3. Download the completed original study archive and receive it through Workspace restore.
 4. Open the received Conservation portfolio and its original Scenario design preparation. The embedded editor reopens the same project UUID and captured current revision. Saved alternatives and revision history remain available.
 5. Continue editing normally. New valid saves extend the original history; receiving verification continues to check the frozen captured prefix.
@@ -58,9 +58,11 @@ workspace/conservation-design/editor/projects.sqlite
 
 The staged database has already been closed and converted to a self-contained journal. Re-snapshotting it would change the exact bytes named by the history receipt. Existing portable handling preserves this exact frozen member and verifies it against the archive inventory. No WAL, SHM or rollback-journal sidecar is delivered.
 
+The original related-result resolver retains native Design preparation and receiving continuations when that option is enabled. Independently, every captured editor preparation reference retains its own required original native parent packet. The adapter validates the parent's schema, selection digest, Workspace/project/plan/study identities, original geometry role and binding; it then checks the original project baseline and binding and copies the exact preparation JSON plus all declared files, including the editable ZIP. These verified members join the existing snapshot inventory. This keeps the normal `open_preparation()` path complete even with optional related results disabled, without discovering unrelated scenarios or runs.
+
 The original live database is not an ordinary closure file. Do not stage the whole live editor directory or add it to a closure tree before capture. The adapter rejects an existing staged database rather than mixing an entire Store with the selected subset.
 
-The complete guarded core proposal accompanies this source family. It targets the original source blob `c96a591e8ccc0b0ee02c397bf471426acbe89067` and includes a complete postimage; the original core owner composes those eight narrow joins onto any newer source.
+The complete guarded core proposal accompanies this source family. Its eight narrow joins were composed by the original ES26 shared-core owner onto the current Receptor, Review, Chemistry and Implementation source. The complete owner bank is `page_c590ce6891248191b1bd32f96a11b7f6`; its original reviewed helper is 22,082 bytes with SHA256 `45f22cfb4dd240b3eafa2707d1ab545eda38ef50da7c01acc59decc513fa67d6`. Subsequent shared-core updates must preserve those existing peer hooks and the same frozen-database contract.
 
 ## Snapshot and concurrency behavior
 
