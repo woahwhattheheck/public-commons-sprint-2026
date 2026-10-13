@@ -1,0 +1,61 @@
+{
+  "schema": "commons.source-release/1",
+  "operation": "ECO-GEO-0D0F/4731",
+  "edition": "639-owner-direction-2026-10-13.4",
+  "members": 639,
+  "installed_members": 636,
+  "decoded_bytes": 22265384,
+  "decoded_sha256": "51de897cb0c6156b57dda1cdcfa5c5a66d924a96ec8d6c85afb50fd880c884c8",
+  "gzip_bytes": 3097779,
+  "gzip_sha256": "f433982abe03678d613862d42ffcc1acd6bbeb3d7ec540038dc65d0b6a33ddbf",
+  "base64_bytes": 4130373,
+  "base64_sha256": "3ee94426bcf71e179ab9065b5a723aea912432da703802dd6983725bbb9f393e",
+  "predecessor": {
+    "commit": "21266d348e9f92eddbdc729fa8e5adef1ad9b483",
+    "decoded_bytes": 22261414,
+    "decoded_sha256": "96044c50f9924ee149ce960dc5ca98f372a4def358c7f04f90356e75a6c9e182"
+  },
+  "changed_members": [
+    {
+      "path": "AGENTS.md",
+      "git_blob": "f3b4088fc4801e93a0de810dee8a25f21ab211e8",
+      "sha256": "e4800ffe55b6bed027f8ec012501657f5dabadbbc435ac5ce2503e22828a6c78"
+    },
+    {
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "git_blob": "5b056567a896277fdff362a1b6785673317f6a65",
+      "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c"
+    },
+    {
+      "path": "operator/ASSESSMENT_CONTEXT.md",
+      "git_blob": "e4e412844e6777d776fe6fd2e3b8addabed43360",
+      "sha256": "d83a28e0375b5cc28d1ead909bff1944b73d719e9ed86a59536a46fe455954b3"
+    },
+    {
+      "path": "operator/ECONOMIC_COMPARISON_REPORT.md",
+      "git_blob": "cd53f042803fb851838d6fabc179bfc89f174592",
+      "sha256": "0e1abcfb8799e7dfee8cfa65c97c72bc7c6c9a2f238a22f317818a54223b9d05"
+    },
+    {
+      "path": "operator/OBSERVED_STATION_STUDIES.md",
+      "git_blob": "c511e31b41c6c02f4b31cc04ae120bd023d7fb90",
+      "sha256": "050b24da2ee6c45c4e69a425539e1cfbfde0baf566b17f46e63a02dfdfb6d25f"
+    },
+    {
+      "path": "operator/SOURCE_REPORTS.md",
+      "git_blob": "30b75b9ca2e183a66c974e120bbd65ef212cc000",
+      "sha256": "912a5abee76a5e4f4623ef9116095f329effccefc0744308f02dcfd76422095c"
+    },
+    {
+      "path": "source/observed-report-20261013/ASSESSMENT_BROWSER.md",
+      "git_blob": "56f302266fab0c8ac0824d2a1e77950bb97721d6",
+      "sha256": "6e1827109f691dfa47ce685edf6405e47806641a0e864a79eb06425feeedcfc3"
+    }
+  ],
+  "unchanged_members": 632,
+  "owner_direction_git_blob": "5b056567a896277fdff362a1b6785673317f6a65",
+  "binary_git_blob": "150be32272000e2e4c54e22d987380b78dc51c47",
+  "base64_git_blob": "7920d96c7e11c4704514ebaec719feb6b3978a41",
+  "bootstrap_bytes": 7596,
+  "bootstrap_sha256": "ae0e55339b2ba506ea46c7444fd4c79ba38715028112f85a099be5e53a9458d8"
+}
