@@ -742,14 +742,21 @@ class ImplementationOperator:
             raise self.Fault("IMPLEMENTATION_OBSERVATION_BINDING",
                              "The requested field revision differs from the retained document.", 409)
         ws = self.operator.ws(workspace)
+        selection = value.get("existing_report_selection")
+        if selection is not None and not isinstance(selection, dict):
+            raise self.Fault("IMPLEMENTATION_OBSERVATION_BINDING",
+                             "Choose the complete original report selection object.")
         if preview:
-            result = preview_observation_context(ws, document)
+            result = preview_observation_context(
+                ws, document, existing_report_selection=selection)
         else:
             operation_id = value.get("observation_operation_id")
             if not isinstance(operation_id, str) or not re.fullmatch(r"[0-9a-f]{64}", operation_id):
                 raise self.Fault("IMPLEMENTATION_OBSERVATION_BINDING",
                                  "Review the original field source selection before registering it.")
-            result = import_observation_context(ws, document, expected_operation_id=operation_id)
+            result = import_observation_context(
+                ws, document, existing_report_selection=selection,
+                expected_operation_id=operation_id)
         if not isinstance(result, dict):
             raise self.Fault("IMPLEMENTATION_OBSERVATION_RESULT",
                              "The observation adapter returned an invalid result.")
