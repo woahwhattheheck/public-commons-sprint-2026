@@ -53,3 +53,11 @@ Use the existing ASTRA13 ordered-report receiving operation and real retained or
 ## Continue from a prepared study
 
 The registered extension host exposes `openScientificReport({workspace_key, sources, title?})`. The receiving Sources controller verifies the current Workspace, reopens the typed source catalogue, validates all incoming original source choices, and appends missing choices after the user's existing draft order. It preserves the current contact and nonempty title. Duplicate source choices are included once. A completed producer can therefore open the same standalone report composer directly, including single-model diagnostics, while retaining its separate original modeled-delivery action.
+
+## Complete tables across PDF pages
+
+Scientific PDF tables repeat their column headings on each page. Ordinary records stay together when space permits. If one retained cell is longer than a page—for example, a complete list of selected feature IDs, a scientific rationale or an original source reference—the formatter continues that cell on the following pages. Long identifiers wrap at the available column width. Values and links are preserved; the formatter does not shorten source text, delete rows or reduce the scientific table to a sample.
+
+The saved HTML, Markdown and report-data.json continue to carry the complete original table in its original order. Use HTML or the structured data when copying a long identifier; a visual PDF line break is not a new source identifier. The source and report archives retain the corresponding original files.
+
+This uses the existing ReportLab table renderer with both between-row and in-row splitting enabled, while keeping repeated headings. The actual 640a receiver uses ReportLab 4.4.9. The supported behavior is also documented by the original ReportLab 4.4.8 oversized-cell examples: https://hg.reportlab.com/hg-public/reportlab/file/8017a5b19981/tests/test_table_inrowsplit.py . Completed saved editions remain unchanged. A new report preview binds the installed formatter source, so newly prepared editions use the updated pagination.

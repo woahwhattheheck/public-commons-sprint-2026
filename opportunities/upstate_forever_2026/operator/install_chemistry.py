@@ -14,6 +14,9 @@ import tempfile
 FILES = [
     "model/chemistry.py",
     "model/chemistry_reports.py",
+    "model/chemistry_report_source.py",
+    "model/CHEMISTRY_REPORT_SOURCE.md",
+    "integration/component_fragments/chemistry_report_sources.json",
     "model/CHEMISTRY_REPORTS.md",
     "model/reach_chemistry/reporting.py",
     "integration/component_fragments/chemistry_reports.json",
@@ -78,6 +81,28 @@ REPORT_PREVIOUS_SHA256 = {
     "operator/web/chemistry-native.mjs": "9520e37557315888f6fe96b147e9731a018dc4e044ab7caa38bf81a8fb808440"
 }
 
+SOURCE_PREVIOUS_SHA256 = {
+    "model/chemistry.py": "dfe0af2343010f95be8922ae324a30097778af18b07041997ddaa9d2ceadaa64",
+    "model/chemistry_receiving.py": "dc30f390a7c329fcdd6b2614dd66fe7e1513c12da7eaa2b648dfa1dfcb7930f3",
+    "operator/chemistry.py": "a2dac71be1d3a8691beed3a6b512bb2edeed061d71f39a0e2e594b6b80371951",
+    "operator/extensions/chemistry.json": "4a7fc7354b2cba35d735c9246bf464d1e4261e9ba7c2785bd37d4b44355c6956",
+    "operator/web/chemistry.mjs": "15557dd9cb3d42cdd20e3abec8b702b0129af32ea611c164621a0c67d44b8036",
+    "operator/install_chemistry.py": "dc0b57181da0575a3dcf065cab1e138a1bbf5e40820e55263a008a08c96478ae",
+    "operator/CHEMISTRY_OPERATOR.md": "f6e2951c63f24ee392cd4ea6e02923f4eded2a8ddc8bdc6f8926b7520994e88b"
+}
+
+SHARED_REPORT_FILES = [
+    "model/observed_context.py",
+    "model/scientific_figures.py",
+    "model/observed_report_render.py",
+    "operator/source_reports.py",
+    "operator/source_report_editions.py",
+    "operator/web/source_reports.mjs",
+    "operator/web/source_report_editions.mjs",
+    "operator/extensions/source-reports.json",
+    "operator/web/extension_host.mjs"
+]
+
 def install(application, source_root=None, dry_run=False):
     target = Path(application).resolve(strict=True)
     source = Path(source_root or Path(__file__).resolve().parents[1]).resolve(strict=True)
@@ -88,6 +113,12 @@ def install(application, source_root=None, dry_run=False):
     with lock.open("a+") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
         pending, preimages = {}, {}
+        shared = {}
+        for name in SHARED_REPORT_FILES:
+            path = target / name
+            if not path.is_file() or path.is_symlink():
+                raise ValueError("Receive the maintained Scientific Reports component; missing " + name)
+            shared[name] = path.read_bytes()
         for name in FILES:
             path = source / name
             if not path.is_file():
@@ -101,7 +132,8 @@ def install(application, source_root=None, dry_run=False):
             current = destination.read_bytes() if destination.is_file() else None
             if (current is not None and current != body
                     and hashlib.sha256(current).hexdigest() not in
-                    {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name), REPORT_PREVIOUS_SHA256.get(name)}):
+                    {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name),
+                     REPORT_PREVIOUS_SHA256.get(name), SOURCE_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = body, current
         descriptor = json.loads(pending["operator/extensions/chemistry.json"])
@@ -117,6 +149,9 @@ def install(application, source_root=None, dry_run=False):
                     path = stage / name
                     path.parent.mkdir(parents=True, exist_ok=True)
                     path.write_bytes(pending[name])
+                for name, before in shared.items():
+                    if (target / name).read_bytes() != before:
+                        raise RuntimeError("Concurrent scientific-report source change: " + name)
                 for name in changed:
                     destination = target / name
                     actual = destination.read_bytes() if destination.is_file() else None
@@ -144,7 +179,9 @@ def install(application, source_root=None, dry_run=False):
                             os.replace(rollback, destination)
                     raise
         return {"schema": "upstate.chemistry-native-install/v1", "application": str(target),
-                "dry_run": dry_run, "changed": changed, "files": len(FILES), "view": "chemistry"}
+                "dry_run": dry_run, "changed": changed, "files": len(FILES), "view": "chemistry",
+                "report_dependencies": {name: hashlib.sha256(body).hexdigest()
+                                        for name, body in shared.items()}}
 
 
 def main():
