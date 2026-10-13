@@ -1,5 +1,9 @@
 // MIT. Source-owned tools for the complete WFS application and original customer engines.
 import { MAX_RETAINED_CHUNK_BYTES } from '../../../../stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs';
+// JSON can encode one UTF-16 code unit as six wire bytes (\uXXXX).
+// Keep the complete advertised profile plus the tool-call envelope readable.
+export const WFS_PROFILE_JSON_MAX_CHARACTERS=4*1024*1024;
+export const WFS_MCP_REQUEST_MAX_BYTES=6*WFS_PROFILE_JSON_MAX_CHARACTERS+128*1024;
 const alias={type:'string',pattern:'^[a-z0-9][a-z0-9_-]{0,63}$'};
 const op={type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$'};
 const hash={type:'string',pattern:'^[a-f0-9]{64}$'},object={type:'object'};
@@ -59,7 +63,7 @@ export function wfsWorkspaceTools(tool){return[
     selectionId:{type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$'},
     identityJson:{type:'string',minLength:1,maxLength:131072}},['workspace','id','orderId','sourceCrs','coordinateOrder'],change),
   tool('merchant_wfs_vector_export','Export a retained native capture through its complete reviewed GeoPackage/Shapefile profile. Choose profileJson or one host-selected vector-profile input; exact numeric JSON remains text.',{
-    ...workspace,id:op,captureId:op,profileJson:{type:'string',minLength:1,maxLength:4*1024*1024},
+    ...workspace,id:op,captureId:op,profileJson:{type:'string',minLength:1,maxLength:WFS_PROFILE_JSON_MAX_CHARACTERS},
     profileInput:alias,expectedSha256:hash},['workspace','id','captureId'],change),
   tool('merchant_wfs_vector_compare','Compare the complete original feature identities and values of two retained native captures; both source editions travel with its delivery.',{
     ...workspace,id:op,before:op,after:op},['workspace','id','before','after'],change),
