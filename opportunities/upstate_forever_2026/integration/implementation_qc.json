@@ -1,17 +1,19 @@
 {
   "schema": "upstate.implementation-qc-source/v1",
-  "edition": "implementation-qc-20261013-v1",
+  "edition": "implementation-qc-20261013-v2",
   "requires": [
     "implementation",
     "core"
   ],
   "paths": [
+    "model/implementation_qc_actions.py",
     "model/implementation_qc.py",
     "operator/implementation_qc.py",
     "operator/web/implementation_qc.mjs",
     "operator/extensions/implementation-qc.json",
     "model/IMPLEMENTATION_QC.md",
-    "integration/implementation_qc.json"
+    "integration/implementation_qc.json",
+    "integration/component_fragments/implementation-qc.json"
   ],
   "controller_join": {
     "module": "operator/web/implementation.mjs",
@@ -31,7 +33,7 @@
       "git_blob": "b53a4fe98e4c2cc8cd3b7e49dda864bb871d39ae"
     },
     "operator/implementation_operator.py": {
-      "git_blob": "477a1c1e1820df448f14e25ae2af912c6695913a"
+      "git_blob": "207bad2644183b5977f3cb37afc44f2f3b983b05"
     },
     "model/implementation_observations.py": {
       "git_blob": "06a8077095b8e880384cff5c6e157b2e76373222"
