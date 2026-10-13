@@ -14,6 +14,7 @@
 <button type="button" data-page="migrations">Migrations</button>
 <button type="button" data-page="decisions">Decisions</button>
 <button type="button" data-page="cases">Cases</button>
+<button type="button" data-page="events">Event intake</button>
 <button type="button" data-page="programmes">Commissioning</button>
 <button type="button" data-page="handover">Handover</button>
 <button type="button" data-page="engines">Engines</button>
@@ -155,6 +156,17 @@
 <div id="programme-authoring" class="panel"><h2>Author a complete programme</h2><p class="muted">Keep the original catalogue, model editions and typed inputs together. Build the complete course, review its selections and save it for native operation review.</p></div>
 <form id="programme-import" class="panel"><h2>Receive programme</h2><label>Complete programme JSON<input name="programme" type="file" accept=".json,application/json" required></label><p class="muted">The selected engine supplies the original process, decision or case REST service. The programme retains exact deployment resources and typed request text.</p><button type="submit">Receive programme</button></form>
 <div class="panel"><h2>Saved programmes</h2><div id="programme-records"></div></div><div class="panel" id="programme-current"></div></section>
+<section data-panel="events" hidden><h1>Event intake</h1>
+<p class="lede">Map a complete CloudEvents JSON event into a selected, captured case definition. Review the exact typed start before native dispatch.</p>
+<p id="event-status" class="muted">Open Cases and refresh the CMMN connection.</p>
+<div class="panel"><h2>Original sources</h2><div class="toolbar"><label>Reference event<select id="event-example"><option value="classification-change">Classification change</option><option value="missing-owner">Missing owner</option><option value="schema-change">Schema change</option></select></label><button type="button" id="event-load-example">Open example</button><button type="button" id="event-download">Download event</button><button type="button" id="event-profile-download">Download profile</button></div>
+<div class="form-grid"><label>Original event file<input id="event-file" type="file" accept=".json,application/json"></label><label>Mapping profile file<input id="event-profile-file" type="file" accept=".json,application/json"></label>
+<label class="full">Captured case definition<select id="event-definition"><option value="">Select original case definition</option></select></label>
+<label class="full">Complete CloudEvents JSON<textarea id="event-source" rows="16" spellcheck="false" aria-label="Complete CloudEvents JSON"></textarea></label>
+<label class="full">Typed mapping profile<textarea id="event-profile" rows="16" spellcheck="false" aria-label="Typed event mapping profile"></textarea></label></div>
+<button type="button" id="event-preview-button">Preview mapped native start</button></div>
+<div id="event-preview" class="panel"><p>Open an event and its mapping, then preview the exact native request.</p></div>
+<div class="panel"><h2>Saved event work</h2><div id="event-saved"></div></div></section>
 <section data-panel="handover" hidden><h1>Customer handover</h1><p class="lede">Receive complete source resources, saved revisions, native responses and operation journals in another workspace.</p>
 <div class="two-columns"><form id="export-form" class="panel"><h2>Export workspace</h2>
 <label>Handover name<input name="label" maxlength="300" placeholder="Customer process operations handover"></label>
