@@ -331,6 +331,8 @@ def _type(cell,style,validation,label,book,names,sheet):
     elif validation and validation.get("type") in {"whole","decimal"}:result["kind"]="integer" if validation["type"]=="whole" else "number"
     elif validation and validation.get("type")=="date":result["kind"]="date"
     elif cell["kind"]=="b":result["kind"]="boolean"
+    elif cell["kind"] in {"s","str","inlineStr"} and cell["value"] not in {None,""}:
+        result.update(kind="text",source_type_provenance={"method":"original-text-cell","original_kind":cell["kind"]})
     elif style["number_format"]!="General":
         result["kind"]="date" if re.search(r"[dy]",style["number_format"],re.I) and not any(t in style["number_format"] for t in ("#","0")) else "number"
     elif not re.search(r"explain|describe|comment|reason|names?|addresses?|website|signature",label,re.I) and re.search(r"volume|value|cost|price|employees|hours|wages|percentage|percent|capacity|quantit|number of|minimum|maximum|revenue|sales|production",label,re.I) and cell["kind"]=="n":result["kind"]="number"
@@ -458,7 +460,7 @@ def compile_definition(workspace,source_sha256,classifications=None):
                 question.update(_question_display(presentation,question))
                 questions.append(question)
     definition={"title":role+" — original NQ-2023-001 questionnaire","source_workbooks":[source_sha256],"questions":questions,"rules":[],
-        "source_intake":{"schema":"atssc.original-family-definition.v1","compiler_version":4,"source_sha256":source_sha256,"original_name":name,
+        "source_intake":{"schema":"atssc.original-family-definition.v1","compiler_version":5,"source_sha256":source_sha256,"original_name":name,
             "original_sheet_count":book["sheetCount"],"original_cell_count":book["cellCount"],"original_formula_count":book["formulaCount"],
             "source_role":role,"defined_names":names,"hidden_operator_origins":[{"sheet":x["sheet"],"state":x["state"],"source_kind":x["source_kind"]} for x in operator_sources]}}
     joined=definition_native_bindings(definition,source_sha256,graph);by_id={q["id"]:q for q in questions}
