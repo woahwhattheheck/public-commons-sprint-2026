@@ -1,0 +1,328 @@
+{
+  "version": "broomdesk-commissioning-fields/v1",
+  "authoredAt": "2026-10-13",
+  "purpose": "An editable operator commissioning record around actual selected systems and original exports.",
+  "sourceRegister": "BROOMDESK-SOURCES.json",
+  "representation": {
+    "ids": "Stable ordinary identifiers, unique within a record type; references resolve within the selected business.",
+    "money": "Integer minor units plus currency; null means unknown, zero is an entered value.",
+    "time": "Preserve source text/offset and organization IANA time zone; canonical instants only when resolvable.",
+    "durations": "Integer minutes or null, with source and any explicit correction retained.",
+    "percent": "Exact decimal string or integer basis points as chosen by implementation; never binary-floating rounding of pay.",
+    "unknowns": "Use null/pending and a visible label; do not coerce absent values to false, zero or accepted.",
+    "files": "Original bytes, filename, media type, byte length and SHA256; attachment references are exact identities.",
+    "externalActions": "Desk records requested/performed/observed events. No implicit vendor account, payroll, messaging, cancellation or deletion action."
+  },
+  "records": {
+    "pilot": {
+      "fields": [
+        "id",
+        "business_id",
+        "business_name",
+        "accountable_operator",
+        "decision_maker",
+        "organization_timezone",
+        "source_systems",
+        "selected_plan",
+        "plan_observed_at",
+        "scope_start",
+        "scope_end",
+        "selected_property_ids",
+        "selected_worker_ids",
+        "selected_job_ids",
+        "selected_period_ids",
+        "selected_capabilities",
+        "excluded_work",
+        "baseline_measurements",
+        "revision"
+      ],
+      "rules": [
+        "Selected scope is one business.",
+        "Empty starter has no invented operating values."
+      ]
+    },
+    "source": {
+      "fields": [
+        "id",
+        "business_id",
+        "system",
+        "kind",
+        "original_filename",
+        "media_type",
+        "bytes",
+        "sha256",
+        "captured_at",
+        "coverage_start",
+        "coverage_end",
+        "source_record_count",
+        "original_bytes",
+        "custodian",
+        "confidentiality"
+      ],
+      "rules": [
+        "Keep original bytes immutable; changed bytes create a new edition.",
+        "Do not store passwords or property entry secrets in a portable review packet."
+      ]
+    },
+    "mapping": {
+      "fields": [
+        "id",
+        "source_id",
+        "version",
+        "source_column",
+        "target_field",
+        "interpretation",
+        "timezone",
+        "identifier_namespace",
+        "normalization",
+        "row_dispositions",
+        "reviewed_by"
+      ],
+      "rules": [
+        "Map customer/property/job/visit/worker separately.",
+        "All original rows belong to accepted/excluded/unresolved dispositions.",
+        "Changed map invalidates its selected acceptance."
+      ]
+    },
+    "property_handoff": {
+      "fields": [
+        "id",
+        "pilot_id",
+        "property_source_key",
+        "selected_source_ids",
+        "service_scope_reference",
+        "contact_reference",
+        "secure_access_reference",
+        "instruction_revision",
+        "parking_pet_notes",
+        "assigned_worker_ids",
+        "handoff_owner",
+        "recipient",
+        "acknowledged_at",
+        "role_observation",
+        "outstanding_issue"
+      ],
+      "rules": [
+        "Secure access reference records custody, not the secret.",
+        "Client packet requires explicit field/attachment selection."
+      ]
+    },
+    "schedule_change": {
+      "fields": [
+        "id",
+        "pilot_id",
+        "job_source_key",
+        "visit_source_key",
+        "intent",
+        "requested_by",
+        "requested_at",
+        "reason",
+        "before_source_ids",
+        "requested_local_time",
+        "requested_duration_minutes",
+        "requested_assignees",
+        "performed_by",
+        "performed_at",
+        "observed_source_ids",
+        "observed_affected_ids",
+        "conflicts",
+        "override_decision",
+        "handoff_id",
+        "status"
+      ],
+      "intent": [
+        "single_visit",
+        "series_change",
+        "pause",
+        "resume",
+        "end"
+      ],
+      "rules": [
+        "Requested and observed results remain separate.",
+        "A single-visit result must identify observed surrounding occurrences.",
+        "Keep excluded future/history records available in the original source."
+      ]
+    },
+    "work_observation": {
+      "fields": [
+        "id",
+        "pilot_id",
+        "visit_source_key",
+        "worker_source_keys",
+        "service_status",
+        "raw_clock_events",
+        "timezone",
+        "observed_minutes",
+        "time_status",
+        "access_outcome",
+        "selected_attachment_ids",
+        "source_ids",
+        "reviewer",
+        "finding",
+        "correction_of",
+        "correction_reason",
+        "revision"
+      ],
+      "rules": [
+        "Missing clock-out is unresolved, not an invented completed shift.",
+        "Corrections retain superseded values and source.",
+        "Do not infer earnings from an absent time field."
+      ]
+    },
+    "payroll_handover": {
+      "fields": [
+        "id",
+        "pilot_id",
+        "period_source_key",
+        "period_start",
+        "period_end",
+        "timezone",
+        "worker_source_keys",
+        "pay_arrangement_reference",
+        "original_earnings_source_id",
+        "original_export_source_id",
+        "format_observed",
+        "provider_period_status",
+        "observed_hours",
+        "observed_gross_minor",
+        "currency",
+        "adjustment_source_ids",
+        "unresolved_findings",
+        "reviewed_source_revision",
+        "reviewer",
+        "reviewed_at",
+        "recipient",
+        "receiving_result",
+        "handover_status"
+      ],
+      "rules": [
+        "Provider approval and desk review are distinct fields.",
+        "Use actual original calculations and separate reviewer differences.",
+        "No tax, net-pay or payment execution is implied.",
+        "Changing the selected original edition requires a new review."
+      ]
+    },
+    "commercial_review": {
+      "fields": [
+        "id",
+        "pilot_id",
+        "location_source_key",
+        "contract_source_id",
+        "billing_mode",
+        "contract_amount_minor",
+        "currency",
+        "period",
+        "invoice_source_id",
+        "observed_invoice_minor",
+        "inspection_source_id",
+        "scored_area_ids",
+        "unscored_area_ids",
+        "observed_score",
+        "findings"
+      ],
+      "rules": [
+        "Only present when selected and capability is observed.",
+        "Keep original invoice and inspection rather than generating assumed native results."
+      ]
+    },
+    "measurement": {
+      "fields": [
+        "id",
+        "pilot_id",
+        "definition",
+        "unit",
+        "period_start",
+        "period_end",
+        "numerator",
+        "denominator",
+        "value",
+        "observed_by",
+        "observed_at",
+        "source_ids",
+        "comparable_to",
+        "limitations"
+      ],
+      "rules": [
+        "Unmeasured stays null.",
+        "Compare equivalent scope and observation windows."
+      ]
+    },
+    "decision": {
+      "fields": [
+        "id",
+        "pilot_id",
+        "business_id",
+        "scope_revision",
+        "selected_source_ids",
+        "mapping_ids",
+        "observation_revisions",
+        "outcome",
+        "reason",
+        "conditions",
+        "reviewer",
+        "reviewed_at",
+        "supersedes",
+        "current"
+      ],
+      "outcome": [
+        "proceed",
+        "proceed_with_conditions",
+        "repeat_selected_observation",
+        "retain_current_process"
+      ],
+      "rules": [
+        "Selected edits require new review; preserve historical decisions.",
+        "Each condition has owner, desired result and next review date."
+      ]
+    },
+    "exit_custody": {
+      "fields": [
+        "id",
+        "pilot_id",
+        "source_category",
+        "required",
+        "original_system",
+        "obtained_source_ids",
+        "recipient",
+        "receiving_result",
+        "outstanding_owner",
+        "account_cancellation_requested_at",
+        "account_cancellation_effective_at",
+        "export_target_date",
+        "deletion_requested_at",
+        "deletion_observed_at",
+        "retention_exception_reference"
+      ],
+      "rules": [
+        "Cancellation, export and deletion are separate events.",
+        "Do not assume complete attachment/message export from CSV availability."
+      ]
+    }
+  },
+  "proposed_views": [
+    "Current scope and open work",
+    "Original sources and mappings",
+    "Property and crew handoffs",
+    "Schedule changes",
+    "Actual work and exceptions",
+    "Payroll handover",
+    "Decision and complete receiving"
+  ],
+  "received_history": {
+    "requirements": [
+      "Append full ordered actions with previous revision and returned revision.",
+      "Reconstruct current state from history on receiving, including preserved original sources and decisions.",
+      "Reject stale writes without changing the current workspace.",
+      "Preserve raw imported originals through export and independent reopen.",
+      "Show whether browser persistence succeeded; provide complete working download in session mode."
+    ]
+  },
+  "unknowns": [
+    "Detailed vendor role matrix and account-specific permissions",
+    "Exact recurrence horizon and customer-specific calendar behavior",
+    "Exact CSV header spelling, dialect and import requirements of each chosen payroll provider",
+    "Overtime, taxes, net-pay and jurisdiction-specific interpretation",
+    "Actual selected subscription, locations, integrations and ownership",
+    "Customer-specific cancellation/no-show policy and agreed charge authorization"
+  ]
+}
