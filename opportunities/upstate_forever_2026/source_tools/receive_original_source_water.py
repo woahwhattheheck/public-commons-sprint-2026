@@ -175,7 +175,7 @@ def main(argv=None):
         if zipfile.is_zipfile(source):
             if source.stat().st_size != ZIP_BYTES or sha256(source) != ZIP_SHA256:
                 raise ValueError("Original domain ZIP differs from its retained length or SHA256")
-        profile_path = application / "source/receptor-topology/20261013/utility-focus-profile.json"
+        profile_path = application / "source/receptor-profiles/utility-focus-20261012.json"
         if sha256(profile_path) != PROFILE_SHA256:
             raise ValueError("Retain the original utility focus profile from the current application")
         profile = json.loads(profile_path.read_text(encoding="utf-8"))
