@@ -1,4 +1,5 @@
-function analyzeSV833(files,parseCsv,assessmentContext={}) {
+// Original SV-833 agency result analysis; preserves source identities and reporting limits.
+export function analyzeSV833(files,parseCsv,assessmentContext={},intervalTools) {
  const assert=(x,msg)=>{if(!x)throw Error(msg)},round=x=>x===null?null:Number(x.toFixed(12)),avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
  const group=(a,key)=>{const m=new Map();for(const v of a){const k=key(v);if(!m.has(k))m.set(k,[]);m.get(k).push(v)}return m};
  const role=key=>{const f=files.find(f=>f.role===key);assert(f,"Missing original "+key);return f};
@@ -92,7 +93,42 @@ function analyzeSV833(files,parseCsv,assessmentContext={}) {
  const summary=read("period_of_record_summary").filter(r=>Number(r.raw.YearSummarized)>=2021&&Number(r.raw.YearSummarized)<=2026);
  const sourceCensus=summary.map(s=>({year:Number(s.raw.YearSummarized),characteristic:s.raw.CharacteristicName,published_result_count:Number(s.raw.ResultCount),captured_result_count:records.filter(r=>Number(r.date.slice(0,4))===Number(s.raw.YearSummarized)&&r.characteristic===s.raw.CharacteristicName).length,summary_source_sha256:s.source_sha256,summary_source_row:s.source_data_row}));
  for(const row of sourceCensus)assert(row.published_result_count===row.captured_result_count,"Original physical source count differs");
+
+ const weightingEffects=[];
+ for(const [year,as]of group(activities,a=>a.year))for(const k of analytes){
+   const activityValues=as.map(a=>a.measurements[k]).filter(m=>m&&m.analysis_eligible),rawValues=records.filter(r=>Number(r.date.slice(0,4))===year&&r.analyte===k&&r.analysis_eligible);
+   if(!activityValues.length||rawValues.length<=activityValues.length)continue;
+   const aStats=statistics(activityValues),rawStats=statistics(rawValues.map(v=>({...v,result_count:1})));
+   weightingEffects.push({year,analyte:k,unit:activityValues[0].unit,activities:activityValues.length,original_result_rows:rawValues.length,
+     activity_mean_lower:aStats.mean_lower,activity_mean_upper:aStats.mean_upper,activity_mean_lower_open:aStats.mean_lower_open,activity_mean_upper_open:aStats.mean_upper_open,
+     raw_row_mean_lower:rawStats.mean_lower,raw_row_mean_upper:rawStats.mean_upper,raw_row_mean_lower_open:rawStats.mean_lower_open,raw_row_mean_upper_open:rawStats.mean_upper_open});
+ }
+ const influences=[];
+ for(const k of analytes){
+   const rows=activities.flatMap(a=>a.measurements[k]?.analysis_eligible?[{...a.measurements[k],activity:a.activity,date:a.date}]:[]);
+   if(rows.length<10||rows.some(r=>r.upper===null))continue;
+   const largest=[...rows].sort((a,b)=>b.upper-a.upper||a.date.localeCompare(b.date))[0],rest=rows.filter(r=>r!==largest),full=statistics(rows),without=statistics(rest);
+   influences.push({analyte:k,unit:rows[0].unit,n:rows.length,largest_date:largest.date,largest_activity:largest.activity,largest_lower:largest.lower,largest_upper:largest.upper,largest_result_ids:largest.result_ids,
+     full_mean_lower:full.mean_lower,full_mean_upper:full.mean_upper,full_mean_lower_open:full.mean_lower_open,full_mean_upper_open:full.mean_upper_open,
+     full_median_lower:full.median_lower,full_median_upper:full.median_upper,full_median_lower_open:full.median_lower_open,full_median_upper_open:full.median_upper_open,
+     without_mean_lower:without.mean_lower,without_mean_upper:without.mean_upper,without_mean_lower_open:without.mean_lower_open,without_mean_upper_open:without.mean_upper_open,remaining_n:rest.length,
+     selection:"largest finite upper endpoint; full cohort retained"});
+ }
+
+
+ const intervalAssociations=[],intervalPairs=[];
+ const asSupport=m=>({lo:m.lower,hi:m.upper,loOpen:m.lower_open,hiOpen:m.upper_open});
+ for(const y of ["ecoli","phosphorus"]){
+   const rows=activities.filter(a=>a.measurements.turbidity?.analysis_eligible&&a.measurements[y]?.analysis_eligible).map(a=>({
+     activity:a.activity,date:a.date,x:asSupport(a.measurements.turbidity),y:asSupport(a.measurements[y])
+   }));
+   const classified=intervalTools.classifyPairedIntervals(rows);
+   intervalAssociations.push({x:"turbidity",y,...classified.summary});
+   intervalPairs.push(...classified.pairs.map(p=>({x:"turbidity",y,...p})));
+ }
+ const nitrogen2025=activities.filter(a=>a.year===2025&&a.measurements.total_nitrogen).map(a=>({activity:a.activity,...asSupport(a.measurements.total_nitrogen)}));
+ const nitrogenInfluence2025=intervalTools.omissionInfluence(nitrogen2025,"21SC60WQ_WQX-AF33511");
+
  return{schema:"sv833.original-water-quality-study/v1",counts:{original_narrow_results:records.length,original_full_results:allFull.length,original_activity_records:activitiesOriginal.length,original_limit_records:limitsOriginal.length,distinct_result_ids:records.length,activity_characteristics:measurements.length,repeated_activity_characteristics:duplicates.length,additional_equal_results:records.length-measurements.length,activities:activities.length,dates:new Set(activities.map(a=>a.date)).size,ph_screened_records:quality.length,original_above_results:records.filter(r=>r.censoring==="above").length,original_below_results:records.filter(r=>r.censoring==="below").length},
-  station,records,measurements,duplicates,activities,activity_table:activityTable,summaries,associations,top_turbidity:topTurbidity,quality_flags:quality,agency_nitrogen:agencyComparison,yearly_coverage:yearlyCoverage,source_census:sourceCensus,assessment_context:assessmentContext};
+  station,records,measurements,duplicates,activities,activity_table:activityTable,summaries,associations,top_turbidity:topTurbidity,quality_flags:quality,agency_nitrogen:agencyComparison,yearly_coverage:yearlyCoverage,source_census:sourceCensus,weighting_effects:weightingEffects,influences,interval_associations:intervalAssociations,interval_pairs:intervalPairs,nitrogen2025_influence:nitrogenInfluence2025,assessment_context:assessmentContext};
 }
-export { analyzeSV833 };
