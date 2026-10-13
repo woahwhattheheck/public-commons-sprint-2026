@@ -16,7 +16,7 @@ from .source_lineage import LINEAGE_VERSION
 from .delivery_archive import package_archive
 from . import receiving_water_delivery, scientific_report, observed_context, delivery_datasets
 from . import scenario_analysis_delivery as analysis_delivery
-from . import scenario_treatment_report, fgdc_metadata
+from . import scenario_treatment_report, client_biophysical_evidence, fgdc_metadata
 from .robust_decisions.eco_robust import decision_delivery
 from .client_economics import (CLIENT_REPORT_EDITION, bind_economic,
                                retain_economic, scientific_sections)
@@ -25,7 +25,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_EDITION = "2026-10-13-integrated-native-treatment-report-14"
+DELIVERY_EDITION = "2026-10-13-integrated-coefficient-source-report-15"
 DELIVERY_FORMAT_VERSION = "retained-stage-version-treatment-client-report-14"
 
 def _copy(source, target, expected=None):
@@ -446,6 +446,11 @@ def build(workspace, selection):
     grid = workspace.get_grid(baseline["selection"]["grid_id"])
     cells = _grid_measurements(grid)
     profile = workspace._get("profiles", baseline["selection"]["profile_id"])
+    coefficient_binding = client_biophysical_evidence.bind(
+        workspace, selection,
+        sorted({run["selection"]["profile_id"] for run in [baseline, *alternatives]}))
+    selection["coefficient_evidence"] = coefficient_binding["selection"]
+    selection["coefficient_evidence_binding"] = coefficient_binding
     report_title = (selection.get("title")
                     or (selection["native_study"]["title"] if study_mode else None)
                     or workspace.project.get("title") or "Source-water assessment")
@@ -508,6 +513,9 @@ def build(workspace, selection):
                 verify_file(directory, state["files"]["native_execution"])
                 if read_json(execution_path) != native_execution:
                     raise ValueError("The retained execution provenance differs from this delivery selection")
+            coefficient_product = client_biophysical_evidence.collect(
+                workspace, directory, state, coefficient_binding)
+            atomic_json(state_path, state)
             observed_product = observed_context.collect(workspace, selection, directory, state)
             if (observed_product is None) != (observed_link is None):
                 raise ValueError("Observed report context does not match the selected source")
@@ -870,6 +878,10 @@ def build(workspace, selection):
                     observation_results=observation_results,
                     receptor_inventory=state.get("receptor_inventory"),
                 )
+                coefficient_sections = client_biophysical_evidence.scientific_sections(coefficient_product)
+                profile_index = next((index + 1 for index, (heading, _) in enumerate(sections)
+                                      if heading == "Selected parameter profile"), len(sections))
+                sections[profile_index:profile_index] = coefficient_sections
                 sections.extend(scenario_treatment_report.sections(
                     summary, baseline_run_id=baseline["id"],
                     alternative_run_ids=[run["id"] for run in alternatives]))
@@ -914,6 +926,7 @@ def build(workspace, selection):
                         "source_decision": decision_link,
                         "client_report_edition": CLIENT_REPORT_EDITION,
                         "observed_context": observed_link,
+                        "coefficient_evidence": coefficient_binding,
                     },
                 ))
                 state["files"]["report"] = describe_file(directory, target)
@@ -929,6 +942,7 @@ def build(workspace, selection):
                     observation_results=observation_results, comparison=comparison,
                     scenario_summary=summary,
                     decision_product=decision_product, observed_product=observed_product,
+                    coefficient_product=coefficient_product,
                     additional_sections=receiving_water_delivery.report_section(water_product),
                     output_stem="client-report", file_key_prefix="client_",
                     working_archive_path=working_relative)
