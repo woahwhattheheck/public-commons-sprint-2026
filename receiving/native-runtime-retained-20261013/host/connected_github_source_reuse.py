@@ -91,6 +91,78 @@ def _metadata_payload(response, kind):
     raise ReuseError("SOURCE_METADATA_SHAPE", "No captured Git " + kind + " object was found.")
 
 
+
+def _captured_tree_response(selection, expected_tree):
+    """Compose original direct-tree captures without asserting omitted subtrees complete."""
+    if "tree_responses" not in selection:
+        return _metadata_payload(selection.get("tree_response"), "tree")
+    if selection.get("tree_response") is not None:
+        raise ReuseError("SOURCE_TREE_AMBIGUOUS", "Select either the original full tree or captured direct trees.")
+    captures = selection["tree_responses"]
+    if not isinstance(captures, list) or len(captures) > 100000:
+        raise ReuseError("SOURCE_TREE_CAPTURES", "Retain the complete direct-tree response array.")
+    cache, captured_rows = {}, 0
+    for capture in captures:
+        tree = _metadata_payload(capture, "tree")
+        sha = _sha(tree["sha"], "captured tree")
+        if tree.get("truncated") is not False:
+            raise ReuseError("SOURCE_TREE_INCOMPLETE", "A captured direct tree is truncated.")
+        entries, names = [], set()
+        for entry in tree["tree"]:
+            if not isinstance(entry, dict):
+                raise ReuseError("SOURCE_TREE_ENTRY", "A captured direct-tree entry is not an object.")
+            name = entry.get("path")
+            if (not isinstance(name, str) or not name or "/" in name or "\0" in name
+                    or name in (".", "..") or name in names):
+                raise ReuseError("SOURCE_TREE_ENTRY", "Retain unique direct Git names.", name)
+            names.add(name)
+            mode = "040000" if entry.get("mode") == "40000" else entry.get("mode")
+            kind = entry.get("type")
+            valid = {"040000": "tree", "100644": "blob", "100755": "blob",
+                     "120000": "blob", "160000": "commit"}
+            if mode not in valid or valid[mode] != kind:
+                raise ReuseError("SOURCE_TREE_ENTRY", "Captured mode/type is invalid.", name)
+            row = {"path": name, "sha": _sha(entry.get("sha"), "tree entry"),
+                   "mode": mode, "type": kind}
+            if kind == "blob":
+                if type(entry.get("size")) is not int or entry["size"] < 0:
+                    raise ReuseError("SOURCE_SIZE", "Retain the exact original blob byte count.", name)
+                row["size"] = entry["size"]
+            entries.append(row)
+        captured_rows += len(entries)
+        if captured_rows > 1000000:
+            raise ReuseError("SOURCE_TREE_LIMIT", "Captured direct trees exceed the source row limit.")
+        try:
+            entries.sort(key=lambda row: (row["path"] + ("/" if row["type"] == "tree" else "")).encode("utf-8"))
+            raw = b"".join(row["mode"].lstrip("0").encode("ascii") + b" " +
+                           row["path"].encode("utf-8") + bytes(1) + bytes.fromhex(row["sha"])
+                           for row in entries)
+        except UnicodeError:
+            raise ReuseError("SOURCE_TREE_ENCODING", "Keep original UTF-8 Git names.") from None
+        actual = hashlib.sha1(b"tree " + str(len(raw)).encode("ascii") + bytes(1) + raw).hexdigest()
+        if actual != sha:
+            raise ReuseError("SOURCE_TREE_INCOMPLETE", "Captured children do not reproduce their original Git tree.")
+        if sha in cache and cache[sha] != entries:
+            raise ReuseError("SOURCE_TREE_CONFLICT", "Two captures disagree on the same original tree.")
+        cache[sha] = entries
+    if expected_tree not in cache:
+        raise ReuseError("SOURCE_TREE_INCOMPLETE", "Capture the original root direct tree.")
+    rows = []
+    def expand(sha, prefix, ancestors):
+        if len(ancestors) > 512 or sha in ancestors:
+            raise ReuseError("SOURCE_TREE_LIMIT", "Captured tree depth or ancestry is invalid.", prefix)
+        for entry in cache[sha]:
+            name = prefix + entry["path"]
+            rows.append({**entry, "path": name})
+            if len(rows) > 1000000:
+                raise ReuseError("SOURCE_TREE_LIMIT", "Expanded source rows exceed the source limit.")
+            if entry["type"] == "tree" and entry["sha"] in cache:
+                expand(entry["sha"], name + "/", ancestors + (sha,))
+    expand(expected_tree, "", ())
+    # The unchanged selector below proves every selected directory and ancestor.
+    # An omitted unselected subtree is a bound tree object, never fabricated contents.
+    return {"sha": expected_tree, "tree": rows, "truncated": False}
+
 def select_tree_sources(selection):
     """Bind explicit file/subtree selection to captured original commit/tree identities."""
     if not isinstance(selection, dict) or selection.get("schema") != SELECTION_SCHEMA:
@@ -107,7 +179,7 @@ def select_tree_sources(selection):
         raise ReuseError("SOURCE_COMMIT_MISMATCH", "The captured commit differs from the requested commit.")
     commit_tree = original_commit.get("tree") or original_commit.get("commit", {}).get("tree")
     expected_tree = _sha(commit_tree.get("sha"), "commit tree")
-    tree = _metadata_payload(selection.get("tree_response"), "tree")
+    tree = _captured_tree_response(selection, expected_tree)
     if _sha(tree["sha"], "returned tree") != expected_tree:
         raise ReuseError("SOURCE_TREE_MISMATCH", "The tree is not the requested commit's root tree.")
     if tree.get("truncated") is not False:

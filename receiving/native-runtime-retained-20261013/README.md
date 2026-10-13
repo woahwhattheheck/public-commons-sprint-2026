@@ -90,3 +90,9 @@ The received AGENTS.md carries Bryce's complete rendered-product instruction. Be
 ## Source custody
 
 Maintained public path: woahwhattheheck/public-commons-sprint-2026/receiving/native-runtime-retained-20261013. Original runtime modules retain their names and APIs inside host/. Existing repository host/ modules and active deployed workers are preserved. The source selection manifest records the historical donor commit and exact changes so the current source owner can incorporate the correction in its maintained public distribution. Private runtime history and original customer source continue in their existing destinations.
+
+## Complete selected-source metadata receiving
+
+The existing `host/connected_github_source_reuse.py` now also accepts the original `commons.github-source-selection.v1` with a `tree_responses` array of complete captured direct Git trees. It reproduces every captured Git object, binds the exact commit root and proves all selected parent/subtree contents before the unchanged `select`, `plan`, `copy`, `inspect` and `export` operations. The original single complete `tree_response` input is unchanged.
+
+Use repository-root `host/connected_github_source_tree.cjs` and `host/connected_github_tree_source_cli.cjs` for the same caller-owned acquisition/offline selection. The full receiving course, paused/failed request semantics and actual provider result are in `host/CONNECTED_GITHUB_TREE_SOURCE_RECEIVING.md`. No provider retry, account switch, new supervisor or source execution is implied. Preserve the complete captured responses and original source request with the current operation. Metadata acquisition has been exercised through actual connected Git reads; CPython/filesystem receiving of this edition remains with the original accepting owner.
