@@ -19,7 +19,12 @@
         "source_tools/climate_forcing_study.py",
         "ecsa_runs/upstate.py",
         "operator/native_jobs.py",
-        "model/native_worker.py"
+        "model/native_worker.py",
+        "model/climate_working.py",
+        "model/climate_working_transfer.py",
+        "operator/web/climate_working.mjs",
+        "operator/CLIMATE_WORKING.md",
+        "source_tools/climate_working.py"
       ],
       "requires": [
         "core",
@@ -38,6 +43,7 @@
   "source_reference": {
     "edition": "spatial-climate-forcing-studies-20261013",
     "basis": "Original retained Workspace, explicit forcing editions, original native run supervisor",
-    "native_reuse": "Original per-model NativeInputMatcher and stage cache; complete climate context is forwarded through the retained operator and native worker"
+    "native_reuse": "Original per-model NativeInputMatcher and stage cache; complete climate context is forwarded through the retained operator and native worker",
+    "working_designs": "Original immutable Workspace revision store, explicit named branches and original selected Study delivery"
   }
 }

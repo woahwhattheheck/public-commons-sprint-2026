@@ -125,7 +125,7 @@ def _baseline(ws, key):
 def _selection(ws, raw):
     if not isinstance(raw, dict):
         raise ValueError("Supply the complete forcing selection")
-    allowed = {"title", "purpose", "baseline_run_id", "cases", "reporting_areas", "difference_maps"}
+    allowed = {"title", "purpose", "baseline_run_id", "cases", "reporting_areas", "difference_maps", "working_origin"}
     if set(raw) - allowed:
         raise ValueError("Unknown forcing selection fields")
     run, grid, profile, scenario = _baseline(ws, raw.get("baseline_run_id"))
@@ -181,6 +181,9 @@ def _selection(ws, raw):
                  "purpose": _text(raw.get("purpose"), "the scientific forcing purpose"),
                  "baseline_run_id": run["id"], "cases": normalized,
                  "reporting_areas": deepcopy(areas), "difference_maps": maps}
+    if "working_origin" in raw:
+        from .climate_working import origin
+        selection["working_origin"] = origin(ws, raw["working_origin"], selection)
     versions = comparison_versions([run], run_models(run))
     baseline = {"run_id": run["id"], "run_selection": deepcopy(run["selection"]),
                 "artifacts": {k: deepcopy(run["artifacts"][k])
