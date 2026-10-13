@@ -1,0 +1,101 @@
+{
+  "schema": "definian.chinook-component-provenance.v1",
+  "source": {
+    "commit": "7f67772503d71ba90f19283c38e93923addb43fa",
+    "upstream": "ChinookDatabase1.4.5",
+    "originalSourcePage": "https://chatgpt.com/space/page_27069812c9bc8191b418262976e5db42",
+    "originalSourceMerge": "094c6b14c46426ce32396c9961050ef36bf64768",
+    "files": [
+      {
+        "path": "reference/MIGRATION_SOURCE_AND_ACCEPTANCE.md",
+        "bytes": 14819,
+        "sha256": "fd0124616d0d0a7e22014880f759f418b1ed0f66de75cd81932b68c16e28151c"
+      },
+      {
+        "path": "reference/SOURCE_CONTROL_BASELINE.json",
+        "bytes": 175158,
+        "sha256": "36bb637d03eb3100750047e9b76691eb255c89ecd42b756f7e0e8a6fa16b512b"
+      },
+      {
+        "path": "reference/SOURCE_SELECTION.json",
+        "bytes": 2935,
+        "sha256": "fb753e746297be210e0e711ed9cd13cfeae1de91514173333f51d47d94fcf537"
+      },
+      {
+        "path": "reference/UPSTREAM_LICENSE.md",
+        "bytes": 1117,
+        "sha256": "5064d720db431474b0a0b0cef9d2b5e362b6c6f80602b35c6443b07cbc979f77"
+      },
+      {
+        "path": "reference/receive_reference.py",
+        "bytes": 17775,
+        "sha256": "07ce2b2936209a12273ba923c8819de81ef2e3624d1cdea36d1e6b8bc407a0f3"
+      }
+    ],
+    "cohort": {
+      "bytes": 700081,
+      "sha256": "22a685ddf339a8595c220874a9fa2144b3c5ef098fc06742f0ebdbad29180a98",
+      "path": "reference/CHINOOK_SOURCE_COHORT.json",
+      "decodedBytes": 3490342,
+      "decodedSha256": "239983242c3578f959c559b1bc68c6a69ff0e4d7f55aa2e13df5cf0bbfbf1799",
+      "originalCanvasId": "F0C8LNH0561",
+      "originalUpstreamCount": 10,
+      "originalUpstreamBytes": 3161129
+    }
+  },
+  "integration": {
+    "originalWholeSource": "integration/provenance/ORIGINAL_26B1_INTEGRATION.json",
+    "bytes": 93614,
+    "sha256": "e99ef48f8d79622df2a33cbe5165c81bfdbec2506860d37127e5a0f720d0e717",
+    "originalBlob": "61c8d72d5c66ba0c3c15bf2d972f0248b9af5e3f",
+    "originalFiles": [
+      {
+        "path": "integration/chinook-native-input.mjs",
+        "bytes": 22656,
+        "sha256": "af466b398af10e7dbe997eb1ad7317ea8ee3be720da85543e8fe9effd315d174"
+      },
+      {
+        "path": "integration/relational-acceptance.mjs",
+        "bytes": 16626,
+        "sha256": "592647c852243300035728ff281043f46084d23a8d23c0526788f0c19dd65669"
+      },
+      {
+        "path": "integration/RECEIVING.md",
+        "bytes": 16625,
+        "sha256": "47da1ac5b751653ba360f726059e91feb94f965f595419f4f3eb4d080aa7e675"
+      },
+      {
+        "path": "integration/VALIDATION.json",
+        "bytes": 1868,
+        "sha256": "391c8683ce24e5a39805023c84751cba4776d334a2d03747aa1a0c1704ceafef"
+      },
+      {
+        "path": "integration/DEPENDENCIES.json",
+        "bytes": 31460,
+        "sha256": "adfa17590ca06541c34ccb1ac4fc1ee539ac42402d8a792a79edbfa81c507321"
+      }
+    ],
+    "activeChanges": [
+      {
+        "paths": [
+          "integration/chinook-native-input.mjs",
+          "integration/relational-acceptance.mjs"
+        ],
+        "from": "../../dlthub_pipeline_workshare_20261013/",
+        "to": "../vendor/dlt/",
+        "kind": "relative-import-rebase-only"
+      }
+    ]
+  },
+  "receiving": {
+    "module": "receiving/chinook.mjs",
+    "sourceHelper": "receiving/chinook-source.py",
+    "guide": "CHINOOK.md",
+    "parent": "receiving/receive.mjs",
+    "entry": "runChinookProgramme",
+    "originalWorker": "vendor/dlt/pipeline/worker.py",
+    "operation": "DEFINIAN-CHINOOK-SAME-PROGRAMME-0C7A-20261013",
+    "sourcePreparation": "Exact original receive_reference.py over all ten pinned upstream bodies; native SQLite realization retains complete lineage and controls.",
+    "delivery": "Original full dlt native run/verify, typed parity, required business rules, all invoice and grouped reconciliation, original operator review, cutover/rollback/all table consumers, same programme browser and receiving hosts."
+  }
+}

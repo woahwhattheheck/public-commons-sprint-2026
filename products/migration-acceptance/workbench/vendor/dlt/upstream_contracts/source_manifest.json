@@ -1,0 +1,557 @@
+{
+  "schema": "commons.upstream-source-companion/v1",
+  "project": "DLTHUB-PIPELINE-MIGRATION-0C7A-20261013",
+  "upstream_repository": "dlt-hub/dlt",
+  "upstream_commit": "2360d229c77f7f64692acc31a4555f4cfcd50ed3",
+  "upstream_version": "1.31.0",
+  "original_files": [
+    {
+      "path": "dlt/__init__.py",
+      "bytes": 2807,
+      "sha256": "04daf8a68674a33293623890f253a20b8c00a4293a80355ba1e37f33d2983d08",
+      "git_blob": "8b524b376b6da17493d87e1bd97615d9e7912ac4",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/__init__.py"
+    },
+    {
+      "path": "dlt/_workspace/_templates/_single_file_templates/fruitshop_pipeline.py",
+      "bytes": 3568,
+      "sha256": "2d18b2df0b82f143794ad49afa6bc62d53bed0b51b33be668f06af5edcdfdb97",
+      "git_blob": "068d549bceaf6d68092d6d1e8c5344fbc016332d",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/_workspace/_templates/_single_file_templates/fruitshop_pipeline.py"
+    },
+    {
+      "path": "dlt/_workspace/cli/_pipeline_command_helpers.py",
+      "bytes": 13660,
+      "sha256": "7a1a385197b2532a99e7366808d448c1875dab682baf8640d37871adac4bdbd2",
+      "git_blob": "9bc42b3b0c1a35adfcd0aaf6f8bc34c160b20d1a",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/_workspace/cli/_pipeline_command_helpers.py"
+    },
+    {
+      "path": "dlt/_workspace/cli/_pipeline_command.py",
+      "bytes": 18151,
+      "sha256": "f3085b96cb7e8128f0d4a156bbb8a440d0e53613ed0cad1fa69963422c2adae2",
+      "git_blob": "3c448ba2b63a6d7da603c071ddc2b218f691e93e",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/_workspace/cli/_pipeline_command.py"
+    },
+    {
+      "path": "dlt/common/destination/client.py",
+      "bytes": 46851,
+      "sha256": "b3c6073e643132b02e5103121bb857940478ed34b6bf10a83054edb8b6af959b",
+      "git_blob": "30468f179c343d2acff19695d5da51c851870582",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/destination/client.py"
+    },
+    {
+      "path": "dlt/common/normalizers/json/helpers.py",
+      "bytes": 6524,
+      "sha256": "da460ba078c3292378b1f7f59d5af60ae69a589d9cef3c3f648b996052b16a56",
+      "git_blob": "7aa060e5c267ffd49acef6eaddb00f4d25199e11",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/normalizers/json/helpers.py"
+    },
+    {
+      "path": "dlt/common/normalizers/json/relational.py",
+      "bytes": 19687,
+      "sha256": "bafaa164aa04cbdefd5b3d285d78c1793cfd49b63d2577330588bf007bc32e04",
+      "git_blob": "119b1c61b7fac337948c1dad0f8cf2c85f3f4e7a",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/normalizers/json/relational.py"
+    },
+    {
+      "path": "dlt/common/pipeline.py",
+      "bytes": 31253,
+      "sha256": "c118f7533727122ec027bb9790229fbf6ba50089f549d2ab38fe25b861bf3982",
+      "git_blob": "a70b8860be31772d088e8f17561584bf343a6d7e",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/pipeline.py"
+    },
+    {
+      "path": "dlt/common/schema/migrations.py",
+      "bytes": 8847,
+      "sha256": "c1f8a88db82d907cfe398c95e42fa5fbef1656e20fd823f96283878ba32e12ed",
+      "git_blob": "1a28e747fd6f871aac35396d135943e39506257d",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/schema/migrations.py"
+    },
+    {
+      "path": "dlt/common/schema/schema.py",
+      "bytes": 58810,
+      "sha256": "627a406569c5a0040d2a0d4f9f2d7c6b9db211fae43e0ab4702b5c494b2a3144",
+      "git_blob": "62d792d92166fb054277a681887afddab089626a",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/schema/schema.py"
+    },
+    {
+      "path": "dlt/common/schema/typing.py",
+      "bytes": 15007,
+      "sha256": "c30e4486cb9bf5cc14fefdc27e0f7b3bee72cffbcf090bacf8e30143738f529a",
+      "git_blob": "2dbebcb26499c60658978ddc48622f69e1e299ec",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/schema/typing.py"
+    },
+    {
+      "path": "dlt/common/storages/exceptions.py",
+      "bytes": 5939,
+      "sha256": "f668481e41f907f2a9ee8a7fecc5d374f0500bd8f2e253d177dc6c8d4bc2b700",
+      "git_blob": "ffcd8299255603a410e5492b07d55825800a9890",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/storages/exceptions.py"
+    },
+    {
+      "path": "dlt/common/storages/file_storage.py",
+      "bytes": 16385,
+      "sha256": "1cb7d42afdd3851ad704a16216e972c38fe07792b14819b4c439c5acf527c02f",
+      "git_blob": "a7fe59bfe1a6d5d5c774473470ea5f9531cd844d",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/storages/file_storage.py"
+    },
+    {
+      "path": "dlt/common/storages/load_package.py",
+      "bytes": 56420,
+      "sha256": "8246680a94258eb52859714c5d3bc58aef562c2b9f4396dbcb177398628613e5",
+      "git_blob": "e7284d313bf2d1bd533b0d8e149f28881c7e2a0b",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/storages/load_package.py"
+    },
+    {
+      "path": "dlt/common/storages/load_storage.py",
+      "bytes": 10534,
+      "sha256": "cfcf659f905ed8ef454cc748acff9b3fbb2cee97552b09de53b0c4ebe33a0d4c",
+      "git_blob": "82ebb06e2c08d583c61fbe8d3acb5ef637e45df7",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/storages/load_storage.py"
+    },
+    {
+      "path": "dlt/common/storages/normalize_storage.py",
+      "bytes": 3429,
+      "sha256": "3b24209dbf73869af02ab0a2eb43736a2d3b9970f716f9c9e9a4dc4098e3b8a3",
+      "git_blob": "e25cacd0267ebcfa5e73e2412d24bfd1d7a9e03b",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/storages/normalize_storage.py"
+    },
+    {
+      "path": "dlt/common/storages/schema_storage.py",
+      "bytes": 13880,
+      "sha256": "ccc50b68fd5d4676a9c0cc66743f25d2ef0b3fe265c94e7de6008bc6a870c282",
+      "git_blob": "c675608f863da1abb5d58ad960efc53bdf960215",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/common/storages/schema_storage.py"
+    },
+    {
+      "path": "dlt/destinations/exceptions.py",
+      "bytes": 6191,
+      "sha256": "d2a128c191f630be9e4c3bdfa40e794f11d3632385b718fba40fc618b03f4c9a",
+      "git_blob": "c08b386ce21a30b6b18d9359a8104ee7ff91937d",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/exceptions.py"
+    },
+    {
+      "path": "dlt/destinations/impl/duckdb/configuration.py",
+      "bytes": 20340,
+      "sha256": "e4f40e46f37957d5e6c7c25b6257929d1fd1f9d01cd1cd9537a42ef59b5b87a4",
+      "git_blob": "4a4aaabdce0a0c97ef746062db881deaf80a3807",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/impl/duckdb/configuration.py"
+    },
+    {
+      "path": "dlt/destinations/impl/duckdb/duck.py",
+      "bytes": 4172,
+      "sha256": "9605f7a61ead178ae9936ca36111783950c3b1d7a7511fb29c01cc7a2624dc7d",
+      "git_blob": "fe461654c76e1fbe847b6ca02d1f10af5da28cfd",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/impl/duckdb/duck.py"
+    },
+    {
+      "path": "dlt/destinations/impl/duckdb/exceptions.py",
+      "bytes": 788,
+      "sha256": "25018c509b500b0565b5d60a37deae4c11bc6f2181781f540fa0a31543eb7793",
+      "git_blob": "55a3d7c7182731ce14b204aee68a27db5602b45c",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/impl/duckdb/exceptions.py"
+    },
+    {
+      "path": "dlt/destinations/impl/duckdb/factory.py",
+      "bytes": 9629,
+      "sha256": "a7eafb34e772a449943cd203a5c98ebad13e802337a4fdad5928583330e9b08c",
+      "git_blob": "d6ddc194308e6c0a4ac8a0f896e17623868b7f5c",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/impl/duckdb/factory.py"
+    },
+    {
+      "path": "dlt/destinations/impl/duckdb/sql_client.py",
+      "bytes": 35647,
+      "sha256": "607d288af503bab168dc461f2749e070709f15244f000aaf38f7eef2cbe37e3d",
+      "git_blob": "9e5f155575e573519b2a3e40ecc8e5b0214557b5",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/impl/duckdb/sql_client.py"
+    },
+    {
+      "path": "dlt/destinations/insert_job_client.py",
+      "bytes": 5648,
+      "sha256": "4acf22d4a14f024ed90305401bc6ebf8e340c793fec4c0bbfa30424c379e71d6",
+      "git_blob": "04c1a41abdb0a5d71cf00e756b6556dc5788f2d4",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/insert_job_client.py"
+    },
+    {
+      "path": "dlt/destinations/job_client_impl.py",
+      "bytes": 42969,
+      "sha256": "5136f9c0d60ea35826e5717ff0a8db7bb7e57302b70fb037bfbc57c274f8c105",
+      "git_blob": "c0b8d53b66e4ffb734c290c6826e53fef533f0d2",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/job_client_impl.py"
+    },
+    {
+      "path": "dlt/destinations/job_impl.py",
+      "bytes": 7885,
+      "sha256": "c534ed06721b87e06d5d93e34866a592abd56031dfdae35a85de638f0e8f2740",
+      "git_blob": "af657438492006b5196e3986ff98671d8e8ae850",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/job_impl.py"
+    },
+    {
+      "path": "dlt/destinations/sql_client.py",
+      "bytes": 21494,
+      "sha256": "c2eef5567aa83f2f6bfe38eb6cce21c4ebda12bd62629982841de56f2bc745d7",
+      "git_blob": "020e1187ee12ddef95207abda8477277e0777df3",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/sql_client.py"
+    },
+    {
+      "path": "dlt/destinations/sql_jobs.py",
+      "bytes": 63556,
+      "sha256": "7b6b2b3a9b54ab097f2c4c4fc02b914a740362253731657746b86b38a5f557ba",
+      "git_blob": "13e7d1ffe43d93383f91a391122ce26103d0330e",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/destinations/sql_jobs.py"
+    },
+    {
+      "path": "dlt/extract/extract.py",
+      "bytes": 27623,
+      "sha256": "b8625f322d7b1de5c176308872995665a5107395a34831ff30beb4a1e3f057c1",
+      "git_blob": "83f1ef52a415f21781e4dd5ae22099f9cef1bc2d",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/extract/extract.py"
+    },
+    {
+      "path": "dlt/extract/incremental/__init__.py",
+      "bytes": 52993,
+      "sha256": "ab054f9917f36c427d7a5898e295c2a467e009398a4a6338748e8244f9ac1d00",
+      "git_blob": "24648790120bb7fc4bed3168e6c7924bd72a0a3f",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/extract/incremental/__init__.py"
+    },
+    {
+      "path": "dlt/extract/incremental/transform.py",
+      "bytes": 27254,
+      "sha256": "f2737628d3c58dbed851aff150f4936e206d5c5564d3abfe43ae172d025efac7",
+      "git_blob": "7265c14d5d8d55ac2952cf272cedee4e55b113fb",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/extract/incremental/transform.py"
+    },
+    {
+      "path": "dlt/load/configuration.py",
+      "bytes": 1558,
+      "sha256": "3ab33f1d138aaf2e8867c6de7a7e218d24a5c58a45ad57915948efbece44dde9",
+      "git_blob": "aca59f75515aeaffe80528c9014339daf789bee0",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/load/configuration.py"
+    },
+    {
+      "path": "dlt/load/exceptions.py",
+      "bytes": 4538,
+      "sha256": "3113cee9a008814198eb6c65e2dbae75bef58a3f08553fc41e8acd3be33a1570",
+      "git_blob": "e4d0763be4cbb35445701df2cb57f98f7dca268a",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/load/exceptions.py"
+    },
+    {
+      "path": "dlt/load/load.py",
+      "bytes": 49906,
+      "sha256": "0af18c7e84d8666e3c776e8994ab66459251c1e21df7fae24d90df31d9a9fce0",
+      "git_blob": "2e4e3a4bfa0443b83e687778632ce877d5b1e29c",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/load/load.py"
+    },
+    {
+      "path": "dlt/load/utils.py",
+      "bytes": 16772,
+      "sha256": "793b572d3bef65759df50d66d7f606405beea5406885bf19775f5d1439ae50fb",
+      "git_blob": "790dc8e908c48b8135b3ba0334d5526f793c7ae6",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/load/utils.py"
+    },
+    {
+      "path": "dlt/normalize/normalize.py",
+      "bytes": 18160,
+      "sha256": "428c938a2eb48d0d87743ed69e38355b7ab87cb4076087cd1d1f7a6dc30d426d",
+      "git_blob": "c731c77f88e41a6ac87da0fa712eb8302969cf26",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/normalize/normalize.py"
+    },
+    {
+      "path": "dlt/pipeline/__init__.py",
+      "bytes": 20886,
+      "sha256": "38a6e71fc0a33ce88e4b430f9d0105c462133f099d45523051cc451978ae0d51",
+      "git_blob": "03145d0cad629f91948adbaae9c2064b578a241d",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/pipeline/__init__.py"
+    },
+    {
+      "path": "dlt/pipeline/abort.py",
+      "bytes": 7215,
+      "sha256": "3e222b94cac686403ff4522f74488efee33102ee958c7a0f748544c99e3acd54",
+      "git_blob": "ca5c844027a1b05e4c6b564e05a5aa4456837d14",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/pipeline/abort.py"
+    },
+    {
+      "path": "dlt/pipeline/configuration.py",
+      "bytes": 4171,
+      "sha256": "110fc15da990d0240fa9acd1a81e78352be17e68cd38331cdb615f9bd0f2772b",
+      "git_blob": "9d83b70816be1b824a0edc5352252a8df341dddb",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/pipeline/configuration.py"
+    },
+    {
+      "path": "dlt/pipeline/drop.py",
+      "bytes": 6556,
+      "sha256": "0cb9a776d6a44832ef92236ead0515e35a97466e19b7225dbf785f27f5847d5a",
+      "git_blob": "4b5743da61c4bef6fb7c745d70255eb4a690efc3",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/pipeline/drop.py"
+    },
+    {
+      "path": "dlt/pipeline/exceptions.py",
+      "bytes": 6393,
+      "sha256": "4bb049fad9b01647a4e3e3738ba92b9b163d9b864610ba1657341e92df208d2b",
+      "git_blob": "19d4f542c9c20315f4a94cea472fcda1363e40e6",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/pipeline/exceptions.py"
+    },
+    {
+      "path": "dlt/pipeline/helpers.py",
+      "bytes": 9306,
+      "sha256": "8da12a4eac747cc0e333a40097912e728e37a5902faa3d61fac105bc6adab328",
+      "git_blob": "965ccf2de722608abaef29880e62bb50fad97951",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/pipeline/helpers.py"
+    },
+    {
+      "path": "dlt/pipeline/pipeline.py",
+      "bytes": 104099,
+      "sha256": "63ae6fa0cdea61c12fdcda7e6b7cbaf24295276430494e277a57d20da21396af",
+      "git_blob": "03a705f5e4230a208efd1357f17a7d0baf07d9ce",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/pipeline/pipeline.py"
+    },
+    {
+      "path": "dlt/pipeline/state_sync.py",
+      "bytes": 5804,
+      "sha256": "e826ef1c6573af2471c8636faa2e7bd598da4413c5c4fa89f7d5782850507a53",
+      "git_blob": "007b17eacf4ed9ec2e095fd1d779ce2cb654618e",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/pipeline/state_sync.py"
+    },
+    {
+      "path": "dlt/pipeline/trace.py",
+      "bytes": 15351,
+      "sha256": "8c373b8b4c7eceb04ba69fc4bcdbf8723ec04ccb3f7511ff0488c4cb9b50c92d",
+      "git_blob": "5b00a77dfd1ff0c4578e23aab04734881221c8c8",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/pipeline/trace.py"
+    },
+    {
+      "path": "dlt/version.py",
+      "bytes": 1763,
+      "sha256": "906d9dcf898482f77de44f45b281b726e7558c3ed9b5bed0373dfdfded207cea",
+      "git_blob": "1406d5d5e0680006c31a27eeb35febf298acb50e",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/dlt/version.py"
+    },
+    {
+      "path": "docs/website/docs/dlt-ecosystem/destinations/duckdb.md",
+      "bytes": 15507,
+      "sha256": "e125d50dc7d41604019506b1013a688cf93b94e934de389ef49ae2231be6ba5c",
+      "git_blob": "4a338e29f5139e7b47cb9024987afe2dd984a427",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/dlt-ecosystem/destinations/duckdb.md"
+    },
+    {
+      "path": "docs/website/docs/general-usage/destination-tables.md",
+      "bytes": 19868,
+      "sha256": "1f222349efa5a8feb6cd9af9a2b2f89132ae433332f452e9d8c2502962ae1263",
+      "git_blob": "a590d258c63731e029a0326cb9254b7020ea5e45",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/general-usage/destination-tables.md"
+    },
+    {
+      "path": "docs/website/docs/general-usage/incremental-loading.md",
+      "bytes": 6417,
+      "sha256": "fdc71a39c78f8427ad1b47a0078e6a0fe44767ef2cbce29b0c320699f5ce5147",
+      "git_blob": "6b3749aa36ceba45b5b774fbcd6970cd5bcfda02",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/general-usage/incremental-loading.md"
+    },
+    {
+      "path": "docs/website/docs/general-usage/incremental/advanced-state.md",
+      "bytes": 5866,
+      "sha256": "9d0bf8297e0d955b2516b51c1614e0a85a77e2058560b086a5f86045413eb33c",
+      "git_blob": "011743889dcf9d2e6655d139a94803f4881b4119",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/general-usage/incremental/advanced-state.md"
+    },
+    {
+      "path": "docs/website/docs/general-usage/incremental/cursor.md",
+      "bytes": 33878,
+      "sha256": "62279806cded3e188af52e0ec867a75120d3f410380660cf92b5ea0717548f69",
+      "git_blob": "a8b7a69b64db74b90127dc85739a8ad1bb211ad9",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/general-usage/incremental/cursor.md"
+    },
+    {
+      "path": "docs/website/docs/general-usage/merge-loading.md",
+      "bytes": 51833,
+      "sha256": "5b7b6e0a13167cf3ef38147164767763e7d5442c94dd64763d5d51baa0c33ffa",
+      "git_blob": "0c212482843b2c4fb2ae1042f6da5f6f474e88ad",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/general-usage/merge-loading.md"
+    },
+    {
+      "path": "docs/website/docs/general-usage/pipeline.md",
+      "bytes": 12134,
+      "sha256": "4bee8b3cd296e4101652b2b8f644e7d466139a6de9d360abd8b251c0a226e03a",
+      "git_blob": "3dc272619ab9042f4d49040ebadc9878176fad51",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/general-usage/pipeline.md"
+    },
+    {
+      "path": "docs/website/docs/general-usage/schema.md",
+      "bytes": 43541,
+      "sha256": "d5e36e4b04e3c4c383561c640a5d73cbadeaecf0596755e9b31cefeda2d92028",
+      "git_blob": "5c653e5317d9827e5fe31ca752716fd8f9adb3aa",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/general-usage/schema.md"
+    },
+    {
+      "path": "docs/website/docs/reference/command-line-interface.md",
+      "bytes": 26037,
+      "sha256": "0937cfd2b17eee2ddd188e86d7f627e72ff974d64ea6ae4c8cc19862543a3f98",
+      "git_blob": "398683a569046e4aa2e3ca2ddbab7edc4cda4f60",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/reference/command-line-interface.md"
+    },
+    {
+      "path": "docs/website/docs/running-in-production/running.md",
+      "bytes": 38872,
+      "sha256": "52e5ad6990ae90206743d8ca85736943ca6d42a8e2c10577feda8d04556f2168",
+      "git_blob": "33e04caacc96b8dfd79e7e0eeb3a30fad2eaa2bd",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/running-in-production/running.md"
+    },
+    {
+      "path": "docs/website/docs/tutorial/load-data-from-an-api.md",
+      "bytes": 27399,
+      "sha256": "4db6c9b459aaee4bd1a7e956c22af03c557b6e2c7ad10852e85041bbb42a8d20",
+      "git_blob": "9d0268bf4d8ee606d093fae59cc41dcb2b80e498",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/docs/website/docs/tutorial/load-data-from-an-api.md"
+    },
+    {
+      "path": "LICENSE.txt",
+      "bytes": 11348,
+      "sha256": "3bd68ce12f57c10e265b3d19b3251efa5aa40f780f590bc8bb7b1c83f85854ca",
+      "git_blob": "e386e8c8b30d45577906c70e37d1e896a1af197c",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/LICENSE.txt"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 14774,
+      "sha256": "1fab0023430f142a3fbdacf05290fce2d9409302dc545b05ad11c498a405edcb",
+      "git_blob": "0320ba364ccbfe4d1487f23ab9577e7e0be6152f",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/pyproject.toml"
+    },
+    {
+      "path": "README.md",
+      "bytes": 13472,
+      "sha256": "136175c5ffad0b39d70a9ce7b512a601aef62fe3604bcba19f6a81a0988513c9",
+      "git_blob": "84e22acc4613c21cb3e526b2e3a955c293b92b2e",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/README.md"
+    },
+    {
+      "path": "tests/normalize/cases/event.event.many_load_2.json",
+      "bytes": 1323,
+      "sha256": "90ef3530238b5e29fa2246e8293deca05107ec3a89e04d29b25b3398d6cb4175",
+      "git_blob": "06a605665678b7f770d956388ffa8eee3c6f853e",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/normalize/cases/event.event.many_load_2.json"
+    },
+    {
+      "path": "tests/normalize/cases/event.event.user_load_1.json",
+      "bytes": 5902,
+      "sha256": "cf4ce99de166cbee9f75b4c4be4eef98313983ff90864869fca4588a073fafc4",
+      "git_blob": "6ce98a6721baa35e1f334a470a8fa7ea9d0d585c",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/normalize/cases/event.event.user_load_1.json"
+    },
+    {
+      "path": "tests/normalize/cases/github.issues.load_page_5_duck.json",
+      "bytes": 526313,
+      "sha256": "f1ad05152bc84abe563cf6d342057d91e8dff32e961d737d5ed3c3e9840cc7cd",
+      "git_blob": "9afbb8c0421223be385c3ac5480fa441613c3f67",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/normalize/cases/github.issues.load_page_5_duck.json"
+    },
+    {
+      "path": "tests/normalize/cases/schemas/event.schema.json",
+      "bytes": 2864,
+      "sha256": "a114b4c1999b93a1efb2eb2d6e425f7fe202b25a45ab1198e939613504fd7ed1",
+      "git_blob": "8bdf14f928b225d738beb730a1909357f61c3a47",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/normalize/cases/schemas/event.schema.json"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/__init__.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/.dlt/config.toml",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/.dlt/config.toml"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/datetime_key_pipeline.py",
+      "bytes": 2678,
+      "sha256": "ed764c80a3a92c728066c5524260e910708e0ed7700a5b33f7c6b6306b7cef2d",
+      "git_blob": "d2b4ca83c0a4e962eba0b6841025154a207fe6b3",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/datetime_key_pipeline.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/github_extract.py",
+      "bytes": 420,
+      "sha256": "c34cbb1562cf9be3c04b2a4888af9aa393fa95bd917e09af41a62f7433d248d2",
+      "git_blob": "c9ed672fadfcbe3ee206b9e814c668178fe51633",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/github_extract.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/github_load.py",
+      "bytes": 129,
+      "sha256": "897360b5216a3192453eb117aadd13914809b10e6a217c9b709caca2bdb5a2c3",
+      "git_blob": "1df3350ae7bdca994459b0bd503cd1be527007d8",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/github_load.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/github_normalize.py",
+      "bytes": 122,
+      "sha256": "f83729c078082641581e785edd593e16436949ba2e5304e66c64e15d26e2b630",
+      "git_blob": "30a45a26319f26f324f629875c86fba621807074",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/github_normalize.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/github_pipeline.py",
+      "bytes": 1621,
+      "sha256": "b13980af816f32e6b1ba0793669351d575f22aeaa4ba712f77c9ca286475fa34",
+      "git_blob": "c9bf2ecebd4046fb6e1cfb41904df2e2d7d7933f",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/github_pipeline.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/github_rev.py",
+      "bytes": 523,
+      "sha256": "7f9242fd8754c553b8c5ed2a4fe8751c7ecd1657a9b6e76a1a364467d89fdf86",
+      "git_blob": "4ebe3048f436e51b781386717e3f9360501eedd4",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/github_rev.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/github_scd2.py",
+      "bytes": 956,
+      "sha256": "ffe384e585d03a770729a2f8b1a4c5961d581abfeb4ec200c71702aafda6daa6",
+      "git_blob": "9d70b2129e57a0ecc7dc298c1f4b5d2f4f9da111",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/github_scd2.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/legacy_upsert_pipeline.py",
+      "bytes": 2097,
+      "sha256": "a249aba654a7ba89d295f7a169d9573501c12837be138dcea665b995b343b851",
+      "git_blob": "a4e1e68f750846c8f8d4bf238aab2eac5233aa73",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/legacy_upsert_pipeline.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/null_columns_pipeline.py",
+      "bytes": 493,
+      "sha256": "ced9b2c19b7ff1d1b15f3fccc3b17f674fb606ef908f101d12c5182ac6b3d8a1",
+      "git_blob": "238f63bd92a18399a1739a3698b4d5375104e0fe",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/null_columns_pipeline.py"
+    },
+    {
+      "path": "tests/pipeline/cases/github_pipeline/refresh_normalized_pipeline.py",
+      "bytes": 1318,
+      "sha256": "7d0ef621cdbfde797008c8a6be62e4f8ca23df4c3580db5355da307df31ab3af",
+      "git_blob": "4b3a844419a9a478baa4aa1e054a272e3909d1c3",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/github_pipeline/refresh_normalized_pipeline.py"
+    },
+    {
+      "path": "tests/pipeline/cases/separate_steps/pipeline_step_loop.py",
+      "bytes": 887,
+      "sha256": "06bf073e65ac9acda5b5dcf4ae6f6b6cc5f9412c3a4a1f311db38cb77563589e",
+      "git_blob": "0e2450f9ef0fc36a092c886380ee26795fad4c7a",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/tests/pipeline/cases/separate_steps/pipeline_step_loop.py"
+    },
+    {
+      "path": "uv.lock",
+      "bytes": 1864588,
+      "sha256": "ec26611cedb620e1e7fa5342c39934bb175df16449a868975199e027da8201d4",
+      "git_blob": "c9a7406b68a202d9ec01f2071ae149eb71ebe9de",
+      "source_url": "https://github.com/dlt-hub/dlt/blob/2360d229c77f7f64692acc31a4555f4cfcd50ed3/uv.lock"
+    }
+  ],
+  "license_path": "upstream/LICENSE.txt",
+  "source_total_bytes": 3663599
+}

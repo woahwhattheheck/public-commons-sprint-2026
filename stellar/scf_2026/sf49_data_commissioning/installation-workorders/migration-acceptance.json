@@ -1,0 +1,124 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "migration-acceptance",
+  "title": "Migration Acceptance Workbench customer commissioning",
+  "task": {
+    "name": "Commission and independently receive a complete native data migration and business acceptance edition",
+    "purpose": "Give the customer's data owner and receiving operator a complete, reproducible migration from authorized original source files through the selected dlt/DuckDB runtime, exact destination parity and business-rule review to an explicitly selected consumer and portable editable handover.",
+    "request": "Receive the complete agreed original data population, independent expected tables, source authority and source/target semantics. Retain filenames, formats, hashes, keys, NULL rules, exact numeric types, time and cursor meaning. Review the native input, every selected resource and normalized business table, mappings, destination names, write disposition, incremental/backfill options and schema contract. Compile and approve the exact native plan. Run original dlt extraction, normalization and load against the selected runtime, retaining full pipeline state, packages, schemas, destination data, logs and interrupted attempts. Perform explicit native verification and complete typed comparison of every agreed business table, including multiplicities and schema/key findings. Compile the complete business acceptance edition for those same streams: object keys, required fields, parent/child relationships and exact grouped counts or sums. Evaluate full native observations, retain every failed row/group and record attributed decisions against that exact report. Correct required failures through source or reviewed-plan editions; a permitted exception never overrides native parity. Switch the retained consumer only after the current plan, verification, comparison and acceptance meet their original checks. Read all selected tables, demonstrate rollback to the retained prior binding and preserve the entire history. Receive an agreed subsequent source/correction edition through the same project. Deliver full original application source, installed runtime archive, all source/native files, reports, decisions and named handoffs. Independently receive, reopen and continue the same project; record actual Installation observations.",
+    "completeOutput": "One complete accepted customer migration edition with all agreed source/expected/destination tables; full native pipeline state, schemas, load packages and attempts; exact typed parity and complete business evidence; original operator decisions; selected/previous consumer bindings; complete editable application/runtime/source handover; and independent receive/reopen results for the same project and Installation.",
+    "repeatTrigger": "A genuine subsequent customer source period, corrected original edition, reviewed business requirement or supported configuration change creates a linked useful task. An interrupted request, extra download, alternate report format or retry continues its original task and is not another completed customer purchase.",
+    "pricedUnit": "One agreed whole customer migration and acceptance edition covering its explicit complete population and handover. Select the actual merchant unit, atomic price/count and spending authority from the original Installation. Keep professional adaptation, operator sessions and correction terms in the existing Workshare."
+  },
+  "source": {
+    "reference": "Select complete customer source editions, independent expected tables, reviewed pipeline input and business acceptance input in the original case. Record filenames, acquisition references/times, bytes/SHA-256, project/plan identities and complete installed application/runtime manifests.",
+    "mode": "Immutable CSV, JSON-array or newline-JSON intake followed by native dlt 1.31.0 extraction/normalization/load and DuckDB destination operation. Retain reviewed native incremental and load-package state. Live connectors or external destinations are additional explicitly selected original integration work; an uploaded configuration alone is not a live extractor.",
+    "population": "All tables, rows and nested business objects agreed in the Workshare, with declared complete selection and independent expected population per business table. Preserve excluded or unsupported scope explicitly. Use original limits and actual source volumes; sampled parity cannot replace the agreed complete output.",
+    "meaning": "Preserve original resource/table names, normalized mappings, ordered composite keys, NULL policy, padded text, integer/decimal precision, binary values, float64 representation, timestamps/time zones and cursor bounds. Retain duplicate multiplicity and native metadata. Business keys, required fields and parent/child references bind exact typed observations. Grouped controls preserve exact coefficients/exponents and missing groups, including zero-valued groups.",
+    "changePolicy": "Retain every original source and plan edition. Changed source, mapping, rules or runtime requires explicit review in the same project. Preserve prior native state/receipts; continue from an original closed parent job or maintained reconciliation. New reports do not inherit unrelated exceptions. Record withdrawal or stopped consumer through the original application and Installation with attributable history."
+  },
+  "receiving": {
+    "application": "TJLabs Migration Acceptance Workbench at products/migration-acceptance/workbench, the complete 205-file public software derivative whose manifest is fbabde0b35342409e652fab1514e1892876ad865591067ddd59b4d4eb7bd90a5; native implementation retained from source commit 6720db68738b822e3c87ee10c4b58e1a2a12944f. Commands: migration-acceptance (original CLI), migration-acceptance-managed (managed foreground), migration-acceptance-receive (original complete programme). Retain the selected Linux/Node/Python and exact dlt/DuckDB portable runtime.",
+    "acceptanceRule": "Every agreed original/expected/actual population is retained in full. Explicit verify and comparison belong to the currently approved native plan and cover all normalized business tables. The current business report names that comparison and rule edition; required findings pass and only reviewable findings may have attributed accepted exceptions. The consumer records that accepted result. The customer reads complete pages/downloads, observes rollback/reselection, independently receives the whole project/runtime/source handoff and reopens its original identity/history. Only actual completed results become Installation observations.",
+    "changeAndWithdraw": "The authorized operator changes source, mapping, rules and consumer selection through the original project/revision. Rollback restores the prior retained binding while preserving subsequent outputs/reports/decisions. External production routing remains the existing system owner's action. Use the original Installation draft/change/return route for scope/authority changes; additional connectors, destinations or populations follow the original Workshare change process.",
+    "recovery": "Retain exact actor/request/body and expected revision after uncertainty. Resume upload ranges and named handoffs from original descriptors. Inspect the existing job/attempt before retry, adopt or abandon; adoption needs an actual original result. Preserve native state and failed attempts. Same/forward/older receiving follows original prefix rules without rolling current history backward. Imported process bindings stay suspended until the receiving host explicitly selects its runtime.",
+    "maintenance": "Record data owner, adaptation engineer, runtime owner and independent receiver in the original case. Deliver editable source, licences, manifests, private configuration guidance, complete native files and agreed support. Keep bearer tokens and credentials outside project handoffs. Migration Acceptance names TJLabs' authored product; original Definian identifiers and separate company case do not imply endorsement or accepted customer commissioning."
+  },
+  "steps": [
+    {
+      "title": "Receive the original Workshare and complete source selection",
+      "result": "Use the actual case and fresh Workshare-derived seed. Retain commercial phases, funded assignments and actual payment terms. List every source/expected table, population, authority and receiving owner/environment."
+    },
+    {
+      "title": "Verify whole application and native runtime",
+      "result": "Preserve all 205 public-edition files and SOURCE_MANIFEST.json plus integration source. Adopt exact runtime-ready and portable archive. Verify interpreter, upstream source and dependency identity; retain authentication privately."
+    },
+    {
+      "title": "Review the complete native pipeline input",
+      "result": "Retain all original/expected files. Review resources, tables, field mapping, keys, NULL policy, types, nested normalization, schema contract, merge/cursor/backfill meaning. Compile and approve the current plan."
+    },
+    {
+      "title": "Operate original native stages with state custody",
+      "result": "Execute extraction, normalization, load or combined run through the original application. Retain schemas, state, packages, destination snapshot, logs and every attempt. Continue interrupted work through maintained same-job recovery or explicit reconciliation."
+    },
+    {
+      "title": "Verify every agreed destination table",
+      "result": "Run a fresh explicit verify. Compare complete typed populations, multiplicities, keys/schema and all normalized business tables. Retain full observations/comparison and expose incomplete or unmapped output."
+    },
+    {
+      "title": "Compile and evaluate business acceptance",
+      "result": "Receive every business object, key, required field, relationship and exact grouped control. Bind rules to the native plan and evaluate its complete comparison. Retain all findings, original rows, missing groups and exact totals."
+    },
+    {
+      "title": "Record decisions and correct failures",
+      "result": "Bind authenticated decisions to the current report. Acknowledgement remains unresolved; exceptions apply only where policy permits. Correct required failures through actual source/rule/native work and retain earlier and corrected measured editions."
+    },
+    {
+      "title": "Select, review and roll back the consumer",
+      "result": "Select an eligible verify/comparison/acceptance result. Read every table and download typed output. Roll back to the actual prior binding, verify it and deliberately reselect the accepted edition, preserving all history."
+    },
+    {
+      "title": "Commission a useful following edition",
+      "result": "Receive a genuine later source period or agreed correction in the same project. Review changes and carry state only through the original selected parent. Retain a complete new useful result without counting retries/formats as purchases."
+    },
+    {
+      "title": "Independently receive the whole handover",
+      "result": "Create complete named v2 NDJSON handoffs with project revisions/requests, sources, native files, reports, decisions, editable source and runtime. Inspect and receive independently; verify same/forward/older disposition, cold reopen, full downloads and explicit runtime rebinding."
+    },
+    {
+      "title": "Save actual Installation outcomes and continuation",
+      "result": "Use current case/version for original preview/save. Record actual work/purchase/outcome IDs only. Export and independently receive the complete Operations case, reopen the same Installation and retain support and next-task ownership."
+    }
+  ],
+  "inputs": [
+    "Complete existing customer Workshare and matching commissioning/receiving packet, all original phases/owners/dependencies, effort/terms, current SCF case and pinned plan.",
+    "All authorized CSV, JSON-array or newline-JSON data and independent complete typed expectations; source references/times, filenames, lengths and SHA-256.",
+    "Actual full table/population scope, column/key/NULL semantics, decimal/currency/time-zone meaning, cursor bounds, merge and permitted schema changes.",
+    "Complete reviewed dlthub.pipeline-input.v1, original Airbyte migration decisions where applicable, real source IDs and every normalized business-table mapping.",
+    "Complete acceptance input: every business object, required field, relationship, grouped control, exactness and exception policy, with accountable reviewer.",
+    "Exact SOURCE_MANIFEST.json and 205-file workbench, integration source, licences, selected runtime-ready, installed manifest and full portable runtime.",
+    "Host-owned authentication/connection selections referenced privately; original project, plan, job, attempt and request IDs.",
+    "Full native files, destination data, schema/state/package histories, exact comparisons/observations and accepted/corrected business reports.",
+    "A real subsequent source edition or agreed correction and customer task purpose/calendar.",
+    "Named complete handoffs, independent receive/reopen output, original Installation export and actual receiving operator/host.",
+    "Actual merchant/buyer deployments, source-use authority, network/asset/recipient, integer atomic price/count/budget and approved spending selection."
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/migration-acceptance/workbench/SOURCE_MANIFEST.json",
+      "blob": "08f3359170170843a642c6e889f5d2086bf2ca54"
+    },
+    {
+      "path": "products/migration-acceptance/workbench/cli.mjs",
+      "blob": "c206a91ab35a541bd7b51deb0c2ae0c510599bd0"
+    },
+    {
+      "path": "products/migration-acceptance/workbench/OPERATOR.md",
+      "blob": "42b0007dca637a9a3b194524be67dc91cf7c5144"
+    },
+    {
+      "path": "products/migration-acceptance/workbench/acceptance/index.mjs",
+      "blob": "0a622deb4a3ef21ece441b57a2fa6424087808a0"
+    },
+    {
+      "path": "products/migration-acceptance/workbench/acceptance/OPERATING.md",
+      "blob": "12f7581517d97d98d59bfd9416953f3b8ecedbd3"
+    },
+    {
+      "path": "products/migration-acceptance/workbench/receiving/chinook.mjs",
+      "blob": "97247ef70c999b377f584db69cce9c0c1f9b295c"
+    },
+    {
+      "path": "products/migration-acceptance/workbench/receiving/chinook-source.py",
+      "blob": "557386e9812f8593e65c01980e333872d7225cc3"
+    },
+    {
+      "path": "products/migration-acceptance/workbench/CHINOOK.md",
+      "blob": "29631aa3146514a9b121850ad23b3296274e81f2"
+    },
+    {
+      "path": "products/migration-acceptance/workbench/vendor/dlt/runtime/runtime.mjs",
+      "blob": "d4bbd77230c7a4d4d07b9bd18211feb19a9149dd"
+    }
+  ]
+}

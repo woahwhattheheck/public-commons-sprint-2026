@@ -1,0 +1,159 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "migration-acceptance",
+  "heading": "## Migration Acceptance Workbench: complete native migration and independent customer receiving",
+  "sources": [
+    {
+      "id": "migration-acceptance-workbench-source",
+      "label": "Complete original 208-file Migration Acceptance Workbench source",
+      "repository": "woahwhattheheck/commons",
+      "kind": "tree",
+      "path": "revenue/definian_migration_acceptance_20261013",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f"
+    },
+    {
+      "id": "migration-acceptance-source-manifest",
+      "label": "Complete original Migration Acceptance source manifest",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/definian_migration_acceptance_20261013/SOURCE_MANIFEST.json",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+      "editions": [
+        {
+          "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+          "bytes": 38692,
+          "sha256": "38fbf4bab1ec87dfc14c9b3d4bff3b580186bee0b78958410e8be89afa7332fc",
+          "git_blob": "c00d35d7bc92082b2b82ab33d0f7631efa7f212b"
+        }
+      ]
+    },
+    {
+      "id": "migration-acceptance-original-cli",
+      "label": "Original Migration Acceptance CLI and exact retained request handling",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/definian_migration_acceptance_20261013/cli.mjs",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+      "editions": [
+        {
+          "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+          "bytes": 9781,
+          "sha256": "9954415297a25af1ed8e4844569537b4aa50ca3b8f42eb037315df56690a0263",
+          "git_blob": "c206a91ab35a541bd7b51deb0c2ae0c510599bd0"
+        }
+      ]
+    },
+    {
+      "id": "migration-acceptance-original-operator",
+      "label": "Complete native migration and business acceptance operating guide",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/definian_migration_acceptance_20261013/OPERATOR.md",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+      "editions": [
+        {
+          "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+          "bytes": 31788,
+          "sha256": "eb0d4251cbad86ecaea35abb2a1c5fdc729ed882bf9d415a9dcad114c34a9fd6",
+          "git_blob": "42b0007dca637a9a3b194524be67dc91cf7c5144"
+        }
+      ]
+    },
+    {
+      "id": "migration-acceptance-business-engine",
+      "label": "Complete exact typed business acceptance engine",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/definian_migration_acceptance_20261013/acceptance/index.mjs",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+      "editions": [
+        {
+          "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+          "bytes": 26715,
+          "sha256": "0fbc0f85b62fa2fd81ca4056a958add9028ba15c4babd3cd756bab5f73e961b3",
+          "git_blob": "0a622deb4a3ef21ece441b57a2fa6424087808a0"
+        }
+      ]
+    },
+    {
+      "id": "migration-acceptance-business-contract",
+      "label": "Complete business rule, findings and decision contract",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/definian_migration_acceptance_20261013/acceptance/OPERATING.md",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+      "editions": [
+        {
+          "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+          "bytes": 10600,
+          "sha256": "7d8234b3156a4b6224a31550477a5d43f36b05829e0d8b597cc34808df7dd567",
+          "git_blob": "12f7581517d97d98d59bfd9416953f3b8ecedbd3"
+        }
+      ]
+    },
+    {
+      "id": "migration-acceptance-chinook-course",
+      "label": "Whole original Chinook native and independent customer receiving course",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/definian_migration_acceptance_20261013/receiving/chinook.mjs",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+      "editions": [
+        {
+          "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+          "bytes": 34256,
+          "sha256": "0059d4cf637923c4d25a98c63fe3eb521e5cf41b014c434e27a7da22b169fc36",
+          "git_blob": "97247ef70c999b377f584db69cce9c0c1f9b295c"
+        }
+      ]
+    },
+    {
+      "id": "migration-acceptance-chinook-source",
+      "label": "Original source custody, inherited-runtime and continuation implementation",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/definian_migration_acceptance_20261013/receiving/chinook-source.py",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+      "editions": [
+        {
+          "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+          "bytes": 16251,
+          "sha256": "e99e9a9bcdaeaa673ad8b643aa89d8130d2c067f6a82d605f8b996303a184f43",
+          "git_blob": "557386e9812f8593e65c01980e333872d7225cc3"
+        }
+      ]
+    },
+    {
+      "id": "migration-acceptance-chinook-guide",
+      "label": "Complete related-data source and customer receiving guide",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/definian_migration_acceptance_20261013/CHINOOK.md",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+      "editions": [
+        {
+          "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+          "bytes": 29778,
+          "sha256": "b9e3e4831e581d6f9ad2d38b8572101dfbe5663767bf1d844986b813550d1952",
+          "git_blob": "29631aa3146514a9b121850ad23b3296274e81f2"
+        }
+      ]
+    },
+    {
+      "id": "migration-acceptance-original-runtime",
+      "label": "Original locked dlt runtime and portable receiving implementation",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/definian_migration_acceptance_20261013/vendor/dlt/runtime/runtime.mjs",
+      "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+      "editions": [
+        {
+          "commit": "6720db68738b822e3c87ee10c4b58e1a2a12944f",
+          "bytes": 27303,
+          "sha256": "60708b6b7c1bffc6fee52a5142e161dd338b1a1befb32e8b9631b1ee66743c37",
+          "git_blob": "d4bbd77230c7a4d4d07b9bd18211feb19a9149dd"
+        }
+      ]
+    }
+  ]
+}
