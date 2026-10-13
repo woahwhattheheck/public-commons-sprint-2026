@@ -5,7 +5,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {spawn,spawnSync} from 'node:child_process';
 import {createRequire} from 'node:module';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath,pathToFileURL} from 'node:url';
 import readline from 'node:readline';
 
 const HERE=path.dirname(fileURLToPath(import.meta.url));
@@ -174,6 +174,32 @@ async function download(page,button,label){
  const retained=retain(file,data);fs.unlinkSync(temporary);journal.downloads[label]={...retained,suggested_filename:value.suggestedFilename()};save();await idle(page);
  return retained;
 }
+async function captureViews(page,label){
+ const original=page.viewportSize();
+ try{
+  for(const width of [1440,390]){
+   await page.setViewportSize({width,height:1000});
+   await page.evaluate(()=>document.fonts.ready);
+   const raw=await page.screenshot({fullPage:true,animations:'disabled'}),hash=sha(raw);
+   const item={...retain(path.join(OUT,'visuals',label+'-'+width+'-'+hash.slice(0,12)+'.png'),raw),
+    label,viewport:{width,height:1000},url:page.url(),captured_at:new Date().toISOString()};
+   journal.visuals??=[];
+   if(!journal.visuals.some(row=>row.label===label&&row.viewport?.width===width&&row.sha256===hash))journal.visuals.push(item);
+   save();
+  }
+ }finally{if(original)await page.setViewportSize(original);}
+}
+async function captureDownloadedReports(){
+ const page=await context.newPage();
+ try{
+  for(const [label,download]of Object.entries(journal.downloads)){
+   if(!label.endsWith('.html'))continue;
+   const raw=fs.readFileSync(download.path);insist(sha(raw)===download.sha256,'The saved printable report changed: '+label);
+   await page.goto(pathToFileURL(download.path).href,{waitUntil:'load'});
+   await captureViews(page,label.replace(/\.html$/,''));
+  }
+ }finally{await page.close();}
+}
 async function run(){
  if(journal.status==='COMPLETE'){
   const file=path.join(OUT,'browser-result.json');
@@ -210,11 +236,12 @@ async function run(){
   insist(enabled,'The cached receiving controls stayed disabled after original pricing navigation');
   step('detached_receiving_return',{original_review_id:design.origin.id,prior_analysis_id:design.origin.prior_analysis_id,controls_enabled:enabled});
  }
- if(!journal.steps.accepted_analysis_reopened){
+ if(!journal.steps.accepted_analysis_reopened||!journal.visuals?.some(row=>row.label==='original-accepted-pricing')){
   await page.locator('#nav [data-view="reports"]').click();
   await page.locator('[data-action="review-analysis"][data-id="'+design.analysis_id+'"]').click();
   await page.locator('#review-form').waitFor({state:'visible'});
   insist(await page.locator('#review-form').getAttribute('data-sha')===design.analysis_sha256,'The visible review no longer binds the original accepted result');
+  await captureViews(page,'original-accepted-pricing');
   step('accepted_analysis_reopened',{analysis_id:design.analysis_id,accepted_review_id:design.accepted_review_id});
  }
  await receiving(page,'delivery');
@@ -235,6 +262,7 @@ async function run(){
  for(const [title,label]of [['Download CSV','linked-handback.csv'],['Download TSV','linked-handback.tsv'],['Download complete handoff JSON','linked-handback.json'],['Download printable receiving report','linked-handback-report.html']]){
   if(!journal.downloads[label])await download(page,page.getByRole('button',{name:title,exact:true}),label);
  }
+ await captureViews(page,'linked-handback');
  if(!journal.linked_annual_review){
   await receiving(page,'annual');
   await page.getByLabel('Previous receiving edition',{exact:true}).selectOption(design.previous_handoff.id);await idle(page);
@@ -255,6 +283,8 @@ async function run(){
  const annual=await get('/api/extensions/receiving/document/annual-review/'+journal.linked_annual_review.id);
  insist(annual.sha256===journal.linked_annual_review.sha256&&annual.previous.id===design.previous_handoff.id&&annual.current.id===journal.linked_handoff.id,'Reopened annual receiving selected a different edition');
  step('saved_history_reopened',{annual_review_id:annual.id,previous_handoff:annual.previous.id,current_handoff:annual.current.id});
+ await captureViews(page,'linked-annual-review');
+ await captureDownloadedReports();
  for(const [label,kind,id]of [['linked-handback.csv','handoff-csv',handoff.id],['linked-handback.tsv','handoff-tsv',handoff.id],['linked-handback.json','handoff-json',handoff.id],['linked-annual-review.json','annual-review',annual.id]]){
   const response=await context.request.get(baseURL+'/api/extensions/receiving/download/'+kind+'/'+id);
   insist(response.ok(),'Native original download failed: '+label);
@@ -265,7 +295,7 @@ async function run(){
   actual_browser:await context.browser()?.version()||'persistent Chromium',executable:chromiumPath,
   linked_handoff:journal.linked_handoff,linked_annual_review:journal.linked_annual_review,
   original_analysis_id:design.analysis_id,original_accepted_review_id:design.accepted_review_id,
-  steps:journal.steps,downloads:journal.downloads,retained_requests:Object.keys(journal.requests).length,page_errors:journal.errors};
+  steps:journal.steps,downloads:journal.downloads,visuals:journal.visuals||[],retained_requests:Object.keys(journal.requests).length,page_errors:journal.errors};
  atomic(path.join(OUT,'browser-result.json'),bytes(result));
  journal.completed_result=result;journal.status='COMPLETE';save();
  await context.close();context=null;
