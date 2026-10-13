@@ -33,6 +33,12 @@ A change is alternative minus baseline. A negative export change is a reduction;
 
 Each pollutant uses one common change legend across all selected alternatives. The cap is the largest exact 98th percentile of the alternatives' nonzero absolute cell changes, unless `map_settings.display_percentile` selects another percentile. The same cap applies to both positive and negative change. Display caps affect the picture; quantitative GeoTIFF values and totals remain available in full. `maps/display-scales.json` records the cap, percentile, population, units and zero-range handling. The combined priority uses its fixed dimensionless zero-to-one scale.
 
+## Source-water overlay labels
+
+The drinking-water overlay uses the retained source's geography. SCDES surface-water protection polygons are protection areas, while the receptor-network product derives upstream watershed membership from original HUC links. Keep each product's name with its own geometry when reviewing the maps and report.
+
+A source overlay selection accepts an optional `label` alongside its `source_collection_id` and `source_id`. For the original SCDES surface-water protection polygons, set `label` to `Surface-water protection areas`. The renderer retains this explicit caption and appends the source vintage. When no caption is supplied, the drinking-water fallback is `Drinking-water source areas`. High-quality-water styling continues to follow its source role even when its displayed caption is customized.
+
 ## Operate the received application
 
 The command restores `scientific-workspace.zip` to `ECO_RECEIVED`, then runs that delivered application's own CLI against `ECO_RECEIVED/workspace`. It saves the actual CLI response as `reopened-workspace.json` and checks that the selected complete runs and comparison are present.
@@ -60,6 +66,25 @@ Open the local URL returned by the operator. Use the existing project workflow t
 | Open the saved GIS delivery and report | All selected map families, metadata, working project and interpretation | The delivered materials can be reviewed and reused with their original inputs and assumptions. |
 
 The active receiving worker should record the actual opening, scenario comparison, export and reopen sequence from this prepared project, with screenshots and elapsed times. Keep a completed prepared result available while a fresh source-bound case runs in the original application.
+
+## Retained grid and complete package
+
+Each delivery carries a copy of its original completed `grid/grid.json` as a declared package artifact. The manifest's model grid ID, retained grid ID and original record ID must agree. The package audit compares every physical raster with that original record: projected metre CRS, dimensions, all six affine coefficients, pixel area and actual added context. The recorded context is checked against the model selection.
+
+An unrotated 30-metre grid with positive added context uses the regional audit scope. Other original native grids, including a zero-context selection, use the source-native scope. This preserves the actual source edition: 15 × 15 metre cells are 0.0225 hectares; 30 × 30 metre cells are 0.09 hectares; 300 × 300 metre cells are 9 hectares. Read the actual retained grid record for the delivery being reviewed. A source-native result remains identified by its original geography and resolution.
+
+The package engine writes into the delivery's own `package` directory, provided that directory contains none of the declared inputs. It captures every declared artifact, including the native grid record and editable working archive, and verifies their original bytes. On compatible Linux filesystems it creates independent copy-on-write files to reduce temporary disk use. Other filesystems use the same streamed copy path. The capture index records the declared, cloned and streamed byte totals.
+
+Large regional archives have no implicit per-file, total-byte or artifact-count cutoff. Operators may supply an explicit storage budget when invoking the package engine directly:
+
+```sh
+python -B package_delivery.py pack "$ECO_DELIVERY/delivery.json" "$ECO_DELIVERY/package" \
+  --max-file-bytes 21474836480 --max-total-bytes 107374182400
+```
+
+These example budgets are 20 GiB per artifact and 100 GiB total; omit the flags to capture all declared original artifacts. The ordinary regional-delivery command uses the unrestricted path. The same limits mapping is available to the Python API and verifier; metadata budgets remain independently selectable. Source identity and content verification apply in both cases. Packaging still needs disk space for its streamed copies, final archive and verification outputs; copy-on-write support depends on the receiving filesystem.
+
+A completed matching package is reused by the existing delivery resume path. A failed earlier package remains separate while the next attempt selects a fresh package directory. The retained grid is part of the captured manifest and remains available when the package is independently reopened.
 
 ## Source integration
 

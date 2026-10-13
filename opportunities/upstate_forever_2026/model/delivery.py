@@ -21,7 +21,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-7"
+DELIVERY_FORMAT_VERSION = "retained-grid-analysis-economic-report-8"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -669,10 +669,14 @@ def build(workspace, selection):
                 ))
                 state["files"]["report"] = describe_file(directory, target)
                 atomic_json(state_path, state)
-            original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
-            grid_path = directory / "grid" / "grid.json"
-            _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
-            state["files"]["native_grid_record"] = describe_file(directory, grid_path)
+            if "native_grid_record" not in state["files"]:
+                original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
+                grid_path = directory / "grid" / "grid.json"
+                _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
+                state["files"]["native_grid_record"] = describe_file(directory, grid_path)
+                atomic_json(state_path, state)
+            else:
+                verify_file(directory, state["files"]["native_grid_record"])
             manifest = {"schema": "upstate-ec-sdc-2026/delivery-v1",
                 "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
                          "record": state["files"]["native_grid_record"]["path"],
