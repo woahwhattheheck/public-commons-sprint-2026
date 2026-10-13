@@ -110,7 +110,9 @@ Continue with the restored application and Workspace returned by the normal `mod
   --archive "$GURA_REFERENCE_ARCHIVE"
 ```
 
-Use a new archive destination when saving another complete backup. This command reopens the same baseline and regenerates its comparisons from the received original outputs. The saved grid retains the original 15 m cells and zero added buffer; existing source, profile, scenario and run identities remain unchanged.
+This command reopens the same baseline and regenerates its comparisons from the received original outputs. The saved grid retains the original 15 m cells and zero added buffer; existing source, profile, scenario and run identities remain unchanged.
+
+Repeating the same `--archive` destination reuses its completed original backup after full verification. This also recovers an archive published just before the final operation checkpoint was interrupted. The receiver checks the archive's complete member inventory, project, exact run/grid/profile/scenario records, original source objects and Gura inputs, completed reference outputs, and captured native application. It records the archived application's own fingerprint; later edits to the current application do not relabel that original captured source. If a completed backup receipt is already present, its byte count and SHA256 must still match. A different scientific selection or a changed retained archive requires a new destination.
 
 Completed original stages are verified before loading InVEST. `--mode native` can verify their retained inputs and outputs using the standard Python library and the retained application. `--mode workspace` uses the GIS stack for original-cell checks and result comparisons; it requests InVEST through the ordinary Workspace executor only when its selected run is unfinished. `--mode both` executes only original stages that are missing, then follows that same Workspace continuation. Existing stage runtime metadata continues to describe the environment that produced the results.
 
