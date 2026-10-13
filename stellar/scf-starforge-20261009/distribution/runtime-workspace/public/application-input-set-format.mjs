@@ -25,13 +25,16 @@ export function normalizeApplicationInputSet(value) {
   function register(path,type,explicit=false) {
     applicationInputSetPath(path);
     const parts=path.split('/');
-    for(let i=1;i<parts.length;i++)register(parts.slice(0,i).join('/'),'directory');
-    const folded=path.toUpperCase().toLowerCase().normalize('NFC'),prior=spellings.get(folded);
-    need(prior===undefined||prior===path,'APPLICATION_INPUT_SET_CASE_COLLISION');
-    need(!kinds.has(path)||kinds.get(path)===type&&type==='directory'&&!explicit,
-      'APPLICATION_INPUT_SET_PATH_COLLISION');
-    spellings.set(folded,path);kinds.set(path,type);
-    if(type==='directory')directories.add(path);
+    for(let i=1;i<=parts.length;i++) {
+      const member=parts.slice(0,i).join('/'),last=i===parts.length;
+      const memberType=last?type:'directory',memberExplicit=last&&explicit;
+      const folded=member.toUpperCase().toLowerCase().normalize('NFC'),prior=spellings.get(folded);
+      need(prior===undefined||prior===member,'APPLICATION_INPUT_SET_CASE_COLLISION');
+      need(!kinds.has(member)||kinds.get(member)===memberType&&memberType==='directory'&&!memberExplicit,
+        'APPLICATION_INPUT_SET_PATH_COLLISION');
+      spellings.set(folded,member);kinds.set(member,memberType);
+      if(memberType==='directory')directories.add(member);
+    }
   }
   const explicitDirs=new Set();
   for(const path of value.directories??[]) {
