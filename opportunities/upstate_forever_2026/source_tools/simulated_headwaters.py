@@ -208,7 +208,7 @@ def write_inputs(output, recipe_path):
             "retention": "eff_n/eff_p are assumed maximum retention proportions; crit_len_n/crit_len_p are 100 m; groundwater nitrogen share is zero.",
             "sediment": "usle_c/usle_p are dimensionless assumed cover/support factors; all support factors are one.",
             "stream_threshold": "100 contributing 30 m cells = 9 ha; both native models use MFD.",
-            "parameter_profile": "NDR k=2, subsurface length=150m, efficiency=.5; SDR k=2, maximum=.8, IC0=.5, maximum slope length=122m. These are demonstration assumptions.",
+            "parameter_profile": "NDR k=2, subsurface length=150m, efficiency=.5; SDR k=2, maximum=.8, IC0=.5, maximum dimensionless L-factor=122. These are demonstration assumptions.",
             "input_summary": recipe["input_summary"],
             "methods": [
                 "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html",
@@ -345,10 +345,17 @@ def operate_locked(args, output):
         runs.append(ws.prepare_run({"grid_id": grid["id"], "profile_id": profile["id"],
                                     "scenario_id": scenario["id"], "models": ["ndr", "sdr"]}))
     save(baseline_run_id=runs[0]["id"], alternative_run_ids=[runs[1]["id"]])
+    from source_tools.simulated_headwaters_control import prepare as prepare_control
+    control = phase("prepare_matched_control", lambda: prepare_control(
+        ws, receipt, args.recipe, args.recipe.parent / "matched-control.json", output / "control"))
+    runs.append(ws.inspect_run(control["run_id"]))
+    save(control=control, alternative_run_ids=[run["id"] for run in runs[1:]],
+         alternative_scenario_ids=[alternative["id"], control["scenario_id"]])
+    case_names = ("baseline", "alternative", "control")
     from model.scenario_footprint import preview_run
     footprints = []
     for index, run in enumerate(runs):
-        footprint = phase("baseline_footprint" if index == 0 else "alternative_footprint",
+        footprint = phase(case_names[index] + "_footprint",
                           lambda key=run["id"]: preview_run(ws, key))
         expected_cells = 0 if index == 0 else recipe["input_summary"]["changed_cells"]
         expected_area = expected_cells * recipe["grid"]["pixel_area_ha"]
@@ -356,19 +363,45 @@ def operate_locked(args, output):
         if (summary["net_changed_cells"] != expected_cells or not math.isclose(
                 summary["net_changed_hectares"], expected_area, rel_tol=1e-9, abs_tol=1e-8)):
             raise ValueError("Actual retained scenario footprint differs from its selected input recipe")
-        atomic_json(output / ("baseline-footprint.json" if index == 0 else "alternative-footprint.json"),
+        atomic_json(output / (case_names[index] + "-footprint.json"),
                     footprint)
         footprints.append(footprint["id"])
     save(scenario_footprint_ids=footprints)
+    from source_tools.headwaters_parameter_course import prepare as prepare_parameter_course
+    parameter_selection = {
+        "grid_id": receipt["grid_id"], "baseline_scenario_id": receipt["baseline_scenario_id"],
+        "base_profile_id": receipt["profile_id"],
+        "alternative_scenario_ids": receipt["alternative_scenario_ids"],
+    }
+    parameter_plan = phase("prepare_parameter_course",
+                           lambda: prepare_parameter_course(ws, parameter_selection))
+    save(ensemble_id=parameter_plan["ensemble_id"])
     if args.prepare_only:
         save(state="prepared", active_stage=None)
+        return receipt
+    from source_tools.prepare_simulated_fieldwork import prepare as prepare_fieldwork
+    from model.simulated_fieldwork import continue_campaign, inspect_campaign, attach_to_delivery
+    field_inputs = phase("prepare_fieldwork",
+                         lambda: prepare_fieldwork(args.recipe, output / "field-inputs"))
+    campaign = phase("fieldwork_closeout",
+                     lambda: continue_campaign(ws, field_inputs["directory"], through="closeout"))
+    if (campaign["phase"] != "closeout" or len(campaign["completed_steps"]) != 17
+            or campaign["original_project_id"] != ws.project["id"]
+            or campaign["recipe_sha256"] != receipt["recipe_sha256"]):
+        raise ValueError("Complete the original simulated field campaign in this same project")
+    save(fieldwork_operation_id=campaign["operation_id"],
+         fieldwork_plan_id=campaign["plan_id"], fieldwork=campaign)
+    atomic_json(output / "fieldwork-campaign.json", campaign)
+
+    if args.field_only:
+        save(state="field_complete", active_stage=None)
         return receipt
     installed = importlib.metadata.version("natcap.invest")
     if installed != recipe["model_version"]:
         raise ValueError("This retained demo requires native InVEST " + recipe["model_version"] + "; installed " + installed)
     save(invest_version=installed)
     for index, run in enumerate(runs):
-        result = phase("baseline_native" if index == 0 else "alternative_native",
+        result = phase(case_names[index] + "_native",
                        lambda key=run["id"]: ws.run(key))
         if result.get("state") != "complete":
             raise ValueError("Native run did not complete: " + run["id"])
@@ -390,9 +423,9 @@ def operate_locked(args, output):
     delivery_selection = {
         "delivery_mode": "native_study", "audit_scope": "source-native",
         "native_study": {"title": recipe["title"],
-                         "purpose": "A declared simulated input edition operated through native NDR/SDR and paired riparian restoration.",
+                         "purpose": "A declared simulated input edition operated through native NDR/SDR, riparian restoration and a matched-area restoration outside the corridor.",
                          "reference": "recipe-sha256:" + source["recipe_sha256"]},
-        "baseline_run_id": runs[0]["id"], "scenario_run_ids": [runs[1]["id"]],
+        "baseline_run_id": runs[0]["id"], "scenario_run_ids": [run["id"] for run in runs[1:]],
         "contact": {"name": "Upper Savannah project team",
                     "organization": "Internal simulated demonstration", "email": ""},
         "source_roles": {},
@@ -408,6 +441,7 @@ def operate_locked(args, output):
         "notes": recipe["assumptions"],
     }
     delivery_selection = native_process_report.attach(ws, process_report["id"], delivery_selection)
+    delivery_selection = attach_to_delivery(ws, campaign["operation_id"], delivery_selection)
     atomic_json(output / "delivery-selection.json", delivery_selection)
     delivery = phase("mapped_delivery", lambda: ws.build_delivery(delivery_selection))
     if delivery.get("state") != "complete":
@@ -415,8 +449,39 @@ def operate_locked(args, output):
     save(delivery_id=delivery["id"], delivery_state=delivery["state"])
     atomic_json(output / "mapped-delivery.json", delivery)
 
+    from source_tools.simulated_headwaters_rehearsal import save_native_review
+    spatial_reviews = receipt.setdefault("spatial_review_ids", {})
+    for index, run in enumerate(runs[1:], start=1):
+        map_receipt = dict(receipt)
+        map_receipt["spatial_review_id"] = spatial_reviews.get(run["id"])
+        if index == 1 and map_receipt["spatial_review_id"] is None:
+            map_receipt["spatial_review_id"] = receipt.get("spatial_review_id")
+        selected = {"baseline_run_id": runs[0]["id"], "alternative_run_ids": [run["id"]]}
+        review = phase(case_names[index] + "_spatial_review",
+                       lambda chosen=selected, retained=map_receipt:
+                           save_native_review(ws, retained, chosen))
+        spatial_reviews[run["id"]] = review["id"]
+        save(spatial_review_id=spatial_reviews[runs[1]["id"]],
+             spatial_review_ids=spatial_reviews)
+
+    from source_tools.headwaters_parameter_course import continue_course
+    parameter_course = phase("parameter_course", lambda: continue_course(
+        ws, parameter_plan["ensemble_id"], execute=True,
+        on_progress=lambda value: event("parameter_course_progress", progress=value)))
+    save(parameter_course=parameter_course)
+    if parameter_course.get("state") != "complete":
+        raise ValueError("Continue the original saved parameter course from its actual pending members")
+    atomic_json(output / "parameter-course.json", parameter_course)
+
     from model import portable
-    edition_id = delivery["id"]
+    archive_selection = {
+        "delivery_id": delivery["id"], "spatial_review_ids": spatial_reviews,
+        "fieldwork_operation_id": campaign["operation_id"],
+        "ensemble_id": parameter_plan["ensemble_id"],
+    }
+    edition_suffix = hashlib.sha256(json.dumps(
+        archive_selection, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
+    edition_id = delivery["id"] + "-" + edition_suffix
     archives = output / "archives"
     archives.mkdir(parents=True, exist_ok=True)
     archive = archives / (edition_id + ".zip")
@@ -425,7 +490,11 @@ def operate_locked(args, output):
     required_members = [
         "workspace/workspace.json",
         *["workspace/runs/" + run["id"] + "/run.json" for run in runs],
-        "workspace/deliveries/" + edition_id + "/delivery-state.json",
+        "workspace/deliveries/" + delivery["id"] + "/delivery-state.json",
+        *["workspace/spatial-reviews/" + key + ".json" for key in spatial_reviews.values()],
+        "workspace/implementation/simulated-fieldwork/" + campaign["operation_id"] + "/completed.json",
+        "workspace/ensemble_results/" + parameter_plan["ensemble_id"] + "/headwaters-results.json",
+
     ]
 
     def inspect_selected_archive():
@@ -491,10 +560,29 @@ def operate_locked(args, output):
             raise ValueError("Reopened native run is incomplete")
     if reopened.retained_item("deliveries", delivery["id"]).get("id") != delivery["id"]:
         raise ValueError("Reopened delivery identity differs")
+    from model.spatial import SpatialReview
+    reopened_spatial = SpatialReview(reopened)
+    for key in spatial_reviews.values():
+        original_view = reopened.retained_item("spatial_reviews", key)
+        if reopened_spatial.validate_saved(original_view).get("identity") != "MATCH":
+            raise ValueError("Reopened paired map differs from its original native layers")
+    received_campaign = inspect_campaign(reopened, campaign["operation_id"])
+    if received_campaign["phase"] != "closeout" or received_campaign["plan_id"] != campaign["plan_id"]:
+        raise ValueError("Reopen the original completed field campaign with this scientific project")
+    from model.ensembles import Ensembles
+    received_ensemble = Ensembles(reopened).inspect(parameter_plan["ensemble_id"])
+    if (received_ensemble["grid_id"] != receipt["grid_id"]
+            or received_ensemble["alternative_scenario_ids"] != receipt["alternative_scenario_ids"]):
+        raise ValueError("Reopened parameter study differs from the original scenario selection")
+    received_course = read_json(reopened.root / "ensemble_results"
+                                / parameter_plan["ensemble_id"] / "headwaters-results.json")
+    if received_course.get("state") != "complete":
+        raise ValueError("Reopened parameter course is incomplete")
+    save(received_fieldwork=received_campaign, received_ensemble_id=received_ensemble["id"])
     save(state="complete", active_stage=None, reopened_project_id=reopened.project["id"],
          completed_at=receipt.get("completed_at", utc_now()))
     event("demo_complete", receipt=str(receipt_path), baseline_run_id=runs[0]["id"],
-          alternative_run_ids=[runs[1]["id"]], delivery_id=delivery["id"],
+          alternative_run_ids=[run["id"] for run in runs[1:]], delivery_id=delivery["id"],
           archive=receipt["backup"])
     return receipt
 
@@ -504,8 +592,11 @@ def main(argv=None):
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--recipe", type=Path, default=EDITION / "input-recipe.json")
-    parser.add_argument("--prepare-only", action="store_true",
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--prepare-only", action="store_true",
                         help="Retain actual inputs/grid/scenarios and prepared runs before native execution.")
+    modes.add_argument("--field-only", action="store_true",
+                       help="Prepare the same scientific case and complete its native field/lab chapter before model execution.")
     args = parser.parse_args(argv)
     result = operate(args)
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
