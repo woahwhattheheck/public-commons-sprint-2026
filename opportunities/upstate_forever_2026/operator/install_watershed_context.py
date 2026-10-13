@@ -164,9 +164,21 @@ def install(application, source_root, *, dry_run=False):
     source_bodies = source_manifest_files(source_root, application)
     names = dict.fromkeys(FILES + tuple(
         name for name in OPTIONAL if (source_root / name).is_file()) + tuple(source_bodies))
+    if ("integration/component_fragments/watershed-observation-exports.json" in names
+            and "landcover_observation_profiles.sources.json" not in source_bodies):
+        raise ValueError("The observed-evidence component needs its complete "
+                         "landcover_observation_profiles.sources.json edition")
     for name in names:
-        source = source_root / name
-        body = source_bodies[name] if name in source_bodies else source.read_bytes()
+        if name in source_bodies:
+            body = source_bodies[name]
+        else:
+            source, member_root = source_root / name, source_root
+            if not source.exists() and not source.is_symlink():
+                source, member_root = application / name, application
+            resolved = source.resolve(strict=True)
+            if not resolved.is_relative_to(member_root) or not resolved.is_file():
+                raise ValueError("Installation member leaves its prepared application: " + name)
+            body = resolved.read_bytes()
         if name.endswith(".py"):
             ast.parse(body.decode("utf-8"), filename=name)
         if name.endswith(".json"):

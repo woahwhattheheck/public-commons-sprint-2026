@@ -8,21 +8,35 @@ export function zipReportFiles(files, { compress = false } = {}) {
   const u32 = (data,p,v) => { for(let i=0;i<4;i++)data[p+i]=(v>>>(8*i))&255; };
   const entries=Object.entries(files).sort(([a],[b])=>a.localeCompare(b));
   if(entries.length>65535)throw Error("Too many portable report members");
+  // Exact string values and identical binary objects only; no digest shortcuts.
+  // Keep payloads only while another member in this archive needs the same value.
+  const remaining=new Map(),payloads=new Map();
+  for(const [,value] of entries)remaining.set(value,(remaining.get(value)??0)+1);
+  for(const [value,count] of remaining)if(count<2)remaining.delete(value);
   for(const [path,value] of entries) {
     if(!/^[A-Za-z0-9_./-]+$/.test(path)||path.startsWith("/")||path.split("/").some(p=>!p||p==="."||p===".."))
       throw Error("Invalid report member path");
-    const name=codec.utf8Encode(path),data=bytes(value),crc=codec.crc32(data);
-    const packed=compress?codec.deflateRaw(data):data,method=compress?8:0;
-    if(data.length>0xffffffff||offset+30+name.length+packed.length>0xffffffff)throw Error("Report exceeds ZIP32 limits");
+    const name=codec.utf8Encode(path),method=compress?8:0;
+    let payload=payloads.get(value);
+    if(!payload) {
+      const data=bytes(value);
+      payload={length:data.length,crc:codec.crc32(data),packed:compress?codec.deflateRaw(data):data};
+      if(remaining.has(value))payloads.set(value,payload);
+    }
+    const {length,crc,packed}=payload;
+    if(length>0xffffffff||offset+30+name.length+packed.length>0xffffffff)throw Error("Report exceeds ZIP32 limits");
     const local=new Uint8Array(30+name.length+packed.length);
     u32(local,0,0x04034b50);u16(local,4,20);u16(local,6,0x0800);u16(local,8,method);u16(local,12,33);
-    u32(local,14,crc);u32(local,18,packed.length);u32(local,22,data.length);u16(local,26,name.length);
+    u32(local,14,crc);u32(local,18,packed.length);u32(local,22,length);u16(local,26,name.length);
     local.set(name,30);local.set(packed,30+name.length);
     const central=new Uint8Array(46+name.length);
     u32(central,0,0x02014b50);u16(central,4,0x0314);u16(central,6,20);u16(central,8,0x0800);u16(central,10,method);u16(central,14,33);
-    u32(central,16,crc);u32(central,20,packed.length);u32(central,24,data.length);u16(central,28,name.length);
+    u32(central,16,crc);u32(central,20,packed.length);u32(central,24,length);u16(central,28,name.length);
     u32(central,38,0o100644*65536);u32(central,42,offset);central.set(name,46);
     locals.push(local);centrals.push(central);offset+=local.length;centralBytes+=central.length;
+    const left=remaining.get(value);
+    if(left===1){remaining.delete(value);payloads.delete(value);}
+    else if(left!==undefined)remaining.set(value,left-1);
   }
   const end=new Uint8Array(22);u32(end,0,0x06054b50);u16(end,8,entries.length);u16(end,10,entries.length);
   u32(end,12,centralBytes);u32(end,16,offset);

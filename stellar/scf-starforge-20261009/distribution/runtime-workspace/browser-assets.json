@@ -17,6 +17,13 @@
       ]
     ],
     [
+      "/runtime-output.mjs",
+      [
+        "runtime-output.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/managed.mjs",
       [
         "managed.mjs",

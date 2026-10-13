@@ -1,0 +1,29 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "community-revision-handover",
+  "components": {
+    "community-revision-handover": {
+      "title": "Retained Community revision comparison and original incoming handover archives",
+      "requires": [
+        "community-report-context"
+      ],
+      "paths": [
+        "model/community_revisions.py",
+        "model/community_revision_receiving.py",
+        "operator/community_revisions.py",
+        "operator/extensions/community-revisions.json",
+        "operator/web/community_revisions.mjs",
+        "operator/web/community.mjs",
+        "operator/COMMUNITY_REVISIONS.md"
+      ]
+    }
+  },
+  "required_components": [
+    "community-revision-handover"
+  ],
+  "source_reference": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "comparison_revision": "bf36d4a9604e2610ca6b7d8354371c02d170cc65",
+    "received_handover_revision": "03fefa6204b1bc8f2ead2f851be8938d5642447a"
+  }
+}

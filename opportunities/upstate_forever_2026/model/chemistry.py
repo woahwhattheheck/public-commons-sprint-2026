@@ -20,7 +20,7 @@ from .reach_chemistry.service import execute
 from .reach_chemistry.solver import Cancelled
 from .reach_chemistry.io import write_outputs
 
-ENGINE_VERSION = '0.1.0'
+ENGINE_VERSION = '0.3.0'
 ACTIONS = {'chemistry.case.save', 'chemistry.case.get', 'chemistry.catalog',
            'chemistry.run', 'chemistry.run.get', 'chemistry.result.page',
            'chemistry.case.from-source', 'chemistry.export', 'chemistry.receive',
@@ -177,7 +177,7 @@ class Chemistry:
         # Explicit collections, not arbitrary paths or arbitrary attribute reads.
         field=value.get('field') or 'final'
         allowed={'final','samples','budgets','reactions','boundary_export_by_state',
-                 'observations','scores','parameters','rows','selected','summaries','sources'}
+                 'observations','scores','interval_scores','parameters','rows','selected','summaries','sources'}
         if field not in allowed: raise ModelError('Choose a documented chemistry result collection')
         source=result.get('baseline',result)
         rows=result.get(field,source.get(field,[]))

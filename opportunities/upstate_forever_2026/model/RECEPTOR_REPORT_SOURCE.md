@@ -211,3 +211,13 @@ Install them as part of the complete application, preserving the current shared
 renderer rather than replacing it with an older component copy. Native packages
 are capabilities of the actual receiving host; they are not synthesized by the
 source installer.
+
+## Complete report and editable Study receiving
+
+The maintained `source_tools.receive_receptor_report` command carries this saved
+source through the original scientific render, complete report downloads, full
+Workspace backup and independent selected Study restore. It preserves the frozen
+source identity, original task IDs and editable network/prepared-area products
+across resume. See [the complete receiving guide](../source_tools/RECEIVE_RECEPTOR_REPORT.md)
+for the one-command native course, explicit map edition, retained-source reopen,
+actual browser continuation and original product verification.

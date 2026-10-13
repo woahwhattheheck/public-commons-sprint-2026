@@ -20,6 +20,7 @@ from .implementation_lab_dispatch import dispatch_files, reconcile_dispatch
 from .implementation_observation_quality import method_context
 from .implementation_observations import (
     _attachment_inventory, _compose_existing, _retain, _same,
+    _composition_selection, _composition_identity, _compose_report_selection,
 )
 from . import observed_context
 
@@ -78,45 +79,15 @@ def _description(root, path):
 
 
 def _selection(workspace, value, dispatch_id, plan_digest):
-    """Unwrap this same source when reopening without duplicating its sections."""
-    selected = _clone(value if value is not None else {})
-    if not isinstance(selected, dict) or not isinstance(selected.get("source_roles", {}), dict):
-        raise ImplementationError("Choose the original delivery selection and source roles")
-    selected.setdefault("source_roles", {})
-    seen = set()
-    while True:
-        source = observed_context._source(workspace, selected)
-        binding = source["binding"] if source else None
-        declared = selected.get("observed_context_binding")
-        if declared is not None and declared != binding:
-            raise ImplementationError("The selected scientific report differs from its original source binding")
-        if source is None:
-            selected.pop("observed_context_binding", None)
-            return selected, None
-        selected["observed_context_binding"] = binding
-        identity = source["recipe"].get("implementation_dispatch_report_identity", {})
-        if (identity.get("schema") != IDENTITY_SCHEMA
-                or identity.get("project_id") != workspace.project["id"]
-                or identity.get("dispatch_id") != dispatch_id
-                or identity.get("plan", {}).get("document_digest") != plan_digest
-                or source["entry"].get("metadata", {}).get("laboratory_report_operation") != digest(identity)):
-            # Another producer may preserve this identity as inherited metadata.
-            # Only our own source entry is eligible for this unwrap.
-            return selected, binding
-        if binding["body_sha256"] in seen:
-            raise ImplementationError("The selected dispatch report repeats an original source binding")
-        seen.add(binding["body_sha256"])
-        previous = identity["original_delivery_selection"]
-        original_choice = previous.get("source_roles", {}).get(observed_context.ROLE)
-        roles = dict(selected["source_roles"])
-        if original_choice is None:
-            roles.pop(observed_context.ROLE, None)
-        else:
-            roles[observed_context.ROLE] = _clone(original_choice)
-        selected["source_roles"] = roles
-        selected.pop("observed_context_binding", None)
-        if observed_context.bind(workspace, selected) != identity["original_observed_context_binding"]:
-            raise ImplementationError("The report's preceding original context changed")
+    """Reopen this exact laboratory producer while retaining ordered source choices."""
+    def matches(source, identity):
+        return (identity.get("schema") == IDENTITY_SCHEMA
+                and identity.get("project_id") == workspace.project["id"]
+                and identity.get("dispatch_id") == dispatch_id
+                and identity.get("plan", {}).get("document_digest") == plan_digest
+                and source["entry"].get("metadata", {}).get("laboratory_report_operation") == digest(identity))
+    return _composition_selection(
+        workspace, value, "implementation_dispatch_report_identity", matches)
 
 
 def _result_records(plan, reconciliation):
@@ -211,7 +182,7 @@ def _context(workspace, saved_plan, dispatch_id, existing_report_selection):
     if document_digest(revision["plan"]) != checksum:
         raise ImplementationError("The original saved revision event changed")
     attachments, attachment_files = _attachment_inventory(workspace, plan)
-    selected, original_binding = _selection(workspace, existing_report_selection, dispatch_id, checksum)
+    selected, original_binding, composition = _selection(workspace, existing_report_selection, dispatch_id, checksum)
     identity = {
         "schema": IDENTITY_SCHEMA, "edition": EDITION,
         "project_id": workspace.project["id"], "dispatch_id": dispatch_id,
@@ -222,6 +193,7 @@ def _context(workspace, saved_plan, dispatch_id, existing_report_selection):
         "reconciliation_sha256": digest(reconciliation),
         "original_delivery_selection": selected,
         "original_observed_context_binding": original_binding,
+        **_composition_identity(selected, composition),
     }
     records = _result_records(plan, reconciliation)
     contexts = _sample_contexts(reconciliation)
@@ -253,6 +225,7 @@ def _context(workspace, saved_plan, dispatch_id, existing_report_selection):
         "revision_path": revision_path, "package": package, "package_files": package_files,
         "reconciliation": reconciliation, "records": records, "contexts": contexts,
         "attachment_files": attachment_files, "preview": preview,
+        "report_composition": composition,
     }
 
 
@@ -423,7 +396,8 @@ def _write_sources(context, root):
 def _report(workspace, context, root, source_members):
     directory = root / "report"
     selected = context["identity"]["original_delivery_selection"]
-    recipe, binding, names = _compose_existing(workspace, selected, directory)
+    composition = context["report_composition"]
+    recipe, binding, names = _compose_existing(workspace, selected, directory, composition)
     if binding != context["identity"]["original_observed_context_binding"]:
         raise ImplementationError("The original scientific context changed during composition")
     for descriptor in source_members:
@@ -470,10 +444,7 @@ def _report(workspace, context, root, source_members):
                 {"schema": "upstate.sources/v1", "title": title, "entries": [entry]}, immutable=True)
     collection = workspace.import_sources(directory / "model-sources.json")
     choice = {"source_collection_id": collection["id"], "source_id": entry["id"]}
-    selection = {
-        **selected, "source_roles": {**selected["source_roles"], observed_context.ROLE: choice},
-    }
-    selection["observed_context_binding"] = observed_context.bind(workspace, selection)
+    selection = _compose_report_selection(workspace, selected, choice, composition)
     atomic_json(directory / "delivery-selection.json", selection, immutable=True)
     paths = sorted(set(names + ["observed-report.json", "model-sources.json", "delivery-selection.json"]))
     return {

@@ -93,8 +93,26 @@ def write_outputs(directory: Path, project: Project | dict, result: dict, reques
                                  **{r['species']+'_basis':r['basis'] for r in by_reach[rid]}}})
         if features: json_write(directory/'reach-results.geojson', {'type':'FeatureCollection','features':features})
     if 'observations' in result:
-        atomic_write(directory/'observation-fit.csv', csv_body(result['observations'],
-            ['id','reach','species','day','role','qualifier','observed_mg_l','predicted_mg_l','sigma_mg_l','weighted_residual']))
+        fields = ['id','reach','species','day','role','qualifier','observed_mg_l',
+                  'predicted_mg_l','sigma_mg_l','weighted_residual']
+        observations = result['observations']
+        # Preserve original legacy CSV bytes. New operators retain their complete
+        # measurement definition and limits beside the unchanged native outputs.
+        if any('components' in row or row.get('qualifier') == 'interval' for row in observations):
+            fields += ['measurement','basis','components','lower_mg_l','upper_mg_l',
+                       'lower_closed','upper_closed','interval_contains_prediction','provenance']
+            observations = [{**row, **{key: json.dumps(row[key], ensure_ascii=False, sort_keys=True,
+                                                       allow_nan=False)
+                                      for key in ('components', 'provenance') if key in row}}
+                            for row in observations]
+        atomic_write(directory/'observation-fit.csv', csv_body(observations, fields))
+    if result.get('interval_scores'):
+        interval_rows = [{**row, **({'components': json.dumps(row['components'], ensure_ascii=False,
+                                                            sort_keys=True, allow_nan=False)}
+                                   if 'components' in row else {})} for row in result['interval_scores']]
+        atomic_write(directory/'interval-support.csv', csv_body(interval_rows,
+            ['role','species','measurement','basis','components','count',
+             'predictions_within_declared_interval','weighted_distance_to_interval_rmse']))
     if 'parameter_draws' in result:
         ids=[q['id'] for q in result['parameters']]
         atomic_write(directory/'parameter-draws.csv', csv_body([{'draw':i,**dict(zip(ids,row))} for i,row in enumerate(result['parameter_draws'])], ['draw']+ids))
