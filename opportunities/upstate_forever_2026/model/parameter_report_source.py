@@ -210,7 +210,9 @@ def _freeze(workspace, key, directory, selected, state):
     fields = ("case_id", "case", "run_id", "profile_id", "area_id", "area", "pollutant", "units",
               "baseline_mass", "case_mass", "change", "percent_change", "baseline_full_mass",
               "case_full_mass", "baseline_valid_cells", "case_valid_cells", "paired_valid_cells",
-              "paired_area_ha", "support_changed")
+              "paired_area_ha", "support_changed", "parameter", "baseline_parameter",
+              "case_parameter", "response_per_parameter_unit", "elasticity", "pixel_area_ha",
+              "baseline_valid_area_ha", "case_valid_area_ha")
     buffer = io.StringIO(newline="")
     writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
@@ -220,7 +222,8 @@ def _freeze(workspace, key, directory, selected, state):
                          for name, value in row.items()})
     atomic_bytes(directory / "selected-results.csv", buffer.getvalue().encode("utf-8"), immutable=True)
     records, bindings = [], {}
-    for profile_id in dict.fromkeys(row["profile_id"] for row in selected["cases"]):
+    for profile_id in dict.fromkeys([state["baseline_selection"]["profile_id"],
+                                    *(row["profile_id"] for row in selected["cases"])]):
         profile = workspace._get("profiles", identifier(profile_id))
         atomic_json(directory / "profiles" / (profile_id + ".json"), profile, immutable=True)
         _retain_source(workspace, directory, profile["source_collection_id"],
