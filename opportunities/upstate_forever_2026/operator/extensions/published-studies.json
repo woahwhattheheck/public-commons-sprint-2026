@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "published-studies",
   "title": "Published studies",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "order": 46,
   "assets": [
     "published_studies.mjs",
@@ -79,6 +79,32 @@
         ],
         "path": "/api/published-studies/review",
         "operation": "review",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/geographic-preview",
+        "operation": "geographic-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/geographic-selection",
+        "operation": "geographic-selection",
         "handler": "read",
         "args": [
           "workspace_key",
