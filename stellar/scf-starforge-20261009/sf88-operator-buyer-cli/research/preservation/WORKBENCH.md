@@ -596,3 +596,8 @@ Collection API routes are `GET /api/accessions`, `GET /api/accession?id=ID`, and
 The Delivery tab now opens exact supported research or original-file collection BagIt packages, displays every full recorded row, and compares ordered package editions through their original verification/comparison engines. Saved packages are reused by original artifact identity; incoming regular ZIPs are retained once by full byte hash. Full JSON, HTML and CSV findings and their original packages travel in the complete editable workspace.
 
 [TRANSFER_INSPECTION.md](TRANSFER_INSPECTION.md) documents package selection, all-row reading, complete downloads, CLI observation, original-case native continuation and the separately retained desktop/narrow browser receiving programme. Inspection is a local source observation; provider acceptance and repository operations retain their existing controls and actual receipts.
+
+
+## Portable collection reviews
+
+Collections can download an editable working HTML or complete working JSON containing the exact original inventory, institutional settings, complete saved review history through its selected base, current draft and unfinished file edit. The offline editor opens without a repository connection, edits full metadata/rights/selection records, saves and reopens the working file, and returns it through the existing explicit saved/local/imported comparison and original CAS save. Original binary contents stay in the full Workbench workspace and BagIt. See [COLLECTION_REVIEW.md](COLLECTION_REVIEW.md) for the full recipient/author workflow, original size boundaries and same-case receiving command. A source or automated result is distinct from producing-operator desktop/narrow inspection and downloaded-file reopening.
