@@ -279,6 +279,20 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     const scale=image.scale||{};
     return fmt(scale.minimum)+' to '+fmt(scale.maximum)+(image.units?' '+image.units:'');
   }
+  function legendHTML(name,image){
+    if(image?.categorical){
+      const classes=(image.categories||[]).map(row=>{
+        const colour=/^#[0-9a-f]{6}$/i.test(row.colour||'')?row.colour:'#7f7f7f';
+        return '<li><svg class="spatial-category-swatch" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="16" height="16" fill="'+colour+'" stroke="#777"/></svg><span><b>'+esc(row.value)+'</b> '+esc(row.label||('Code '+row.value))+'</span></li>';
+      }).join('');
+      const source=image.category_source||{},sources=source.sources||[],conflicts=source.conflicts||[];
+      const provenance=sources.length?'<details class="spatial-category-sources"><summary>Original class labels · '+sources.length+' retained table'+(sources.length===1?'':'s')+'</summary><ul>'+sources.map(row=>'<li>'+esc(row.source_id)+'<br><small>'+esc(row.uri||'')+'</small><br><code>'+esc(row.sha256||'')+'</code></li>').join('')+'</ul></details>':'';
+      const warning=conflicts.length?'<p class="note">Original tables disagree for codes '+esc(conflicts.join(', '))+'. Their codes are shown without an assigned label.</p>':'';
+      return '<section class="spatial-category-legend"><strong>'+esc(name)+' · '+esc(image.title||'Land cover')+'</strong><p class="note">'+esc(image.scale?.basis||'Discrete original class codes; grey shade has no magnitude')+'</p><ul class="spatial-category-list">'+classes+'</ul>'+warning+provenance+'</section>';
+    }
+    const constant=image?.scale?.minimum===image?.scale?.maximum;
+    return '<span class="spatial-legend-item"><span class="spatial-ramp'+(constant?' spatial-ramp-constant':'')+'" aria-hidden="true"></span><strong>'+esc(name)+'</strong> '+esc(rangeText(image))+'<small>'+esc(image?.scale?.basis||'')+'</small></span>';
+  }
   function renderFrame(c){
     const focusedMap=document.activeElement?.closest?.('[data-spatial-map]'),focusName=focusedMap&&c.root.contains(focusedMap)?focusedMap.dataset.spatialMap:null;
     const m=c.model,frame=m.frame,p=frame.images?.primary,a=frame.images?.comparison,d=frame.images?.difference;
@@ -293,7 +307,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     c.root.querySelector('[data-spatial-swipe-control]').hidden=!(m.mode==='swipe'&&p&&a);
     c.root.querySelector('[data-spatial-input="swipe"]').value=m.swipe;
     const images=m.mode==='difference'&&d?[['Difference',d]]:m.mode!=='single'&&a?[['Baseline',p],['Alternative',a]]:p?[['Raster',p]]:[];
-    c.root.querySelector('[data-spatial-legend]').innerHTML=images.map(([name,image])=>'<span class="spatial-legend-item"><span class="spatial-ramp" '+(image?.scale?.minimum===image?.scale?.maximum?'style="background:#7f7f7f" ':'')+'aria-hidden="true"></span><strong>'+name+'</strong> '+esc(rangeText(image))+'<small>'+esc(image?.scale?.basis||'')+'</small></span>').join('')+'<span class="spatial-nodata-key">Transparent cells: no native value</span>';
+    c.root.querySelector('[data-spatial-legend]').innerHTML=images.map(([name,image])=>legendHTML(name,image)).join('')+'<span class="spatial-nodata-key">Transparent cells: no native value</span>';
     const bounds=m.view.bounds,ref=layer(c,m.reference);
     c.root.querySelector('[data-spatial-view-meta]').innerHTML='<span><strong>View CRS</strong> '+esc(m.view.crs)+'</span><span><strong>Bounds</strong> '+bounds.map(value=>esc(fmt(value))).join(', ')+'</span><details><summary>Original source identity</summary><p>'+esc(ref?.title||'')+' · '+identity(ref)+'</p>'+images.map(([name,image])=>'<p>'+esc(name)+': '+(image.source_sha256?'<span class="mono">'+esc(image.source_sha256)+'</span>':'<span class="mono">'+esc(JSON.stringify(image.source_sha256s||{}))+'</span>')+'</p>').join('')+'<p>Display cells use nearest sampling. Inspect reads original native cells and exact source attributes.</p></details>';
     const warnings=[...(frame.warnings||[])];
@@ -415,7 +429,8 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   function pixelHTML(title,pixel){
     if(!pixel)return '<section><h3>'+esc(title)+'</h3><p class="note">No raster selected.</p></section>';
     const row=pixel.layer||{},values=[
-      ['Physical value',pixel.valid?(pixel.value_text??String(pixel.value))+(pixel.units?' '+pixel.units:''):pixel.reason||'No native value at this point'],
+      ...(pixel.category?[['Original land-cover class',pixel.category.label],['Original class code',String(pixel.category.value)]]:[]),
+      [pixel.category?'Stored class value':'Physical value',pixel.valid?(pixel.value_text??String(pixel.value))+(pixel.units?' '+pixel.units:''):pixel.reason||'No native value at this point'],
       ['Original stored value',pixel.valid?(pixel.raw_value_text??String(pixel.raw_value)):'—'],
       ['Native row / column',pixel.row!==undefined&&pixel.row!==null?String(pixel.row)+' / '+String(pixel.column):'—'],
       ['Native coordinate',pixel.coordinate?fmt(pixel.coordinate.x)+', '+fmt(pixel.coordinate.y):'—'],

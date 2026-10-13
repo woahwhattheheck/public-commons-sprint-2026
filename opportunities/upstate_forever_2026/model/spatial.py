@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import copy
+import csv
 import hashlib
 import json
 import math
@@ -150,6 +151,7 @@ class SpatialReview:
         self._source_views = {}
         self._descriptions = {}
         self._esri_sources = {}
+        self._category_tables = {}
 
     def _manifest_signature(self):
         root = self.workspace.root
@@ -519,6 +521,103 @@ class SpatialReview:
                 raise ValueError("Fixed scale maximum must exceed its minimum")
         return result
 
+    def _source_categories(self, record):
+        """Read class descriptions from retained tables in this source edition."""
+        public = record["public"]
+        if not public.get("categorical") or public.get("role") == "reporting_mask":
+            return {"labels": {}, "sources": [], "conflicts": []}
+        ws = self.workspace
+        collection_id = public.get("source_collection_id")
+        preferred = None
+        if public.get("profile_id"):
+            profile = ws._get("profiles", public["profile_id"])
+            collection_id = profile["source_collection_id"]
+            preferred = profile.get("biophysical_source_id")
+        if not collection_id:
+            return {"labels": {}, "sources": [], "conflicts": []}
+        cache_key = (collection_id, preferred)
+        with self.lock:
+            cached = self._category_tables.get(cache_key)
+            if cached is not None:
+                return copy.deepcopy(cached)
+        collection = ws._get("sources", collection_id)
+        entries = [entry for entry in collection["entries"] if entry["kind"] == "table"]
+        entries.sort(key=lambda entry: (entry["id"] != preferred, entry["id"]))
+        labels, sources, conflicts = {}, [], set()
+        for entry in entries:
+            path, original = ws.source_file(collection_id, entry["id"])
+            if path.suffix.lower() != ".csv":
+                continue
+            with path.open(encoding="utf-8-sig", newline="") as incoming:
+                reader = csv.DictReader(incoming)
+                fields = {str(field).strip().lower(): field for field in reader.fieldnames or []}
+                if not {"lucode", "description"} <= fields.keys():
+                    continue
+                table_labels = {}
+                for index, row in enumerate(reader):
+                    if index >= 4096:
+                        table_labels = {}
+                        break
+                    try:
+                        value = _integer(row.get(fields["lucode"]), "Original land-cover code",
+                                         minimum=-2147483648, maximum=2147483647)
+                    except (TypeError, ValueError):
+                        table_labels = {}
+                        break
+                    description = str(row.get(fields["description"]) or "").strip()
+                    if not description or value in table_labels:
+                        table_labels = {}
+                        break
+                    table_labels[value] = description
+            if not table_labels:
+                continue
+            sources.append({"source_collection_id": collection_id, "source_id": entry["id"],
+                            "sha256": original["body"]["sha256"], "uri": original.get("uri"),
+                            "columns": {"value": "lucode", "label": "description"}})
+            for value, description in table_labels.items():
+                if value in labels and labels[value] != description:
+                    conflicts.add(value)
+                else:
+                    labels[value] = description
+            # A description in the run's selected biophysical table takes priority.
+            if entry["id"] == preferred:
+                break
+        for value in conflicts:
+            labels.pop(value, None)
+        result = {"labels": labels, "sources": sources, "conflicts": sorted(conflicts)}
+        with self.lock:
+            self._category_tables[cache_key] = copy.deepcopy(result)
+        return result
+
+    @staticmethod
+    def _style_categories(samples):
+        """Use one discrete code palette across linked categorical map panels."""
+        import numpy as np
+        selected = [sample for sample in samples
+                    if sample is not None and sample["layer"].get("categorical")]
+        if not selected:
+            return
+        codes = set()
+        for sample in selected:
+            values = np.unique(sample["data"][~sample["mask"]])
+            if np.any(values != np.floor(values)):
+                raise ValueError("The selected categorical raster contains noninteger class codes")
+            if values.size > 4096:
+                raise ValueError("The selected categorical raster contains more than 4096 classes")
+            codes.update(int(value) for value in values)
+            codes.update(sample["category_source"]["labels"])
+        ordered = sorted(codes)
+        # Colour indicates class membership, never a physical magnitude.
+        greys = [round(48 + 176 * index / max(1, len(ordered) - 1))
+                 for index in range(len(ordered))]
+        for sample in selected:
+            original = sample["category_source"]
+            sample["categories"] = [
+                {"value": value,
+                 "label": original["labels"].get(value, "Code " + str(value)),
+                 "colour": "#" + format(grey, "02x") * 3}
+                for value, grey in zip(ordered, greys)]
+
     def _sample(self, selection, record, view, size):
         import numpy as np
         import rasterio
@@ -564,7 +663,8 @@ class SpatialReview:
                         data = data * scale + offset
                     mask |= ~np.isfinite(data)
                 return {"data": data, "mask": mask, "selection": selection,
-                        "layer": record["public"], "units": self._units(original, record, band)}
+                        "layer": record["public"], "units": self._units(original, record, band),
+                        "category_source": self._source_categories(record)}
 
     @staticmethod
     def _statistics(sample):
@@ -597,7 +697,13 @@ class SpatialReview:
         data, mask = sample["data"], sample["mask"]
         low, high = scale["minimum"], scale["maximum"]
         grey = np.full(data.shape, 127, dtype="uint8")
-        if low is not None and high is not None and high > low:
+        if sample.get("categories"):
+            categories = sample["categories"]
+            levels = np.asarray([item["value"] for item in categories], dtype="float64")
+            colours = np.asarray([int(item["colour"][1:3], 16) for item in categories], dtype="uint8")
+            valid = ~mask
+            grey[valid] = colours[np.searchsorted(levels, data[valid])]
+        elif low is not None and high is not None and high > low:
             # Work only on valid cells so NaN, infinity and masked data never
             # participate in conversion or receive an opaque colour.
             valid = ~mask
@@ -617,7 +723,14 @@ class SpatialReview:
         if sample is None:
             return None
         height, width = sample["data"].shape
+        categorical = bool(sample["layer"].get("categorical"))
+        category_source = sample.get("category_source", {})
+        if categorical:
+            scale = {"mode": "categorical", "minimum": None, "maximum": None,
+                     "basis": "Discrete original class codes; grey shade has no magnitude"}
         return {"selection": sample["selection"], "title": sample["layer"]["title"],
+                "categorical": categorical, "categories": sample.get("categories", []),
+                "category_source": {key: value for key, value in category_source.items() if key != "labels"},
                 "units": sample["units"], "mime": "image/png",
                 "png_base64": self._png(sample, scale), "width": width, "height": height,
                 "source_sha256": sample["layer"]["sha256"], "scale": scale,
@@ -699,6 +812,7 @@ class SpatialReview:
                 selection, record = self._selected(selected, layers, kind="raster")
                 descriptions[name] = self._describe(selection, record)
                 samples[name] = self._sample(selection, record, view, size)
+        self._style_categories(list(samples.values()))
         pair = self._pair(descriptions["primary"], descriptions["comparison"])
         warnings = []
         if samples["primary"] and samples["comparison"] and samples["primary"]["units"] != samples["comparison"]["units"]:
@@ -911,6 +1025,13 @@ class SpatialReview:
                 result["reason"] = "nonfinite physical value after original scale and offset"
                 return result
             result.update(valid=True, reason=None, value=_json(value), value_text=_scalar_text(value))
+            if record["public"].get("categorical"):
+                original_categories = self._source_categories(record)
+                code = int(value) if value == int(value) else value
+                result["category"] = {"value": _json(value),
+                                      "label": original_categories["labels"].get(code, "Code " + _scalar_text(value))}
+                result["category_source"] = {key: item for key, item in original_categories.items()
+                                             if key != "labels"}
             return result
 
     def point(self, payload):

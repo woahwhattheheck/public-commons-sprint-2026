@@ -69,6 +69,7 @@ APPLICATION_DIRECTORIES = (
     "source",
     "source_data",
     "ecsa_runs",
+    "eco_intelligence",
     "measurement_workspace",
     "observations",
     "checks",
