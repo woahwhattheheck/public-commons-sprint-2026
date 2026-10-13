@@ -56,7 +56,7 @@ export function renderObservedLandcover(report,{huc='',unit='ha'}={}){
 
 export function attachObservedLandcover(host){
   const {getState,api,endpoint,toast,openForm,submitAction,openScientificReport,openDesk}=host;
-  let root=null,workspace=null,epoch=0,catalogRead=0,inputRead=0,comparisonRead=0,portableRead=0,events=null,catalog=null,inputs=null,preview=null,opened=null;
+  let root=null,workspace=null,epoch=0,catalogRead=0,inputRead=0,comparisonRead=0,portableRead=0,composeRead=0,sourceOpenRead=0,events=null,catalog=null,inputs=null,preview=null,opened=null;
   const contexts=new Map(),portableSelection=createObservedLandcoverSelectionContract();
   const state=()=>getState()?.workspace_key||'';
   const find=s=>root?.querySelector(s);
@@ -130,16 +130,17 @@ export function attachObservedLandcover(host){
     note('Original source edition opened. Choose watersheds for a retained comparison.');
   }
   async function refresh({load=true}={}){
-    const w=workspace,g=epoch,ticket=++catalogRead,c=context(w),chosen=c.draft.source;
+    const w=workspace,g=epoch,ticket=++catalogRead,c=context(w),edit=c.edit,
+      priorOpened=opened,priorPreview=preview;
     const result=await api(endpoint('/api/observed-landcover/catalog',{workspace:w}));
     if(!alive(w,g)||ticket!==catalogRead)return false;
     catalog=result;
-    if(!rows(result.sources).some(row=>choiceKey(row)===chosen))c.draft.source='';
+    if(!rows(result.sources).some(row=>choiceKey(row)===c.draft.source))c.draft.source='';
     field('source').innerHTML=options(rows(result.sources).map(row=>({value:choiceKey(row),label:row.title+' · '+row.analysis_sha256.slice(0,12)})),c.draft.source,'Choose original source');
     field('edition').innerHTML=options(rows(result.selections).map(row=>({value:row.id,label:row.title+' · '+row.huc12s.length+' HUCs'})),c.lastOpened,'Choose saved comparison');
     find('[data-lc-action="import"]').disabled=!result.published_source_available;
     persist(w);
-    if(load&&c.draft.source)await loadInputs();
+    if(load&&c.draft.source&&c.edit===edit&&opened===priorOpened&&preview===priorPreview)await loadInputs();
     return true;
   }
   async function readPreview(){
@@ -208,10 +209,12 @@ export function attachObservedLandcover(host){
   async function compose(selectionMode){
     if(!opened)throw Error('Open a saved comparison before creating its scientific report.');
     if(!['replace','append'].includes(selectionMode))throw Error('Choose how to open the original report source.');
-    const w=workspace,g=epoch,original=opened,id=original.edition.id;
+    const w=workspace,g=epoch,original=opened,id=original.edition.id,ticket=++composeRead;
     if(!alive(w,g))throw Error('Open this report in its original Workspace.');
-    const result=await api(endpoint('/api/observed-landcover/edition',{workspace:w,id}));
-    if(!alive(w,g)||opened!==original)return;
+    let result;
+    try{result=await api(endpoint('/api/observed-landcover/edition',{workspace:w,id}));}
+    catch(error){if(alive(w,g)&&ticket===composeRead&&opened===original)throw error;return;}
+    if(!alive(w,g)||ticket!==composeRead||opened!==original)return;
     if(result.edition?.id!==id||result.edition.project_id!==getState()?.data?.project?.id||
        result.edition.state!=='complete'||JSON.stringify(result.edition.source)!==JSON.stringify(original.edition.source))
       throw Error('Reopen the original complete comparison before choosing its report source.');
@@ -243,7 +246,12 @@ export function attachObservedLandcover(host){
   }
   async function openImported(value){
     const w=state();if(!root||workspace!==w)return openDesk('observed-landcover','openImported',value);
-    await refresh({load:false});if(workspace!==w||state()!==w)return;
+    const g=epoch,ticket=++sourceOpenRead,c=context(w),edit=c.edit,comparisonTicket=comparisonRead;
+    const current=()=>alive(w,g)&&ticket===sourceOpenRead&&c.edit===edit&&comparisonRead===comparisonTicket;
+    let refreshed;
+    try{refreshed=await refresh({load:false});}
+    catch(error){if(current())throw error;return;}
+    if(!refreshed||!current())return;
     const found=rows(catalog?.sources).find(row=>row.source_collection_id===value.collection&&row.analysis_source_id===value.source);
     if(!found)throw Error('The original imported analysis is not in this Workspace catalogue.');
     context(w).draft.source=choiceKey(found);context(w).draft.huc12s=[];context(w).edit++;field('source').value=choiceKey(found);persist(w);
@@ -315,7 +323,7 @@ export function attachObservedLandcover(host){
     else return;
     c.edit++;clearPreview();persist(workspace);
   }
-  function detach(){++epoch;++catalogRead;++inputRead;++comparisonRead;++portableRead;events?.abort();events=null;root=null;workspace=null;catalog=null;inputs=null;preview=null;opened=null;}
+  function detach(){++epoch;++catalogRead;++inputRead;++comparisonRead;++portableRead;++composeRead;++sourceOpenRead;events?.abort();events=null;root=null;workspace=null;catalog=null;inputs=null;preview=null;opened=null;}
   async function mount(container){
     if(root===container&&workspace===state())return update();
     detach();root=container;workspace=state();const w=workspace,g=epoch,c=context(w);
