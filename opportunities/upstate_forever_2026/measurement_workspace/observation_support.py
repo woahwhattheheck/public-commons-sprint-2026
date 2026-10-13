@@ -34,6 +34,9 @@ def _basis(records):
                 "below-limit values contribute [0, original reporting limit), conditional on nonnegative concentration. "
                 "No individual censored value is substituted. This is not a statistical confidence interval. "
                 "Original method, fraction, basis and effective unit remain separate series.")
+    if records and records[0].get("excluded_statistical_count"):
+        return (BASIS.replace("every retained result row", "every eligible result row")
+                + " Source-documented excluded values remain in the original result export and exclusion table.")
     if records and records[0].get("source_observation"):
         return BASIS.replace("The published report retains its separate analytical cohort and censor treatment.",
                              "Fraction, method, original result type, basis fields and effective support unit remain separate source series.")
@@ -157,6 +160,15 @@ def enrich_observation_context(context: dict[str, Any]) -> dict[str, Any]:
             count = sum(record.get("measurement_original_result_count", 1) for record in records)
             item["observation_support"].update(record_count=count, original_result_count=count,
                 measurement_count=len(records), statistic_basis=context["statistic_basis"])
+        if context.get("has_statistical_exclusions"):
+            item["observation_support"].update(
+                record_count=row["record_count"], original_result_count=row["record_count"],
+                canonical_measurement_count=row["canonical_measurement_count"],
+                eligible_statistical_count=row["eligible_statistical_count"],
+                excluded_statistical_count=row["excluded_statistical_count"])
+            if row["excluded_statistical_count"]:
+                item["observation_support"]["basis"] += (" Source-documented exclusions retain their original values and identifiers; "
+                    "interval arithmetic uses only eligible measurements.")
         series.append(item)
     return {**context, "series": series, "observation_support_version": VERSION}
 
@@ -177,6 +189,27 @@ def report_sections(context: dict[str, Any]) -> list[tuple[str, list[Any]]]:
             groups[(row["parameter"], row.get("project_id", ""),
                     row.get("activity_type", ""), row.get("series_key", ""))].append(row)
     sections = []
+    if enriched.get("has_statistical_exclusions"):
+        rows = enriched.get("statistical_exclusion_rows", [])
+        sections.append(("Source-documented statistical exclusions", [
+            (str(enriched["original_record_count"]) + " original result rows; "
+             + str(enriched["canonical_measurement_count"]) + " canonical measurements; "
+             + str(enriched["eligible_statistical_count"]) + " eligible measurements; "
+             + str(enriched["excluded_statistical_count"]) + " excluded from statistics. "
+             "All original values and exact source references remain in the original-row export."),
+            {"kind": "table", "columns": ["Station / date", "Original characteristic / value", "Original ResultIdentifier", "Source CSV row / reason"],
+             "rows": [[str(row["site_id"]) + " / " + str(row["date"]),
+                       str(row["parameter_original"]) + " / " + str(row.get("value")) + " " + str(row.get("unit", "")),
+                       str(row.get("original_result_identifier", "")),
+                       str(row.get("source_csv_row", "")) + " / " + str(row.get("statistical_exclusion_reason", ""))]
+                      for row in rows],
+             "widths": [1.2, 1.1, 1.5, 2.2],
+             "caption": "Source-owned exclusions; the source value is retained, never replaced."},
+            *[("Retained original: " + str(row.get("original_source_path", "")) + "; SHA256 "
+               + str(row.get("original_source_sha256", "")) + "; CSV row "
+               + str(row.get("source_csv_row", "")) + ".")
+              for row in rows],
+        ]))
     for (parameter, project, activity_type, series_key), records in sorted(groups.items()):
         coverage, means = [], []
         for row in records:
