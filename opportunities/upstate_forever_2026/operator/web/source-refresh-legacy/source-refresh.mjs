@@ -71,7 +71,8 @@ function displayState(state){
   const target=$('progress');target.replaceChildren();element('p',`Status: ${state.status}`,target).className='status';
   if(state.error)element('p',`${state.error.type}: ${state.error.message}`,target);
   const pane=element('div',undefined,target);
-  table(pane,['Selection','Action','State','Result ID'],Object.entries(state.steps||{}).map(([key,s])=>[key,s.action,s.status,s.new_id]));
+  table(pane,['Selection','Action','Refresh step','Native run state','Result ID'],Object.entries(state.steps||{}).map(([key,s])=>[key,s.action,s.status,s.native_state || '—',s.new_id]));
+  element('p','Refresh completion describes the source replacement operation. Native run state shows whether each model has completed; unchanged runs retain their original source bindings.',target);
   if(state.status==='running')schedulePoll();
 }
 function displayPlan(value){
