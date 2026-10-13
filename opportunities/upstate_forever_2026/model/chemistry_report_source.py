@@ -13,11 +13,14 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      file_digest, held, identifier, read_json, verify_file)
 from . import chemistry_reports as reports
 from . import observed_context
-from .reach_chemistry.reporting import PARAMETER_UNITS, _parameters, _species, _text
+from .reach_chemistry.reporting import (PARAMETER_UNITS, _parameters, _species, _text,
+                                         _observation_groups, _interval_figures)
+from .reach_chemistry.inference import observation_key
 from .scientific_figures import _validate_figure
 
 VERSION = 1
-EDITION = "native-chemistry-scientific-source-v1"
+EDITION = "native-chemistry-scientific-source-v2"
+READABLE_EDITIONS = {"native-chemistry-scientific-source-v1", EDITION}
 KIND = "chemistry-report-sources"
 DIRECTORY = "chemistry-report-source-exports"
 SOURCE_ID = "native-chemistry-report"
@@ -108,8 +111,12 @@ def _figures(project, result):
                                        "concentration range. Lines join retained output times for reading; "
                                        "they do not add calculated states between samples.",
                             "panels": panels})
+    observations = list(result.get("observations", []))
+    observations.extend(item["observation"] for item in result.get("summaries", []))
+    for key, species, retained in _observation_groups(project, observations):
+        sid = species["operator_label"]
         exact = [row for row in result.get("observations", [])
-                 if row["species"] == sid and row.get("qualifier", "equal") == "equal"]
+                 if observation_key(row) == key and row.get("qualifier", "equal") == "equal"]
         if exact:
             axis = _axis("Original reference", "mg " + species["basis"] + "/L",
                          [row[key] for row in exact for key in ("observed_mg_l", "predicted_mg_l")])
@@ -122,17 +129,18 @@ def _figures(project, result):
                           for row in exact if row.get("role", "fit") == role]
                 if points:
                     series.append({"geometry": "scatter", "marker": marker, "label": label, "points": points})
-            figures.append({"id": _figure_id("fit", sid),
+            figures.append({"id": _figure_id("fit", key),
                             "title": "Original reference and fitted prediction: " + sid,
                             "caption": "One point per original exact-valued reference record; identical axis "
-                                       "ranges retain mg of " + species["basis"] + "/L. Filled circles were "
+                                       "ranges retain mg of " + species["basis"] + "/L for " + species["operator_expression"]
+                                       + ". Filled circles were "
                                        "used in fitting; open squares were held out. The full original "
-                                       "provenance determines empirical independence. Below-limit records "
+                                       "provenance determines empirical independence. Below-limit and interval records "
                                        "remain in the original table and are not plotted as exact values.",
                             "panels": [{"id": sid, "title": sid, "x": axis,
                                         "y": {**axis, "label": "Retained fitted prediction"}, "series": series}]})
         quantiles = [{**item["observation"], **{key: value for key, value in item.items() if key != "observation"}}
-                     for item in result.get("summaries", []) if item["observation"]["species"] == sid]
+                     for item in result.get("summaries", []) if observation_key(item["observation"]) == key]
         if quantiles:
             for row in quantiles:
                 bounds = [_finite(row[key]) for key in ("p05_mg_l", "median_mg_l", "p95_mg_l")]
@@ -155,15 +163,17 @@ def _figures(project, result):
                                "points": [{"x": row["day"], "y": row["median_mg_l"],
                                            "record_id": row["id"]} for row in rows]})
                 panels.append({"id": reach, "title": str(reach), "x": x, "y": y, "series": series})
-            figures.append({"id": _figure_id("prior", sid),
+            figures.append({"id": _figure_id("prior", key),
                             "title": "Original parameter-prior quantiles: " + sid,
                             "caption": "Vertical segments retain each original target's 5th and 95th "
                                        "percentiles; diamonds retain its median. These are pointwise "
                                        "summaries of the supplied parameter-prior draws, not a simultaneous "
                                        "band or a measurement-error confidence interval. The supplied "
                                        "priors, bounds, latent correlation, seed and completed draw count "
-                                       "remain in the report. Shared reach panels use one physical scale.",
+                                       "remain in the report. Shared reach panels use one physical scale for "
+                                       + species["operator_expression"] + " on the " + species["basis"] + " basis.",
                             "panels": panels})
+    figures.extend(_interval_figures(project, result.get("observations", [])))
     for figure in figures:
         _validate_figure(figure)
     return figures
@@ -311,11 +321,16 @@ def _sections(project, result, request, report, add):
               "Held-out records were excluded from fitting; their original source and sampling design "
               "determine independence. The optimizer cost is one half the sum of the selected loss "
               "on squared standardized fit residuals. A below-limit record uses the original one-sided "
-              "exceedance penalty and no fraction-of-limit substitution.",
+              "exceedance penalty and no fraction-of-limit substitution. Interval records use signed "
+              "distance to the nearest endpoint divided by the error scale, zero inside the limits. "
+              "An excluded open endpoint has zero distance but is outside the declared interval. "
+              "Weighted pools retain one conserved basis without implicit conversion or normalization.",
               [("Converged", result.get("converged")), ("Termination", result.get("termination")),
                ("Loss", result.get("loss")), ("Optimizer cost", result.get("objective")),
                ("Evaluations", result.get("evaluations")), ("Fit records", info["fit_records"]),
                ("Held-out records", info["held_out_records"]), ("Below-limit records", info["below_limit_records"]),
+               ("Interval records", sum(row.get("qualifier") == "interval" for row in result["observations"])),
+               ("Compound records", sum("components" in row for row in result["observations"])),
                ("Local identifiability", result.get("identifiability"))])
         table_section("fit-parameters", "Original fitted parameters and bounds",
                       "Parameter order, original physical values, fitted values and active-bound status are retained.",
@@ -325,16 +340,30 @@ def _sections(project, result, request, report, add):
                       ("source_reference", "Source")])
         table_section("fit-scores", "Original fit and held-out scores",
                       "The engine's RMSE and mean modeled-minus-reference bias use exact-valued "
-                      "records only. Below-limit records are excluded from these summaries.",
+                      "records only, grouped by exact measurement operator. Below-limit and interval records are excluded.",
                       [_species(project, row) for row in result.get("scores", [])],
-                      [("role", "Role"), ("species", "Species"), ("basis", "Basis"), ("count", "Records"),
+                      [("role", "Role"), ("operator_label", "Measurement"), ("operator_expression", "Weighted pools"), ("basis", "Basis"), ("components", "Original components"), ("count", "Records"),
                        ("rmse_mg_l", "RMSE mg basis/L"), ("bias_mg_l", "Bias mg basis/L")])
+        if result.get("interval_scores"):
+            table_section("interval-support", "Original interval support",
+                          "This support summary is separate from point RMSE. Endpoint inclusion is "
+                          "evaluated exactly; an excluded endpoint has zero distance penalty.",
+                          [_species(project, row) for row in result["interval_scores"]],
+                          [("role", "Role"), ("operator_label", "Measurement"),
+                           ("operator_expression", "Weighted pools"), ("basis", "Basis"),
+                           ("components", "Original components"), ("count", "Interval records"),
+                           ("predictions_within_declared_interval", "Predictions within declared limits"),
+                           ("weighted_distance_to_interval_rmse", "RMS standardized distance to limits")])
         table_section("references", "Every original reference and retained prediction",
                       "Original qualifiers, assumed error scales and record provenance remain visible.",
                       [_species(project, row) for row in result["observations"]],
-                      [("id", "Record"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
+                      [("id", "Record"), ("reach", "Reach"), ("operator_label", "Measurement"), ("operator_expression", "Weighted pools"), ("basis", "Basis"), ("components", "Original components"),
                        ("day", "Model day"), ("role", "Role"), ("qualifier", "Qualifier"),
-                       ("observed_mg_l", "Reference or limit mg basis/L"),
+                       ("observed_mg_l", "Point or below limit mg basis/L"),
+                       ("lower_mg_l", "Lower limit mg basis/L"), ("upper_mg_l", "Upper limit mg basis/L"),
+                       ("lower_closed", "Includes lower"), ("upper_closed", "Includes upper"),
+                       ("declared_interval", "Declared interval mg basis/L"),
+                       ("interval_contains_prediction", "Prediction within declared interval"),
                        ("predicted_mg_l", "Prediction mg basis/L"), ("sigma_mg_l", "Error scale mg basis/L"),
                        ("weighted_residual", "Objective residual"), ("provenance", "Original source")])
     if "rows" in result:
@@ -346,7 +375,7 @@ def _sections(project, result, request, report, add):
                        "predicted_mg_l": row["predicted_mg_l"],
                        "parameter_units": PARAMETER_UNITS.get(derivative.get("parameter_kind"))})
                        for row in result["rows"] for derivative in row["derivatives"]],
-                      [("id", "Target"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
+                      [("id", "Target"), ("reach", "Reach"), ("operator_label", "Measurement"), ("operator_expression", "Weighted pools"), ("basis", "Basis"), ("components", "Original components"),
                        ("day", "Day"), ("parameter", "Parameter"), ("parameter_kind", "Physical field"),
                        ("parameter_units", "Parameter units"),
                        ("predicted_mg_l", "Prediction mg basis/L"),
@@ -370,8 +399,8 @@ def _sections(project, result, request, report, add):
                       [_species(project, {**row["candidate"], "order": row["order"],
                        "predicted_mg_l": row["predicted_mg_l"],
                        "incremental_logdet_gain": row["incremental_logdet_gain"]}) for row in result["selected"]],
-                      [("order", "Order"), ("id", "Candidate"), ("reach", "Reach"), ("species", "Species"),
-                       ("basis", "Basis"), ("day", "Day"), ("sigma_mg_l", "Error scale mg basis/L"),
+                      [("order", "Order"), ("id", "Candidate"), ("reach", "Reach"), ("operator_label", "Measurement"), ("operator_expression", "Weighted pools"),
+                       ("basis", "Basis"), ("components", "Original components"), ("day", "Day"), ("sigma_mg_l", "Error scale mg basis/L"),
                        ("predicted_mg_l", "Prediction mg basis/L"), ("incremental_logdet_gain", "Incremental logdet gain")])
     if "summaries" in result:
         items("ensemble", "Original parameter-prior ensemble",
@@ -389,10 +418,10 @@ def _sections(project, result, request, report, add):
                       [("id", "Parameter"), ("target", "Target"), ("parameter_units", "Units"), ("basis", "Basis"),
                        ("lower", "Lower"), ("upper", "Upper"), ("distribution", "Original distribution")])
         table_section("ensemble-quantiles", "Original target-by-target prior quantiles",
-                      "Pointwise original summaries retain each target reach, species, basis and day.",
+                      "Pointwise original summaries retain each target reach, complete measurement operator, basis and day.",
                       [_species(project, {**row["observation"], **{k: v for k, v in row.items() if k != "observation"}})
                        for row in result["summaries"]],
-                      [("id", "Target"), ("reach", "Reach"), ("species", "Species"), ("basis", "Basis"),
+                      [("id", "Target"), ("reach", "Reach"), ("operator_label", "Measurement"), ("operator_expression", "Weighted pools"), ("basis", "Basis"), ("components", "Original components"),
                        ("day", "Day"), ("p05_mg_l", "5th percentile mg basis/L"),
                        ("median_mg_l", "Median mg basis/L"), ("p95_mg_l", "95th percentile mg basis/L"),
                        ("mean_mg_l", "Mean mg basis/L")])
@@ -518,7 +547,7 @@ def prepare(workspace, report_id):
 
 def inspect(workspace, record_id):
     record = workspace._get(KIND, identifier(record_id))
-    if (record.get("version") != VERSION or record.get("edition") != EDITION
+    if (record.get("version") != VERSION or record.get("edition") not in READABLE_EDITIONS
             or record.get("state") != "complete" or record.get("workspace_id") != workspace.project["id"]
             or digest(record["selection"]) != record["selection_id"]):
         raise ValueError("Choose the original Chemistry scientific-source edition in this workspace")
