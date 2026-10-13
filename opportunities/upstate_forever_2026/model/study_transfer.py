@@ -169,7 +169,8 @@ def _record_path(kind, key):
 class _Closure:
     def __init__(self, workspace, selection, *, decision_database=None, report_lineage=True,
                  implementation_lineage=True, customer_review_lineage=True,
-                 report_source_keys=None, implementation_source_keys=None):
+                 report_source_keys=None, implementation_source_keys=None,
+                 geographic_native_studies=None):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -197,6 +198,8 @@ class _Closure:
         self.implementation_source_keys = (None if implementation_source_keys is None
                                            else frozenset(implementation_source_keys))
         self.external_decision_dependencies = []
+        self.geographic_native_selection = geographic_native_studies
+        self.geographic_native_records = []
 
     def add_file(self, relative, expected=None):
         path = _member(self.root, relative)
@@ -580,6 +583,8 @@ class _Closure:
         while self.pending:
             self._visit(*self.pending.popleft())
         if self.selection["include_related_results"]:
+            from . import geographic_study_transfer
+            geographic_study_transfer.related_native_cohort(self)
             # A completed release can name another retained report/source cohort.
             # Resolve its typed descendants before discovering their saved comparisons.
             while True:
@@ -653,6 +658,7 @@ class _Closure:
             "related_result_issues": self.related_issues,
             "external_decision_dependencies": self.external_decision_dependencies,
             "completed_deliveries": delivery_transfer.receipt(self),
+            "geographic_native_studies": copy.deepcopy(self.geographic_native_records),
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
             "scientific_report_editions": report_editions.receipt(self),
@@ -936,6 +942,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             "planned_cases": plan["planned_cases"],
             "related_result_issues": plan["related_result_issues"],
         }
+        if closure.geographic_native_records:
+            identity["geographic_native_studies"] = copy.deepcopy(closure.geographic_native_records)
         if closure.report_source_records:
             identity["scientific_report_sources"] = report_transfer.receipt(closure)
         if closure.customer_review_records:
@@ -1022,6 +1030,7 @@ def verify_received_studies(workspace):
                 or receipt["identity"]["project_id"] != workspace.project["id"]):
             raise ValueError("The received scientific study has a different original identity.")
         closure = _Closure(workspace, receipt["identity"]["selection"],
+                           geographic_native_studies=receipt["identity"].get("geographic_native_studies", []),
                            report_lineage="scientific_report_sources" in receipt["identity"],
                            implementation_lineage="implementation_report_sources" in receipt["identity"],
                            customer_review_lineage="customer_reviews" in receipt["identity"],
