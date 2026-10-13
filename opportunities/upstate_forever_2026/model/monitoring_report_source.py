@@ -511,6 +511,7 @@ def prepare(workspace, selection, *, progress=None):
     if selected.get("comparison_id"):
         from . import monitoring_comparison_report
         identity["comparison_producer_sha256"] = file_digest(Path(monitoring_comparison_report.__file__))
+        identity["comparison_figure_sources"] = monitoring_comparison_report.figure_implementation()
     if not selected.get("comparison_id"):
         from . import utility_monitoring_report
         identity["utility_report_producer_sha256"] = file_digest(utility_monitoring_report.__file__)
@@ -533,12 +534,14 @@ def prepare(workspace, selection, *, progress=None):
             atomic_json(intent_path, intent, immutable=True)
         prepared = directory / "prepared.json"
         if not prepared.exists():
+            figure_selection = {"figures": []}
             if selected.get("comparison_id"):
                 from .monitoring_comparison_report import capture
                 captured = capture(workspace, directory, selected, intent, report)
                 title, summary, records = captured["title"], captured["summary"], captured["records"]
                 edition, kind = captured["edition"], captured["report_context_kind"]
                 sections, source_links = captured["sections"], captured["source_links"]
+                figure_selection = {name: captured[name] for name in ("figures", "figure_spec") if name in captured}
             else:
                 report("capture-native-export")
                 context = _capture(workspace, directory, selected)
@@ -573,7 +576,7 @@ def prepare(workspace, selection, *, progress=None):
             from . import observed_context
             recipe = {"schema": observed_context.SCHEMA, "title": title, "edition": edition,
                       "report_context_kind": kind, "project_id": workspace.project["id"],
-                      "inputs": companions, "sections": sections, "figures": [], "source_links": source_links}
+                      "inputs": companions, "sections": sections, **figure_selection, "source_links": source_links}
             atomic_json(directory / "report-source.json", recipe, immutable=True)
             entry = {"id": SOURCE_ID, "kind": "document", "title": title,
                      "uri": "urn:upstate:monitoring-report:" + workspace.project["id"] + ":" + key,

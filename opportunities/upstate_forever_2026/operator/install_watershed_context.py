@@ -18,6 +18,8 @@ FILES = (
     "model/utility_monitoring.py",
     "model/utility_monitoring_report.py",
     "model/monitoring_workspace.py",
+    "model/monitoring_packet.py",
+    "model/monitoring_comparison_report.py",
     "model/monitoring_report_source.py",
     "docs/UTILITY_MONITORING_REPORTS.md",
     "docs/UTILITY_MONITORING.md",
