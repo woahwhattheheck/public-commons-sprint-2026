@@ -16,12 +16,41 @@ All captured public-water layers use EPSG:26917. Intake source PWSNO includes th
 
 The source's published description defines its surface-water protection areas as 15 miles upstream of the intake. BUFFER_FT separately distinguishes the 200-foot and 1500-foot feature records. Retain both attributes and original polygons. The receiver's source_area relation uses each complete polygon without constructing an additional buffer. The existing family union handles overlapping footprints once for family totals.
 
-## Receive the original polygon file
+## Run the complete native receiving operation
 
-All original sources and metadata are retained on:
+The existing model Workspace and its complete delivery selection can run through the entire retained source path with one command:
+
+```bash
+/opt/pyvenv/bin/python source_tools/receive_designation_delivery.py \
+  --workspace /ABSOLUTE/PATH/TO/EXISTING/WORKSPACE \
+  --delivery /ABSOLUTE/PATH/TO/current-complete-delivery-selection.json \
+  --output /ABSOLUTE/PATH/TO/designation-operation
+```
+
+The command imports the bundled public sources, prepares the four utility receptors, saves the two separate and combined utility choices, receives the complete 377-feature river case, verifies its saved selections and archive, then imports the actual river selection into the model Workspace and builds the combined delivery with the original engine.
+
+The output is an input-specific request directory containing the full operation journal, every issued command and its stdout/stderr, the input selection, the actual saved source/selection IDs, the original seven-map delivery result and its source table. The same input returns to the same request directory. Re-running uses the original commands and their retained objects and caches, with a new attempt log; an active operation holds the original application's exclusive file lock. Different input delivery bytes select a new request directory.
+
+For the actual browser journey, the running operator must already expose that model Workspace. Add its retained startup JSON, the existing browser executable and, when needed, its registered Workspace key:
+
+```bash
+  --operator-start /ABSOLUTE/PATH/TO/operator-start.json \
+  --workspace-key ACTUAL_REGISTERED_MODEL_WORKSPACE_KEY \
+  --browser /usr/bin/chromium
+```
+
+The browser opens the real saved designation, retains its complete source/rule association, traverses the installed Map atlas or original delivery editor, and submits the original delivery build. Its screenshots, complete exports, native task result and browser report remain under the same operation directory. Use `--playwright-path` when the existing Playwright package needs an explicit import path; `--timeout-seconds` controls the browser's native-build wait.
+
+The individual commands below remain available for an existing receiver that has already completed part of this operation.
+
+## Original polygon source
+
+The complete original four-polygon response is bundled at `raw/scdes-arjws-prwd-source-water-protection-original.json`. Its 2,389,556 bytes retain SHA256 `ddac0feb1c704ca5e95336e21961e08beede1f83b6b820423dffa5a63bd8e285`, the native EPSG:26917 coordinates, and original OBJECTIDs 11, 12, 131 and 132. `sources.public-native.json` binds that exact local file together with the original intake response and publisher metadata.
+
+The retained source attachment and metadata are also available on:
 https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e
 
-The single large external input is the attached original ARJWS/PRWD protection query, 2,389,556 bytes. Its stable reference and exact official query URL are in source-dictionary.json. Use the connected Notion get-file-download-urls operation on that retained reference to obtain a fresh ordinary download URL, then save the response locally without changing its bytes. A native host with direct public source access can retrieve the original query from the documented official service.
+The source dictionary retains its original attachment reference and exact official query URL. The bundled bytes let the native importer use this retained edition directly. To recover the same captured edition from the attachment, use its current ordinary download URL and verify the recorded byte count and SHA256 before use. A later live service response is a separate edition if its bytes differ.
 
 Exact original query:
 https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/2/query?objectIds=11,12,131,132&outFields=*&returnGeometry=true&orderByFields=OBJECTID&f=pjson
@@ -29,6 +58,19 @@ https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServ
 The package itself includes the complete 25,984-byte original intake source, all 136 original protection attribute rows, full layer 0/2/3 metadata, and a complete layer 3 polygon example. The well example belongs to CAMP GRAVATT (SYSTEM 0270677); the named RFP utility plan uses their actual surface-water sources.
 
 ## Prepare the native source-water plan
+
+The complete bundled-source route uses the existing native GIS interpreter and existing Workspace:
+
+```bash
+/opt/pyvenv/bin/python source_tools/prepare_public_source_water.py \
+  --model-root /ABSOLUTE/PROJECT/ROOT \
+  --workspace /ABSOLUTE/PATH/TO/EXISTING/WORKSPACE \
+  --out /ABSOLUTE/PATH/TO/public-water-native
+```
+
+This imports `sources.public-native.json`, binds the actual returned source collection, prepares all four original source-area receptors, and writes `public-water-preparation.json`, `receiving-waters-spec.json` and `scenario-source-areas.json`. The source-areas file keeps each original polygon and receptor identity available to the scenario-analysis desk.
+
+The companion command below defaults to the bundled original polygon file, accepts the same captured bytes through an explicit path, and can intentionally create a new Workspace when requested. It verifies the captured byte count and SHA256 before importing. Both preparation routes use the same original geometry and downstream preparation fields.
 
 Extract the package under its declared opportunities/upstate_forever_2026 root while preserving relative paths. Use the native GIS interpreter that already runs the model. The command below accepts the existing workspace and the directory containing the existing model package as explicit arguments:
 
@@ -67,3 +109,30 @@ Re-run that CLI against the retained original HUC domain and original NRCS/SCDES
 source-dictionary.json preserves official field names, aliases, types, domains, source spatial references, original renderer labels, per-layer description, source URLs, original features and stable file references. None of the three layer metadata responses publishes editingInfo; the observed source capture date is separate from an unstated dataset edition.
 
 Layer 3 uses the exact field DESC_ for its name. Its ZONE values are 0 (low-volume buffer), 1 (one-year travel), 2 (five-year travel) and 3 (ten-year travel); BUFFERDIS is feet and ACRES is the publisher area field. These metadata and the original polygon example are available to the existing source compiler.
+
+## Carry the utility choices into the designation desk and delivery
+
+Use the preparation result from the same model Workspace to save separate ARJWS, Pioneer and combined choices:
+
+```bash
+/opt/pyvenv/bin/python source_tools/prepare_utility_designations.py \
+  --model-root /ABSOLUTE/PROJECT/ROOT \
+  --workspace /ABSOLUTE/PATH/TO/EXISTING/WORKSPACE \
+  --preparation /ABSOLUTE/PATH/TO/public-water-native/public-water-preparation.json \
+  --out /ABSOLUTE/PATH/TO/utility-designations
+```
+
+The native designation engine retains the original source edition and full geometry. ARJWS and Pioneer each select their two published buffer records; `both-utilities.selection.json` selects all four for the single drinking-water overlay. The saved choices reopen in the designation desk and enter the installed Map atlas through the existing native apply action.
+
+To combine that choice with an already prepared complete model delivery, preserve the actual baseline, alternatives, reporting sources and print settings:
+
+```bash
+/opt/pyvenv/bin/python source_tools/prepare_designation_delivery.py \
+  --workspace /ABSOLUTE/PATH/TO/EXISTING/WORKSPACE \
+  --delivery /ABSOLUTE/PATH/TO/current-complete-delivery-selection.json \
+  --selection /ABSOLUTE/PATH/TO/utility-designations/both-utilities.selection.json \
+  --output /ABSOLUTE/PATH/TO/utility-delivery \
+  --build-delivery
+```
+
+This calls the original delivery engine and writes the complete resulting selection and source table alongside the native build result. A river designation can be included with another `--selection`; when imported from a separate Workspace, supply its retained original `sources.json` with `--source-manifest`. All original source IDs, source hashes, selected feature identities and legal context travel through the saved overlay into the report.

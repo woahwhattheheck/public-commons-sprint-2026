@@ -1,141 +1,216 @@
-# Original Gura: inputs, native comparisons and a reopened operator
+# Original Gura: native calculation, class comparisons and a reopened operator
 
-The workflow uses the Natural Capital Project's retained InVEST 3.20.0 Gura
-release archives and original biophysical CSVs pinned to revision
-098183806c0c715e6422d4d0570db91321c0f4e8. It continues GURA-NATIVE-01 with the
-operation's 300 m grid (9 ha per square pixel) and separate 300 m context buffer.
+This workflow continues `GURA-NATIVE-01` in the maintained Upper Savannah
+application. It receives original Gura inputs, prepares the original baseline,
+runs NDR and SDR through InVEST 3.20.0, compares separately selected land-cover
+substitutions, creates the watershed report and economic editing desk, saves
+the whole Workspace, and can start the operator against those results.
 
-## Receiving the complete application
+The original Gura grid uses 300 m cells: 9 ha per square pixel. Its separate
+upstream context selection is 300 m. Native rates are converted using the
+actual pixel area. Regional Upper Savannah studies retain their own source
+grids, source collections and programme selections.
 
-Use the complete current application from the public repository at
-opportunities/upstate_forever_2026. The workflow composes its existing
-source receiver, native programme executor, comparison reports and operator.
-Keep those modules from the same current application checkout when receiving
-or transferring the project.
+## Application and runtime
 
-Use the Python environment defined by environment.yml for native calculation.
-The same workflow's prepare command can use an existing GIS interpreter with
-NumPy, rasterio, Fiona, pyproj and shapely. Every native run uses InVEST 3.20.0,
-GDAL and pygeoprocessing through the maintained application executor.
+Use the complete maintained application at
+`opportunities/upstate_forever_2026/` in
+`woahwhattheheck/public-commons-sprint-2026`. This release adds
+`source_tools/gura_workflow.py`, `source_tools/gura_comparison.py` and this guide.
+Keep the installed current `receive_gura.py`, programme coordinator, source
+retention, native execution and portable Workspace modules. Earlier seven-file
+carriers included the older 21,851-byte receiver; the current receiver's
+22,545-byte successor reuses already extracted original ZIP members.
 
-## Preparing the retained original inputs
+Use the existing compatible GIS/native interpreter. The application
+`environment.yml` defines Python 3.12, InVEST 3.20.0 and the required GIS
+packages when an environment must be installed. A prepare-only command needs
+NumPy, rasterio, Fiona, pyproj and shapely. Native execution additionally checks
+InVEST 3.20.0, GDAL and pygeoprocessing. The workflow records the interpreter,
+hostname, package versions, selected application files, child PID and command.
 
-From the actual received application root:
+The existing native adapter selects TaskGraph's synchronous `n_workers=-1`.
+The workflow defaults `GDAL_CACHEMAX=16` and `GDAL_NUM_THREADS=1` before GIS
+imports and records the effective values. Explicit caller environment values
+take precedence. The cache setting is in MB and controls GDAL's block cache;
+the existing original input and output files remain necessary.
 
-    python -B -m source_tools.gura_workflow prepare \
-      --workspace /absolute/path/to/gura/workspace \
-      --source-directory /absolute/path/to/gura/source \
-      --archives /absolute/path/to/gura-3.20.0-inputs
+## Original inputs and provenance
 
-The archive directory contains the retained NDR.zip and SDR.zip. The workflow
-checks their original release digests and uses the two exact CSVs supplied
-under source/gura-original-tables-3.20. Source URLs and original bytes stay with
-the imported collection. It prepares the original grid, profile and baseline,
-then counts actual land-cover cells inside the original Gura watershed.
+For a new intake the workflow checks the retained generation-specific InVEST
+3.20.0 release archives:
+
+| Input | SHA256 |
+| --- | --- |
+| NDR.zip | df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4c8af8bea53c6c7d |
+| SDR.zip | 34351a1305d8e6258c2d566917cfeab5f152096e930ef5b0a834968146bdc779 |
+
+The source code preserves the original Google Cloud Storage object generations
+`1781204725169434` and `1781204725769073` in the NDR and SDR source URLs.
+The two separate biophysical CSVs come from the original sample-data revision
+`098183806c0c715e6422d4d0570db91321c0f4e8` and are supplied under
+`source/gura-original-tables-3.20/`. Their full original bytes and URLs travel
+with the imported collection. Nutrient columns come from NDR; SDR supplies
+`usle_c` and `usle_p`, joined by original integer `lucode`.
+
+An already prepared source manifest or receiving record keeps its own actual
+archive hashes, source URLs and edition. This includes the original 3.16.1
+archives referenced by the tagged InVEST 3.20.0 example datastacks. Restarting
+the workflow reuses the selected retained bytes and preserves that provenance.
+The new-intake release choice does not rewrite an existing source selection.
+
+## Preparing the same Workspace
+
+Run from the actual application root with the compatible interpreter:
+
+```sh
+env GDAL_CACHEMAX=16 GDAL_NUM_THREADS=1 /compatible/python -B -m source_tools.gura_workflow prepare \
+  --workspace /absolute/gura/workspace \
+  --source-directory /absolute/gura/source \
+  --archives /absolute/gura/original-archives
+```
+
+The archive directory contains retained `NDR.zip` and `SDR.zip`. The known
+original archive location on host `4bdbb5b17718` is
+`/dev/shm/c8ff-upstate-planning-20261013/gura-3.20.0-inputs`.
+Use the receiving host's existing operation paths. Once `sources.json` has
+been retained, subsequent preparation can recover directly from its verified
+original files without another archive download or external archive location.
+
+The workflow prepares the original source collection, grid, coefficient
+profile and baseline. It counts land-cover cells inside the original Gura
+watershed and saves their areas using the actual affine determinant.
 
 The default comparison pairs the dominant observed original class with every
-other observed class, in both directions, in separate native scenarios. Its
-saved plan includes original class labels, original profile coefficients,
-actual source-cell counts and areas, watershed features, and all scenario IDs.
-For an intentionally selected cohort, repeat --convert FROM:TO using original
-integer class codes. The same arguments resume the same saved selection.
+other observed class in both directions. Each pair is a separate scenario.
+The plan retains original class labels and coefficients, source-cell counts
+and areas, watershed feature IDs and scenario selections. To select a
+particular cohort, repeat `--convert FROM:TO` with original integer class
+codes. Resume with the same cohort and `--zone-id-field` arguments.
 
-The existing retained archive path on host 4bdbb5b17718 is:
+## Native execution and recovery
 
-    /dev/shm/c8ff-upstate-planning-20261013/gura-3.20.0-inputs
+Use the same paths with `run`:
 
-Use the existing GURA-NATIVE-01 Workspace/source paths of the receiving host.
-The command above shows path placeholders; it does not select a second host
-or another Workspace.
+```sh
+env GDAL_CACHEMAX=16 GDAL_NUM_THREADS=1 /compatible/python -B -m source_tools.gura_workflow run \
+  --workspace /absolute/gura/workspace \
+  --source-directory /absolute/gura/source \
+  --archives /absolute/gura/original-archives \
+  --backup /absolute/gura/gura-complete.zip
+```
 
-## Native calculation, reports and saved Workspace
+The original `receiving.json` and `programme-selection.json` remain the source
+lineage for the saved comparison plan. Interrupted preparation reuses the
+saved source reference. On native execution the coordinator creates or reopens
+a programme from that saved selection against the installed scientific source
+inventory. The current programme ID is recorded separately as
+`active_original_programme_id` in `gura-workflow.json`; its native run IDs and
+completed stages are reused when their input and runtime identities match.
 
-Use the same arguments with run and the compatible native interpreter:
+Both the original baseline and the comparison cohort use the maintained
+CLI `resume` action. This clears a retained pause request before continuing.
+A failed or interrupted native child leaves its actual command, PID, log,
+return code and programme record available for recovery. Rerun the same
+workflow command after correcting the concrete runtime issue.
 
-    python -B -m source_tools.gura_workflow run \
-      --workspace /absolute/path/to/gura/workspace \
-      --source-directory /absolute/path/to/gura/source \
-      --archives /absolute/path/to/gura-3.20.0-inputs \
-      --backup /absolute/path/to/gura/gura-complete.zip
+The comparison executor checks every selected native run, verifies that
+alternatives changed actual source cells, builds the watershed comparison,
+creates economic editions where the original exports have common support,
+and saves the full Workspace archive. Use `--physical-only` for the native
+report without the economic companion. Archive paths must be outside the
+Workspace. Existing verified complete archives are reused.
 
-The workflow first continues the original receiving programme and writes its
-actual programme ID, host, PID and log path to progress. It then uses the
-maintained programme executor for the complete selected comparison cohort.
-That executor reuses completed baseline and alternative runs, continues
-interrupted work, and keeps current process/run details in the comparison
-directory. Each alternative must change actual source cells.
-Completed outputs include a native watershed comparison, quantitative source
-areas and exports, the economic editing desk, and a full Workspace archive
-with the matched application and original source collection.
+Progress and outputs:
 
-Progress is emitted as JSON lines and saved to source/gura-workflow.json.
-The original programme writes source/original-native-programme.log. The native
-comparison retains its own progress.json and native-programme.log
-under workspace/gura-comparisons/<comparison-id>. Rerun the same command after
-an interrupted process; the retained source selection and programme are reused.
+| Path | Contents |
+| --- | --- |
+| source/gura-workflow.json | Workflow phase, original and active programme IDs, runtime, current application inventory and command |
+| source/programme-executions/&lt;programme-id&gt;/original-native-programme.log | Original baseline native process output |
+| source/gura-source-catalog.json | Actual original classes, cells, areas, tables and watershed features |
+| source/gura-comparison-plan.json | Saved source-class cohort |
+| source/gura-comparison-result.json | Final native reports, economic editions and archive |
+| workspace/gura-comparisons/&lt;comparison-id&gt;/ | Comparison progress, native log, source selection, reports and archive receipt |
 
-    python -B -m source_tools.gura_workflow status \
-      --workspace /absolute/path/to/gura/workspace \
-      --source-directory /absolute/path/to/gura/source \
-      --inspect-runtime
+Inspect the recorded operation and currently imported runtime:
 
-## Opening the real operator
+```sh
+/compatible/python -B -m source_tools.gura_workflow status \
+  --workspace /absolute/gura/workspace \
+  --source-directory /absolute/gura/source \
+  --inspect-runtime
+```
 
-Add --serve to run to start the operator after calculation and archive creation,
-or use the existing completed Workspace:
+## Operator and transferred Workspace
 
-    python -B -m source_tools.gura_workflow serve \
-      --workspace /absolute/path/to/gura/workspace \
-      --source-directory /absolute/path/to/gura/source
+Add `--serve` to the native run to start the operator after the result and
+archive are saved, or open the existing completed Workspace:
 
-The server prints its actual origin and operator_url. Open the exact returned
-operator_url, including its token fragment. The operator can inspect sources,
-select models and cases, run native work, compare completed results, edit
-report selections and notes, download deliverables, and save the Workspace.
+```sh
+/compatible/python -B -m source_tools.gura_workflow serve \
+  --workspace /absolute/gura/workspace \
+  --source-directory /absolute/gura/source
+```
 
-## Reopening a transferred copy
+The server prints its actual origin and `operator_url`. Open the returned URL
+including its token fragment. Sources, native cases, comparisons, report
+selections, notes, deliverable downloads and Workspace saving remain available.
 
-Use the maintained portable.restore(archive_path, new_destination) API from
-model.portable. Its returned application directory contains the matching
-operator/server.py, and its returned workspace is the restored scientific
-Workspace. Launch that returned application:
+For a transferred whole Workspace, call the maintained
+`model.portable.restore(archive_path, new_destination)` API. Launch the returned
+application's `operator/server.py` against its returned Workspace path:
 
-    /compatible/python /absolute/returned/application/operator/server.py \
-      --workspace /absolute/returned/workspace \
-      --operator-state /absolute/returned/operator-state \
-      --port 0
+```sh
+/compatible/python /returned/application/operator/server.py \
+  --workspace /returned/workspace \
+  --operator-state /returned/operator-state \
+  --port 0
+```
 
-The server again prints the actual operator_url. The current portable model
-includes the cumulative application packages and ordinary Workspace root
-files, including operator-session.json when present, so browser selections and
-report notes travel with the Workspace.
+The portable source includes the matched application and original source
+collection. Ordinary Workspace root files, including a retained operator
+session, preserve report selections and notes.
 
-## Continuing native work from the transferred archive
+## Preserving a running child and reopening the workflow
 
-The workflow retains its original receiving record, original programme
-selection, selected conversion cohort and watershed ID field under
-workspace/gura-workflow before creating the archive. The original raster,
-vector, ZIP and table objects are also retained by the scientific Workspace.
+The native launcher holds a programme-specific launch lock through an inherited
+file descriptor. If its caller ends while the native child continues, the next
+caller observes that issued process and its maintained programme/run state.
+It starts a continuation after the existing process has settled. Every issued
+attempt is retained under `programme-executions/<programme-id>/native-attempts`,
+with the actual log path in its command record. Earlier operation-wide command
+records remain available.
 
-After portable.restore, use the matched application's workflow with the
+Completed programmes and reports retain their original source identity.
+For an incomplete programme, the launcher checks the installed scientific
+inventory immediately before execution. Only the coordinator's exact
+scientific-source-change result triggers creation from the saved selection
+under the current inventory. Its active programme ID and command ledger are
+recorded separately, and canonical native run IDs remain bound to their
+original inputs. All other identity or grid errors remain explicit.
+
+The workflow saves original receiving and programme selections, the conversion
+cohort, selected watershed field and progress inside
+`workspace/gura-workflow` before the complete Workspace archive is built.
+After `portable.restore`, run the matched application's workflow with the
 returned Workspace and a new local source directory:
 
-    python -B -m source_tools.gura_workflow run \
-      --workspace /absolute/returned/workspace \
-      --source-directory /absolute/returned/gura-source \
-      --backup /absolute/returned/gura-continued.zip
+```sh
+/compatible/python -B -m source_tools.gura_workflow run \
+  --workspace /returned/workspace \
+  --source-directory /returned/gura-source \
+  --backup /returned/gura-continued.zip
+```
 
-The workflow verifies the restored project and source/grid/profile/scenario
-identities, rebinds the receipt's local Workspace and programme-selection paths,
-and restores the original conversion and watershed-field selections. It then
-reuses the preserved native runs through the same programme executor. The
-archive contains the original scientific inputs, so this continuation does not
-need the original machine's source directory or another archive download.
+The restored scientific project and source/grid/profile/scenario identities
+are checked before local receipt and programme-selection paths are rebound.
+The original cohort and watershed-field selection are restored from the
+Workspace. The retained native runs and original source objects are available
+without another original archive download.
 
-## Application source
-
-The workflow and this guide are maintained alongside receive_gura.py,
-gura_comparison.py, the two pinned original CSVs and environment.yml. Each
-execution records the actual application file hashes in its progress record.
-The preserved source collection and the matching application travel with a
-complete Workspace archive.
+To separate the operator's startup receipt from workflow JSON output, add
+`--operator-ready-file /absolute/new-operator-ready.json` to `serve` or a
+`run --serve` command. That receipt path must be new so an earlier server's
+connection information is preserved. Open the actual returned `operator_url`.
+A physical-only run defaults to a separate `-physical-complete.zip` backup
+filename, preserving the archive containing economic editions.

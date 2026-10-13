@@ -8,7 +8,13 @@ The desk joins retained watershed, aquatic habitat, hydrography and land invento
 
 Receive every file from the complete ECO-CONTEXT13 source bank into the existing Upper Savannah application, preserving the listed relative paths. The addon includes model/water_context.py and its method guide; operator/water_context_service.py and its service guide; water_context_cli.py; operator/extensions/water-context.json; and the three operator/web/water_context assets.
 
-The application uses the current ECSA extension registry and browser host. Its published source bank F0C8PRVG4EN defines the registry and original installer; preserve the later ECSA typed-file-route updates in the receiving application. For an application whose original server and browser are already installed with ECSA, restart that same operator so its registry reads water-context.json. For the raw cumulative application, run its current install_extensions.py against that same application using its documented --application and --source-root arguments, then start its existing operator. The addon files must already be present at their relative paths.
+The application uses the current ECSA extension registry and browser host. Its published source bank F0C8PRVG4EN defines the registry and original installer; preserve the later ECSA typed-file-route updates in the receiving application. Receive source_tools/install_water_context.py together with the ten complete component files. From that received application run:
+
+```sh
+python -B source_tools/install_water_context.py --application /absolute/path/to/received/application
+```
+
+The installer calls the receiving application's own current install_extensions.py composition hooks for its server and browser, and adds only missing water_context_cli.py and WATER_CONTEXT_OPERATOR.md entries to the current portable APPLICATION_FILES inventory. It preserves all current portable directories and unrelated source. All component files and current shared dependencies must already exist at their relative paths. The complete source_tools directory retains this installer in application archives. Use --dry-run to inspect the composed changes; rerunning an installed edition is idempotent. Restart the same operator after installation so its registry reads water-context.json. Back up and restore through the existing Workspace flow to carry the command, operating guide and full scientific implementation into the independent application.
 
 The registration imports water_context_service.WaterContextService through the original operator module path. Its serial queue owns water-context.build. Catalogue, saved-analysis and preview reads use the original authenticated handler. Download links use the existing file-ticket service. The desk is an additional navigation entry called Water and Habitat Context.
 

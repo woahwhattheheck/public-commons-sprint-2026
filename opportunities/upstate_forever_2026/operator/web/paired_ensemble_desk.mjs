@@ -25,7 +25,8 @@ export function attachPairedEnsembles(context) {
   const document = context.document || globalThis.document;
   const {api, getState, toast} = context;
   let root=null, workspace=null, catalog=null, epoch=0, version=0;
-  let listeners=null, reads=null, timer=null, pollBusy=false;
+  let listeners=null, reads=null, timer=null, pollBusy=null;
+  let catalogRevision=0, submitRevision=0, uploadRevision=0, pollRevision=0;
   let pairRows=[], choices=new Map(), imported=null, selectedTask=null;
   let productSignature='', taskSignature='', pendingOpen=null, detailRequest=0;
   let lastRequest=null, lastSelection=null, savedDraft=null, pollingTask=null, detailId=null;
@@ -48,6 +49,31 @@ export function attachPairedEnsembles(context) {
       globalThis.sessionStorage?.setItem(storageKey(workspace), JSON.stringify({lastRequest,lastSelection,draft:savedDraft}));
     } catch (_) { /* The original task retains every submitted request. */ }
   }
+  function recordTask(task, request=null){
+    const key=task.workspace||request?.workspace;
+    if(!key||!task.id)return;
+    const terminal=state=>['complete','failed','cancelled','canceled'].includes(state);
+    const update=record=>{
+      if(!record||record.workspace!==key||
+        !(record.task_id===task.id||(request&&record.operation_id===request.operation_id)))return record;
+      if(terminal(record.task_state)&&!terminal(task.state))return record;
+      if(record.task_id===task.id&&record.task_state===task.state)return record;
+      return {...record,task_id:task.id,task_state:task.state};
+    };
+    if(workspace===key){
+      const request=update(lastRequest),selection=update(lastSelection);
+      if(request===lastRequest&&selection===lastSelection)return;
+      lastRequest=request;lastSelection=selection;remember();
+    }else{
+      try{
+        const saved=JSON.parse(globalThis.sessionStorage?.getItem(storageKey(key))||'null');
+        if(saved){
+          saved.lastRequest=update(saved.lastRequest);saved.lastSelection=update(saved.lastSelection);
+          globalThis.sessionStorage?.setItem(storageKey(key),JSON.stringify(saved));
+        }
+      }catch(_){ /* The original queue retains accepted task identities. */ }
+    }
+  }
   function restore() {
     lastRequest=null;lastSelection=null;savedDraft=null;
     try {
@@ -67,8 +93,9 @@ export function attachPairedEnsembles(context) {
   }
   function detach() {
     captureDraft();
-    epoch++;version++;listeners?.abort();reads?.abort();
-    clearTimeout(timer);timer=null;pollingTask=null;pollBusy=false;
+    epoch++;version++;catalogRevision++;submitRevision++;uploadRevision++;pollRevision++;
+    listeners?.abort();reads?.abort();
+    clearTimeout(timer);timer=null;pollingTask=null;pollBusy=null;
     root=null;workspace=null;catalog=null;detailId=null;
     productSignature='';taskSignature='';
   }
@@ -128,8 +155,10 @@ export function attachPairedEnsembles(context) {
     update(getState());
   }
   async function reload({restoreDraft=false,token=epoch,key=workspace}={}) {
+    const revision=++catalogRevision;
     const result=await api(url('/api/paired-ensemble/catalog',{},key),{signal:reads.signal});
-    if(!current(token,key))return;
+    if(!current(token,key)||revision!==catalogRevision)return;
+    version++;
     if(!restoreDraft)captureDraft();
     catalog=result;
     for(const [name,kind,title] of [['grid','grids','Choose the original grid'],['baseline','scenarios','Choose a baseline'],['alternative','scenarios','Choose an alternative']])
@@ -300,24 +329,33 @@ export function attachPairedEnsembles(context) {
     notify('Source binding is ready for this selection.');
   }
   async function submit(actionName,payload,{resumeRecord=null,key=workspace}={}) {
-    const token=epoch;
+    const token=epoch,revision=++submitRevision;
+    if(!current(token,key))throw Error('Open the selected workspace before submitting its analysis.');
+    const terminal=record=>['complete','failed','cancelled','canceled'].includes(record?.task_state);
     const same=lastRequest?.action===actionName&&JSON.stringify(lastRequest.payload)===JSON.stringify(payload)&&lastRequest.workspace===key;
-    const record=resumeRecord||same&&lastRequest||{
+    const record=resumeRecord&&!terminal(resumeRecord)?resumeRecord:same&&!terminal(lastRequest)?lastRequest:{
       workspace:key,action:actionName,payload:JSON.parse(JSON.stringify(payload)),operation_id:crypto.randomUUID()
     };
+    if(record.workspace!==key||record.action!==actionName)throw Error('The saved request belongs to a different action or workspace.');
     lastRequest=record;if(['paired_ensemble.build','paired_ensemble.resume'].includes(actionName))lastSelection=record;remember();
-    const task=await api('/api/actions',{method:'POST',body:{
-      workspace:key,action:actionName,payload:record.payload,operation_id:record.operation_id
-    }});
-    record.task_id=task.id;
-    if(workspace===key){lastRequest=record;selectedTask=task.id;remember();}
-    if(root&&workspace===key&&getState()?.workspace_key===key){
-      notify('The original queue retained '+actionName+'.');
-      await context.refresh?.({force:true});
-      if(!current(token,key))return task;
-      showProgress(task);
-      if(['queued','running'].includes(task.state))schedule(task.id);
+    let task;
+    try{
+      task=await api('/api/actions',{method:'POST',body:{
+        workspace:key,action:actionName,payload:record.payload,operation_id:record.operation_id
+      }});
+      if(task.workspace!==key)throw Error('The queued task belongs to a different workspace.');
+    }catch(error){
+      if(current(token,key)&&revision===submitRevision)throw error;
+      return null;
     }
+    recordTask(task,record);
+    if(!current(token,key)||revision!==submitRevision)return task;
+    selectedTask=task.id;
+    notify('The original queue retained '+actionName+'.');
+    await context.refresh?.({force:true});
+    if(!current(token,key)||revision!==submitRevision)return task;
+    showProgress(task);
+    if(['queued','running'].includes(task.state))schedule(task.id);
     return task;
   }
   async function loadTask(taskId) {
@@ -325,6 +363,7 @@ export function attachPairedEnsembles(context) {
     const task=await api(url('/api/task',{id:taskId},key),{signal:reads.signal});
     if(!current(token,key))return null;
     if(task.workspace!==key||!String(task.action).startsWith('paired_ensemble.'))throw Error('Choose a paired-raster task in this workspace.');
+    recordTask(task);
     return task;
   }
   async function resumeTask(taskId) {
@@ -355,37 +394,44 @@ export function attachPairedEnsembles(context) {
       downloads(task._downloads||[]);
   }
   function schedule(id) {
-    clearTimeout(timer);pollingTask=id;
-    const token=epoch,key=workspace;
-    timer=setTimeout(()=>poll(id,token,key),2500);
+    clearTimeout(timer);
+    if(!root||workspace!==getState()?.workspace_key)return;
+    if(pollingTask!==id)pollRevision++;
+    pollingTask=id;
+    const token=epoch,key=workspace,revision=pollRevision;
+    timer=setTimeout(()=>poll(id,token,key,revision),2500);
   }
-  async function poll(id,token,key) {
-    if(!current(token,key)||pollBusy)return;
-    pollBusy=true;
+  async function poll(id,token,key,revision=pollRevision) {
+    const owns=()=>current(token,key)&&revision===pollRevision&&pollingTask===id;
+    if(!owns())return;
+    if(pollBusy?.revision===revision&&pollBusy?.token===token){schedule(id);return;}
+    const claim={id,token,key,revision};pollBusy=claim;
     try {
       const task=await api(url('/api/task',{id},key),{signal:reads.signal});
-      if(!current(token,key))return;
       if(task.workspace!==key)throw Error('The task belongs to another workspace.');
+      recordTask(task);
+      if(!owns())return;
       let progress=null;
       if(['queued','running'].includes(task.state)&&['paired_ensemble.build','paired_ensemble.resume'].includes(task.action))
         progress=await api(url('/api/paired-ensemble/progress',{task_id:id},key),{signal:reads.signal});
-      if(!current(token,key))return;
+      if(!owns())return;
       showProgress(task,progress);
       if(['queued','running'].includes(task.state))schedule(id);
       else {
-        pollingTask=null;
+        pollingTask=null;pollRevision++;
         await context.refresh?.({force:true});
         if(current(token,key))renderProducts(getState()?.data?.paired_ensemble_products||[]);
       }
     } catch(error) {
-      if(error.name!=='AbortError'&&current(token,key)){notify(error.message,true);pollingTask=null;}
-    } finally {if(current(token,key))pollBusy=false;}
+      if(error.name!=='AbortError'&&owns()){notify(error.message,true);pollingTask=null;pollRevision++;}
+    } finally {if(pollBusy===claim)pollBusy=null;}
   }
   function downloads(rows) {
     return rows.map(row=>'<a href="'+esc(row.url||('/api/file/'+row.id))+'" download>'+esc(row.label||row.filename||'Download')+'</a>').join('');
   }
   function renderTasks(state) {
     const tasks=(state.tasks||[]).filter(task=>task.workspace===workspace&&String(task.action).startsWith('paired_ensemble.'));
+    for(const task of tasks)recordTask(task);
     const signature=JSON.stringify(tasks.map(task=>[task.id,task.state,task.updated_at,task.result?.state]));
     if(signature!==taskSignature){
       taskSignature=signature;
@@ -462,13 +508,13 @@ export function attachPairedEnsembles(context) {
     await submit('paired_ensemble.resume',result.selection,{key});
   }
   async function receive() {
-    const file=field('archive').files[0],token=epoch,key=workspace;
+    const file=field('archive').files[0],token=epoch,key=workspace,revision=++uploadRevision;
     if(!file)throw Error('Choose the complete result ZIP.');
     const limit=getState()?.limits?.upload_bytes;
     if(Number.isFinite(limit)&&file.size>limit)throw Error('This result ZIP exceeds the operator’s configured upload capacity.');
     notify('Retaining '+file.name+' ('+number(file.size)+' bytes)…');
     const upload=await api('/api/upload',{method:'POST',raw:file,filename:file.name,signal:reads.signal});
-    if(!current(token,key))return;
+    if(!current(token,key)||revision!==uploadRevision||field('archive').files[0]!==file)return;
     await submit('paired_ensemble.receive',{upload_id:upload.id},{key});
   }
   async function loadSaved() {
@@ -485,7 +531,7 @@ export function attachPairedEnsembles(context) {
     const button=event.target.closest?.('[data-pe-action]');
     if(!button||!root?.contains(button))return;
     event.preventDefault();event.stopPropagation();
-    const operation=button.dataset.peAction,id=button.dataset.id;
+    const operation=button.dataset.peAction,id=button.dataset.id,token=epoch,key=workspace;
     button.disabled=true;
     try {
       if(operation==='reload')await reload();
@@ -504,7 +550,7 @@ export function attachPairedEnsembles(context) {
       else if(operation==='watch'){const task=await loadTask(id);if(task){showProgress(task);if(['queued','running'].includes(task.state))schedule(task.id);}}
       else throw Error('Choose an available paired-raster operation.');
     } catch(error) {
-      if(error.name!=='AbortError'){notify(error.message,true);toast?.(error.message);}
+      if(error.name!=='AbortError'&&current(token,key)){notify(error.message,true);toast?.(error.message);}
     } finally {if(button.isConnected)button.disabled=false;}
   }
   function onChange(event) {

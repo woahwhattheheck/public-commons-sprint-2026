@@ -70,6 +70,30 @@ function unwrap(input) {
   throw Error("Choose one complete source document or its original file response");
 }
 
+function predecessorMetadata(entry, path) {
+  const retained = entry.predecessor_declarations || [];
+  if (!Array.isArray(retained) || retained.some(row => !row || typeof row !== "object" || Array.isArray(row)))
+    throw Error("Invalid predecessor declarations: " + path);
+  const declarations = [...retained];
+  const fields = ["base_sha256", "replaces_sha256", "before_sha256", "before_bytes",
+    "before", "base_ref", "base_git_blob", "base"];
+  const declared = Object.fromEntries(fields.filter(key => Object.hasOwn(entry, key)).map(key => [key, entry[key]]));
+  if (Object.keys(declared).length && !declarations.some(row => canonical(row) === canonical(declared)))
+    declarations.push(declared);
+  const hashes = [];
+  for (const row of declarations) {
+    for (const key of ["base_sha256", "replaces_sha256", "before_sha256"])
+      if (row[key] !== undefined && row[key] !== null) hashes.push(row[key]);
+    for (const key of ["before", "base"])
+      if (row[key] && typeof row[key] === "object" && !Array.isArray(row[key]) &&
+          row[key].sha256 !== undefined && row[key].sha256 !== null) hashes.push(row[key].sha256);
+  }
+  if (hashes.some(hash => typeof hash !== "string" || !/^[0-9a-f]{64}$/.test(hash)))
+    throw Error("Invalid predecessor identity: " + path);
+  if (new Set(hashes).size > 1) throw Error("Conflicting predecessor identities: " + path);
+  return {sha256: hashes[0] || null, declarations};
+}
+
 function layerFromDocument(document, {label = "source", payloadSha256 = null, payloadBytes = null} = {}) {
   if (!document || typeof document !== "object" || !document.files) throw Error("Source has no file inventory");
   const raw = document.files, declared = document.file_metadata || {};
@@ -115,14 +139,25 @@ function layerFromDocument(document, {label = "source", payloadSha256 = null, pa
     if (sha256Bytes(utf8Encode(content)) !== actual) throw Error("Source requires exact UTF-8 text: " + path);
     const mode = entry.mode || null;
     if (mode !== null && !["100644", "100755"].includes(mode)) throw Error("Unsupported source mode: " + path);
-    const previous = alias(entry, ["base_sha256", "replaces_sha256"], path);
-    if (previous !== null && !/^[0-9a-f]{64}$/.test(previous)) throw Error("Invalid predecessor identity: " + path);
+    const predecessor = predecessorMetadata(entry, path);
     const item = {bytes: bytes.length, sha256: actual, mode,
       git_blob: alias(entry, ["git_blob", "git_blob_sha", "github_blob_sha"], path),
       origins: Array.isArray(entry.origins) ? [...entry.origins] : []};
-    if (previous !== null) item.base_sha256 = previous;
-    if (files[path] !== undefined && (files[path] !== content || canonical(metadata[path]) !== canonical(item)))
-      throw Error("Conflicting duplicate source file: " + path);
+    if (predecessor.sha256 !== null) item.base_sha256 = predecessor.sha256;
+    if (predecessor.declarations.length) item.predecessor_declarations = predecessor.declarations;
+    if (files[path] !== undefined) {
+      const prior = metadata[path], left = {...prior}, right = {...item};
+      for (const row of [left, right]) { delete row.base_sha256; delete row.predecessor_declarations; }
+      if (files[path] !== content || canonical(left) !== canonical(right))
+        throw Error("Conflicting duplicate source file: " + path);
+      if (prior.base_sha256 && item.base_sha256 && prior.base_sha256 !== item.base_sha256)
+        throw Error("Source-bank blocks select different predecessors: " + path);
+      if (prior.base_sha256) item.base_sha256 = prior.base_sha256;
+      const declarations = [...(prior.predecessor_declarations || [])];
+      for (const declared of item.predecessor_declarations || [])
+        if (!declarations.some(row => canonical(row) === canonical(declared))) declarations.push(declared);
+      if (declarations.length) item.predecessor_declarations = declarations;
+    }
     files[path] = content; metadata[path] = item;
   }
   const total = Object.values(metadata).reduce((n, row) => n + row.bytes, 0);
@@ -226,14 +261,24 @@ function composeApplication(layers, {edition, operationId = null} = {}) {
     const origin = layer.receipt.payload_sha256;
     for (const name of Object.keys(layer.files).sort()) {
       const previous = metadata[name], incoming = {...layer.metadata[name]};
-      if (incoming.base_sha256 && (!previous || previous.sha256 !== incoming.base_sha256))
-        throw Error("Selected predecessor differs at layer " + index + ": " + name);
+      const expected = incoming.base_sha256 || null, declarations = incoming.predecessor_declarations || [];
       delete incoming.base_sha256;
+      delete incoming.predecessor_declarations;
       incoming.mode = incoming.mode || previous?.mode || "100644";
+      const action = !previous ? "added" : previous.sha256 === incoming.sha256 && previous.mode === incoming.mode ? "identical" : "replaced";
+      if ((action === "added" && expected !== null) ||
+          (action === "replaced" && expected !== previous.sha256))
+        throw Error("Source join differs at layer " + index + ": " + name +
+          "; current_sha256=" + (previous?.sha256 || "<absent>") +
+          "; incoming_sha256=" + incoming.sha256 +
+          "; expected_predecessor_sha256=" + (expected || "<undeclared>") +
+          ". Apply the intended source joins to the current member and publish its before_sha256.");
       if (!incoming.git_blob && previous?.sha256 === incoming.sha256) incoming.git_blob = previous.git_blob || null;
       incoming.origins = [...new Set([...(previous?.origins || []), ...(incoming.origins || []), origin])];
-      const action = !previous ? "added" : previous.sha256 === incoming.sha256 && previous.mode === incoming.mode ? "identical" : "replaced";
-      changes.push({layer: index, path: name, action, previous_sha256: previous?.sha256 || null, sha256: incoming.sha256});
+      const change = {layer: index, path: name, action, previous_sha256: previous?.sha256 || null, sha256: incoming.sha256};
+      if (expected !== null) change.base_sha256 = expected;
+      if (declarations.length) change.predecessor_declarations = declarations;
+      changes.push(change);
       files[name] = layer.files[name]; metadata[name] = incoming;
     }
     const keepReference = row => {

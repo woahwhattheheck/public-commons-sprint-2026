@@ -1,0 +1,81 @@
+{
+  "id": "watershed-4592eb077b7164d59ba4",
+  "summary": {
+    "huc_count": 217,
+    "area_acres": 4659072.1,
+    "area_km2": 18854.595850309655,
+    "hucs_with_area_count": 217,
+    "state_portion_acres": 4659074.06895431,
+    "state_area_minus_huc_area_acres": 1.9689543107524514,
+    "state_row_count": 240,
+    "states": [
+      "GA",
+      "NC",
+      "SC"
+    ],
+    "cross_state_huc_count": 22,
+    "priority_huc_count": 15,
+    "priority_state_row_count": 18,
+    "priority_area_acres": 467561.88,
+    "priority_state_portion_acres": 467562.072553,
+    "unknown_priority_huc_count": 0,
+    "selected_classification_count": 1886,
+    "class_counts": {
+      "ORW": 1040,
+      "TN": 247,
+      "TPGT": 599
+    },
+    "classified_huc_count": 19,
+    "priority_and_classified_huc_count": 0,
+    "priority_without_selected_classes_huc_count": 15,
+    "sc_huc_count": 116,
+    "outside_south_carolina_huc_count": 101,
+    "complete_query_huc_count": 217,
+    "queried_zero_target_huc_count": 198,
+    "unverified_zero_target_huc_count": 0
+  },
+  "files": {
+    "watershed-context.json": {
+      "path": "watershed-context.json",
+      "bytes": 470519,
+      "sha256": "54374a5b1feae5afda7217b27b7c796616d8654de8cc1fd8fc92831780e86e34",
+      "media_type": "application/json"
+    },
+    "watershed-hucs.csv": {
+      "path": "watershed-hucs.csv",
+      "bytes": 83474,
+      "sha256": "7f63e89b1c8c683b6fc03b4a5834a898f07e6840576f1290600c81943e9e9c81",
+      "media_type": "text/csv"
+    },
+    "watershed-huc8s.csv": {
+      "path": "watershed-huc8s.csv",
+      "bytes": 1573,
+      "sha256": "9b8f27fa12c37e147f61315cc0bc528d53d05fc437c76a02543702123b5db989",
+      "media_type": "text/csv"
+    },
+    "watershed-states.csv": {
+      "path": "watershed-states.csv",
+      "bytes": 611,
+      "sha256": "ba29c12cf299866e14ea085ed44fd8e91b7dbbb57b567d820e4862975a25357d",
+      "media_type": "text/csv"
+    },
+    "watershed-report.md": {
+      "path": "watershed-report.md",
+      "bytes": 6583,
+      "sha256": "e60ede577fa26a85f29b1a26d7b123c9107f8b3c24038f81cfd8c504b05e6a25",
+      "media_type": "text/markdown"
+    },
+    "selected-watersheds.json": {
+      "path": "selected-watersheds.json",
+      "bytes": 17316,
+      "sha256": "bb5c1000da55c71e6a25ce2711d2445592b3315484f1371cd0dac926ae7b3909",
+      "media_type": "application/json"
+    },
+    "selected-watersheds.csv": {
+      "path": "selected-watersheds.csv",
+      "bytes": 1003,
+      "sha256": "9a35e4d9cdd68c1e230210b121cc622927a9920ef42d6fcc20f49a99506595cf",
+      "media_type": "text/csv"
+    }
+  }
+}

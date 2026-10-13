@@ -6,6 +6,14 @@ from model.common import describe_file, read_json
 
 
 def read(operator, workspace_key, operation, payload, fault=None):
+    if operation == "inspect":
+        from model.atlas_spatial import panel_target
+        workspace = operator.ws(workspace_key)
+        value = payload or {}
+        target = panel_target(workspace, operator.spatial_reviews[workspace_key],
+                              value.get("delivery_id"), value.get("map_key"),
+                              value.get("panel_index"))
+        return {"workspace_key": workspace_key, "target": target}
     if operation != "source-context":
         raise ValueError("Unknown map-atlas source operation")
     workspace = operator.ws(workspace_key)
