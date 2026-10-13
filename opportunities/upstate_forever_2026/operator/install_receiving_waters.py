@@ -13,21 +13,24 @@ import hashlib
 import json
 import os
 import re
+import runpy
 from pathlib import Path
 import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-5"
+PREFIX = "waterlink-receiving-waters-monitoring-6"
 REQUIRED = (
     "model/receiving_waters.py",
     "model/receiving_water_spatial.py",
     "model/receiving_water_delivery.py",
     "model/receiving_water_cli.py",
+    "model/receiving_water_monitoring.py",
     "source_tools/receiving_water_catalog.py",
     "operator/receiving_water_actions.py",
     "operator/web/receiving_waters.mjs",
     "operator/web/receiving_water_spatial.mjs",
+    "operator/web/receiving_water_monitoring.mjs",
     "operator/web/receiving_waters.css",
 )
 EXTENSION_REQUIRED = (
@@ -36,6 +39,36 @@ EXTENSION_REQUIRED = (
     "operator/extension_registry.py",
     "operator/web/extension_host.mjs",
 )
+MONITORING_REQUIRED = (
+    "model/MONITORING.md",
+    "model/monitoring_actions.py",
+    "model/monitoring_campaign.py",
+    "model/monitoring_cli.py",
+    "model/monitoring_common.py",
+    "model/monitoring_design.py",
+    "model/monitoring_network.py",
+    "model/monitoring_sources.py",
+    "model/monitoring_workspace.py",
+    "operator/MONITORING_API.md",
+    "operator/extensions/monitoring.json",
+    "operator/monitoring.py",
+    "operator/monitoring_native.py",
+    "operator/monitoring_receiving.py",
+    "operator/static/monitoring.js",
+    "operator/web/monitoring-component.mjs",
+    "operator/web/monitoring.css",
+    "operator/web/monitoring.mjs",
+    "model/requirements-monitoring.txt",
+    "integrations/monitoring/install_native_monitoring.py",
+    "operator/RECEIVING_WATER_MONITORING.md",
+)
+MONITORING_ACTIONS = {
+    "monitoring.network.import", "monitoring.design", "monitoring.frontier",
+    "monitoring.campaign.create", "monitoring.campaign.revise",
+    "monitoring.campaign.event", "monitoring.export",
+}
+# Exact retained version 4 descriptor, before the priority-source workflow.
+DESCRIPTOR_PREDECESSORS = {"461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c"}
 EXTENSION_TARGET = "operator/extensions/receiving-waters.json"
 TARGETS = (
     "operator/server.py",
@@ -151,7 +184,8 @@ def allow_browser_assets(text):
     names = ast.literal_eval(match.group(1))
     if not isinstance(names, set) or not all(isinstance(name, str) for name in names):
         raise ValueError("The operator static allowlist must contain original file names")
-    additions = {"receiving_waters.mjs", "receiving_waters.css", "receiving_water_spatial.mjs"}
+    additions = {"receiving_waters.mjs", "receiving_waters.css", "receiving_water_spatial.mjs",
+                 "receiving_water_monitoring.mjs"}
     if additions <= names:
         return text
     replacement = "{" + ", ".join(repr(name) for name in sorted(names | additions)) + "}"
@@ -409,7 +443,7 @@ def join_delivery(text):
 
 
 def join_portable(text):
-    return replace_once(
+    text = replace_once(
         text,
         '            for path in sorted((root / "grids").glob("*/.grid.lock")):\n'
         '                stack.enter_context(held(path, blocking=False))\n',
@@ -418,6 +452,14 @@ def join_portable(text):
         '            for path in sorted((root / "receiving-water-analyses").glob("*/.analysis.lock")):\n'
         '                stack.enter_context(held(path, blocking=False))\n',
         '(root / "receiving-water-analyses").glob("*/.analysis.lock")',
+    )
+
+    return replace_once(
+        text,
+        '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n',
+        '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n'
+        '            stack.enter_context(held(root / ".receiving-water-monitoring.lock", blocking=False))\n',
+        'held(root / ".receiving-water-monitoring.lock", blocking=False)',
     )
 
 
@@ -536,13 +578,35 @@ def install(root, *, check=False):
     browser_registry = "createExtensionHost(" in original_app
     if registry != browser_registry:
         raise ValueError("Complete the existing shared extension host's server and browser join before composing receiving waters")
-    required = REQUIRED + (EXTENSION_REQUIRED if registry else ())
+    if not registry:
+        raise ValueError("Install the current shared extension host before the receiving-water monitoring workflow")
+    required = REQUIRED + EXTENSION_REQUIRED + MONITORING_REQUIRED
     for relative in required:
         path = root / relative
         if not path.is_file():
             raise FileNotFoundError(f"Receive the complete receiving-water extension source: {path}")
         if relative.endswith(".py"):
             ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    monitoring = json.loads((root / "operator/extensions/monitoring.json").read_bytes())
+    if (monitoring.get("schema") != "upstate.operator-extension/v1"
+            or monitoring.get("id") != "monitoring"
+            or monitoring.get("backend", {}).get("module") != "monitoring_native"
+            or monitoring.get("client", {}).get("module") != "/web/monitoring.mjs"
+            or not MONITORING_ACTIONS <= set(monitoring.get("backend", {}).get("actions", []))):
+        raise ValueError("Receive the complete original registered Monitoring desk")
+    version = re.fullmatch(r"1\.(\d+)\.\d+", str(monitoring.get("version", "")))
+    adapter = (root / "operator/web/monitoring.mjs").read_text(encoding="utf-8")
+    component = (root / "operator/web/monitoring-component.mjs").read_text(encoding="utf-8")
+    if (version is None or int(version.group(1)) < 3
+            or "async function openNetwork(" not in adapter
+            or "await node.ready;" not in adapter
+            or "this.ready=this.run(" not in component):
+        raise ValueError("Receive Monitoring 1.3 or later compatible source with its complete network handoff")
+    migration = runpy.run_path(str(root / "integrations/monitoring/install_native_monitoring.py"),
+                              run_name="_original_monitoring_migration")
+    removers = {"operator/server.py": migration["remove_server"],
+                "operator/web/app.mjs": migration["remove_app"],
+                "operator/web/index.html": migration["remove_index"]}
     joiners = dict(JOINERS)
     if "client_report.build_report(" in (root / "model/delivery.py").read_text(encoding="utf-8"):
         report_path = root / "model/client_report.py"
@@ -553,7 +617,10 @@ def install(root, *, check=False):
     for relative, join in joiners.items():
         path = root / relative
         before = path.read_bytes()
-        after = join(before.decode("utf-8")).encode("utf-8")
+        source = before.decode("utf-8")
+        if relative in removers:
+            source = removers[relative](source)
+        after = join(source).encode("utf-8")
         if relative.endswith(".py"):
             ast.parse(after.decode("utf-8"), filename=str(path))
         originals[relative] = before
@@ -577,8 +644,12 @@ def install(root, *, check=False):
             previous = json.loads(json.dumps(template))
             previous["version"] = "2"
             previous["assets"] = [name for name in previous["assets"]
-                                  if name != "receiving_water_spatial.mjs"]
-            if installed != previous:
+                                  if name not in {"receiving_water_spatial.mjs", "receiving_water_monitoring.mjs"}]
+            previous["backend"]["actions"] = [name for name in previous["backend"]["actions"]
+                                                if name != "receiving.water.monitoring"]
+            previous["backend"]["routes"] = [route for route in previous["backend"]["routes"]
+                                               if route.get("operation") != "monitoring"]
+            if installed != previous and sha256(before) not in DESCRIPTOR_PREDECESSORS:
                 raise ValueError("The installed receiving-water descriptor has authored changes; compose that descriptor before replacing it")
         originals[EXTENSION_TARGET] = before
         if installed != template:
