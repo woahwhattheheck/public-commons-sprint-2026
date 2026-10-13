@@ -1,9 +1,9 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "75fd43d00aea71192a62eb36ecadcc3ddbbd711e",
+  "source_reference_base": "0cd423ac3d94e3455a743dd3f17af084fa71a122",
   "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations. Saved observation reviews prepare immutable selected scientific report sources for the existing ordered composer. Source editions preserve the complete original review archive and selected native tables; same-project selected Study transfer preserves the editable original review and study. The installer composes only the saved-review dispatcher registration into the installed shared source. The optional same-operation scientific report continuation preserves original and explicit hydrology review editions separately, then exports both saved reports with their editable study history and reads them with the independently restored application.",
   "external_source_edition": {
     "files": 62,
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 16208,
-      "sha256": "6ae600c88657c7227f242516890fd41e2637aa166618b553caf47e68327dba1c"
+      "bytes": 16445,
+      "sha256": "263ce8a1dd6f7faa96fb80f17009c95652a95514bec625b4dc93b7be0d09aac8"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -78,8 +78,8 @@
     },
     {
       "path": "measurement_workspace/GEOGRAPHIC_STUDY_SELECTION.md",
-      "bytes": 6186,
-      "sha256": "071942a54f4efbb7079c55376bb5c579ed892ea7212bc6c908b9ec33f367c3e8"
+      "bytes": 7619,
+      "sha256": "85f06278d911c2d6b9f408307cc6ae286cdbded7179f3e1675846ad7b36b3902"
     },
     {
       "path": "measurement_workspace/geographic_study_selection.py",
@@ -1163,8 +1163,8 @@
     },
     {
       "path": "operator/PUBLISHED_REVIEW_REPORTS.md",
-      "bytes": 6463,
-      "sha256": "4bf6ee7a02e965291ffc16d702aa1685a01677541a1815a331d3cf9b6cada10c"
+      "bytes": 9369,
+      "sha256": "3817432aa78d94a979a421f3cfdfdb2fab4771005c2a33193f6af56edda4f4b8"
     },
     {
       "path": "operator/published_study_operator.py",
@@ -1217,9 +1217,29 @@
       "sha256": "27a609e1e95f9acd6750accc63d2f3a7fe5e0c509172f3c911a3b72cad504c72"
     },
     {
+      "path": "source_tools/offline_handover/adapt_eighteenmile_retained.py",
+      "bytes": 5164,
+      "sha256": "674a5b62e8ea26f372c7b3354aee458855f01a3c64b057aac988fd279ea666da"
+    },
+    {
+      "path": "source_tools/offline_handover/build_offline_handover.py",
+      "bytes": 10788,
+      "sha256": "966abe3b72846126ae85c7baf824f3ca9d29cc48b6fc506e17772da9da2c80e6"
+    },
+    {
+      "path": "source_tools/offline_handover/offline_handover.html",
+      "bytes": 23314,
+      "sha256": "6e1032d350e26bf60c3a9df59aee68c1f3aa607ba64b5b0f844013036909cc09"
+    },
+    {
+      "path": "source_tools/offline_handover/README.md",
+      "bytes": 6603,
+      "sha256": "d06587c644fe4dfef951eba061c072c047b9cb9d4a98007652b354607be57aa1"
+    },
+    {
       "path": "source_tools/receive_geographic_study_review.py",
-      "bytes": 5430,
-      "sha256": "fd514789805394fb3a752fd21da36ffab53cd87939b16ac57664b42057f936eb"
+      "bytes": 24454,
+      "sha256": "7d998e420b8d374b0f478cb1aba4d292b27b321b02462793c89dd87cff404c1a"
     },
     {
       "path": "source_tools/receive_original_study.py",
@@ -2223,7 +2243,16 @@
       "composer": "Existing ordered Sources scientific composer",
       "installer": "Guarded scoped registration preserves the installed shared dispatcher",
       "component_graph_repair_commit": "82db8c08a26d2f3e36bae8a51f61573f0ac8e4df",
-      "component_fragment_sha256": "b61b1dba18a72cb6d9c752769e945a7561a5ae2290dd12431de8098500f45042"
+      "component_fragment_sha256": "b61b1dba18a72cb6d9c752769e945a7561a5ae2290dd12431de8098500f45042",
+      "geographic_receiving": {
+        "module": "source_tools/receive_geographic_study_review.py",
+        "mode": "--scientific-report",
+        "request_schema": "upstate.geographic-scientific-receiving-request/v1",
+        "result_schema": "upstate.geographic-scientific-receiving/v1",
+        "native_course": "source/observed-report-20261013/receive_operator.py",
+        "restart": "Retain exact study version, original review export, scientific source and original queued report tasks; --resume continues the same receiving directory.",
+        "original_station_geography": "20f1eb34d1edefd64340f8dea6f817a69e5fbe0880f0c349b2e1fd0b0ecfec8b"
+      }
     }
   }
 }

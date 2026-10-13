@@ -19,6 +19,21 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "model/implementation_cost_review.py",
+    "operator/implementation_cost_review.py",
+    "operator/extensions/implementation-cost-review.json",
+    "operator/web/implementation_cost_review.mjs",
+    "operator/economic_workbench.py",
+    "operator/web/economic_desk.mjs",
+    "operator/web/economic_cost_worksheet.mjs",
+    "operator/web/economic_implementation.mjs",
+    "operator/web/economic_desk.css",
+    "operator/extensions/economic-desk.json",
+    "model/native_versions.py",
+    "model/decision_analysis.py",
+    "model/decision_cli.py",
+    "model/decision_desk.html",
+    "model/model_selection.py",
     "model/field_deployment.py",
     "model/monitoring_packet.py",
     "model/monitoring_common.py",
@@ -110,6 +125,8 @@ FILES = (
 OFFLINE_FILE = "operator/web/implementation_workbench.html"
 OFFLINE_BUILDER = "build_implementation_offline.py"
 OPTIONAL_FILES = (
+    "docs/IMPLEMENTATION_COST_REVIEW.md",
+    "docs/IMPLEMENTATION_COST_REVIEW_SOURCE.md",
     "source_tools/receive_observed_scientific_review.py",
     "source_tools/RECEIVE_OBSERVED_SCIENTIFIC_REVIEW.md",
     "observations/eighteenmile_2023/scientific-review.request.json",

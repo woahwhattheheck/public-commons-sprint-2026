@@ -1,0 +1,31 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "study-transfer-native-lineage",
+  "source_reference": "ES26 cumulative native lineage closure; original Implementation and Conservation design stores retained",
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/implementation_report_transfer.py",
+        "model/field_deployment.py",
+        "model/monitoring_packet.py",
+        "model/monitoring_common.py",
+        "model/conservation_design_study_transfer.py",
+        "model/conservation_design_editor.py",
+        "model/conservation_design.py",
+        "model/conservation_bindings.py",
+        "model/conservation_scenarios.py",
+        "model/portable_databases.py",
+        "scenario-design/__init__.py",
+        "scenario-design/engine.py",
+        "scenario-design/conservation.py",
+        "scenario-design/server.py",
+        "scenario-design/eco_bridge.py",
+        "integration/component_fragments/study-transfer-native-lineage.json"
+      ],
+      "requires": [
+        "implementation"
+      ]
+    }
+  },
+  "required_components": []
+}

@@ -242,7 +242,7 @@ def archive_report(workspace, directory, result, archive_path, receive_path=None
                     "operation_id": result["operation_id"],
                     "project_id": workspace.project["id"],
                     "report_binding": result["binding"],
-                    "selection": result["selection"], "files": selected}
+                    "selection": result["selection"], "files": dict(selected)}
         atomic_json(retained / "capture.json", captured, immutable=True)
     selected["capture"] = describe_file(retained, retained / "capture.json")
     wanted = {"workspace/" + relative.as_posix() + "/" + item["path"]: item

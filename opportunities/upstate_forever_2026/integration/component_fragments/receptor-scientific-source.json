@@ -10,7 +10,15 @@
         "model/scientific_map_figures.py",
         "model/scientific_figures.py",
         "model/spatial_esri.py",
-        "source/capture_upstream_network.py"
+        "source/capture_upstream_network.py",
+        "source_tools/receive_receptor_report.py",
+        "source_tools/RECEIVE_RECEPTOR_REPORT.md",
+        "source/observed-report-20261013/receive_operator.py",
+        "source/observed-report-20261013/receive_browser.mjs"
+      ],
+      "requires": [
+        "scientific-report-review",
+        "study-transfer"
       ]
     }
   },

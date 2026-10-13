@@ -617,3 +617,19 @@ course; create no separate validation application or broad test suite.
 
 Instruction source: [Bryce's rendered-product direction, relayed to the Ecosystem
 owners](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791881463183449).
+
+## Install the observed-evidence continuation in an existing application
+
+Run the prepared continuation's own installer against the retained application:
+
+```sh
+python -B PREPARED_SOURCE/operator/install_watershed_context.py --application ACTUAL_APP --source-root PREPARED_SOURCE
+```
+
+The prepared source supplies changed files; unchanged required files come from the actual installed application. Every selected Python/JSON file is parsed before replacement, and the original transaction retains its backup and rollback behavior. Preserve any newer maintained source when composing this continuation.
+
+The observed-evidence fragment declares the root `landcover_observation_profiles.sources.json`. Include that exact manifest and every primary/companion it names: four profile outputs plus ten distinct original input/replay members. The source edition contains fourteen physical members in total, plus its root manifest. The installer resolves those members from the prepared source or installed application and verifies their original byte counts and hashes before writing. A scientific-report-only source package does not necessarily contain this root profile manifest.
+
+The consumer fragment follows that direct source manifest. It does not require installation of the raster/WBD producer components to consume the already-completed profile edition. Full current application exports retain their original producer components through their own declarations.
+
+After installation, reopen the original operator with the current application, confirm Regional Watersheds extension version 1.7.0, and follow the populated visual/interactive inspection above. At a narrow viewport, operate the ordinary-sized evidence checkbox and expand both source-identity details; the complete source identifiers must wrap within the desk. Then run the same existing-workspace receiving course with `--include-observed-evidence`.

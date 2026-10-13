@@ -26,7 +26,30 @@ A newer review edit, a different saved review, a Workspace change, or navigation
 
 The existing source-only review export remains useful independently: **Export saved review ZIP → Import a complete review ZIP** preserves its original study edition, filters, table, title and notes.
 
-## Continue the existing native review operation
+## One native geographic-review continuation
+
+The existing receiver can complete the entire geographic-review/report course in one invocation. Start with the saved Station geography record and an already imported original study:
+
+```sh
+"$PYTHON" -B -m source_tools.receive_geographic_study_review \
+  --workspace "$WORKSPACE" \
+  --geography 20f1eb34d1edefd64340f8dea6f817a69e5fbe0880f0c349b2e1fd0b0ecfec8b \
+  --study utility-ecoli-2021-2025 \
+  --output "$RECEIVING/geographic-review" \
+  --scientific-report
+```
+
+The receiver freezes the original geography, explicit station selection, study version and report options. It retains or reuses the original saved review and its complete ZIP; prepares or reopens that review's immutable scientific source; and invokes the maintained scientific receiver with selected-study mode. Its original queue renders and exports the report, restores the full project and restores the selected editable Study. The final step reopens the exact saved review and source product in both received Workspaces.
+
+Repeat the same command with `--resume` after interruption. The resolved study version remains frozen even if another version becomes current. Completed source products reopen directly, and the maintained scientific receiver preserves its original preview and task IDs across source upgrades. A producer completed before the outer source checkpoint is recovered by its actual saved result.
+
+An existing `geographic-study-review-receiving.json` directory can enter this continuation using `--scientific-report --resume`; its original review and export are verified and reused. A later change to the chosen cohort, title, contact or browser options starts a separate output directory, preserving the existing operation. Task timeout and upload capacity can be adjusted on restart.
+
+The outer output retains `geographic-scientific-request.json`, original review receipt, scientific-source checkpoint, exact composer selection and final `geographic-scientific-receiving.json`. The latter identifies both reopened review/study versions, the scientific edition, exact source choice and all three complete archives. The maintained report queue and its own progress remain beneath `scientific-report/`.
+
+Use `--version` for a specific retained study edition, repeat `--station` for a subset, and explicitly choose `--allow-partial` when the selected study lacks some requested stations. `--contact-json` accepts the original report contact object. `--browser-node` delegates to the existing desktop/mobile scientific-report browser course; optional `--video` uses that same course. A failed browser continuation resumes before this outer operation is marked complete.
+
+## Continue an existing saved review through the source API
 
 Use the actual saved review produced by the existing geographic-review receiver or saved through the normal review API. Its identifier is the `review_id` in `geographic-study-review-receiving.json`. Keep the accepted complete application, original Workspace and receiving directory.
 
@@ -66,7 +89,7 @@ Supply the returned selection file to the already maintained native scientific-r
 
 Choose selected-study mode before this output's first launch. Resume an interrupted run with the same selections and the existing `--resume` option. The receiver uses the native operator's queued render/export, preserves original report task identities, downloads the full report products, restores the complete Workspace and reopens the selected editable Study.
 
-For the current regional course, use the original project `b9d5d257-c6bb-4f07-b975-8e8c63705db3` in `/mnt/data/eco-cohort-resume/received/workspace` and its existing Published studies operation `1791875233.324399`. The geographic review is derived from the already completed `3bf6c45056785bedd914d0dc6dd201cbd9cc8222431e4ba7dbf1a7a99b0144a7` station edition. The original 36 station identifiers and 730 E. coli records remain the same underlying sources.
+For the current regional course, use the original project `b9d5d257-c6bb-4f07-b975-8e8c63705db3` in `/mnt/data/eco-cohort-resume/received/workspace` and its existing Published studies operation `1791875233.324399`. The geographic review uses the retained `station-geographies/20f1eb34d1edefd64340f8dea6f817a69e5fbe0880f0c349b2e1fd0b0ecfec8b` record. The separate `utility-microbial-studies/3bf6c45056785bedd914d0dc6dd201cbd9cc8222431e4ba7dbf1a7a99b0144a7` record is its source-study lineage. Use the actual current receiver's restored Workspace path. The original 36 station identifiers and 730 E. coli records remain the same underlying sources.
 
 ## Complete application
 
