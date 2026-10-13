@@ -18,7 +18,7 @@ from model.common import (
 )
 from eco_intelligence.common import IntelligenceError, public_metadata
 from science_catalog_delivery import (
-    CatalogDeliveryError, bundle, prepare, project_repository,
+    CatalogDeliveryError, bundle, prepare, project_repository, repository_read_scope,
 )
 
 SCHEMA = "upstate.intelligence-source-collection/v1"
@@ -214,9 +214,10 @@ class CollectionExports:
         else:
             # The original native adapter creates typed CAS views and companions lazily.
             # Resolve only the chosen originals, before capturing their live descriptors.
-            for ref in refs:
-                engine.repo.path(workspace, ref)
-            catalog = project_repository(engine.repo, [workspace])
+            with repository_read_scope(engine.repo, workspace):
+                for ref in refs:
+                    engine.repo.path(workspace, ref)
+                catalog = project_repository(engine.repo, [workspace])
             chosen = [{"tenant_id": workspace, **ref} for ref in refs]
             planned = prepare(catalog, ws.root, chosen)
             snapshot = {
@@ -239,8 +240,9 @@ class CollectionExports:
                 raise IntelligenceError("The retained transfer belongs to another source edition.", 409)
         else:
             if retained_selection:
-                for ref in refs:
-                    engine.repo.path(workspace, ref)
+                with repository_read_scope(engine.repo, workspace):
+                    for ref in refs:
+                        engine.repo.path(workspace, ref)
             current = prepare(snapshot["catalog"], ws.root, snapshot["refs"])
             if current["input_signature"] != snapshot["input_signature"]:
                 raise IntelligenceError(
