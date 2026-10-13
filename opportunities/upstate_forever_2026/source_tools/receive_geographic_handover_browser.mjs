@@ -1,6 +1,8 @@
 /**
  * Open the delivered geographic case through its original files and existing Operator.
  * The original Operator serves this receiving course. No native model or source import is started here.
+ * One original choice-document upload receives real file bytes; its receipt is retained without preparing that file.
+ * Use an isolated cloud browser while the owner exclusively controls the local browser.
  * Optional programme_action=adopt_completed uses its existing completed-output Programme action.
  */
 import {promises as fs, createReadStream, constants as fsConstants} from 'node:fs';
@@ -13,7 +15,8 @@ import {admitGeographicCourse,operateGeographicCourse,selectGeographicReceivingE
 import {operateGeographicAllocation} from './geographic_allocation_browser.mjs';
 import {operateGeographicProgramme} from './geographic_programme_browser.mjs';
 
-const CUTOFF=Date.parse('2026-10-13T14:00:00Z');
+// Current direction .4 renews the full delivery. A caller may request its own deadline.
+let CUTOFF=Infinity;
 const INPUT='upstate.geographic-browser-input/v1', RESULT='upstate.geographic-browser-result/v1';
 const now=()=>new Date().toISOString();
 const canonical=value=>JSON.stringify(sort(value));
@@ -23,7 +26,7 @@ const digest=value=>createHash('sha256').update(canonical(value)).digest('hex');
 function requireValue(ok,message){if(!ok)throw new Error(message);}
 async function readJSON(file){return JSON.parse(await fs.readFile(file,'utf8'));}
 async function atomic(file,value){const pending=file+'.'+randomUUID()+'.tmp';await fs.writeFile(pending,JSON.stringify(value,null,2)+'\n',{mode:0o600,flag:'wx'});await fs.rename(pending,file);}
-async function fileHash(file){const hash=createHash('sha256');let bytes=0;for await(const part of createReadStream(file)){requireValue(Date.now()<CUTOFF,'The requested 14:00 UTC cutoff was reached');bytes+=part.length;hash.update(part);}return {bytes,sha256:hash.digest('hex')};}
+async function fileHash(file){const hash=createHash('sha256');let bytes=0;for await(const part of createReadStream(file)){requireValue(Date.now()<CUTOFF,'The caller’s requested receiving cutoff was reached');bytes+=part.length;hash.update(part);}return {bytes,sha256:hash.digest('hex')};}
 async function exists(file){try{await fs.lstat(file);return true;}catch(e){if(e.code==='ENOENT')return false;throw e;}}
 function member(value){requireValue(typeof value==='string'&&value&&!value.includes('\\')&&!isAbsolute(value)&&value.split('/').every(p=>p&&p!=='.'&&p!=='..'),'Use the original relative member path');return value;}
 async function regular(root,name){const path=join(root,member(name));requireValue(await fs.realpath(path)===path&&(await fs.lstat(path)).isFile(),'Use a regular original file without path aliases: '+name);return path;}
@@ -36,14 +39,16 @@ async function main(argv){
  let context=null,lock=null,lockPath=null,timer=null,stopped=false,progress=null,output=null,attempt=null,checkpoint=null,secret='';
  const publicMessage=value=>secret?String(value).replaceAll(secret,'[private capability]'):String(value);
  const stop=()=>{stopped=true;if(context)context.close().catch(()=>{});};
- const check=()=>{requireValue(!stopped&&Date.now()<CUTOFF,'The requested 14:00 UTC cutoff or original process interruption was reached');};
+ const check=()=>{requireValue(!stopped&&Date.now()<CUTOFF,'The caller’s requested cutoff or original process interruption was reached');};
  process.on('SIGTERM',stop);process.on('SIGINT',stop);
  try{
   check();requireValue(argv.length===1&&isAbsolute(argv[0]),'Pass one absolute path to the complete receiving input JSON');
   const settings=await readJSON(argv[0]);
-  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action'];
+  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action','cutoff'];
   requireValue(settings.schema===INPUT&&Object.keys(settings).every(k=>allowed.includes(k)),'Select the complete geographic browser input');
   safeId(settings.operation_id);
+  if(settings.cutoff!==undefined){requireValue(typeof settings.cutoff==='string'&&/T.*(?:Z|[+-]\d{2}:\d{2})$/.test(settings.cutoff)&&Number.isFinite(Date.parse(settings.cutoff)),'Use a complete caller-requested cutoff timestamp with timezone');CUTOFF=Date.parse(settings.cutoff);}
+  check();
   if(settings.programme_action!==undefined)requireValue(['inspect','adopt_completed'].includes(settings.programme_action),'Choose inspect or adopt_completed for the original Programme');
   let originalState=null,selectedState=null;
   if(settings.completion_scope!==undefined)requireValue(['reference','full_course'].includes(settings.completion_scope),'Use the actual saved reference or full-course scope');
@@ -118,7 +123,7 @@ async function main(argv){
   attempt={id,started_at:now(),state:'running',actions:[],files:[],opened:[],errors:[]};progress.attempts.push(attempt);
   const attemptRoot=join(output,'attempts',id);for(const part of ['media','downloads','records','private'])await fs.mkdir(join(attemptRoot,part),{recursive:true,mode:0o700});
   checkpoint=async()=>{progress.updated_at=now();await atomic(progressPath,progress);};await checkpoint();
-  timer=setTimeout(stop,Math.max(1,CUTOFF-Date.now()));
+  if(Number.isFinite(CUTOFF)){const arm=()=>{const remaining=CUTOFF-Date.now();if(remaining<=0)stop();else timer=setTimeout(arm,Math.min(2147483647,remaining));};arm();}
   function action(kind,detail={}){check();attempt.actions.push({kind,at:now(),...detail});}
   async function artifact(path,role){const row={path:relative(output,path).split(sep).join('/'),...await fileHash(path),role};attempt.files.push(row);await checkpoint();return row;}
   async function saveRecord(name,value){const file=join(attemptRoot,'records',name+'.json');await atomic(file,JSON.parse(JSON.stringify(value,(key,item)=>key==='_downloads'?undefined:item)));await artifact(file,name);return file;}
@@ -250,6 +255,81 @@ async function main(argv){
   await waitFor(async()=>await title.inputValue()===prepared.selection.title,'reopen original choices');
   const second=await download(page.locator('[data-geo-save]'),'reopened-choices');
   requireValue(equal((await readJSON(second.file)).payload,choices.payload),'Choice save/reopen changed original selectors or assumptions');
+  // Exercise the real upload endpoint once, holding only its actual response while a newer choice is made.
+  // The uploaded JSON is the already downloaded choice document, not an asserted geographic source.
+  // It is retained as a receipt and restored out of the selection before preview; no Prepare/Run is called.
+  const openWorking=async()=>{const details=page.locator('[data-sp-working] details');if(!(await details.evaluate(n=>n.open)))await details.locator('summary').click();};
+  await openWorking();
+  const workingBefore=await download(page.locator('[data-sp-action="download-working"]'),'working-inputs-before');
+  const originalWorking=await readJSON(workingBefore.file);
+  requireValue(originalWorking.schema==='upstate.source-working-inputs/v1'&&originalWorking.selection.method==='geographic-headwaters','The complete original working choice was not exported');
+  const intakeField='huc_polygons',intakeSelector='[data-sp-input="'+intakeField+'"]';
+  const originalSelector=await page.locator(intakeSelector).inputValue();
+  let uploaded=null,uploadProblem=null,releaseUpload,uploadSettled;
+  const released=new Promise(resolve=>{releaseUpload=resolve;}),settled=new Promise(resolve=>{uploadSettled=resolve;});
+  const uploadRoute='**/api/upload*';
+  const holdActualUpload=async route=>{
+   try{
+    const response=await route.fetch({timeout:120000});
+    requireValue(response.ok(),'The original upload endpoint returned '+response.status());
+    uploaded=await response.json();requireValue(typeof uploaded.id==='string'&&uploaded.id,'The original upload has no retained identity');
+    await released;await route.fulfill({response});
+   }catch(error){uploadProblem=error;try{await route.abort();}catch{}}
+   finally{uploadSettled();}
+  };
+  await page.route(uploadRoute,holdActualUpload);
+  try{
+   await page.locator('[data-sp-upload="'+intakeField+'"]').setInputFiles(choiceDownload.file);
+   await waitFor(async()=>{if(uploadProblem)throw uploadProblem;return uploaded!==null;},'actual original upload receipt',120000);
+   await title.fill(prepared.selection.title+' · retained newer draft');
+   await page.locator(intakeSelector).selectOption('');
+   releaseUpload();await settled;
+   await waitFor(async()=>await page.locator('[data-sp-action="select-upload"]').count()>originalWorking.upload_receipts.filter(x=>x.result?.id).length,'late upload retained without replacing current choice');
+   requireValue(await page.locator(intakeSelector).inputValue()===''&&await title.inputValue()===prepared.selection.title+' · retained newer draft','The late upload overwrote newer working choices');
+  }finally{releaseUpload();await page.unroute(uploadRoute,holdActualUpload);}
+  await openWorking();
+  const retained=await download(page.locator('[data-sp-action="download-working"]'),'late-upload-retained');
+  const retainedWorking=await readJSON(retained.file),receipt=retainedWorking.upload_receipts.find(row=>row.result?.id===uploaded.id);
+  requireValue(receipt&&receipt.state==='retained'&&receipt.field===intakeField&&receipt.method==='geographic-headwaters','The full original late-upload receipt is missing');
+  requireValue(receipt.bytes===choiceDownload.item.bytes&&equal(receipt.result,uploaded),'The upload receipt changed its original response or file size');
+  const receiptSelector='[data-sp-upload-id="'+receipt.id+'"]';
+  const receivedReceipt=await download(page.locator('[data-sp-action="download-upload"]'+receiptSelector),'original-upload-receipt');
+  requireValue(equal(await readJSON(receivedReceipt.file),receipt),'The downloaded upload receipt differs from the retained original');
+  await page.locator('[data-sp-action="select-upload"]'+receiptSelector).click();
+  await waitFor(async()=>JSON.parse(await page.locator(intakeSelector).inputValue()).upload_id===uploaded.id,'explicit original upload selection');
+  await screenshot(page,'source-intake-history',1440);await screenshot(page,'source-intake-history',390);
+
+  const priorToInvalid=await download(page.locator('[data-geo-save]'),'choice-before-invalid-import');
+  const priorPayload=(await readJSON(priorToInvalid.file)).payload;
+  const invalidChoices=JSON.parse(JSON.stringify(choices));invalidChoices.payload.title='This invalid edition must never apply';invalidChoices.payload.options.seed={invalid:'whole number required'};
+  await page.locator('[data-geo-reopen]').setInputFiles({name:'invalid-geographic-choice.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(invalidChoices))});
+  await waitFor(async()=>await page.locator('[data-geo-notice]').evaluate(node=>node.classList.contains('geo-error')),'complete invalid choice rejected');
+  const afterInvalid=await download(page.locator('[data-geo-save]'),'choice-after-invalid-import');
+  requireValue(equal((await readJSON(afterInvalid.file)).payload,priorPayload),'A malformed final option partially replaced the working choice');
+
+  await openWorking();
+  await page.locator('[data-sp-working-file]').setInputFiles(workingBefore.file);
+  await waitFor(async()=>await title.inputValue()===originalWorking.selection.title&&await page.locator(intakeSelector).inputValue()===originalSelector,'complete working file reopened');
+  const recoveredWorkingFile=await download(page.locator('[data-sp-action="download-working"]'),'working-inputs-reopened');
+  const recoveredWorking=await readJSON(recoveredWorkingFile.file);
+  requireValue(equal(recoveredWorking.selection,originalWorking.selection)&&recoveredWorking.upload_receipts.some(row=>row.id===receipt.id),'Working reopen lost the complete original selection or later upload history');
+  const newerPrior=recoveredWorking.input_history.findIndex(row=>row.selection.inputs?.[intakeField]?.upload_id===uploaded.id);
+  requireValue(newerPrior>=0,'The replaced complete newer choice was not retained');
+  await page.locator('[data-sp-action="restore-working"][data-sp-index="'+newerPrior+'"]').click();
+  await waitFor(async()=>JSON.parse(await page.locator(intakeSelector).inputValue()).upload_id===uploaded.id,'earlier complete choice explicitly selected');
+  await page.locator('[data-sp-working-file]').setInputFiles(workingBefore.file);
+  await waitFor(async()=>await title.inputValue()===originalWorking.selection.title&&await page.locator(intakeSelector).inputValue()===originalSelector,'original working file selected again');
+
+  await page.reload({waitUntil:'domcontentloaded'});await navigate('geographic-headwaters');
+  await waitFor(async()=>await title.count()>0&&await title.inputValue()===originalWorking.selection.title,'cold reopened working choice');
+  await openWorking();
+  const coldWorkingFile=await download(page.locator('[data-sp-action="download-working"]'),'working-inputs-cold-reopen');
+  const coldWorking=await readJSON(coldWorkingFile.file);
+  requireValue(equal(coldWorking.selection,originalWorking.selection)&&coldWorking.upload_receipts.some(row=>row.id===receipt.id)&&coldWorking.input_history.length>=recoveredWorking.input_history.length,'Cold receiving changed the selected choice or lost original history');
+  await screenshot(page,'source-intake-cold-reopen',1440);await screenshot(page,'source-intake-cold-reopen',390);
+  await saveRecord('source-input-lifecycle',{original:originalWorking,late:retainedWorking,reopened:recoveredWorking,cold:coldWorking,upload:receipt,invalid_choice_left_selection_unchanged:true});
+  action('source_input_lifecycle',{upload_id:uploaded.id,receipt_id:receipt.id,late_response_preserved_newer_choice:true,atomic_invalid_reopen:true,history_reselected:true,cold_reopen:true});
+
   // Preview reads original geometry only. Do not click Prepare or Run in this receiving course.
   const [previewResponse]=await Promise.all([
    page.waitForResponse(response=>new URL(response.url()).pathname==='/api/geographic-headwaters/preview'&&response.request().method()==='POST'),
@@ -339,7 +419,7 @@ async function main(argv){
   requireValue(!pageErrors.length,'An actual outgoing page raised a browser error; inspect retained diagnostics');
   attempt.state='browser_completed';attempt.completed_at=now();attempt.elapsed_seconds=(Date.parse(attempt.completed_at)-Date.parse(attempt.started_at))/1000;
   attempt.human_inspection='The producing worker must open and personally view these actual screens and every outgoing attachment. Automated capture is not visual acceptance.';
-  await checkpoint();await atomic(join(output,'result.json'),{schema:RESULT,binding,attempt,owner_direction:'2026-10-13.3',cutoff:'2026-10-13T14:00:00Z',automatic_resume:false});
+  await checkpoint();await atomic(join(output,'result.json'),{schema:RESULT,binding,attempt,owner_direction:'2026-10-13.4',cutoff:settings.cutoff??null,automatic_resume:false});
   process.stdout.write(JSON.stringify({state:'browser_completed',project_id:project.id,geographic_id:prepared.id,result:join(output,'result.json'),files:attempt.files.length,elapsed_seconds:attempt.elapsed_seconds})+'\n');
  }catch(error){
   if(attempt){attempt.state=stopped||Date.now()>=CUTOFF?'interrupted':'failed';attempt.ended_at=now();attempt.error={name:error.name,message:publicMessage(error.message)};
