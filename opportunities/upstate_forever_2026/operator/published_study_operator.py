@@ -11,6 +11,7 @@ from urllib.parse import quote
 from model.common import describe_file
 from measurement_workspace.source_observations import builtin_companion
 from measurement_workspace import utility_microbiology as microbial
+from measurement_workspace import sv833_observations as sv833
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
@@ -44,6 +45,8 @@ class PublishedStudyProvider:
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
     def _builtin_source(self, builtin_id=BUILTIN_ID):
+        if builtin_id == sv833.BUILTIN_ID:
+            return sv833.builtin_companion(self.builtin.parent.parent)
         if builtin_id == microbial.BUILTIN_ID:
             return microbial.builtin_companion(self.builtin.parent.parent)
         if builtin_id != BUILTIN_ID:
@@ -134,6 +137,10 @@ class PublishedStudyProvider:
         return ws, PublishedStudyStore(ws, ws.root / "published_studies")
 
     def _root_path(self, root_id, relative):
+        team = getattr(self.operator, "team", None)
+        context = team.current() if team else None
+        if context:
+            team.require(context["principal"], administrator=True)
         root = self.roots.get(root_id)
         if root is None:
             self._fail("STUDY_SOURCE_ROOT", "Choose an available study source folder.", 404)
@@ -267,6 +274,9 @@ class PublishedStudyProvider:
                             "publication": metadata.get("publication"),
                             "counts": metadata.get("content_counts", {}),
                         })
+                sv833_source = sv833.catalog_entry(self.builtin.parent.parent)
+                if sv833_source:
+                    builtin.append(sv833_source)
                 microbial_source = microbial.catalog_entry(self.builtin.parent.parent)
                 if microbial_source:
                     builtin.append(microbial_source)
@@ -300,7 +310,9 @@ class PublishedStudyProvider:
                 evidence = {}
                 builtin_id = payload.get("builtin_id")
                 if builtin_id is not None:
-                    if builtin_id == microbial.BUILTIN_ID:
+                    if builtin_id == sv833.BUILTIN_ID:
+                        available = sv833.catalog_entry(self.builtin.parent.parent) is not None
+                    elif builtin_id == microbial.BUILTIN_ID:
                         available = microbial.catalog_entry(self.builtin.parent.parent) is not None
                     else:
                         directory = BUILTIN_DIRECTORIES.get(builtin_id) if isinstance(builtin_id, str) else None

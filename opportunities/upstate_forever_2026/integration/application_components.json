@@ -203,6 +203,10 @@
         "source/hydrology-huc05-07-20261013/flow-support/selected-reference-binding.json",
         "source/hydrology-huc05-07-20261013/flow-support/source-period-selection.json",
         "source/hydrology-huc05-07-20261013/flow-support/station-date-support.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/original/capture.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/original/openapi.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/original/process.json",
+        "source/hydrology-huc05-07-20261013/nldi-split/request-plan.json",
         "source/hydrology-huc05-07-20261013/nldi/README.md",
         "source/hydrology-huc05-07-20261013/nldi/capture-manifest.json",
         "source/hydrology-huc05-07-20261013/nldi/derive-basins.mjs",
@@ -250,7 +254,9 @@
         "source/hydrology-huc05-07-20261013/reference-support-inputs.json",
         "source/hydrology-huc05-07-20261013/reference-support.sources.json",
         "source/hydrology-huc05-07-20261013/source-manifest.json",
-        "source_tools/calibration_assembly.py"
+        "source_tools/NLDI_SPLIT_CAPTURE.md",
+        "source_tools/calibration_assembly.py",
+        "source_tools/capture_nldi_split.py"
       ],
       "requires": [
         "core"
@@ -259,17 +265,22 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_discharge_sources",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_gauge_catchments",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_reference_flow_support",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+        },
+        {
+          "inventory": "integration/a74f-component-inventory-20261013.json",
+          "family": "original_gauge_split_capture",
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -681,6 +692,7 @@
         "model/ensemble_operations.py",
         "model/ensemble_references.py",
         "model/ensemble_report.py",
+        "model/ensemble_scientific_source.py",
         "model/ensembles.py",
         "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
         "operator/ensemble_service.py",
@@ -697,17 +709,17 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "saved_parameter_studies",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "saved_study_consumers",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "complete_operating_guide",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -849,7 +861,7 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "paired_raster_studies",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -885,7 +897,7 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "source_profile_intake",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -1134,7 +1146,7 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "regional_soil_preparation",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },
@@ -1350,10 +1362,12 @@
         "integration/watershed_completed_receiving.json",
         "model/WATERSHED_BRIEF.md",
         "model/WATERSHED_CONTEXT.md",
+        "model/utility_observed_context.py",
         "model/utility_watershed_context.py",
         "model/watershed_brief.py",
         "model/watershed_context.py",
         "model/watershed_context_cli.py",
+        "observations/observed_hydrology_20261013/derived/daily_flow.csv",
         "operator/WATERSHED_CONTEXT.md",
         "operator/extensions/watershed-context.json",
         "operator/install_watershed_context.py",
@@ -1365,7 +1379,50 @@
         "outputs/watershed-connectivity-20261013/connectivity-manifest.json",
         "outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv",
         "outputs/watershed-connectivity-20261013/watershed-connectivity-summary.json",
+        "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
+        "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json",
+        "source/ecoli_utility_context/20261013/raw/stations-original.csv",
+        "source/ecoli_utility_context/20261013/raw/stations-original.geojson",
+        "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
+        "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
+        "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+        "source/ecoli_utility_context/20261013/source-inputs.json",
+        "source/ecoli_utility_context/20261013/source-manifest.json",
+        "source/ecoli_utility_context/20261013/station-membership.csv",
+        "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
+        "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/analysis-summary.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/model-sources.json",
+        "source/eighteenmile-stream-nutrients-20261013/flow-analysis/nutrient-flow.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-gauge-network-location.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv233-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv245-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv375-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv376-hydrolocation.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+        "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
         "source/receptor-topology/20261013/utility-focus-profile.json",
+        "source/utility-observed-context/20261013/README.md",
+        "source/utility-observed-context/20261013/inputs.json",
+        "source/utility-observed-context/20261013/regional-nutrient-series.csv",
+        "source/utility-observed-context/20261013/regional-stream-geography.csv",
+        "source/utility-observed-context/20261013/report.html",
+        "source/utility-observed-context/20261013/utility-observed-context.json",
+        "source/utility-observed-context/20261013/utility-original-record-index.csv",
+        "source/utility-observed-context/20261013/utility-station-coverage.csv",
+        "source/utility-observed-context/20261013/utility-station-year-method.csv",
+        "source/utility-observed-context/20261013/utility-year-coverage.csv",
+        "source/utility-source-context/20261013/utility-source-context.json",
         "source/water_context/20261013/classified-full-domain-query.json",
         "source/water_context/20261013/classified-reaches.csv",
         "source/water_context/20261013/complete-native-sources.json",
@@ -1382,13 +1439,17 @@
         "source/water_context/20261013/source-context-run.json",
         "source_tools/NATIVE_NETWORK_SOURCE.md",
         "source_tools/WATERSHED_SOURCE_IMPORT.md",
+        "source_tools/build_utility_observed_context.mjs",
         "source_tools/prepare_watershed_context.py",
         "source_tools/prepare_watershed_manifest.py",
         "source_tools/prepare_watershed_network.py",
+        "source_tools/receive_utility_source_context.py",
         "source_tools/receive_watershed_context.py",
         "source_tools/receive_watershed_edition.py",
+        "source_tools/utility_observed_context.mjs",
         "source_tools/watershed_source_entry.py",
-        "source_tools/watershed_source_validation.py"
+        "source_tools/watershed_source_validation.py",
+        "utility_observed_context.sources.json"
       ],
       "requires": [
         "core"
@@ -1397,8 +1458,11 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "watershed_source_reporting",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
+      ],
+      "source_manifests": [
+        "utility_observed_context.sources.json"
       ]
     },
     "utility-microbial-study": {
@@ -2813,6 +2877,7 @@
     "gauge-support": {
       "title": "Gauge support",
       "paths": [
+        "model/gauge_report_context.py",
         "model/gauge_support.py",
         "operator/GAUGE_SUPPORT.md",
         "operator/extensions/gauge-support.json",
@@ -2831,7 +2896,7 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "regional_gauge_support",
-          "revision": "9d4bd1246efcbc74928906bbcaa41ca1324740aa"
+          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
         }
       ]
     },

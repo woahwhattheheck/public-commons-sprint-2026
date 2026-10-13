@@ -37,7 +37,17 @@ function inflateGzip(data) {
  if(written!==size)throw Error("size mismatch");
  const crc=crc32Bytes(out),expected=(data[data.length-8]|data[data.length-7]<<8|data[data.length-6]<<16|data[data.length-5]<<24)>>>0;if(crc!==expected)throw Error("crc mismatch");return out;
 }
-function utf8Decode(bytes) {let out="";for(let i=0;i<bytes.length;){let c=bytes[i++];if(c<128){out+=String.fromCharCode(c);continue;}let n=c<224?1:c<240?2:3,v=c&((1<<(6-n))-1);while(n--){let b=bytes[i++];if((b&192)!==128)throw Error("bad utf8");v=(v<<6)|(b&63);}out+=String.fromCodePoint(v);}return out;}
+function utf8Decode(bytes) {
+ const chunks=[];let codes=[];
+ function flush(){if(codes.length){chunks.push(String.fromCharCode(...codes));codes=[];}}
+ for(let i=0;i<bytes.length;){
+  let c=bytes[i++],v=c;
+  if(c>=128){let n=c<224?1:c<240?2:3;v=c&((1<<(6-n))-1);while(n--){let b=bytes[i++];if((b&192)!==128)throw Error("bad utf8");v=(v<<6)|(b&63);}}
+  if(v<=65535)codes.push(v);else{if(v>0x10ffff)throw new RangeError("Invalid code point");v-=0x10000;codes.push(0xd800+(v>>10),0xdc00+(v&1023));}
+  if(codes.length>=8192)flush();
+ }
+ flush();return chunks.join("");
+}
 function utf8Encode(s) {
   let size=0;
   for(const ch of s){const c=ch.codePointAt(0);size+=c<128?1:c<2048?2:c<65536?3:4;}
