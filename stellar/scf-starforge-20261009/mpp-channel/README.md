@@ -316,6 +316,7 @@ A failed or definitively expired transaction can be followed by a new operation 
 
 **Create operating handover** transfers the selected channel from its current workspace. It retains one immutable file before transferring operation, including:
 
+- Complete selected opening code, profile, salt, authority, signed upload/creation stages and original deployment receipt.
 - Complete task editions, task authority, budget reservations, signed cumulative commitments and original requests.
 - Native SDK state, merchant profiles, accepted deliveries and exact paid response bytes.
 - Funder profile editions, funding/refund authority, collection/close commitments, signed transactions, coherent chain observations, original finality responses and incomplete journals.

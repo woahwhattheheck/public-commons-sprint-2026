@@ -144,6 +144,11 @@ export function openingView(row) {
   const {codeData,environment,...rest}=row;
   return {...rest,codeData:codeData?{sha256:codeData.sha256,bytes:codeData.bytes,source:codeData.source}:null,
     transactions:Object.fromEntries(Object.entries(row.transactions ?? {}).map(([stage,value])=>{
-      const {signedXdr,config,...transaction}=value;return [stage,transaction];
+      const {signedXdr,config,finality,...transaction}=value;
+      if(finality) {
+        const {envelopeXdr,resultXdr,resultMetaXdr,...summary}=finality;
+        transaction.finality=summary;
+      }
+      return [stage,transaction];
     }))};
 }
