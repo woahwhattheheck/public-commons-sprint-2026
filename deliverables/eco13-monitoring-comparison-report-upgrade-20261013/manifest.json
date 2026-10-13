@@ -742,10 +742,10 @@
   },
   "owner_instruction": {
     "path": "AGENTS.md",
-    "bytes": 2991,
-    "sha256": "a885446d7a7e765950734dff934e0f19a48009dc2c8bf75009d4cb54b6aadc83",
+    "bytes": 7593,
+    "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
     "source_path": "AGENTS.md",
-    "source_git_blob": "2b4a530756d1107c87992794a26336125a0fbc21",
+    "source_git_blob": "46be323017be913780d0d2850b7658861744508d",
     "version": "2026-10-13.1"
   }
 }
