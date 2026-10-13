@@ -453,7 +453,7 @@ def save(workspace, selection, *, operation_id=None):
         return {**receipt, "profile": saved, "review_state": _state(workspace, saved["id"])}
 
 
-def review(workspace, selection, *, operation_id=None):
+def review(workspace, selection, *, operation_id=None, before_commit=None):
     selection = deepcopy(_object(selection, "Profile review"))
     profile_id = identifier(selection.get("profile_id"))
     profile = workspace._get("profiles", profile_id)
@@ -487,6 +487,11 @@ def review(workspace, selection, *, operation_id=None):
             return {**event, "review_id": event["id"], "review_state": current}
         if selection["expected_review_id"] != current["review_id"]:
             raise ValueError("Another review was saved while this profile was open; reopen its current review")
+        # An integrating review source may validate its selected head while the
+        # ordinary Workspace/profile locks still protect this history write.
+        # Already committed operations return above without reapplying a decision.
+        if before_commit is not None:
+            before_commit()
         if event is None:
             event = workspace._save("profile-reviews", {
                 "profile_id": profile_id, "table_sha256": profile["table_summary"]["sha256"],
