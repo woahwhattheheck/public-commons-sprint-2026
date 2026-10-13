@@ -781,7 +781,9 @@
         "model/gis_vector_review.py",
         "operator/gis_vector_reviews.py",
         "operator/extensions/gis-vector-reviews.json",
-        "AGENTS.md"
+        "AGENTS.md",
+        "model/gis_review_raster.py",
+        "model/gis_review_raster_view.html"
       ],
       "requires": [
         "core",

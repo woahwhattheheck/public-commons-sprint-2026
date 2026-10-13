@@ -94,6 +94,51 @@ The value-change.tif is **received minus exported**, in the original declared ph
 
 Categorical layers and layers with different declared units retain raw-change and support counts without assigning an arithmetic physical difference across categories or different units. Working-file and actual companion changes remain separate from the selected-band numeric result; the report does not describe other bands as numerically unchanged.
 
+### Locate raster changes in the original grid
+
+The same **REVIEW.html** includes a geographic raster-change view for each
+paired raster layer. Choose the layer and a support or physical-change view,
+then inspect its native coordinate footprint with the map's zoom, pan, reset
+and selected-region controls. The complete layer summary and original change
+artifact links remain beside the view. Keyboard operation and the selected
+region's text readout provide the same retained data as the map.
+
+The display aggregates **every** native support cell into contiguous grid bins
+with at most 256 bins along either dimension. It does not sample one native cell
+or resample the scientific rasters. Each bin retains the exact counts of cells
+valid in neither edition, both editions, only the received edition or only the
+exported edition. A sparse addition or removal remains present in its bin.
+Physical views retain the minimum and maximum finite representable
+received-minus-exported difference and its contributing cell count. Positive
+and negative changes remain separate so opposite signs cannot cancel.
+
+The selected region is explicitly a display bin. Its readout gives the native
+half-open row/column range, actual coordinate corners, support counts and physical
+range/count. It does not label that region as a single native raster cell.
+The geographic footprint uses all six original affine coefficients, including
+rotation and shear, the actual CRS, and the smaller final bins at the raster
+edges. View zoom changes the display only. The original selected-band units,
+subtraction direction and native grid remain unchanged.
+
+Open the linked **support-change.tif**, optional **value-change.tif** and
+**raster-view.json** for the complete retained artifacts. The physical TIFF
+contains original common finite-valid cells with representable differences;
+the original report separately retains exact changed counts and unrepresentable
+difference counts. Categories or differing declared units retain support views
+and explicit skipped-arithmetic explanations. Incompatible native grids or
+selected bands retain their unpaired explanation instead of a resampled map.
+
+The offline viewer, its embedded view data and all linked change artifacts
+travel in the original complete review ZIP and optional source-adoption context.
+It makes no network or map-tile request. Original exported/received working TIFFs
+and their companions remain in their respective complete GIS project archives;
+the report does not create links that escape its own ZIP.
+
+The geographic producer is **received-gis-review/v2**. Selecting the same
+original export/received pair through the existing review action creates the
+current immutable report edition. Previously completed review IDs and adopted
+source contexts retain their original content and continue to reopen.
+
 ### Portable report and recovery
 
 The complete review ZIP opens through **REVIEW.html** and includes both original project manifests, review.json, layers.csv and every layer's full change records or derived support/value rasters. The report preserves the exact exported/received project and edition IDs, original source/run/scenario provenance, inventory fingerprints and subtraction direction. Keep the complete ZIP contents together so its relative links resolve.
