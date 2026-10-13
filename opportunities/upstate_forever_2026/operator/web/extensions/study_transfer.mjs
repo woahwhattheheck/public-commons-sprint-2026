@@ -5,7 +5,12 @@ const ROOTS = [
   ['experiment-diagnostics', 'Scientific analyses'],
   ['experiments', 'Experiment programmes'],
   ['runs', 'Native runs'],
-  ['robust-decisions', 'Decision studies']
+  ['robust-decisions', 'Decision studies'],
+  ['monitoring_networks', 'Monitoring networks'],
+  ['monitoring_plans', 'Monitoring designs'],
+  ['monitoring_frontiers', 'Monitoring budget comparisons'],
+  ['monitoring_heads', 'Monitoring campaigns'],
+  ['monitoring_observed_contexts', 'Monitoring observational context']
 ];
 const rootLabels = Object.fromEntries(ROOTS);
 const phases = {
@@ -82,7 +87,7 @@ export function attachStudyTransfer(host) {
     root.innerHTML=
       '<header class="st-heading"><div><p class="st-eyebrow">Scientific workspace</p>'+
       '<h2>Transfer a scientific study</h2>'+
-      '<p>Choose saved analyses, experiment programmes, native runs or decision studies. The receiving workspace keeps the original inputs, cases and results.</p>'+
+      '<p>Choose saved scientific or Monitoring studies. The receiving workspace keeps original inputs, cases, results and editable field history.</p>'+
       '</div><button type="button" data-action="restore">Receive study archive</button></header>'+
       '<div class="st-notice" data-study-notice role="status" aria-live="polite" hidden></div>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Choose studies</h3>'+
@@ -476,9 +481,11 @@ export function attachStudyTransfer(host) {
     transferHandler=callback;renderExports();
   }
 
-  function openForStudies(roots) {
+  function openForStudies(selection) {
+    const roots=Array.isArray(selection)?selection:selection?.roots;
     if(!Array.isArray(roots)||!roots.length)throw new Error('Select saved scientific studies.');
     const next=workspaceNow();
+    if(!Array.isArray(selection)&&selection?.workspace_key!==next)throw new Error('Open these saved studies in their original workspace.');
     if(!next)throw new Error('Open a scientific workspace first.');
     if(workspace!==next)reset(next);
     for(const row of roots){

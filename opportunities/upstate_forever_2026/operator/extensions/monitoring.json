@@ -2,14 +2,15 @@
   "schema": "upstate.operator-extension/v1",
   "id": "monitoring",
   "title": "Monitoring design",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "order": 85,
   "assets": [
     "monitoring.mjs",
     "monitoring-component.mjs",
     "monitoring.css",
     "monitoring-observed.mjs",
-    "monitoring_fieldwork.mjs"
+    "monitoring_fieldwork.mjs",
+    "monitoring-study-transfer.mjs"
   ],
   "backend": {
     "module": "monitoring_native",

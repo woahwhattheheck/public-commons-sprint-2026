@@ -98,12 +98,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/extensions/monitoring.json",
       "path": "operator/extensions/monitoring.json",
-      "bytes": 1669,
-      "sha256": "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4",
+      "bytes": 1795,
+      "sha256": "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61",
       "original_bytes": 1567,
       "original_sha256": "6f126ec8362be17ee17f70780f6d2b8ebc98b5f22fa03118f8100ff4cae0d3bf",
-      "previous_bytes": 1567,
-      "previous_sha256": "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c"
+      "previous_bytes": 1669,
+      "previous_sha256": "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring.py",
@@ -126,12 +126,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring_receiving.py",
       "path": "operator/monitoring_receiving.py",
-      "bytes": 16918,
-      "sha256": "7dbc67d5c58ce4bdffed8482ddd04f3ba030ee5ed845d16973f355e06f367155",
+      "bytes": 18059,
+      "sha256": "f59fea6a2b5c61f90803728776029b5880fe33bd61a2d7393e0abfa389727756",
       "original_bytes": 5296,
       "original_sha256": "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7",
-      "previous_bytes": 5296,
-      "previous_sha256": "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7"
+      "previous_bytes": 16918,
+      "previous_sha256": "7dbc67d5c58ce4bdffed8482ddd04f3ba030ee5ed845d16973f355e06f367155"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/static/monitoring.js",
@@ -162,12 +162,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs",
       "path": "operator/web/monitoring.mjs",
-      "bytes": 7810,
-      "sha256": "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919",
+      "bytes": 8104,
+      "sha256": "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a",
       "original_bytes": 4274,
       "original_sha256": "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
-      "previous_bytes": 7566,
-      "previous_sha256": "c65c0081e94a1500850fc8e8f5f798bc8b63ed7e3bc57deab91784e8a5054f44"
+      "previous_bytes": 7810,
+      "previous_sha256": "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919"
     },
     {
       "source": "model/monitoring_observed_context.py",
@@ -180,8 +180,10 @@
       "source": "operator/web/monitoring-observed.mjs",
       "source_role": "current_application_source",
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 11144,
-      "sha256": "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe"
+      "bytes": 11335,
+      "sha256": "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f",
+      "previous_bytes": 11144,
+      "previous_sha256": "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe"
     },
     {
       "source": "model/MONITORING_OBSERVED_CONTEXT.md",
@@ -194,8 +196,10 @@
       "source": "integrations/monitoring/RECEIVING.md",
       "source_role": "current_application_source",
       "path": "integrations/monitoring/RECEIVING.md",
-      "bytes": 12853,
-      "sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
+      "bytes": 13814,
+      "sha256": "1f8b2c863fe73d91834e72fbc8da779f7957e289d3d60d097fa13062c5428bcb",
+      "previous_bytes": 12853,
+      "previous_sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
     }
   ],
   "host": "operator/extension_registry.py",
@@ -287,5 +291,21 @@
     "source_module": "model/monitoring_report_source.py",
     "native_cli": "model/monitoring_report_cli.py",
     "preparation_action": "monitoring.report.prepare"
+  },
+  "selected_study_transfer": {
+    "guide": "model/MONITORING_STUDY_TRANSFER.md",
+    "source_manifest": "integration/monitoring_study_transfer_sources.json",
+    "roots": [
+      "monitoring_networks",
+      "monitoring_plans",
+      "monitoring_frontiers",
+      "monitoring_heads",
+      "monitoring_observed_contexts"
+    ],
+    "action": "study.export",
+    "receiving_option": {
+      "archive_scope": "selected"
+    },
+    "host": "Original Study transfer desk and portable Workspace restore"
   }
 }
