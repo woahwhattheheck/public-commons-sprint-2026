@@ -3,9 +3,9 @@ import ast,base64,datetime,hashlib,json,os,pathlib,stat,sys,traceback
 OPERATION='SCF-STAC-MANAGED-APPLICATION-RECEIVING-B710-20261012'
 ROOT=pathlib.Path('/dev/b710-stac-applications-7169')
 REPOSITORY='woahwhattheheck/public-commons-sprint-2026'
-SOURCE_BLOB='e12ece6b6b7cd1fda53c522c9c0a5f0b16c58263'
-SOURCE_BYTES=101193
-SOURCE_SHA256='8d386d351e2650cef62d6bea9326ed64d395f775d9187665d346d2d1b9eb4551'
+SOURCE_BLOB='0f46b4ae7057216a5df2aa0dad33d2cc3681c908'
+SOURCE_BYTES=142341
+SOURCE_SHA256='6e5df114649eb511ec5702e6ba15bc184275dbedea3d02c49dedf62232ec6873'
 PACKET_BLOB='01b61e5e056abd203fe6f5de18c10b7ba38013b2'
 PACKET_BYTES=2468401
 PACKET_SHA256='4ab15fe3bdcd26648a896a251fcaaec41d6e4577c188f4412ba0ead3bcb50ea9'
@@ -19,7 +19,30 @@ elif len(sys.argv)==2:
  with pathlib.Path(sys.argv[1]).open() as f:request=json.load(f)
 else:request=json.load(sys.stdin)
 sys.stdin=sys.__stdin__
-if set(request)!=({'attemptLabel'} if prepare_original else {'archiveTransfers','upload','attemptLabel'}):raise ValueError('Use the same two original archive transfers, final upload and selected original continuation')
+following_path=os.environ.get('STAC_FOLLOWING_PREPARATION')
+if following_path:
+ if 'followingPreparation' in request:raise ValueError('Select the following preparation once')
+ selected_path=pathlib.Path(following_path)
+ if not selected_path.is_absolute() or selected_path.is_symlink() or not selected_path.is_file() or selected_path.resolve(strict=True)!=selected_path:
+  raise ValueError('Use the explicit original preparation file')
+ request['followingPreparation']=json.loads(selected_path.read_text())
+required={'attemptLabel'} if prepare_original else {'archiveTransfers','upload','attemptLabel'}
+if not required.issubset(request) or set(request)-required-{'followingPreparation'}:
+ raise ValueError('Use the original transfers and optional retained following preparation')
+following_preparation=request.get('followingPreparation')
+if following_preparation is not None:
+ if not isinstance(following_preparation,dict) or following_preparation.get('schema')!='commons.stac-following-preparation.v1' or following_preparation.get('operationId')!=OPERATION or following_preparation.get('attemptLabel')!=request['attemptLabel']:
+  raise ValueError('Use the same original operation preparation')
+ source_roots=following_preparation.get('sourceRoots')
+ if not isinstance(source_roots,dict) or set(source_roots)!={'libraryHelpers','sourceInput','operationCode','builder'}:
+  raise ValueError('Select all original source roots')
+ for key,environment in [('libraryHelpers','STAC_LIBRARY_HELPER_DIRECTORY'),('sourceInput','STAC_SOURCE_INPUT_FILE'),('operationCode','STAC_OPERATION_CODE_DIRECTORY'),('builder','STAC_BUILDER_SOURCE_DIRECTORY')]:
+  source_path=pathlib.Path(source_roots[key])
+  if not source_path.is_absolute() or source_path.is_symlink() or source_path.resolve(strict=True)!=source_path:
+   raise ValueError('Use the canonical selected original source path')
+  if not (source_path.is_file() if key=='sourceInput' else source_path.is_dir()):
+   raise ValueError('Receive the selected original source before starting')
+  os.environ[environment]=str(source_path)
 attempt_label=request['attemptLabel']
 if not isinstance(attempt_label,str) or not attempt_label.startswith('native-') or not attempt_label[7:].isdigit() or int(attempt_label[7:])<3:raise ValueError('Use the selected numbered continuation of the original native operation')
 ROOT.mkdir(mode=0o700,parents=True,exist_ok=True)
@@ -47,7 +70,7 @@ client=None;selected=None;source_path=ROOT/'native-source-receiving.py'
 packet_path=ROOT/'source-input'/'fixed7169-residual-source.json.gz.b64'
 receipts=[]
 try:
- helper=pathlib.Path('/workspace/scratch/b71092915960/wherobots/library-upload-20261012/library_hosted_apps.py')
+ helper=pathlib.Path(os.environ.get('STAC_LIBRARY_HELPER_DIRECTORY','/workspace/scratch/b71092915960/wherobots/library-upload-20261012'))/'library_hosted_apps.py'
  if hashlib.sha256(helper.read_bytes()).hexdigest()!='b7961301f7ca6f76b2f2f30e4e5673a303532680a790e545c3207a2bf5e63de4':raise ValueError('The maintained session client source changed')
  sys.path.insert(0,str(helper.parent))
  from library_hosted_apps import HostedAppsClient,HostedAppTool
@@ -100,6 +123,8 @@ try:
   receipts.append({'repository':REPOSITORY,'blob':blob,'path':str(path),'bytes':len(data),'sha256':wanted,'receivedAt':stamp(),'originalTool':selected[1] if selected else 'retained-verified-file'})
   print(json.dumps({'stage':'ORIGINAL_CONNECTED_SOURCE_RECEIVED',**receipts[-1]}),flush=True)
   return data
+ if following_preparation is not None:
+  exact(ROOT/'private-uploads'/(attempt_label+'-following-preparation.json'),(json.dumps(following_preparation,sort_keys=True,indent=2)+'\n').encode())
  source=receive(SOURCE_BLOB,source_path,SOURCE_BYTES,SOURCE_SHA256)
  ast.parse(source)
  receive(PACKET_BLOB,packet_path,PACKET_BYTES,PACKET_SHA256)
@@ -152,6 +177,7 @@ try:
   uploads=prepared['uploads']
   if len(uploads)!=1 or uploads[0].get('method')!='PUT' or not isinstance(uploads[0].get('upload_url'),str) or not uploads[0]['upload_url'].startswith('https://'):raise ValueError('Use the original prepared final archive upload')
   request={'attemptLabel':attempt_label,'archiveTransfers':transfers,'upload':uploads[0]}
+  if following_preparation is not None:request['followingPreparation']=following_preparation
   exact(ROOT/'private-uploads'/(attempt_label+'-prepared-original-input.json'),(json.dumps(request)+'\n').encode())
   print(json.dumps({'stage':'ORIGINAL_TRANSFERS_PREPARED','operationId':OPERATION,'attemptLabel':attempt_label,'archiveFileIds':[x['file_id'] for x in transfers],'uploadFileId':uploads[0]['file_id'],'preparedAt':stamp()}),flush=True)
  source_receipt=(json.dumps({'operationId':OPERATION,'attemptLabel':attempt_label,'files':receipts},indent=2)+'\n').encode()
