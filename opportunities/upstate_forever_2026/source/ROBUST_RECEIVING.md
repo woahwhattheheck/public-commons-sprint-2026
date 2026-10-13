@@ -424,3 +424,43 @@ rasters and report identities remain authoritative. These source checks do not
 launch a model, render a report or constitute native receiving acceptance.
 Continue the same accepted receiving operation and retain its actual command,
 process result, archive identity and reopened records.
+
+## Saved Economic comparison receiving
+
+The optional Economic layer carries the original comparison engine, retained
+source adapter, edition desk, registered queue actions and restored-comparison
+opener together. A received Study reader now imports
+`model/economic_comparison_study_transfer.py` directly, and its browser imports
+`operator/web/economic_received_comparisons.mjs`. Installing only the shared
+reader can therefore break the whole received-Study view on an older application.
+
+Receive the complete original `economic-comparison` and
+`economic-comparison-source` component files, including their two component
+fragments and the original Economic desk. The cumulative installer admits these
+as optional source layers. If the assembled application contains the helper or
+a Study consumer that imports it, the installer checks its native models,
+three original registrations, declared assets, saved-comparison opener and
+Study receiving asset before replacing any file. The existing fifteen required
+Decision workbench files, exact preimage checks, ordered layers, native
+installation lock and legacy registration retirement remain unchanged.
+
+The optional maintained `operator/economic_receive.py` retains its original
+operation and uses the original `model/decision_receive.py` when that continuation
+is requested. Their presence does not start a receiver or a model. Reuse the
+actual accepted Economic operation and its original output directory; retain
+the real interpreter, command, process, saved comparison and restored Study
+receipts. A complete source layer is not an execution result.
+
+The current Economic history resolver retains the original comparison report
+source and adapter operation as well as its completed editions, allowing the
+received study to reexport the same source. Preserve original scientific run,
+cost, scenario, edition, comparison and source identities. When an installed
+file has advanced beyond a declared predecessor, compose its current original
+source before applying the layer rather than replacing it with an older body.
+
+Follow the complete owner brief in `CURRENT_OWNER_DIRECTION.md`, version
+2026-10-13.3. Keep the original active modeled work running through the 14:00 UTC
+cutoff. The producing peer must open and operate the exact outgoing desktop and
+narrow-screen Economic and received-Study views, exercise the original
+comparison opener, and inspect every exported attachment and the reopened
+application/project. Source checks do not substitute for that inspection.
