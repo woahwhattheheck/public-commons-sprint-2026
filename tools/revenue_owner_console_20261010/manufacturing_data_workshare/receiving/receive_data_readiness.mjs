@@ -3,6 +3,7 @@ import {resolve,join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 import * as core from '../data_readiness.mjs';
+import * as comparison from '../data_comparison.mjs';
 
 const need=(ok,message)=>{if(!ok)throw new Error(message);};
 const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -30,7 +31,8 @@ function deskEnvelope(workspace){
  * The caller owns the existing browser and original receiving operation.
  * Input schema manufacturing-data-receiving-input.v1:
  * {operationId, desk:{path,bytes,sha256}, proposal:{path,bytes,sha256},
- *  mechanicalWorkspace:{path,bytes,sha256},core:{bytes,sha256}}. All three files are complete.
+ *  mechanicalWorkspace:{path,bytes,sha256},comparisonWorkspace:{path,bytes,sha256},
+ *  core:{bytes,sha256},comparison:{bytes,sha256}}. Both workspaces are the supplied original pair.
  * Return actual downloads, original source identities and desktop/narrow images.
  * The producing peers must OPEN and VIEW those actual images and attachments.
  */
@@ -40,11 +42,22 @@ export async function runDataReadinessCourse({browser,inputFile,outputRoot,onPro
  need(input.schema==='manufacturing-data-receiving-input.v1'&&typeof input.operationId==='string'&&input.operationId,'Keep the original receiving operation identity.');
  const deskFile=await retainedFile(input.desk),proposalFile=await retainedFile(input.proposal),workspaceFile=await retainedFile(input.mechanicalWorkspace);
  const coreFile=await retainedFile({...input.core,path:fileURLToPath(new URL('../data_readiness.mjs',import.meta.url))});
- const mechanical=core.importWorkspace(utf8(workspaceFile.body));
+ const comparisonFile=await retainedFile(input.comparisonWorkspace);
+ const comparisonModule=await retainedFile({...input.comparison,path:fileURLToPath(new URL('../data_comparison.mjs',import.meta.url))});
+ const sourceWorkspace=body=>{const value=JSON.parse(utf8(body).replace(/^\uFEFF/,''));
+  return core.importWorkspace(value?.schema==='manufacturing-data-desk.v1'?value.current?.workspace:value?.workspace||value);};
+ const mechanical=sourceWorkspace(workspaceFile.body),successor=sourceWorkspace(comparisonFile.body);
  need(/mechanical.*example|example.*mechanical/i.test(mechanical.label),'The receiving record must identify itself as a mechanical example.');
  need(mechanical.revision===9,'Use the original operated revision 9 receiving workspace.');
+ need(successor.id===mechanical.id&&successor.revision>mechanical.revision,'Supply the retained later original mechanical source edition for this exact workspace.');
+ need(equal(successor.history.slice(0,mechanical.history.length),mechanical.history)&&
+      equal(successor.requests.slice(0,mechanical.requests.length),mechanical.requests)&&
+      mechanical.imports.every(source=>successor.imports.some(row=>equal(row,source))),
+      'The supplied successor must retain the original revision 9 history, requests and complete source editions.');
+ const expectedComparison=comparison.compareWorkspaces(mechanical,successor);
  const out=resolve(outputRoot);await mkdir(out,{recursive:true,mode:0o700});
- const recordPath=join(out,'receiving.json'),inputSha256=sha(inputBytes);
+ // Historical baseline-only receiving.json remains intact, including completed results.
+ const recordPath=join(out,'source-comparison-receiving.json'),inputSha256=sha(inputBytes);
  let record;
  if(await exists(recordPath)){
   record=JSON.parse(await readFile(recordPath,'utf8'));
@@ -53,7 +66,7 @@ export async function runDataReadinessCourse({browser,inputFile,outputRoot,onPro
    for(const file of record.files)await retainedFile(file);
    return record;
   }
- }else record={schema:'manufacturing-data-receiving-result.v1',operationId:input.operationId,inputSha256,status:'PREPARING',attempts:[]};
+ }else record={schema:'manufacturing-data-comparison-receiving-result.v1',operationId:input.operationId,inputSha256,status:'PREPARING',attempts:[]};
  const attempt={id:randomUUID(),startedAt:new Date().toISOString(),status:'RUNNING'};
  const work=join(out,attempt.id);await mkdir(work,{mode:0o700});attempt.directory=work;record.attempts.push(attempt);record.status='RUNNING';await checkpoint(recordPath,record);
  const files=[],screens=[],events=[],errors=[],contexts=[];
@@ -156,7 +169,78 @@ export async function runDataReadinessCourse({browser,inputFile,outputRoot,onPro
    await openSources(page);const original=await download(page,page.locator('[data-action="source-original"][data-source="'+source.id+'"]'),'original-'+kind+'.csv');
    need(original.sha256===source.sha256&&original.bytes===source.bytes,'Original source download changed: '+kind);
    await viewText(viewer,'canonical-'+kind,'Complete '+kind+' CSV',utf8(csv.body),'csv');
+   await viewText(viewer,'canonical-'+kind+'-json','Complete '+kind+' table JSON',utf8(tableJSON.body));
+   await viewText(viewer,'original-'+kind,'Complete original '+kind+' CSV',utf8(original.body),'csv');
   }
+
+  // Use the actual original pair through the normal retained-edition controls.
+  const beforeComparison=clone(current.value.current.workspace);
+  await page.locator('#desk-comparison-open').setInputFiles(workspaceFile.path);
+  await status(page,'Complete comparison edition retained beside the current desk.');
+  await page.locator('#desk-comparison-open').setInputFiles(comparisonFile.path);
+  await status(page,'Complete comparison edition retained beside the current desk.');
+  let comparedDesk=await working(page,'comparison-01-originals-retained-working.json');
+  let comparisonState=comparedDesk.value.current.comparison;
+  const baselineRecord=comparisonState.records.find(row=>row.raw===utf8(workspaceFile.body)&&row.sha256===workspaceFile.sha256);
+  const successorRecord=comparisonState.records.find(row=>row.raw===utf8(comparisonFile.body)&&row.sha256===comparisonFile.sha256);
+  need(baselineRecord&&successorRecord&&baselineRecord.id!==successorRecord.id,'Comparison did not retain both exact original supplied source files.');
+  need(equal(comparedDesk.value.current.workspace,beforeComparison),'Comparison import changed the active source workspace.');
+  await page.locator('#desk-comparison-baseline').selectOption(baselineRecord.id);
+  await page.locator('#desk-comparison-target').selectOption(successorRecord.id);
+  for(const filter of ['added','missing','changed','ambiguous','all']){
+   await page.locator('#desk-comparison-status').selectOption(filter);
+   await page.waitForFunction(value=>document.querySelector('#desk-comparison-status')?.value===value,filter);
+  }
+  const difference=expectedComparison.differences[0];
+  if(difference){
+  let card=page.locator('[data-comparison-difference="'+difference.id+'"]');
+  await card.locator('summary').click();
+  await card.locator('[data-comparison-review-status]').selectOption('working');
+  const comparisonNote='Mechanical example: reconcile this exact returned-source difference with its original row references.';
+  await card.locator('[data-comparison-review-note]').fill(comparisonNote);
+  await card.locator('[data-action="comparison-review"]').click();
+  await status(page,'Comparison review retained with the exact source pair.');
+  // Retain an unfinished edit separately from the completed source-bound review.
+  card=page.locator('[data-comparison-difference="'+difference.id+'"]');
+  await card.locator('summary').click();
+  const draftNote=comparisonNote+' Draft: awaiting the source owner response.';
+  await card.locator('[data-comparison-review-note]').fill(draftNote);
+  comparedDesk=await working(page,'comparison-02-reviewed-with-unfinished-note.json');
+  comparisonState=comparedDesk.value.current.comparison;
+  const reviewKey=expectedComparison.id+':'+difference.id;
+  need(comparisonState.baselineId===baselineRecord.id&&comparisonState.targetId===successorRecord.id&&
+       comparisonState.reviewHistory.length===1&&comparisonState.reviews[reviewKey]?.note===comparisonNote&&
+       comparisonState.reviewDrafts[reviewKey]?.note===draftNote,'The exact pair, recorded review or unfinished draft was not retained.');
+  }else{
+   comparedDesk=await working(page,'comparison-02-no-source-differences-working.json');
+   comparisonState=comparedDesk.value.current.comparison;
+   need(comparisonState.reviewHistory.length===0,'A source review was fabricated where the actual comparison has no differences.');
+  }
+  const comparisonOptions={reviews:comparisonState.reviewHistory,reviewer:comparedDesk.value.current.actor,notes:comparedDesk.value.current.notes};
+  await capture(page,'comparison-03-populated-source-review');
+  const comparisonJSON=await download(page,page.locator('[data-action="comparison-json"]'),'comparison-complete.json');
+  const comparisonCSV=await download(page,page.locator('[data-action="comparison-csv"]'),'comparison-differences.csv');
+  const comparisonHTML=await download(page,page.locator('[data-action="comparison-report"]'),'comparison-report.html');
+  need(utf8(comparisonJSON.body)===comparison.exportComparisonJSON(expectedComparison,comparisonOptions),'Comparison JSON differs from the actual selected source pair and recorded reviews.');
+  need(utf8(comparisonCSV.body)===comparison.exportComparisonCSV(expectedComparison,comparisonOptions),'Comparison CSV omitted or changed an original difference, issue or review.');
+  need(utf8(comparisonHTML.body)===comparison.reportHTML(expectedComparison,comparisonOptions),'Comparison report differs from the complete original selected result.');
+  for(const [record,original,name]of [[baselineRecord,workspaceFile,'baseline'],[successorRecord,comparisonFile,'successor']]){
+   const button=page.locator('[data-action="comparison-original"][data-edition="'+record.id+'"]');
+   const details=button.locator('xpath=ancestor::details[1]');
+   if(!await details.evaluate(el=>el.open))await details.locator('summary').click();
+   const downloaded=await download(page,button,'comparison-original-'+name+'.json');
+   need(downloaded.body.equals(original.body),'Comparison original download changed '+name+' source bytes.');
+   await viewText(viewer,'comparison-original-'+name,'Complete original '+name+' workspace',utf8(downloaded.body));
+  }
+  await viewer.setContent(utf8(comparisonHTML.body),{waitUntil:'load'});await capture(viewer,'comparison-04-full-report');
+  await viewText(viewer,'comparison-05-csv','Complete comparison differences and source exceptions',utf8(comparisonCSV.body),'csv');
+  await viewText(viewer,'comparison-06-json','Complete comparison and retained review history',utf8(comparisonJSON.body));
+  current=await working(page,'comparison-07-complete-working.json');
+  need(equal(current.value.current.workspace,beforeComparison),'Reviewing or exporting a comparison changed the active original source workspace.');
+  await event('original_source_pair_compared',{comparisonId:expectedComparison.id,baselineRevision:mechanical.revision,
+   successorRevision:successor.revision,counts:expectedComparison.counts,recordedReviews:comparisonState.reviewHistory.length,
+   unfinishedReviewRetained:Boolean(difference),reviewSkippedReason:difference?null:'The supplied source pair has no differences to review.'});
+
   const cold=await newPage();await loadDesk(cold);await cold.locator('#desk-open').setInputFiles(current.file.path);
   await status(cold,'The complete incoming desk is retained below.');
   await cold.locator('[data-action="open-edition"][data-location="incoming"]').first().click();
@@ -166,11 +250,27 @@ export async function runDataReadinessCourse({browser,inputFile,outputRoot,onPro
   for(const source of current.value.current.workspace.imports)need(reopened.value.current.workspace.imports.some(x=>equal(x,source)),'A previous exact source edition was lost.');
   await capture(cold,'22-cold-reopened-desk');
 
+  // Recover the old UI's saved filter without changing any source or review record.
+  const legacy=clone(current.value);legacy.current.comparison.status='unchanged';
+  const legacyFile=await keep('comparison-08-legacy-unchanged-filter-working.json',json(legacy));
+  const legacyPage=await newPage();await loadDesk(legacyPage);
+  await legacyPage.locator('#desk-open').setInputFiles(legacyFile.path);
+  await status(legacyPage,'The complete incoming desk is retained below.');
+  await legacyPage.locator('[data-action="open-edition"][data-location="incoming"]').first().click();
+  await heading(legacyPage,mechanical.label);
+  const recoveredLegacy=await working(legacyPage,'comparison-09-recovered-legacy-filter-working.json');
+  need(recoveredLegacy.value.current.comparison.status==='all'&&equal(recoveredLegacy.value.current,current.value.current),
+       'Legacy unchanged-filter recovery lost the original pair, sources, reviews or unfinished editor.');
+  await capture(legacyPage,'comparison-10-legacy-filter-recovered');
+  await event('comparison_cold_reopened',{comparisonId:expectedComparison.id,legacyFilterRecovered:true,completeEditorRetained:true});
+
   await viewer.setContent(utf8(proposalFile.body),{waitUntil:'load'});await capture(viewer,'23-original-customer-proposal');
   need(errors.length===0,'Actual browser errors: '+errors.join('; '));
   await event('full_course_complete',{workspaceId:mechanical.id,currentRevision:current.value.current.workspace.revision,sourceEditions:current.value.current.workspace.imports.length,actualScreenshots:screens.length});
   const result={schema:record.schema,operationId:record.operationId,inputSha256,status:'COMPLETE',completedAt:new Date().toISOString(),attempts:record.attempts,
-   originalInputs:[identity(deskFile.path,deskFile.body),identity(proposalFile.path,proposalFile.body),identity(workspaceFile.path,workspaceFile.body),identity(coreFile.path,coreFile.body)],
+   originalInputs:[identity(deskFile.path,deskFile.body),identity(proposalFile.path,proposalFile.body),identity(workspaceFile.path,workspaceFile.body),identity(coreFile.path,coreFile.body),identity(comparisonFile.path,comparisonFile.body),identity(comparisonModule.path,comparisonModule.body)],
+   comparisonId:expectedComparison.id,comparisonCounts:expectedComparison.counts,comparisonOriginalsRetained:true,
+   comparisonExportsReopened:true,comparisonReviewAndDraftRetained:Boolean(difference),legacyComparisonFilterRecovered:true,
    files,screens,events,mechanicalWorkspaceId:mechanical.id,initialCustomerWorkspaceId:empty.value.current.workspace.id,
    currentRevision:current.value.current.workspace.revision,fullSourcesRetained:current.value.current.workspace.imports.length,
    sourceBOMPreserved:true,currentWorkPreservedOnInvalidInput:true,priorDeskRetained:true,originalDecisionRetained:true,coldReopened:true,

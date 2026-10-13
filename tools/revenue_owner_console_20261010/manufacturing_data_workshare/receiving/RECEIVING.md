@@ -7,6 +7,7 @@ This is a continuation of the existing customer operation on its already equippe
 Retain this runner beside the current complete source:
 
 - `data_readiness.mjs`
+- `data_comparison.mjs`
 - `data_desk.mjs`
 - `data_desk.css`
 - `bundle.mjs`
@@ -15,7 +16,9 @@ Retain this runner beside the current complete source:
 - `receiving/receive_data_readiness.mjs`
 - this guide.
 
-The source owner supplies the exact standalone desk, complete customer proposal and already operated revision 9 mechanical workspace in the existing private customer handover. Customer names, offers and operational inputs stay out of the generic source repository. The public core begins with no data.
+The source owner supplies the exact standalone desk, complete customer proposal, already operated revision 9 mechanical workspace and its actual later source edition in the existing private customer handover. Keep both complete original files and their byte counts and SHA-256 digests. A raw workspace, complete working file or workspace-bearing handover can supply the later edition; its complete original envelope is retained for comparison and download. Customer names, offers and operational inputs stay out of the generic source repository. The public core begins with no data.
+
+The earlier source-owner receipt described a revision 9 to revision 13 comparison. That is historical context, not a replacement input or a fixed expected outcome. The receiver requires the actual supplied later edition, checks its original workspace identity and retained history, requests and source editions, and calculates the expected comparison with the maintained engine. Do not generate a substitute successor or copy an unrelated empty customer workspace. Until the original pair is supplied, the comparison browser course remains unexecuted.
 
 Use one private input JSON file:
 
@@ -38,14 +41,23 @@ Use one private input JSON file:
     "bytes": 9485,
     "sha256": "7850b02960e9c95813ebfa531ac947fd35e284f4c4d3a5e7175ad7307841ba16"
   },
+  "comparisonWorkspace": {
+    "path": "/owned/source/original-mechanical-successor.json",
+    "bytes": 0,
+    "sha256": "EXACT_COMPLETE_SUPPLIED_SUCCESSOR_SHA256"
+  },
   "core": {
-    "bytes": 30924,
-    "sha256": "d679c01e51519467eede041b751a0562b4b77a6aaa8343358d0d1887b57c06fc"
+    "bytes": 30958,
+    "sha256": "4d29b85b700e8300464f319512d56ddb491e44be5829958fef426053e695c397"
+  },
+  "comparison": {
+    "bytes": 20872,
+    "sha256": "3a18952c275a744168b4377e5b810e6a21336ab2297e1e80c581af8a97df4cba"
   }
 }
 ```
 
-Replace the two zero lengths and placeholder digests with the source owner's actual complete file identities. Paths belong to the same private source edition. The runner reads its actual relative `../data_readiness.mjs` and requires that identity too. The mechanical workspace is the complete already-operated original, public source blob `da1c61858600a59f04a2c8003a0f66e48bbccc07`; its explicit label and all nine revisions remain intact. No replacement customer dataset is generated.
+Replace all three zero lengths and placeholder digests with the source owner's actual complete file identities. Paths belong to the same private source edition. The module identities shown are the comparison feature's source edition; use the exact selected current module identities if the application has subsequently changed. The runner reads its actual relative `../data_readiness.mjs` and `../data_comparison.mjs` and requires both identities. Rebuild the standalone desk from that same complete source before selecting its hash; an older HTML desk lacks the comparison controls. The mechanical baseline is the complete already-operated original, public source blob `da1c61858600a59f04a2c8003a0f66e48bbccc07`; its explicit label and all nine revisions remain intact. No replacement customer dataset is generated.
 
 ## Join the original equipped browser
 
@@ -64,7 +76,7 @@ const result = await runDataReadinessCourse({
 
 The runner uses separate browser contexts and closes only those contexts. It leaves the caller's browser open. It loads the exact supplied HTML with `setContent`, requires no public server, blocks HTTP(S) requests inside its own contexts, and changes no browser policy. Use the installed source/browser versions already accepted by the original receiver. Do not create another customer case, competing process request or paid browser run.
 
-Retain the same input and output paths after interruption. Each attempt receives its own child directory, preserving earlier downloads and images. A completed invocation verifies all retained output file identities and reopens the same result. The original receiver remains the sole executor; this helper does not schedule work or claim an external host.
+Retain the same complete input and output paths after interruption. Each attempt receives its own child directory, preserving earlier downloads and images. This extended course uses `source-comparison-receiving.json`; it leaves any earlier baseline-only `receiving.json` and its completed outputs unchanged. Thus a previously completed baseline course can continue through the new comparison journey in the same original operation without treating its old result as completion of new work. The new journal binds the complete input digest, including both source files and both modules. A completed invocation verifies all retained output file identities and returns the same result. The original receiver remains the sole executor; this helper does not schedule work or claim an external host.
 
 ## The actual user workflow
 
@@ -74,7 +86,15 @@ It then imports the actual retained mechanical inventory with an explicit UTF-8 
 
 The actual retained circular BOM predecessor is opened through the normal mapping review. A reviewer records a note on the exact cycle exception. The complete exceptions CSV and readable report are downloaded and reopened. The earlier valid BOM is deliberately restored as a successor source while all prior editions and the cycle note remain retained.
 
-All four complete canonical CSVs and table JSONs are downloaded, as are the four selected exact original CSVs. They are compared to the source-bound core exports and reopened in readable browser tables. The complete current working file is then opened in a fresh context; its full editor, source history, mappings and decisions must match. Finally the exact customer proposal is rendered at both widths.
+All four complete canonical CSVs and table JSONs are downloaded, as are the four selected exact original CSVs. They are compared to the source-bound core exports and reopened in readable browser views.
+
+The course then opens the two exact supplied source files through **Open an edition for comparison**. Importing them must retain the complete originals beside the current desk, without replacing its active source workspace. The normal selectors choose the exact baseline and later edition. The course operates the supported added, missing, changed, ambiguous and all-differences filters, keeping unchanged identities in their summary counts.
+
+Where the actual comparison has a difference, the reviewer records a working disposition and source-owner note against that exact difference, then leaves a separate unfinished edit. Both the recorded review history and unfinished draft must survive. If the supplied pair has no differences, the result records that fact and the skipped review explicitly; it never invents a difference or review to satisfy a fixed count. Source errors and incomparable families remain the original engine's result.
+
+The complete comparison JSON, differences-and-issues CSV, and readable HTML report are downloaded and matched to the maintained engine's full output with the actual review history. Both retained original source files are downloaded and matched byte-for-byte. The course opens the report at desktop and 390 pixels, renders the complete CSV and JSON, and opens both exact original files in readable browser views.
+
+The complete current working file is then opened in a fresh context; its full editor, source history, mappings, decisions, chosen source pair, comparison reviews and unfinished notes must match. A separately named compatibility copy changes only the saved comparison filter to the older `unchanged` value. Opening it through the normal working-file controls must normalize that filter to `all` and preserve every other source and editor field. This compatibility copy contains the actual retained source data; it creates no new manufacturing observations. Finally the exact customer proposal is rendered at both widths.
 
 Outputs include:
 
@@ -83,8 +103,12 @@ Outputs include:
 - complete canonical tables in CSV and JSON;
 - cycle exceptions and complete readable reports;
 - complete handover JSON;
+- both complete supplied comparison originals and their exact downloaded copies;
+- complete comparison JSON, differences-and-issues CSV and readable HTML report;
+- complete comparison working files with recorded review history and unfinished notes;
+- the clearly named legacy-filter compatibility copy and its recovered complete working file;
 - actual desktop and 390-pixel screenshots;
-- `receiving.json` with exact input, output, viewport and original operation identities.
+- `source-comparison-receiving.json` with exact input, output, viewport, source-pair outcome and original operation identities; any historical `receiving.json` remains unchanged.
 
 The helper uses the source's actual controls and original browser download events. It measures horizontal document overflow. It does not claim that creating screenshots means a producing peer has viewed them.
 
