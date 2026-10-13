@@ -16,6 +16,9 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "integration/conservation_native_versions_composition.json",
+    "model/CONSERVATION_NATIVE_VERSIONS.md",
+    "model/native_versions.py",
     "integration/conservation_catalog_browser_composition.json",
     "model/CONSERVATION.md",
     "model/CONSERVATION_CONSUMERS.md",
@@ -101,7 +104,8 @@ KNOWN_PRIOR = {
         "099cdbb19f03560e6cf8214605a3d2212afdc5221e8f192eab46f74ed54065ca",
         "8755fb5f3b9e7870868db8f3c5345030b117259340918e14250c85ea5d4c67f3",
         "771681f14e61426ce74b10844f203627eaf8c1a435f674fed42bb87ad08470d0",
-        "fe8324135c497c1286307ba4d2aee9c56ba96873378d86aaa53078051c8f5c39"
+        "fe8324135c497c1286307ba4d2aee9c56ba96873378d86aaa53078051c8f5c39",
+        "b1a6595b575beac4b1f7656544e37af721df198c8499742e323e15eb7f2ebd27"
     ],
     "model/conservation_cli.py": [
         "1ead9b863bcd772e0845c7603465a24cc5eeb95a877730ccc6f9c4344310c8ed"
@@ -173,7 +177,8 @@ KNOWN_PRIOR = {
         "5662e0ee4c342dbd8ec50a8d3cdf74b7af10841680b46559f6eb6ad2f40ab8eb",
         "1bf6aa847d00df9b1e5a5bf8d9bc347f4ae73604e1f9e36abcfac827576f2256",
         "1929be639e1ed2297e63611ce96115949b56d71e8c5a2cd58e91ed98d9b189f1",
-        "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195"
+        "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195",
+        "56e0e5a3a45c44c3bdbddc8725b7e62f3d15af7242e36240b4f34c70b31b2b5c"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -862,6 +867,7 @@ def read_packet(path):
         if expected.get("sha256") != sha(encoded) or expected.get("bytes") != len(encoded):
             raise ValueError("Source body differs from its retained identity: " + name)
     needed = {
+        "model/native_versions.py",
         "integration/conservation_catalog_browser_composition.json",
         "model/conservation.py",
         "model/conservation_bindings.py",
@@ -930,6 +936,7 @@ def verify_application_dependencies(application, incoming):
     """Resolve source dependencies against the actual receiving application."""
     required = (
         "model/common.py", "model/workspace.py", "model/rasters.py",
+        "model/model_selection.py",
         "source/capture_original_overlays.py", "source/capture_upstream_network.py",
         "source_tools/soil_sources.py", "operator/extension_registry.py",
     )
