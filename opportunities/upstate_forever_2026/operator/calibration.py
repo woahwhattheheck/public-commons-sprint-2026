@@ -12,16 +12,18 @@ import zipfile
 from model.common import (atomic_bytes, atomic_json, describe_file,
                           held, identifier, read_json, verify_file)
 from model import calibration as science
+from model import calibration_history as history_science
+from model import calibration_history_export as history_export
 from model import calibration_uncertainty as uncertainty_science
 from model import calibration_maps as map_science
 from model import calibration_review as review_science
 from model import calibration_report_source as report_source_science
 
-ACTIONS = frozenset({"calibration.prepare", "calibration.analyze", "calibration.export",
+ACTIONS = frozenset({"calibration.history.export", "calibration.prepare", "calibration.analyze", "calibration.export",
                      "calibration.uncertainty", "calibration.uncertainty.export",
                      "calibration.maps.prepare", "calibration.maps.review", "calibration.review.prepare",
                      "calibration.review.source"})
-READS = frozenset({"catalog", "plan", "report", "uncertainty", "maps", "review", "report-source"})
+READS = frozenset({"history", "catalog", "plan", "report", "uncertainty", "maps", "review", "report-source"})
 UNITS = {"nitrogen": "kg/year", "phosphorus": "kg/year", "sediment": "metric_tonnes/year"}
 COLUMNS = {
     "execution": review_science.NATIVE_EXECUTION_FIELDS,
@@ -432,6 +434,11 @@ class CalibrationOperations:
             return {"workspace_key": workspace, "plan": ws._get("calibration-plans", key),
                     "progress": science.inspect(ws, key),
                     "_downloads": [self._document(workspace, "calibration-plans", key, "Original calibration selection")]}
+        if operation == "history":
+            key = self._id(value, "id")
+            history = history_science.inspect(ws, key)
+            return {"workspace_key": workspace, "history": history,
+                    "_downloads": history_export.downloads(self.operator, workspace, history)}
         if operation == "report":
             key = self._id(value, "id")
             report = ws._get("calibrations", key)
@@ -441,7 +448,12 @@ class CalibrationOperations:
             manifest_path = ws.root / "calibration-exports" / key / "manifest.json"
             if manifest_path.exists():
                 downloads.extend(self._export_downloads(workspace, key))
+            history = (history_science.inspect(ws, key)
+                       if plan["selection"].get("prior_evaluation") else None)
+            if history is not None:
+                downloads.extend(history_export.downloads(self.operator, workspace, history))
             return {"workspace_key": workspace, "report": report, "plan": plan,
+                    "profile_history": history,
                     "view": _presentation(ws, plan, report), "_downloads": downloads,
                     "uncertainties": [_uncertainty_summary(row) for row in ws._list(UNCERTAINTY_KIND)
                                       if row.get("calibration_id") == key],
@@ -516,6 +528,8 @@ class CalibrationOperations:
     def invoke(self, task):
         workspace, payload = task["workspace"], task["payload"]
         ws = self.operator.ws(workspace)
+        if task["action"] == "calibration.history.export":
+            return history_export.export(ws, self._id(payload, "report_id"))
         if task["action"] == "calibration.prepare":
             plan = science.prepare(ws, payload["selection"])
             return {"plan_id": plan["id"], "plan": plan}
@@ -822,6 +836,11 @@ class CalibrationOperations:
                                             result["report_id"], "Complete calibration results"))
         if task["action"] == "calibration.export":
             downloads.extend(self._export_downloads(task["workspace"], result["report_id"]))
+        if task["action"] == "calibration.history.export":
+            history = history_science.inspect(self.operator.ws(task["workspace"]), result["report_id"])
+            if history["id"] != result["history_id"]:
+                raise ValueError("The selected-profile history differs from this completed export")
+            downloads.extend(history_export.downloads(self.operator, task["workspace"], history))
         if result.get("uncertainty_id"):
             downloads.append(self._document(task["workspace"], UNCERTAINTY_KIND,
                                             result["uncertainty_id"], "Complete observation sensitivity"))
