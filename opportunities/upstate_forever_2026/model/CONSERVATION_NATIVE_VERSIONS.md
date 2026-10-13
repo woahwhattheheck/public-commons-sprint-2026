@@ -47,6 +47,20 @@ A native decision packet includes `native-execution.json`, with schema `upstate.
 
 Source-context packet identities and source-context calculations retain their existing behavior. The separate physical pollutant values, paired valid-cell support, original grid resolution and partial-model availability contracts remain unchanged.
 
+## Human-readable execution sources
+
+The existing decision report includes a **Native model execution** section. Each original run is labeled as baseline or alternative and lists its selected NDR and/or SDR models separately. The table displays the resolved model version, its provenance basis, original requested version, latest observed run version and recorded stage completion time. Completed-stage, observed-run fallback and requested legacy fallback remain distinct labels.
+
+A companion table gives each run's quantity-adapter contract and selected-model compatibility. The expandable original JSON preserves model reuse sources and runtime history. The same typed execution map appears as `native_execution` in the existing `source-register.json`; the ordinary report dictionary defines these fields. Both new study reports and freshly exported historical native studies use the supplied maintained execution records. A source-context report with no native run has no native execution table.
+
+Presentation reads the study's resolved `native_execution` map, or the execution metadata already bound to a newly prepared native study. It performs no additional version resolution, source acquisition or scientific run. Existing scientific quantities, candidate ordering, score methods, selected geometries and source presentation stay intact. The report implementation hash creates a new presentation edition while the original study, plan and earlier report remain retained.
+
+## Experiment baseline compatibility
+
+The maintained experiment engine currently uses the requested InVEST version in its generated case identity and original reference validation. Conservation's scenario bridge therefore retains that requested-version requirement when preparing an experiment. It additionally checks the effective execution version for every selected model with the same maintained resolver used by Conservation quantities.
+
+A completed stage executed under an incompatible version is rejected even if its original request names the current version. Ready or interrupted references retain their original resume path: already completed stages are checked, while unfinished stages execute through the original engine and its requested-version selection. A supported observed execution paired with another requested version can be used by Conservation's study quantity adapter, but experiment admission also needs the experiment engine's retained case-selection contract. The bridge preserves that distinction and never rewrites the original baseline selection or run ID.
+
 ## Receiving and current source composition
 
 Install the complete current Conservation backend and bindings with the shared helper. The supplied helper is the unchanged ECSA revision: 3,770 UTF-8 bytes, SHA-256 `bd4996f78c9e21ea8093499a7f7ff9adc9622ffce9bdb49b22f4121199a8b6f2`. Its maintained dependency is `model/model_selection.py`.
