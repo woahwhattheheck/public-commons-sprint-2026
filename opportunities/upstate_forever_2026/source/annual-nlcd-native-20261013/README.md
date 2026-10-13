@@ -32,7 +32,7 @@ Select this completed raster as the reference for the maintained A74F source fin
 python -B -m source_tools.soil_region prepare \
   --capture "$UPSTATE_REGIONAL_SOIL_CAPTURE" \
   --reference source/annual-nlcd-native-20261013/source/land-cover.tif \
-  --output "$UPSTATE_SOIL_CAPTURE" \
+  --output "$UPSTATE_SOIL_PREPARED" \
   --null-policy nlcd-water-zero
 ```
 

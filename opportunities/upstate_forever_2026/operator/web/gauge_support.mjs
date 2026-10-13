@@ -12,6 +12,11 @@ const options = (rows,selected,getKey,getTitle,empty='Choose retained source') =
   '<option value="">'+esc(empty)+'</option>'+rows.map(row=>'<option value="'+esc(getKey(row))+'"'+
     (getKey(row)===selected?' selected':'')+'>'+esc(getTitle(row))+'</option>').join('');
 const sourceTitle = row => (row.title||row.source_id)+' · '+(row.collection_title||row.collection_id);
+const supportLabel = result => result?.support?.label || ({
+  nhdplusv2_upstream_whole_catchments:'Original upstream whole catchments',
+  nhdplusv2_upstream_gauge_split:'Original indexed-gauge split catchments',
+  nhdplusv2_coordinate_delineated_upstream:'Coordinate-delineated upstream catchments'
+})[list(result?.stations)[0]?.support_kind] || 'Retained source catchments';
 const svgMap = (edition,stationId) => {
   const selected=list(edition?.catchments?.features).find(row=>row.properties?.station_id===stationId);
   const station=list(edition?.gauges?.features).find(row=>row.id===stationId);
@@ -33,11 +38,11 @@ const svgMap = (edition,stationId) => {
   const xy=p=>[ox+(p[0]-x0)*cosine*scale,h-oy-(p[1]-y0)*scale];
   function path(geom){const polys=geom?.type==='Polygon'?[geom.coordinates]:geom?.type==='MultiPolygon'?geom.coordinates:[];
     return polys.flatMap(poly=>poly.map(ring=>ring.map((p,i)=>(i?'L':'M')+xy(p).map(n=>n.toFixed(2)).join(',')).join(' ')+'Z')).join(' ');}
-  return '<svg class="gs-map" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc('Original whole catchment and intersecting HUC12 polygons for '+stationId)+'">'+
+  return '<svg class="gs-map" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(supportLabel(edition.result)+' and intersecting HUC12 polygons for '+stationId)+'">'+
     hucs.map(row=>'<path class="gs-huc" fill-rule="evenodd" d="'+path(row.geometry)+'"><title>'+esc(row.properties?.huc12+' '+(row.properties?.name||''))+'</title></path>').join('')+
-    (selected?'<path class="gs-basin" fill-rule="evenodd" d="'+path(selected.geometry)+'"><title>Original upstream whole catchment</title></path>':'')+
+    (selected?'<path class="gs-basin" fill-rule="evenodd" d="'+path(selected.geometry)+'"><title>'+esc(supportLabel(edition.result))+'</title></path>':'')+
     (station?'<circle class="gs-point" cx="'+xy(station.geometry.coordinates)[0]+'" cy="'+xy(station.geometry.coordinates)[1]+'" r="5"><title>'+esc(stationId)+'</title></circle>':'')+
-    '</svg><p class="gs-muted">Original whole catchment: dark outline. Regional HUC12 polygons: thin outlines. Gauge: point. Display is locally scaled longitude/latitude; all reported areas use EPSG:5070.</p>';
+    '</svg><p class="gs-muted">Selected source catchment: dark outline. Regional HUC12 polygons: thin outlines. Gauge: point. Display is locally scaled longitude/latitude; all reported areas use EPSG:5070.</p>';
 };
 
 export function attachGaugeSupport(host) {
@@ -55,25 +60,27 @@ export function attachGaugeSupport(host) {
   function fail(problem){error=problem?.message||String(problem);message='';note();}
   function source(value){return list(catalog?.sources).find(row=>refKey(row)===value);}
   function report(){return list(catalog?.reports).find(row=>row.id===draft.report_id);}
+  function catchmentSource(value){return list(catalog?.support_sources).find(row=>refKey(row)===value);}
   function renderForm(){
     if(!root)return;const vectors=list(catalog?.sources).filter(row=>row.kind==='vector'),tables=list(catalog?.sources).filter(row=>row.kind==='table');
     const hucs=list(report()?.hucs),selectedHucs=new Set(draft.reporting_huc12s);
+    const catchmentChoices=list(catalog?.support_sources),support=catchmentSource(refKey(draft.catchment_source))?.support;
     root.querySelector('[data-gs-draft]').innerHTML='<details class="gs-card gs-draft" open><summary>Build regional gauge support</summary>'+
-      '<p>Choose original retained source editions. The station geography engine resolves exact station IDs and point memberships; this support analysis intersects their whole catchments with the selected regional polygons.</p>'+
+      '<p>Choose original retained source editions. The station geography engine resolves exact station IDs and point memberships; this support analysis intersects the selected original catchment edition with the regional polygons.</p>'+
       '<form data-gs-form><div class="gs-grid"><label>Title<input data-gs-field="title" value="'+esc(draft.title)+'" required></label>'+
       '<label>Saved regional watershed report<select data-gs-field="report_id" required>'+options(list(catalog?.reports),draft.report_id,row=>row.id,row=>(row.title||row.id)+' · '+row.hucs.length+' HUC12s','Choose saved report')+'</select></label>'+
       '<label>Original HUC12 polygon source<select data-gs-field="huc_source" required>'+options(vectors,refKey(draft.huc_sources?.[0]),refKey,sourceTitle)+'</select></label>'+
       '<label>Original HUC12 field<input data-gs-field="huc_field" value="'+esc(draft.huc_sources?.[0]?.id_field||'huc12')+'" required></label>'+
       '<label>Gauge point source<select data-gs-field="point_source">'+options(vectors,refKey(draft.point_source),refKey,sourceTitle,'Choose gauge points or saved geography')+'</select></label>'+
       '<label>Saved station geography (optional)<select data-gs-field="station_edition_id">'+options(list(catalog?.station_editions),draft.station_edition_id||'',row=>row.id,row=>row.title||row.id,'Build from selected gauge points')+'</select></label>'+
-      '<label>Original whole catchment source<select data-gs-field="catchment_source" required>'+options(vectors,refKey(draft.catchment_source),refKey,sourceTitle)+'</select></label>'+
+      '<label>Original upstream support edition<select data-gs-field="catchment_source" required>'+options(catchmentChoices,refKey(draft.catchment_source),refKey,row=>sourceTitle(row)+' · '+row.support.label)+'</select></label>'+
       '<label>Original daily-flow coverage JSON<select data-gs-field="coverage_source" required>'+options(tables,refKey(draft.coverage_source),refKey,sourceTitle)+'</select></label>'+
       '<label>Reporting HUC12 selection<select data-gs-field="reporting_huc12s" multiple>'+hucs.map(row=>'<option value="'+esc(row.huc12)+'"'+
         (selectedHucs.has(row.huc12)?' selected':'')+'>'+esc(row.huc12+' '+row.name+(row.priority?' · priority':''))+'</option>').join('')+'</select></label>'+
       '<label>Utility polygon sources (optional)<select data-gs-field="utility_source" multiple>'+vectors.map(row=>'<option value="'+esc(refKey(row))+'"'+
         (list(draft.utility_sources).some(selected=>refKey(selected)===refKey(row))?' selected':'')+'>'+esc(sourceTitle(row))+'</option>').join('')+'</select></label>'+
       list(draft.utility_sources).map((row,index)=>'<label>'+esc(sourceTitle(source(refKey(row))||row))+' — original utility ID field<input data-gs-field="utility_field" data-gs-utility-index="'+index+'" value="'+esc(row.id_field||'id')+'"></label>').join('')+'</div>'+
-      '<p class="gs-note">Whole-catchment source requests retain simplified=false and splitCatchment=false. Select all reporting HUC12s to compare the full regional domain. Utility areas are evaluated separately.</p>'+
+      '<p class="gs-note">'+esc(support?support.label+'. '+support.description:'Import the completed original whole, indexed-gauge split or coordinate-delineated source edition, then select it here.')+' Select all reporting HUC12s to compare the full regional domain. Utility areas are evaluated separately.</p>'+
       '<div class="gs-actions"><button type="submit"'+(busy?' disabled':'')+'>Build and retain support report</button>'+button('all-hucs','Select all reporting HUC12s')+button('priority-hucs','Select priority HUC12s')+'</div></form></details>';
   }
   function renderEditions(){
@@ -100,6 +107,7 @@ export function attachGaugeSupport(host) {
     container.innerHTML='<section class="gs-card"><h2>'+esc(result.title)+'</h2><div class="gs-metrics">'+
       '<span><b>'+num(summary.gauge_count)+'</b>gauge catchments</span><span><b>'+num(summary.gauges_with_point_in_region)+'</b>gauge points in region</span>'+
       '<span><b>'+num(summary.complete_numeric_flow_gauges)+'</b>complete numeric calendars</span><span><b>'+num(summary.reporting_huc_count)+'</b>reporting HUC12s</span></div>'+
+      '<p><strong>'+esc(supportLabel(result))+'.</strong> '+esc(result.methods.support_geometry)+'</p>'+
       '<p class="gs-muted">Saved regional report '+esc(result.regional.report_id)+' · original station geography '+esc(result.station_edition_id)+
       ' · source edition '+esc(edition.id)+'</p><div class="gs-actions">'+button('station-edition','Open source station geography')+
       button('reuse','Use this selection')+button('verify','Verify and reopen linked source')+'</div><div>'+important.map(fileLink).join('')+'</div>'+
@@ -112,13 +120,13 @@ export function attachGaugeSupport(host) {
       '<p class="gs-muted">Download a scientific PDF, HTML, Markdown, data and full source ZIP from this saved edition. Use in scientific report adds the same source to a new or saved delivery, preserving its native runs, overlays and selected studies.</p>'+
       '<details><summary>All source-preserving downloads</summary>'+files.map(fileLink).join('')+'</details></section>'+
       '<section class="gs-card"><h2>Gauges and original flow coverage</h2><label>Find gauge<input type="search" data-gs-search value="'+esc(search)+'" placeholder="Station, name or HUC12"></label>'+
-      '<div class="gs-table"><table><thead><tr><th>Gauge</th><th>Point membership</th><th>Whole catchment km²</th><th>Within region</th><th>Numeric days</th><th>Original series</th></tr></thead><tbody>'+
+      '<div class="gs-table"><table><thead><tr><th>Gauge</th><th>Point membership</th><th>Selected catchment km²</th><th>Within region</th><th>Numeric days</th><th>Original series</th></tr></thead><tbody>'+
       rows.map(row=>'<tr data-gs-station="'+esc(row.station_id)+'" aria-selected="'+(row.station_id===selected)+'" tabindex="0"><td><strong>'+esc(row.station_id)+'</strong><br>'+esc(row.station_name)+'</td>'+
       '<td>'+esc(row.point_huc12s.join(', ')||row.point_membership_status)+'<br><small>'+esc(row.location_status)+'</small></td><td>'+num(row.catchment_area_m2/1e6)+'</td>'+
       '<td>'+num(100*row.regional_domain_fraction)+'%</td><td>'+num(row.flow.totals.numeric_day_count)+' / '+num(row.flow.totals.calendar_days)+'</td><td>'+esc(row.ts_id)+'</td></tr>').join('')+'</tbody></table></div></section>'+
       (station?'<section class="gs-card"><h2>'+esc(station.station_id)+' — '+esc(station.station_name)+'</h2>'+svgMap(edition,station.station_id)+
-      '<p><strong>Gauge point relative to its original supplied whole catchment: '+esc(station.point_own_catchment_relation)+'.</strong> Original source measure: '+esc(station.original_catchment_properties?.measure??'—')+'.</p>'+
-      '<p>Reporting overlap: '+num(station.reporting_overlap_area_m2/1e6)+' km². Whole catchment outside regional domain: '+num(station.outside_regional_domain_area_m2/1e6)+' km².</p>'+
+      '<p><strong>Gauge point relative to its selected original catchment: '+esc(station.point_own_catchment_relation)+'.</strong> Original source measure: '+esc(station.original_catchment_properties?.measure??'—')+'.</p>'+
+      '<p>Reporting overlap: '+num(station.reporting_overlap_area_m2/1e6)+' km². Selected catchment outside regional domain: '+num(station.outside_regional_domain_area_m2/1e6)+' km².</p>'+
       '<h3>Annual coverage from the original daily-flow series</h3><div class="gs-table"><table><thead><tr><th>Year</th><th>Numeric / calendar</th><th>Approved</th><th>Estimated</th><th>Provisional</th><th>Observed-day mean cfs</th><th>Missing dates</th></tr></thead><tbody>'+
       station.flow.years.map(year=>'<tr class="gs-year"><td>'+year.year+'</td><td>'+year.numeric_day_count+' / '+year.calendar_days+'</td><td>'+year.approved_numeric_days+
         '</td><td>'+year.estimated_numeric_days+'</td><td>'+year.provisional_numeric_days+'</td><td>'+num(year.mean_observed_daily_cfs)+'</td><td>'+year.missing_date_count+'</td></tr>').join('')+
@@ -138,7 +146,7 @@ export function attachGaugeSupport(host) {
     if(!root)return;const key=workspace,version=generation,sequence=++catalogRequest;message='Reading original sources and saved reports…';error='';note();
     try{const next=await read('catalog');if(!root||key!==workspace||version!==generation||sequence!==catalogRequest)return;catalog=next;
       if(!draft.point_source){const row=next.sources.find(row=>row.source_id==='nldi-daily-flow-gauge-locations-20261013');if(row)draft.point_source={...ref(row),station_id_field:'station_id'};}
-      if(!draft.catchment_source){const row=next.sources.find(row=>row.source_id==='nldi-daily-flow-whole-catchments-20261013');if(row)draft.catchment_source=ref(row);}
+      if(!draft.catchment_source){const row=list(next.support_sources).find(row=>row.source_id==='nldi-daily-flow-whole-catchments-20261013');if(row){draft.catchment_source=ref(row);draft.support_kind=row.support.kind;}}
       if(!draft.coverage_source){const row=next.sources.find(row=>row.role==='daily-flow-coverage');if(row)draft.coverage_source=ref(row);}
       message='Original source catalogue ready.';renderForm();renderEditions();renderTasks();save();note();
     }catch(problem){if(root&&key===workspace&&version===generation)fail(problem);}
@@ -218,7 +226,10 @@ export function attachGaugeSupport(host) {
       old.find(selected=>refKey(selected)===refKey(row))||{...ref(row),id_field:row.id_field||'id'});renderForm();}
     else if(field==='huc_field'){if(draft.huc_sources[0])draft.huc_sources[0].id_field=target.value.trim();}
     else if(field==='utility_field'){const index=Number(target.dataset.gsUtilityIndex);if(draft.utility_sources[index])draft.utility_sources[index].id_field=target.value.trim();}
-    else if(['point_source','catchment_source','coverage_source'].includes(field)){const row=source(target.value);
+    else if(field==='catchment_source'){const row=catchmentSource(target.value);
+      if(row){draft.catchment_source=ref(row);draft.support_kind=row.support.kind;}
+      else{delete draft.catchment_source;delete draft.support_kind;}renderForm();}
+    else if(['point_source','coverage_source'].includes(field)){const row=source(target.value);
       if(row)draft[field]={...ref(row),...(field==='point_source'?{station_id_field:'station_id'}:{})};else delete draft[field];}
     else if(field==='station_edition_id'){if(target.value)draft.station_edition_id=target.value;else delete draft.station_edition_id;}
     else if(field==='title')draft.title=target.value;
@@ -248,7 +259,7 @@ export function attachGaugeSupport(host) {
     catalog=null;edition=null;error='';message='';busy=false;selected='';search='';currentTask=null;request=null;
     reportTask=null;reportRequest=null;reportDelivery='';reportReady=null;reportBusy=false;reportHandled=null;
     draft={title:'Regional gauge and catchment support',report_id:'',reporting_huc12s:[],huc_sources:[],utility_sources:[]};restore();controller=new AbortController();
-    root.innerHTML='<section class="gauge-support"><header><div><h1>Gauge support</h1><p>Original gauge locations, whole-catchment coverage and regional watershed relationships.</p></div>'+button('refresh','Refresh sources')+'</header>'+
+    root.innerHTML='<section class="gauge-support"><header><div><h1>Gauge support</h1><p>Original gauge locations, selected upstream support and regional watershed relationships.</p></div>'+button('refresh','Refresh sources')+'</header>'+
       '<p class="gs-error" data-gs-error role="alert" hidden></p><p data-gs-message role="status" hidden></p><div data-gs-draft></div>'+
       '<div class="gs-card"><label>Saved gauge support report<select data-gs-editions></select></label><div data-gs-tasks></div></div><div data-gs-result></div></section>';
     const signal=controller.signal;root.addEventListener('click',click,{signal});root.addEventListener('change',change,{signal});
