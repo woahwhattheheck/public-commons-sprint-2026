@@ -326,6 +326,11 @@ def _read(workspace, key):
     key = identifier(key)
     spec = workspace._get("experiment-specs", key)
     state = read_json(workspace.root / "experiments" / key / "experiment.json")
+    return _bind_state(workspace, key, spec, state)
+
+
+def _bind_state(workspace, key, spec, state):
+    """Bind a checkpoint or its catalogue projection to its original selection."""
     expected = {k: v for k, v in spec.items() if k not in ("id", "schema")}
     actual = {k: v for k, v in state["selection"].items() if k != "schema"}
     if state.get("id") != key or expected != actual or state.get("workspace_id") != workspace.project["id"]:
