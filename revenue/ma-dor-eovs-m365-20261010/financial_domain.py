@@ -337,6 +337,8 @@ def compare_output(definition, run, output_dataset, output_rows):
         left, right = expected.get(key), observed.get(key, [])
         issues = [issue for _, row in right for issue in row["issues"]
                   if issue not in ("INVALID_POSTING_DATE", "INVALID_DOCUMENT_DATE")]
+        if any(any(not part["present"] or part.get("value") is None for part in parts) for parts, _ in right):
+            issues.append("ABSENT_GROUP_KEY")
         if len(right) > 1: status = "AMBIGUOUS"
         elif issues: status = "UNKNOWN"
         elif left is None: status = "UNEXPECTED" if run["calculation"]["complete"] else "UNKNOWN"
