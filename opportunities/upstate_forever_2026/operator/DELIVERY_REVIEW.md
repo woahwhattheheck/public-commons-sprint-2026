@@ -33,7 +33,7 @@ The receiving-area section connects each selected source-water or water-resource
 
 **Bryce can say:** “This shows which land contributes to each selected receiving area and carries the same annual quantities and coverage counts into the working tables.”
 
-Use the report's study-area and model-scope sections before presenting a prepared case. The title and grid describe the actual selected project. For example, a prepared Gura case can use a 300 m grid; a regional Upper Savannah case can use the required 30 m grid. The report resolves the saved grid geometry and labels the case being read.
+Use the report's study-area and model-scope sections before presenting a prepared case. Read the grid retained with the selected study: the original Gura input raster is 15 m in EPSG:32737, with 1,939 columns and 603 rows; an explicitly resampled Gura workspace can instead retain 300 m cells. The Upper Savannah RFP specifies a 30 m mapping grid. Fresh intake derives its geometry from the selected original land-use raster. The upstream context buffer is a separate choice. Reopening a retained study preserves that study's own grid and run identifiers.
 
 ## 3. Choose the right delivery files
 
@@ -120,7 +120,7 @@ In **Maps and delivery**, open the registered **Received copy** and choose **Rea
 
 ### Use the grid printed in this report
 
-The report reads the saved affine transform and coordinate system. Cell dimensions describe the actual grid. A 30 m by 30 m cell has an area of 0.09 hectares; a 300 m by 300 m cell has an area of 9 hectares. These examples explain why cell size affects the relationship between a per-hectare native result and a delivered per-cell quantity.
+The report reads the saved affine transform and coordinate system. Cell dimensions describe the actual grid. A 15 m by 15 m cell has an area of 0.0225 hectares; a 30 m by 30 m cell has an area of 0.09 hectares; a 300 m by 300 m cell has an area of 9 hectares. These examples explain why cell size affects the relationship between a per-hectare native result and a delivered per-cell quantity. Use the retained affine and cell area for the selected study when reading quantities; a change to the upstream buffer does not itself change the raster resolution.
 
 The retained native adapter converts the model's per-hectare rate to annual mass per cell using the actual cell area. The report uses the recorded annual-mass raster totals. Its represented area comes from the valid-cell count and saved cell area.
 
