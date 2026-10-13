@@ -43,6 +43,26 @@ function ventcrmDocumentPreview(name,source){
  return opening===null?originalDocumentPreview(name,source):opening;
 }
 
+export function bindVentCRMProfileNavigation(frame){
+ frame.addEventListener("load",()=>{
+  const doc=frame.contentDocument;if(!doc)return;
+  doc.addEventListener("click",event=>{
+   const link=event.target.closest?.("a[href]"),href=link?.getAttribute("href");
+   if(!href?.startsWith("#"))return;
+   event.preventDefault();
+   let id=href.slice(1);try{id=decodeURIComponent(id);}catch{}
+   const target=id?doc.getElementById(id)||Array.from(doc.getElementsByName(id)).find(el=>el.tagName==="A"):doc.documentElement;
+   if(!target)return;
+   target.scrollIntoView({block:"start"});
+   if(!target.hasAttribute("tabindex")){
+    target.setAttribute("tabindex","-1");
+    target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});
+   }
+   target.focus({preventScroll:true});
+  });
+ });
+}
+
 export function renderVentCRMPackageViewer(input,{fragment=false}={}){
  if(input?.schema!=="commons.ventcrm-complete-package-viewer.v1")throw Error("Select the complete VentCRM package input.");
  const rendered=renderCustomerPackagePanel({customer:"VentCRM",envelope:input.envelope});
@@ -50,7 +70,11 @@ export function renderVentCRMPackageViewer(input,{fragment=false}={}){
  if(rendered.split(escapedPreview).length!==2)throw Error("The original document preview changed.");
  const replacement=originalPreview.replace(/^function documentPreview\(/,"function originalDocumentPreview(")+"\n"+
   renderCommissioningPreview.toString()+"\n"+ventcrmDocumentPreview.toString().replace(/^function ventcrmDocumentPreview\(/,"function documentPreview(");
- const original=rendered.replace(escapedPreview,replacement.replace(/<\/script/gi,"<\\/script"));
+ const previewed=rendered.replace(escapedPreview,replacement.replace(/<\/script/gi,"<\\/script"));
+ const endScript=previewed.lastIndexOf("</script>");
+ if(endScript<0||!previewed.slice(0,endScript).endsWith("packagePanelMain();"))throw Error("The complete original viewer runtime changed.");
+ const navigation="\n"+bindVentCRMProfileNavigation.toString()+"\nbindVentCRMProfileNavigation(document.getElementById(\"preview\"));";
+ const original=previewed.slice(0,endScript)+navigation.replace(/<\/script/gi,"<\\/script")+previewed.slice(endScript);
  const head=original.match(/<head>([\s\S]*?)<\/head>/),start=original.indexOf("<body>"),end=original.lastIndexOf("</body>");
  if(!head||start<0||end<=start)throw Error("The complete original viewer template changed.");
  const markup='<div id="'+root+'">'+original.slice(start+6,end)+"</div>";
