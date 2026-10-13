@@ -289,6 +289,7 @@ WQP_CALENDAR = "wqp/derived/calendar.csv"
 WQP_SUMMARY = "wqp/derived/summary.json"
 FLOW_FILE = "wqp/study_flow_dates.csv"
 FLOW_METHODS = "wqp/flow_context_methods.json"
+FLOW_METHODS_PUBLIC = "wqp/flow_context_methods.public.json"
 WQP_FIELDS = {
     "monitoring_location_id": "station_id", "activity_id": "activity_id",
     "date": "sample_date", "local_time": "sample_time", "source_timezone": "sample_timezone",
@@ -538,7 +539,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
 def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: str, version_id: str):
     """Register original map/table identities and every retained study document."""
     manifest_entries, source_entries, seen_ids, native_ids = [], {}, set(), {}
-    manifest_names = [name for name in ("model-sources.json", "wqp_20261013/source-manifest.json", COHORT_MANIFEST) if name in files]
+    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", COHORT_MANIFEST) if name in files]
     for manifest_name in manifest_names:
         parent = PurePosixPath(manifest_name).parent
         native = _json(files[manifest_name])
@@ -825,7 +826,9 @@ class PublishedStudyStore:
                     "source_id": record["source_entries"][raw_path],
                 }
         summary = _json(original(WQP_SUMMARY)) if WQP_SUMMARY in record["source_entries"] else {}
-        flow_methods = _json(original(FLOW_METHODS)) if FLOW_METHODS in record["source_entries"] else {}
+        methods_name = next((name for name in (FLOW_METHODS, FLOW_METHODS_PUBLIC)
+                             if name in record["source_entries"]), None)
+        flow_methods = _json(original(methods_name)) if methods_name else {}
         available_stations = {row["site_id"]: row for row in tables["stations"]}
         for source in summary.get("source_row_counts", []):
             site_id = source["station_id"]
