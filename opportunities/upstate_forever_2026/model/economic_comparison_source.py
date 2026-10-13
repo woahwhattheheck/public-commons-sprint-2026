@@ -16,7 +16,7 @@ from .common import atomic_json, describe_file, digest, file_digest, held, read_
 from .workspace import Workspace
 
 SCHEMA = "upstate.economic-comparison-source/v1"
-EDITION = "economic-comparison-scientific-source-20261013-v2-programme"
+EDITION = "economic-comparison-scientific-source-20261013-v3-native-context"
 ROOT = "economic-comparison-report-sources"
 RECIPE_NAME = "observed-report.json"
 MANIFEST_NAME = "model-sources.json"
@@ -123,7 +123,14 @@ def _retained_editions(directory, comparison, record, members):
                 and original["report_sha256"] == comparison[side]["report_sha256"]
                 and original["zone_id"] == comparison[side]["zone_id"],
                 "The captured Economic input names a different physical source.")
-        result[side] = edition
+        report_name = side + "-report.json"
+        require(report_name in by_name, "The comparison omits its completed Economic report.")
+        report = read_json(_member(directory, by_name[report_name]))
+        require(report.get("schema") == "upstate.decision-report/v1"
+                and digest(report) == record["identity"][side + "_report_sha256"],
+                "The captured Economic report differs from the comparison identity.")
+        # Internal context only; the captured edition itself is never rewritten.
+        result[side] = {**edition, "retained_physical_report": report}
     return result
 
 
@@ -180,6 +187,119 @@ def _review_audit(cost, edition, run_id):
             "current_amounts_and_finance_match": amounts_match,
             "current_scope_matches": scope_match,
             "current_basis_matches": bool(source_match and amounts_match and scope_match and reference_match)}
+
+
+def _model_context_blocks(cost, labels, row, editions):
+    value = cost.get("native_model_context")
+    if value is None:
+        return ["This original cost edition did not capture a native configuration snapshot. "
+                "Grid and profile IDs remain in the original report; CRS, boundary and parameter "
+                "values are not inferred from a title or from a newer Workspace edition."]
+    require(isinstance(value, dict)
+            and value.get("schema") == "upstate.restoration-native-model-context/v1",
+            "Retain the complete original native configuration context.")
+    body = {key: item for key, item in value.items() if key != "sha256"}
+    require(digest(body) == value.get("sha256"), "The captured native configuration changed.")
+    bound, grid, profile = value["binding"], value["grid"], value["profile"]
+    require(bound == cost.get("native_binding")
+            and grid["id"] == bound["grid_id"] and profile["id"] == bound["profile_id"]
+            and value["scenario"]["id"] == bound["scenario_id"],
+            "The original configuration snapshot differs from its retained design binding.")
+    matches = {
+        side: bool(bound.get("run_id") == row["run_id"]
+                   and all(bound.get(key) == editions[side]["input"].get(key)
+                           for key in ("report_id", "report_sha256", "zone_id"))
+                   and all(bound.get(key) == (row.get(side) or {}).get(key)
+                           for key in ("grid_id", "profile_id", "scenario_id")))
+        for side in labels
+    }
+    definition, spec = grid["grid"], grid["spec"]
+    zone = value["physical_source"].get("zone") or {}
+    spatial = [
+        ["Current edition binding matches captured configuration", matches],
+        ["CRS", definition.get("crs_name") or definition.get("crs")],
+        ["Grid cell size (m) / area (ha)", {"resolution_m": definition.get("resolution_m"),
+                                         "pixel_area_ha": definition.get("pixel_area_ha")}],
+        ["Raster dimensions / bounds in source CRS", {key: definition.get(key) for key in
+                                                     ("width", "height", "bounds")}],
+        ["Original affine transform", definition.get("transform")],
+        ["Original reference-grid alignment", definition.get("reference_alignment")],
+        ["Model domain selection", spec.get("model_domain")],
+        ["Added model-context buffer (m)", spec.get("upstream_buffer_m")],
+        ["Reporting-mask source selection", spec.get("reporting_area")],
+        ["Selected report zone", {key: zone.get(key) for key in
+                                 ("id", "title", "scope", "area_ha", "original_area_ha")}],
+    ]
+    parameters = []
+    for model in ("ndr", "sdr"):
+        declared = profile.get(model)
+        if isinstance(declared, dict):
+            parameters.extend([[model.upper(), key, declared[key]] for key in sorted(declared)])
+    sources = []
+    for item in value["sources"]:
+        entry = item["entry"]
+        sources.append([
+            ", ".join(item["roles"]), entry.get("title") or entry["id"],
+            entry.get("vintage"), entry.get("units"),
+            entry.get("uri"), entry["body"]["sha256"],
+        ])
+    return [
+        "Captured native model context — " + " / ".join(side.capitalize() for side in labels) +
+        ". Values come from the exact selected grid, profile and source descriptors. "
+        "A nonmatching binding denotes historical context and supplies no current-source assumption.",
+        _table(["Spatial or reporting definition", "Original saved value"], spatial,
+               "The computational domain, reporting mask, selected zone, shared finite-cell support "
+               "and treatment footprint serve different purposes. Raster dimensions and bounds "
+               "are not an implementation area. Full CRS WKT, normalization, masks and input "
+               "descriptors remain in native_model_context within the saved input."),
+        _table(["Native model", "Saved parameter", "Original value"], parameters,
+               "These are original selected profile declarations, including routing and SDR l_max "
+               "where present. Parameter choices are not probabilities, calibrated uncertainty "
+               "bounds or new execution results. Missing model settings remain unstated."),
+        _table(["Native provenance", "Original saved value"], [
+            ["Profile title / ID", {"title": profile.get("title"), "id": profile["id"]}],
+            ["Declared profile references", profile.get("references")],
+            ["Baseline requested / observed versions", {key: value["baseline"].get(key) for key in
+                                                        ("invest_version", "model_versions")}],
+            ["Alternative requested / observed versions", {key: value["alternative"].get(key) for key in
+                                                           ("invest_version", "model_versions")}],
+            ["Biophysical table identity", profile.get("table_summary")],
+            ["Snapshot SHA256", value["sha256"]],
+        ], "Requested model version and retained observed stage provenance are distinct. "
+           "The complete original coefficient rows and source classifications remain in the snapshot."),
+        _table(["Source role", "Original source", "Vintage", "Declared units", "Reference", "SHA256"],
+               sources, "Source classifications and authored assumptions remain in each complete entry; "
+                        "a retained source descriptor does not make a simulated input an observation."),
+    ]
+
+
+def _physical_context_sections(editions):
+    if not editions:
+        return []
+    groups = {}
+    for side in ("first", "second"):
+        report = editions[side]["retained_physical_report"]
+        physical = report.get("physical_source")
+        if isinstance(physical, dict):
+            groups.setdefault(digest(physical), {"source": physical, "sides": []})["sides"].append(side)
+    sections = []
+    for group in groups.values():
+        source, labels = group["source"], group["sides"]
+        zone = source.get("zone") or {}
+        sections.append([" / ".join(side.capitalize() for side in labels) + " original reporting boundary", [
+            _table(["Original geographic definition", "Retained value"], [
+                ["Selected zone", zone.get("title") or zone.get("id")],
+                ["Selected scope", zone.get("scope")],
+                ["Selected geometry area (ha)", zone.get("area_ha")],
+                ["Original geometry area before reporting intersection (ha)", zone.get("original_area_ha")],
+                ["Boundary source", zone.get("source")],
+                ["Native report selection", source.get("selection")],
+            ], "Geometry area is not shared raster support or implementation hectares. "
+               "The original report selection and boundary source are retained unchanged."),
+            *[str(source[key]) for key in ("scope_note", "mass_note", "interpretation")
+              if source.get(key)],
+        ]])
+    return sections
 
 
 def _programme_blocks(cost, labels, row, editions):
@@ -273,6 +393,7 @@ def _programme_blocks(cost, labels, row, editions):
         "Benchmark applicability: " + _text(schedule.get("benchmark_applicability")),
         "Unpriced scope: " + _text(priced.get("unpriced_excluded_scopes")),
     ])
+    blocks.extend(_model_context_blocks(cost, labels, row, editions))
     return blocks
 
 
@@ -343,7 +464,7 @@ def _implementation_sections(row, editions):
         require(len(originals) == 1 and originals[0] == cost,
                 "The comparison cost differs from the original captured Economic selection.")
         if isinstance(cost.get("programme"), dict):
-            key = digest({name: cost.get(name) for name in ("programme", "priced_basis", "native_binding")})
+            key = digest({name: cost.get(name) for name in ("programme", "priced_basis", "native_binding", "native_model_context")})
             groups.setdefault(key, {"cost": cost, "sides": []})["sides"].append(side)
     for item in groups.values():
         blocks.extend(_programme_blocks(item["cost"], item["sides"], row, editions))
@@ -400,6 +521,7 @@ def report_sections(comparison, *, retained_editions=None):
         sections.append([label + " saved budget and target criteria", [
             _table(["Original field", "Retained value"], _field_rows(comparison["criteria"][side])),
         ]])
+    sections.extend(_physical_context_sections(retained_editions))
     labels = (("capital", "Upfront capital"), ("annual_operating", "Annual operating"),
               ("annualized", "Annualized"), ("present_value", "Present value"))
     for row in comparison["scenarios"]:
@@ -460,6 +582,25 @@ def report_sections(comparison, *, retained_editions=None):
         blocks.append(_table(["Edition", "Original quantity", "Support", "Valid cells", "Shared area (ha)"],
                              support, "Shared model support is not an implementation treatment quantity. "
                                       "Complete original output fields remain in comparison.json."))
+        total_rows = []
+        for side, original in zip(("First", "Second"), originals):
+            for metric, output in (original.get("outputs") or {}).items():
+                if "baseline_total_all_valid" in output or "alternative_total_all_valid" in output:
+                    total_rows.append([
+                        side, metric, output.get("baseline_total_all_valid"),
+                        output.get("alternative_total_all_valid"),
+                        {"baseline": output.get("baseline_valid_cells"),
+                         "alternative": output.get("alternative_valid_cells")},
+                        output.get("units"),
+                    ])
+        if total_rows:
+            blocks.append(_table(["Edition", "Original quantity", "Baseline all-valid total",
+                                  "Alternative all-valid total", "Each run's valid cells", "Units"],
+                                 total_rows, "These original totals use each run's own valid cells in "
+                                 "the selected zone. They are context, not the denominator for avoided "
+                                 "export or cost effectiveness. The paired quantities above use the "
+                                 "original all-run common support. No subtraction of unmatched totals "
+                                 "is introduced."))
         cost_effectiveness = []
         for side, original in zip(("First", "Second"), originals):
             for metric, result in (original.get("economics") or {}).items():
@@ -471,7 +612,10 @@ def report_sections(comparison, *, retained_editions=None):
             blocks.append(_table(["Edition", "Original quantity", "Saved cost per avoided mass",
                                   "Units", "Original basis"], cost_effectiveness,
                                  "Values are copied from the completed Economic report. Unavailable values "
-                                 "remain unstated; no new benefit or unit-cost calculation is performed."))
+                                 "remain unstated; no new benefit or unit-cost calculation is performed. "
+                                 "Each pollutant uses the original annualized cost for its declared scope divided by "
+                                 "its positive paired avoided annual mass. Pollutant ratios are separate "
+                                 "views of that same cost, not allocated shares or additive benefits."))
 
         if row["changes"]:
             blocks.append(_table(["Original field", "Change", "First", "Second"],
