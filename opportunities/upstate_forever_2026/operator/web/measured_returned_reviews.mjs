@@ -44,7 +44,7 @@ export function mountReturnedReviews(root,host,{memory=new Map(),openLargeFiles=
  async function work(fn){if(busy||!active())return;busy=true;root.setAttribute('aria-busy','true');controls();try{await fn();}catch(error){message(error.message,true);}finally{busy=false;if(active()){root.setAttribute('aria-busy','false');controls();}}}
  function links(record){
   const downloads=record?._downloads||[];
-  return downloads.length?'<div class="mrr-actions">'+downloads.map(file=>'<a href="'+esc(file.url)+'" download="'+esc(file.filename||'')+'">'+esc(file.label||file.filename||'Original file')+'</a>').join('')+'</div>':'<p class="mrr-small">Reopen this saved record to load its original download links.</p>';
+  return downloads.length?'<div class="mrr-actions">'+downloads.map(file=>'<a href="'+esc(file.url+(file.url.includes('?')?'&':'?')+'download=1')+'" download="'+esc(file.filename||'')+'">'+esc(file.label||file.filename||'Original file')+'</a>').join('')+'</div>':'<p class="mrr-small">Reopen this saved record to load its original download links.</p>';
  }
  function archiveDetails(role){
   const chosen=state.archives[role],record=(catalog.archives||[]).find(row=>archiveKey(row)===archiveKey(chosen));
@@ -78,9 +78,9 @@ export function mountReturnedReviews(root,host,{memory=new Map(),openLargeFiles=
   if(!id)throw Error('Choose a saved comparison.');
   const value=await read('inspect',{kind:'plan',id});
   if(value.record?.id!==id||value.record.kind!=='plan'||!value.record.native_plan_id)throw Error('The saved comparison identity is incomplete.');
-  plan={...value.record,_downloads:value.downloads||[]};state.planId=id;decisions=null;q('[data-decisions]').value='';q('[data-decision-review]').replaceChildren();paintPlan();controls();save();
+  plan={...value.record,_downloads:value.downloads||[]};state.planId=id;q('[data-plans]').value=id;decisions=null;q('[data-decisions]').value='';q('[data-decision-review]').replaceChildren();paintPlan();controls();save();
  }
- async function openResult(id){if(!id)throw Error('Choose an independent reviewed project.');const value=await read('inspect',{kind:'result',id});if(value.record?.id!==id||value.record.kind!=='result')throw Error('The saved incorporation identity differs.');result={...value.record,_downloads:value.downloads||[]};state.resultId=id;paintResult();save();}
+ async function openResult(id){if(!id)throw Error('Choose an independent reviewed project.');const value=await read('inspect',{kind:'result',id});if(value.record?.id!==id||value.record.kind!=='result')throw Error('The saved incorporation identity differs.');result={...value.record,_downloads:value.downloads||[]};state.resultId=id;q('[data-results]').value=id;paintResult();save();}
  async function upload(file){
   requireActive();const result=await host.api('/api/upload',{method:'POST',raw:file,filename:file.name});requireActive();
   if(!result.id||!result.sha256||result.bytes!==file.size)throw Error('The retained upload differs from the selected complete file.');
@@ -143,14 +143,14 @@ export function mountReturnedReviews(root,host,{memory=new Map(),openLargeFiles=
    const tokens=new Set();let useReturn=0,keepCurrent=0;
    for(const choice of value.decisions){const token=canonical([choice.kind,choice.key]);if(!['measurement','station'].includes(choice.kind)||typeof choice.key!=='string'||tokens.has(token)||!['current','return'].includes(choice.choice))throw Error('The file contains an incomplete, repeated or invalid decision. Finish the original review desk first.');tokens.add(token);if(choice.choice==='return')useReturn++;else keepCurrent++;}
    const retained=await upload(file);if(!active()||version!==generation||state.planId!==planId)return;
-   decisions={...retained,plan_id:planId};q('[data-decision-review]').innerHTML='<p><strong>'+esc(value.reviewer)+'</strong> · '+useReturn+' returned choices · '+keepCurrent+' kept current</p><p>'+esc(value.reason)+'</p><p class="mrr-small">The native engine verifies every original group and source constraint before incorporation.</p>';controls();message('Exact saved decision file retained. Review the choices, then create the separate result.');
+   decisions={...retained,plan_id:planId};q('[data-decision-review]').innerHTML='<p><strong>'+esc(retained.filename)+'</strong> · '+amount(retained.bytes)+' bytes</p><p><strong>'+esc(value.reviewer)+'</strong> · '+useReturn+' returned choices · '+keepCurrent+' kept current</p><p>'+esc(value.reason)+'</p><p class="mrr-small">The native engine verifies every original group and source constraint before incorporation.</p>';controls();message('Exact saved decision file retained. Review the choices, then create the separate result.');
   });
  },{signal:abort.signal});
  q('[data-apply-form]').addEventListener('submit',event=>{event.preventDefault();work(async()=>{if(!decisions||decisions.plan_id!==state.planId)throw Error('Open the saved decisions for the current comparison.');await queue('measurements.returned-review.apply',{plan_id:state.planId,decisions_upload_id:decisions.upload_id});});},{signal:abort.signal});
  q('[data-refresh]').addEventListener('click',()=>work(loadCatalog),{signal:abort.signal});
  q('[data-open-plan]').addEventListener('click',()=>work(()=>openPlan(q('[data-plans]').value)),{signal:abort.signal});
  q('[data-open-result]').addEventListener('click',()=>work(()=>openResult(q('[data-results]').value)),{signal:abort.signal});
- q('[data-task]').addEventListener('click',()=>{if(active()&&currentTask)host.showTask?.(currentTask);},{signal:abort.signal});
+ q('[data-task]').addEventListener('click',async()=>{if(active()&&currentTask){try{await host.showTask?.(currentTask);}catch(error){message(error.message,true);}}},{signal:abort.signal});
  q('[data-retry]').hidden=!state.lastRequest;
  q('[data-retry]').addEventListener('click',()=>work(async()=>{const entry=readEntry(state.lastRequest);if(!entry||entry.request?.workspace!==workspace)throw Error('The saved original request is unavailable. Inspect native tasks before submitting again.');await observeTask(entry,state.lastRequest,true);}),{signal:abort.signal});
  panel.addEventListener('toggle',()=>{if(panel.open&&!loaded)work(async()=>{await recoverPointer();await loadCatalog();if(state.planId)await openPlan(state.planId);if(state.resultId)await openResult(state.resultId);message('Original saved comparisons and independent results loaded.');});},{signal:abort.signal});
