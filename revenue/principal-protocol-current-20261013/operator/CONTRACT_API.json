@@ -1,11 +1,11 @@
 {
   "schema": "principal.contract-api.v2",
-  "edition": "principal-current-accounting-2",
+  "edition": "principal-current-accounting-3",
   "source": {
     "repository": "principal-Protocol-org/principal",
     "baseCommit": "f35b914cbf4896255a3711d81795b810b0a47f1c",
     "baseTree": "4d07bd2718558e467956f7744bfd6052c4eb8845",
-    "implementationEdition": 2,
+    "implementationEdition": 3,
     "implementationSource": "CURRENT_ACCOUNTING_SOURCE.json",
     "migration": "new-initialization-only"
   },
@@ -77,7 +77,7 @@
           "args": {},
           "returns": "u64",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 oracle_adapter contract."
+          "description": "Read the deployed accounting edition 3 oracle_adapter contract."
         },
         "get_sample": {
           "args": {
@@ -85,7 +85,7 @@
           },
           "returns": "Option<OracleSample>",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 oracle_adapter contract."
+          "description": "Read the deployed accounting edition 3 oracle_adapter contract."
         },
         "first_at_or_after": {
           "args": {
@@ -93,7 +93,7 @@
           },
           "returns": "Option<OracleSample>",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 oracle_adapter contract."
+          "description": "Read the deployed accounting edition 3 oracle_adapter contract."
         }
       }
     },
@@ -192,7 +192,7 @@
     },
     "principal_manager": {
       "sourcePath": "contracts/principal_manager/src/lib.rs",
-      "sourceSha256": "b878f88430c4ad561450d61bdff60f2454b876d42de28fff2acaa69315b8ab8b",
+      "sourceSha256": "d1876d4ab9004a680ad1411b99871b9d3433516b453a58d2c7c645d666361072",
       "methods": {
         "initialize": {
           "args": {
@@ -310,43 +310,51 @@
           "args": {},
           "returns": "u32",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 principal_manager contract."
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
         },
         "locked_shares": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 principal_manager contract."
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
         },
         "total_deposited_underlying": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 principal_manager contract."
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
         },
         "total_paid_principal": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 principal_manager contract."
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
         },
         "total_paid_yield": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 principal_manager contract."
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
         },
         "principal_reserve": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 principal_manager contract."
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
         },
         "backing_underlying": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 principal_manager contract."
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "preview_mint": {
+          "args": {
+            "sy_shares": "i128"
+          },
+          "returns": "MintPreview",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
         }
       }
     },
@@ -527,7 +535,7 @@
     },
     "recovery_escrow": {
       "sourcePath": "contracts/recovery_escrow/src/lib.rs",
-      "sourceSha256": "f6d77cb6bed42ffd7aa681ee1df8d6c2afcd2e2602b94d894817d0561c2c4a6c",
+      "sourceSha256": "b53b9dd7e192a0815263753515e700009a571931231c039467cb073abdb18678",
       "methods": {
         "initialize": {
           "args": {
@@ -617,7 +625,7 @@
           "args": {},
           "returns": "u64",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 recovery_escrow contract."
+          "description": "Read the deployed accounting edition 3 recovery_escrow contract."
         },
         "yield_recovery_receipt": {
           "args": {
@@ -625,7 +633,16 @@
           },
           "returns": "Option<YieldRecovery>",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 recovery_escrow contract."
+          "description": "Read the deployed accounting edition 3 recovery_escrow contract."
+        },
+        "recover_fraction": {
+          "args": {
+            "caller": "Address",
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact recovery_escrow method with current SAC issuer; original source account deauthorized authorization."
         }
       }
     },
@@ -897,7 +914,7 @@
     },
     "yt_token": {
       "sourcePath": "contracts/yt_token/src/lib.rs",
-      "sourceSha256": "9ae3f145dc7d0851319d94cee5bc47bbab27de4d19e25fb12a5839c45efe2108",
+      "sourceSha256": "0c869970e9fdeb1a26a153b2bfa0c31b102bf4fef5cd2d4b7e5cb15dfa1cc347",
       "methods": {
         "initialize": {
           "args": {
@@ -1116,37 +1133,37 @@
           "args": {},
           "returns": "u32",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 yt_token contract."
+          "description": "Read the deployed accounting edition 3 yt_token contract."
         },
         "accounting_rate": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 yt_token contract."
+          "description": "Read the deployed accounting edition 3 yt_token contract."
         },
         "maturity_sample": {
           "args": {},
           "returns": "Option<OracleSample>",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 yt_token contract."
+          "description": "Read the deployed accounting edition 3 yt_token contract."
         },
         "total_backing_credit": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 yt_token contract."
+          "description": "Read the deployed accounting edition 3 yt_token contract."
         },
         "total_pending": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 yt_token contract."
+          "description": "Read the deployed accounting edition 3 yt_token contract."
         },
         "total_claimed": {
           "args": {},
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 yt_token contract."
+          "description": "Read the deployed accounting edition 3 yt_token contract."
         },
         "backing_credit": {
           "args": {
@@ -1154,7 +1171,7 @@
           },
           "returns": "i128",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 yt_token contract."
+          "description": "Read the deployed accounting edition 3 yt_token contract."
         },
         "yield_position": {
           "args": {
@@ -1162,7 +1179,7 @@
           },
           "returns": "YieldPosition",
           "readOnly": true,
-          "description": "Read the deployed accounting edition 2 yt_token contract."
+          "description": "Read the deployed accounting edition 3 yt_token contract."
         },
         "settle_yield": {
           "args": {
@@ -1202,6 +1219,49 @@
           "returns": "i128",
           "readOnly": false,
           "description": "Invoke the exact yt_token method with original recovery escrow authorization."
+        },
+        "inverse_index": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "reward_scale": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "max_accounting_rate": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "reward_remainder": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "last_inverse_index": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "seize_fraction": {
+          "args": {
+            "caller": "Address",
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact yt_token method with original recovery escrow authorization."
         }
       }
     }
@@ -1225,7 +1285,8 @@
     "RecoveryMovement": {
       "amount": "i128",
       "backing_credit": "i128",
-      "pending_underlying": "i128"
+      "pending_underlying": "i128",
+      "reward_remainder": "i128"
     },
     "YieldPosition": {
       "balance": "i128",
@@ -1233,7 +1294,11 @@
       "pending": "i128",
       "current_rate": "i128",
       "projected_yield": "i128",
-      "last_factor": "i128"
+      "last_factor": "i128",
+      "inverse_index": "i128",
+      "last_inverse_index": "i128",
+      "reward_remainder": "i128",
+      "reward_scale": "i128"
     },
     "YieldRecovery": {
       "sequence": "u64",
@@ -1241,13 +1306,36 @@
       "issuer": "Address",
       "yt_amount": "i128",
       "pending_underlying": "i128",
-      "recorded_at": "u64"
+      "recorded_at": "u64",
+      "reward_remainder": "i128"
+    },
+    "MintPreview": {
+      "sy_shares": "i128",
+      "underlying": "i128",
+      "oracle_rate": "i128",
+      "inverse_index": "i128",
+      "reward_scale": "i128",
+      "original_rate_notional": "i128",
+      "issued_notional": "i128",
+      "issuance_adjustment": "i128"
     }
   },
   "accounting": {
-    "edition": 2,
+    "edition": 3,
     "scale": "10000000",
-    "rounding": "Checked U256 floor/ceil; exact raw integer amounts",
-    "maturity": "First authenticated timely sample at or after maturity, frozen once"
+    "rounding": "Checked U256 floor/ceil and exact earned numerator carry",
+    "maturity": "First authenticated timely sample at or after maturity, frozen once",
+    "rewardScale": "1000000000000000000000000000000",
+    "supportedOracleRate": {
+      "min": "1",
+      "max": "1000000000000000000"
+    },
+    "inverseRelativeCeilingError": "strictly less than 1e-19 across the supported interval",
+    "issuance": "floor(actual underlying * rewardScale / inverseIndex); preview retains original-rate notional and exact difference",
+    "principal": "floor(burned notional * 1e7 / frozen original rate)",
+    "reserve": "ceil(outstanding PT * frozen/current inverseIndex / rewardScale)",
+    "ordinaryTransfer": "settle both; earned integer and fractional reward stays with original holder",
+    "recovery": "explicit issuer-authorized exact proportional complete earned numerator; full transfer moves exact remainder",
+    "cost": "O(1) account storage and arithmetic; no issuance lot/history scan"
   }
 }

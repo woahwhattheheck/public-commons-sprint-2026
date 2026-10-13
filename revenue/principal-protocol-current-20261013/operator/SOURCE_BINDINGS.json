@@ -1,6 +1,6 @@
 {
   "schema": "principal.operator-source-bindings.v1",
-  "edition": "principal-current-accounting-2",
+  "edition": "principal-current-accounting-3",
   "upstream": {
     "repository": "principal-Protocol-org/principal",
     "commit": "f35b914cbf4896255a3711d81795b810b0a47f1c",
@@ -15,10 +15,10 @@
     "manifest": "contracts-source/CURRENT_ACCOUNTING_SOURCE.json",
     "packet": {
       "path": "source/current-accounting-packet.json",
-      "bytes": 7482441,
-      "sha256": "17e49d735384874c3db1116de7d449078e0a6f12246eb4598661821bb45c5915"
+      "bytes": 7509894,
+      "sha256": "71d7d5b9b1adaf6fb4c9a2bb6b49f614cd9c5c101a0454c75985e54f9de9eb04"
     },
-    "members": 230
+    "members": 231
   },
   "original": {
     "directory": "source/original",
@@ -43,7 +43,7 @@
       "key": "principal_manager",
       "apiSourcePath": "contracts/principal_manager/src/lib.rs",
       "installedSourcePath": "contracts-source/contracts/principal_manager/src/lib.rs",
-      "sha256": "b878f88430c4ad561450d61bdff60f2454b876d42de28fff2acaa69315b8ab8b"
+      "sha256": "d1876d4ab9004a680ad1411b99871b9d3433516b453a58d2c7c645d666361072"
     },
     {
       "key": "pt_token",
@@ -55,7 +55,7 @@
       "key": "recovery_escrow",
       "apiSourcePath": "contracts/recovery_escrow/src/lib.rs",
       "installedSourcePath": "contracts-source/contracts/recovery_escrow/src/lib.rs",
-      "sha256": "f6d77cb6bed42ffd7aa681ee1df8d6c2afcd2e2602b94d894817d0561c2c4a6c"
+      "sha256": "b53b9dd7e192a0815263753515e700009a571931231c039467cb073abdb18678"
     },
     {
       "key": "risk_control",
@@ -73,8 +73,17 @@
       "key": "yt_token",
       "apiSourcePath": "contracts/yt_token/src/lib.rs",
       "installedSourcePath": "contracts-source/contracts/yt_token/src/lib.rs",
-      "sha256": "9ae3f145dc7d0851319d94cee5bc47bbab27de4d19e25fb12a5839c45efe2108"
+      "sha256": "0c869970e9fdeb1a26a153b2bfa0c31b102bf4fef5cd2d4b7e5cb15dfa1cc347"
     }
   ],
-  "status": "SOURCE_REVIEWED_NATIVE_AND_BROWSER_NOT_YET_EXECUTED"
+  "status": "SOURCE_REVIEWED_NATIVE_AND_BROWSER_NOT_YET_EXECUTED",
+  "previousEditions": [
+    {
+      "edition": "principal-current-accounting-2",
+      "api": "source/editions/accounting-2/CONTRACT_API.json",
+      "publishedCommit": "162daa67331d57235da4f8b24bd97801d0c325ec",
+      "completeSourceCarrier": "added7f809300307d18748689fad67fc1a356d7d",
+      "scope": "Original source/history retained; no automatic migration of an earlier workspace or deployed contract."
+    }
+  ]
 }

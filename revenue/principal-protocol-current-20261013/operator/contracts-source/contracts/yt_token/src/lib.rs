@@ -1,9 +1,10 @@
-//! SEP41 YT with conserved underlying backing credit.
-//! Current accounting edition 2. This is a new-initialization source selection:
-//! balances from the former factor-rebase edition cannot silently infer paid history.
-//! Every mint assigns funded underlying credit; settle debits it before creating a
-//! pending claim. Transfers move remaining credit after settling both participants.
-//! Seizure additionally moves proportional earned pending to the original escrow.
+//! SEP41 YT accounting edition 3: fixed inverse-liability index and exact reward carry.
+//! New initialization only; neither former factor-rebase nor edition-2 rounded
+//! credit storage can be interpreted as this edition's accrued reward history.
+//! Settle balance*(previous_inverse-current_inverse) over the immutable 1e30
+//! denominator. Ordinary transfer leaves earned integer/fractional reward with
+//! the original holder; explicit issuer recovery moves a proven proportional share.
+//! Every ordinary action touches only its two accounts: no issuance-lot scans.
 #![no_std]
 
 use soroban_sdk::{
@@ -12,7 +13,7 @@ use soroban_sdk::{
 };
 
 #[path="../../accounting_math.rs"] mod accounting_math;
-use accounting_math::{add,sub,floor,ceil};
+use accounting_math::{add,sub,floor,ceil,inverse,reward,proportional_reward,REWARD_SCALE,MAX_ACCOUNTING_RATE};
 
 pub const SCALE: i128 = 10_000_000; // 1e7, matches PrincipalManager's SCALE
 
@@ -67,6 +68,7 @@ pub enum Error {
     AccountingEditionRequired = 15,
     InvalidSettlementSample = 16,
     AlreadyMature = 17,
+    UnsupportedAccountingRate = 18,
 }
 
 // ---------------------------------------------------------------------------
@@ -88,11 +90,14 @@ pub enum DataKey {
     TotalSupply,
     AccountingEdition,
     GenesisRate,
-    TotalCredit,
+    TotalCredit, // reserved edition-2 key; unused by edition-3 economics.
     TotalPending,
     TotalClaimed,
     FrozenSample,
-    BackingCredit(Address),
+    InverseIndex,
+    LastInverse(Address),
+    RewardRemainder(Address),
+    BackingCredit(Address), // reserved edition-2 key; never read by edition 3.
     Balance(Address),
     Allowance(Address, Address),
     YieldIndex, // display factor only: floor(genesis_rate*SCALE/current_rate).
@@ -106,12 +111,13 @@ pub enum DataKey {
 pub struct OracleSample { pub sequence:u64,pub value:i128,pub timestamp:u64,pub observed_at:u64 }
 #[contracttype]
 #[derive(Clone,Debug,Eq,PartialEq)]
-pub struct RecoveryMovement {pub amount:i128,pub backing_credit:i128,pub pending_underlying:i128}
+pub struct RecoveryMovement {pub amount:i128,pub backing_credit:i128,pub pending_underlying:i128,pub reward_remainder:i128}
 #[contracttype]
 #[derive(Clone,Debug,Eq,PartialEq)]
 pub struct YieldPosition {
  pub balance:i128,pub backing_credit:i128,pub pending:i128,
  pub current_rate:i128,pub projected_yield:i128,pub last_factor:i128,
+ pub inverse_index:i128,pub last_inverse_index:i128,pub reward_remainder:i128,pub reward_scale:i128,
 }
 #[contracttype]
 #[derive(Clone)]
@@ -165,7 +171,9 @@ impl YTTokenContract {
         if genesis_rate<=0 || maturity<=env.ledger().timestamp() || decimals!=7 {
             panic_with_error!(&env,Error::InvalidSettlementSample);
         }
-        env.storage().instance().set(&DataKey::AccountingEdition,&2u32);
+        env.storage().instance().set(&DataKey::AccountingEdition,&3u32);
+        if genesis_rate>MAX_ACCOUNTING_RATE{panic_with_error!(&env,Error::UnsupportedAccountingRate)}
+        env.storage().instance().set(&DataKey::InverseIndex,&inverse(&env,genesis_rate));
         env.storage().instance().set(&DataKey::GenesisRate,&genesis_rate);
         env.storage().instance().set(&DataKey::TotalCredit,&0i128);
         env.storage().instance().set(&DataKey::TotalPending,&0i128);
@@ -235,7 +243,7 @@ impl YTTokenContract {
         Self::settle(&env, &from);
         Self::settle(&env, &to);
 
-        Self::move_credit(&env,&from,&to,amount,from_balance,false);
+        // Earned whole and fractional rewards stay with their original holder.
         Self::set_balance(&env, &from, sub(&env,from_balance,amount));
         let to_balance = Self::get_balance(&env, &to);
         Self::set_balance(&env, &to, add(&env,to_balance,amount));
@@ -266,7 +274,7 @@ impl YTTokenContract {
         Self::settle(&env, &from);
         Self::settle(&env, &to);
 
-        Self::move_credit(&env,&from,&to,amount,from_balance,false);
+        // Earned whole and fractional rewards stay with their original holder.
         Self::set_balance(&env, &from, sub(&env,from_balance,amount));
         let to_balance = Self::get_balance(&env, &to);
         Self::set_balance(&env, &to, add(&env,to_balance,amount));
@@ -342,11 +350,7 @@ impl YTTokenContract {
         if env.ledger().timestamp()>=Self::maturity(env.clone()){panic_with_error!(&env,Error::AlreadyMature)}
         Self::update_yield_index(env.clone());
         Self::settle(&env, &to);
-        let rate=Self::accounting_rate(env.clone());
-        let credit=ceil(&env,amount,SCALE,rate);
-        Self::set_credit(&env,&to,add(&env,Self::credit(&env,&to),credit));
-        let total_credit=Self::total_backing_credit(env.clone());
-        env.storage().instance().set(&DataKey::TotalCredit,&add(&env,total_credit,credit));
+        // Manager has funded amount*inverse_index/REWARD_SCALE before mint.
 
         let bal = Self::get_balance(&env, &to);
         Self::set_balance(&env, &to, add(&env,bal,amount));
@@ -374,10 +378,8 @@ impl YTTokenContract {
         }
         Self::update_yield_index(env.clone());
         Self::settle(&env, &from);
-        let credit=Self::credit(&env,&from);
-        let retired=if amount==bal {credit}else{floor(&env,credit,amount,bal)};
-        Self::set_credit(&env,&from,sub(&env,credit,retired));
-        env.storage().instance().set(&DataKey::TotalCredit,&sub(&env,Self::total_backing_credit(env.clone()),retired));
+        // Burn never destroys already earned fractional or whole rewards.
+        // The minter permits burns only at the same frozen maturity index.
         Self::set_balance(&env, &from, sub(&env,bal,amount));
         let total: i128 = env
             .storage()
@@ -398,7 +400,7 @@ impl YTTokenContract {
     /// `account`'s authorization. Callable only by the configured `RecoveryEscrow` — see
     /// `SYWrapper::seize` for the full rationale. Settles both sides' pending yield first, same
     /// as any other balance-changing path. The seized fraction of earned pending yield
-    /// moves with its remaining backing credit into the authenticated recovery escrow.
+    /// and exact sub-atom reward numerator move into the authenticated recovery escrow.
     pub fn seize(env:Env,caller:Address,account:Address,amount:i128)->i128 {
         Self::seize_position(env,caller,account,amount).amount
     }
@@ -420,18 +422,17 @@ impl YTTokenContract {
         Self::settle(&env, &account);
         Self::settle(&env, &caller);
 
-        let credit=Self::credit(&env,&account);
-        let pending=Self::pending_claim(env.clone(),account.clone());
-        let moved_credit=if amount==bal{credit}else{floor(&env,credit,amount,bal)};
-        let moved_pending=if amount==bal{pending}else{floor(&env,pending,amount,bal)};
-        Self::move_credit(&env,&account,&caller,amount,bal,true);
+        let (moved_pending,moved_fraction)=proportional_reward(&env,
+            Self::pending_claim(env.clone(),account.clone()),Self::fraction(&env,&account),amount,bal);
+        Self::move_reward(&env,&account,&caller,moved_pending,moved_fraction);
+        let moved_credit=ceil(&env,amount,Self::inverse_index(env.clone()),REWARD_SCALE);
         Self::set_balance(&env, &account, sub(&env,bal,amount));
         let to_balance = Self::get_balance(&env, &caller);
         Self::set_balance(&env, &caller, add(&env,to_balance,amount));
 
         env.events()
             .publish((symbol_short!("seize"),), (caller, account, amount));
-        RecoveryMovement{amount,backing_credit:moved_credit,pending_underlying:moved_pending}
+        RecoveryMovement{amount,backing_credit:moved_credit,pending_underlying:moved_pending,reward_remainder:moved_fraction}
     }
 
     // --- yield accrual ---
@@ -439,8 +440,8 @@ impl YTTokenContract {
     /// Permissionless refresh of the actual rate and display-only genesis factor.
     /// Before maturity this requires a fresh oracle observation. At maturity the
     /// first authenticated, timely sample at or after the boundary is frozen once.
-    /// Accrual is calculated from each holder's remaining funded underlying credit;
-    /// this display factor never rebases principal after an earlier yield claim.
+    /// Accrual uses balance times the change in the fixed-precision inverse index,
+    /// retaining every fractional reward. This factor is only a display value.
     pub fn update_yield_index(env: Env) {
         Self::assert_edition(&env);
         let frozen:Option<OracleSample>=env.storage().instance().get(&DataKey::FrozenSample);
@@ -462,12 +463,14 @@ impl YTTokenContract {
             if !oracle.is_fresh(&MAX_ORACLE_STALENESS_SECS){panic_with_error!(&env,Error::OracleStale)}
             oracle.get_reference_value()
         };
+        if rate>MAX_ACCOUNTING_RATE{panic_with_error!(&env,Error::UnsupportedAccountingRate)}
         let last:i128=env.storage().instance().get(&DataKey::LastOracleRate).unwrap();
         if rate<last||rate<=0 {panic_with_error!(&env,Error::InvalidSettlementSample)}
         let genesis:i128=env.storage().instance().get(&DataKey::GenesisRate).unwrap();
         let factor=floor(&env,genesis,SCALE,rate);
         env.storage().instance().set(&DataKey::YieldIndex,&factor);
         env.storage().instance().set(&DataKey::LastOracleRate,&rate);
+        env.storage().instance().set(&DataKey::InverseIndex,&inverse(&env,rate));
         env.events().publish((symbol_short!("idx_up"),),(factor,rate));
     }
 
@@ -482,7 +485,7 @@ impl YTTokenContract {
     }
 
     /// Display-only floor(genesis_rate*SCALE/current_rate), frozen at maturity.
-    /// Financial entitlement uses backing_credit and pending, not this factor.
+    /// Financial entitlement uses the inverse-index reward numerator, not this factor.
     pub fn accrued_yield_index(env: Env) -> i128 {
         env.storage()
             .instance()
@@ -562,8 +565,7 @@ impl YTTokenContract {
         Self::update_yield_index(env.clone());Self::settle(&env,&account);Self::settle(&env,&caller);
         let pending=Self::pending_claim(env.clone(),account.clone());
         if amount>pending{panic_with_error!(&env,Error::InsufficientBalance)}
-        Self::set_pending(&env,&account,sub(&env,pending,amount));
-        Self::set_pending(&env,&caller,add(&env,Self::pending_claim(env.clone(),caller.clone()),amount));
+        Self::move_reward(&env,&account,&caller,amount,0);
         env.events().publish((symbol_short!("y_pseize"),),(caller,account,amount));amount
     }
 
@@ -586,66 +588,88 @@ impl YTTokenContract {
     pub fn accounting_edition(env:Env)->u32 { env.storage().instance().get(&DataKey::AccountingEdition).unwrap_or(0) }
     pub fn accounting_rate(env:Env)->i128 { Self::assert_edition(&env);env.storage().instance().get(&DataKey::LastOracleRate).unwrap() }
     pub fn maturity_sample(env:Env)->Option<OracleSample> {env.storage().instance().get(&DataKey::FrozenSample)}
-    pub fn total_backing_credit(env:Env)->i128 {env.storage().instance().get(&DataKey::TotalCredit).unwrap_or(0)}
+    pub fn total_backing_credit(env:Env)->i128 {ceil(&env,Self::total_supply(env.clone()),Self::inverse_index(env.clone()),REWARD_SCALE)}
     pub fn total_pending(env:Env)->i128 {env.storage().instance().get(&DataKey::TotalPending).unwrap_or(0)}
     pub fn total_claimed(env:Env)->i128 {env.storage().instance().get(&DataKey::TotalClaimed).unwrap_or(0)}
-    pub fn backing_credit(env:Env,account:Address)->i128 {Self::credit(&env,&account)}
+    pub fn backing_credit(env:Env,account:Address)->i128 {ceil(&env,Self::get_balance(&env,&account),Self::inverse_index(env.clone()),REWARD_SCALE)}
     pub fn yield_position(env:Env,account:Address)->YieldPosition {
-        let balance=Self::get_balance(&env,&account);let backing_credit=Self::credit(&env,&account);
-        let current_rate=Self::accounting_rate(env.clone());let protected=ceil(&env,balance,SCALE,current_rate);
-        YieldPosition{balance,backing_credit,pending:Self::pending_claim(env.clone(),account.clone()),current_rate,
-          projected_yield:if backing_credit>protected{backing_credit-protected}else{0},
-          last_factor:Self::last_claimed_index(env.clone(),account)}
+        let balance=Self::get_balance(&env,&account);let index=Self::inverse_index(env.clone());
+        let previous=Self::last_inverse(&env,&account);
+        let fraction=Self::fraction(&env,&account);
+        let (projected,_) = reward(&env,balance,sub(&env,previous,index),fraction);
+        YieldPosition{balance,backing_credit:ceil(&env,balance,index,REWARD_SCALE),
+          pending:Self::pending_claim(env.clone(),account.clone()),current_rate:Self::accounting_rate(env.clone()),
+          projected_yield:projected,last_factor:Self::last_claimed_index(env.clone(),account),
+          inverse_index:index,last_inverse_index:previous,reward_remainder:fraction,reward_scale:REWARD_SCALE}
+    }
+
+    pub fn inverse_index(env:Env)->i128 {Self::assert_edition(&env);env.storage().instance().get(&DataKey::InverseIndex).unwrap()}
+    pub fn reward_scale(_env:Env)->i128 {REWARD_SCALE}
+    pub fn max_accounting_rate(_env:Env)->i128 {MAX_ACCOUNTING_RATE}
+    pub fn reward_remainder(env:Env,account:Address)->i128 {Self::fraction(&env,&account)}
+    pub fn last_inverse_index(env:Env,account:Address)->i128 {Self::last_inverse(&env,&account)}
+    /// Explicitly recover the complete earned fraction even for a former zero-YT holder.
+    pub fn seize_fraction(env:Env,caller:Address,account:Address)->i128 {
+        caller.require_auth();
+        if caller!=Self::require_escrow(&env){panic_with_error!(&env,Error::NotRecoveryEscrow)}
+        if caller==account{panic_with_error!(&env,Error::ZeroAmount)}
+        Self::update_yield_index(env.clone());Self::settle(&env,&account);Self::settle(&env,&caller);
+        let fraction=Self::fraction(&env,&account);
+        Self::move_reward(&env,&account,&caller,0,fraction);
+        env.events().publish((symbol_short!("y_fseize"),),(caller,account,fraction));fraction
     }
 
     // --- internal helpers ---
-    fn assert_edition(env:&Env) { if Self::accounting_edition(env.clone())!=2 {panic_with_error!(env,Error::AccountingEditionRequired)} }
-    fn credit(env:&Env,account:&Address)->i128 {env.storage().persistent().get(&DataKey::BackingCredit(account.clone())).unwrap_or(0)}
-    fn set_credit(env:&Env,account:&Address,value:i128) {
-        let key=DataKey::BackingCredit(account.clone());env.storage().persistent().set(&key,&value);
+    fn assert_edition(env:&Env) { if Self::accounting_edition(env.clone())!=3 {panic_with_error!(env,Error::AccountingEditionRequired)} }
+    fn fraction(env:&Env,account:&Address)->i128 {env.storage().persistent().get(&DataKey::RewardRemainder(account.clone())).unwrap_or(0)}
+    fn last_inverse(env:&Env,account:&Address)->i128 {env.storage().persistent().get(&DataKey::LastInverse(account.clone())).unwrap_or(Self::inverse_index(env.clone()))}
+    fn set_fraction(env:&Env,account:&Address,value:i128) {
+        let key=DataKey::RewardRemainder(account.clone());env.storage().persistent().set(&key,&value);
         let ttl=env.storage().max_ttl();env.storage().persistent().extend_ttl(&key,ttl/2,ttl);
     }
     fn set_pending(env:&Env,account:&Address,value:i128) {
         let key=DataKey::PendingClaim(account.clone());env.storage().persistent().set(&key,&value);
         let ttl=env.storage().max_ttl();env.storage().persistent().extend_ttl(&key,ttl/2,ttl);
     }
-    fn move_credit(env:&Env,from:&Address,to:&Address,amount:i128,balance:i128,recovery:bool) {
+    /// Transfer a precise earned numerator, preserving any borrow/carry across Q.
+    /// TotalPending counts only crystallized whole atoms, including a merged carry.
+    fn move_reward(env:&Env,from:&Address,to:&Address,whole:i128,fraction:i128) {
         if from==to{return}
-        let credit=Self::credit(env,from);
-        let moved=if amount==balance{credit}else{floor(env,credit,amount,balance)};
-        Self::set_credit(env,from,sub(env,credit,moved));
-        Self::set_credit(env,to,add(env,Self::credit(env,to),moved));
-        if recovery {
-            let pending=Self::pending_claim(env.clone(),from.clone());
-            let moved_pending=if amount==balance{pending}else{floor(env,pending,amount,balance)};
-            Self::set_pending(env,from,sub(env,pending,moved_pending));
-            Self::set_pending(env,to,add(env,Self::pending_claim(env.clone(),to.clone()),moved_pending));
-            env.events().publish((symbol_short!("y_recover"),),(from.clone(),to.clone(),amount,moved,moved_pending));
-        }
+        let before_from=Self::pending_claim(env.clone(),from.clone());
+        let before_to=Self::pending_claim(env.clone(),to.clone());
+        let old_fraction=Self::fraction(env,from);
+        let borrow=if fraction>old_fraction{1}else{0};
+        let new_from=sub(env,before_from,add(env,whole,borrow));
+        let new_fraction=if borrow==1{add(env,old_fraction,REWARD_SCALE)-fraction}else{sub(env,old_fraction,fraction)};
+        let combined=add(env,Self::fraction(env,to),fraction);
+        let carry=combined/REWARD_SCALE;
+        let new_to=add(env,add(env,before_to,whole),carry);
+        Self::set_pending(env,from,new_from);Self::set_fraction(env,from,new_fraction);
+        Self::set_pending(env,to,new_to);Self::set_fraction(env,to,combined%REWARD_SCALE);
+        let original=add(env,before_from,before_to);let successor=add(env,new_from,new_to);
+        let total=Self::total_pending(env.clone());
+        let next=if successor>=original{add(env,total,successor-original)}else{sub(env,total,original-successor)};
+        env.storage().instance().set(&DataKey::TotalPending,&next);
     }
 
-
-    /// Settle before every balance mutation. Reserve ceil(notional*SCALE/rate)
-    /// from this holder's remaining funded credit; move only the excess into
-    /// earned pending, debiting that credit first. A later claim cannot recreate
-    /// the same yield, and zero-balance accounts retain previously earned pending.
-    /// LastClaimedIndex is retained solely as an observable display snapshot.
+    /// Credit only the index change since this account's last settlement.
+    /// The exact fractional numerator remains owned after transfers and burns.
     fn settle(env: &Env, account: &Address) {
         Self::assert_edition(env);
-        let credit=Self::credit(env,account);
-        let balance=Self::get_balance(env,account);
-        let protected=ceil(env,balance,SCALE,Self::accounting_rate(env.clone()));
-        let earned=if credit>protected{credit-protected}else{0};
+        let index=Self::inverse_index(env.clone());
+        let (earned,fraction)=reward(env,Self::get_balance(env,account),
+            sub(env,Self::last_inverse(env,account),index),Self::fraction(env,account));
         if earned>0 {
-            Self::set_credit(env,account,sub(env,credit,earned));
-            env.storage().instance().set(&DataKey::TotalCredit,&sub(env,Self::total_backing_credit(env.clone()),earned));
-            let pending=Self::pending_claim(env.clone(),account.clone());
-            Self::set_pending(env,account,add(env,pending,earned));
+            Self::set_pending(env,account,add(env,Self::pending_claim(env.clone(),account.clone()),earned));
             env.storage().instance().set(&DataKey::TotalPending,&add(env,Self::total_pending(env.clone()),earned));
         }
+        Self::set_fraction(env,account,fraction);
+        let inverse_key=DataKey::LastInverse(account.clone());env.storage().persistent().set(&inverse_key,&index);
         let key=DataKey::LastClaimedIndex(account.clone());
         env.storage().persistent().set(&key,&Self::accrued_yield_index(env.clone()));
-        let ttl=env.storage().max_ttl();env.storage().persistent().extend_ttl(&key,ttl/2,ttl);
+        let ttl=env.storage().max_ttl();
+        env.storage().persistent().extend_ttl(&key,ttl/2,ttl);
+        env.storage().persistent().extend_ttl(&inverse_key,ttl/2,ttl);
     }
 
     fn assert_permitted(env: &Env, account: &Address) {

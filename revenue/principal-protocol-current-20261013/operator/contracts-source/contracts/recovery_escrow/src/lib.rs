@@ -66,13 +66,14 @@ pub trait YTTokenInterface {
     fn seize_position(env:Env,caller:Address,account:Address,amount:i128)->RecoveryMovement;
     fn pending_claim(env:Env,account:Address)->i128;
     fn seize_pending(env:Env,caller:Address,account:Address,amount:i128)->i128;
+    fn seize_fraction(env:Env,caller:Address,account:Address)->i128;
     fn underlying_address(env: Env) -> Address;
     fn seize(env: Env, caller: Address, account: Address, amount: i128) -> i128;
 }
 
 #[contracttype]
 #[derive(Clone,Debug,Eq,PartialEq)]
-pub struct RecoveryMovement {pub amount:i128,pub backing_credit:i128,pub pending_underlying:i128}
+pub struct RecoveryMovement {pub amount:i128,pub backing_credit:i128,pub pending_underlying:i128,pub reward_remainder:i128}
 #[contracttype]
 #[derive(Clone)]
 pub struct RedeemResult {
@@ -115,7 +116,7 @@ pub enum DataKey {
 #[derive(Clone,Debug,Eq,PartialEq)]
 pub struct YieldRecovery {
     pub sequence:u64,pub source_account:Address,pub issuer:Address,
-    pub yt_amount:i128,pub pending_underlying:i128,pub recorded_at:u64,
+    pub yt_amount:i128,pub pending_underlying:i128,pub reward_remainder:i128,pub recorded_at:u64,
 }
 #[contract]
 pub struct RecoveryEscrowContract;
@@ -210,7 +211,7 @@ impl RecoveryEscrowContract {
         let yt=YTTokenClient::new(&env,&yt_token);
         let movement=yt.seize_position(&self_addr,&account,&amount);
         let seized=movement.amount;
-        Self::record_yield(&env,&caller,&account,seized,movement.pending_underlying);
+        Self::record_yield(&env,&caller,&account,seized,movement.pending_underlying,movement.reward_remainder);
 
         env.events()
             .publish((symbol_short!("seize_yt"),), (caller, account, seized));
@@ -277,7 +278,15 @@ impl RecoveryEscrowContract {
         if amount<=0{panic_with_error!(&env,Error::ZeroAmount)}
         let yt=YTTokenClient::new(&env,&Self::get(&env,&DataKey::YTToken));
         let moved=yt.seize_pending(&env.current_contract_address(),&account,&amount);
-        Self::record_yield(&env,&caller,&account,0,moved);moved
+        Self::record_yield(&env,&caller,&account,0,moved,0);moved
+    }
+    /// Recover the full remaining sub-atom entitlement, including a zero-YT
+    /// former holder. It remains an exact numerator over YT.reward_scale().
+    pub fn recover_fraction(env:Env,caller:Address,account:Address)->i128 {
+        Self::assert_issuer_admin(&env,&caller);Self::assert_target_deauthorized(&env,&account);
+        let yt=YTTokenClient::new(&env,&Self::get(&env,&DataKey::YTToken));
+        let moved=yt.seize_fraction(&env.current_contract_address(),&account);
+        Self::record_yield(&env,&caller,&account,0,0,moved);moved
     }
     /// Pay accrued escrow yield without requiring a positive remaining YT balance.
     pub fn finalize_yield(env:Env,caller:Address)->i128 {
@@ -300,9 +309,9 @@ impl RecoveryEscrowContract {
 
     // --- internal helpers ---
 
-    fn record_yield(env:&Env,issuer:&Address,account:&Address,yt_amount:i128,pending_underlying:i128) {
+    fn record_yield(env:&Env,issuer:&Address,account:&Address,yt_amount:i128,pending_underlying:i128,reward_remainder:i128) {
         let count=Self::yield_recovery_count(env.clone()).checked_add(1).unwrap_or_else(||panic_with_error!(env,Error::InvalidReceipt));
-        let row=YieldRecovery{sequence:count,source_account:account.clone(),issuer:issuer.clone(),yt_amount,pending_underlying,recorded_at:env.ledger().timestamp()};
+        let row=YieldRecovery{sequence:count,source_account:account.clone(),issuer:issuer.clone(),yt_amount,pending_underlying,reward_remainder,recorded_at:env.ledger().timestamp()};
         let key=DataKey::YieldRecovery(count);env.storage().persistent().set(&key,&row);
         let ttl=env.storage().max_ttl();env.storage().persistent().extend_ttl(&key,ttl/2,ttl);
         env.storage().instance().set(&DataKey::YieldRecoveryCount,&count);

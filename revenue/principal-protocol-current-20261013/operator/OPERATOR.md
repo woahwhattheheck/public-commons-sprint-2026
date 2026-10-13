@@ -1,6 +1,6 @@
 # Principal current operations
 
-This application operates the complete eight-contract accounting edition 2 derived from principal-Protocol-org/principal at base commit f35b914cbf4896255a3711d81795b810b0a47f1c. The installed catalogue includes every retained original public method and the accounting, oracle-history and recovery methods in the shipped corrected source. Its per-method access mode is explicit. Original upstream source and its original 118-method ABI are retained separately. An existing workspace remains attached to its exact API edition; use a separate workspace for a different deployment/source edition. The installed CONTRACT_API.json and every configured deployed WASM digest identify the selected source edition.
+This application operates the complete eight-contract accounting edition 3 derived from principal-Protocol-org/principal at base commit f35b914cbf4896255a3711d81795b810b0a47f1c. The installed catalogue includes every retained original public method and the accounting, oracle-history and recovery methods in the shipped corrected source. Its per-method access mode is explicit. Original upstream source and its original 118-method ABI are retained separately. An existing workspace remains attached to its exact API edition; use a separate workspace for a different deployment/source edition. The installed CONTRACT_API.json and every configured deployed WASM digest identify the selected source edition.
 
 ## Open the actual application
 
@@ -111,7 +111,7 @@ Run the native course in RECEIVING.md against the selected runtime and source. T
 The programme contains the complete operating source and concrete native course. The receiving owner's actual operated results determine its rendered and runtime acceptance.
 
 
-## Accounting edition 2
+## Accounting edition 3
 
 The accounting panels use methods present in the installed catalogue. Every
 read retains its own full result, original observation time, network, contract
@@ -120,7 +120,7 @@ reads into a same-ledger snapshot.
 
 Market & contract wiring includes manager locked SY shares, managed underlying,
 outstanding principal reserve, cumulative deposits and actual payouts; YT
-remaining backing credit, settled pending and consumed yield; the stored
+notional reserve view, settled pending and consumed yield; the stored
 accounting rate and the recorded oracle sample count. Read all accounting
 values saves each result through the same native observation command.
 
@@ -131,8 +131,9 @@ explicit timestamp. Original history lookups and maturity-sample results remain
 available through Contract observations and their complete source files.
 
 Account positions adds a single yield_position result containing the selected
-account's YT balance, remaining backing credit, settled pending, stored
-accounting rate, projected yield at that rate and last settled factor. The UI
+account's YT balance, notional reserve view, settled pending, stored accounting
+rate, projected whole yield, last settled factor, current and previous inverse
+indices, exact earned fractional numerator and immutable reward denominator. The UI
 labels projected yield with its stored-rate basis. A claim settles the eligible
 rate and records the manager's measured payment; conversion remainders stay
 pending. Principal redemption requires exact representability of the computed
@@ -146,9 +147,8 @@ exact sequence and displays the full source-account/issuer/amount/time record.
 Inspect the escrow yield_position and full receipt before recording a reconciled
 case stage.
 
-Commission this storage edition as an explicitly selected deployment. Its
-remaining-credit accounting cannot reconstruct payouts already completed under
-another storage edition. Retain the prior source, deployed addresses, balances
+Commission this storage edition as an explicitly selected deployment. Its inverse-index and reward-carry accounting cannot reconstruct payouts already
+completed under the predecessor or published edition-2 credit storage. Retain the prior source, deployed addresses, balances
 and complete payout history in that prior workspace when planning any migration.
 
 For the actual receiving course, run the eight-contract lifecycle described in
@@ -158,3 +158,36 @@ receipt. Prepare a yield-only recovery from a saved case, retain its native
 result, download the complete case/report/workspace, and reopen the original
 files in a separate receiving directory. The producing owner operates and looks
 at the desktop and narrow-width application and every relevant outgoing file.
+
+
+### Exact issuance and fractional recovery
+
+Edition 3 settles balance × inverse-index change over a fixed 10^30 denominator.
+The supported original oracle rate is 1 through 10^18 inclusive, scaled by 10^7.
+The conservative ceiling has relative error below 10^-19 in that interval; an
+integer mint can still issue fewer notional atoms than the original rate formula.
+The account's Preview PT and YT issuance form reads preview_mint and exposes SY
+shares, valued underlying, original rate, inverse index, denominator, both notional
+amounts and their exact difference. Its prepare control carries that observed share
+amount and original deployment to the standard operation form.
+
+Ordinary transfer and burn preserve earned whole and fractional rewards with the
+original account. Fractional numerators are not whole underlying token balances.
+Read reward_scale with reward_remainder or inspect the complete yield_position.
+The reserve view backing_credit is computed from current YT balance and the index;
+it is no longer a separately transferred funded-credit ledger. Individual ceiling
+views must not be added to manufacture a market-wide reserve.
+
+The saved issuer recovery case offers Recover earned fraction separately from
+Recover settled yield. The original contract authenticates the current SAC issuer
+and affected account's deauthorization. A full fractional recovery can apply to a
+zero-YT former holder. Recovery receipts retain the moved numerator; adding it to
+an existing escrow fraction may create a whole pending atom. Inspect the resulting
+escrow position and original receipt before finalizing or marking a case reconciled.
+
+Extend the actual same receiving course with both reported small-transfer cases,
+a later entrant, transfer_from and self-transfer, partial and complete recovery,
+zero-YT fractional recovery and mature PT/YT redemption. Preserve the exact native
+snapshots and source edition. Open the new preview, original position and recovery
+receipts at desktop and narrow width, then download and reopen the full review,
+browser working copy and native workspace.

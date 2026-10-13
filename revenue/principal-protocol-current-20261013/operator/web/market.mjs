@@ -1,5 +1,5 @@
 // MIT. Current Principal source-bound projections; original observations stay intact.
-export const SOURCE={repository:'principal-Protocol-org/principal',baseCommit:'f35b914cbf4896255a3711d81795b810b0a47f1c',implementationEdition:'accounting-2'};
+export const SOURCE={repository:'principal-Protocol-org/principal',baseCommit:'f35b914cbf4896255a3711d81795b810b0a47f1c',implementationEdition:'accounting-3'};
 export const CONTRACTS=['oracle_adapter','permissioning','principal_manager','pt_token','recovery_escrow','risk_control','sy_wrapper','yt_token'];
 const plain=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 export function canonical(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';}

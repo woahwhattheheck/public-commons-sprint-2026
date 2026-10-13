@@ -1,17 +1,19 @@
 {
-  "schema": "principal.current-accounting-additions.v2",
+  "schema": "principal.current-accounting-additions.v3",
   "base": {
     "repository": "principal-Protocol-org/principal",
     "commit": "f35b914cbf4896255a3711d81795b810b0a47f1c"
   },
-  "accountingEdition": 2,
+  "accountingEdition": 3,
   "migration": "new-initialization-only",
   "units": {
     "balance": "USDC accounting atoms (1e7)",
-    "credit": "underlying atoms (1e7)",
+    "credit": "ceil(current notional balance * inverse index / reward scale), a reserve view, not a separately transferred cash balance",
     "pending": "underlying atoms (1e7)",
     "sampleValue": "USDC per underlying, scaled1e7",
-    "lockedShares": "SY share atoms (1e7)"
+    "lockedShares": "SY share atoms (1e7)",
+    "rewardNumerator": "underlying atoms divided by 1e30",
+    "inverseIndex": "ceil(1e7 * 1e30 / authenticated oracle rate)"
   },
   "types": {
     "OracleSample": {
@@ -23,7 +25,8 @@
     "RecoveryMovement": {
       "amount": "i128",
       "backing_credit": "i128",
-      "pending_underlying": "i128"
+      "pending_underlying": "i128",
+      "reward_remainder": "i128"
     },
     "YieldPosition": {
       "balance": "i128",
@@ -31,7 +34,11 @@
       "pending": "i128",
       "current_rate": "i128",
       "projected_yield": "i128",
-      "last_factor": "i128"
+      "last_factor": "i128",
+      "inverse_index": "i128",
+      "last_inverse_index": "i128",
+      "reward_remainder": "i128",
+      "reward_scale": "i128"
     },
     "YieldRecovery": {
       "sequence": "u64",
@@ -39,7 +46,18 @@
       "issuer": "Address",
       "yt_amount": "i128",
       "pending_underlying": "i128",
-      "recorded_at": "u64"
+      "recorded_at": "u64",
+      "reward_remainder": "i128"
+    },
+    "MintPreview": {
+      "sy_shares": "i128",
+      "underlying": "i128",
+      "oracle_rate": "i128",
+      "inverse_index": "i128",
+      "reward_scale": "i128",
+      "original_rate_notional": "i128",
+      "issued_notional": "i128",
+      "issuance_adjustment": "i128"
     }
   },
   "methods": {
@@ -177,6 +195,50 @@
         ],
         "returns": "i128",
         "authorization": "original recovery escrow"
+      },
+      "inverse_index": {
+        "args": [],
+        "returns": "i128"
+      },
+      "reward_scale": {
+        "args": [],
+        "returns": "i128"
+      },
+      "max_accounting_rate": {
+        "args": [],
+        "returns": "i128"
+      },
+      "reward_remainder": {
+        "args": [
+          [
+            "account",
+            "Address"
+          ]
+        ],
+        "returns": "i128"
+      },
+      "last_inverse_index": {
+        "args": [
+          [
+            "account",
+            "Address"
+          ]
+        ],
+        "returns": "i128"
+      },
+      "seize_fraction": {
+        "args": [
+          [
+            "caller",
+            "Address"
+          ],
+          [
+            "account",
+            "Address"
+          ]
+        ],
+        "returns": "i128",
+        "authorization": "original recovery escrow"
       }
     },
     "principal_manager": {
@@ -207,6 +269,16 @@
       "backing_underlying": {
         "args": [],
         "returns": "i128"
+      },
+      "preview_mint": {
+        "args": [
+          [
+            "sy_shares",
+            "i128"
+          ]
+        ],
+        "returns": "MintPreview",
+        "readOnly": true
       }
     },
     "recovery_escrow": {
@@ -250,6 +322,20 @@
           ]
         ],
         "returns": "Option<YieldRecovery>"
+      },
+      "recover_fraction": {
+        "args": [
+          [
+            "caller",
+            "Address"
+          ],
+          [
+            "account",
+            "Address"
+          ]
+        ],
+        "returns": "i128",
+        "authorization": "current SAC issuer; original source account deauthorized"
       }
     }
   },
@@ -257,7 +343,8 @@
     "yt_token": {
       "AccountingEditionRequired": 15,
       "InvalidSettlementSample": 16,
-      "AlreadyMature": 17
+      "AlreadyMature": 17,
+      "UnsupportedAccountingRate": 18
     },
     "principal_manager": {
       "AccountingEditionRequired": 14,
@@ -287,7 +374,23 @@
       "current-02-frozen-final.json",
       "current-03-explicit-pending-recovery.json",
       "current-04-recovered-final.json",
-      "current-05-complete-maturity-proof.json"
+      "current-05-complete-maturity-proof.json",
+      "current-06-three-atom-conservation.json",
+      "current-07-full-unit-conservation.json"
     ]
+  },
+  "economics": {
+    "rewardScale": "1000000000000000000000000000000",
+    "supportedOracleRate": {
+      "min": "1",
+      "max": "1000000000000000000"
+    },
+    "inverseRelativeCeilingError": "strictly less than 1e-19 across the supported interval",
+    "issuance": "floor(actual underlying * rewardScale / inverseIndex); preview retains original-rate notional and exact difference",
+    "principal": "floor(burned notional * 1e7 / frozen original rate)",
+    "reserve": "ceil(outstanding PT * frozen/current inverseIndex / rewardScale)",
+    "ordinaryTransfer": "settle both; earned integer and fractional reward stays with original holder",
+    "recovery": "explicit issuer-authorized exact proportional complete earned numerator; full transfer moves exact remainder",
+    "cost": "O(1) account storage and arithmetic; no issuance lot/history scan"
   }
 }

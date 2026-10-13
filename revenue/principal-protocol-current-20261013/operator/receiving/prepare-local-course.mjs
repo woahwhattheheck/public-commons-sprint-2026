@@ -12,11 +12,11 @@ export async function prepareLocalCourse(argv=process.argv.slice(2)){
  need(path.isAbsolute(opt.directory)&&path.isAbsolute(opt.out),'ABSOLUTE_INPUT_REQUIRED');
  const operationId=opt['operation-id'];
  need(typeof operationId==='string'&&/^[a-zA-Z0-9._:-]{1,160}$/.test(operationId),'OPERATION_ID_REQUIRED');
- const selected=['CONTRACT_API.json','source-files.json','contracts-source/docs/ACCOUNTING_EDITION_2.md'];
+ const selected=['CONTRACT_API.json','source-files.json','contracts-source/docs/ACCOUNTING_EDITION_3.md'];
  const sources=[];
  for(const relative of selected){const original=await readOriginal(path.join(ROOT,relative));sources.push({relative,...original});}
  const api=JSON.parse(sources[0].data.toString('utf8'));
- need(api.schema==='principal.contract-api.v2'&&api.edition==='principal-current-accounting-2','CURRENT_ACCOUNTING_SOURCE_REQUIRED');
+ need(api.schema==='principal.contract-api.v2'&&api.edition==='principal-current-accounting-3','CURRENT_ACCOUNTING_SOURCE_REQUIRED');
  const base=path.resolve(opt.directory),tag=hash(bytes({operationId,directory:base})).slice(0,24);
  const producerCommands=sources.map((source,index)=>({
   requestId:tag+'.source.'+index,expectedRevision:index,method:'source.import',
