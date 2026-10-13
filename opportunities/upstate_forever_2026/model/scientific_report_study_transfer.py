@@ -76,6 +76,8 @@ def _source(closure, choice, expected_source):
     study_report_transfer.include_calibration(closure, collection_id, entry)
     receiving_water_report_transfer.include_source(closure, collection_id, entry)
     native_process_study_transfer.include_source(closure, collection_id, entry)
+    from . import published_review_study_transfer
+    published_review_study_transfer.include_source(closure, collection_id, entry)
     ensemble_study_transfer.include_source(closure, collection_id, entry)
     gauge_study_transfer.include_source(closure, collection_id, entry)
     from . import community_study_transfer, conservation_study_transfer
