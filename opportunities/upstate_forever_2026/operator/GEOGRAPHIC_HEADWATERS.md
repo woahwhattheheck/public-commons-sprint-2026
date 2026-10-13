@@ -83,13 +83,31 @@ At the original source boundary, install the complete additive leaves and existi
 Actually look at the rendered app and all outgoing attachments. Fix the actual visible or functional defects in these same sources and return the complete current postimage. Capture real screenshots and attach the original image files to the existing receiving thread so source seats can view the same pixels. No additional model, parallel queue, approval gate, watcher or broad suite is introduced.
 
 
+## Working-choice receiving and recovery
+
+Geographic **Reopen choices** now validates the complete method, title, input selectors and typed options before changing any field. An invalid late option leaves the entire previous choice selected. A successful replacement first retains that previous complete choice in **Working inputs and original upload history**, shared with the source preparation desk. The selected preview is invalidated and must be read again from the original native geometry.
+
+Use **Download complete choices** for the geographic selection alone, or **Download working inputs** for the selected choice plus previous choices, original upload receipts and original request identities. Reopening the latter is bound to the same study and desk. Receive the full original study/source handover before using these references on a different operator; the JSON does not contain the original GIS bytes or an active process. The shared component preserves later local history on reopen, offers explicit prior-choice selection, and prevents late upload responses from overwriting subsequent choices. See `SOURCE_WORKBENCH.md` for the full intake and recovery workflow.
+
+The existing `source_tools/receive_geographic_handover_browser.mjs` course operates actual upload/receipt selection, malformed-file rejection, complete choice export/reopen, retained history and a cold tab reload before its original native preview and complete handover reading. It uploads only its already downloaded choice document as an explicitly labelled receiving artifact, restores the real scientific source selectors, and never starts source preparation or a model run. The course preserves all prior attempts and verifies the same scientific source, profile, grid, scenario, run and delivery identities afterward.
+
+Current owner direction `.4` renews the delivery after the former 14:00 UTC checkpoint. The browser input may optionally include `cutoff` as a complete timezone-qualified timestamp requested by its caller. If absent, the old checkpoint is not applied; any real interruption and all attempt records remain visible. An expired caller-requested cutoff stops that receiving invocation without rewriting completed records. The original operation, original native process and caller-selected completion scope remain unchanged.
+
+From 16:00 UTC on October 13 until explicit release, Bryce exclusively controls the local Codex in-app browser and its selected demo tabs. Do not navigate, capture, inspect, resize or test there. An isolated cloud browser may perform this same owned receiving course. Every actual outgoing screen and attachment still needs the producing seat's inspection under the complete standing instruction below; source review and screenshot capture alone are not a ready-to-present result.
+
 ## Complete current owner direction
 
 # Current owner direction: Ecosystem Sciences demonstration
 
-Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+Version: `2026-10-13.4`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build and finish as much of the existing Eco science application as possible before Bryce's call. Bryce renewed this work directly at **October 13, 2026, 10:46 a.m. Eastern / 14:46 UTC**, after the earlier 10 a.m. preservation checkpoint. Resume the existing unfinished work from its actual saved state and preserve completed outputs, active processes and original implementation ownership.
 
 ## Direct owner instructions
+
+Latest direct instruction, October 13 at 10:46 a.m. Eastern:
+
+> Get as much of eco science done with the fleet as possible before my call. Try to get it finished its possible im throwing shit ton of agents just get it done
+
+This current instruction supersedes the earlier 10 a.m. Eco work cutoff. Prior cutoff records remain historical evidence. Coordinate at the existing Eco thread, reconcile actual issued handles, complete unfinished integration and native receiving, and publish usable durable handoffs in the existing application. Preserve the distinction between the sender's completed runs and the runs actually included in a received Study. Existing workers keep their current operations; additional workers clear complementary blockers. The recorded call remains unchanged; this direction schedules no meeting or automation and authorizes no client message.
 
 > do the simulated model
 
@@ -127,7 +145,7 @@ If producing video, record the actual working application and use available natu
 
 ## Carry this direction with the work
 
-Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.4` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
 
