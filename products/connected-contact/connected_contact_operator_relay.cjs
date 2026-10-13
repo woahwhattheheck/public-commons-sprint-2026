@@ -51,7 +51,7 @@ function summary(state){
  return {schema:STATE_SCHEMA,operation_id:state.operation_id,session_id:state.session_id,
   phase:state.phase,native_session_id:state.native_session_id??null,exit_code:state.exit_code??null,
   calls:state.calls.length,received:state.calls.filter(x=>x.phase==='RECEIVED').length,
-  configuration_sha256:state.configuration_sha256,provider_write_invocations:0,
+  configuration_sha256:state.configuration_sha256,provider_write_invocations:state.calls.filter(x=>/^mcp__codex_apps__gmail_send_(email|draft)$/.test(x.binding)).length,
   journal_directory:state.journal_directory,application_result:state.application_result?{...state.application_result.value,sha256:state.application_result.sha256}:null,reason:state.reason||null};
 }
 async function runConnectedContactOperator(options){
@@ -59,7 +59,16 @@ async function runConnectedContactOperator(options){
  need(bridge&&typeof bridge.validateConfiguration==='function'&&typeof bridge.validateRead==='function','Load the exact reviewed companion bridge module.');
  need(typeof configurationText==='string'&&typeof configurationPath==='string'&&configurationPath.startsWith('/')&&!/[\x00-\x1f\x7f]/.test(configurationPath),'Select the original complete private bridge configuration and its on-machine path.');
  need(typeof sha256Utf8==='function'&&typeof sha256Bytes==='function'&&typeof loadState==='function'&&typeof saveState==='function'&&typeof stateKey==='string'&&stateKey.length>0,'Supply the maintained exact SHA helpers and private retained orchestration state.');
- const config=JSON.parse(configurationText);bridge.validateConfiguration(config);
+ const config=JSON.parse(configurationText),cliArgs=bridge.validateConfiguration(config);
+ const operational=config.mode==='continue-original';
+ let selection=null;
+ if(operational){
+  need(typeof options.selectionText==='string','Retain the complete exact original private continuation selection.');
+  const selectedPin=config.pins.find(row=>row.path===cliArgs['--selection']),measured=sha256Utf8(options.selectionText);
+  need(selectedPin&&measured.bytes===selectedPin.bytes&&measured.sha256===selectedPin.sha256,'The foreground selection differs from the pinned native input.');
+  selection=JSON.parse(options.selectionText);bridge.validateContinuation(selection,config);
+  need(typeof options.reviewRelationship==='function','Supply the existing original owner relationship callback.');
+ }
  const identity=sha256Utf8(configurationText);need(identity&&/^[a-f0-9]{64}$/.test(identity.sha256)&&identity.bytes<=1024*1024,'Configuration bytes are invalid.');
  const lock=identity.sha256;need(!ACTIVE.has(lock),'This exact foreground relay is already running in this orchestration.');ACTIVE.add(lock);
  let state;
@@ -82,16 +91,16 @@ async function runConnectedContactOperator(options){
  try{
   state=await loadState(stateKey);
   if(state){
-   need(state.schema===STATE_SCHEMA&&state.configuration_sha256===identity.sha256&&state.configurationText===configurationText&&state.configurationPath===configurationPath&&state.operation_id===config.operation_id&&state.session_id===config.session_id,'Never replace the original retained relay selection.');
+   need(state.schema===STATE_SCHEMA&&state.configuration_sha256===identity.sha256&&state.configurationText===configurationText&&state.configurationPath===configurationPath&&state.operation_id===config.operation_id&&state.session_id===config.session_id&&(!operational||state.selectionText===options.selectionText),'Never replace the original retained relay selection.');
    if(state.phase==='COMPLETE'||state.phase==='FAILED')return summary(state);
    need(resume===true,'Select explicit same-session continuation for this retained foreground operation.');
    if(!state.native_session_id)return await fail('The original native admission has no returned session. Reconcile that original entry; no second launch is permitted.');
-   if(state.calls.some(x=>x.phase==='DISPATCHING'))return await fail('An original provider read has no retained full return. Reconcile the original result; never redispatch it automatically.');
+   if(state.calls.some(x=>x.phase==='DISPATCHING'))return await fail('An original provider invocation has no retained full return. Reconcile the original result; never redispatch it automatically.');
    for(const call of state.calls)if(call.phase==='PROVIDER_RETURNED')await sealReturn(call);
   }else{
    need(!resume,'There is no retained original foreground operation to continue.');
    state={schema:STATE_SCHEMA,configurationText,configurationPath,configuration_sha256:identity.sha256,operation_id:config.operation_id,session_id:config.session_id,
-    journal_directory:config.journal_directory+'/'+config.session_id,phase:'SELECTED',native_session_id:null,
+    journal_directory:config.journal_directory+'/'+config.session_id,selectionText:operational?options.selectionText:null,phase:'SELECTED',native_session_id:null,
     calls:[],frames:[],native_returns:[],pending_output:'',hello:null,completion:null,exit_code:null,reason:null};
    await persist();
   }
@@ -110,7 +119,15 @@ async function runConnectedContactOperator(options){
    mcp__codex_apps__github_fetch_file:a=>tools.mcp__codex_apps__github_fetch_file(a),
    mcp__codex_apps__github_fetch_blob:a=>tools.mcp__codex_apps__github_fetch_blob(a),
    mcp__codex_apps__github_compare_commits:a=>tools.mcp__codex_apps__github_compare_commits(a),
-   mcp__codex_apps__github_get_user_login:a=>tools.mcp__codex_apps__github_get_user_login(a)
+   mcp__codex_apps__github_get_user_login:a=>tools.mcp__codex_apps__github_get_user_login(a),
+   mcp__codex_apps__gmail_get_profile:a=>tools.mcp__codex_apps__gmail_get_profile(a),
+   mcp__codex_apps__gmail_search_email_ids:a=>tools.mcp__codex_apps__gmail_search_email_ids(a),
+   mcp__codex_apps__gmail_read_email:a=>tools.mcp__codex_apps__gmail_read_email(a),
+   mcp__codex_apps__gmail_batch_read_email:a=>tools.mcp__codex_apps__gmail_batch_read_email(a),
+   mcp__codex_apps__gmail_list_drafts:a=>tools.mcp__codex_apps__gmail_list_drafts(a),
+   mcp__codex_apps__gmail_send_email:a=>tools.mcp__codex_apps__gmail_send_email(a),
+   mcp__codex_apps__gmail_send_draft:a=>tools.mcp__codex_apps__gmail_send_draft(a),
+   [bridge.RELATIONSHIP_BINDING]:a=>options.reviewRelationship({selection:JSON.parse(options.selectionText),spec:JSON.parse(JSON.stringify(a.spec))})
   };
   async function acceptNative(result,operation,args,write_id=null){
    need(plain(result)&&typeof result.output==='string','Native transport did not return complete original output.');
@@ -130,8 +147,8 @@ async function runConnectedContactOperator(options){
      // interpreted as a request to invoke a connected tool.
      if(line.startsWith('{')){
       let application;try{application=JSON.parse(line);}catch{}
-      if(application?.status==='COMPLETE'&&application.action==='prepare'){
-       need(application.request_saved===true&&typeof application.coordinator_id==='string','The original CLI result is incomplete.');
+      if(application?.status==='COMPLETE'&&application.action===config.argv[0]){
+       need((operational?application.result_saved===true&&application.operation_key===selection.operation_key&&application.coordinator_id===selection.coordinator_id:application.request_saved===true)&&typeof application.coordinator_id==='string','The original CLI result is incomplete.');
        const observed={raw:line,value:application,...sha256Utf8(line)};
        need(!state.application_result||state.application_result.raw===line,'Original CLI completion changed.');
        state.application_result=observed;
@@ -174,16 +191,49 @@ async function runConnectedContactOperator(options){
     state.hello=frame;await persist();return;
    }
    need(state.hello,'No exact original process handshake was retained.');
+   
+   if(frame.kind==='call-start'){
+    need(operational&&Number.isSafeInteger(frame.bytes)&&frame.bytes>bridge.MAX_REQUEST&&frame.bytes<=bridge.MAX_OPERATION_REQUEST&&frame.call_id===frame.sha256&&/^[a-f0-9]{64}$/.test(frame.sha256),'Select a complete bounded original request transfer.');
+    const existing=state.calls.find(row=>row.call_id===frame.call_id);
+    if(existing){need(sha256Utf8(existing.requestText).bytes===frame.bytes,'The repeated original large request changed.');return;}
+    need(!state.calls.some(x=>x.phase!=='RECEIVED'),'Finish the previous exact native return before another request.');
+    if(state.request_transfer){need(JSON.stringify(state.request_transfer.frame)===JSON.stringify(frame),'Another original request transfer is unresolved.');return;}
+    state.request_transfer={frame,chunks:[],bytes:0,index:0,awaiting:null};await persist();return;
+   }
+   if(frame.kind==='call-chunk'){
+    const transfer=state.request_transfer;
+    need(transfer&&frame.call_id===transfer.frame.call_id&&Number.isSafeInteger(frame.index)&&frame.index>=0,'The original request chunk has no selected transfer.');
+    if(frame.index<transfer.index){need(transfer.chunks[frame.index]===frame.base64,'A repeated original request chunk changed.');return;}
+    need(frame.index===transfer.index&&transfer.awaiting&&transfer.awaiting.index===frame.index,'Receive each requested original chunk in order.');
+    const bytes=unbase64(frame.base64);
+    need(bytes.length>0&&bytes.length<=8192&&transfer.bytes+bytes.length<=transfer.frame.bytes,'The original request chunk length changed.');
+    transfer.chunks.push(frame.base64);transfer.bytes+=bytes.length;transfer.index++;transfer.awaiting=null;await persist();return;
+   }
+   if(frame.kind==='call-end'){
+    const transfer=state.request_transfer;
+    need(transfer&&frame.call_id===transfer.frame.call_id&&frame.chunks===transfer.index&&transfer.bytes===transfer.frame.bytes&&transfer.awaiting&&transfer.awaiting.index===transfer.index,'The complete original request is not retained.');
+    const bytes=new Uint8Array(transfer.bytes);let offset=0;
+    for(const part of transfer.chunks){const chunk=unbase64(part);bytes.set(chunk,offset);offset+=chunk.length;}
+    const measured=sha256Bytes(bytes);
+    need((typeof measured==='string'?measured:measured.sha256)===transfer.frame.sha256,'The complete original message or attachment bytes changed.');
+    // Turn the retained frame into the ordinary exact-call path BEFORE any
+    // provider dispatch. A resumed relay receives the same complete request.
+    Object.assign(frame,{kind:'call',bytes:transfer.frame.bytes,sha256:transfer.frame.sha256,base64:base64(bytes)});
+    delete frame.chunks;state.request_transfer=null;await persist();
+    return handleFrame(frame);
+   }
+
    if(frame.kind==='call'){
     const retained=state.calls.find(x=>x.call_id===frame.call_id);
     if(retained){need(frame.sha256===retained.call_id&&sha256Utf8(retained.requestText).bytes===frame.bytes&&base64(unbase64(frame.base64))===frame.base64&&decodeUtf8(unbase64(frame.base64))===retained.requestText,'A repeated original request frame changed.');return;}
-    need(!state.calls.some(x=>x.phase!=='RECEIVED')&&Number.isSafeInteger(frame.bytes)&&frame.bytes>0&&frame.bytes<=bridge.MAX_REQUEST&&frame.call_id===frame.sha256,'Unexpected concurrent or oversized source frame.');
+    need(!state.calls.some(x=>x.phase!=='RECEIVED')&&Number.isSafeInteger(frame.bytes)&&frame.bytes>0&&frame.bytes<=(operational?bridge.MAX_OPERATION_REQUEST:bridge.MAX_REQUEST)&&frame.call_id===frame.sha256,'Unexpected concurrent or oversized source frame.');
     const bytes=unbase64(frame.base64);need(bytes.length===frame.bytes,'Original request byte count changed.');
     const digest=sha256Bytes(bytes);need((typeof digest==='string'?digest:digest.sha256)===frame.sha256,'Original request hash changed.');
     const requestText=decodeUtf8(bytes),request=JSON.parse(requestText);
     need(Object.keys(request).length===6&&['schema','operation_id','session_id','sequence','binding','args'].every(k=>Object.prototype.hasOwnProperty.call(request,k))&&request.schema===bridge.SCHEMA&&request.operation_id===config.operation_id&&request.session_id===config.session_id&&request.sequence===state.calls.length+1&&request.sequence<=config.max_calls,'Original provider request identity changed.');
-    bridge.validateRead(request.binding,request.args,config);
-    need(Object.prototype.hasOwnProperty.call(dispatch,request.binding)&&typeof tools?.[request.binding]==='function','The exact allowed original read binding is not exposed.');
+    bridge.validateCall(request.binding,request.args,config,selection);
+    need(Object.prototype.hasOwnProperty.call(dispatch,request.binding)&&(request.binding===bridge.RELATIONSHIP_BINDING?operational&&typeof options.reviewRelationship==='function':typeof tools?.[request.binding]==='function'),'The exact allowed original read binding is not exposed.');
+    if(bridge.SEND_NAMES.includes(request.binding))need(!state.calls.some(x=>bridge.SEND_NAMES.includes(x.binding)),'The same foreground operation already dispatched its one original native send.');
     const call={call_id:frame.call_id,sequence:request.sequence,binding:request.binding,requestText,phase:'DISPATCHING',responseText:null,response_sha256:null,response_bytes:null,tx:null};
     state.calls.push(call);await persist();
     let envelope;
@@ -215,7 +265,7 @@ async function runConnectedContactOperator(options){
    }
    if(frame.kind==='complete'){
     if(state.completion){need(JSON.stringify(frame)===JSON.stringify(state.completion),'Original completion changed.');return;}
-    need(frame.operation_id===config.operation_id&&frame.calls===state.calls.length&&frame.provider_write_invocations===0&&state.calls.every(x=>x.phase==='RECEIVED'),'Original preparation completion is incomplete.');
+    need(frame.operation_id===config.operation_id&&frame.calls===state.calls.length&&frame.provider_write_invocations===state.calls.filter(x=>bridge.SEND_NAMES.includes(x.binding)).length&&state.calls.every(x=>x.phase==='RECEIVED'),'Original preparation completion is incomplete.');
     state.completion=frame;await persist();return;
    }
    throw Error('Unknown bridge protocol frame.');
@@ -241,6 +291,21 @@ async function runConnectedContactOperator(options){
      continue;
     }
    }
+   
+   if(state.request_transfer){
+    const transfer=state.request_transfer;
+    if(!transfer.awaiting){
+     const frame={schema:bridge.SCHEMA,kind:'request-next',session_id:config.session_id,call_id:transfer.frame.call_id,index:transfer.index};
+     const frameText=bridge.PREFIX+JSON.stringify(frame)+'\n';
+     transfer.awaiting={index:transfer.index,stage:'PREPARED',frameText,id:sha256Utf8(frameText).sha256};await persist();
+    }
+    if(transfer.awaiting.stage==='PREPARED'){
+     need(state.native_session_id,'Keep the original native session for complete request transfer.');
+     if(!await callTransport('write',{session_id:state.native_session_id,chars:transfer.awaiting.frameText,yield_time_ms:1000,max_output_tokens:24000},transfer.awaiting))return summary(state);
+     continue;
+    }
+   }
+
    const call=state.calls[state.calls.length-1];
    if(call?.phase==='RETURNED'&&!call.tx.awaiting){
     const tx=call.tx;let frame,waiting;

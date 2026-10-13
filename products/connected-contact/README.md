@@ -121,3 +121,8 @@ The original maintained Commons source and this component retain the complete Ap
 ## Reusable exact source capsule
 
 After publication, the original source operator can run `node make_source_capsule.cjs ACTUAL_PUBLISHED_COMMIT OUTPUT.json` from this complete source directory. The builder verifies every manifest member, includes the manifest itself, calculates each actual Git blob identity, and emits the maintained `commons.connected-contact-required-source-closure.v1` format with its complete original loader. Its output is staged, fsynced and published without replacing an existing different capsule. Supply the resulting full packet's independently measured SHA-256 and byte length to the original source-activation API; the loader's own hash is also checked before evaluation. Use the actual merged source commit, never an operational-state commit or a guessed value. Building or reading this source capsule invokes no contact operation.
+
+
+## One original contact through the foreground bridge
+
+The existing preparation-only route now has a separately selected `continue-original` mode. [FOREGROUND_ORIGINAL_CONTACT.md](FOREGROUND_ORIGINAL_CONTACT.md) gives the complete original-checkpoint selection, exact message/attachment transport, maintained account admission, full provider-result journal and uncertainty/reconciliation course. It requires the actual existing coordinator deployment and preserves its history; source availability is not a deployment or send receipt.
