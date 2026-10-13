@@ -26,7 +26,8 @@
       ],
       "requires": [
         "measurement-large-files",
-        "measurement-flow-studies"
+        "measurement-flow-studies",
+        "measurement-observed-benchmarks"
       ]
     }
   },

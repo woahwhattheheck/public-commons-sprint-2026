@@ -14,7 +14,10 @@
 <button data-view="sources">Source editions</button>
 <button data-view="updates">Data updates</button>
 <button data-view="review">Change review</button>
+<button data-view="cycles">Review cycles</button>
+<button data-view="review-exchange">Reviewer exchange</button>
 <button data-view="portfolios">Counterparties</button>
+<button data-view="portfolio-refresh">Portfolio refresh</button>
 <button data-view="screening">Native screening</button>
 <button data-view="receiving">Receiving</button>
 <a id="native-link" href="/">Dataset console</a>
@@ -30,6 +33,8 @@
 </div>
 <article><h2>Two decisions per case</h2><div class="two-columns"><div><h3>Identity</h3><p>Is the customer counterparty the entity returned by the screening service? Keep confirmed matches, mismatches and undecided cases separate.</p></div><div><h3>Relevance</h3><p>Does the selected source or designation affect the customer’s configured programs and topics? Routine export metadata remains visible without reopening a prior decision.</p></div></div></article>
 </section>
+
+<section id="view-portfolio-refresh" hidden></section>
 
 <section id="view-sources" hidden>
 <div class="page-heading"><div><p class="eyebrow">Original data</p><h1>Source editions</h1><p>Each edition retains the original metadata, published checksum, complete FtM records and the original dataset-engine build.</p></div></div>
@@ -60,6 +65,7 @@
 <section id="view-portfolios" hidden>
 <div class="page-heading"><div><p class="eyebrow">Customer-owned source</p><h1>Counterparties</h1><p>Original customer IDs remain in their selected portfolio namespace. The provider receives only the native requests you prepare and dispatch.</p></div></div>
 <article><h2>Receive customer FtM objects</h2><form id="portfolio-form"><div class="form-grid"><label>Stable portfolio key<input name="key" required maxlength="128" placeholder="Customer-selected key"></label><label>Label<input name="label" required maxlength="160"></label><label>Original FtM JSON Lines<input name="original" type="file" required accept=".json,.jsonl,.ndjson,.gz"></label></div><button type="submit">Receive original counterparties</button></form></article>
+<article id="gleif-intake"></article>
 <article><h2>Retained portfolio editions</h2><div id="portfolio-table" class="table-wrap"></div><label>Inspect portfolio<select id="portfolio-selection" data-portfolios></select></label><div id="counterparty-table" class="table-wrap"></div><div id="counterparty-pager" class="pager"></div><pre id="counterparty-detail" class="scroll-box"></pre></article>
 </section>
 
@@ -77,6 +83,18 @@
 <article><h2>Receive an existing package</h2><p>Compatible original identities are reused. A conflicting local case history remains visible for the operator to resolve.</p><form id="receiving-form"><label>Original receiving ZIP<input name="original" type="file" accept=".zip" required></label><button type="submit">Receive and reconstruct</button></form><pre id="receiving-result"></pre></article>
 <article><h2>Scope of the source</h2><p>Flat FtM exports preserve the selected dataset’s properties and global identifier referents. Statement exports add per-value lineage when supplied. The customer’s configured programs, topics and identity decisions determine which source changes need review.</p><div id="contract-summary"></div></article>
 </section>
+
+<section id="view-cycles" hidden>
+<div class="page-heading"><div><p class="eyebrow">Finite customer review</p><h1>Review cycles</h1><p>Assign the selected source changes, record review completion against the original case decisions and freeze a supervisor report.</p></div><button id="cycle-refresh" type="button">Refresh cycles</button></div>
+<p id="cycle-branch"></p><p id="cycle-notice" role="status" aria-live="polite"></p>
+<article><h2>Review operator</h2><div class="form-grid"><label>Reviewer ID<input id="cycle-actor-id" maxlength="160"></label><label>Reviewer name<input id="cycle-actor-name" maxlength="160"></label></div><button id="cycle-use-actor" type="button">Use this reviewer</button><p>The same reviewer ID identifies assignments and supervisor actions. This records the operating person within the existing authorized local workspace.</p></article>
+<article><h2>Saved cycles</h2><div id="cycle-list"></div></article>
+<article><details><summary>Create a review cycle</summary><form id="cycle-create-form"><div class="form-grid"><label>Cycle label<input name="label" required maxlength="240"></label><label>Original comparison: source dataset or customer portfolio<select id="cycle-comparison" name="comparison" required></select></label><label>Supervisor ID<input name="supervisorId" required maxlength="160"></label><label>Supervisor name<input name="supervisorName" required maxlength="160"></label><label>Cycle due time<input name="dueAt" type="datetime-local"></label></div><label>Scope note<textarea name="scopeNote" required rows="3"></textarea></label><label>Selected case IDs, one per line; leave blank for every impacted case<textarea name="caseIds" rows="3"></textarea></label><p>The selected comparison, case decision versions and monitoring scope are frozen at creation. Explicitly excluded cases remain listed in the report.</p><button type="submit">Create review cycle</button></form></details></article>
+<div id="cycle-detail"></div>
+<article><details><summary>Saved cycle requests</summary><p>Recover the original command after an interrupted response. An uncertain request keeps its original ID and body.</p><div id="cycle-requests"></div></details></article>
+</section>
+
+<section id="view-review-exchange" hidden aria-label="Reviewer exchange"></section>
 </main>
 </div>
 <footer>Starforge · Original source, native screening, customer decisions</footer>
