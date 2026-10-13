@@ -56,7 +56,7 @@ The saved-analysis delivery table reads compared per-model versions from the imm
 
 ## Installation
 
-Receive the nine portfolio files, three scenario-analysis files and two economic/delivery-continuation files from the three complete source banks on this Page under the current application root. The additive descriptor registers the read route, queued action and static helpers with the installed original extension host; restart the existing operator to read it.
+Receive the nine portfolio files, three scenario-analysis files two economic/delivery-continuation files and three original producer/release/viewer files from the four complete source banks on this Page under the current application root. The additive descriptor registers the read route, queued action and static helpers with the installed original extension host; restart the existing operator to read it.
 
 The original app factory must supply its existing refresh callback:
 
@@ -71,6 +71,6 @@ No new server, queue, page or raster engine is installed. Current model/portfoli
 
 ## Focused verification
 
-Both complete authored JavaScript modules parse. A direct wiring check executed the actual attachPortfolio and pairing-control source with retained-record-shaped fixtures: a changed-profile NDR evaluation opens the matched baseline, and a missing baseline queues exactly one original completion then refreshes the host before opening the original analysis form. The shared browser version source also accepts identical NDR/SDR stage-version vectors when the last run runtimes differ, rejects a changed compared stage, and allows an unrelated noncompared model version difference. Original stage_summary runtime metadata produces the same result.
+Both complete authored JavaScript modules parse. A direct wiring check executed the actual attachPortfolio and pairing-control source with retained-record-shaped fixtures: a changed-profile NDR evaluation opens the matched baseline, and a missing baseline queues exactly one original completion then refreshes the host before opening the original analysis form. The shared browser version source also accepts identical NDR/SDR stage-version vectors when the last run runtimes differ, rejects a changed compared stage, and allows an unrelated noncompared model version difference. Original stage_summary runtime metadata produces the same result. The native-report producer retains its existing supported-engine conversion and checks selected completed stages; the original delivery backend verifies saved per-model bindings before release.
 
 Native receiving should run the same journey with actual saved portfolio/evaluation IDs, then reopen the result and original report archive. Python source review and native execution remain part of that original receiving operation.

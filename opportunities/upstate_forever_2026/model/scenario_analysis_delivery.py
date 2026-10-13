@@ -16,6 +16,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      identifier, read_json, verify_file)
 from .model_selection import require_complete_delivery
 from .reuse import copy_verified
+from .native_versions import model_versions, models_for_outputs
 
 SCHEMA = "upstate.scenario-analysis-delivery/v1"
 ANALYSIS_SCHEMA = "upstate.scenario-analysis/v1"
@@ -97,7 +98,8 @@ def _cohort(workspace, record):
         issue("future_scenario", "Complete a source-bound land-cover alternative and save an analysis containing it and this reference for the seven-family GIS release.")
     if set(record.get("comparison_pollutants", [])) != set(POLLUTANTS):
         issue("analysis_models", "Retain nitrogen, phosphorus and sediment in this source analysis before attaching it to the seven-family GIS release.")
-    reference_version = None
+    selected_models = models_for_outputs(record.get("comparison_pollutants", []))
+    reference_versions = None
     for index, detail in enumerate(details):
         key = detail["id"]
         case = {"id": key, "title": detail.get("title") or key,
@@ -106,7 +108,8 @@ def _cohort(workspace, record):
                 "profile_id": detail["selection"]["profile_id"],
                 "scenario_kind": detail.get("scenario_kind"),
                 "comparison_kind": detail.get("comparison_kind"),
-                "saved_native_version": _copy(detail.get("native_version"))}
+                "saved_native_version": _copy(detail.get("native_version")),
+                "saved_model_versions": _copy(detail.get("model_versions"))}
         cases.append(case)
         try:
             run = workspace.inspect_run(key)
@@ -125,11 +128,17 @@ def _cohort(workspace, record):
             elif index and scenario["kind"] != "landcover":
                 issue("scenario_kind", "Use an explicit source-bound land-cover alternative for future-service maps.", key)
             current_version = _version(run)
+            current_models = model_versions(run, selected_models)
             case["native_version"] = current_version
+            case["model_versions"] = current_models
             if index == 0:
-                reference_version = current_version["comparison_version"]
-            if not current_version["comparison_version"] or current_version["comparison_version"] != reference_version:
-                issue("native_version", "Restore the observed native model version shared by the original analysis cohort.", key)
+                reference_versions = current_models
+            for model, provenance in current_models.items():
+                reference = (reference_versions or {}).get(model, {})
+                version = provenance["comparison_version"]
+                if not version or version != reference.get("comparison_version"):
+                    issue("native_version", "Restore the " + model.upper() +
+                          " execution version shared by the original analysis cohort.", key)
             bound = bindings.get(key)
             if not bound:
                 issue("native_binding", "Restore the original analysis's retained native input binding.", key)
@@ -140,8 +149,28 @@ def _cohort(workspace, record):
                     artifact = run.get("artifacts", {}).get(pollutant) or {}
                     if any(artifact.get(field) != original.get(field) for field in ("sha256", "bytes", "units")):
                         issue("native_artifact", "Restore the original " + pollutant + " raster edition retained by this analysis.", key)
-                if bound.get("native_version") is not None and digest(bound["native_version"]) != digest(current_version):
-                    issue("bound_version", "The native execution provenance differs from the saved analysis input binding; keep the original analysis and restore its exact run edition.", key)
+                saved_models = bound.get("model_versions") or detail.get("model_versions")
+                if saved_models is not None:
+                    if not isinstance(saved_models, dict):
+                        raise ValueError("The saved model execution binding must be an object")
+                    # The completed model source governs the comparison. A later
+                    # unrelated stage may legitimately replace the run runtime.
+                    fields = ("comparison_version", "basis", "observed_stage_version",
+                              "requested_version", "stage_completed_at", "reused_from")
+                    for model in selected_models:
+                        original = saved_models.get(model)
+                        current = current_models[model]
+                        if not isinstance(original, dict) or any(
+                                digest(original.get(field)) != digest(current.get(field))
+                                for field in fields):
+                            issue("bound_version", "Restore the original " + model.upper() +
+                                  " execution provenance retained by this analysis.", key)
+                elif bound.get("native_version") is not None:
+                    original = bound["native_version"]
+                    if (digest(original) != digest(current_version)
+                            or any(value["comparison_version"] != original.get("comparison_version")
+                                   for value in current_models.values())):
+                        issue("bound_version", "The native execution provenance differs from the saved analysis input binding; keep the original analysis and restore its exact run edition.", key)
         except (ValueError, OSError, KeyError, TypeError) as error:
             issue("native_run", "Reopen or restore " + case["title"] + ": " + str(error), key)
     return ids, grid_id, profile_id, cases, issues
@@ -365,6 +394,27 @@ def _table(columns, rows, caption=None):
             "widths": None, "caption": caption}
 
 
+def _version_rows(record):
+    rows = []
+    for run in record["runs"]:
+        title = run.get("title") or run["id"]
+        role = "Reference" if run["id"] == record["baseline_run_id"] else "Alternative"
+        versions = run.get("model_versions")
+        if versions:
+            for model, version in versions.items():
+                rows.append([title, role, model.upper(),
+                             version.get("comparison_version") or "Not retained",
+                             version.get("requested_version") or "Not retained",
+                             version.get("basis") or "Not retained"])
+        else:
+            version = run.get("native_version") or {}
+            rows.append([title, role, "Legacy run record",
+                         version.get("observed") or version.get("requested") or "Not retained",
+                         version.get("requested") or run.get("selection", {}).get("invest_version") or "Not retained",
+                         version.get("basis") or "Legacy selection provenance"])
+    return rows
+
+
 def report_sections(product):
     """Readable append-only blocks; all numbers come directly from the attached record."""
     if product is None:
@@ -377,12 +427,8 @@ def report_sections(product):
         "Analysis ID: " + binding["analysis_id"] + "; original record SHA-256: " + binding["analysis_sha256"] + ".",
         binding["interpretation"]["areas"], binding["interpretation"]["support"],
         "Positive physical change means increased modeled annual export. Zero-baseline percentages and quantities with no common cells remain unavailable.",
-        _table(["Run", "Role", "Observed InVEST", "Requested InVEST", "Version basis"],
-               [[row.get("title") or row["id"], "Reference" if row["id"] == record["baseline_run_id"] else "Alternative",
-                 (row.get("native_version") or {}).get("observed") or "Not retained",
-                 (row.get("native_version") or {}).get("requested") or row.get("selection", {}).get("invest_version") or "Not retained",
-                 (row.get("native_version") or {}).get("basis") or "Legacy selection provenance"]
-                for row in record["runs"]]),
+        _table(["Run", "Role", "Model", "Retained InVEST", "Requested InVEST", "Version basis"],
+               _version_rows(record)),
     ]
     sections = [("Attached fixed-scale scenario analysis", blocks)]
     physical_by_area, priority_by_area, sensitivity_by_area = {}, {}, {}
