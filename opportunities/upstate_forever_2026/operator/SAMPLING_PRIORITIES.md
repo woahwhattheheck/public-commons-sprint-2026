@@ -50,13 +50,13 @@ Choose **Save recommendation** to retain the complete selection, original contex
 
 Choose an existing entry under **Saved sampling edition**, then **Open saved edition** to reopen that exact source-bound result. Edit the targets and choose **Save new revision** to retain a new immutable child. The request carries the original parent ID as its expected parent identity. **Open original parent edition** returns to the retained preceding edition.
 
-Refreshing the saved catalog does not discard an in-memory draft. Changing the selected context or opening another saved edition asks before replacing unsaved target or design edits. Navigating away and back in the same operator session preserves the Workspace's draft. Closing or reloading the browser warns about unsaved edits; only saved editions are durable Workspace records.
+Refreshing the saved catalog does not discard an in-memory draft. Changing the selected context or opening another saved edition asks before replacing unsaved target or design edits. Navigating away and back in the same operator session preserves the Workspace's draft. Closing or reloading warns about unfinished edits and unresolved requests. Saved recommendations and saved working-copy editions are durable Workspace records. Use the working-copy controls below to retain incomplete planning work.
 
 Recording time remains explicit when making a revision. Update it to the time the operator records the revised proposal.
 
 ## Prepare the existing Monitoring design
 
-Open **Prepare an original Monitoring design from the saved edition**.
+Open **Review, revise and prepare a Monitoring design**.
 
 When the observed context refers to an original saved plan, its complete design configuration seeds this form. Otherwise the numeric planning fields remain blank and require explicit input. Review the native programme budget, maximum sites, overhead, setup and visit costs, cost basis, dates, round interval, crews, duration and travel allowance.
 
@@ -68,7 +68,7 @@ Choose **Prepare Monitoring design**. This invokes the existing native solver wi
 
 Inspect the returned feasibility status and target/calendar comparison. Calendar visits are compared against the proposed visit counts in the chosen months. A feasible geographic design does not itself satisfy every analyte, reporting-limit or future high-flow objective.
 
-Choose **Open design and field calendar** to open the exact saved plan in the original Monitoring component. Reopened sampling editions list their already-prepared designs as **Open saved design and calendar**. The Monitoring component retains responsibility for calendar and campaign preparation.
+Choose **Open design and field calendar** to open the exact saved plan in the original Monitoring component. Reopened sampling editions list their already-prepared designs. Select **Retained native design**, then **Use selected design configuration** to load that exact design, including its original cost basis, calendar and unexposed configuration. Review its original feasibility, budget, calculated cost, remaining budget and target/calendar results. The differences table compares the selected design with the current authored inputs; differences do not predict a calculated outcome. Prepare a new design through the original action to calculate the revised choices. **Open saved design and calendar** opens the retained native plan. The Monitoring component retains responsibility for calendar and campaign preparation.
 
 ## Export and receive
 
@@ -105,6 +105,50 @@ Saved design navigation calls monitoring.openStudy with kind monitoring_plans. O
 The maintained browser module was executed with an explicit DOM and host-API adapter for context selection, target entry, preview, ambiguous-response retry, save, immutable revision, native design configuration, export and exact downstream navigation. The course checks zero versus unknown values, original unexposed configuration, source-bound required IDs and workspace-change rejection of stale responses.
 
 This source/controller course is separate from a native Python execution or actual browser-pixel review. The accepting native host should operate the same installed extension with its actual saved context, inspect the report/source package, prepare a justified native design, export an editable study and reopen it through the original receiving route.
+
+
+## Save and reopen unfinished working copies
+
+**Working copies and exact request recovery** retains the complete current targets and design form. Enter a working-copy title, responsible operator and notes, then choose **Save working copy**. A selected existing working copy produces **Save new working-copy revision** with its exact immutable parent identity. Changing the observational context starts a new family.
+
+A working copy may contain an unfinished rationale, empty targets, unknown costs or incomplete advanced JSON text. It is an editable planning record. Saving it does not validate a new scientific proposal or invoke the Monitoring solver. A saved original design remains unchanged.
+
+Select **Saved working copy**, then **Open saved working copy** to reopen its source-bound editor state. **Download current working JSON** retains current edits and exact unresolved requests even when no working edition has been saved. **Open a working JSON file** first checks its project, observational context, recommendation and selected design against their retained originals. Review the displayed identities, then explicitly choose **Open reviewed working copy**. A rejected or stale opening leaves the current work available.
+
+The original IDs and digests travel together. Opening does not substitute another project's context, fill a missing identity, reconstruct original source values, or dispatch a solver operation. The editor retains zero, blank, null, source labels and full advanced text. The JSON opening limit is 8 MiB.
+
+**Export working copy, review and original sources** exports the selected saved working edition, not later unsaved changes. It includes readable `sampling-working-review.html`, exact `working-copy.json`, immutable history, selected native design/configuration, all referenced original evidence and their declared member identities. The readable comparison records authored input changes; original outputs remain separately identified.
+
+**Export complete editable Workspace** uses the original full Workspace backup, including the working-copy records. Restore that archive through the original application before opening its working JSON on another machine. The selected-Study path remains available for saved scientific recommendations; it does not implicitly include these separate working-copy records.
+
+Native commands, exact file schema, complete source membership and the restore command are documented in [Sampling working-copy CLI and receiving](../source_tools/SAMPLING_WORKING_COPIES.md).
+
+## Continue uncertain operations without losing later work
+
+**Resume original request** uses the exact original operation ID and payload. The current browser may retry an unacknowledged original submission through the maintained idempotent queue. Once a task ID is known, recovery reads that exact original task and verifies its Workspace, action and payload.
+
+**Keep original request and continue editing** retains the request separately and unlocks the current draft. It does not cancel an accepted task. A failed working-copy save can also be retained so its rejected input remains available while you correct the draft.
+
+**Inspect or recover this exact request** requires the confirmed original native task. It never submits an imported request solely because a Workspace label matches. An imported request with a foreign or unavailable task remains in the working file for original operator reconciliation. For an unacknowledged request without a task ID, use **Resume original request** before retaining it when the current original session is available.
+
+Recovering an earlier completed recommendation or design keeps later target/design edits. **Open the completed recommendation** explicitly opens the original result. Saved JSON includes the pending and retained request identities, their payloads, task IDs and original workspace metadata.
+
+Working-file preview is a read-only POST to the existing `/api/monitoring-recommendations` route, so complete files are not put into URL query strings. New queued actions are `monitoring.recommendations.working-save` and `monitoring.recommendations.working-export`. All operations remain in the installed operator, with its original authenticated queue and file tickets.
+
+## Complete receiving course for this continuation
+
+Continue the existing Sampling producing operation on its actual retained observational context and justified proposal. Preserve active native work and the permitted browser boundary.
+
+1. Open a saved recommendation and an actual saved native design. Select **Use selected design configuration** and confirm its title, original configuration, budget, costs, calendar and exact native plan identity.
+2. Enter a justified changed budget or field-calendar setting. Check the exact differences, then save a named working copy with the reason and operator. Keep original solver outputs separate.
+3. Download working JSON, switch to another saved entry, then open the file and explicitly adopt the reviewed source binding. Confirm all entered fields, including advanced text, are retained.
+4. Make a further change and save a working-copy revision. Open the parent and child independently. Confirm the original is unchanged.
+5. With a complete valid configuration, prepare the revised Monitoring design through the original queue. Open its native field calendar and compare the actual retained results. Record infeasibility honestly when that is the native result.
+6. Export the selected working bundle and the complete editable Workspace. Open every generated HTML/JSON/CSV/source attachment. Restore the full Workspace to a fresh owned directory; reopen the same working ID and verify all original bindings and editor choices. A restored workspace does not prove an original operator task survived.
+7. Operate the actual extension at desktop width and 390 pixels, personally view the rendered screens and attachment pages, and repair concrete display or workflow failures in the same source.
+
+The maintained controller course executes the full source callbacks using explicitly authored DOM/API/storage adapters. It checks exact original configuration/provenance, incomplete JSON retention, immutable working save, transactional opening failure, source mismatch, uncertain acknowledgement retention, later-draft preservation during verified older-task recovery and foreign-workspace rejection. This is source execution, not a native solver run or browser-pixel result.
+
 
 ## Producing and receiving ownership
 
