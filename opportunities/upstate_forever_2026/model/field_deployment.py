@@ -4,12 +4,15 @@ from __future__ import annotations
 import argparse
 from collections import defaultdict
 from copy import deepcopy
+from decimal import Decimal
 import csv
 import datetime as dt
 from html import escape
 import io
 import json
+import math
 import os
+import warnings
 from pathlib import Path
 import re
 import tempfile
@@ -21,7 +24,7 @@ from .implementation_observations import _attachment_inventory
 from .monitoring_packet import add_member, file_member, retain_packet
 
 SCHEMA = "upstate.field-deployment/v1"
-VERSION = "field-crew-packet/1"
+VERSION = "field-crew-packet/2-declared-coordinates"
 HEX = re.compile(r"[0-9a-f]{64}")
 APPLICATION = Path(__file__).resolve().parents[1]
 
@@ -60,6 +63,148 @@ def _calendar(visit):
     return value if isinstance(value, dict) else {}
 
 
+
+SUPPORTED_GEOGRAPHIC_CRS = {"EPSG:4326", "EPSG:4269", "EPSG:4267", "EPSG:4258"}
+
+
+def _grid_metadata(grid):
+    return {key: getattr(grid, key, None) for key in
+            ("short_name", "full_name", "package_name", "url",
+             "direct_download", "open_license", "available")}
+
+
+def _coordinate_record(site):
+    """Derive a WGS84 point from its explicit original geographic declaration."""
+    lat, lon = site.get("latitude"), site.get("longitude")
+    declared = site.get("coordinate_reference_system")
+    record = {
+        "site_id": site["id"],
+        "original": {"latitude": lat, "longitude": lon,
+                     "coordinate_reference_system": deepcopy(declared)},
+        "state": "missing_coordinates", "wgs84": None,
+        "transformation": None, "message": "",
+    }
+    if lat is None or lon is None:
+        record["message"] = "The original site has no complete point coordinate."
+        return record
+    if (isinstance(lat, bool) or isinstance(lon, bool)
+            or not isinstance(lat, (int, float)) or not isinstance(lon, (int, float))
+            or not math.isfinite(lat) or not math.isfinite(lon)
+            or not -90 <= lat <= 90 or not -180 <= lon <= 180):
+        record.update(state="invalid_coordinates",
+                      message="Original geographic coordinates are not finite valid degrees.")
+        return record
+    if not isinstance(declared, str) or not declared.strip():
+        record.update(state="undeclared_crs",
+                      message="The original site datum is unstated. Original degrees are retained without a GeoJSON point or calendar GEO.")
+        return record
+    source_crs = declared.strip().upper()
+    if source_crs not in SUPPORTED_GEOGRAPHIC_CRS:
+        record.update(state="unsupported_crs",
+                      message="This geographic datum declaration needs an explicit supported transformation; original coordinates are retained without relabeling.")
+        return record
+    if source_crs == "EPSG:4326":
+        record.update(
+            state="original_wgs84", wgs84={"longitude": lon, "latitude": lat},
+            transformation={"source_crs": source_crs, "target_crs": "EPSG:4326",
+                            "method": "Original explicitly declared WGS84 degrees; no datum conversion",
+                            "always_xy": True},
+            message="Original explicitly declared WGS84 coordinates are used unchanged.")
+        return record
+    try:
+        import pyproj
+        from pyproj.aoi import AreaOfInterest
+        from pyproj.transformer import TransformerGroup
+        # A point-local area avoids selecting an operation for another geographic region.
+        area = AreaOfInterest(max(-180, lon - 0.000001), max(-90, lat - 0.000001),
+                              min(180, lon + 0.000001), min(90, lat + 0.000001))
+        with warnings.catch_warnings(record=True) as observed:
+            warnings.simplefilter("always")
+            group = TransformerGroup(source_crs, "EPSG:4326", always_xy=True,
+                                     area_of_interest=area, allow_ballpark=False)
+        unavailable = [
+            {"name": operation.name, "accuracy_m": operation.accuracy,
+             "grids": [_grid_metadata(grid) for grid in operation.grids]}
+            for operation in group.unavailable_operations
+        ]
+        runtime = {
+            "source_crs": source_crs, "target_crs": "EPSG:4326", "always_xy": True,
+            "allow_ballpark": False, "pyproj_version": pyproj.__version__,
+            "proj_version": pyproj.proj_version_str,
+            "best_available": group.best_available,
+            "warnings": [str(item.message) for item in observed],
+            "unavailable_operations": unavailable,
+        }
+        record["transformation"] = runtime
+        failures = []
+        for transformer in group.transformers:
+            extent = transformer.area_of_use
+            if extent is not None:
+                longitude_inside = (extent.west <= lon <= extent.east if extent.west <= extent.east
+                                    else lon >= extent.west or lon <= extent.east)
+                if not longitude_inside or not extent.south <= lat <= extent.north:
+                    continue
+            try:
+                x, y = transformer.transform(lon, lat, errcheck=True)
+            except Exception as error:
+                failures.append({"operation": transformer.description, "message": str(error)})
+                continue
+            if not (math.isfinite(x) and math.isfinite(y) and -180 <= x <= 180 and -90 <= y <= 90):
+                failures.append({"operation": transformer.description, "message": "Output is not a finite WGS84 longitude/latitude point"})
+                continue
+            operation_grids = [_grid_metadata(grid) for operation in transformer.operations
+                               for grid in operation.grids]
+            runtime.update(
+                description=transformer.description, definition=transformer.definition,
+                accuracy_m=transformer.accuracy if transformer.accuracy >= 0 else None,
+                area_of_use=({"name": extent.name, "west": extent.west, "south": extent.south,
+                              "east": extent.east, "north": extent.north} if extent else None),
+                grids=operation_grids, rejected_operations=failures)
+            record.update(state="transformed", wgs84={"longitude": x, "latitude": y},
+                          message="Original declared " + source_crs + " coordinates were transformed to WGS84 using the retained native operation.")
+            if not group.best_available:
+                record["message"] += " A preferred known operation is unavailable; the selected available operation and declared accuracy are retained."
+            return record
+        runtime["rejected_operations"] = failures
+        record.update(state="transform_unavailable",
+                      message="No available non-ballpark native operation covers and transforms this original site. Original coordinates are retained without a GeoJSON point or calendar GEO.")
+    except ImportError as error:
+        record.update(state="transform_unavailable",
+                      message="The native coordinate transformation runtime is unavailable: " + str(error))
+    except Exception as error:
+        record.update(state="transform_unavailable",
+                      message="The declared native coordinate transformation could not be completed: " + str(error))
+    return record
+
+
+def _coordinate_inventory(sites):
+    return {
+        "schema": "upstate.field-deployment-coordinates/v1",
+        "geojson_crs": "OGC:CRS84", "geojson_axis_order": ["longitude", "latitude"],
+        "calendar_geo_crs": "EPSG:4326", "calendar_geo_axis_order": ["latitude", "longitude"],
+        "policy": "Only explicitly declared WGS84 or a retained non-ballpark native transform supplies exported geometry; original site records remain unchanged",
+        "sites": [_coordinate_record(site) for site in sites],
+    }
+
+
+def _coordinate_index(context):
+    inventory = context.get("coordinate_inventory")
+    if inventory is None:
+        inventory = _coordinate_inventory(context["sites"])
+    return {row["site_id"]: row for row in inventory["sites"]}
+
+
+def _coordinate_label(record):
+    if record["wgs84"] is None:
+        return record["state"].replace("_", " ") + "; no exported point"
+    value = record["wgs84"]
+    label = _text(value["latitude"]) + " / " + _text(value["longitude"]) + " (WGS84)"
+    operation = record.get("transformation") or {}
+    if operation.get("accuracy_m") is not None:
+        label += "; operation accuracy " + _text(operation["accuracy_m"]) + " m"
+    return label
+
+
 def _context(workspace, plan_id, revision, selection):
     selected = _selection(selection)
     store = ImplementationStore(workspace)
@@ -87,10 +232,13 @@ def _context(workspace, plan_id, revision, selection):
     binding = {"plan_id": plan["id"], "title": plan["title"], "revision": plan["revision"],
                "document_digest": document_digest(plan)}
     revision_path = store.base / plan["id"] / "revisions" / ("%016d.json" % plan["revision"])
+    coordinate_inventory = _coordinate_inventory(sites)
+    coordinates = {row["site_id"]: row for row in coordinate_inventory["sites"]}
     identity = {"version": VERSION, "implementation_sha256": file_digest(__file__),
                 "workspace_id": workspace.project["id"], "plan": binding, "selection": selected,
                 "original_revision": describe_file(workspace.root, revision_path),
-                "attachment_inventory": attachments, "offline_application_sources": offline}
+                "attachment_inventory": attachments, "offline_application_sources": offline,
+                "coordinate_inventory": coordinate_inventory}
     site_index = {row["id"]: row for row in sites}
     issues = []
     for visit in visits:
@@ -103,6 +251,14 @@ def _context(workspace, plan_id, revision, selection):
         ):
             if condition:
                 issues.append({"visit_id": visit["id"], "code": code, "message": message})
+        coordinate = coordinates[site["id"]]
+        if coordinate["state"] != "missing_coordinates" and coordinate["wgs84"] is None:
+            issues.append({"visit_id": visit["id"], "site_id": site["id"],
+                           "code": "coordinate_" + coordinate["state"],
+                           "message": coordinate["message"]})
+        elif coordinate["state"] == "transformed" and not coordinate["transformation"]["best_available"]:
+            issues.append({"visit_id": visit["id"], "site_id": site["id"],
+                           "code": "coordinate_available_accuracy", "message": coordinate["message"]})
         if _calendar(visit).get("start_local") or _calendar(visit).get("finish_local"):
             issues.append({"visit_id": visit["id"], "code": "local_clock",
                            "message": "Original local clock values are printed. Calendar events use the planned date; no time zone is assigned."})
@@ -116,7 +272,10 @@ def _context(workspace, plan_id, revision, selection):
         groups[(visit.get("planned_date") or "", _text(calendar.get("crew")), visit.get("observer") or "")].append(visit["id"])
     summary = {"visits": len(visits), "sites": len(sites), "protocols": len(protocols),
                "activities": len(activities), "observations": len(observations),
-               "mapped_sites": sum(row.get("latitude") is not None for row in sites),
+               "mapped_sites": sum(row["wgs84"] is not None for row in coordinate_inventory["sites"]),
+               "original_coordinate_sites": sum(row.get("latitude") is not None for row in sites),
+               "unmapped_coordinate_sites": sum(row.get("latitude") is not None and coordinates[row["id"]]["wgs84"] is None for row in sites),
+               "transformed_sites": sum(row["state"] == "transformed" for row in coordinate_inventory["sites"]),
                "calendar_events": sum(bool(row.get("planned_date")) for row in visits),
                "available_attachments": len(files),
                "groups": [{"planned_date": day or None, "crew": crew or None, "observer": observer or None,
@@ -126,14 +285,14 @@ def _context(workspace, plan_id, revision, selection):
             "visits": visits, "sites": sites, "monitoring_plans": protocols,
             "activities": activities, "observations": observations,
             "attachment_inventory": attachments, "attachment_files": files,
-            "summary": summary, "issues": issues}
+            "summary": summary, "issues": issues, "coordinate_inventory": coordinate_inventory}
 
 
 def preview(workspace, plan_id, revision, selection):
     value = _context(workspace, plan_id, revision, selection)
     return {"schema": SCHEMA, "state": "preview",
             **{name: value[name] for name in ("id", "plan", "selection", "summary", "issues",
-                                             "visits", "sites", "monitoring_plans", "attachment_inventory")}}
+                                             "visits", "sites", "monitoring_plans", "attachment_inventory", "coordinate_inventory")}}
 
 
 def _copy_file(source, target, descriptor):
@@ -186,6 +345,11 @@ def _fold(value):
     return "\r\n".join([*lines, line])
 
 
+def _calendar_coordinate(value):
+    """RFC5545 FLOAT uses decimal digits, without scientific exponent notation."""
+    return format(Decimal(str(value)), "f")
+
+
 def calendar_bytes(context):
     """RFC5545 date events; original local clocks remain explicit description fields."""
     plan = context["original_plan"]
@@ -193,6 +357,7 @@ def calendar_bytes(context):
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Upper Savannah//Field crew packet//EN",
              "CALSCALE:GREGORIAN"]
     sites = {row["id"]: row for row in context["sites"]}
+    coordinates = _coordinate_index(context)
     for visit in context["visits"]:
         if not visit.get("planned_date"):
             continue
@@ -205,6 +370,9 @@ def calendar_bytes(context):
             "Original local start: " + _text(original.get("start_local")),
             "Original local finish: " + _text(original.get("finish_local")),
             "Original calendar: " + _text(original), "Notes: " + visit.get("notes", ""),
+            "Original latitude/longitude: " + _text(site.get("latitude")) + " / " + _text(site.get("longitude")),
+            "Original coordinate reference system: " + _text(site.get("coordinate_reference_system")),
+            "Exported coordinate: " + _coordinate_label(coordinates[site["id"]]),
             "Open the retained crew packet and existing field workbench for original protocol and actual field capture.",
         ])
         lines.extend(["BEGIN:VEVENT", "UID:" + uid + "@upstate-field",
@@ -215,8 +383,9 @@ def calendar_bytes(context):
                       "DESCRIPTION:" + _ical_text(description), "TRANSP:TRANSPARENT"])
         if visit["status"] == "cancelled":
             lines.append("STATUS:CANCELLED")
-        if site.get("latitude") is not None:
-            lines.append("GEO:" + str(site["latitude"]) + ";" + str(site["longitude"]))
+        point = coordinates[site["id"]]["wgs84"]
+        if point is not None:
+            lines.append("GEO:" + _calendar_coordinate(point["latitude"]) + ";" + _calendar_coordinate(point["longitude"]))
         lines.append("END:VEVENT")
     lines.append("END:VCALENDAR")
     return ("\r\n".join(_fold(line) for line in lines) + "\r\n").encode("utf-8")
@@ -230,6 +399,7 @@ def _table(headers, rows):
 
 def render_html(context):
     plan = context["original_plan"]
+    coordinates = _coordinate_index(context)
     sites = {row["id"]: row for row in context["sites"]}
     protocols = {row["id"]: row for row in context["monitoring_plans"]}
     visits = {row["id"]: row for row in context["visits"]}
@@ -240,14 +410,16 @@ def render_html(context):
              "<p>" + escape(plan["title"]) + " · saved revision " + str(plan["revision"]) + "</p>",
              '<p class="screen"><a href="field-workbench.html">Open field workbench</a> · <a href="original-plan.json" download>Complete editable plan</a> · <a href="visits.ics" download>Calendar</a> · <a href="sites.geojson" download>Site geometry</a></p>',
              "<p>Open the field workbench, choose Open JSON and select original-plan.json. Record actual visits, samples and observations there, export the complete edited plan, and import it in the original Workspace. Review the saved revision before returning completed work to its original Monitoring campaign.</p>",
-             "<p>The packet groups original visits by planned date, original crew and observer. Local clock values remain as recorded. Calendar events cover the stated day. Source search areas remain identified where no station point is available.</p>"]
+             "<p>The packet groups original visits by planned date, original crew and observer. Local clock values remain as recorded. Calendar events cover the stated day. Source search areas remain identified where no station point is available.</p>",
+             "<p>Original site coordinates and their declared datum are retained. GeoJSON and calendar coordinates use WGS84 only after an explicit declaration or a recorded native transformation. Unstated or unavailable transformations leave geometry empty; coordinate-inventory.json retains each original coordinate and operation.</p>"]
     parts.append(_table(["Day", "Original crew", "Observer", "Visits"], [
         [row["planned_date"], row["crew"], row["observer"], len(row["visit_ids"])] for row in context["summary"]["groups"]]))
     parts.append("<h2>Preparation notes</h2>" + _table(["Visit / activity", "Recorded preparation detail"], [
         [row.get("activity_id") or row["visit_id"], row["message"]] for row in context["issues"]]))
-    parts.append("<h2>Selected sites</h2>" + _table(["Site", "Latitude", "Longitude", "Geometry role", "Original source"], [
-        [site["label"], site.get("latitude"), site.get("longitude"), site.get("geometry_role"), site.get("source_ref")]
-        for site in context["sites"]]))
+    parts.append("<h2>Selected sites</h2>" + _table(["Site", "Original latitude / longitude", "Declared CRS", "Exported coordinate", "Geometry role", "Original source"], [
+        [site["label"], _text(site.get("latitude")) + " / " + _text(site.get("longitude")),
+         site.get("coordinate_reference_system") or "Unstated", _coordinate_label(coordinates[site["id"]]),
+         site.get("geometry_role"), site.get("source_ref")] for site in context["sites"]]))
     for group in context["summary"]["groups"]:
         for key in group["visit_ids"]:
             visit, site = visits[key], sites[visits[key]["site_id"]]
@@ -259,7 +431,10 @@ def render_html(context):
                 ["Original crew", original.get("crew")], ["Observer", visit.get("observer")],
                 ["Original local start / finish", _text(original.get("start_local")) + " / " + _text(original.get("finish_local"))],
                 ["Recorded status", visit["status"]], ["Recorded actual visit", visit.get("visited_at")],
-                ["Site ID", site["id"]], ["Latitude / longitude", _text(site.get("latitude")) + " / " + _text(site.get("longitude"))],
+                ["Site ID", site["id"]], ["Original latitude / longitude", _text(site.get("latitude")) + " / " + _text(site.get("longitude"))],
+                ["Original coordinate reference system", site.get("coordinate_reference_system") or "Unstated"],
+                ["Exported WGS84 coordinate", _coordinate_label(coordinates[site["id"]])],
+                ["Coordinate interpretation", coordinates[site["id"]]["message"]],
                 ["Site geometry role", site.get("geometry_role")], ["Visit notes", visit.get("notes")],
                 ["Evidence references", visit.get("evidence_refs", [])],
             ]))
@@ -307,19 +482,28 @@ def prepare(workspace, plan_id, revision, selection, *, expected_id):
         atomic_json(directory / "selection.json", context["selection"], immutable=True)
         atomic_json(directory / "attachment-inventory.json", context["attachment_inventory"], immutable=True)
         atomic_json(directory / "preparation.json", {"summary": context["summary"], "issues": context["issues"]}, immutable=True)
+        atomic_json(directory / "coordinate-inventory.json", context["coordinate_inventory"], immutable=True)
         for name, headers in (
             ("visits", ["id", "planned_date", "site_id", "observer", "status", "monitoring_plan_id"]),
-            ("sites", ["id", "label", "latitude", "longitude", "geometry_role"]),
+            ("sites", ["id", "label", "latitude", "longitude", "coordinate_reference_system", "geometry_role"]),
             ("monitoring_plans", ["id", "title", "objective", "parameters", "method_ref"]),
             ("activities", ["id", "visit_id", "site_id", "kind", "sample_id", "collected_at", "method", "custody_ref"]),
             ("observations", ["id", "activity_id", "parameter", "result_type", "original_text", "unit"]),
         ):
             atomic_bytes(directory / (name + ".csv"), _csv(records[name], headers), immutable=True)
-        features = [{"type": "Feature", "id": site["id"],
-                     "geometry": {"type": "Point", "coordinates": [site["longitude"], site["latitude"]]}
-                                 if site.get("latitude") is not None else None,
-                     "properties": {**site, "deployment_visit_ids": [row["id"] for row in context["visits"] if row["site_id"] == site["id"]]}}
-                    for site in context["sites"]]
+        coordinates = _coordinate_index(context)
+        features = []
+        for site in context["sites"]:
+            coordinate = coordinates[site["id"]]
+            point = coordinate["wgs84"]
+            features.append({
+                "type": "Feature", "id": site["id"],
+                "geometry": ({"type": "Point", "coordinates": [point["longitude"], point["latitude"]]}
+                             if point is not None else None),
+                "properties": {**site, "deployment_coordinate": coordinate,
+                               "deployment_visit_ids": [row["id"] for row in context["visits"]
+                                                        if row["site_id"] == site["id"]]},
+            })
         atomic_json(directory / "sites.geojson", {"type": "FeatureCollection", "features": features}, immutable=True)
         atomic_bytes(directory / "visits.ics", calendar_bytes(context), immutable=True)
         atomic_bytes(directory / "crew-packet.html", render_html(context), immutable=True)
@@ -333,7 +517,7 @@ def prepare(workspace, plan_id, revision, selection, *, expected_id):
         for path, descriptor in context["attachment_files"]:
             _copy_file(path, directory / descriptor["retained_path"], descriptor)
         names = ["intent.json", "original-plan.json", "original-revision.json", "selected-records.json",
-                 "selection.json", "attachment-inventory.json", "preparation.json",
+                 "selection.json", "attachment-inventory.json", "preparation.json", "coordinate-inventory.json",
                  "visits.csv", "sites.csv", "monitoring_plans.csv", "activities.csv", "observations.csv",
                  "sites.geojson", "visits.ics", "crew-packet.html", "field-workbench.html", "offline-build.json"]
         names.extend(row["retained_path"] for row in context["attachment_inventory"] if row["state"] == "retained")

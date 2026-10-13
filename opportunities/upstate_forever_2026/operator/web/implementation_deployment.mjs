@@ -58,11 +58,18 @@ export function render(w){
     const s=preview.summary;
     html+='<h4>Reviewed original selection</h4><p>'+esc(s.visits)+' visits · '+esc(s.sites)+' sites · '+esc(s.protocols)+' protocols · '+esc(s.activities)+' original activities · '+esc(s.calendar_events)+' dated calendar events · '+esc(s.available_attachments)+' retained attachments.</p>'+
       w.table(['Planned day','Original crew','Observer','Visits'],s.groups.map(g=>[esc(g.planned_date||'Unscheduled'),esc(g.crew||'Unassigned'),esc(g.observer||'Unassigned'),esc(g.visit_ids.length)]))+
+      (preview.coordinate_inventory?'<h4>Original and exported site coordinates</h4><p>'+esc(s.mapped_sites)+' WGS84 export points · '+esc(s.original_coordinate_sites)+' original coordinate-bearing sites · '+esc(s.transformed_sites)+' transformed sites. Original values and declared datums remain unchanged.</p>'+
+       w.table(['Site','Original latitude / longitude','Declared CRS','WGS84 export latitude / longitude','Operation / status'],preview.coordinate_inventory.sites.map(row=>{
+        const site=preview.sites.find(value=>value.id===row.site_id),point=row.wgs84,operation=row.transformation||{};
+        return [esc(site?.label||row.site_id),esc(String(row.original.latitude??'')+' / '+String(row.original.longitude??'')),
+          esc(row.original.coordinate_reference_system||'Unstated'),esc(point?String(point.latitude)+' / '+String(point.longitude):'No exported point'),
+          esc(operation.description||row.state.replace(/_/g,' '))+(operation.accuracy_m!=null?'<br>'+esc('Declared operation accuracy: '+operation.accuracy_m+' m'):'')+'<br>'+esc(row.message)];
+       })):'')+
       w.table(['Visit / activity','Preparation detail'],preview.issues.map(row=>[esc(row.activity_id||row.visit_id),esc(row.message)]),'The selected records have no additional preparation notes.')+
       '<div class="iw-actions">'+button('prepare',f.stage==='preparing'?'Packet task retained…':'Create reviewed packet',locked||!editable(w,f)?'disabled':'')+'</div>';
   }
   if(result){
-    const primary=(result._downloads||[]).filter(row=>/^(crew-packet\.zip|crew-packet\.html|field-workbench\.html|original-plan\.json|visits\.ics|sites\.geojson)$/.test(row.label||row.filename||''));
+    const primary=(result._downloads||[]).filter(row=>/^(crew-packet\.zip|crew-packet\.html|field-workbench\.html|original-plan\.json|visits\.ics|sites\.geojson|coordinate-inventory\.json)$/.test(row.label||row.filename||''));
     html+='<h4>Retained packet · revision '+esc(result.plan.revision)+'</h4><p>'+w.nativeDownloads(primary)+'</p>'+
       '<p>Unzip the complete packet and open field-workbench.html. Choose Open JSON and load original-plan.json. Record actual work, export the edited plan, and import it into this original Workspace.</p>'+
       '<details><summary>Every original packet member</summary><p>'+w.nativeDownloads(result._downloads)+'</p></details>';
