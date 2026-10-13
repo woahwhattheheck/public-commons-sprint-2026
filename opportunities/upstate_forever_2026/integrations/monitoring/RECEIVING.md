@@ -168,3 +168,12 @@ other current Monitoring behavior. It preserves the original archived source
 and migrations. Complete Workspace transfer takes the report-source root lock
 after the existing workspace lock, before capturing any report output or
 retained source; preparation does not acquire the workspace lock afterward.
+
+
+## Maintained cumulative application source
+
+For the current complete application, use the existing installer in `docs/COMPLETE_APPLICATION_RECEIVING.md`. Its component catalogue now selects the current campaign-to-Implementation bridge, observed context, exact native reports and original source packets together.
+
+The current Monitoring installer accepts `--source-root /absolute/pinned/application-or-repository` in addition to its existing target argument. When invoked from a complete current checkout without that option, it chooses that checkout's maintained source. `current_application_files.json` lists the owned current files and existing native dependencies. The original packaged `src/` route remains available for its original standalone bundle. Use `--check` to inspect the selected source mode, complete file identities and exact changes before applying the same invocation.
+
+The live application requires the existing Implementation, registered extension-host and Monitoring report-source families. The report-source producer/descriptor/assets remain with their own maintained installer; this installer checks their presence instead of replacing them. Updates preserve current unknown peer postimages and retain original backup/rollback handling. The cumulative whole-application route supplies these dependencies in one installation.
