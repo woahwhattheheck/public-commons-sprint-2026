@@ -10,7 +10,7 @@ The comparison checks that every plan belongs to the original frontier job and n
 
 The original default objective is geodesic source-catchment area in square kilometres; a network with a priority property retains that property's original weight basis. Coverage is over the complete model-source network, including upstream contributors. A reporting-boundary intersection has a separately identified geography. The comparison exposes total coverage, existing-station baseline weight, new covered weight, and exact change from the chosen comparison baseline. Higher-budget site sets need not contain lower-budget sites.
 
-Money remains integer cents with the original currency. Native cost records retain overhead, per-site scope, remaining budget and treatment of existing-station costs. The original calendars and solver status/gap remain attached to each plan.
+Money remains integer cents with the original currency. Native cost records retain overhead, per-site scope, remaining budget and treatment of existing-station costs. The original calendars and solver status/gap remain attached to each plan. The printable table uses four decimal places and scientific notation for smaller nonzero values; the saved JSON and CSV retain the original values.
 
 ## Observed support
 

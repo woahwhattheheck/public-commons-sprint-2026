@@ -147,6 +147,8 @@ def preview(workspace, *, frontier_id, baseline_plan_id=None, context_ids=None,
                                    if coverage is not None else None),
             "weight_basis": plan["weight_basis"], "coverage_mode": plan["coverage_mode"],
             "coverage_meaning": plan["coverage_meaning"],
+            "max_sites": plan["configuration"].get("max_sites", len(network["nodes"])),
+            "calendar_site_capacity": plan["calendar_site_capacity"],
             "solver": plan.get("solver"), "diagnostics": plan.get("diagnostics", []),
             "warnings": plan.get("warnings", []),
             "calendar": {"visits": len(visits),
@@ -262,7 +264,15 @@ def _summary_rows(record):
 
 def report_html(record):
     escape = lambda value: html.escape(str(value), quote=True)
-    show = lambda value: "Unavailable" if value is None else escape(value)
+    def show(value):
+        if value is None:
+            return "Unavailable"
+        if isinstance(value, float):
+            return escape(format(value, ".4g") if value and abs(value) < 0.0001
+                          else format(value, ",.4f").rstrip("0").rstrip("."))
+        if isinstance(value, int) and not isinstance(value, bool):
+            return escape(format(value, ","))
+        return escape(value)
     def table(headers, rows):
         return ("<table><thead><tr>" + "".join("<th>" + escape(v) + "</th>" for v in headers)
                 + "</tr></thead><tbody>" + "".join("<tr>" + "".join("<td>" + show(v) + "</td>" for v in row)
@@ -368,6 +378,7 @@ def export_comparison(workspace, *, comparison_id, export_root=None):
                     for name, member in sorted(files.items())],
     })
     base = Path(export_root).resolve() if export_root else workspace.root.parent / (workspace.root.name + "-monitoring-exports")
+    service.export_root = base
     path = base / ("monitoring-budget-comparison-" + comparison_id) / "monitoring-budget-comparison.zip"
     retain_packet(path, files)
     return service._download(path, {"format": "budget-comparison", "comparison_id": comparison_id,

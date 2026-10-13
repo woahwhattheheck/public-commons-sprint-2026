@@ -15,7 +15,7 @@ from .common import (atomic_json, describe_file, digest, file_digest, held,
 from .communities import REPORT_KIND
 
 SCHEMA = "upstate.community-report-context/v1"
-VERSION = "2"
+VERSION = "3"
 RECIPE = "community-scientific-report.json"
 MANIFEST = "sources.json"
 
@@ -58,8 +58,11 @@ def _text(value):
         return "Unspecified"
     if isinstance(value, bool):
         return "Yes" if value else "No"
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False, sort_keys=True, allow_nan=False)
+    if isinstance(value, dict):
+        return "\n".join(str(key).replace("_", " ") + ": " + _text(item)
+                         for key, item in value.items()) or "None recorded"
+    if isinstance(value, (list, tuple)):
+        return "\n".join(_text(item) for item in value) or "None recorded"
     return str(value)
 
 
@@ -68,8 +71,180 @@ def _table(columns, rows):
             "rows": [[_text(value) for value in row] for row in rows]}
 
 
+def _metadata_rows(value, prefix=""):
+    """Show every retained metadata leaf without serializing a JSON cell."""
+    if isinstance(value, dict):
+        rows = []
+        for key, item in value.items():
+            label = str(key).replace("_", " ")
+            rows.extend(_metadata_rows(item, prefix + " / " + label if prefix else label))
+        return rows or [[prefix or "Value", "None recorded"]]
+    if isinstance(value, (list, tuple)):
+        if any(isinstance(item, (dict, list, tuple)) for item in value):
+            return [row for number, item in enumerate(value, 1)
+                    for row in _metadata_rows(item, prefix + " / item " + str(number))]
+    return [[prefix or "Value", _text(value)]]
+
+
+def _coverage(known, total):
+    return _text(known) + " of " + _text(total) + " block groups"
+
+
+def _summary_blocks(summary, income):
+    total = summary.get("geoid_count")
+    currency = income.get("currency") or "currency unspecified"
+    return [
+        "Selected block groups: " + _text(total) + ". Complete totals require a value for every selected "
+        "block group. Known-group subtotals retain the available source values and their coverage.",
+        _table(["Whole-block-group measure", "Complete selected total", "Known-group subtotal",
+                "Groups with a value"], [
+            [label, summary.get(key), summary.get(key + "_known_sum"),
+             _coverage(summary.get(key + "_known_groups"), total)]
+            for label, key in (("People", "population_total"), ("Households", "households_total"),
+                               ("Households below poverty", "poverty_households_total"))
+        ]),
+        _table(["Poverty measure", "Saved value", "Source support"], [
+            ["Selected-group household poverty (%)", summary.get("household_poverty_percent"),
+             "Available only when every selected group has both household and poverty counts"],
+            ["Known paired-group household poverty (%)", summary.get("household_poverty_known_percent"),
+             _coverage(summary.get("household_poverty_known_groups"), total)],
+            ["Paired poverty numerator (households)", summary.get("household_poverty_numerator"),
+             "Households below poverty in groups with both counts"],
+            ["Paired household denominator (households)", summary.get("household_poverty_denominator"),
+             "All households in the same paired groups"],
+        ]),
+        "The poverty percentage uses the saved paired household numerator and denominator, rather than "
+        "an average of block-group percentages. A zero household denominator has no percentage.",
+        _table(["Income and membership context", "Saved value"], [
+            ["Income reference (" + currency + ")", income.get("threshold")],
+            ["Income reference source", income.get("source_reference")],
+            ["Block groups with a known median income", _coverage(summary.get("income_known_groups"), total)],
+            ["Known block-group medians below the source reference",
+             _text(summary.get("below_state_median_count")) + " of " + _text(summary.get("income_known_groups"))],
+            ["Lowest block-group median (" + currency + ")", summary.get("median_income_min")],
+            ["Highest block-group median (" + currency + ")", summary.get("median_income_max")],
+            ["Block groups with multiple original memberships", summary.get("shared_membership_groups")],
+        ]),
+        "Income bounds describe the individual block-group medians. No pooled community median or mean "
+        "household income is calculated. Each selected block group appears once in the overall totals.",
+    ]
+
+
+def _scope_blocks(rows, scope_label):
+    blocks = []
+    for row in rows:
+        total = row.get("geoid_count")
+        blocks.append(_table([scope_label + " measure", "Complete total", "Known-group subtotal",
+                              "Groups with a value"], [
+            [str(row.get("label") or row.get("scope_id") or "Unnamed") + " — " + label,
+             row.get(key), row.get(key + "_known_sum"),
+             _coverage(row.get(key + "_known_groups"), total)]
+            for label, key in (("people", "population_total"), ("households", "households_total"),
+                               ("households below poverty", "poverty_households_total"))
+        ]))
+        blocks.append(_table([scope_label + " identity / paired poverty", "Saved value"], [
+            ["Source scope ID", row.get("scope_id")],
+            ["Selected block groups", total],
+            ["Selected-group household poverty (%)", row.get("household_poverty_percent")],
+            ["Known paired-group household poverty (%)", row.get("household_poverty_known_percent")],
+            ["Paired-group coverage", _coverage(row.get("household_poverty_known_groups"), total)],
+            ["Paired poverty numerator (households)", row.get("household_poverty_numerator")],
+            ["Paired household denominator (households)", row.get("household_poverty_denominator")],
+        ]))
+    return blocks
+
+
+def _revision_change_rows(revision):
+    rows = []
+    for change in revision.get("changes", []):
+        before, after = change.get("before"), change.get("after")
+        label = str(change.get("intervention_id", "")) + " / " + str(change.get("title", ""))
+        if isinstance(before, dict) or isinstance(after, dict):
+            left = dict(_metadata_rows(before)) if isinstance(before, dict) else {}
+            right = dict(_metadata_rows(after)) if isinstance(after, dict) else {}
+            for field in dict.fromkeys([*left, *right]):
+                rows.append([change.get("change"), label, str(change.get("field", "")) + " / " + field,
+                             left.get(field, "Absent from this edition"),
+                             right.get(field, "Absent from this edition")])
+        else:
+            rows.append([change.get("change"), label, change.get("field"), before, after])
+    return rows
+
+
+def _revision_blocks(revision):
+    selection = revision.get("selection", {})
+    before_summary, after_summary = (selection.get(name, {}) for name in ("before_summary", "after_summary"))
+    costs = revision.get("costs", {})
+    before_cost, after_cost = (costs.get(name, {}) for name in ("before", "after"))
+    context = revision.get("scientific_context", {})
+    csv = revision.get("received_csv", {})
+    changes = revision.get("plan_changes", []) + context.get("identifier_changes", [])
+    blocks = [
+        _table(["Saved revision", "Original value"], [
+            ["Previous plan", revision.get("previous_plan_id")],
+            ["Current plan", revision.get("plan_id")],
+            ["Previous revision number", revision.get("previous_revision_number")],
+            ["Current revision number", revision.get("revision_number")],
+            ["Original community table", revision.get("table_id")],
+            ["Original community source SHA256", revision.get("source_sha256")],
+        ]),
+        _table(["Recorded change count", "Value"], _metadata_rows(revision.get("counts", {}))),
+        selection.get("basis") or "Selection changes describe whole-block-group membership.",
+        _table(["Selected membership / source measure", "Previous edition", "Current edition"], [
+            ["Utility filters", selection.get("before", {}).get("utility_ids"),
+             selection.get("after", {}).get("utility_ids")],
+            ["Watershed filters", selection.get("before", {}).get("watershed_ids"),
+             selection.get("after", {}).get("watershed_ids")],
+            ["Whole block groups", before_summary.get("geoid_count"), after_summary.get("geoid_count")],
+            ["Selected GEOIDs", before_summary.get("geoids"), after_summary.get("geoids")],
+            ["Added selected GEOIDs", "Not applicable", selection.get("added_geoids")],
+            ["Removed selected GEOIDs", selection.get("removed_geoids"), "Not applicable"],
+            ["Complete population total", before_summary.get("population_total"),
+             after_summary.get("population_total")],
+            ["Groups with population", _coverage(before_summary.get("population_total_known_groups"),
+                                                before_summary.get("geoid_count")),
+             _coverage(after_summary.get("population_total_known_groups"), after_summary.get("geoid_count"))],
+            ["Complete household total", before_summary.get("households_total"),
+             after_summary.get("households_total")],
+            ["Groups with households", _coverage(before_summary.get("households_total_known_groups"),
+                                                before_summary.get("geoid_count")),
+             _coverage(after_summary.get("households_total_known_groups"), after_summary.get("geoid_count"))],
+        ]),
+        costs.get("basis") or "Entered planning estimates retain their original availability.",
+        _table(["Entered planning estimates (" + str(costs.get("currency") or "currency unspecified") + ")",
+                "Previous edition", "Current edition"], [
+            ["Entered total", before_cost.get("entered_total_usd"), after_cost.get("entered_total_usd")],
+            ["Interventions with an estimate", before_cost.get("known_estimate_count"),
+             after_cost.get("known_estimate_count")],
+            ["Interventions with an unspecified estimate", before_cost.get("unknown_estimate_count"),
+             after_cost.get("unknown_estimate_count")],
+        ]),
+        _table(["Saved signed change", "Value"], [
+            ["Current minus previous entered estimates (USD)", costs.get("entered_estimate_difference_usd")],
+        ]),
+        _table(["Change", "Intervention", "Original field", "Previous value", "Current value"],
+               _revision_change_rows(revision)),
+    ]
+    if changes:
+        blocks.append(_table(["Plan / scientific selection field", "Previous value", "Current value"],
+                             [[row.get("field"), row.get("before"), row.get("after")] for row in changes]))
+    blocks.append(_table(["Revision source lineage", "Previous edition", "Current edition"], [
+        ["Scientific snapshot SHA256", context.get("before_snapshot_sha256"), context.get("after_snapshot_sha256")],
+        ["Scientific snapshot changed", "Not applicable", context.get("snapshot_changed")],
+        ["Received intervention CSV SHA256", csv.get("before_sha256"), csv.get("after_sha256")],
+        ["Received CSV parent plan", csv.get("before_import_plan_id"), csv.get("after_import_plan_id")],
+    ]))
+    return blocks
+
+
 def _sections(payload, report_id, report_sha256):
     plan = payload["plan"]
+    source = plan.get("source") or {}
+    income = plan.get("metadata", {}).get("income_reference", {})
+    currency = income.get("currency") or "currency unspecified"
+    aggregate = plan.get("summaries", {}).get("all", {})
+    utilities = payload.get("utility_summaries", [])
+    cost = plan.get("cost_summary", {})
     sections = [
         ["Community planning context", [
             plan.get("purpose") or "Saved utility and community intervention programme.",
@@ -81,145 +256,127 @@ def _sections(payload, report_id, report_sha256):
             "They are separate from measured environmental outcomes and modeled export reductions.",
             _table(["Original selection", "Saved value"], [
                 ["Plan", plan.get("title")], ["Plan ID", plan["id"]],
-                ["Original community source", plan.get("source")],
                 ["Saved report", report_id], ["Original report JSON SHA256", report_sha256],
-                ["Whole-block-group summary", plan.get("summaries", {}).get("all")],
             ]),
+            *_summary_blocks(aggregate, income),
+        ]],
+        ["Original community source", [
+            _table(["Source field", "Saved value"], [
+                ["Source title", source.get("title")],
+                ["Original source URI", source.get("uri")],
+                ["Source vintage", source.get("vintage")],
+                ["Source collection", source.get("collection_id")],
+                ["Source member", source.get("source_id")],
+                ["Original source SHA256", source.get("sha256")],
+            ]),
+            _table(["Retained original file", "Saved value"],
+                   _metadata_rows(source.get("original"), "Original file")),
+            *plan.get("metadata", {}).get("limitations", []),
         ]],
         ["Selected utilities and source communities", [
-            _table(["Utility", "Block groups", "Block-group population", "Households",
-                    "Poverty households", "Approximate whole-system service population", "Service population basis"], [
-                [row.get("label"), row.get("geoid_count"), row.get("population_total"),
-                 row.get("households_total"), row.get("poverty_households_total"),
-                 row.get("approximate_service_population"), row.get("service_population_basis")]
-                for row in payload.get("utility_summaries", [])
+            _table(["Utility", "Approximate whole-system service population", "Service population basis",
+                    "Original service population source"], [
+                [row.get("label"), row.get("approximate_service_population"),
+                 row.get("service_population_basis"), row.get("service_population_source")]
+                for row in utilities
             ]),
-            _table(["Block group", "Utility memberships", "HUC12 memberships", "Population", "Households",
-                    "Median household income", "Poverty households", "Original source notes"], [
-                [row.get("geoid"), row.get("utility_ids"), row.get("watershed_ids"),
-                 row.get("population"), row.get("households"), row.get("median_household_income"),
-                 row.get("households_below_poverty"), row.get("source_notes")]
+            *_scope_blocks(utilities, "Utility"),
+            "The following values belong to each original whole block group. Memberships identify the "
+            "selected utility and watershed associations without dividing household or population counts.",
+            _table(["Block group", "Population", "Households",
+                    "Median household income (" + currency + ")", "Households below poverty"], [
+                [row.get("geoid"), row.get("population"), row.get("households"),
+                 row.get("median_household_income"), row.get("households_below_poverty")]
                 for row in payload.get("communities", [])
             ]),
+            _table(["Block group", "Utility memberships", "HUC12 memberships", "Original source notes"], [
+                [row.get("geoid"), row.get("utility_ids"), row.get("watershed_ids"), row.get("source_notes")]
+                for row in payload.get("communities", [])
+            ]),
+        ]],
+        ["Selected watershed community context", [
+            "These totals retain whole block groups associated with each selected watershed. Groups shared "
+            "by watersheds remain present in each membership summary; totals across watersheds cannot be added.",
+            *_scope_blocks(payload.get("watershed_summaries", []), "Watershed"),
         ]],
         ["Ordered intervention programme", [
             "The original editable interventions.csv accompanies this report. When this plan received an edited "
             "CSV, its unchanged received-interventions.csv and INTERVENTION_IMPORT.json accompany it too.",
-            _table(["Order", "Intervention", "Priority / recorded status", "Utility / HUC12", "Strategy",
-                    "Estimated USD", "Owner", "Reason", "Next step"], [
-                [row.get("position"), row.get("title"),
+            _table(["Planning cost coverage", "Saved value"], [
+                ["Interventions", cost.get("intervention_count")],
+                ["Interventions with an entered estimate", cost.get("known_estimate_count")],
+                ["Total of entered estimates (USD)", cost.get("known_estimate_total")],
+            ]),
+            "The cost total includes entered estimates only. An unspecified cost is an open planning input; "
+            "it does not become a zero estimate or a measured economic benefit.",
+            _table(["Order / intervention", "Priority / recorded status", "Utility / HUC12", "Strategy",
+                    "Estimated USD"], [
+                [str(row.get("position", "")) + " / " + str(row.get("title", "")),
                  str(row.get("priority", "")) + " / " + str(row.get("status", "")),
                  str(row.get("utility_id", "")) + " / " + str(row.get("watershed_id", "")),
-                 row.get("strategy"), row.get("cost_estimate_usd"), row.get("owner"),
-                 row.get("reason"), row.get("next_step")]
+                 row.get("strategy"), row.get("cost_estimate_usd")]
+                for row in payload.get("interventions", [])
+            ]),
+            _table(["Order / intervention", "Owner", "Reason", "Next step"], [
+                [str(row.get("position", "")) + " / " + str(row.get("title", "")),
+                 row.get("owner"), row.get("reason"), row.get("next_step")]
                 for row in payload.get("interventions", [])
             ]),
         ]],
     ]
     revision = payload.get("plan_revision")
     if revision:
-        costs = revision.get("costs", {})
-        before_costs, after_costs = costs.get("before", {}), costs.get("after", {})
-        selection = revision.get("selection", {})
-        scientific = revision.get("scientific_context", {})
-        csv = revision.get("received_csv", {})
-        counts = revision.get("counts", {})
-        sections.append(["Changes from previous saved Community plan", [
-            "This register compares the two retained planning editions. The previous-plan.json, "
-            "plan-revision-summary.json and plan-revision-changes.csv originals accompany this report. "
-            "Entered cost-estimate differences keep missing estimates separate and do not represent "
-            "environmental benefits or measured programme expenditure.",
-            _table(["Original revision", "Saved identity"], [
-                ["Previous plan", revision.get("previous_plan_id")],
-                ["Saved plan", revision.get("plan_id")],
-                ["Previous revision", revision.get("previous_revision_number")],
-                ["Saved revision", revision.get("revision_number")],
-                ["Original community table", revision.get("table_id")],
-                ["Original community source SHA256", revision.get("source_sha256")],
-            ]),
-            _table(["Interventions added", "Removed", "Changed", "Unchanged", "Changed fields"], [[
-                counts.get("added_interventions"), counts.get("removed_interventions"),
-                counts.get("changed_interventions"), counts.get("unchanged_interventions"),
-                counts.get("changed_fields"),
-            ]]),
-            _table(["Change", "Intervention", "Field", "Previous value", "Saved value"], [
-                [row.get("change"), row.get("title") or row.get("intervention_id"),
-                 row.get("field"), row.get("before"), row.get("after")]
-                for row in revision.get("changes", [])
-            ]),
-            _table(["Plan detail", "Previous value", "Saved value"], [
-                [row.get("field"), row.get("before"), row.get("after")]
-                for row in revision.get("plan_changes", [])
-            ]),
-            _table(["Entered estimate basis", "Previous plan", "Saved plan"], [
-                ["Entered total USD", before_costs.get("entered_total_usd"), after_costs.get("entered_total_usd")],
-                ["Known estimate count", before_costs.get("known_estimate_count"), after_costs.get("known_estimate_count")],
-                ["Unknown estimate count", before_costs.get("unknown_estimate_count"), after_costs.get("unknown_estimate_count")],
-                ["Entered-estimate difference USD", None, costs.get("entered_estimate_difference_usd")],
-                ["Difference basis", None, costs.get("basis")],
-            ]),
-            "Community selections below describe whole original source block groups. Their utility "
-            "and watershed overlaps retain original memberships and are not additive.",
-            _table(["Whole source block-group selection", "Previous plan", "Saved plan"], [
-                ["Selection", selection.get("before"), selection.get("after")],
-                ["Whole-group summary", selection.get("before_summary"), selection.get("after_summary")],
-                ["Added block groups", None, selection.get("added_geoids")],
-                ["Removed block groups", None, selection.get("removed_geoids")],
-            ]),
-            _table(["Scientific context selection", "Previous value", "Saved value"], [
-                [row.get("field"), row.get("before"), row.get("after")]
-                for row in scientific.get("identifier_changes", [])
-            ]),
-            _table(["Original scientific and CSV lineage", "Previous plan", "Saved plan"], [
-                ["Scientific snapshot SHA256", scientific.get("before_snapshot_sha256"), scientific.get("after_snapshot_sha256")],
-                ["Snapshot changed", None, scientific.get("snapshot_changed")],
-                ["Received CSV SHA256", csv.get("before_sha256"), csv.get("after_sha256")],
-                ["CSV import plan", csv.get("before_import_plan_id"), csv.get("after_import_plan_id")],
-            ]),
-        ]])
+        sections.insert(1, ["Changes from previous saved Community plan", _revision_blocks(revision)])
     regional = payload.get("regional_watershed_context")
     if regional:
         hucs = regional.get("hucs", [])
+        coverage = regional.get("classification_coverage") or {}
         sections.append(["Original regional watershed planning context", [
             *payload.get("watershed_scope_notes", []),
             "A complete South Carolina query with zero selected-class matches describes the named target "
             "classes in that source edition. Water-quality condition and impairment decisions use their "
             "assessment sources. Whole-HUC area is shown once; state portions retain each original edition.",
             _table(["HUC12 / watershed", "Whole-HUC acres", "NRCS edition", "Priority states",
-                    "Original programme labels", "Selected classification matches", "Query coverage"], [
+                    "Original programme labels"], [
                 [str(row.get("huc12", "")) + " / " + str(row.get("name", "")),
                  row.get("area_acres"), row.get("nrcs_edition"), row.get("priority_states"),
-                 row.get("system_types"), row.get("selected_classification_count"),
-                 row.get("classification_query_coverage")]
+                 row.get("system_types")] for row in hucs
+            ]),
+            _table(["HUC12", "Selected classification matches", "Query coverage", "Original HUC assignment"], [
+                [row.get("huc12"), row.get("selected_classification_count"),
+                 row.get("classification_query_coverage"), row.get("classification_assignment")]
                 for row in hucs
             ]),
-            _table(["HUC12", "State", "NRCS edition", "Original state acres", "Original designation",
-                    "Programme label", "Resource concern"], [
-                [row.get("huc12"), state.get("st_usps"), row.get("nrcs_edition"),
-                 state.get("st_ac"), state.get("fy26_status"), state.get("system_type"),
-                 state.get("resource_concern")]
+            _table(["HUC12 / state", "NRCS edition", "Original state acres", "Original designation",
+                    "Programme label / resource concern"], [
+                [str(row.get("huc12", "")) + " / " + str(state.get("st_usps", "")),
+                 row.get("nrcs_edition"), state.get("st_ac"), state.get("fy26_status"),
+                 _text(state.get("system_type")) + "\n" + _text(state.get("resource_concern"))]
                 for row in hucs for state in row.get("nrcs_state_rows", [])
             ]),
             _table(["Regional source", "Saved identity"], [
                 ["Original report", regional.get("report_id")],
-                ["Original report file", regional.get("report_file")],
                 ["Source fingerprint", regional.get("source_fingerprint")],
                 ["Selected HUC12s", regional.get("selected_huc12s")],
-                ["Queried target classes", regional.get("classification_coverage", {}).get("selected_classes")],
-                ["Classification jurisdiction", regional.get("classification_coverage", {}).get("source_jurisdiction")],
-                ["Original HUC assignment", {row.get("huc12"): row.get("classification_assignment") for row in hucs}],
+                ["Queried target classes", coverage.get("selected_classes")],
+                ["Classification jurisdiction", coverage.get("source_jurisdiction")],
             ]),
+            _table(["Original regional report file", "Saved value"],
+                   _metadata_rows(regional.get("report_file"), "Report file")),
         ]])
     physical = payload.get("physical_context", [])
     if physical:
         sections.append(["Original modeled physical context", [
             *payload.get("scientific_scope_notes", []),
-            _table(["Original run", "Metric", "Original value", "Units", "Run valid cells",
-                    "Alternative minus baseline", "Comparison valid cells", "Comparison basis"], [
+            _table(["Original run", "Metric", "Reporting-area total", "Units", "Run valid cells"], [
                 [row.get("run_id"), row.get("pollutant"), row.get("value"), row.get("unit"),
-                 row.get("run_valid_cells"), row.get("alternative_minus_baseline"),
-                 row.get("comparison_valid_cells"), row.get("comparison_spatial_basis")]
-                for row in physical
+                 row.get("run_valid_cells")] for row in physical
+            ]),
+            _table(["Original alternative run", "Metric", "Alternative minus baseline", "Units",
+                    "Comparison valid cells", "Comparison basis"], [
+                [row.get("run_id"), row.get("pollutant"), row.get("alternative_minus_baseline"),
+                 row.get("unit"), row.get("comparison_valid_cells"), row.get("comparison_spatial_basis")]
+                for row in physical if row.get("comparison_id")
             ]),
         ]])
     sections.append(["Editable original report and source lineage", [

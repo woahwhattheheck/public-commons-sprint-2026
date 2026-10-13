@@ -55,6 +55,21 @@ For ordinary input, `--sha256` checks the supplied file bytes. With `--base64`, 
 
 Source-bank paths are preserved relative to the chosen destination. The bank's `source_root`, `base_path`, or `commons.source-map/1` `prefix` is returned as provenance metadata and is not prepended silently. A project-relative bank can therefore be recovered into a new project staging directory and installed through its existing source-specific workflow.
 
+## Receive original JSON source packets
+
+The same command accepts an original `upstate.application-source-part/v1` JSON object directly, or a JSON array containing its complete packet cohort. A single object must declare `part: 1` and `parts: 1`. A multipart edition must include every original packet; the decoder orders packets by their declared index and rejects mixed editions, missing parts and duplicates. No Markdown wrapping or manual decompression is needed.
+
+For the [complete prepared tributary source](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C9L50G0GY), the original single-packet body is also retained as Git blob `83071835c3f7f2b7fd701a1e7ff134cf645d8370` in `woahwhattheheck/public-commons-sprint-2026`. Save that exact returned packet text as `prepared-tributaries-source.json` and run:
+
+```sh
+node source_tools/source_bank_cli.mjs inspect prepared-tributaries-source.json
+node source_tools/source_bank_cli.mjs extract prepared-tributaries-source.json received-prepared-tributaries
+```
+
+The complete result contains 38 files and 1,351,991 original source bytes. Its decoded JSON is 1,437,686 bytes with SHA-256 `5542892c2ce03fe7872b8f1f1b3125dbc12ef5a4fda35dfdd71bf89f75f88ff6`; the original gzip is 384,653 bytes with SHA-256 `02f8766608a776e61e8f5ef8c957c264a0104c796e1ce5e28592da1022157ad4`. All original prepared source paths and per-file identities survive extraction. Use the retained preparation guide and existing `source_tools.sparrow_reference bind` command for the actual Workspace admission.
+
+Every source-packet cohort must declare its edition, positive part count, decoded/gzip byte lengths and both SHA-256 identities. The decoder checks declared sizes before base64 decoding and limits decompression to the declared decoded length. Optional source-file count and summed source-byte declarations are checked when present.
+
 ## Receive native Slack Canvas responses
 
 The same receiver accepts the exact JSON returned by `slack_read_canvas`, including its single-text MCP result wrapper. Save the complete provider response, preserving its `canvas_id` and `markdown_content`, and inspect or extract it directly:
@@ -185,7 +200,7 @@ The retained `integration/source_binary_inputs.json` includes the original `sour
 | XZ | Single-stream plain LZMA2 source banks; bounded dictionary/output, complete metadata/index checks and None, CRC32, CRC64 or SHA-256 block checks; see the linked XZ guide |
 | Cumulative source maps | `commons.source-map/1`; `files` mapping using UTF-8 by default or `file_metadata[path].encoding: "base64"`, with mandatory original byte length and SHA-256 and optional regular-file mode; complete original descriptors retained |
 | Leaf contents | Exact UTF-8 `content`, `content_base64`, or explicit `encoding: "base64"` plus `content`; declared byte lengths and hashes are checked |
-| Carriers | One supported JSON bank/envelope fence, or one complete cohort of `upstate.application-source-part/v1` gzip+base64 packets |
+| Carriers | One supported JSON bank/envelope fence, or a complete `upstate.application-source-part/v1` gzip+base64 cohort as a JSON object, JSON array or Markdown JSON fences |
 | Source envelopes | `commons.source-bank-envelope/v1` with required decoded/compressed lengths and SHA-256 identities; `commons.gzip-source-bank/v1` with ordered base64 chunks and both original byte/hash pairs |
 | Native Canvas results | Original `canvas_id`/`markdown_content` JSON, optionally in one text MCP result; Canvas transport escaping and original carrier identity retained |
 

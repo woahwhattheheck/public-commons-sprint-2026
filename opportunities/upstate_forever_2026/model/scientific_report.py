@@ -940,7 +940,8 @@ def report_pdf(path, title, sections, *, contact, source_records,
     styles["BodyText"].fontName = "Helvetica"
     styles["BodyText"].fontSize = 9
     styles["BodyText"].leading = 13
-    cell_style = ParagraphStyle("ScientificTable", parent=styles["BodyText"], fontSize=8, leading=10)
+    cell_style = ParagraphStyle("ScientificTable", parent=styles["BodyText"],
+                                fontSize=8, leading=10, splitLongWords=1)
     story = [Paragraph(escape(str(title)), styles["Title"]), Spacer(1, .15 * inch)]
 
     def paragraph(value, style=None):
@@ -979,8 +980,12 @@ def report_pdf(path, title, sections, *, contact, source_records,
             total = sum(widths)
             rows = [[paragraph(value, cell_style) for value in block["columns"]]]
             rows.extend([paragraph(value, cell_style) for value in row] for row in block["rows"])
+            # Keep ordinary records together when possible. An original source
+            # cell can exceed one page (for example, a complete feature-ID list);
+            # ReportLab must be allowed to continue its Paragraph on later pages.
+            # This changes pagination only: every original cell and link is retained.
             table = Table(rows, colWidths=[7.1 * inch * value / total for value in widths],
-                          repeatRows=1, hAlign="LEFT")
+                          repeatRows=1, splitByRow=1, splitInRow=1, hAlign="LEFT")
             table.setStyle(TableStyle([
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eeeeee")),

@@ -377,3 +377,28 @@ Use the actual installed source catalog to choose the original 2023 and correcte
 its imported source collection ID comes from that actual catalog. The source-only
 path requires the existing GIS environment and does not require an InVEST run.
 
+
+
+## Use a saved ledger in Scientific Reports
+
+Open its saved edition in **Land-cover changes**, enter the source title and choose
+**Prepare scientific report**. The original native queue retains this operation;
+an interrupted preparation can resume from the same task. Preparation attaches the
+completed ledger, complete watershed rows, source bodies, geometry, GIS outputs
+and offline report. Source mode and retained-run mode use their original identities.
+
+Open a completed source, then choose **Open Scientific Reports composer**. The
+existing composer receives the exact source collection and entry; it preserves its
+ordered selection of other reports and its editable title/contact fields. Complete
+the ordinary preview and build there. The source ZIP is also available from this
+ledger and the native task's original file tickets. Saved report sources reopen
+with the ledger after returning to the desk or restoring its full Workspace.
+
+A later task completion leaves a newer ledger selection or another Workspace in
+place. Accepted preparation tasks remain in the original native queue across desk
+changes. Returning to their ledger exposes the retained source without recomputing
+land-cover transitions.
+
+See [the complete source preparation guide](model/LANDCOVER_REPORT_SOURCE.md) for
+the original Python API and CLI, input membership, portable source bundle and
+scientific interpretation.

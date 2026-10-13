@@ -6,6 +6,7 @@ const ROOTS = [
   ['experiments', 'Experiment programmes'],
   ['runs', 'Native runs'],
   ['robust-decisions', 'Decision studies'],
+  ['scientific-report-editions', 'Saved scientific reports'],
   ['monitoring_networks', 'Monitoring networks'],
   ['monitoring_plans', 'Monitoring designs'],
   ['monitoring_frontiers', 'Monitoring budget comparisons'],
@@ -87,7 +88,7 @@ export function attachStudyTransfer(host) {
     root.innerHTML=
       '<header class="st-heading"><div><p class="st-eyebrow">Scientific workspace</p>'+
       '<h2>Transfer a scientific study</h2>'+
-      '<p>Choose saved scientific or Monitoring studies. The receiving workspace keeps original inputs, cases, results and editable field history.</p>'+
+      '<p>Choose saved scientific reports, analyses or Monitoring studies. The receiving workspace keeps ordered report sources, original results and available editable study history.</p>'+
       '</div><button type="button" data-action="restore">Receive study archive</button></header>'+
       '<div class="st-notice" data-study-notice role="status" aria-live="polite" hidden></div>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Choose studies</h3>'+
@@ -102,7 +103,7 @@ export function attachStudyTransfer(host) {
       '<section class="st-panel"><div class="st-panel-heading"><h3>Study contents</h3></div>'+
       '<div class="st-export-fields"><label><span>Archive title</span><input type="text" data-study-field="title" maxlength="240"></label>'+
       '<label class="st-check"><input type="checkbox" data-study-field="related"><span>Include saved comparisons for the selected cohort</span></label></div>'+
-      '<p class="st-description">Shared source editions and prepared grids are included once. Complete native results and original experiment plans remain available for further analysis.</p>'+
+      '<p class="st-description">Shared source editions and prepared grids are included once. Saved scientific reports keep their original source order and files, with recorded local diagnostic, Monitoring and calibration history for further analysis.</p>'+
       '<div class="st-actions">'+button('preview','Preview contents')+button('export','Export editable study','class="st-primary"')+'</div>'+
       '<div data-study-plan></div></section>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Study archives</h3>'+
@@ -199,6 +200,11 @@ export function attachStudyTransfer(host) {
       '<p class="st-description">The archive also includes the application source. Its final download size appears after compression.</p>'+
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Contents</th>'+
       '<th scope="col">Files</th><th scope="col">Uncompressed size</th></tr></thead><tbody>'+groups+'</tbody></table></div>';
+    if(plan.scientific_report_editions?.length)html+='<section class="st-details"><h4>Original report order</h4>'+
+      plan.scientific_report_editions.map(edition=>'<div><strong>'+escapeHTML(edition.title)+'</strong>'+
+        '<ol>'+edition.sources.map(source=>'<li>'+escapeHTML(source.title||source.source_id)+
+          '<small class="st-identity">'+escapeHTML(source.source_id)+' · '+escapeHTML(source.body_sha256)+'</small></li>').join('')+
+        '</ol></div>').join('')+'</section>';
     if(plan.decision_history?.studies)html+='<p class="st-description">The export also captures '+
       number(plan.decision_history.studies)+' decision studies, '+number(plan.decision_history.revisions)+
       ' saved revisions and '+number(plan.decision_history.calculations)+

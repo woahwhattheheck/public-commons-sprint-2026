@@ -618,7 +618,11 @@ class ImplementationOperator:
         if not isinstance(notes_id, str) or not notes_id:
             raise self.Fault("IMPLEMENTATION_BRIEFING", "Upload the original meeting notes JSON.")
         notes = self.operator.upload(notes_id)
-        if value.get("source_export_id"):
+        if value.get("scientific_briefing_id"):
+            if any(value.get(field) for field in ("source_export_id", "delivery_id", "report_upload_id", "index_upload_id")):
+                raise self.Fault("IMPLEMENTATION_BRIEFING", "Choose one original saved report or exported report pair.")
+            paths = briefing_implementation.scientific_sources(ws, value["scientific_briefing_id"])
+        elif value.get("source_export_id"):
             if value.get("delivery_id") or value.get("report_upload_id") or value.get("index_upload_id"):
                 raise self.Fault("IMPLEMENTATION_BRIEFING", "Choose one original saved report or exported report pair.")
             paths = briefing_implementation.source_context_sources(ws, value["source_export_id"])
@@ -649,7 +653,8 @@ class ImplementationOperator:
         return {**result, "workspace_key": workspace,
                 "notes_upload_id": notes_id,
                 "delivery_id": value.get("delivery_id"),
-                "source_export_id": value.get("source_export_id")}
+                "source_export_id": value.get("source_export_id"),
+                "scientific_briefing_id": value.get("scientific_briefing_id")}
 
     def _lab(self, workspace, value, *, operation, actor=""):
         """Receive original CSV bytes through the host's verified upload ticket."""

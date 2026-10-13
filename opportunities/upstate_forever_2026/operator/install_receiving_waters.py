@@ -81,6 +81,14 @@ RECEIVING_REPORT_REQUIRED = (
     "operator/extensions/receiving-water-report.json",
     "operator/web/receiving_water_report.mjs",
     "integration/component_fragments/receiving-water-report.json",
+    "model/receiving_water_report_transfer.py",
+    "model/RECEIVING_WATER_REPORT_TRANSFER.md",
+    "integration/component_fragments/receiving-water-report-transfer.json",
+    "model/scientific_figures.py",
+    "model/scientific_map_figures.py",
+    "model/receiving_water_report_maps.py",
+    "model/RECEIVING_WATER_REPORT_MAPS.md",
+    "integration/component_fragments/receiving-water-report-maps.json",
 )
 MONITORING_ACTIONS = {
     "monitoring.network.import", "monitoring.design", "monitoring.frontier",
@@ -263,6 +271,7 @@ def join_registry_app(text):
     ):
         text = text.replace(old, "")
     text = text.replace("receivingWaters.detach();", "")
+    text = text.replace("(extensions.hasView('receiving-waters')?'':receivingWaters.taskActions(row))+", "")
     text = text.replace("receivingWaters.taskActions(row)+", "")
     text = text.replace("openReceivingPlan:id=>receivingWaters.openPlan(id)",
                         "openReceivingPlan:id=>extensions.openExtension('receiving-waters','openPlan',id)")
