@@ -728,6 +728,9 @@ def render_spatial_review(directory, *, review, project, frame, layout, overlay_
                             paragraph(field.replace("_", " ") + ": " +
                                       json.dumps(native[field], ensure_ascii=False, sort_keys=True))
                 paragraph("Review notes", heading=True)
+                if review.get("atlas_review"):
+                    from .atlas_reviews import context_text
+                    paragraph(context_text(review["atlas_review"]))
                 paragraph(review.get("notes", "") or "No saved notes.")
                 paragraph("Point annotations", heading=True)
                 with Path(annotation_file).open(encoding="utf-8") as source:
