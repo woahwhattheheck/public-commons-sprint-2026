@@ -1,7 +1,7 @@
-//! Current PrincipalManager accounting edition 2.
+//! Current PrincipalManager accounting edition 3.
 //! Real SEP41 PT/YT and original SAC/Permissioning remain the authority.
 //! Mint values actual SY custody using the wrapper rate. Yield is paid only from
-//! conserved YT credit; queued claims and outstanding PT principal are reserved.
+//! inverse-index earned rewards; queued claims and outstanding PT are reserved.
 //! Both redemption sides use the same YT-frozen authenticated maturity sample.
 //! This source requires a newly initialized economic edition; it does not infer
 //! earlier payouts or outstanding liabilities from a prior deployment's balances.
@@ -13,7 +13,7 @@ use soroban_sdk::{
 };
 
 #[path="../../accounting_math.rs"] mod accounting_math;
-use accounting_math::{add,sub,floor,ceil};
+use accounting_math::{add,sub,floor,ceil,inverse,REWARD_SCALE};
 
 pub const SCALE: i128 = 10_000_000; // 1e7
 
@@ -72,6 +72,7 @@ pub trait YTTokenInterface {
     fn consume_yield(env:Env,caller:Address,from:Address,amount:i128);
     fn accounting_edition(env:Env)->u32;
     fn accounting_rate(env:Env)->i128;
+    fn inverse_index(env:Env)->i128;
     fn total_pending(env:Env)->i128;
     fn balance(env: Env, account: Address) -> i128;
     fn total_supply(env: Env) -> i128;
@@ -147,6 +148,14 @@ pub struct RedeemResult {
     pub underlying_from_yt: i128,
 }
 
+#[contracttype]
+#[derive(Clone,Debug,Eq,PartialEq)]
+pub struct MintPreview {
+    pub sy_shares:i128,pub underlying:i128,pub oracle_rate:i128,pub inverse_index:i128,
+    pub reward_scale:i128,pub original_rate_notional:i128,pub issued_notional:i128,
+    pub issuance_adjustment:i128,
+}
+
 // ---------------------------------------------------------------------------
 // Contract
 // ---------------------------------------------------------------------------
@@ -213,8 +222,8 @@ impl PrincipalManagerContract {
             .instance()
             .set(&DataKey::Underlying, &underlying);
         env.storage().instance().set(&DataKey::Maturity, &maturity);
-        if YTTokenClient::new(&env,&yt_token).accounting_edition()!=2 {panic_with_error!(&env,Error::AccountingEditionRequired)}
-        env.storage().instance().set(&DataKey::AccountingEdition,&2u32);
+        if YTTokenClient::new(&env,&yt_token).accounting_edition()!=3 {panic_with_error!(&env,Error::AccountingEditionRequired)}
+        env.storage().instance().set(&DataKey::AccountingEdition,&3u32);
         env.storage().instance().set(&DataKey::LockedShares,&0i128);
         env.storage().instance().set(&DataKey::TotalDepositedUnderlying,&0i128);
         env.storage().instance().set(&DataKey::TotalPaidPrincipal,&0i128);
@@ -233,17 +242,19 @@ impl PrincipalManagerContract {
         Self::assert_not_mature(&env);Self::assert_oracle_fresh(&env);
         if sy_shares<=0{panic_with_error!(&env,Error::ZeroAmount)}
         Self::assert_sac_authorized(&env,&from);Self::assert_permitted(&env,&from);
+        let yt=YTTokenClient::new(&env,&Self::get_yt_token(&env));yt.update_yield_index();
+        let rate=Self::get_oracle_rate(&env);
+        if yt.accounting_rate()!=rate{panic_with_error!(&env,Error::TopologyMismatch)}
+        let index=yt.inverse_index(); // rate bounds validated before valuation/custody
         let wrapper=Self::get_sy_wrapper(&env);let sy=SYWrapperClient::new(&env,&wrapper);
         Self::assert_custody(&env);
-        let rate=Self::get_oracle_rate(&env);let underlying=floor(&env,sy_shares,sy.exchange_rate(),SCALE);
-        let notional=floor(&env,underlying,rate,SCALE);
+        let underlying=floor(&env,sy_shares,sy.exchange_rate(),SCALE);
+        let notional=floor(&env,underlying,REWARD_SCALE,index);
         if notional<=0{panic_with_error!(&env,Error::ZeroAmount)}
         let this=env.current_contract_address();let before=sy.balance_of(&this);
         sy.transfer(&from,&this,&sy_shares);
         if sy.balance_of(&this)!=add(&env,before,sy_shares){panic_with_error!(&env,Error::UnexpectedTransfer)}
         env.storage().instance().set(&DataKey::LockedShares,&add(&env,Self::locked_shares(env.clone()),sy_shares));
-        let yt=YTTokenClient::new(&env,&Self::get_yt_token(&env));yt.update_yield_index();
-        if yt.accounting_rate()!=rate{panic_with_error!(&env,Error::TopologyMismatch)}
         PTTokenClient::new(&env,&Self::get_pt_token(&env)).mint(&from,&notional);
         yt.mint(&from,&notional);
         let total:i128=env.storage().instance().get(&DataKey::TotalDepositedUnderlying).unwrap_or(0);
@@ -301,6 +312,20 @@ impl PrincipalManagerContract {
         let paid=Self::pay_yield(&env,&from);
         Self::assert_reserved(&env,0);
         env.events().publish((symbol_short!("yt_claim"),),(from,paid));paid
+    }
+
+    /// No dispatch or custody mutation. Exact conservative issuance is visible
+    /// before the original mint; unsupported rates fail before valuation.
+    pub fn preview_mint(env:Env,sy_shares:i128)->MintPreview {
+        Self::assert_edition(&env);Self::assert_not_mature(&env);Self::assert_oracle_fresh(&env);
+        if sy_shares<=0{panic_with_error!(&env,Error::ZeroAmount)}
+        let rate=Self::get_oracle_rate(&env);let index=inverse(&env,rate);
+        let sy=SYWrapperClient::new(&env,&Self::get_sy_wrapper(&env));
+        let underlying=floor(&env,sy_shares,sy.exchange_rate(),SCALE);
+        let original=floor(&env,underlying,rate,SCALE);
+        let issued=floor(&env,underlying,REWARD_SCALE,index);
+        MintPreview{sy_shares,underlying,oracle_rate:rate,inverse_index:index,reward_scale:REWARD_SCALE,
+            original_rate_notional:original,issued_notional:issued,issuance_adjustment:sub(&env,original,issued)}
     }
 
     // --- views ---
@@ -374,7 +399,7 @@ impl PrincipalManagerContract {
     pub fn total_deposited_underlying(env:Env)->i128 {env.storage().instance().get(&DataKey::TotalDepositedUnderlying).unwrap_or(0)}
     pub fn principal_reserve(env:Env)->i128 {
         let yt=YTTokenClient::new(&env,&Self::get_yt_token(&env));
-        ceil(&env,Self::total_pt(env.clone()),SCALE,yt.accounting_rate())
+        ceil(&env,Self::total_pt(env.clone()),yt.inverse_index(),REWARD_SCALE)
     }
     pub fn backing_underlying(env:Env)->i128 {
         let sy=SYWrapperClient::new(&env,&Self::get_sy_wrapper(&env));
@@ -382,7 +407,7 @@ impl PrincipalManagerContract {
     }
 
     // --- internal helpers ---
-    fn assert_edition(env:&Env) {if Self::accounting_edition(env.clone())!=2 {panic_with_error!(env,Error::AccountingEditionRequired)}}
+    fn assert_edition(env:&Env) {if Self::accounting_edition(env.clone())!=3 {panic_with_error!(env,Error::AccountingEditionRequired)}}
     fn assert_custody(env:&Env) {
         Self::assert_edition(env);
         let wrapper=Self::get_sy_wrapper(env);let sy=SYWrapperClient::new(env,&wrapper);

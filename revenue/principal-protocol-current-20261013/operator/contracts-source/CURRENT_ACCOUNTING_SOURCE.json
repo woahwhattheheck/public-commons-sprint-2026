@@ -1,13 +1,18 @@
 {
-  "schema": "principal.current-accounting-source.v2",
+  "schema": "principal.current-accounting-source.v3",
   "repository": "principal-Protocol-org/principal",
   "baseCommit": "f35b914cbf4896255a3711d81795b810b0a47f1c",
-  "accountingEdition": 2,
+  "accountingEdition": 3,
   "files": [
     {
       "path": ".gitignore",
       "bytes": 436,
       "sha256": "2fe5e4b1ac76d3152f93555d88c20d2ed7225060bae7e8cfc4e4427f36802e43"
+    },
+    {
+      "path": "CURRENT_ACCOUNTING_API.json",
+      "bytes": 9313,
+      "sha256": "5de0f33b6ab8cc6b919c11fadcb479b384af611f705f2e6c6f87f52ffdd46212"
     },
     {
       "path": "Cargo.lock",
@@ -20,9 +25,14 @@
       "sha256": "5b43063566b51ab00481e751c7f8fd1ef40b370017c5f6d66c2f5563d7fae330"
     },
     {
+      "path": "README.md",
+      "bytes": 15856,
+      "sha256": "a5c707cdb9111a8d3658ab2c100e8d817fa2e980d396ca2aaca4df1cc36ad08f"
+    },
+    {
       "path": "contracts/accounting_math.rs",
-      "bytes": 1408,
-      "sha256": "40c9ba9995f2920c4e2c04ef99fa00a47b2c606517353a91b9e79b6b00bd517b"
+      "bytes": 3159,
+      "sha256": "446d3cb1564633f50837ff6a14a7c182c6d764e981a10a672178259d6f015fc1"
     },
     {
       "path": "contracts/integration_tests/Cargo.toml",
@@ -111,8 +121,8 @@
     },
     {
       "path": "contracts/integration_tests/tests/accounting_lifecycle.rs",
-      "bytes": 6940,
-      "sha256": "a69dfeb54cb658451a0cb1e6e481ceb4ee13dd044b733cca33e43d727f118886"
+      "bytes": 11125,
+      "sha256": "e31d2d61e77c7b4a7829763c6d4294ffa3571e90f69771d5679d8ca3d232a390"
     },
     {
       "path": "contracts/integration_tests/tests/admin_and_risk_control.rs",
@@ -266,8 +276,8 @@
     },
     {
       "path": "contracts/principal_manager/src/lib.rs",
-      "bytes": 55059,
-      "sha256": "b878f88430c4ad561450d61bdff60f2454b876d42de28fff2acaa69315b8ab8b"
+      "bytes": 56456,
+      "sha256": "d1876d4ab9004a680ad1411b99871b9d3433516b453a58d2c7c645d666361072"
     },
     {
       "path": "contracts/principal_manager/test_snapshots/test/admin_transfer.1.json",
@@ -566,8 +576,8 @@
     },
     {
       "path": "contracts/recovery_escrow/src/lib.rs",
-      "bytes": 33881,
-      "sha256": "f6d77cb6bed42ffd7aa681ee1df8d6c2afcd2e2602b94d894817d0561c2c4a6c"
+      "bytes": 34623,
+      "sha256": "b53b9dd7e192a0815263753515e700009a571931231c039467cb073abdb18678"
     },
     {
       "path": "contracts/recovery_escrow/test_snapshots/test/double_initialize_panics.1.json",
@@ -760,14 +770,14 @@
       "sha256": "24e3dde8d7baf63012b2309688b1204c646b31b5724c3449b54bc7c881b1af0d"
     },
     {
-      "path": "contracts/sy_wrapper/test_snapshots/test/admin_transfer_and_getters.1.json",
-      "bytes": 14376,
-      "sha256": "e835bda45843df0b26f1c38b7203b1b359412f5fec5d40c61691d69d29c58364"
-    },
-    {
       "path": "contracts/sy_wrapper/test_snapshots/test/admin_transfer.1.json",
       "bytes": 12713,
       "sha256": "663770b054b327e79be4e2434a09b962dfb9c27d0b190976d6557bd3e74a45ef"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/admin_transfer_and_getters.1.json",
+      "bytes": 14376,
+      "sha256": "e835bda45843df0b26f1c38b7203b1b359412f5fec5d40c61691d69d29c58364"
     },
     {
       "path": "contracts/sy_wrapper/test_snapshots/test/balance_of_returns_correct_shares.1.json",
@@ -911,8 +921,8 @@
     },
     {
       "path": "contracts/yt_token/src/lib.rs",
-      "bytes": 59865,
-      "sha256": "9ae3f145dc7d0851319d94cee5bc47bbab27de4d19e25fb12a5839c45efe2108"
+      "bytes": 62099,
+      "sha256": "0c869970e9fdeb1a26a153b2bfa0c31b102bf4fef5cd2d4b7e5cb15dfa1cc347"
     },
     {
       "path": "contracts/yt_token/test_snapshots/test/approve_and_transfer_from.1.json",
@@ -1090,14 +1100,14 @@
       "sha256": "5a7a845604ec40f70a4e94d4d77d4d76091e596928a20e5d590b4906261013a5"
     },
     {
-      "path": "CURRENT_ACCOUNTING_API.json",
-      "bytes": 6258,
-      "sha256": "e7cb65500cd93b9e3b9d6ec7d49288913ef2f02e1f9d6684a7ccfae848a6bec0"
-    },
-    {
       "path": "docs/ACCOUNTING_EDITION_2.md",
       "bytes": 10762,
       "sha256": "8df4e0bf05dd7564c95ea2e2ec32ac9e70a5274b133661fb722307207e29c552"
+    },
+    {
+      "path": "docs/ACCOUNTING_EDITION_3.md",
+      "bytes": 13049,
+      "sha256": "ec4d6be26e98b972b0ad56de45025c326ce63d99c511ba43ab3707e6a5af39f0"
     },
     {
       "path": "docs/ARCHITECTURE.md",
@@ -1143,11 +1153,6 @@
       "path": "docs/TESTNET_STRESS_TEST_EVIDENCE.md",
       "bytes": 13909,
       "sha256": "548dccc14ff4593212d3d3bf4823ba12831723090985d5c3090bd6d20171a763"
-    },
-    {
-      "path": "README.md",
-      "bytes": 15856,
-      "sha256": "a5c707cdb9111a8d3658ab2c100e8d817fa2e980d396ca2aaca4df1cc36ad08f"
     }
   ]
 }
