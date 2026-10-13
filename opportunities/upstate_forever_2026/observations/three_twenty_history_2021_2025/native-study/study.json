@@ -1,0 +1,28 @@
+{
+  "schema": "upstate.published-water-quality-study/v1",
+  "study_id": "three-twenty-historical-2021-2025",
+  "title": "Three and Twenty Creek historical station comparison, 2021–2025",
+  "issuing_body": "South Carolina Department of Environmental Services via Water Quality Portal",
+  "publication": "Original agency monitoring records; source-bound historical comparison by TokenJunkieLabs, 2026-10-13",
+  "original_url": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+  "observation_calendar_filters": true,
+  "observation_sources": "observation-sources.json",
+  "grab_sampling": {
+    "start": "2021-01-06",
+    "end": "2025-12-02",
+    "frequency": "Original irregular routine sampling; full calendar retained",
+    "total_visits": 120
+  },
+  "content_counts": {
+    "stations": 3,
+    "original_result_rows": 1502,
+    "original_activity_count": 120
+  },
+  "observation_selection_notes": [
+    "The full retained result source has 1,588 unique ResultIdentifiers from 126 activities; the exact original-result selector selects 1,502 historical IDs from 120 activities.",
+    "Original 2026 SV-833 rows remain retained outside this 2021–2025 selection.",
+    "No repeated activity-characteristic values occur in the selected historical originals; each ResultIdentifier contributes separately to its compatible analytical series.",
+    "Source Calculated Nitrogen remains separate from same-activity TKN + nitrate/nitrite reconstruction.",
+    "Original limit direction, values, units, project, methods and clock/timezone labels are retained."
+  ]
+}
