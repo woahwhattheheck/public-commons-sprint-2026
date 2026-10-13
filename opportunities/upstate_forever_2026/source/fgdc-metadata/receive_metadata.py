@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate retained delivery XML and exercise its exact writer with the official XSD."""
+"""Validate retained delivery XML and its exact writer with the official XSD and DTD."""
 from __future__ import annotations
 
 import argparse
@@ -180,6 +180,71 @@ def main():
         parser.error("Choose the writer exercise and/or one original delivery directory")
     if args.download_schema:
         receive_schema(args.schema_directory)
+    # Bind both an offline and a freshly downloaded family to the retained
+    # original federal source capture; a different schema is not this receipt.
+    expected_schemas = [
+        {
+            "name": "fgdc-std-001-1998.xsd",
+            "bytes": 4752,
+            "sha256": "222e77b9be8796539816f7a818edae01e55ab5657c5599005732c40be6b9e57b"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect01.xsd",
+            "bytes": 9878,
+            "sha256": "8b7e31c62de8415a7c657883187f6a73b7167960eaa24d108335d00226ad4454"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect02.xsd",
+            "bytes": 7751,
+            "sha256": "64e83b7ffc1f424b879ba7a7eb803746b14c44ca663a6f367b3893bbcea11d0e"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect03.xsd",
+            "bytes": 5135,
+            "sha256": "4826e84227807af5f71572591fd5613b0ae880bdf1f87e793b2072a2c0abd4d1"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect04.xsd",
+            "bytes": 24168,
+            "sha256": "98099256985727348638e2214b20ccf1fde1589056de303b8b4170dacc1076d9"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect05.xsd",
+            "bytes": 6327,
+            "sha256": "61f0213fe9a22eab69bb93e3224db5fe7cd395f41636efcdb6f27b9984aef458"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect06.xsd",
+            "bytes": 9012,
+            "sha256": "74276a3faefe03a489a24ce013541c829f0d3f99ad0b4de505ad2572e813f289"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect07.xsd",
+            "bytes": 3275,
+            "sha256": "e5b7f41ab1de3dcae3e63ead8aa665229e9cf1e6e451f5c211856e992c5ebbc9"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect08.xsd",
+            "bytes": 3387,
+            "sha256": "131df7dfb4621ede15b4bcb936897506b09a79c3f34877c6f03d52612fb3f5f3"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect09.xsd",
+            "bytes": 2857,
+            "sha256": "c6462e61fc86feff0bf8e688ad1fe59d7fb475366948010bcfcb5fc4bee91938"
+        },
+        {
+            "name": "fgdc-std-001-1998-sect10.xsd",
+            "bytes": 3700,
+            "sha256": "ea6f813f809b4beced357c7c8f3ca65388d5e9e832c6bd5423b2152e97a5a781"
+        }
+    ]
+    schema_records = []
+    for record in expected_schemas:
+        body = (args.schema_directory / record["name"]).read_bytes()
+        if len(body) != record["bytes"] or sha(body) != record["sha256"]:
+            raise ValueError("The selected official FGDC schema identity differs: " + record["name"])
+        schema_records.append({"path": record["name"], "bytes": len(body), "sha256": sha(body)})
     from lxml import etree
     schema_path = args.schema_directory / SCHEMAS[0]
     parser = etree.XMLParser(no_network=True, load_dtd=False, resolve_entities=False)
@@ -196,8 +261,7 @@ def main():
     receipt = {"schema": "upstate.fgdc-metadata-receiving/v1", "state": "passed",
                "official_schema_url": SCHEMA_URL,
                "official_dtd": {"path": DTD_PATH, "bytes": len(dtd_body), "sha256": sha(dtd_body)},
-               "schemas": [{"path": name, "sha256": sha((args.schema_directory / name).read_bytes())}
-                           for name in SCHEMAS]}
+               "schemas": schema_records}
     if args.exercise_output:
         receipt["writer_exercise"] = writer_examples(args.application, args.exercise_output, validate)
     if args.delivery_directory:
