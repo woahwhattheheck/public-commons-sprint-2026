@@ -1,0 +1,270 @@
+{
+  "schema": "upstate.rl18151-observed-lake-study/v1",
+  "station_id": "21SC60WQ_WQX-RL-18151",
+  "station": {
+    "OrganizationIdentifier": "21SC60WQ_WQX",
+    "OrganizationFormalName": "South Carolina Department of Environmental Services  (State)",
+    "MonitoringLocationIdentifier": "21SC60WQ_WQX-RL-18151",
+    "MonitoringLocationName": "RL-18151",
+    "MonitoringLocationTypeName": "Lake",
+    "MonitoringLocationDescriptionText": "LAKE KEOWEE APPROX 0.15 MILES SSW OF END OF POINT NORTH DRIVE",
+    "HUCEightDigitCode": "03060101",
+    "DrainageAreaMeasure/MeasureValue": "",
+    "DrainageAreaMeasure/MeasureUnitCode": "",
+    "ContributingDrainageAreaMeasure/MeasureValue": "",
+    "ContributingDrainageAreaMeasure/MeasureUnitCode": "",
+    "LatitudeMeasure": "34.8410240000",
+    "LongitudeMeasure": "-82.9031650000",
+    "SourceMapScaleNumeric": "",
+    "HorizontalAccuracyMeasure/MeasureValue": "",
+    "HorizontalAccuracyMeasure/MeasureUnitCode": "",
+    "HorizontalCollectionMethodName": "GPS Code (Pseudo Range) Differential",
+    "HorizontalCoordinateReferenceSystemDatumName": "WGS84",
+    "VerticalMeasure/MeasureValue": "",
+    "VerticalMeasure/MeasureUnitCode": "",
+    "VerticalAccuracyMeasure/MeasureValue": "",
+    "VerticalAccuracyMeasure/MeasureUnitCode": "",
+    "VerticalCollectionMethodName": "",
+    "VerticalCoordinateReferenceSystemDatumName": "",
+    "CountryCode": "US",
+    "StateCode": "45",
+    "CountyCode": "073",
+    "AquiferName": "",
+    "LocalAqfrName": "",
+    "FormationTypeText": "",
+    "AquiferTypeName": "",
+    "ConstructionDateText": "",
+    "WellDepthMeasure/MeasureValue": "",
+    "WellDepthMeasure/MeasureUnitCode": "",
+    "WellHoleDepthMeasure/MeasureValue": "",
+    "WellHoleDepthMeasure/MeasureUnitCode": "",
+    "ProviderName": "STORET",
+    "longitude": -82.903165,
+    "latitude": 34.841024
+  },
+  "selected_period": {
+    "start": "2018-01-01",
+    "end": "2026-10-13"
+  },
+  "source_acquisition": "A73C-RL18151-PHOSPHORUS-20261013",
+  "source_response_count": 16,
+  "records": 498,
+  "result_identifiers": 498,
+  "exact_source_linked_records": 498,
+  "default_profile_candidate_set_records": 38,
+  "activities": 40,
+  "sampling_dates": 40,
+  "first_date": "2018-01-10",
+  "last_date": "2026-06-11",
+  "characteristic_counts": {
+    "Alkalinity, total": 41,
+    "Ammonia": 26,
+    "Biochemical oxygen demand, standard conditions": 39,
+    "Conductivity": 13,
+    "Depth": 25,
+    "Dissolved oxygen (DO)": 40,
+    "Escherichia coli": 43,
+    "Hardness, Ca, Mg": 11,
+    "Inorganic nitrogen (nitrate and nitrite) ***retired***use Nitrate + Nitrite": 12,
+    "Kjeldahl nitrogen": 39,
+    "Nitrate + Nitrite": 27,
+    "Nitrogen": 14,
+    "Phosphorus": 41,
+    "Temperature, water": 42,
+    "Turbidity": 43,
+    "pH": 42
+  },
+  "group_counts": {
+    "Microbiological": 43,
+    "Nutrient": 159,
+    "Physical": 296
+  },
+  "interval_status_counts": {
+    "left_censored": 171,
+    "reported_numeric": 327
+  },
+  "yearly_coverage": [
+    {
+      "year": "2018",
+      "records": 156,
+      "activities": 12,
+      "dates": 12,
+      "months": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12"
+      ],
+      "coverage": "original_records_returned",
+      "groups": {
+        "Nutrient": 60,
+        "Physical": 84,
+        "Microbiological": 12
+      }
+    },
+    {
+      "year": "2019",
+      "records": 0,
+      "activities": 0,
+      "dates": 0,
+      "months": [],
+      "coverage": "no_original_records_returned",
+      "groups": {
+        "Nutrient": 0,
+        "Physical": 0,
+        "Microbiological": 0
+      }
+    },
+    {
+      "year": "2020",
+      "records": 0,
+      "activities": 0,
+      "dates": 0,
+      "months": [],
+      "coverage": "no_original_records_returned",
+      "groups": {
+        "Nutrient": 0,
+        "Physical": 0,
+        "Microbiological": 0
+      }
+    },
+    {
+      "year": "2021",
+      "records": 0,
+      "activities": 0,
+      "dates": 0,
+      "months": [],
+      "coverage": "no_original_records_returned",
+      "groups": {
+        "Nutrient": 0,
+        "Physical": 0,
+        "Microbiological": 0
+      }
+    },
+    {
+      "year": "2022",
+      "records": 0,
+      "activities": 0,
+      "dates": 0,
+      "months": [],
+      "coverage": "no_original_records_returned",
+      "groups": {
+        "Nutrient": 0,
+        "Physical": 0,
+        "Microbiological": 0
+      }
+    },
+    {
+      "year": "2023",
+      "records": 0,
+      "activities": 0,
+      "dates": 0,
+      "months": [],
+      "coverage": "no_original_records_returned",
+      "groups": {
+        "Nutrient": 0,
+        "Physical": 0,
+        "Microbiological": 0
+      }
+    },
+    {
+      "year": "2024",
+      "records": 133,
+      "activities": 11,
+      "dates": 11,
+      "months": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11"
+      ],
+      "coverage": "original_records_returned",
+      "groups": {
+        "Nutrient": 46,
+        "Physical": 76,
+        "Microbiological": 11
+      }
+    },
+    {
+      "year": "2025",
+      "records": 115,
+      "activities": 11,
+      "dates": 11,
+      "months": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11"
+      ],
+      "coverage": "original_records_returned",
+      "groups": {
+        "Nutrient": 36,
+        "Physical": 68,
+        "Microbiological": 11
+      }
+    },
+    {
+      "year": "2026",
+      "records": 94,
+      "activities": 6,
+      "dates": 6,
+      "months": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06"
+      ],
+      "coverage": "original_records_returned",
+      "groups": {
+        "Nutrient": 17,
+        "Physical": 68,
+        "Microbiological": 9
+      }
+    }
+  ],
+  "identity_method": "Original narrow ResultIdentifier binds each record. Exact shared default-profile fields, unique Activity metadata and native ResultIdentifier limits select retained source candidates. Indistinguishable full-profile row positions remain explicit candidate sets; original result identities are never collapsed.",
+  "temporal_comparability": "Annual summaries retain exact characteristic, fraction, units, medium, depth, method and result-basis cohorts. Different cohorts are not pooled.",
+  "censor_method": "Original values and limits remain separate. Recognized left-censored rows have [0, published limit) when their positive limit and result units match. If both original result value and unit are blank, an explicitly published positive limit retains its own separate unit and original_quantitation_limit basis. Conflicting nonblank units and unknown conditions retain no numeric interval. No half-limit substitution.",
+  "interpretation": "Original lake sampling concentrations and physical measurements are contextual observations. No annual catchment export, discharge or load is inferred.",
+  "original_activity_and_limit_tables": {
+    "nutrient": {
+      "activity_records": 38,
+      "limit_records": 159,
+      "summary_records": 17
+    },
+    "physical": {
+      "activity_records": 40,
+      "limit_records": 245,
+      "summary_records": 33
+    },
+    "microbiological": {
+      "activity_records": 40,
+      "limit_records": 43,
+      "summary_records": 4
+    }
+  }
+}
