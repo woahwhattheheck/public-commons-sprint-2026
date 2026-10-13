@@ -28,7 +28,7 @@ def read(workspace, programme_id, run_id, **options):
     if len(selected_cases) != len(matches):
         raise ValueError("The saved programme's original case bindings changed")
     overview = {name: programme.get(name) for name in (
-        "state", "recorded_state", "active", "phase", "pause_requested",
+        "state", "recorded_state", "active", "native_active", "phase", "pause_requested",
         "current_run", "requested_runs", "counts", "updated_at", "completed_at", "error")}
     overview["cases"] = [{name: row.get(name) for name in (
         "key", "title", "run_id", "state", "native_state", "active", "attempts",
@@ -43,6 +43,7 @@ def read(workspace, programme_id, run_id, **options):
     return {**value, "schema": "upstate.programme-case-console/v1",
             "programme_id": key, "title": record["selection"]["title"],
             "programme_state": programme["state"], "programme_active": programme["active"],
+            "programme_native_active": programme["native_active"],
             "programme": overview, "case_bindings": cases, "context": context,
             "continuation": {"action": "compute.programme.run", "payload": {"programme_id": key},
                              "scope": "The original saved programme and its unfinished runs",
