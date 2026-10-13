@@ -1,0 +1,53 @@
+{
+  "upload_type": "software",
+  "title": "dcat-us-binding: a generated RDF binding for DCAT-US 3.0, and what it does to validation",
+  "description": "<p>DCAT-US 3.0, the United States federal open data metadata profile, is published as a JSON Schema. The live repository ships no JSON-LD context and no SHACL shapes, so its 115 published example files expand to 76 triples, one predicate and zero DCAT triples, with 38 files producing nothing and one processor error.</p><p>The binding needed to fix that is already inside the schema and unpublished: 26 of 26 classes carry the RDF class they stand for and 231 of 270 properties carry the RDF property, retained when the profile's SHACL definition was retired. This repository generates a JSON-LD 1.1 context and SHACL shapes from those records and measures what changes. Read through the generated context, and with nothing in the corpus edited, the same 115 files expand to 1,510 triples, 123 predicates and 228 DCAT triples, with zero errors.</p><p>The result the work turns on concerns validation rather than expansion. The profile's own retired shapes, 3,435 lines and 34 node shapes recovered from history, select no focus nodes over the corpus as published, report no violations and return conformance. Run unchanged over the same corpus once it carries a binding, they select 228 focus nodes and report 287 violations. The shapes were never wrong; they were pointed at a graph that did not exist.</p><p>Secondary findings, each reproducible: four JSON keys map to two different RDF properties depending on the class, three of them in Document; the Concept and Identifier classes have no bound properties at all despite being the most instantiated objects in the corpus; 22 keys declared with a resource range are published as prose 100 times, producing 98 invented identifiers under faithful expansion; and the deprecated context published elsewhere declares a namespace host that does not resolve and mints the W3C Organization Ontology under w3c.org rather than w3.org.</p><p>Every figure quoted anywhere in the repository is generated into build/measurements.json by the build and pinned by the test suite, so upstream drift fails a test rather than silently rewriting the report. Every RDF figure is computed twice, by rdflib and by the Open Ontologies engine, and every SHACL figure by pySHACL and the same engine, with disagreements reported rather than resolved in favour of the convenient answer. Three defects found that way, two in Open Ontologies and one in rdflib, ship with reproductions.</p><p>Accepted for the Practitioners Track of SEMANTiCS 2026, the 22nd International Conference on Semantic Systems, Ghent, 17 September 2026, as a demonstration. This is not a paper and appears in no proceedings.</p><p>Generator code is MIT. Upstream DCAT-US is a work of the United States Government under CC0 1.0, so the generated artefacts in build/ are dedicated to the public domain under CC0 on the same basis. This repository is not a fork and proposes no change to the upstream one.</p>",
+  "creators": [
+    {
+      "name": "Rovai, Fabio",
+      "affiliation": "The Tesseract Academy (Kampakis and Co Ltd)",
+      "orcid": "0009-0001-7244-794X"
+    }
+  ],
+  "license": "mit",
+  "access_right": "open",
+  "language": "eng",
+  "keywords": [
+    "DCAT",
+    "DCAT-US",
+    "JSON-LD",
+    "SHACL",
+    "RDF",
+    "JSON Schema",
+    "open data",
+    "metadata profile",
+    "conformance",
+    "validation",
+    "interoperability",
+    "register assurance",
+    "data.gov"
+  ],
+  "related_identifiers": [
+    {
+      "relation": "isSupplementTo",
+      "identifier": "https://github.com/fabio-rovai/dcat-us-binding",
+      "resource_type": "software"
+    },
+    {
+      "relation": "references",
+      "identifier": "https://github.com/GSA/dcat-us",
+      "resource_type": "software"
+    },
+    {
+      "relation": "references",
+      "identifier": "https://www.w3.org/TR/vocab-dcat-3/",
+      "resource_type": "publication-standard"
+    },
+    {
+      "relation": "references",
+      "identifier": "https://www.w3.org/TR/shacl/",
+      "resource_type": "publication-standard"
+    }
+  ],
+  "version": "0.2.0"
+}

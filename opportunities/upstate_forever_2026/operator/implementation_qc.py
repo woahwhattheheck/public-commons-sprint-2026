@@ -2,6 +2,7 @@
 from __future__ import annotations
 from pathlib import Path
 import re
+import urllib.parse
 
 from implementation_operator import ImplementationOperator
 from model import implementation_qc as qc
@@ -9,6 +10,16 @@ from model import implementation_qc_actions as qca
 from model import implementation_qc_comparison as qcc
 from model.implementation_schema import ImplementationError
 from model.common import digest
+
+# Original relative files use the existing file-session origin. Only the exact
+# native print event handler is admitted; script elements, other handlers,
+# forms and external resources remain disabled. Evidence keeps host isolation.
+REPORT_VIEW_POLICY = (
+    "sandbox allow-downloads allow-same-origin allow-scripts allow-modals; "
+    "default-src 'none'; script-src 'none'; script-src-elem 'none'; "
+    "script-src-attr 'unsafe-hashes' 'sha256-MguIPR6qNR8D3B+eAlK+bIRTZe8t3wkOY4B/56Me9FU='; "
+    "style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; "
+    "frame-ancestors 'none'")
 
 ACTIONS = {
     "comparison-save": "implementation.qc.comparison.save",
@@ -75,12 +86,66 @@ class ImplementationQC(ImplementationOperator):
         except (ImplementationError, ValueError, TypeError) as error:
             raise self.Fault("IMPLEMENTATION_QC_INPUT", str(error)) from error
 
+    def _report_identity(self, result):
+        if "comparison_report_id" in result:
+            return "comparison", result["comparison_report_id"]
+        if "action_report_id" in result:
+            return "actions", result["action_report_id"]
+        return "qc", result["report_id"]
+
+    def _member_url(self, workspace, kind, plan_id, report_id, member):
+        return "/api/file/implementation-qc/" + "/".join(
+            urllib.parse.quote(str(value), safe="")
+            for value in (workspace, kind, plan_id, report_id, member))
+
+    def member(self, workspace, kind, plan_id, report_id, member_path):
+        """Open one native-inspected report member through the original file auth."""
+        try:
+            plan_id = self._id(plan_id)
+            inspectors = {"qc": qc.inspect, "actions": qca.inspect, "comparison": qcc.inspect}
+            if kind not in inspectors:
+                raise ImplementationError("Choose an original QC report family.")
+            if (not isinstance(member_path, str) or not member_path
+                    or member_path in (".", "..") or "/" in member_path or "\\" in member_path
+                    or any(ord(char) < 32 or ord(char) == 127 for char in member_path)):
+                raise ImplementationError("Choose one declared QC report member.")
+            ws = self.operator.ws(workspace)
+            inspected = inspectors[kind](ws, plan_id, report_id)
+            selected_kind, selected_id = self._report_identity(inspected)
+            if selected_kind != kind or selected_id != report_id:
+                raise ImplementationError("The retained QC report differs from its selected route identity.")
+            directory = Path(inspected["directory"])
+            expected = next((item for item in inspected["files"]
+                             if Path(item["path"]).parent == directory
+                             and Path(item["path"]).name == member_path), None)
+            if expected is None:
+                raise self.Fault("IMPLEMENTATION_QC_MEMBER",
+                                 "The selected file is not in this retained QC report.", 404)
+            path = ws.root / expected["path"]
+            ticket = self._ticket(workspace, path, member_path, expected)
+            # Only the ordinary static report receives an origin. Its unchanged
+            # original HTML can resolve the other inventoried members here.
+            return ticket, REPORT_VIEW_POLICY if member_path == "report.html" else None
+        except (ImplementationError, ValueError, TypeError) as error:
+            raise self.Fault("IMPLEMENTATION_QC_INPUT", str(error)) from error
+
     def _decorate(self, workspace, result):
         result = dict(result)
         root = self.operator.ws(workspace).root
         result["workspace_key"] = workspace
-        result["_downloads"] = [self._ticket(workspace, root / item["path"],
-            Path(item["path"]).name, item) for item in result.get("files", [])]
+        kind, report_id = self._report_identity(result)
+        directory = Path(result["directory"])
+        downloads = []
+        for item in result.get("files", []):
+            path = Path(item["path"])
+            if path.parent != directory:
+                raise self.Fault("IMPLEMENTATION_QC_MEMBER",
+                                 "The retained QC file leaves its original report directory.", 409)
+            ticket = self._ticket(workspace, root / path, path.name, item)
+            ticket["url"] = self._member_url(workspace, kind, result["plan_id"],
+                                             report_id, path.name)
+            downloads.append(ticket)
+        result["_downloads"] = downloads
         return result
 
     def invoke(self, task):

@@ -1,0 +1,65 @@
+{
+  "schema": "stellar-forge.source-workflow-configuration.v1",
+  "profile": "wri-geothermal-review",
+  "sourceAlias": "geothermal",
+  "source": {
+    "kind": "handover",
+    "path": "SOURCE_HANDOVER"
+  },
+  "sourceArchive": "SOURCE_ARCHIVE",
+  "analysis": {
+    "workspace": "ANALYSIS_WORKSPACE",
+    "operationId": "ANALYSIS_OPERATION_ID",
+    "prefix": "geothermal",
+    "queries": [
+      {
+        "name": "original_records",
+        "title": "Complete original geothermal records",
+        "sql": "SELECT * FROM {{plants}} ORDER BY {{column:gppd_idnr}}",
+        "parameterNames": [],
+        "maxRows": 100000,
+        "note": "Every original source row and column, including explicit nulls, source URLs and original attribution."
+      },
+      {
+        "name": "selected_country",
+        "title": "Selected country and capacity threshold",
+        "sql": "SELECT * FROM {{plants}} WHERE {{column:country}} = ? AND {{column:capacity_mw}} >= ? ORDER BY {{column:capacity_mw}} DESC, {{column:gppd_idnr}}",
+        "parameterNames": [
+          "country",
+          "minimumCapacityMw"
+        ],
+        "maxRows": 100000,
+        "note": "Country is the original three-letter code. The capacity threshold uses the published capacity_mw field in MW."
+      },
+      {
+        "name": "country_inventory",
+        "title": "Country capacity and 2017 generation coverage",
+        "sql": "SELECT {{column:country}} AS country, {{column:country_long}} AS country_name, COUNT(*) AS plants, SUM({{column:capacity_mw}}) AS published_capacity_mw, COUNT({{column:year_of_capacity_data}}) AS plants_with_capacity_year, COUNT({{column:generation_gwh_2017}}) AS plants_with_observed_generation_2017, SUM({{column:generation_gwh_2017}}) AS observed_generation_2017_gwh FROM {{plants}} GROUP BY {{column:country}}, {{column:country_long}} ORDER BY {{column:country}}",
+        "parameterNames": [],
+        "maxRows": 100000,
+        "note": "Capacity MW and observed generation GWh retain separate units. SUM ignores missing observations and remains NULL when every observation is missing; the coverage count accompanies the total."
+      },
+      {
+        "name": "source_quality",
+        "title": "Reviewed source coverage",
+        "sql": "SELECT COUNT(*) AS source_rows, COUNT(DISTINCT {{column:gppd_idnr}}) AS distinct_plant_keys, SUM(CASE WHEN {{column:gppd_idnr}} IS NULL OR TRIM({{column:gppd_idnr}}) = '' THEN 1 ELSE 0 END) AS missing_or_blank_keys, SUM(CASE WHEN {{column:owner}} IS NULL THEN 1 ELSE 0 END) AS missing_owner, SUM(CASE WHEN {{column:year_of_capacity_data}} IS NULL THEN 1 ELSE 0 END) AS missing_capacity_year, SUM(CASE WHEN {{column:generation_gwh_2017}} IS NULL THEN 1 ELSE 0 END) AS missing_observed_generation_2017, SUM(CASE WHEN {{column:latitude}} IS NULL OR {{column:longitude}} IS NULL OR {{column:latitude}} < -90 OR {{column:latitude}} > 90 OR {{column:longitude}} < -180 OR {{column:longitude}} > 180 THEN 1 ELSE 0 END) AS missing_or_out_of_range_coordinates FROM {{plants}}",
+        "parameterNames": [],
+        "maxRows": 100000,
+        "note": "Source-quality counts retain each underlying record in the complete original-records output."
+      }
+    ],
+    "report": {
+      "title": "WRI geothermal source inventory and selected-country review",
+      "introduction": "World Resources Institute, Global Power Plant Database, CC BY 4.0. Source pages were observed on 12 October 2026; capacity, commissioning and generation values retain their original historical source years. This report separates published capacity in MW, observed 2017 generation in GWh, estimated generation and missing observations.",
+      "note": "Complete original edition, customer SQL, parameters, report and editable workspace delivered together."
+    },
+    "waitSeconds": 3600
+  },
+  "delivery": {
+    "queryFormats": [
+      "csv",
+      "jsonl",
+      "sqlite"
+    ]
+  }
+}

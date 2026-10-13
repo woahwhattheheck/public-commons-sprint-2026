@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "workspace-finder",
   "title": "Find in workspace",
-  "version": "1",
+  "version": "2",
   "order": 5,
   "assets": [
     "workspace_finder.mjs",

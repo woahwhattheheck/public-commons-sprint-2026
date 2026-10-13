@@ -361,3 +361,74 @@ actionable missing/changed-file messages; operate the real controls. Open the
 resulting HTML, scientific report and exported/reimported source edition. A
 source review or simulated DOM does not establish that the delivered screens
 render correctly.
+
+
+## Follow original files from a saved Scientific Report or briefing
+
+Open a saved **Scientific Report** from its original source desk or Workspace Finder. Its in-page figure and original-file links now use the operator's existing authenticated file session. The complete report, original figures, report data, original selection and downloadable ZIP retain their original bytes and identities.
+
+A saved **meeting briefing** keeps its presentation, agenda and meeting-note controls. Follow **Complete report**, **Original report model** or an original report section without leaving the retained briefing's file route. Notes remain in the existing browser storage for the same briefing; export the meeting file to transfer them. Reopening the same saved briefing can restore those notes through its existing binding checks. A Workspace change still closes the current view, and the application never submits a model operation to follow these links.
+
+### Reader implementation
+
+The original imported-source HTML reader retains its opaque-origin policy. For saved Scientific Reports, the verified `report_html` role receives a dedicated script-free policy that retains the operator origin. This also applies to the same original report reached through a briefing's `original_files` map. The distinction uses the original descriptor role and its exact path; a matching filename alone does not establish it. Script execution, forms, nested frames and network-fetch APIs remain disabled in this static report.
+
+Interactive briefing HTML receives the operator origin only if its complete retained bytes exactly match a reconstruction by the installed `client_briefing.render` template. The reader uses the original complete model bytes, verified embedded figure bytes, original report path and original model path. Every consumed body is checked again against its original byte length and SHA before comparison. The installed template escapes report text and embedded JSON and supplies the fixed meeting/presentation script. Its original inline-script hashes and request restrictions remain in the response.
+
+An older or unmatched interactive briefing continues through the existing isolated reader. The complete extracted briefing ZIP and the application's direct download controls remain available. Neither selecting a policy nor opening a link rebuilds or rewrites a report.
+
+The two saved-report/briefing iframe attributes allow the verified response to retain its origin; the response policy still imposes the stricter boundary on every unmatched document. Both the client and provider belong to this complete source change. Generic imported HTML, source intake, original file tickets, shared server authentication and archived HTML remain governed by their existing paths.
+
+### Complete receiving and actual use
+
+Receive the maintained `operator/source_reports.py`, `operator/source_report_editions.py`, `operator/web/source_report_editions.mjs` and this guide together into the existing receiving application. Preserve the newer complete source already installed by its sole receiving owner. Restart that receiving operator at the existing course's safe application-update point; preserve active model jobs and their original Workspace.
+
+Use the already-complete Scientific Report and briefing in the same receiving course. Open and LOOK at the populated report and briefing at screenshare and 390-pixel widths. Follow an actual retained source link, figure, JSON/report model and **Complete report** link; open the downloaded bytes normally and confirm the browser retains the existing file session. In the briefing, add an actual temporary meeting note, navigate its original pages, export/reopen the meeting file, and reload the same saved briefing to use its retained note. Exercise an original imported HTML source through its unchanged isolated reader as well.
+
+The whole report ZIP and briefing ZIP should still open independently after extraction with their original report-relative links. View and use every outgoing attachment being presented under the full owner direction below. This is the existing native receiving course; keep its actual operation/report/source identities and correct any visible or functional defect there.
+
+Technical references:
+- https://html.spec.whatwg.org/multipage/browsers.html#sandboxing
+- https://chromium.googlesource.com/chromium/src/+/refs/heads/main/net/cookies/cookie_util.cc
+
+## Full current owner direction
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Current project instructions
+
+Execute the prepared simulated model and deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time. Continue active work while checking progress. Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

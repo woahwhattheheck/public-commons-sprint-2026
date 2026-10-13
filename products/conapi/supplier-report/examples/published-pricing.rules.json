@@ -1,0 +1,132 @@
+{
+  "keyFields": [
+    "name"
+  ],
+  "fields": [
+    {
+      "name": "name",
+      "type": "text",
+      "baseline": "name",
+      "candidate": "name",
+      "required": true
+    },
+    {
+      "name": "path",
+      "type": "text",
+      "baseline": "path",
+      "candidate": "path",
+      "required": true
+    },
+    {
+      "name": "title",
+      "type": "text",
+      "baseline": "title",
+      "candidate": "title",
+      "required": true
+    },
+    {
+      "name": "amount_gbp",
+      "type": "decimal",
+      "baseline": "amount_gbp",
+      "candidate": "amount_gbp",
+      "required": true,
+      "min": "0",
+      "contextFields": [
+        "currency",
+        "period",
+        "price_basis"
+      ]
+    },
+    {
+      "name": "charity_amount_gbp",
+      "type": "decimal",
+      "baseline": "charity_amount_gbp",
+      "candidate": "charity_amount_gbp",
+      "nullValues": [
+        ""
+      ],
+      "min": "0",
+      "contextFields": [
+        "currency",
+        "period",
+        "price_basis"
+      ]
+    },
+    {
+      "name": "period",
+      "type": "text",
+      "baseline": "period",
+      "candidate": "period",
+      "required": true,
+      "allowedValues": [
+        "one-off",
+        "month",
+        "free"
+      ]
+    },
+    {
+      "name": "display",
+      "type": "text",
+      "baseline": "display",
+      "candidate": "display",
+      "required": true
+    },
+    {
+      "name": "source_url",
+      "type": "text",
+      "baseline": "source_url",
+      "candidate": "source_url",
+      "required": true
+    },
+    {
+      "name": "capture_date",
+      "type": "date",
+      "baseline": "capture_date",
+      "candidate": "capture_date",
+      "required": true
+    },
+    {
+      "name": "currency",
+      "type": "text",
+      "baseline": {
+        "constant": "GBP"
+      },
+      "candidate": {
+        "constant": "GBP"
+      },
+      "required": true,
+      "allowedValues": [
+        "GBP"
+      ]
+    },
+    {
+      "name": "price_basis",
+      "type": "text",
+      "baseline": "display",
+      "candidate": "display",
+      "required": true,
+      "aliases": {
+        "£1,500": "published",
+        "from £3,495": "from",
+        "from £8,495": "from",
+        "from £12,000": "from",
+        "from £1,995": "from",
+        "from £2,950": "from",
+        "from £4,500": "from",
+        "from £995/month": "from",
+        "£1,995/month": "published",
+        "£4,995/month": "published",
+        "from £99/month": "from",
+        "from £299/month": "from",
+        "£899": "published",
+        "£1,349": "published",
+        "£2,249": "published",
+        "£0": "published"
+      },
+      "allowedValues": [
+        "from",
+        "published"
+      ]
+    }
+  ]
+}

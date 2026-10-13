@@ -1,0 +1,126 @@
+{
+  "version": "barn-work.v1",
+  "id": "prairie-sky-source-starter",
+  "revision": 2,
+  "workspace": {
+    "name": "Prairie Sky — daily barn work",
+    "timezone": "America/Los_Angeles"
+  },
+  "sources": [
+    {
+      "id": "prairie-sky-boarding",
+      "url": "https://www.prairieskyeqctr.com/boarding-info",
+      "checked_at": "2026-10-13",
+      "title": "Prairie Sky boarding information",
+      "facts": [
+        "Three daily hay feeds.",
+        "Turnout six days each week.",
+        "Full-care boarding, individual stalls and attached runs."
+      ],
+      "setup": "The source gives frequency. Enter actual horse instructions, feed times and chosen turnout weekdays before activating routines."
+    },
+    {
+      "id": "prairie-sky-contact",
+      "url": "https://www.prairieskyeqctr.com/form__map",
+      "checked_at": "2026-10-13",
+      "title": "Prairie Sky business contact",
+      "facts": [
+        "prairieskyeqctr@cs.com",
+        "509-434-6090",
+        "14410 W Lincoln Road, Spokane WA99224"
+      ],
+      "setup": "Public business contact for the prepared Auptim lead."
+    }
+  ],
+  "staff": [],
+  "locations": [],
+  "horses": [],
+  "instructions": [],
+  "routines": [
+    {
+      "id": "daily-feed",
+      "title": "Three daily feeds",
+      "kind": "feed",
+      "horse_ids": [],
+      "days": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "slots": [
+        {
+          "id": "morning",
+          "label": "Morning",
+          "time": ""
+        },
+        {
+          "id": "midday",
+          "label": "Midday",
+          "time": ""
+        },
+        {
+          "id": "evening",
+          "label": "Evening",
+          "time": ""
+        }
+      ],
+      "active": false,
+      "source_url": "https://www.prairieskyeqctr.com/boarding-info",
+      "notes": "Published frequency: three daily hay feeds. Enter actual times and authorized horse-specific instructions.",
+      "revision": 1,
+      "updated_at": "2026-10-13T12:24:00.000Z",
+      "history": []
+    },
+    {
+      "id": "six-day-turnout",
+      "title": "Six-day turnout",
+      "kind": "turnout",
+      "horse_ids": [],
+      "days": [],
+      "slots": [
+        {
+          "id": "turnout",
+          "label": "Turnout",
+          "time": ""
+        }
+      ],
+      "active": false,
+      "source_url": "https://www.prairieskyeqctr.com/boarding-info",
+      "notes": "Published frequency: six days weekly. Operator chooses actual weekdays, time and horse-specific turnout instructions.",
+      "revision": 1,
+      "updated_at": "2026-10-13T12:24:00.000Z",
+      "history": []
+    }
+  ],
+  "tasks": [],
+  "movements": [],
+  "handovers": [],
+  "day_closures": [],
+  "source_files": [],
+  "history": [
+    {
+      "id": "source-daily-feed",
+      "revision": 1,
+      "kind": "routine-save",
+      "at": "2026-10-13T12:24:00.000Z",
+      "request": "{\"expected_revision\":0,\"input\":{\"active\":false,\"days\":[0,1,2,3,4,5,6],\"horse_ids\":[],\"id\":\"daily-feed\",\"kind\":\"feed\",\"notes\":\"Published frequency: three daily hay feeds. Enter actual times and authorized horse-specific instructions.\",\"slots\":[{\"id\":\"morning\",\"label\":\"Morning\",\"time\":\"\"},{\"id\":\"midday\",\"label\":\"Midday\",\"time\":\"\"},{\"id\":\"evening\",\"label\":\"Evening\",\"time\":\"\"}],\"source_url\":\"https://www.prairieskyeqctr.com/boarding-info\",\"title\":\"Three daily feeds\"},\"kind\":\"routine-save\"}",
+      "result": {
+        "id": "daily-feed"
+      }
+    },
+    {
+      "id": "source-six-day-turnout",
+      "revision": 2,
+      "kind": "routine-save",
+      "at": "2026-10-13T12:24:00.000Z",
+      "request": "{\"expected_revision\":1,\"input\":{\"active\":false,\"days\":[],\"horse_ids\":[],\"id\":\"six-day-turnout\",\"kind\":\"turnout\",\"notes\":\"Published frequency: six days weekly. Operator chooses actual weekdays, time and horse-specific turnout instructions.\",\"slots\":[{\"id\":\"turnout\",\"label\":\"Turnout\",\"time\":\"\"}],\"source_url\":\"https://www.prairieskyeqctr.com/boarding-info\",\"title\":\"Six-day turnout\"},\"kind\":\"routine-save\"}",
+      "result": {
+        "id": "six-day-turnout"
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "spatial-study-transfer",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "integration/component_fragments/spatial-study-transfer.json",
+        "operator/SPATIAL_STUDY_TRANSFER.md",
+        "operator/web/extensions/study_transfer.mjs"
+      ]
+    }
+  }
+}

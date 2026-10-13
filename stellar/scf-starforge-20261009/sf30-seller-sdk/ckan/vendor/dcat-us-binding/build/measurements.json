@@ -1,0 +1,1790 @@
+{
+  "upstream": "jsonschema",
+  "examples": 115,
+  "audit": {
+    "counts": {
+      "classes": 26,
+      "classesWithRdfClass": 26,
+      "properties": 270,
+      "propertiesWithIri": 231,
+      "propertiesWithoutIri": 39,
+      "distinctTerms": 119,
+      "termsWithIriConflict": 4,
+      "termsWithShapeConflict": 10
+    },
+    "unboundProperties": [
+      {
+        "class": "Agent",
+        "property": "category",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "concept"
+      },
+      {
+        "class": "Catalog",
+        "property": "datasetSeries",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "datasetseries"
+      },
+      {
+        "class": "Catalog",
+        "property": "otherIdentifier",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "identifier"
+      },
+      {
+        "class": "Concept",
+        "property": "altLabel",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Concept",
+        "property": "definition",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Concept",
+        "property": "inScheme",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [],
+        "ref": "conceptscheme"
+      },
+      {
+        "class": "Concept",
+        "property": "notation",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Concept",
+        "property": "prefLabel",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "DataService",
+        "property": "inventoried",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "DataService",
+        "property": "otherIdentifier",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "identifier"
+      },
+      {
+        "class": "Dataset",
+        "property": "created",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Dataset",
+        "property": "first",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [],
+        "ref": "dataset"
+      },
+      {
+        "class": "Dataset",
+        "property": "hasCurrentVersion",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [],
+        "ref": "dataset"
+      },
+      {
+        "class": "Dataset",
+        "property": "hasPart",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "dataset"
+      },
+      {
+        "class": "Dataset",
+        "property": "inventoried",
+        "requirementLevel": "Recommended",
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Dataset",
+        "property": "previousVersion",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [],
+        "ref": "dataset"
+      },
+      {
+        "class": "Dataset",
+        "property": "replaces",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "dataset"
+      },
+      {
+        "class": "Dataset",
+        "property": "rightsHolder",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "organization"
+      },
+      {
+        "class": "Dataset",
+        "property": "supportedSchema",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [],
+        "ref": "dataset"
+      },
+      {
+        "class": "Dataset",
+        "property": "wasAttributedTo",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "agent"
+      },
+      {
+        "class": "Dataset",
+        "property": "wasUsedBy",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "activity"
+      },
+      {
+        "class": "Distribution",
+        "property": "availability",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [],
+        "ref": "concept"
+      },
+      {
+        "class": "Distribution",
+        "property": "inventoried",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Distribution",
+        "property": "otherIdentifier",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "identifier"
+      },
+      {
+        "class": "Document",
+        "property": "accessURL",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Document",
+        "property": "category",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "concept"
+      },
+      {
+        "class": "Document",
+        "property": "corporateCreator",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "organization"
+      },
+      {
+        "class": "Document",
+        "property": "downloadURL",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Document",
+        "property": "otherIdentifier",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "identifier"
+      },
+      {
+        "class": "Identifier",
+        "property": "creator",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [],
+        "ref": "organization"
+      },
+      {
+        "class": "Identifier",
+        "property": "issued",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Identifier",
+        "property": "notation",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Identifier",
+        "property": "schemaAgency",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Identifier",
+        "property": "version",
+        "requirementLevel": null,
+        "range": null,
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Location",
+        "property": "altLabel",
+        "requirementLevel": "Optional",
+        "range": "rdfs:Literal",
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Location",
+        "property": "otherIdentifier",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "identifier"
+      },
+      {
+        "class": "Location",
+        "property": "prefLabel",
+        "requirementLevel": "Recommended",
+        "range": "rdfs:Literal",
+        "jsonTypes": [
+          "string"
+        ],
+        "ref": null
+      },
+      {
+        "class": "Standard",
+        "property": "category",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "concept"
+      },
+      {
+        "class": "Standard",
+        "property": "otherIdentifier",
+        "requirementLevel": "Optional",
+        "range": null,
+        "jsonTypes": [
+          "array"
+        ],
+        "ref": "identifier"
+      }
+    ],
+    "iriConflicts": [
+      {
+        "term": "conformsTo",
+        "dominant": {
+          "iri": "dcterms:conformsTo",
+          "classes": [
+            "Catalog",
+            "CatalogRecord",
+            "DataService",
+            "Dataset",
+            "Distribution"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Document",
+            "iri": "dcterms:identifier"
+          }
+        ]
+      },
+      {
+        "term": "mediaType",
+        "dominant": {
+          "iri": "dcat:mediaType",
+          "classes": [
+            "Distribution"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Document",
+            "iri": "dcterms:mediaType"
+          }
+        ]
+      },
+      {
+        "term": "publisher",
+        "dominant": {
+          "iri": "dcterms:publisher",
+          "classes": [
+            "Catalog",
+            "DataService",
+            "Dataset",
+            "DatasetSeries"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Document",
+            "iri": "dc:publisher"
+          }
+        ]
+      },
+      {
+        "term": "title",
+        "dominant": {
+          "iri": "dcterms:title",
+          "classes": [
+            "Catalog",
+            "CatalogRecord",
+            "ConceptScheme",
+            "DataService",
+            "Dataset",
+            "DatasetSeries",
+            "Distribution",
+            "Document",
+            "Standard"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Kind",
+            "iri": "vcard:title"
+          }
+        ]
+      }
+    ],
+    "shapeConflicts": [
+      {
+        "term": "created",
+        "iri": "dcterms:created",
+        "dominant": {
+          "coercion": null,
+          "container": null,
+          "classes": [
+            "ConceptScheme",
+            "DataService"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Standard",
+            "coercion": "xsd:date",
+            "container": null
+          }
+        ]
+      },
+      {
+        "term": "creator",
+        "iri": "dcterms:creator",
+        "dominant": {
+          "coercion": "@id",
+          "container": "@set",
+          "classes": [
+            "Catalog",
+            "DataService",
+            "Document"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Dataset",
+            "coercion": "@id",
+            "container": null
+          }
+        ]
+      },
+      {
+        "term": "description",
+        "iri": "dcterms:description",
+        "dominant": {
+          "coercion": null,
+          "container": null,
+          "classes": [
+            "Catalog",
+            "ConceptScheme",
+            "DataService",
+            "Dataset",
+            "DatasetSeries",
+            "Distribution",
+            "Document",
+            "Standard"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "CatalogRecord",
+            "coercion": null,
+            "container": "@set"
+          }
+        ]
+      },
+      {
+        "term": "identifier",
+        "iri": "dcterms:identifier",
+        "dominant": {
+          "coercion": null,
+          "container": null,
+          "classes": [
+            "Catalog",
+            "DataService",
+            "Dataset",
+            "Distribution",
+            "Document",
+            "Location"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Standard",
+            "coercion": "xsd:string",
+            "container": null
+          }
+        ]
+      },
+      {
+        "term": "issued",
+        "iri": "dcterms:issued",
+        "dominant": {
+          "coercion": null,
+          "container": null,
+          "classes": [
+            "Catalog",
+            "ConceptScheme",
+            "Dataset",
+            "DatasetSeries",
+            "Distribution",
+            "Document",
+            "Standard"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "CatalogRecord",
+            "coercion": null,
+            "container": "@set"
+          }
+        ]
+      },
+      {
+        "term": "language",
+        "iri": "dcterms:language",
+        "dominant": {
+          "coercion": "@id",
+          "container": "@set",
+          "classes": [
+            "Catalog",
+            "CatalogRecord",
+            "DataService",
+            "Dataset"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Distribution",
+            "coercion": null,
+            "container": "@set"
+          }
+        ]
+      },
+      {
+        "term": "modified",
+        "iri": "dcterms:modified",
+        "dominant": {
+          "coercion": null,
+          "container": null,
+          "classes": [
+            "Catalog",
+            "CatalogRecord",
+            "ConceptScheme",
+            "DataService",
+            "Dataset",
+            "DatasetSeries",
+            "Distribution"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Standard",
+            "coercion": "xsd:date",
+            "container": null
+          }
+        ]
+      },
+      {
+        "term": "relation",
+        "iri": "dcterms:relation",
+        "dominant": {
+          "coercion": "@id",
+          "container": "@set",
+          "classes": [
+            "Dataset"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Relationship",
+            "coercion": "@id",
+            "container": null
+          }
+        ]
+      },
+      {
+        "term": "source",
+        "iri": "dcterms:source",
+        "dominant": {
+          "coercion": "@id",
+          "container": "@set",
+          "classes": [
+            "Dataset"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "CatalogRecord",
+            "coercion": "@id",
+            "container": null
+          }
+        ]
+      },
+      {
+        "term": "version",
+        "iri": "dcat:version",
+        "dominant": {
+          "coercion": "xsd:string",
+          "container": null,
+          "classes": [
+            "ConceptScheme"
+          ]
+        },
+        "overrides": [
+          {
+            "class": "Dataset",
+            "coercion": null,
+            "container": null
+          }
+        ]
+      }
+    ],
+    "unresolvablePrefixes": [],
+    "classesWithoutDefaultType": []
+  },
+  "bareValues": {
+    "terms": {
+      "accessRights": {
+        "occurrences": 6,
+        "examples": [
+          "Public access with no restrictions",
+          "Public access with no restrictions. Data is freely available for download and use.",
+          "This dataset is public domain and freely available for any use."
+        ]
+      },
+      "accrualPeriodicity": {
+        "occurrences": 7,
+        "examples": [
+          "daily",
+          "quarterly",
+          "annually"
+        ]
+      },
+      "algorithm": {
+        "occurrences": 5,
+        "examples": [
+          "SHA-256",
+          ""
+        ]
+      },
+      "category": {
+        "occurrences": 1,
+        "examples": [
+          "Organization"
+        ]
+      },
+      "compressFormat": {
+        "occurrences": 1,
+        "examples": [
+          "application/gzip"
+        ]
+      },
+      "format": {
+        "occurrences": 8,
+        "examples": [
+          "CSV",
+          "JSON",
+          "CSV (Comma-Separated Values)"
+        ]
+      },
+      "geometry": {
+        "occurrences": 3,
+        "examples": [
+          "POLYGON((-125 24, -66 24, -66 50, -125 50, -125 24))"
+        ]
+      },
+      "hadRole": {
+        "occurrences": 12,
+        "examples": [
+          "Data Steward",
+          "isInputTo",
+          "Data Quality"
+        ]
+      },
+      "inDimension": {
+        "occurrences": 1,
+        "examples": [
+          "height"
+        ]
+      },
+      "language": {
+        "occurrences": 10,
+        "examples": [
+          "en",
+          "es"
+        ]
+      },
+      "liabilityStatement": {
+        "occurrences": 2,
+        "examples": [
+          "This dataset is provided as-is without warranty of any kind. Users are responsible for determining fitness for their intended use.",
+          "This dataset is provided as-is without warranty. The publishing agency is not liable for any damages arising from its use."
+        ]
+      },
+      "mediaType": {
+        "occurrences": 12,
+        "examples": [
+          "application/pdf",
+          "text/csv",
+          "application/json"
+        ]
+      },
+      "packageFormat": {
+        "occurrences": 1,
+        "examples": [
+          "application/zip"
+        ]
+      },
+      "provenance": {
+        "occurrences": 3,
+        "examples": [
+          "Data collected from automated weather stations deployed at 2,500 locations across the continental United States.",
+          "Quality control procedures applied according to WMO guidelines.",
+          "Data was collected through automated sensors deployed across the continental United States."
+        ]
+      },
+      "relation": {
+        "occurrences": 1,
+        "examples": [
+          "some resource"
+        ]
+      },
+      "restrictionStatus": {
+        "occurrences": 4,
+        "examples": [
+          "",
+          "Restricted",
+          "Unrestricted"
+        ]
+      },
+      "rights": {
+        "occurrences": 9,
+        "examples": [
+          "This data is in the public domain and may be used without restriction.",
+          "This catalog is maintained by the Federal Data Management Office.",
+          "Data within this catalog may be subject to individual dataset licensing terms."
+        ]
+      },
+      "source": {
+        "occurrences": 1,
+        "examples": [
+          "Original metadata harvested from NOAA data portal"
+        ]
+      },
+      "status": {
+        "occurrences": 1,
+        "examples": [
+          "published"
+        ]
+      },
+      "tel": {
+        "occurrences": 7,
+        "examples": [
+          "+1-555-123-4567",
+          "+1-555-CLIMATE"
+        ]
+      },
+      "theme": {
+        "occurrences": 1,
+        "examples": [
+          "Climate Science"
+        ]
+      },
+      "unitMeasure": {
+        "occurrences": 4,
+        "examples": [
+          "percent"
+        ]
+      }
+    },
+    "termCount": 22,
+    "occurrenceTotal": 100,
+    "affectedFiles": 7
+  },
+  "contextStats": {
+    "declared": {
+      "terms": 165,
+      "typeScopedClasses": [
+        "Catalog",
+        "CatalogRecord",
+        "Dataset",
+        "Distribution",
+        "Document",
+        "Kind",
+        "Relationship",
+        "Standard"
+      ],
+      "scopedOverrides": 17,
+      "idCoerced": 75,
+      "datatypeCoerced": 18,
+      "setContainers": 46
+    },
+    "observed": {
+      "terms": 165,
+      "typeScopedClasses": [
+        "Catalog",
+        "CatalogRecord",
+        "Dataset",
+        "Distribution",
+        "Document",
+        "Kind",
+        "Relationship",
+        "Standard"
+      ],
+      "scopedOverrides": 17,
+      "idCoerced": 53,
+      "datatypeCoerced": 18,
+      "setContainers": 46
+    }
+  },
+  "measurements": {
+    "baseline": {
+      "files": 115,
+      "triples": 76,
+      "distinctPredicates": 1,
+      "dcatNamespaceTriples": 0,
+      "zeroTripleFiles": 38,
+      "zeroTripleFileNames": [
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_object_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json"
+      ],
+      "failures": [
+        {
+          "file": "minimal_string_example.json",
+          "error": "UnboundLocalError: cannot access local variable 'resources' where it is not associated with a value"
+        }
+      ],
+      "topPredicates": [
+        [
+          "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          76
+        ]
+      ],
+      "typeValues": [
+        [
+          "https://example.gov/Location",
+          8
+        ],
+        [
+          "https://example.gov/Dataset",
+          6
+        ],
+        [
+          "https://example.gov/PeriodOfTime",
+          6
+        ],
+        [
+          "https://example.gov/Address",
+          3
+        ],
+        [
+          "https://example.gov/Agent",
+          3
+        ],
+        [
+          "https://example.gov/CUIRestriction",
+          3
+        ],
+        [
+          "https://example.gov/Catalog",
+          3
+        ],
+        [
+          "https://example.gov/Checksum",
+          3
+        ],
+        [
+          "https://example.gov/Concept",
+          3
+        ],
+        [
+          "https://example.gov/ConceptScheme",
+          3
+        ],
+        [
+          "https://example.gov/DatasetSeries",
+          3
+        ],
+        [
+          "https://example.gov/Metric",
+          3
+        ],
+        [
+          "https://example.gov/Organization",
+          3
+        ],
+        [
+          "https://example.gov/Relationship",
+          3
+        ],
+        [
+          "https://example.gov/Activity",
+          2
+        ],
+        [
+          "https://example.gov/Attribution",
+          2
+        ],
+        [
+          "https://example.gov/CatalogRecord",
+          2
+        ],
+        [
+          "https://example.gov/DataService",
+          2
+        ],
+        [
+          "https://example.gov/Distribution",
+          2
+        ],
+        [
+          "https://example.gov/Document",
+          2
+        ],
+        [
+          "https://example.gov/Identifier",
+          2
+        ],
+        [
+          "https://example.gov/Kind",
+          2
+        ],
+        [
+          "https://example.gov/QualityMeasurement",
+          2
+        ],
+        [
+          "https://example.gov/Standard",
+          2
+        ],
+        [
+          "https://example.gov/UseRestriction",
+          2
+        ],
+        [
+          "https://example.gov/AccessRestriction",
+          1
+        ]
+      ],
+      "manufacturedIris": [],
+      "manufacturedIriCount": 0,
+      "manufacturedIriFiles": 0
+    },
+    "declared": {
+      "files": 115,
+      "triples": 1508,
+      "distinctPredicates": 123,
+      "dcatNamespaceTriples": 228,
+      "zeroTripleFiles": 10,
+      "zeroTripleFileNames": [
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_object_example.json",
+        "minimal_string_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json"
+      ],
+      "failures": [],
+      "topPredicates": [
+        [
+          "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          281
+        ],
+        [
+          "http://purl.org/dc/terms/title",
+          114
+        ],
+        [
+          "http://purl.org/dc/terms/description",
+          75
+        ],
+        [
+          "http://xmlns.com/foaf/0.1/name",
+          66
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#prefLabel",
+          47
+        ],
+        [
+          "http://purl.org/dc/terms/identifier",
+          44
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#fn",
+          43
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#hasEmail",
+          43
+        ],
+        [
+          "http://www.w3.org/ns/dcat#contactPoint",
+          38
+        ],
+        [
+          "http://purl.org/dc/terms/publisher",
+          34
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#notation",
+          34
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#definition",
+          32
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#inScheme",
+          31
+        ],
+        [
+          "http://www.w3.org/ns/dcat#keyword",
+          28
+        ],
+        [
+          "http://purl.org/dc/terms/issued",
+          17
+        ]
+      ],
+      "typeValues": [
+        [
+          "http://www.w3.org/2004/02/skos/core#Concept",
+          33
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+          31
+        ],
+        [
+          "http://www.w3.org/ns/dcat#Dataset",
+          22
+        ],
+        [
+          "http://www.w3.org/ns/adms#Identifier",
+          19
+        ],
+        [
+          "http://xmlns.com/foaf/0.1/Agent",
+          19
+        ],
+        [
+          "http://purl.org/dc/terms/Location",
+          15
+        ],
+        [
+          "http://www.w3.org/ns/org#Organization",
+          15
+        ],
+        [
+          "http://www.w3.org/ns/dcat#Distribution",
+          14
+        ],
+        [
+          "http://purl.org/dc/terms/PeriodOfTime",
+          13
+        ],
+        [
+          "http://purl.org/dc/terms/Standard",
+          11
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#Kind",
+          9
+        ],
+        [
+          "http://www.w3.org/ns/locn#Address",
+          9
+        ],
+        [
+          "http://xmlns.com/foaf/0.1/Document",
+          9
+        ],
+        [
+          "http://resources.data.gov/ontology/dcat-us#CuiRestriction",
+          7
+        ],
+        [
+          "http://resources.data.gov/ontology/dcat-us#UseRestriction",
+          6
+        ],
+        [
+          "http://www.w3.org/ns/dqv#Metric",
+          6
+        ],
+        [
+          "http://resources.data.gov/ontology/dcat-us#AccessRestriction",
+          5
+        ],
+        [
+          "http://www.w3.org/ns/dcat#Catalog",
+          5
+        ],
+        [
+          "http://www.w3.org/ns/dcat#Relationship",
+          5
+        ],
+        [
+          "http://www.w3.org/ns/prov#Activity",
+          5
+        ],
+        [
+          "http://www.w3.org/ns/prov#Attribution",
+          5
+        ],
+        [
+          "http://spdx.org/rdf/terms#Checksum",
+          4
+        ],
+        [
+          "http://www.w3.org/ns/dcat#DataService",
+          4
+        ],
+        [
+          "http://www.w3.org/ns/dqv#QualityMeasurement",
+          4
+        ],
+        [
+          "http://www.w3.org/ns/dcat#CatalogRecord",
+          3
+        ],
+        [
+          "http://www.w3.org/ns/dcat#DatasetSeries",
+          3
+        ]
+      ],
+      "manufacturedIris": [
+        [
+          "https://example.gov/",
+          36
+        ],
+        [
+          "https://example.gov/+1-555-123-4567",
+          6
+        ],
+        [
+          "https://example.gov/application/pdf",
+          6
+        ],
+        [
+          "https://example.gov/en",
+          6
+        ],
+        [
+          "https://example.gov/text/csv",
+          5
+        ],
+        [
+          "https://example.gov/SHA-256",
+          4
+        ],
+        [
+          "https://example.gov/es",
+          4
+        ],
+        [
+          "https://example.gov/percent",
+          4
+        ],
+        [
+          "https://example.gov/CSV",
+          3
+        ],
+        [
+          "https://example.gov/annually",
+          2
+        ],
+        [
+          "https://example.gov/daily",
+          2
+        ],
+        [
+          "https://example.gov/isInputTo",
+          2
+        ],
+        [
+          "https://example.gov/quarterly",
+          2
+        ],
+        [
+          "https://example.gov/+1-555-CLIMATE",
+          1
+        ],
+        [
+          "https://example.gov/JSON",
+          1
+        ],
+        [
+          "https://example.gov/Organization",
+          1
+        ],
+        [
+          "https://example.gov/Restricted",
+          1
+        ],
+        [
+          "https://example.gov/Unrestricted",
+          1
+        ],
+        [
+          "https://example.gov/application/gzip",
+          1
+        ],
+        [
+          "https://example.gov/application/json",
+          1
+        ]
+      ],
+      "manufacturedIriCount": 98,
+      "manufacturedIriFiles": 7
+    },
+    "observed": {
+      "files": 115,
+      "triples": 1510,
+      "distinctPredicates": 123,
+      "dcatNamespaceTriples": 228,
+      "zeroTripleFiles": 10,
+      "zeroTripleFileNames": [
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json",
+        "minimal_object_example.json",
+        "minimal_string_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "minimal_example.json",
+        "null_example.json"
+      ],
+      "failures": [],
+      "topPredicates": [
+        [
+          "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          281
+        ],
+        [
+          "http://purl.org/dc/terms/title",
+          114
+        ],
+        [
+          "http://purl.org/dc/terms/description",
+          75
+        ],
+        [
+          "http://xmlns.com/foaf/0.1/name",
+          66
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#prefLabel",
+          47
+        ],
+        [
+          "http://purl.org/dc/terms/identifier",
+          44
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#fn",
+          43
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#hasEmail",
+          43
+        ],
+        [
+          "http://www.w3.org/ns/dcat#contactPoint",
+          38
+        ],
+        [
+          "http://purl.org/dc/terms/publisher",
+          34
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#notation",
+          34
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#definition",
+          32
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#inScheme",
+          31
+        ],
+        [
+          "http://www.w3.org/ns/dcat#keyword",
+          28
+        ],
+        [
+          "http://purl.org/dc/terms/issued",
+          17
+        ]
+      ],
+      "typeValues": [
+        [
+          "http://www.w3.org/2004/02/skos/core#Concept",
+          33
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+          31
+        ],
+        [
+          "http://www.w3.org/ns/dcat#Dataset",
+          22
+        ],
+        [
+          "http://www.w3.org/ns/adms#Identifier",
+          19
+        ],
+        [
+          "http://xmlns.com/foaf/0.1/Agent",
+          19
+        ],
+        [
+          "http://purl.org/dc/terms/Location",
+          15
+        ],
+        [
+          "http://www.w3.org/ns/org#Organization",
+          15
+        ],
+        [
+          "http://www.w3.org/ns/dcat#Distribution",
+          14
+        ],
+        [
+          "http://purl.org/dc/terms/PeriodOfTime",
+          13
+        ],
+        [
+          "http://purl.org/dc/terms/Standard",
+          11
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#Kind",
+          9
+        ],
+        [
+          "http://www.w3.org/ns/locn#Address",
+          9
+        ],
+        [
+          "http://xmlns.com/foaf/0.1/Document",
+          9
+        ],
+        [
+          "http://resources.data.gov/ontology/dcat-us#CuiRestriction",
+          7
+        ],
+        [
+          "http://resources.data.gov/ontology/dcat-us#UseRestriction",
+          6
+        ],
+        [
+          "http://www.w3.org/ns/dqv#Metric",
+          6
+        ],
+        [
+          "http://resources.data.gov/ontology/dcat-us#AccessRestriction",
+          5
+        ],
+        [
+          "http://www.w3.org/ns/dcat#Catalog",
+          5
+        ],
+        [
+          "http://www.w3.org/ns/dcat#Relationship",
+          5
+        ],
+        [
+          "http://www.w3.org/ns/prov#Activity",
+          5
+        ],
+        [
+          "http://www.w3.org/ns/prov#Attribution",
+          5
+        ],
+        [
+          "http://spdx.org/rdf/terms#Checksum",
+          4
+        ],
+        [
+          "http://www.w3.org/ns/dcat#DataService",
+          4
+        ],
+        [
+          "http://www.w3.org/ns/dqv#QualityMeasurement",
+          4
+        ],
+        [
+          "http://www.w3.org/ns/dcat#CatalogRecord",
+          3
+        ],
+        [
+          "http://www.w3.org/ns/dcat#DatasetSeries",
+          3
+        ]
+      ],
+      "manufacturedIris": [],
+      "manufacturedIriCount": 0,
+      "manufacturedIriFiles": 0
+    }
+  },
+  "validation": {
+    "legacyShapesOverPublishedCorpus": {
+      "shapes": "/Users/fabio/projects/dcat-us-binding/vendor/dcat-us_3.0_shacl_shapes.recovered.ttl",
+      "shapeTriples": 4043,
+      "conforms": true,
+      "results": 0,
+      "bySeverity": {},
+      "topPaths": [],
+      "coverage": {
+        "targetClasses": 34,
+        "typesInData": 26,
+        "matchedClasses": [],
+        "matchedClassCount": 0,
+        "focusNodes": 0,
+        "unmatchedTargetClasses": [
+          "http://data.resources.gov/ontology/dcat-us#AccessRestriction",
+          "http://data.resources.gov/ontology/dcat-us#CUIRestriction",
+          "http://data.resources.gov/ontology/dcat-us#GeographicBoundingBox",
+          "http://data.resources.gov/ontology/dcat-us#LiabilityStatement",
+          "http://data.resources.gov/ontology/dcat-us#UseRestriction",
+          "http://purl.org/dc/terms/LicenseDocument",
+          "http://purl.org/dc/terms/Location",
+          "http://purl.org/dc/terms/MediaType",
+          "http://purl.org/dc/terms/PeriodOfTime",
+          "http://purl.org/dc/terms/ProvenanceStatement",
+          "http://purl.org/dc/terms/RightsStatement",
+          "http://purl.org/dc/terms/Standard",
+          "http://spdx.org/rdf/terms#Checksum",
+          "http://www.w3.org/2004/02/skos/core#Concept",
+          "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+          "http://www.w3.org/2006/vcard/ns#Address",
+          "http://www.w3.org/2006/vcard/ns#Kind",
+          "http://www.w3.org/ns/adms#Identifier",
+          "http://www.w3.org/ns/dcat#Catalog",
+          "http://www.w3.org/ns/dcat#CatalogRecord",
+          "http://www.w3.org/ns/dcat#DataService",
+          "http://www.w3.org/ns/dcat#Dataset",
+          "http://www.w3.org/ns/dcat#DatasetSeries",
+          "http://www.w3.org/ns/dcat#Distribution",
+          "http://www.w3.org/ns/dcat#Relationship",
+          "http://www.w3.org/ns/dqv#Metric",
+          "http://www.w3.org/ns/dqv#QualityMeasurement",
+          "http://www.w3.org/ns/locn#Address",
+          "http://www.w3.org/ns/org#Organization",
+          "http://www.w3.org/ns/prov#Activity",
+          "http://www.w3.org/ns/prov#Attribution",
+          "http://xmlns.com/foaf/0.1/Agent",
+          "http://xmlns.com/foaf/0.1/Document",
+          "http://xmlns.com/foaf/0.1/Person"
+        ]
+      }
+    },
+    "legacyShapesOverBoundCorpus": {
+      "shapes": "/Users/fabio/projects/dcat-us-binding/vendor/dcat-us_3.0_shacl_shapes.recovered.ttl",
+      "shapeTriples": 4043,
+      "conforms": false,
+      "results": 287,
+      "bySeverity": {
+        "Violation": 287
+      },
+      "topPaths": [
+        [
+          "http://purl.org/dc/terms/publisher",
+          33
+        ],
+        [
+          "http://data.resources.gov/ontology/dcat-us#describedBy",
+          17
+        ],
+        [
+          "http://purl.org/dc/terms/issued",
+          16
+        ],
+        [
+          "http://purl.org/dc/terms/modified",
+          15
+        ],
+        [
+          "http://www.w3.org/ns/dcat#startDate",
+          12
+        ],
+        [
+          "http://purl.org/dc/terms/language",
+          11
+        ],
+        [
+          "http://purl.org/dc/terms/license",
+          11
+        ],
+        [
+          "http://www.w3.org/ns/dcat#endDate",
+          11
+        ],
+        [
+          "http://www.w3.org/ns/dcat#hadRole",
+          11
+        ],
+        [
+          "http://purl.org/dc/terms/rights",
+          10
+        ],
+        [
+          "http://www.w3.org/ns/dcat#bbox",
+          10
+        ],
+        [
+          "http://purl.org/dc/terms/identifier",
+          9
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#inScheme",
+          9
+        ],
+        [
+          "http://purl.org/dc/terms/format",
+          8
+        ],
+        [
+          "http://purl.org/dc/terms/relation",
+          8
+        ]
+      ],
+      "coverage": {
+        "targetClasses": 34,
+        "typesInData": 26,
+        "matchedClasses": [
+          "http://purl.org/dc/terms/Location",
+          "http://purl.org/dc/terms/PeriodOfTime",
+          "http://purl.org/dc/terms/Standard",
+          "http://spdx.org/rdf/terms#Checksum",
+          "http://www.w3.org/2004/02/skos/core#Concept",
+          "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+          "http://www.w3.org/2006/vcard/ns#Kind",
+          "http://www.w3.org/ns/adms#Identifier",
+          "http://www.w3.org/ns/dcat#Catalog",
+          "http://www.w3.org/ns/dcat#CatalogRecord",
+          "http://www.w3.org/ns/dcat#DataService",
+          "http://www.w3.org/ns/dcat#Dataset",
+          "http://www.w3.org/ns/dcat#DatasetSeries",
+          "http://www.w3.org/ns/dcat#Distribution",
+          "http://www.w3.org/ns/dcat#Relationship",
+          "http://www.w3.org/ns/dqv#Metric",
+          "http://www.w3.org/ns/dqv#QualityMeasurement",
+          "http://www.w3.org/ns/locn#Address",
+          "http://www.w3.org/ns/org#Organization",
+          "http://www.w3.org/ns/prov#Activity",
+          "http://www.w3.org/ns/prov#Attribution",
+          "http://xmlns.com/foaf/0.1/Agent",
+          "http://xmlns.com/foaf/0.1/Document"
+        ],
+        "matchedClassCount": 23,
+        "focusNodes": 228,
+        "unmatchedTargetClasses": [
+          "http://data.resources.gov/ontology/dcat-us#AccessRestriction",
+          "http://data.resources.gov/ontology/dcat-us#CUIRestriction",
+          "http://data.resources.gov/ontology/dcat-us#GeographicBoundingBox",
+          "http://data.resources.gov/ontology/dcat-us#LiabilityStatement",
+          "http://data.resources.gov/ontology/dcat-us#UseRestriction",
+          "http://purl.org/dc/terms/LicenseDocument",
+          "http://purl.org/dc/terms/MediaType",
+          "http://purl.org/dc/terms/ProvenanceStatement",
+          "http://purl.org/dc/terms/RightsStatement",
+          "http://www.w3.org/2006/vcard/ns#Address",
+          "http://xmlns.com/foaf/0.1/Person"
+        ]
+      }
+    },
+    "generatedShapesOverBoundCorpus": {
+      "shapes": "/Users/fabio/projects/dcat-us-binding/build/dcat-us-3.0-shapes.ttl",
+      "shapeTriples": 1789,
+      "conforms": false,
+      "results": 316,
+      "bySeverity": {
+        "Violation": 95,
+        "Warning": 221
+      },
+      "topPaths": [
+        [
+          "http://purl.org/dc/terms/publisher",
+          28
+        ],
+        [
+          "http://www.w3.org/ns/dcat#contactPoint",
+          25
+        ],
+        [
+          "http://www.w3.org/ns/dcat#hadRole",
+          21
+        ],
+        [
+          "http://purl.org/dc/terms/language",
+          20
+        ],
+        [
+          "http://purl.org/dc/terms/rights",
+          18
+        ],
+        [
+          "http://purl.org/dc/terms/format",
+          16
+        ],
+        [
+          "http://www.w3.org/ns/dcat#mediaType",
+          16
+        ],
+        [
+          "http://purl.org/dc/terms/identifier",
+          14
+        ],
+        [
+          "http://purl.org/dc/terms/accessRights",
+          12
+        ],
+        [
+          "http://purl.org/dc/terms/accrualPeriodicity",
+          12
+        ],
+        [
+          "http://www.w3.org/ns/dqv#inDimension",
+          12
+        ],
+        [
+          "http://purl.org/dc/terms/license",
+          9
+        ],
+        [
+          "http://purl.org/dc/terms/relation",
+          8
+        ],
+        [
+          "http://spdx.org/rdf/terms#algorithm",
+          8
+        ],
+        [
+          "http://purl.org/dc/terms/description",
+          7
+        ]
+      ],
+      "coverage": {
+        "targetClasses": 24,
+        "typesInData": 26,
+        "matchedClasses": [
+          "http://purl.org/dc/terms/Location",
+          "http://purl.org/dc/terms/PeriodOfTime",
+          "http://purl.org/dc/terms/Standard",
+          "http://resources.data.gov/ontology/dcat-us#AccessRestriction",
+          "http://resources.data.gov/ontology/dcat-us#CuiRestriction",
+          "http://resources.data.gov/ontology/dcat-us#UseRestriction",
+          "http://spdx.org/rdf/terms#Checksum",
+          "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+          "http://www.w3.org/2006/vcard/ns#Kind",
+          "http://www.w3.org/ns/dcat#Catalog",
+          "http://www.w3.org/ns/dcat#CatalogRecord",
+          "http://www.w3.org/ns/dcat#DataService",
+          "http://www.w3.org/ns/dcat#Dataset",
+          "http://www.w3.org/ns/dcat#DatasetSeries",
+          "http://www.w3.org/ns/dcat#Distribution",
+          "http://www.w3.org/ns/dcat#Relationship",
+          "http://www.w3.org/ns/dqv#Metric",
+          "http://www.w3.org/ns/dqv#QualityMeasurement",
+          "http://www.w3.org/ns/locn#Address",
+          "http://www.w3.org/ns/org#Organization",
+          "http://www.w3.org/ns/prov#Activity",
+          "http://www.w3.org/ns/prov#Attribution",
+          "http://xmlns.com/foaf/0.1/Agent",
+          "http://xmlns.com/foaf/0.1/Document"
+        ],
+        "matchedClassCount": 24,
+        "focusNodes": 191,
+        "unmatchedTargetClasses": []
+      }
+    }
+  },
+  "corpusTriples": {
+    "asPublished": 73,
+    "withBinding": 1383
+  }
+}

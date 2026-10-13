@@ -118,7 +118,7 @@ def _portable(workspace, service, analysis, directory, previous):
 
 def operation(workspace, ensemble_id, *, run_native=False, continue_on_error=True,
               with_raster_products=False, resume_raster_products=False,
-              source_study=None, on_progress=None):
+              source_study=None, on_progress=None, member_ids=None):
     """Run/reopen the same saved design and export its actual completed results.
 
     Returns one machine-readable record. Native stage progress remains in the
@@ -157,6 +157,14 @@ def operation(workspace, ensemble_id, *, run_native=False, continue_on_error=Tru
             "report": None, "raster_products": [], "archives": deepcopy(previous_exports), "errors": [],
         }
 
+        if member_ids is not None:
+            if (not run_native or not isinstance(member_ids, (list, tuple)) or not member_ids
+                    or any(not isinstance(value, str) for value in member_ids)
+                    or len(member_ids) != len(set(member_ids))
+                    or not set(member_ids).issubset({member["id"] for member in plan["members"]})):
+                raise ValueError("Select original native members only for explicit execution")
+            record["requested"]["member_ids"] = list(member_ids)
+
         def save(phase=None, **values):
             if phase is not None:
                 record["state"] = phase
@@ -175,7 +183,10 @@ def operation(workspace, ensemble_id, *, run_native=False, continue_on_error=Tru
         try:
             if run_native:
                 try:
-                    manager.run(key, continue_on_error=continue_on_error)
+                    if member_ids is None:
+                        manager.run(key, continue_on_error=continue_on_error)
+                    else:
+                        manager.run(key, continue_on_error=continue_on_error, member_ids=member_ids)
                 except Exception as exc:
                     # Preserve the completed members and continue their export.
                     # Interrupt/termination signals are handled by the outer
@@ -258,7 +269,16 @@ def operation(workspace, ensemble_id, *, run_native=False, continue_on_error=Tru
         except BaseException as exc:
             record["errors"].append({"phase": record["state"], "type": type(exc).__name__,
                                      "message": str(exc)})
-            save("failed" if isinstance(exc, Exception) else "interrupted")
+            try:
+                save("failed" if isinstance(exc, Exception) else "interrupted")
+            except OSError as receipt_error:
+                exc.operation_receipt_error = {
+                    "type": type(receipt_error).__name__,
+                    "message": str(receipt_error), "errno": receipt_error.errno,
+                }
+                if hasattr(exc, "add_note"):
+                    exc.add_note("Could not retain the ensemble-operation failure record: "
+                                 + str(receipt_error))
             raise
 
 

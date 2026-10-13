@@ -33,6 +33,16 @@ const HELP = [
   'dss-verify     Reopen native --id EXPORT and compare every original mapped value.',
   'dss-handover   Save complete --id EXPORT --out HANDOVER.zip.',
   'dss-receive    Receive --file HANDOVER.zip into this private project.',
+  'watershed-capture  Retain --id ID --source FOLDER with every original watershed file.',
+  'watershed-inspect  Inspect all native DSS files for --id ID.',
+  'watershed-review   Save --id ID --file REVIEW.json (including expectedRevision).',
+  'watershed-preview  Review the complete saved migration for --id ID.',
+  'watershed-execute  Convert/reopen --id ID --plan-sha SHA through official HEC.',
+  'watershed-list     List saved watersheds; watershed-read --id ID opens complete history.',
+  'watershed-working  Export the unfinished review --id ID --out FILE.',
+  'watershed-reopen-working  Reopen --id ID --file FILE --expected-revision N.',
+  'watershed-handover Export --id ID --out HANDOVER.zip.',
+  'watershed-receive  Receive --file HANDOVER.zip into this original Water project.',
   'stage          Prepare --edition ID --origin HTTPS_ORIGIN --payment terms.json [--path /water].',
   'merchant       Run --edition ID [--port 0 --facilitator HTTPS_URL].',
   'status         Read original merchant --edition ID status.',
@@ -118,6 +128,25 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const project = await openWaterProject(directory);
   try {
+    if (command.startsWith('watershed-')) {
+      const action = command.slice('watershed-'.length), input = {};
+      if (!['list','receive'].includes(action)) input.id = required(options, 'id');
+      if (action === 'capture') { input.source = resolve(required(options, 'source')); input.textEncoding = options['text-encoding'] || null; }
+      if (action === 'review') Object.assign(input, await jsonFile(required(options, 'file')), { id: input.id });
+      if (action === 'execute') input.planSha256 = required(options, 'plan-sha');
+      if (action === 'receive') input.file = resolve(required(options, 'file'));
+      if (action === 'reopen-working') {
+        input.working = await jsonFile(required(options, 'file'));
+        input.expectedRevision = integer(required(options, 'expected-revision'));
+      }
+      const result = await project.watershed(action, input);
+      if (action === 'handover') {
+        const destination = resolve(required(options, 'out'));
+        await copyFile(result.path, destination, constants.COPYFILE_EXCL);
+        return output({ ...result, path: destination });
+      }
+      return output(result, options.out);
+    }
     if (command === 'init' || command === 'config') {
       if (command === 'config' && !options.selection) return output(await project.read(), options.out);
       return output(await project.save({ title: options.title ?? (await project.read())?.title ?? 'Water monitoring review',

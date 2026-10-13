@@ -1,15 +1,18 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "datasette-analysis",
-  "description": "Datasette customer editions, original Python Analysis and workbook delivery in the installed Applications workspace",
+  "description": "Datasette and original supplier CSV editions, NLD data flows, native Analysis reports, complete editable review and workflow delivery",
   "components": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/datasette",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli",
-    "stellar/scf-starforge-20261009/distribution/python-runtime"
+    "stellar/scf-starforge-20261009/distribution/python-runtime",
+    "products/conapi/supplier-report",
+    "products/ntico/bdnb-territory"
   ],
   "supportFiles": [
     "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-datasette-analysis.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-datasette-workflow.mjs",
     "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/datasette-analysis.mjs",
     "stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery/deliver.mjs",
     "stellar/scf-starforge-20261009/sf31-buyer-client/public-transport.mjs",
@@ -21,13 +24,17 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/files.mjs"
   ],
   "commands": {
-    "datasette-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/cli.mjs"
+    "datasette-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/cli.mjs",
+    "supplier-report": "products/conapi/supplier-report/supplier-report-cli.mjs"
   },
   "commandDescriptions": {
-    "datasette-analysis": "Receive Datasette source editions, operate original Analysis and deliver editable customer workspaces"
+    "datasette-analysis": "Operate source editions, NLD data flows, native Analysis, original supplier review and complete API/JMS workflow delivery",
+    "supplier-report": "Review original supplier source changes and export the complete editable comparison"
   },
   "exports": {
-    "./seller/datasette-analysis/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/cli.mjs"
+    "./seller/datasette-analysis/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/cli.mjs",
+    "./supplier-report": "./source/products/conapi/supplier-report/supplier-report.mjs",
+    "./supplier-report/catalogue-coverage": "./source/products/conapi/supplier-report/catalogue-coverage.mjs"
   },
   "applicationProviders": {
     "datasette-analysis": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/datasette-analysis.mjs"

@@ -323,8 +323,8 @@ def _retained_complete(workspace, record, plan, directory, previous, raster_prod
     return deepcopy(previous)
 
 
-def continue_course(workspace, ensemble_id, *, execute=False, raster_products=True,
-                    on_progress=None):
+def _continue_course(workspace, ensemble_id, *, execute=False, raster_products=True,
+                     on_progress=None, reference_only=False):
     """Continue the same native operation and retain its full joint decision edition."""
     from model.common import atomic_json, digest, now, read_json
     from model.ensemble_operations import operation
@@ -335,11 +335,20 @@ def continue_course(workspace, ensemble_id, *, execute=False, raster_products=Tr
     with held(directory / ".headwaters-course.lock", blocking=False):
         path = directory / "headwaters-results.json"
         previous = read_json(path) if path.exists() else {}
+        if reference_only:
+            _reference_member(workspace, plan)
         retained = _retained_complete(
             workspace, record, plan, directory, previous, raster_products)
         if retained is not None:
             return retained
-        if previous.get("state") == "complete":
+        if reference_only:
+            retained = _retained_reference(
+                workspace, record, plan, directory, previous, raster_products)
+            if retained is not None:
+                return retained
+        if (previous.get("state") == "complete"
+                or (previous.get("state") == "partial"
+                    and previous.get("reference_report_basis", {}).get("reference_ready") is True)):
             atomic_json(directory / "headwaters-result-editions" / (digest(previous) + ".json"),
                         previous, immutable=True)
         result = {"schema": SCHEMA, "project_id": workspace.project["id"],
@@ -350,10 +359,12 @@ def continue_course(workspace, ensemble_id, *, execute=False, raster_products=Tr
                   "state": "running" if execute else "reporting"}
         atomic_json(path, result)
         try:
+            options = ({"member_ids": [plan["members"][0]["id"]]}
+                       if reference_only and execute else {})
             result["operation"] = operation(
                 workspace, plan["id"], run_native=execute,
                 with_raster_products=raster_products, resume_raster_products=True,
-                source_study=record["source_study"], on_progress=on_progress)
+                source_study=record["source_study"], on_progress=on_progress, **options)
             _, current, _ = _load(workspace, plan["id"])
             result["joint_decisions"] = _decision_export(workspace, current, directory)
             complete = (result["operation"]["state"] == "complete"
@@ -377,6 +388,125 @@ def continue_course(workspace, ensemble_id, *, execute=False, raster_products=Tr
                     error.add_note("Could not retain the parameter-course failure record: "
                                    + str(receipt_error))
             raise
+
+
+def _reference_member(workspace, plan):
+    """Validate the unchanged first profile and its original three native runs."""
+    from model.model_selection import run_models
+    selected = plan["members"][0]
+    scenarios = [plan["baseline_scenario_id"], *plan["alternative_scenario_ids"]]
+    if (len(scenarios) != 3 or len(set(scenarios)) != 3
+            or [run["scenario_id"] for run in selected["runs"]] != scenarios
+            or len({run["run_id"] for run in selected["runs"]}) != 3):
+        raise ValueError("Retain the original reference baseline, restoration and control")
+    for row, scenario in zip(selected["runs"], scenarios):
+        run = workspace.inspect_run(row["run_id"])
+        expected = {"grid_id": plan["grid_id"], "profile_id": selected["profile_id"],
+                    "scenario_id": scenario}
+        if (any(run["selection"].get(key) != value for key, value in expected.items())
+                or tuple(run_models(run)) != ("ndr", "sdr")):
+            raise ValueError("The reference member changed its original native selection")
+    return selected
+
+
+def _reference_files(workspace, result):
+    """Verify original returned products before reusing their exact course record."""
+    from model.common import digest, read_json, verify_file
+    from model.model_selection import validate_completed_run
+    basis = result["reference_report_basis"]
+    for key in basis["reference_run_ids"]:
+        run = workspace.inspect_run(key)
+        validate_completed_run(run)
+        for descriptor in run.get("artifacts", {}).values():
+            verify_file(workspace.root / "runs" / key, descriptor)
+    from model.native_versions import validate_run_comparison
+    for selected in result["joint_decisions"].get("comparisons", []):
+        comparison = workspace.retained_item("comparisons", selected["comparison_id"])
+        validate_run_comparison(workspace, comparison, expected_id=selected["comparison_id"])
+        if (comparison["baseline_run_id"] != selected["baseline_run_id"]
+                or [row["run_id"] for row in comparison["alternatives"]]
+                   != selected["alternative_run_ids"]):
+            raise ValueError("The retained reference decision changed its original run comparison")
+        directory = workspace.root / "comparisons" / comparison["id"]
+        for alternative in comparison["alternatives"]:
+            for descriptor in alternative["artifacts"].values():
+                verify_file(directory, descriptor)
+    operation = result["operation"]
+    report = operation.get("report") or {}
+    if (report.get("state") not in ("partial", "complete")
+            or report.get("report_state") != "current"):
+        raise ValueError("The reference course has no current original report")
+    for descriptor in report.get("files", {}).values():
+        verify_file(workspace.root / "ensemble_reports" / report["id"], descriptor)
+    for product in operation.get("raster_products", []):
+        if product.get("state") == "complete":
+            directory = workspace.root / "ensemble-products" / product["analysis_id"]
+            saved = read_json(directory / "reports.json")
+            if digest(saved) != product["report_signature"]:
+                raise ValueError("The retained paired reference report changed")
+            descriptors = saved.get("files", [])
+            for descriptor in (descriptors.values() if isinstance(descriptors, dict) else descriptors):
+                verify_file(directory, descriptor)
+            verify_file(workspace.root, product["archive"])
+    for product in result["joint_decisions"].get("support_group_reports", []):
+        directory = (workspace.root / "ensemble_results" / result["ensemble_id"]
+                     / "joint-decisions" / product["report_id"])
+        manifest = read_json(directory / "manifest.json")
+        if manifest.get("report_id") != product["report_id"]:
+            raise ValueError("The retained reference decision report changed")
+        for descriptor in manifest["members"]:
+            verify_file(directory, descriptor)
+        verify_file(workspace.root, product["archive_identity"])
+
+
+def _retained_reference(workspace, record, plan, directory, previous, raster_products):
+    """Reuse an unchanged partial reference before any producer timestamp writes."""
+    from model.common import read_json
+    if previous.get("state") != "partial":
+        return None
+    operation = previous.get("operation", {})
+    report = operation.get("report") or {}
+    if (report.get("state") not in ("partial", "complete")
+            or report.get("report_state") != "current"):
+        return None
+    if raster_products and not operation.get("requested", {}).get("raster_products"):
+        return None  # An explicitly expanded product request follows the original producer.
+    basis = reference_report_basis(workspace, plan["id"], previous)
+    if (not basis["reference_ready"] or basis != previous.get("reference_report_basis")
+            or operation.get("native_progress") != plan["progress"]):
+        return None
+    release = read_json(workspace.root / "ensemble_reports" / report["id"] / "report.json")
+    if release.get("report", {}).get("run_signature") != plan["run_signature"]:
+        return None  # A native record changed; retain a new original report edition.
+    if read_json(directory / "operation.json") != operation:
+        raise ValueError("The retained reference operation changed independently")
+    if raster_products:
+        products = operation.get("raster_products", [])
+        if ([item["scenario_id"] for item in products] != plan["alternative_scenario_ids"]
+                or any(item.get("state") != "complete" for item in products)):
+            return None  # Finish the originally requested products without another native dispatch.
+    _reference_files(workspace, previous)
+    return deepcopy(previous)
+
+
+def continue_course(workspace, ensemble_id, *, execute=False, raster_products=True,
+                    on_progress=None):
+    """Continue the same complete native design using the original default behavior."""
+    return _continue_course(workspace, ensemble_id, execute=execute,
+                            raster_products=raster_products, on_progress=on_progress)
+
+
+def continue_reference(workspace, ensemble_id, *, execute=True, raster_products=True,
+                       on_progress=None):
+    """Run/reuse only the original reference trio, then report the unchanged full plan.
+
+    Returns the original partial course plus reference_report_basis. It never
+    dispatches the nine sensitivity runs. A later continue_course(execute=True)
+    reuses these same three IDs and continues the original full design.
+    """
+    return _continue_course(workspace, ensemble_id, execute=execute,
+                            raster_products=raster_products, on_progress=on_progress,
+                            reference_only=True)
 
 
 def main(argv=None):

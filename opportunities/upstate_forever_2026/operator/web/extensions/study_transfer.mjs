@@ -16,6 +16,8 @@ const ROOTS = [
   ['reviews', 'Customer reviews'],
   ['receiving-water-plans', 'Receiving-water source plans'],
   ['receiving-water-analyses', 'Receiving-water analyses'],
+  ['spatial-reviews', 'Saved map views'],
+  ['spatial-exports', 'Completed map packs'],
   ['community-tables', 'Community source tables'],
   ['community-plans', 'Editable Community plans'],
   ['community-reports', 'Saved Community reports'],
@@ -80,7 +82,7 @@ export function attachStudyTransfer(host) {
   let exportsPage={items:[],total:0,offset:0,limit:50,next_offset:null};
   let selected=new Map(),title='Selected scientific study',kind='',query='',selectedOnly=false,offset=0;
   let related=true,plan=null,planSignature=null,busy=false,catalogueBusy=false,exportBusy=false;
-  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0,sourceWaterRequest=0,retainedRecordRequest=0;
+  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0,sourceWaterRequest=0,retainedRecordRequest=0,spatialRequest=0;
   let pendingSubmission=null;
   let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:
     typeof host.openExtension==='function'?
@@ -178,7 +180,7 @@ export function attachStudyTransfer(host) {
     root.querySelector('[data-study-action="preview"]').textContent=busy==='preview'?'Reading contents…':'Preview contents';
     for(const field of root.querySelectorAll('[data-study-field]'))field.disabled=Boolean(busy);
     for(const field of root.querySelectorAll('[data-study-root]'))field.disabled=Boolean(busy)||field.dataset.studyUnavailable==='true';
-    for(const field of root.querySelectorAll('[data-study-action="open-monitoring"],[data-study-action="open-paired"],[data-study-action="open-report-comparison"]'))field.disabled=Boolean(busy);
+    for(const field of root.querySelectorAll('[data-study-action="open-spatial"],[data-study-action="open-monitoring"],[data-study-action="open-paired"],[data-study-action="open-report-comparison"]'))field.disabled=Boolean(busy);
   }
 
   function sourceWaterControl(row){
@@ -201,6 +203,33 @@ export function attachStudyTransfer(host) {
       throw Error('The source-water reply identifies another original study or workspace.');
     try{return await host.openDesk('receptors','openStudy',{workspace_key:captured.workspace,kind,id});}
     catch(error){if(workspaceNow()!==captured.workspace||serial!==sourceWaterRequest)return null;throw error;}
+  }
+  function spatialControl(row){
+    const method=row?.kind==='spatial-reviews'?'openMap':row?.kind==='spatial-exports'?'openItem':null;
+    if(!method||typeof host[method]!=='function'||!/^[0-9a-f]{64}$/.test(row?.id||'')||
+        row.state==='unreadable'||(row.kind==='spatial-exports'&&row.state!=='complete'))return '';
+    return button('open-spatial',row.kind==='spatial-reviews'?'Open saved map':'Open map pack',
+      'data-study-kind="'+escapeHTML(row.kind)+'" data-study-id="'+escapeHTML(row.id)+'"');
+  }
+  async function openSpatial(kind,id){
+    if(!['spatial-reviews','spatial-exports'].includes(kind)||!/^[0-9a-f]{64}$/.test(id||''))
+      throw Error('Choose an original saved map or completed map pack.');
+    const available=[...visiblePage().items,...(plan?.nodes||[])].find(row=>row.kind===kind&&row.id===id);
+    if(!available||available.state==='unreadable')throw Error('Refresh the saved map before opening it.');
+    const review=kind==='spatial-reviews',method=review?'openMap':'openItem',nativeKind=review?'spatial_reviews':'spatial_exports';
+    if(typeof host[method]!=='function')throw Error('Open the map in the maintained scientific operator.');
+    const captured=stamp(),serial=++spatialRequest,projectID=host.getState()?.project?.id;
+    try{
+      const row=await request(endpoint('/api/item',{kind:nativeKind,id}));
+      if(!current(captured)||serial!==spatialRequest)return null;
+      if(row?.id!==id||row.schema!==(review?'upstate.spatial-reviews/v1':'upstate.spatial-export/v1')||
+          (projectID&&row.project_id!==projectID)||(!review&&row.state!=='complete'))
+        throw Error('The saved map reply differs from the selected original record.');
+      return await host[method](nativeKind,id);
+    }catch(error){
+      if(!current(captured)||serial!==spatialRequest)return null;
+      throw error;
+    }
   }
   function receivingControl(row){
     if(!['receiving-water-plans','receiving-water-analyses'].includes(row?.kind)||
@@ -240,7 +269,7 @@ export function attachStudyTransfer(host) {
             '<strong>'+escapeHTML(row.title||row.id.slice(0,12))+'</strong>'+
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
-            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+sourceWaterControl(row)+retainedStudyControl(host,row)+
+            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
@@ -299,7 +328,7 @@ export function attachStudyTransfer(host) {
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Record</th>'+
       '<th scope="col">Type</th><th scope="col">Reason included</th></tr></thead><tbody>'+
       plan.nodes.map(row=>'<tr><td><strong>'+escapeHTML(row.title)+'</strong><small class="st-identity">'+
-        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+sourceWaterControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
+        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
         '</td><td>'+escapeHTML(row.reasons.join('; '))+'</td></tr>').join('')+'</tbody></table></div></details>';
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
@@ -313,18 +342,24 @@ export function attachStudyTransfer(host) {
     body.innerHTML=html;
   }
 
-  async function loadCatalogue() {
+  async function loadCatalogue({propagate=false,isCurrent=()=>true}={}) {
     if(!root||!workspace)return;
     if(selectedOnly){catalogueBusy=false;renderCatalogue();return;}
     const captured=stamp(),serial=++requestSerial;
     catalogueBusy=true;renderCatalogue();
     try {
       const value=await request(endpoint('/api/study-transfer/catalog',{kind,query,offset,limit:200}));
-      if(!current(captured)||serial!==requestSerial)return;
+      if(!current(captured)||serial!==requestSerial||!isCurrent())return null;
       catalogue=value;
       for(const row of value.items)if(selected.has(keyOf(row)))selected.set(keyOf(row),row);
       notice('');
-    }catch(error){if(current(captured)&&serial===requestSerial)fail(error);}
+      return value;
+    }catch(error){
+      if(current(captured)&&serial===requestSerial&&isCurrent()){
+        fail(error);if(propagate)throw error;
+      }
+      return null;
+    }
     finally{if(current(captured)&&serial===requestSerial){catalogueBusy=false;renderCatalogue();}}
   }
 
@@ -457,7 +492,7 @@ export function attachStudyTransfer(host) {
     if(name==='title'){
       title=event.target.value;invalidatePlan();
     }else if(name==='query'){
-      query=event.target.value;offset=0;
+      query=event.target.value;offset=0;++requestSerial;
       clearTimeout(searchTimer);searchTimer=setTimeout(()=>loadCatalogue(),300);
     }
   }
@@ -500,6 +535,7 @@ export function attachStudyTransfer(host) {
       }
       else if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
+      else if(action==='open-spatial'){await openSpatial(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-paired'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
         if(!row||row.state==='unreadable'||row.kind!=='ensemble-products')
@@ -621,5 +657,30 @@ export function attachStudyTransfer(host) {
     }
   }
 
-  return {mount,update,detach,setTransferHandler,openForStudies};
+  async function openForFinder(selection) {
+    if(!root||!workspace||selection?.workspace_key!==workspace||workspace!==workspaceNow())
+      throw new Error('Open this saved study in its original workspace.');
+    if(!Object.hasOwn(rootLabels,selection.kind)||
+       !(selection.kind==='robust-decisions'?/^study_[0-9a-f]{32}$/:/^[0-9a-f]{64}$/).test(selection.id||''))
+      throw new Error('Choose an original saved scientific study.');
+    const captured=stamp(),allowed=()=>current(captured)&&
+      (typeof selection.isCurrent!=='function'||selection.isCurrent());
+    if(!allowed())return null;
+    clearTimeout(searchTimer);searchTimer=null;
+    kind=selection.kind;query=selection.id;selectedOnly=false;offset=0;
+    root.querySelector('[data-study-field="kind"]').value=kind;
+    root.querySelector('[data-study-field="query"]').value=query;
+    root.querySelector('[data-study-field="selected-only"]').checked=false;
+    const value=await loadCatalogue({propagate:true,isCurrent:allowed});
+    if(!value||!allowed()||kind!==selection.kind||query!==selection.id||selectedOnly||offset!==0)return null;
+    const row=value.items.find(item=>item.kind===selection.kind&&item.id===selection.id);
+    if(!row){notice('This saved study is no longer listed in the original workspace. Refresh the search.',true);return null;}
+    const checkbox=[...root.querySelectorAll('[data-study-root]')].find(node=>node.dataset.studyRoot===keyOf(row));
+    const rowNode=checkbox?.closest('tr'),control=rowNode?.querySelector('button:not([disabled])')||checkbox;
+    if(control&&!control.disabled)control.focus({preventScroll:true});
+    rowNode?.scrollIntoView({block:'nearest'});
+    return {workspace_key:workspace,kind:row.kind,id:row.id};
+  }
+
+  return {mount,update,detach,setTransferHandler,openForStudies,openForFinder};
 }

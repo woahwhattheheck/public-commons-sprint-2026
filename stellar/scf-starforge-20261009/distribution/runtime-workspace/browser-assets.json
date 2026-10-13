@@ -80,6 +80,27 @@
       ]
     ],
     [
+      "/application-setup.mjs",
+      [
+        "application-setup.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/application-setup-library.mjs",
+      [
+        "application-setup-library.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/application-setup-codec.mjs",
+      [
+        "application-setup-codec.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/application-review.mjs",
       [
         "application-review.mjs",
@@ -269,24 +290,24 @@
       ]
     ],
     [
-      "/application-setup.mjs",
+      "/managed-configuration.mjs",
       [
-        "application-setup.mjs",
+        "managed-configuration.mjs",
         "text/javascript; charset=utf-8"
       ]
     ],
     [
-      "/application-setup-library.mjs",
+      "/managed-configuration-drafts.mjs",
       [
-        "application-setup-library.mjs",
+        "managed-configuration-drafts.mjs",
         "text/javascript; charset=utf-8"
       ]
     ],
     [
-      "/application-setup-codec.mjs",
+      "/managed-configuration.css",
       [
-        "application-setup-codec.mjs",
-        "text/javascript; charset=utf-8"
+        "managed-configuration.css",
+        "text/css; charset=utf-8"
       ]
     ],
     [
