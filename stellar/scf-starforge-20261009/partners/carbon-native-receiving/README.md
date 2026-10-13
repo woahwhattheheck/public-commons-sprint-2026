@@ -158,7 +158,10 @@ observations join the original native log and host diagnostics.
 If the interrupted stage was already editing the browser workspaces, its complete
 partial files and edits remain in the copied output. A fresh browser attempt starts
 from the retained pre-browser handovers in its own `browser-attempts/` directory.
-It performs the full original form, download, receiving and edit workflow. A
+The caller reserves that attempt directory with a create-only operation and checkpoints
+its identity before creating either store. Unrecorded partial directories are preserved
+and skipped by the next attempt. It performs the full original form, download,
+receiving and edit workflow. A
 completed browser stage instead recovers its original customer, project, assignment,
 statement and received-workspace identities from the saved action records.
 
@@ -166,3 +169,11 @@ After continuation, the caller closes all services and reopens both independent
 receiving workspaces, the browser receiving workspaces and the retained original
 accounting draft. The final archive contains the whole copied recovery history,
 completed new output, source, exact browser downloads and editable workspaces.
+
+An interrupted accounting preparation also continues its retained source selection.
+Original customer, statement-version and fee selections remain fixed. The helper
+saves each mutation intent before dispatch, recovers the native invoice request
+journal when an older run stopped after creating its draft, and preserves the
+original pre-mutation customer and schedule snapshots. A payment-plan draft keeps
+its original generated installments and native request ID. Completed accounting
+preparation is reused directly by the caller.
