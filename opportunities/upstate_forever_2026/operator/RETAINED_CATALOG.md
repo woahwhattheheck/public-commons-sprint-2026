@@ -122,6 +122,37 @@ retry its same operation identity, and save/reopen the current guided view. Reus
 requests must return the same full original task; a deliberately stale saved-view
 revision still returns JOURNEY_CHANGED.
 
+## Retained study catalogues
+
+Compact polling also uses the original parameter-study and scenario-experiment
+checkpoints. A parameter-study row keeps its complete checkpoint metadata,
+selection, model scope, pollutants, progress, errors and artifact descriptors.
+Its case array is replaced by the exact original case count already shown by the
+operator. The immutable experiment specification is separately content-verified;
+the same original model validator binds both full and compact checkpoint reads
+to that specification and the current project. A changed specification is checked
+even when the checkpoint itself is unchanged.
+
+Scenario-experiment rows retain their entire original checkpoint shape, exact
+integer count strings and original updated-time/identity ordering. Their original
+schema, identity and project checks are shared with the full model reader.
+
+Each catalogue has an independent default 2,048-entry / 8 MiB cache retention
+budget. A large valid checkpoint or specification is read normally when it does
+not fit. State replacement invalidates the projection through the existing file
+signature; no checkpoint, native case or source edition is rewritten. Global
+polling retains the existing saved-checkpoint semantics: opening the selected
+parameter study still refreshes its actual native cases through the original
+inspect path. Full model lists, selected results and original exports retain
+their complete records.
+
+On the same retained native study, compare the parameter/scenario rows from the
+original full state request with its compact request while no task is writing.
+They should retain the same values and ordering. Continue an actual existing
+case and confirm its newly saved checkpoint appears on the next refresh, then
+open that study and its original full case/results table. This follows the
+existing native programme without creating a replacement scientific dataset.
+
 ## Cache lifetime and bounds
 
 The cache contains canonical JSON bytes of a projection, never a shared mutable
