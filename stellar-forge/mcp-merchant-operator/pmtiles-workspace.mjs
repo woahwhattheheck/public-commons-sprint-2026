@@ -191,8 +191,13 @@ export class MerchantPMTilesWorkspaces{
   async #open(alias){
     const entry=this.#entry(alias);
     if(!this.#handles.has(alias)){
-      const promise=servePMTilesWorkspace({directory:entry.directory,runtime:entry.runtime,port:0,
-        expectedWorkspaceId:entry.expectedWorkspaceId,title:entry.label});
+      let promise;
+      const merchant={workspace:alias,workspaceId:entry.expectedWorkspaceId,
+        tools:[...TOOL_FIELDS.keys()].filter(name=>name.startsWith('merchant_pmtiles_output_')||
+          name.startsWith('merchant_pmtiles_purchase_')||['merchant_pmtiles_package','merchant_pmtiles_package_info'].includes(name)),
+        invoke:(name,args)=>this.#call(name,{...clone(args),workspace:alias},promise)};
+      promise=servePMTilesWorkspace({directory:entry.directory,runtime:entry.runtime,port:0,
+        expectedWorkspaceId:entry.expectedWorkspaceId,title:entry.label,merchant});
       this.#handles.set(alias,promise);
       try{const server=await promise;if(this.#closing)await server.close();}
       catch(error){if(this.#handles.get(alias)===promise)this.#handles.delete(alias);throw error;}
@@ -353,7 +358,8 @@ export class MerchantPMTilesWorkspaces{
       default:throw failure('TOOL_NOT_FOUND','Unknown PMTiles workspace operation.');
     }
   }
-  call(name,input){
+  call(name,input){return this.#call(name,input);}
+  #call(name,input,selectedHandle=null){
     if(this.#closing)return Promise.reject(failure('OPERATOR_CLOSING','The PMTiles operator is closing.'));
     const fields=TOOL_FIELDS.get(name);if(!fields)return Promise.reject(failure('TOOL_NOT_FOUND','Unknown PMTiles workspace operation.'));
     let args,alias;
@@ -365,7 +371,10 @@ export class MerchantPMTilesWorkspaces{
     // Calls accepted for an alias retain their order; close cannot overtake a saved mutation.
     // Global status stays available while the original native operation is in progress.
     const previous=alias===undefined?Promise.resolve():(this.#tails.get(alias)??Promise.resolve());
-    const pending=previous.catch(()=>{}).then(()=>this.#execute(name,args));
+    const pending=previous.catch(()=>{}).then(()=>{
+      if(selectedHandle)need(this.#handles.get(alias)===selectedHandle,'PMTILES_AUTHORING_SESSION_CHANGED');
+      return this.#execute(name,args);
+    });
     if(alias!==undefined)this.#tails.set(alias,pending);this.#pending.add(pending);
     const done=()=>{this.#pending.delete(pending);if(alias!==undefined&&this.#tails.get(alias)===pending)this.#tails.delete(alias);};
     pending.then(done,done);return pending;

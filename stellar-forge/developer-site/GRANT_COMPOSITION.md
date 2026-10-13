@@ -309,3 +309,39 @@ Preserve the original case identities when incorporating its native result. Prov
 ## A2A source catalogue in the current composition
 
 The existing customer-source receiver also imports `grant-a2a.mjs` and calls its receiver after selecting the A2A chapter. This completes the chapter's source catalogue and retains original dated file/source observations through public-link projection and repeated composition. The composer records `a2a_projector_git_blob` alongside the current renderer, customer projector and delivery-plan identities. The [complete A2A catalogue guide](./GRANT_A2A_CATALOGUE.md) explains the selected sources, retained file witnesses and original dated receiving. Use the same complete four-file composition and the existing publication operation.
+
+## Receive the complete municipal application suite
+
+The existing **Municipal source operations, service reporting and reviewed GIS
+delivery** chapter carries the six municipal Applications through the ordinary
+`grant-compose --manuscript` receiver. Keep the complete accepted chapter and its
+immutable installation, operation, receiving and workflow links together. The
+source receiver records these five selections from that chapter:
+
+| Source ID | Complete source |
+| --- | --- |
+| `municipal-suite-operating` | `products/open311/OPERATING.md`: the six Applications and their existing saved-workspace lifecycle |
+| `municipal-suite-receiving` | `products/open311/RECEIVING.md`: full editable receiving and identity rules |
+| `municipal-suite-workflows` | `products/open311/WORKFLOWS.md`: complete source and returned-file joins between the desks |
+| `municipal-service-configuration-installation` | `open311/service-configuration/INSTALL.md`: the maintained combined installation and service configuration entrypoint |
+| `municipal-suite-distribution-selection` | `distribution/selections/open311-service-configuration.json`: the exact six-application package selection |
+
+The last two paths are under the selected
+`stellar/scf-starforge-YYYYMMDD/` product source; the installation guide is in
+`sf30-seller-sdk/`. Each record takes its repository, full commit and complete
+path from the chapter's actual link. A later chapter edition updates that same
+source ID and clears an obsolete Git blob pin through the original receiver.
+An earlier manuscript without a selected link leaves its existing source record
+unchanged.
+
+The original `municipal-installed-gis-receiving` and
+`municipal-native-format-interchange` registrations remain available for their
+historical source links. All unrelated customer registrations and source records
+remain in the same composition. This registration follows the actual selected
+source; it does not infer a native run, installed application or commercial
+outcome from the presence of a guide.
+
+Receive the four complete reader outputs and their source pins through the
+existing saved draft, review, Page and Site operation. The current municipal
+chapter and these selected source identities travel together with every other
+accepted chapter and the original six funded packages.

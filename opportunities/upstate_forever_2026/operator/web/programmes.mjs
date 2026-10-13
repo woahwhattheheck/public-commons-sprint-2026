@@ -47,7 +47,8 @@ export function attachProgrammes(context) {
     if (errorNode) { errorNode.textContent = ''; errorNode.hidden = true; }
   }
   function tasksFor(id) {
-    return asArray(getState()?.tasks).filter(task => task.payload?.programme_id === id && task.action?.startsWith('compute.programme.'));
+    return asArray(getState()?.tasks).filter(task => task.action?.startsWith('compute.programme.') &&
+      (task.programme?.id || task.result?.id || task.payload?.programme_id) === id);
   }
   function activeTask(id) { return tasksFor(id).find(task => ['queued', 'running'].includes(task.state)); }
   function named(kind, id) {
@@ -153,9 +154,10 @@ export function attachProgrammes(context) {
   function ensembleCandidatesHTML(value) {
     const candidates = asArray(value.ensemble_candidates), issues = asArray(value.ensemble_candidate_issues);
     const available = Array.isArray(getState()?.data?.paired_ensemble_products);
+    const continuations = Object.values(value.pair_completions || {});
     return '<section class="programme-output"><header class="section-header"><div><h3>Paired scenario maps</h3>' +
       '<p>Compare each land-cover alternative with its baseline under the same original parameter profiles.</p></div>' +
-      '<a href="/web/paired_ensemble.html">Open all paired results</a></header>' +
+      actionButton('paired-results', 'Open all paired results') + '</header>' +
       (candidates.length ? table(['Alternative', 'Native models', 'Matched profiles', ''], candidates.map(row =>
         '<tr><td>' + escapeHTML(row.scenario_title || named('scenarios', row.scenario_id)) +
         '</td><td>' + escapeHTML(modelsLabel(row.models)) + '</td><td>' + escapeHTML(row.member_count ?? row.pairs?.length ?? 0) +
@@ -163,7 +165,48 @@ export function attachProgrammes(context) {
         '<p class="note">Complete a baseline and alternative under the same parameter profile to build their paired maps. Completed model stages assembled into a combined run enter this workflow directly.</p>') +
       (issues.length ? '<details><summary>Cases needing a completed matching pair (' + issues.length + ')</summary><ul>' +
         issues.map(issue => '<li>' + escapeHTML(typeof issue === 'string' ? issue : issue.message || issue.reason || JSON.stringify(issue)) + '</li>').join('') +
-        '</ul></details>' : '') + '</section>';
+        '</ul></details>' + actionButton('pair-completion', 'Prepare matching calculations', value.id) : '') +
+      (continuations.length ? '<div class="programme-controls"><strong>Retained matching calculations</strong>' + continuations.map(row =>
+        actionButton('open', 'Open programme · ' + printable(row.added_runs) + ' added cases', row.programme_id)).join('') + '</div>' : '') +
+      (value.pair_completion?.parent_programme_id ? '<div class="programme-controls">' + actionButton('open', 'Open original programme', value.pair_completion.parent_programme_id) + '</div>' : '') + '</section>';
+  }
+  async function preparePairCompletion(programmeId) {
+    const requestedWorkspace = workspaceKey();
+    const preview = await api(query('pair-completion-preview', {programme_id: programmeId}));
+    if (requestedWorkspace !== workspaceKey()) return;
+    if (!preview.has_alternatives) throw new Error('Select an alternative land-cover case before preparing matching calculations.');
+    if (!preview.needed) {
+      toast('The completed matching pairs are ready. Choose Build paired maps.');
+      return select(programmeId);
+    }
+    let form, wrapper;
+    const additions = asArray(preview.additions), requirements = asArray(preview.requirements);
+    const requiredRows = requirements.map(row => {
+      const chosen = row.selection || {}, issue = asArray(row.issues)[0] || {};
+      return '<tr><td>' + escapeHTML(issue.profile_title || named('profiles', chosen.profile_id)) +
+        '</td><td>' + escapeHTML(named('scenarios', chosen.scenario_id)) +
+        '</td><td>' + escapeHTML(modelsLabel(chosen.models)) +
+        '</td><td>' + escapeHTML(row.action === 'prepare' ? 'Prepare selected native models' : 'Continue original calculation') +
+        '</td><td class="mono">' + asArray(row.run_ids).map(id => escapeHTML(id)).join('<br>') + '</td></tr>';
+    });
+    openForm('Prepare matching scenario calculations',
+      'Retain the original programme and create its complete same-profile comparison programme.',
+      '<div class="programme-form programme-pair-completion"><p><strong>' + escapeHTML(preview.run_count - additions.length) +
+      ' original named cases retained · ' + additions.length + ' cases added</strong></p>' +
+      '<p>' + escapeHTML(preview.interpretation) + '</p>' +
+      table(['Parameter profile', 'Land-cover case', 'Native models', 'Calculation', 'Original native selection'], requiredRows) +
+      '<label class="programme-quantity-choices"><input type="checkbox" name="programme_pair_run" checked> Continue these native calculations after saving</label>' +
+      '<p class="note">The saved programme keeps every original case and completed model source. Its completed pairs open in the same paired-map workflow.</p>' +
+      '<details><summary>Prepared programme selections</summary><pre class="json-view">' + escapeHTML(JSON.stringify(preview.selection, null, 2)) + '</pre></details></div>',
+      'Save matching programme', async () => {
+        if (requestedWorkspace !== workspaceKey() || !wrapper?.isConnected || document.querySelector('#operation-form') !== form) {
+          throw new Error('Reopen these matching calculations in their original workspace.');
+        }
+        return submitAction('compute.programme.pair-completion', {programme_id: programmeId,
+          expected_preview_id: preview.preview_id, run: form.elements.namedItem('programme_pair_run').checked});
+      }, () => {
+        form = document.querySelector('#operation-form'); wrapper = form.querySelector('.programme-pair-completion');
+      });
   }
   async function buildProgrammeEnsemble(candidateId) {
     const requestedWorkspace = workspaceKey(), programmeId = record?.id;
@@ -243,7 +286,7 @@ export function attachProgrammes(context) {
     if (!selected) return '<section class="section"><h2>Original calculations, continued together</h2><p>A programme may contain a single baseline or an expanded list of prepared cases. The existing native engine validates every input and executes each saved selection. Completed model stages remain available when another case needs attention.</p></section>';
     if (!record) return '<section class="section" role="status"><h2>Opening saved programme…</h2></section>';
     const counts = record.counts || {}, rows = asArray(record.runs), task = activeTask(record.id);
-    const nativeActive = Boolean(task) || Boolean(record.active) || rows.some(row => row.state === 'running');
+    const nativeActive = Boolean(task) || Boolean(record.active) || rows.some(row => row.active || row.state === 'running');
     const complete = Number(counts.complete || 0), total = Number(counts.total ?? rows.length);
     const canPause = nativeActive && !record.pause_requested;
     const runRows = rows.map(row => {
@@ -397,7 +440,7 @@ export function attachProgrammes(context) {
       ['Units', row => row.units],
       ['Valid cells', row => printable(row.valid_cells)],
       ['Area (ha)', row => printable(row.valid_area_ha ?? row.area_ha)],
-      ['Common-area change', row => printable(row.total_change ?? row.common_sum_change ?? row.sum_change)],
+      ['Alternative − baseline', row => printable(row.total_change ?? row.common_sum_change ?? row.sum_change)],
       ['Change (%)', row => printable(row.percent_change)],
       ['Comparison cells', row => printable(row.comparison_cells)],
       ['State', row => labelState(row.state)],
@@ -406,7 +449,7 @@ export function attachProgrammes(context) {
     return '<p>' + escapeHTML(report.title || 'Saved native result catalogue') + '</p>' +
       (rows.length ? table(columns.map(item => item[0]), rows.map(row => '<tr>' + columns.map(([, value]) => '<td>' +
         escapeHTML(value(row) ?? '—') + '</td>').join('') + '</tr>')) : '<p>No completed quantities are present in this saved catalogue.</p>') +
-      '<p class="note">Whole-run totals retain each run’s actual valid area. Common-area changes use the original paired comparison. The decision-report workflow provides the full catchment and sensitivity interpretation.</p>' +
+      '<p class="note">Whole-run totals retain each run’s actual valid area. Common-area changes are alternative minus baseline: negative values mean lower export under the alternative. Paired effect maps show baseline minus alternative, so positive map values mean lower export. The decision-report workflow provides the full catchment and sensitivity interpretation.</p>' +
       (asArray(report.notes).length ? '<ul>' + report.notes.map(note => '<li>' + escapeHTML(note) + '</li>').join('') + '</ul>' : '') +
       fileList(asArray(report._downloads)) + '<details class="technical"><summary>Complete catalogue</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(report, null, 2)) + '</pre></details>';
@@ -741,7 +784,9 @@ export function attachProgrammes(context) {
     if (action === 'import') return importForm();
     if (action === 'experiment') return fromExperiment();
     if (action === 'clone') return createForm(record);
+    if (action === 'paired-results') return context.navigate?.('paired-ensemble');
     if (action === 'ensemble') return buildProgrammeEnsemble(value);
+    if (action === 'pair-completion') return preparePairCompletion(value);
     if (action === 'select-pending') { subset = new Set(asArray(record?.runs).filter(row => row.state !== 'complete').map(row => row.key)); draw(); return; }
     if (action === 'clear-selection') { subset.clear(); draw(); return; }
     if (action === 'native') return openItem('runs', value);
@@ -778,10 +823,15 @@ export function attachProgrammes(context) {
     if (!task.action?.startsWith('compute.programme.') || !id) return '';
     return '<div class="notice"><strong>' + escapeHTML(row?.title || 'Saved run programme') + '</strong><p>' +
       escapeHTML(row ? labelState(row.state) + ' · ' + countLine(row) : 'The original programme retains each native result and its continuation state.') +
-      '</p><button type="button" data-action="programme-open" data-id="' + escapeHTML(id) + '">Open run programme</button></div>';
+      '</p><button type="button" data-action="programme-open" data-id="' + escapeHTML(id) + '">Open run programme</button>'+
+      (task.experiment?.experiment_id?'<button type="button" data-action="experiment-show" data-id="'+
+        escapeHTML(task.experiment.experiment_id)+'">Open experiment results</button>':'')+
+      ((task.programme_report_error||task.experiment?.report_error)?'<p class="error">'+
+        escapeHTML(task.programme_report_error||task.experiment.report_error)+'</p>':'')+'</div>';
   }
   function completionMessage(task) {
-    if (task.action !== 'compute.programme.run') return '';
+    if (task.action !== 'compute.programme.run' && task.action !== 'compute.programme.pair-completion') return '';
+    if (task.action === 'compute.programme.pair-completion' && !task.payload?.run) return 'Matching calculation programme saved.';
     const result = task.result || {}, counts = result.counts || {};
     return 'Programme ' + labelState(result.state) + ': ' + (counts.complete || 0) + ' / ' + (counts.total || 0) + ' runs completed.';
   }

@@ -1,6 +1,6 @@
 # Seven-family map atlas and complete delivery
 
-The **Map atlas** desk prepares the original complete GIS delivery and opens the retained result in the browser. It adds an ordered PDF atlas, a page catalogue, and print controls to the existing native delivery workflow.
+The **Map atlas** desk prepares the original complete GIS delivery and opens the retained result in the browser. It adds an ordered PDF atlas, an offline map catalogue, native pixel inspection, comparable scenario views and print controls to the existing native delivery workflow. Study and source titles retain the actual workspace geography.
 
 ## Prepare a release
 
@@ -35,11 +35,47 @@ The Water designations desk's **Use in delivery** applies its original saved sel
 - **Atlas page** jumps to the selected sheet inside that document.
 - **Map PDF** opens the original standalone family/scenario PDF.
 - **Download JSON index** and **Download CSV index** provide page numbers, exact map keys, run IDs, raster paths, physical units and shared display limits.
-- **Download source choices** includes complete water-designation records, source identities, rule references, receptor profile and resolved native network. Original receptor GeoPackage, CSV and report files are also offered directly.
-- **Download complete GIS package** receives the original full package, including the new atlas/index files and linked saved-report outputs.
+- **Download source choices** includes complete water-designation records, source identities, rule references, receptor profile, resolved native network and the retained receiving-water analysis identity, scope, normalization, families and measurement. Original receptor GeoPackage, CSV and report files are also offered directly.
+- **Inspect pixels and geography** opens an individual pollutant or priority panel in the native spatial workbench with its original raster, source filters and physical range.
+- **Compare alternative maps** selects two matching panels for linked side-by-side or swipe inspection. Each original scenario retains its own identity and nodata mask.
+- **Download complete GIS package** receives the original full package, including the PDF atlas, offline browser, indexes, original GIS assets and linked saved-report outputs. Extract the complete ZIP and open `index.html`; its atlas catalogue link opens the retained browser with all companion files in place.
 - **Revise this selection** opens the complete original selection as a draft, retaining source bindings, receptor settings and other authored delivery extensions.
 
 The required seven families remain the original identifiers in `model.common.MAP_IDS`. The atlas groups each family in that order and preserves the selected alternative order within each future family. There are five baseline/context map sheets plus two sheets per land-cover alternative. The cover and contents pages are additional pages.
+
+## Inspect an original panel
+
+In a completed release, choose **Inspect pixels and geography** beneath the required panel. The native workbench opens its exact retained TIFF, reporting boundary and original selected source-water, designation and protected-land geometries. Receptor contributing areas and current receiving-water family-union geometry follow their original bindings.
+
+Use **Inspect** for original pixel values and intersecting feature attributes, **Pan** and zoom for the retained view, **Mark** for annotations and **Save review** for an immutable scientific review. Existing map-pack export controls create the printable PDF, PNG, SVG and original point/geometry records. The saved review and export are available for inclusion in a later release.
+
+**Back to atlas and files** returns to the same release. Reopening the same inspection during the desk session retains its current in-memory view. **Open original printed sheet** opens the retained PDF.
+
+WATERLINK priority panels use the actual post-override raster recorded in the verified atlas index. Their overlay uses the retained analysis GeoPackage's `receiving_waters` layer and exact `kind=family_union` / `family` selection, with the original analysis and plan identity. Native receptor outlines use complete retained contributing-area polygons; the printed atlas clips those outlines to the reporting area. The inspection explains that extent difference and keeps the reporting boundary visible.
+
+## Compare alternative maps
+
+The completed release's **Compare alternative maps** section offers quantities with at least two retained alternatives. Choose the **Left source**, the compatible **Right source**, and **Linked side by side** or **Swipe between sources**, then select **Open paired inspection**. The right selector lists only the same family and pollutant with the same signed/absolute meaning, compatible units and identical atlas display range. The backend verifies both original raster descriptions before opening the view.
+
+| Comparison requirement | Original information checked |
+| --- | --- |
+| Same release and scientific reference | One verified atlas index, baseline run, source-report binding and selected model grid |
+| Same physical quantity | Exact map family, original panel quantity title, signed/absolute flag and compatible physical units |
+| Different alternatives | Two distinct retained scenario run IDs and separately retained original raster selections |
+| Same native grid | Equal CRS, width and height, and matching full affine placement using the native renderer's grid tolerance |
+| Common physical display range | Equal retained minimum and maximum, with the original physical unit and signed interpretation |
+| Original geography | Both panels' source, legal designation, receptor and receiving-water bindings; shared overlays are retained once |
+| Original values and masks | Each raster is read directly; each keeps its own nodata mask and native band |
+
+The paired header names both alternatives and their atlas pages. **Open left original sheet** and **Open right original sheet** return to the two retained PDFs. The interpretation and saved source lineage include both map keys, panel indices, original raster hashes, scenario IDs, common baseline, grid, report and atlas-index identity.
+
+For signed future-export maps, each source already represents **its alternative minus the common original baseline**. Negative values mean lower modeled export than that baseline; positive values mean higher export. Linked and swipe inspection display those two original deltas directly. The workbench's general source slots are labeled **Left source** and **Right source** so neither alternative is mistaken for the model baseline.
+
+The original swipe convention reveals the **right/comparison source on the left of the divider**, above the full left/primary underlay. The slider label states that convention. Transparent nodata remains transparent and point inspection reports each original source separately.
+
+The existing **Right source minus left source** view remains an explicit operator choice. With two signed maps from the same baseline, that subtraction is the difference between the two alternatives. It uses only cells valid in both originals. Review the selected physical display range when switching to that derived view. The scientific run baseline/alternative metadata stays attached to the original data; the generic viewport labels describe the sources currently selected.
+
+Pair preparation performs original-file and metadata reads. It does not start NDR/SDR model runs, change native values, or generate replacement scenario rasters.
 
 ## Print settings
 
@@ -63,7 +99,7 @@ Map footers use the current regional delivery's affine-derived cell dimensions. 
 
 ## Retained products and recovery
 
-The existing delivery record gains `atlas` and these four `files` keys:
+The existing delivery record gains `atlas` and these five `files` keys:
 
 | Key | Path within the retained delivery |
 | --- | --- |
@@ -71,16 +107,77 @@ The existing delivery record gains `atlas` and these four `files` keys:
 | `map_atlas_index` | `maps/atlas-index.json` |
 | `map_atlas_csv` | `maps/atlas-index.csv` |
 | `map_atlas_sources` | `maps/source-context.json` |
+| `map_atlas_browser` | `maps/atlas-browser.html` |
 
-Every standalone map stays in its original `maps/<map-key>.pdf` path and remains under `state.maps`. The delivery's original package manifest includes the atlas products as project assets. The atlas version enters the delivery digest so an existing release remains an immutable earlier edition. Source-context products use `seven-family-atlas/v2`; the current native-grid `delivery_format` digest field remains intact. The JSON index embeds the same original source-context object. The CSV writer protects spreadsheet text while retaining numeric display scales as numbers.
+Every standalone map stays in its original `maps/<map-key>.pdf` path and remains under `state.maps`. The delivery's original package manifest includes the atlas products as project assets. The atlas version enters the delivery digest so an existing release remains an immutable earlier edition. Current atlas products use `seven-family-atlas/v4`; the current native-grid `delivery_format` digest field remains intact. The JSON index embeds the same original source-context object, including the retained receiving-water analysis. The offline browser is written from the actual audited package member set and links those exact original assets; it is opened through the extracted package's `index.html`. The CSV writer protects spreadsheet text while retaining numeric display scales as numbers.
 
 Standalone maps and atlas sheets are saved from the same Matplotlib figure. On resume, completed standalone maps are verified and retained. Figures are rendered again only as needed to reconstruct an interrupted multi-page PDF. The final PDF is replaced atomically after all pages are written; its JSON/CSV indexes record the completed file hash and exact page count.
 
 A resumed GIS package is reused only when its captured manifest matches the current manifest and its retained technical audit passed with no missing references. A changed or failed earlier capture stays available in its original directory; the current release is packaged in a deterministic sibling directory with its own package-hash ZIP. Repeated resume can find and reuse that exact current package.
 
+## Saved atlas review collections
+
+A review saved from **Inspect pixels and geography** or **Open paired inspection**
+now retains its atlas origin as a typed record, separate from editable notes.
+Use **Reviewer**, **Disposition** and **Finding or resolution** in the native
+editor, then **Save review**. Dispositions are **Open**, **Addressed** and
+**Closed**. They describe the review finding and stay with that immutable
+revision. Geographic extent, annotations, overlays and physical display settings
+remain editable.
+
+Return through **Back to atlas and files** to **Saved atlas reviews**. The
+collection lists every revision branch for this exact release, its current
+heads, original panel or pair, reviewer, finding and completed map packs.
+**Refresh reviews** receives newly completed save and export tasks. **Open saved
+review** restores the exact saved viewport and annotations; **Revision history**
+opens any earlier revision. Saving from a retained review creates a successor
+using the existing native previous-review relationship. Parallel successors stay
+visible as separate current branches.
+
+**Download review log CSV** provides a spreadsheet-ready finding log. **Download
+review collection JSON** preserves the collection's exact IDs, index hash,
+source panel selections and export descriptors. These downloads describe the
+collection; the original editable records and native files remain in the
+scientific workspace.
+
+Select the current reviews and completed map packs to include, then choose
+**Prepare release with selected reviews**. The original model cohort, source
+choices and map settings open at **Review and build**. A selected map pack also
+includes its exact saved review. The existing delivery builder retains the
+original review JSON and export assets, and the offline catalogue lists them
+with the other captured files. Exported PDF appendices and local map-pack pages
+show the typed finding and original atlas identity.
+
+The saved context uses `upstate.atlas-review-context/v1` and an
+`upstate.atlas-review-origin/v1` origin: original project, delivery,
+atlas-index SHA256, panel keys/numbers and native raster selections. Native
+save, reopen, export and restore validate that origin against the retained
+atlas index and original source bindings. A revision keeps the same origin.
+Changing the selected raster bands begins an independent review instead of
+relabeling an atlas finding. Legacy notes-only reviews remain available through
+the original global review list and delivery selectors.
+
+Read-only inspection also accepts an original `received_snapshot`
+registered by the existing portable receiver. This does not mark a snapshot
+as a newly built complete delivery. The working archive must retain every
+review-referenced original delivery's index, selected source files and state,
+under the same original delivery ID; the accompanying portable closure keeps
+these snapshots nonrecursive. Restored reviews use the original source
+identities and the existing native validation/export machinery.
+
 ## Browser integration
 
-The installed `operator/extensions/map-atlas.json` manifest registers the desk through the current extension host. The small atlas backend adds `GET /api/map-atlas/source-context` to read the installed original receptor profile. The existing registry loads it without a shared server or app-dispatcher edit.
+The installed `operator/extensions/map-atlas.json` manifest registers the desk through the current extension host. The atlas backend registers these reads through the existing extension registry:
+
+| Route | Purpose |
+| --- | --- |
+| `GET /api/map-atlas/source-context` | Read the installed original receptor profile |
+| `POST /api/map-atlas/inspect` | Open one retained panel's exact native raster and geography |
+| `POST /api/map-atlas/compare` | Open two compatible retained alternatives through the same native renderer |
+| `POST /api/map-atlas/reviews` | Read this release's typed review collection, complete history and native map packs |
+| `POST /api/map-atlas/review` | Validate and reopen one original saved review and its panel or pair |
+
+Inspection bodies carry `workspace`, `delivery_id`, `map_key` and `panel_index`. Comparison bodies carry `workspace`, `delivery_id`, `left` and `right` objects with `map_key` / `panel_index`, plus `mode` as `compare` or `swipe`. Both return the authenticated workspace key and an original Spatial review target. The existing registry loads it without a shared server or app-dispatcher edit.
 
 `attachMapAtlas(host)` exposes the ordinary `mount`, `update` and `detach` lifecycle, plus:
 
@@ -106,7 +203,7 @@ The controller uses `getState`, `api`, `navigate`, `refreshState`, `openItem`, `
 
 ## Source composition
 
-Apply the additive module, browser assets, manifest and this guide alongside the exact literal source joins supplied with the component. The joins preserve current receiving, programme, receptor, source-water designation and other shared-source edits.
+Apply the additive atlas and comparison modules, browser assets, manifest and this guide alongside the exact literal source joins supplied with the component. The paired inspection feature requires the merged single-panel inspection and offline atlas components (PR2860 and PR2826). The joins preserve current receiving, programme, receptor, source-water designation and other shared-source edits.
 
 The two source-context successor joins call `map_atlas.bind_water_selections` before the delivery digest and pass the original saved records to the atlas writer. They leave the current native-grid `delivery_format` and existing atlas digest fields intact. The designation browser joins use the original `/api/water-designations/apply` contract and preserve its original editor fallback.
 

@@ -44,8 +44,10 @@ export function validatePMTilesOutputNativeSelection(value){
  * and original testnet buyer; this function creates no replacement payment engine.
  */
 export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtimeProfile,
-  expectedWorkspaceId,root,operationId,commerce,signal,progress}){
+  expectedWorkspaceId,root,operationId,commerce,browserDirectory,openBrowser,signal,progress}){
   commerce=validatePMTilesOutputNativeSelection(commerce);
+  if(openBrowser!==undefined){assert.equal(typeof openBrowser,'function');assert.ok(isAbsolute(browserDirectory));}
+  else assert.equal(browserDirectory,undefined);
   for(const path of [sourceRoot,directory,runtimeProfile,root])assert.ok(isAbsolute(path));
   sourceRoot=resolve(sourceRoot);directory=resolve(directory);root=resolve(root);
   const scf='stellar/scf-starforge-20261009/',product=scf+'sf30-seller-sdk/pmtiles/';
@@ -98,7 +100,7 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
   }
   const input={schema:'starforge.pmtiles-output-native-input.v1',sourceRoot,directory,runtimeProfile:resolve(runtimeProfile),
     runtimeSha256:native.runtimeSha256,runtimeProfileSha256:profile.sha256,expectedWorkspaceId,root,operationId,commerce,
-    ...(operatorWorkspace?{operatorWorkspace}:{})};
+    ...(operatorWorkspace?{operatorWorkspace}:{}),...(openBrowser?{browserDirectory:resolve(browserDirectory)}:{})};
   const inputSha256=digest(input),prefix='sale-'+inputSha256.slice(0,16),id=name=>identifier(prefix+'-'+name);
   await retainJson(join(root,'input.json'),input);
   async function step(name,work){
@@ -349,6 +351,21 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
         ...releaseInput,instanceId:restart.result.instanceId});
       assert.equal(stopped.result.state,'STOPPED');return {restart,stopped};
     });
+    let browserOperator=null;
+    if(openBrowser){
+      const {exercisePMTilesCommerceBrowser}=await import('./pmtiles-commerce-browser-receiving.mjs');
+      browserOperator=await exercisePMTilesCommerceBrowser({root:join(root,'browser-operator'),browserDirectory,
+        openBrowser,call,operationId,workspaceId:expectedWorkspaceId,signal,progress,selection:{
+          mapReleaseId:selected.release.id,mapResourceId:selected.archive.id,
+          packageRequestId:packaged.requestId,output:{requestId:output.requestId,offerId:output.offerId,manifestSha256:output.manifestSha256},
+          release:{id:release.id,digest:release.digest,label:release.label},
+          mapAtomic:commerce.mapAtomic,operationsAtomic:commerce.operationsAtomic,
+          purchases:{map:paid.mapPurchase,operations:paid.operationsPurchase},objects:{map,operations},
+          adoptRequestId:id('adopt-map'),receivingInput:paid.receivingInput,originalReceiving:paid.receiving.originalReceiving,
+          accounting:!!accounting}});
+      assert.equal(browserOperator.status,'PMTILES_COMMERCE_BROWSER_COMPLETE');
+      assert.equal(browserOperator.workspaceId,expectedWorkspaceId);assert.equal(browserOperator.originalReleaseId,selected.release.id);
+    }
     const finalStatus=await call('output_status');assert.equal(finalStatus.runtime.state,'STOPPED');
     await call('close');await closeMcp();
     const environmentClosure=environmentOwner?await environmentOwner.close():null;
@@ -363,8 +380,9 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
       filePaths.push(join(root,'steps','original-final-accounting.json'));
       for(const selected of Object.values(accounting.purchases))for(const page of selected.pages)filePaths.push(page.path);
     }
+    if(browserOperator)filePaths.push(join(root,'browser-operator','complete.json'),...browserOperator.files.map(row=>row.path));
     const files=[];
-    for(const path of filePaths){
+    for(const path of [...new Set(filePaths)]){
       assert.ok(resolve(path).startsWith(root+'/'));
       files.push({path,...await fileDescriptor(path,{limit:34359738368,signal})});
     }
@@ -375,7 +393,7 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
       objects:[map,operations],purchases:{map:coldMap,operations:coldOperations},
       customerReceiving:customerReplay,customerState,firstStart:paid.firstStart,coldStatus,finalStatus,
       cliStatus,nativeStatus,tools:expectedTools,calls,files,
-      ...(accounting?{accounting,coldAccounting}:{}),
+      ...(accounting?{accounting,coldAccounting}:{}),...(browserOperator?{browserOperator}:{}),
       ...(environmentOwner?{nativeEnvironment:{selection:commerce.nativeEnvironment,ready:environmentOwner.ready,closed:environmentClosure}}:{}),
       completedAt:new Date().toISOString()};
     await retainJson(join(root,'result.json'),result);return result;

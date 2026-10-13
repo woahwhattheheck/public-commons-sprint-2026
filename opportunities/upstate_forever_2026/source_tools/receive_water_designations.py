@@ -95,8 +95,19 @@ def main():
     with (selection_dir / "selected-features.csv").open(newline="", encoding="utf-8") as stream:
         csv_rows = list(csv.DictReader(stream))
     assert len(csv_rows) == 332
-    overlay_choice = water.apply_to_delivery(workspace, saved["id"], {})["overlays"]["high_quality_waters"]
+    delivery_patch = water.apply_to_delivery(workspace, saved["id"], {})
+    overlay_choice = delivery_patch["overlays"]["high_quality_waters"]
+    assert delivery_patch["source_roles"]["HIGH_QUALITY_WATERS"] == overlay_choice
     path, entry = workspace.source_file(overlay_choice["source_collection_id"], overlay_choice["source_id"])
+    from model.map_atlas import bind_water_selections
+    source_only = {key: overlay_choice[key] for key in ("source_collection_id", "source_id", "layer")}
+    rebound_selection = {"overlays": {"high_quality_waters": source_only}}
+    rebound_bindings = bind_water_selections(workspace, rebound_selection)
+    assert rebound_selection["overlays"]["high_quality_waters"] == saved["delivery_overlay"]
+    assert rebound_selection["source_roles"]["HIGH_QUALITY_WATERS"] == saved["delivery_overlay"]
+    assert rebound_bindings["high_quality_waters"]["id"] == saved["id"]
+    assert rebound_bindings["high_quality_waters"]["source"] == saved["source"]
+    assert rebound_bindings["high_quality_waters"]["rule_reference"] == saved["rule_reference"]
     native_rows, native_crs = rasters.vector_geometry(path, layer=overlay_choice["layer"], target_crs="EPSG:26917")
     assert {str(r["properties"]["OBJECTID_1"]) for r in native_rows} == outstanding_ids
     from model.delivery import _overlay
@@ -159,13 +170,14 @@ def main():
                "source_features": 377, "selected_features": 332, "excluded_case_features": 331,
                "single_feature_case": 1, "retained_driver_fid": first_id, "native_delivery_features": len(delivered["features"]),
                "restored_features": len(restored_rows), "selection_id": saved["id"],
+               "rebound_selection_id": rebound_bindings["high_quality_waters"]["id"],
                "source_sha256": EXPECTED_SOURCE, "summary": saved["summary"],
                "delivery_overlay": saved["delivery_overlay"],
                "workspace_archive": str(archive_path), "archive_sha256": file_digest(archive_path),
                "restored_workspace": str(restored_workspace.root),
                "selection_report": str(selection_dir / "selection-report.html")}
     atomic_json(output / "water-designation-receiving.json", summary)
-    atomic_json(output / "delivery-overlay.json", {"overlays": {"high_quality_waters": saved["delivery_overlay"]}})
+    atomic_json(output / "delivery-overlay.json", delivery_patch)
     print(json.dumps(summary, indent=2))
     return 0
 

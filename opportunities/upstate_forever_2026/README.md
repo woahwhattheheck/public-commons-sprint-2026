@@ -16,6 +16,23 @@ Large assessments use resumable authenticated transfers within the original oper
 
 See [Scenario decisions](operator/SCENARIO_DECISIONS.md), the [component contract](operator/SCENARIO_DECISIONS_COMPONENT.md), and [performance notes](operator/SCENARIO_DECISIONS_PERFORMANCE.md).
 
+## Prepare a report from an economic decision
+
+Open a completed edition in **Economic desk** and choose **Prepare client report**. The existing map-release form opens with that edition and its original ordered native cohort. Select the source overlays, responsible GIS contact and map settings, then build through the normal workspace queue. You can also choose a compatible completed economic edition from the saved watershed report's Map release panel.
+
+The completed GIS package contains the scientific report in PDF, offline HTML, Markdown and structured JSON, plus the original economic desk, costs, source records and complete economic ZIP. See [Client report and selected-zone economics](model/CLIENT_REPORT.md) for the full workflow and retained quantities.
+
+## Regional decision context
+
+Open **Decision context** in the operator to combine a saved receiving-water analysis or source plan with retained NRCS state/HUC context and the classified-water crosswalk. The desk preserves original paired physical quantities and source editions, saves portable HTML/CSV/ZIP reports, and links compatible map deliveries. See [DECISION_CONTEXT.md](DECISION_CONTEXT.md) for the operator workflow and original-workspace receiving journey.
+
+The retained [217-watershed source edition](source/water_context/20261013/README.md) covers the complete selected model domain. It contains the original composed context, 240 matching NRCS state/HUC rows, the exact domain identifiers and the original classified-water coverage record. Import it into the existing scientific workspace from this application directory:
+
+    python -B -m model.cli --workspace /path/to/scientific-workspace \
+      source-import source/water_context/sources-20261013.json
+
+The [watershed programme guide](model/WATERSHED_CONTEXT.md) covers HUC, state and HUC8 summaries, selected-watershed tables, and upstream/downstream relationships from original HUC12/ToHUC records. Programme designations accompany the original receiving-water calculations.
+
 ## Install additional source editions
 
 This checkout already joins the core operator and its current source/native descriptors. When adopting a maintained component into another existing application, keep that component's complete source and descriptor together and run the shared installer against the actual destination:
@@ -123,6 +140,19 @@ The terrain delivery is source-entry.json, its original GeoTIFF and declared com
 The designation adapter consumes the original source crosswalk, declared rule edition and exact native geometry. It can import its selected source into the original Workspace, create a retained water-desk selection and pass that actual overlay into the original delivery operation. Effective classifications, source metadata and proposal context remain separately represented.
 
 Use the original crosswalk builder's returned result with --crosswalk-result so its actual run directory and source-manifest identity are retained. Full commands, selection schema and source references are in [Water designation applicability](source_tools/WATER_DESIGNATION_APPLICABILITY.md).
+
+## Customer requests and engineering handbacks
+
+The existing Customer reviews desk now carries a complete revision workflow.
+Select a retained customer response, assign its actual requests, save planning
+and ready engineering editions, and connect each addressed item to files or
+requirements in a revised review. The complete handback carries both selected
+review desks, pinned customer response histories, and every engineering edition's
+replacement references.
+
+Use [Customer review handbacks](operator/CUSTOMER_REVIEW_HANDBACK.md) for the
+browser workflow and [the original CLI and portable receiving guide](model/REVIEW_HANDBACK.md)
+for independent reopening and joining the restored scientific project.
 
 ## Focused development checks
 

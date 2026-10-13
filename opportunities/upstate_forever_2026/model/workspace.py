@@ -15,7 +15,9 @@ from .common import (SCHEMA, INVEST_VERSION, ROLES, atomic_json, canonical,
 from .profiles import checked_parameters, inspect_table, scenario_spec
 from .model_selection import (normalize_selection, selected, grid_models, run_models,
                               required_roles, validate_completed_run)
-from .grid_reuse import reuse_grid_inputs
+from .grid_reuse import retain_grid_definition, reuse_grid_inputs
+from .record_catalog import ProjectedFileCache, delivery_summary
+from .operator_catalog import OperatorCatalogue
 
 class Workspace:
     def __init__(self, root, *, create=False, title="Upper Savannah scientific workspace"):
@@ -27,6 +29,8 @@ class Workspace:
                 if not manifest.exists():
                     atomic_json(manifest, {"schema": SCHEMA, "id": str(uuid.uuid4()),
                                            "title": title, "created_at": now()}, immutable=True)
+        self._delivery_catalog_cache = ProjectedFileCache()
+        self._operator_catalog = OperatorCatalogue(self.root)
         self.project = read_json(self.root / "workspace.json")
         if self.project.get("schema") != SCHEMA:
             raise ValueError("Select an original Upper Savannah scientific workspace")
@@ -50,22 +54,80 @@ class Workspace:
         return [self._get(kind, p.stem) for p in sorted(folder.glob("*.json"))] if folder.exists() else []
 
     def overview(self):
-        return {"project": self.project, "sources": self.sources(),
-                "profiles": self._list("profiles"), "scenarios": self._list("scenarios"),
-                "grids": [read_json(p) for p in sorted((self.root / "grids").glob("*/grid.json"))],
-                "runs": [read_json(p) for p in sorted((self.root / "runs").glob("*/run.json"))],
-                "observations": self._list("observations"),
-                "scenario_analyses": [read_json(p) for p in sorted((self.root / "analyses").glob("*/summary.json"))],
-                "community_tables": self._list("community-tables"),
-                "community_plans": self._list("community-plans"),
-                "community_reports": self._list("community-reports"),
-                "spatial_reviews": self._list("spatial-reviews"),
-                "customer_reviews": self._list("reviews"),
-                "customer_review_responses": self._list("review-responses"),
-                "spatial_exports": [read_json(p) for p in sorted((self.root / "spatial-exports").glob("*/export.json"))],
-                "observation_comparisons": self._list("observation-comparisons"),
-                "comparisons": [read_json(p) for p in sorted((self.root / "comparisons").glob("*/comparison.json"))],
-                "deliveries": [read_json(p) for p in sorted((self.root / "deliveries").glob("*/delivery-state.json"))]}
+        """Return all original records, preserving the complete model API."""
+        return self._overview()
+
+    def operator_overview(self):
+        """Catalogue projection for opt-in live operator polling."""
+        paths = sorted((self.root / "deliveries").glob("*/delivery-state.json"))
+        self._delivery_catalog_cache.retain_paths(paths)
+        rows = [self._delivery_catalog_cache.read(path, delivery_summary) for path in paths]
+        return self._overview(delivery_rows=rows, catalogue=self._operator_catalog)
+
+    def _overview(self, *, delivery_rows=None, catalogue=None):
+        visited = []
+
+        def immutable(kind):
+            return catalogue.immutable(kind, visited) if catalogue else self._list(kind)
+
+        def mutable(kind, filename):
+            if catalogue:
+                return catalogue.mutable(kind, filename, visited)
+            return [read_json(path) for path in sorted((self.root / kind).glob("*/" + filename))]
+
+        result = {"project": self.project, "sources": immutable("sources"),
+                "profiles": immutable("profiles"), "scenarios": immutable("scenarios"),
+                "grids": mutable("grids", "grid.json"),
+                "runs": mutable("runs", "run.json"),
+                "observations": immutable("observations"),
+                "scenario_analyses": mutable("analyses", "summary.json"),
+                "community_tables": immutable("community-tables"),
+                "community_plans": immutable("community-plans"),
+                "community_reports": immutable("community-reports"),
+                "planning_inventories": immutable("planning-inventories"),
+                "portfolios": immutable("portfolios"),
+                "portfolio_reports": immutable("portfolio-reports"),
+                "spatial_reviews": immutable("spatial-reviews"),
+                "customer_reviews": immutable("reviews"),
+                "customer_review_responses": immutable("review-responses"),
+                "spatial_exports": mutable("spatial-exports", "export.json"),
+                "observation_comparisons": immutable("observation-comparisons"),
+                "comparisons": mutable("comparisons", "comparison.json"),
+                "deliveries": delivery_rows if delivery_rows is not None else
+                    mutable("deliveries", "delivery-state.json")}
+        if catalogue:
+            catalogue.finish(visited)
+        return result
+
+    def retained_item(self, kind, key):
+        """Open one original record without enumerating unrelated workspace data."""
+        immutable = {
+            "sources": "sources", "profiles": "profiles", "scenarios": "scenarios",
+            "observations": "observations", "community_tables": "community-tables",
+            "community_plans": "community-plans", "community_reports": "community-reports",
+            "planning_inventories": "planning-inventories", "portfolios": "portfolios",
+            "portfolio_reports": "portfolio-reports", "spatial_reviews": "spatial-reviews",
+            "customer_reviews": "reviews", "customer_review_responses": "review-responses",
+            "observation_comparisons": "observation-comparisons",
+        }
+        if kind in immutable:
+            return self._get(immutable[kind], key)
+        mutable = {
+            "grids": ("grids", "grid.json"),
+            "runs": ("runs", "run.json"),
+            "scenario_analyses": ("analyses", "summary.json"),
+            "spatial_exports": ("spatial-exports", "export.json"),
+            "comparisons": ("comparisons", "comparison.json"),
+            "deliveries": ("deliveries", "delivery-state.json"),
+        }
+        if kind not in mutable:
+            raise ValueError("Unknown retained record kind: " + str(kind))
+        key = identifier(key)
+        folder, filename = mutable[kind]
+        value = read_json(self.root / folder / key / filename)
+        if value.get("id") != key:
+            raise ValueError("Retained " + kind + " item identity changed")
+        return value
 
     def sources(self):
         return self._list("sources")
@@ -193,8 +255,8 @@ class Workspace:
         collection = identifier(value["source_collection_id"])
         for patch in value.get("patches", []):
             _, entry = self.source_file(collection, patch["mask_source_id"])
-            if entry["kind"] != "vector":
-                raise ValueError("Scenario masks must be retained polygon sources")
+            if entry["kind"] not in ("vector", "raster"):
+                raise ValueError("Scenario masks must be retained polygons or aligned binary rasters")
         return self._save("scenarios", value)
 
     def prepare_grid(self, spec):
@@ -221,13 +283,14 @@ class Workspace:
         reporting = geometry(spec["reporting_area"])
         model_core = geometry(spec["model_domain"])
         buffer_m = float(spec["upstream_buffer_m"])
-        if not 0 < buffer_m < 1000000:
-            raise ValueError("Specify the actual positive model-context buffer in metres")
+        if not 0 <= buffer_m < 1000000:
+            raise ValueError("Specify the actual nonnegative model-context buffer in metres")
         if not model_core.buffer(1e-5).covers(reporting):
             raise ValueError("Model-domain source must cover the full selected reporting basin")
-        model_geometry = model_core.buffer(buffer_m)
+        model_geometry = model_core if buffer_m == 0 else model_core.buffer(buffer_m)
         grid = rasters.grid_definition(
-            reference, model_geometry, resolution=spec.get("resolution_m", rasters.RESOLUTION))
+            reference, model_geometry, resolution=spec.get("resolution_m"))
+        grid = retain_grid_definition(self, spec, grid)
         key = digest({"spec": spec, "grid": grid})
         directory = self.root / "grids" / key
         directory.mkdir(parents=True, exist_ok=True)
@@ -313,6 +376,8 @@ class Workspace:
     def prepare_run(self, selection):
         profile = self._get("profiles", selection["profile_id"])
         scenario = self._get("scenarios", selection["scenario_id"])
+        from .scenario_footprint import validate_destination_codes
+        validate_destination_codes(profile, scenario)
         grid = self.get_grid(selection["grid_id"])
         selection, active = normalize_selection(selection, default=grid_models(grid))
         if not set(active).issubset(grid_models(grid)):
@@ -348,9 +413,9 @@ class Workspace:
         validate_completed_run(value)
         return value
 
-    def run(self, key):
+    def run(self, key, *, reuse_source_run_ids=None):
         from .native import execute_run
-        return execute_run(self, identifier(key))
+        return execute_run(self, identifier(key), reuse_source_run_ids=reuse_source_run_ids)
 
     def combine_runs(self, selection, source_runs, *, execute=True):
         from .run_assembly import combine_runs
@@ -387,6 +452,47 @@ class Workspace:
     def build_community_report(self, selection):
         from .community_reports import build
         return build(self, selection)
+
+    def build_planning_inventory(self, selection):
+        from .planning_inventory import build
+        return build(self, selection)
+
+    def preview_portfolio(self, selection):
+        from .portfolios import preview
+        return preview(self, selection)
+
+    def save_portfolio(self, selection):
+        from .portfolios import save_portfolio
+        return save_portfolio(self, selection)
+
+    def prepare_portfolio_scenario(self, selection):
+        from .portfolios import prepare_scenario
+        return prepare_scenario(self, selection)
+
+    def prepare_portfolio_run(self, selection):
+        portfolio = self._get("portfolios", selection["portfolio_id"])
+        context = portfolio["context"]
+        grid_id = selection.get("grid_id") or context["grid_id"]
+        if grid_id != context["grid_id"]:
+            raise ValueError("Use the portfolio's original reporting grid for its selected parcel scenario")
+        profile_id = selection.get("profile_id") or context["profile_id"]
+        baseline = self.inspect_run(context["baseline_run_id"])
+        active = selection.get("models", list(run_models(baseline)))
+        scenario = self.prepare_portfolio_scenario(selection)
+        return self.prepare_run({"grid_id": grid_id, "profile_id": profile_id,
+                                 "scenario_id": scenario["id"], "models": active})
+
+    def run_portfolio(self, selection):
+        prepared = self.prepare_portfolio_run(selection)
+        return self.run(prepared["id"])
+
+    def build_portfolio_report(self, selection):
+        from .portfolios import build_report
+        return build_report(self, selection)
+
+    def build_portfolio_decision(self, selection):
+        from .portfolios import build_decision_report
+        return build_decision_report(self, selection)
 
     def backup(self, destination, *, include_intermediates=True):
         """A complete self-contained project; native run caches can be selected."""

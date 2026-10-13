@@ -18,7 +18,7 @@
     {
       "id": "journey-original-capabilities",
       "before": " getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
-      "after": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
+      "after": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
       "marker": "setJourneyController:controller=>{operatingJourney=controller;}"
     },
     {
@@ -103,7 +103,19 @@
       "id": "complete-native-state-projection",
       "before": "  ['ndr','sdr'].every(name=>row.stages?.[name])&&",
       "after": "  ['ndr','sdr'].every(name=>Object.hasOwn(row.stages||row.stage_summary||{},name))&&",
-      "marker": "  ['ndr','sdr'].every(name=>Object.hasOwn(row.stages||row.stage_summary||{},name))&&"
+      "marker": "  ['ndr','sdr'].every(name=>Object.hasOwn(row.stages||row.stage_summary||{},name))&&",
+      "compatible_after": [
+        {
+          "after": "  ['ndr','sdr'].every(name=>completedModelStage(row,name))&&",
+          "marker": "  ['ndr','sdr'].every(name=>completedModelStage(row,name))&&"
+        }
+      ]
+    },
+    {
+      "id": "rehearsal-navigation-elements",
+      "before": "    for(const node of $('[data-view]'))node.setAttribute",
+      "after": "    for(const node of $$('[data-view]'))node.setAttribute",
+      "marker": "    for(const node of $$('[data-view]'))node.setAttribute"
     }
   ],
   "server_patches": [
@@ -121,6 +133,14 @@
         "before": "    source = add(source, \"function toast(message){\", registration, \"extension browser instance\", before=True)\n",
         "after": "    first, last = registration.splitlines(keepends=True)[0], registration.splitlines(keepends=True)[-1]\n    if first not in source:\n        source = add(source, \"function toast(message){\", registration, \"extension browser instance\", before=True)\n    else:\n        if source.count(first) != 1 or source.count(last) != 1:\n            raise ValueError(\"Expected one complete current extension browser instance\")\n        start, end = source.index(first), source.index(last, source.index(first)) + len(last)\n        current, cursor = source[start:end], 0\n        for original_line in registration.splitlines(keepends=True):\n            found = current.find(original_line, cursor)\n            if found < 0:\n                raise ValueError(\"Preserve and compose the current extension host capability: \" + original_line.strip())\n            cursor = found + len(original_line)\n",
         "marker": "first, last = registration.splitlines(keepends=True)[0]"
+      }
+    ],
+    "operator/web/index.html": [
+      {
+        "id": "journey-save-header",
+        "before": "<header class=\"topbar\">\n  <div class=\"brand\"><span class=\"brand-mark\" aria-hidden=\"true\">US</span><div><strong>Upper Savannah</strong><span>Scientific workbench</span></div></div>\n  <label class=\"workspace-control\"><span>Workspace</span><select id=\"workspace-select\" aria-label=\"Selected workspace\"></select></label>\n  <div class=\"top-actions\"><button type=\"button\" data-action=\"refresh\" title=\"Refresh retained state\">Refresh</button><button type=\"button\" data-action=\"tasks\" aria-controls=\"task-panel\" aria-expanded=\"false\">Operations <span id=\"task-count\">0</span></button></div>\n</header>\n<div class=\"shell\">\n  <nav class=\"sidebar\" aria-label=\"Scientific workflow\">\n",
+        "after": "<header class=\"topbar\">\n  <div class=\"brand\"><span class=\"brand-mark\" aria-hidden=\"true\">US</span><div><strong>Upper Savannah</strong><span>Scientific workbench</span></div></div>\n  <label class=\"workspace-control\"><span>Workspace</span><select id=\"workspace-select\" aria-label=\"Selected workspace\"></select></label>\n  <div class=\"top-actions\"><button type=\"button\" data-action=\"journey-save-view\" title=\"Save the selected analysis and notes in this workspace\">Save view and notes</button><button type=\"button\" data-action=\"refresh\" title=\"Refresh retained state\">Refresh</button><button type=\"button\" data-action=\"tasks\" aria-controls=\"task-panel\" aria-expanded=\"false\">Operations <span id=\"task-count\">0</span></button></div>\n</header>\n<div class=\"shell\">\n  <nav class=\"sidebar\" aria-label=\"Scientific workflow\">\n",
+        "marker": "data-action=\"journey-save-view\""
       }
     ]
   }

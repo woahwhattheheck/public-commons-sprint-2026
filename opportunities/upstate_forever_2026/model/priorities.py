@@ -7,6 +7,7 @@ from pathlib import Path
 from contextlib import ExitStack
 from .common import describe_file, finite
 from . import rasters
+from .source_lineage import LINEAGE_VERSION, source_snapshot, write_lineage
 
 def _sum(src, geometry, *, statistic="sum"):
     import numpy as np
@@ -205,9 +206,13 @@ def parcel_inventory(workspace, selection, grid, mass_paths, priority_path, comp
                 "reporting_fraction": min(1.0, max(0.0, covered_area / reporting_area)),
                 "uncovered_reporting_area_ha": max(0.0, reporting_area - covered_area) / 10000,
                 "overlap_handling": "Each covered area is counted once in this footprint"}
-    return {"schema": "upstate.parcel-priorities/v1", "source": {
+    source = source_snapshot(entry, selection)
+    lineage_files = write_lineage(directory, {"parcels": source}, relative_to=directory)
+    return {"schema": "upstate.parcel-priorities/v1", "source_lineage_version": LINEAGE_VERSION, "source": {
                 "uri": entry["uri"], "vintage": entry["vintage"], "sha256": entry["body"]["sha256"],
-                "selection": selection, "scope": entry.get("scope")},
+                "selection": ({**selection, "id_field": id_field} if id_field else dict(selection)),
+                "scope": entry.get("scope"), "metadata": source["metadata"],
+                "source_collection_id": selection["source_collection_id"], "source_id": entry["id"]},
             "features": len(outputs), "features_without_valid_pixels": no_pixels,
             "parcel_coverage": coverage, "processing": processing,
             "selection": "Original feature identity; per-parcel reporting-area intersection; pixel-centre aggregation",
@@ -225,6 +230,6 @@ def parcel_inventory(workspace, selection, grid, mass_paths, priority_path, comp
                 "scenario_totals": "Baseline and alternative totals use their own valid support; change is summed on paired difference support",
             },
             "files": {"geopackage": describe_file(directory, gpkg), "csv": describe_file(directory, csv_path),
-                      "scenario_csv": describe_file(directory, scenario_csv_path)},
+                      "scenario_csv": describe_file(directory, scenario_csv_path), **lineage_files},
             "top_by_current_priority": sorted((r for r in outputs if r["priority_mean"] is not None),
                                               key=lambda r: (-r["priority_mean"], r["feature_id"]))[:50]}

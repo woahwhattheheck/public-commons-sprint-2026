@@ -20,6 +20,13 @@ packets and reopens each plan and analysis. Pass the already prepared native
 --public-water-manifest and --public-water-preparation when receiving those
 sources in another Workspace. Their actual imported collection ID is retained.
 
+Add --prepare-catalog to operate the same completed original study through the
+source-bound candidate index, paged records, retained eligible cohort, original
+plan save and complete row/decision exports. --catalog-study selects one actual
+regional study. The default uses protection_upstream when its originals are
+present, otherwise upstream. Receiving retains every original ID and explicitly
+records its deterministic manual cohort edit before independent reopening.
+
 Land-cover scenario creation additionally requires explicit --from-codes,
 --to-code and --scenario-reason. Original grid/profile IDs can be passed together
 to prepare the native run through the existing scenario adapter. Add --models
@@ -208,7 +215,32 @@ def resolve_public_water(workspace, preparation=None):
             raise ValueError("The original public-water preparation needs its actual source_collection_id")
         if original_preparation.get("original_protection_sha256") != ORIGINALS["protection_areas"]["sha256"]:
             raise ValueError("The public-water preparation refers to different original protection polygons")
-        if original_preparation.get("original_protection_features") != len(PROTECTION_OBJECT_IDS):
+        # Both maintained preparers retain the same original polygon bytes.
+        # Current source-water preparation records each source in source_records;
+        # the earlier preparer declared its protection count at the top level.
+        source_records = original_preparation.get("source_records")
+        protection_record = None
+        if source_records is not None:
+            if not isinstance(source_records, list):
+                raise ValueError("The prepared source_records must be the original source list")
+            matches = [
+                row for row in source_records if isinstance(row, dict)
+                and row.get("id") == ORIGINALS["protection_areas"]["id"]
+            ]
+            if len(matches) != 1:
+                raise ValueError("The preparation must retain one original protection source record")
+            protection_record = matches[0]
+            for key in ("sha256", "bytes"):
+                if protection_record.get(key) != ORIGINALS["protection_areas"][key]:
+                    raise ValueError("The prepared protection source " + key + " changed")
+        counts = [
+            value for value in (
+                original_preparation.get("original_protection_features"),
+                protection_record.get("features") if protection_record else None,
+            ) if value is not None
+        ]
+        if not counts or any(type(value) is not int or value != len(PROTECTION_OBJECT_IDS)
+                             for value in counts):
             raise ValueError("The public-water preparation must retain all four original protection records")
     binding = resolve_original(workspace, "protection_areas", collection_id)
     if binding is None and preparation is not None:
@@ -234,6 +266,7 @@ def resolve_public_water(workspace, preparation=None):
                 "source_collection_id": collection_id,
                 "receiving_water_plan_id": original_preparation.get("plan_id"),
                 "native_manifest": original_preparation.get("native_manifest"),
+                "source_records": original_preparation.get("source_records"),
             }
     return binding
 
@@ -567,7 +600,10 @@ def run_protection_study(workspace, receiving, kind, spec):
         "stability": True,
     }
     preview = receiving.run(kind + ".optimization_preview", lambda: optimization.preview(workspace, request))
-    saved = receiving.run(kind + ".optimization_save", lambda: optimization.save(workspace, request))
+    saved = receiving.run(
+        kind + ".optimization_save",
+        lambda: optimization.save(workspace, preview["request"], retained_analysis=preview),
+    )
     plan = saved["plan"]
     selected = [str(value) for value in saved["selected_ids"]]
     if not selected or len(set(selected)) != len(selected):
@@ -659,6 +695,216 @@ def run_protection_study(workspace, receiving, kind, spec):
     return result
 
 
+
+def run_catalog_study(workspace, receiving, kind):
+    """Operate the source-bound candidate catalog on an existing regional study."""
+    from model import conservation_catalog as catalog
+
+    record = receiving.result["studies"][kind]
+    study_id = record["study_id"]
+    inspected = receiving.run(
+        kind + ".catalog.original_inventory",
+        lambda: conservation.inspect(workspace, study_id, include_candidates=True),
+    )
+    originals = inspected["candidates"]
+    original_rows = {row["id"]: row for row in originals}
+    if len(original_rows) != len(originals) or not all(isinstance(key, str) for key in original_rows):
+        raise ValueError("The original catalog inventory needs unique native text IDs")
+    prepared = receiving.run(kind + ".catalog.prepare", lambda: catalog.prepare(workspace, study_id))
+    if prepared.get("state") != "complete" or prepared["counts"]["total"] != len(originals):
+        raise ValueError("The completed catalog differs from the original candidate count")
+
+    def verified_file(descriptor):
+        path = relative_file(workspace.root, descriptor["path"])
+        actual = file_fact(path)
+        if actual["bytes"] != descriptor["bytes"] or actual["sha256"] != descriptor["sha256"]:
+            raise ValueError("Catalog receiving file differs from its original descriptor: " + descriptor["path"])
+        return path
+
+    verified_file(prepared["files"]["index"])
+
+    def pages(selection, retained=None):
+        offset, rows, pages_seen = 0, [], []
+        total = None
+        seen = set()
+        while True:
+            request = {**selection, "offset": offset, "limit": 100}
+            page = catalog.query(workspace, study_id, request, retained)
+            if page["study_id"] != study_id or page["index_id"] != prepared["id"]:
+                raise ValueError("A candidate page changed the original study or index")
+            if total is None:
+                total = page["total"]
+            if page["total"] != total or page["original_count"] != len(originals):
+                raise ValueError("The candidate count changed while paging the original inventory")
+            for row in page["candidates"]:
+                key = row["id"]
+                if key in seen or key not in original_rows or row != original_rows[key]:
+                    raise ValueError("A paged record differs from its original candidate: " + key)
+                seen.add(key)
+                rows.append(row)
+            if retained is not None and retained.get("selected_only"):
+                if set(page["selected_ids_on_page"]) != {row["id"] for row in page["candidates"]}:
+                    raise ValueError("Selected-only page membership differs from its native candidate rows")
+            pages_seen.append({
+                "offset": page["offset"], "count": len(page["candidates"]),
+                "total": page["total"], "next_offset": page["next_offset"],
+                "selected_ids_on_page": page["selected_ids_on_page"],
+            })
+            following = page["next_offset"]
+            if following is None:
+                break
+            if not isinstance(following, int) or following <= offset:
+                raise ValueError("The candidate page did not advance its original offset")
+            offset = following
+        if len(rows) != total:
+            raise ValueError("The complete paged inventory differs from its declared count")
+        return {"rows": rows, "pages": pages_seen, "total": total}
+
+    original_pages = receiving.run(
+        kind + ".catalog.page_originals",
+        lambda: pages({"filters": {}, "sort": "id", "direction": "asc"}),
+    )
+    if {row["id"] for row in original_pages["rows"]} != set(original_rows):
+        raise ValueError("The complete catalog omitted an original candidate")
+
+    filters = {"eligible": "yes"}
+    expected = sorted(row["id"] for row in originals if row.get("eligible", False))
+    threshold = None
+    if kind.startswith("protection_"):
+        positive = [
+            row for row in originals if row.get("eligible", False)
+            and isinstance(row.get("source_water_fraction"), (int, float))
+            and math.isfinite(row["source_water_fraction"]) and row["source_water_fraction"] > 0
+        ]
+        if not positive:
+            raise ValueError("The original protection study has no eligible positive-overlap catalog cohort")
+        threshold = min(row["source_water_fraction"] for row in positive)
+        filters["source_water_fraction"] = {"min": threshold}
+        expected = sorted(row["id"] for row in positive)
+    if not expected:
+        raise ValueError("The original candidate study has no eligible retained selection")
+    selection = {"filters": filters, "sort": "rank", "direction": "asc"}
+    retained = receiving.run(
+        kind + ".catalog.retain_cohort", lambda: catalog.select(workspace, study_id, selection),
+    )
+    if retained["count"] != len(expected):
+        raise ValueError("The retained catalog cohort differs from the original eligible source selection")
+    selection_path = verified_file(retained["files"]["selected_ids"])
+    retained_file = json.loads(selection_path.read_text(encoding="utf-8"))
+    if retained_file["selected_ids"] != expected:
+        raise ValueError("The retained full catalog ID file differs from the original selection")
+
+    # Exercise a retained-cohort edit with a stated deterministic original ID.
+    excluded = expected[-1:] if len(expected) > 1 else []
+    selected_ids = [key for key in expected if key not in excluded]
+    membership = {
+        "selection_id": retained["selection_id"], "include_ids": [],
+        "exclude_ids": excluded, "selected_only": True,
+    }
+    selected_pages = receiving.run(
+        kind + ".catalog.page_retained",
+        lambda: pages({"filters": {}, "sort": "id", "direction": "asc"}, membership),
+    )
+    if [row["id"] for row in selected_pages["rows"]] != selected_ids:
+        raise ValueError("The edited catalog cohort does not retain the original native membership")
+    plan_request = {
+        "study_id": study_id, "selection_id": retained["selection_id"],
+        "include_ids": [], "exclude_ids": excluded,
+        "plan": {
+            "title": "Catalog receiving selection - " + kind,
+            "mode": "manual", "include_ineligible": False,
+            "limits": {"area_basis": "whole_units"},
+        },
+    }
+    saved = receiving.run(
+        kind + ".catalog.save_original_plan",
+        lambda: catalog.save_selected_plan(workspace, plan_request),
+    )
+    plan = saved["plan"]
+    if (saved["resolved_count"] != len(selected_ids)
+            or saved["plan_id"] != plan["id"]
+            or sorted(plan["selected_ids"]) != selected_ids):
+        raise ValueError("The catalog plan changed its resolved original selection")
+    plan_binding = plan["selection"]["catalog_selection"]
+    if (plan_binding["selection_id"] != retained["selection_id"]
+            or plan_binding["source_inventory"] != retained["source_inventory"]
+            or plan_binding["exclude_ids"] != excluded
+            or plan_binding["resolved_count"] != len(selected_ids)):
+        raise ValueError("The saved original plan lost its retained catalog binding")
+    exported = receiving.run(
+        kind + ".catalog.export_rows",
+        lambda: catalog.export_rows(
+            workspace, study_id, {"filters": {}, "sort": "id", "direction": "asc"}, membership,
+        ),
+    )
+    if exported["count"] != len(selected_ids):
+        raise ValueError("The full catalog export differs from its resolved native cohort")
+    export_paths = {key: verified_file(value) for key, value in exported["files"].items()}
+    exported_originals = json.loads(export_paths["json"].read_text(encoding="utf-8"))["candidates"]
+    if exported_originals != selected_pages["rows"]:
+        raise ValueError("The full JSON export differs from the original selected candidate records")
+    import csv
+    with export_paths["csv"].open(encoding="utf-8-sig", newline="") as handle:
+        exported_csv = list(csv.DictReader(handle))
+    if [row["id"] for row in exported_csv] != selected_ids:
+        raise ValueError("The CSV export does not retain the complete original HUC12 IDs")
+    packet = receiving.run(
+        kind + ".catalog.export_original_plan",
+        lambda: conservation.export_packet(workspace, study_id, plan["id"]),
+    )
+    packet_path = verified_file(packet)
+
+    def reopen():
+        fresh = Workspace(workspace.root)
+        restored_selection = catalog.get_selection(
+            fresh, study_id, retained["selection_id"], include_ids=True,
+        )
+        if restored_selection["selected_ids"] != expected:
+            raise ValueError("The independently reopened retained cohort changed its original IDs")
+        restored_plan = conservation.get_plan(fresh, plan["id"])
+        for key in ("id", "study_id", "selected_ids", "selection", "summary", "files"):
+            if restored_plan.get(key) != plan.get(key):
+                raise ValueError("The independently reopened catalog plan changed " + key)
+        restored_export = catalog.export_rows(
+            fresh, study_id, {"filters": {}, "sort": "id", "direction": "asc"}, membership,
+        )
+        if (restored_export["id"] != exported["id"]
+                or restored_export["reference"] != exported["reference"]
+                or restored_export["files"] != exported["files"]):
+            raise ValueError("The independently reopened catalog export changed its source or files")
+        for item in restored_export["files"].values():
+            verified_file(item)
+        return {
+            "selection_id": restored_selection["selection_id"], "plan_id": restored_plan["id"],
+            "selected_original_huc12": sorted(restored_plan["selected_ids"]),
+            "export_id": restored_export["id"], "source_inventory": restored_selection["source_inventory"],
+        }
+
+    reopened = receiving.run(kind + ".catalog.reopen_originals", reopen)
+    result = {
+        "study_key": kind, "study_id": study_id, "index": prepared,
+        "original_candidate_count": len(originals),
+        "original_pages": original_pages["pages"],
+        "cohort_selection": selection,
+        "minimum_actual_positive_source_water_fraction": threshold,
+        "retained": retained,
+        "retained_original_huc12": expected,
+        "manual_adjustment": {
+            "rule": "Remove the lexicographically last original HUC12 when the receiving cohort has multiple units",
+            "include_ids": [], "exclude_ids": excluded,
+        },
+        "selected_original_huc12": selected_ids,
+        "selected_pages": selected_pages["pages"], "plan_id": plan["id"],
+        "plan_selection": plan["selection"], "plan_summary": plan["summary"],
+        "row_export": exported, "packet": packet, "packet_absolute_path": str(packet_path),
+        "reopened": reopened,
+        "reopened_selection_matches": True,
+    }
+    receiving.result["candidate_catalog"] = result
+    receiving.persist()
+    return result
+
+
 def arguments(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path)
@@ -669,6 +915,11 @@ def arguments(argv=None):
     parser.add_argument("--public-water-preparation", type=Path,
                         help="Existing public-water-preparation.json; use its actual imported collection identity.")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--prepare-catalog", action="store_true",
+                        help="Operate candidate paging, retained selection and original plan/export on this same regional study.")
+    parser.add_argument("--catalog-study", choices=(
+        "upstream", "reporting", "protection_upstream", "protection_reporting",
+    ), help="Default to protection_upstream when present, otherwise upstream.")
     parser.add_argument("--from-codes", nargs="+", type=int)
     parser.add_argument("--to-code", type=int)
     parser.add_argument("--scenario-reason")
@@ -686,6 +937,8 @@ def arguments(argv=None):
     parser.add_argument("--experiment-axes", type=Path)
     parser.add_argument("--experiment-design", choices=("one_at_a_time", "factorial"), default="one_at_a_time")
     args = parser.parse_args(argv)
+    if args.catalog_study and not args.prepare_catalog:
+        parser.error("--catalog-study requires --prepare-catalog")
     scenario_values = (args.from_codes, args.to_code is not None, args.scenario_reason)
     if any(scenario_values) and not all(scenario_values):
         parser.error("--from-codes, --to-code and --scenario-reason are required together")
@@ -700,6 +953,8 @@ def arguments(argv=None):
     if (args.experiment_title or args.experiment_profile_id or args.experiment_axes
             or args.experiment_design != "one_at_a_time") and not (args.prepare_experiment or args.execute_experiment):
         parser.error("Choose --prepare-experiment or --execute-experiment with experiment settings")
+    if args.models and len(args.models) != len(set(args.models)):
+        parser.error("Select each native model once")
     return args
 
 
@@ -801,6 +1056,13 @@ def main(argv=None):
                     "and its public-water-preparation.json through --public-water-preparation."
                 ),
             }
+        if args.prepare_catalog:
+            catalog_key = args.catalog_study or (
+                "protection_upstream" if "protection_upstream" in receiving.result["studies"] else "upstream"
+            )
+            if catalog_key not in receiving.result["studies"]:
+                raise ValueError("The selected catalog study needs its original source and completed study")
+            run_catalog_study(workspace, receiving, catalog_key)
         if args.from_codes:
             if args.scenario_study not in receiving.result["studies"]:
                 raise ValueError("The selected scenario study needs its original reporting source first")
@@ -815,7 +1077,7 @@ def main(argv=None):
             }
             if args.grid_id:
                 request["prepare_run"] = {"grid_id": args.grid_id, "profile_id": args.profile_id}
-                if args.models:
+                if args.models and set(args.models) != {"ndr", "sdr"}:
                     request["prepare_run"]["models"] = args.models
             if args.prepare_experiment or args.execute_experiment:
                 request["prepare_experiment"] = {
@@ -871,6 +1133,7 @@ def main(argv=None):
             "scenario_id": receiving.result.get("scenario", {}).get("scenario_id"),
             "experiment_id": receiving.result.get("scenario", {}).get("experiment_id"),
             "experiment_state": receiving.result.get("experiment", {}).get("state"),
+            "catalog_plan_id": receiving.result.get("candidate_catalog", {}).get("plan_id"),
             "studies": {
                 name: {key: row[key] for key in ("study_id", "plan_id", "selected_original_huc12", "packet_absolute_path")}
                 for name, row in receiving.result["studies"].items()

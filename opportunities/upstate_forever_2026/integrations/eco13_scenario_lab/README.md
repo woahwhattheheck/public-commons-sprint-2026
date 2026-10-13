@@ -1,15 +1,49 @@
-# Ecosystem Sciences — full-watershed scenario workbench
+# Ecosystem Sciences — scenario workbench
 
-An additive scenario layer for the existing Eco application and its original native InVEST driver. It preserves the approved demo; no existing application file needs replacement. Customer-facing capabilities are input retention, parcel intervention preparation, full native runs, scenario/case comparisons, budget trade-offs, complete reports, and independently editable project receiving.
+Version 0.1.2 receives saved native experiments, keeps original scientific results and supporting files, adds explicit planning costs and objectives, and exports a complete edition that another operator can reopen. It composes with the original Upper Savannah application and the existing ECO13 workspace bridge.
 
-## Run it
+## Scientific interpretation
+
+**Needs expert review.** A qualified watershed modeler should review the selected data, grid resolution, model parameters, paired coverage and uncertainty for the study before the modeled quantities and planning comparisons inform real-world decisions. The workbench retains those source assumptions and original results for that review.
+
+## Receive a saved native experiment
+
+From the original application's root, use its installed Python and the existing package path:
+
+```sh
+PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab adopt-upstate ORIGINAL_WORKSPACE EXPERIMENT_ID NEW_COMPARISON --project-id PROJECT --setup-id EDITION --currency USD
+PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab status NEW_COMPARISON
+PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab compare NEW_COMPARISON --scenario-costs costs.json --objectives objectives.json
+PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab export NEW_COMPARISON OUTSIDE.zip
+PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab receive OUTSIDE.zip NEW_RECEIVED
+PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab compare NEW_RECEIVED
+```
+
+The uppercase names are the operator's actual paths, project identifiers and complete original experiment ID. Costs are a JSON object mapping original alternative IDs to integer cents. Objectives are an explicit array of the received reporting-grid/metric pairs. Open the retained reports/index.html for the complete grayscale comparison, parameter sensitivity, original model states, cost groups and downloads.
+
+Read [UPSTATE_RECEIVING.md](UPSTATE_RECEIVING.md) for the complete worked operator flow, original Workspace API, saved-selection format, planning edits, exports and independent reopening. Current native experiments use the original model.experiments paged inspection and paired summary. Original case/run identities, selected-model scope, grid-cell support, native units and percentages remain attached to the received results. Completed selected-model files from partial runs are retained along with their original states.
+
+Report pages include the full retained population, use pagination for large experiments, and print every filtered outcome and unfinished-case row. Cost comparisons require explicit costs and compatible parameter/grid/support/reference groups. Saved costs, objectives and budget choices survive export and receive. Invalid replacement choices restore the prior complete report edition.
+
+The first adoption uses the original application's native runtime. Receiving an exported edition, reopening its retained native summary and rendering its report use Python's standard library. The existing parcel-planning and native-table paths below continue to use their GIS dependencies. Existing workspace_driver.py and workspace_cli.py bridge operations remain available.
+
+## Current Workspace bridge
+
+[WORKSPACE.md](WORKSPACE.md) gives the complete current InVEST 3.20.0 NDR/SDR selection, accepted-run adoption and original Workspace execution commands:
+
+```sh
+PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab.workspace_cli --help
+```
+
+Use the current native experiment receiving workflow above for an existing experiment; use the Workspace bridge for explicit accepted baseline/alternative runs or original Workspace scenario selections. Both retain the original scientific registry and execution ownership. [RETENTION.md](RETENTION.md) describes independent copies, preserved original paths, shared legacy native objects and actual receiving counters.
+
+## Plan parcel scenarios with the existing native driver
 
 The planning/report environment needs Python 3.11+ with numpy, rasterio, Fiona, Shapely 2 and pyproj. The native scientific environment is separate and must contain the exact InVEST version in the plan. Reuse the existing Eco native environment; the package does not install or replace it.
 
 ```sh
-python -m pip install --no-deps dist/eco_scenario_lab-0.1.1-py3-none-any.whl
-# Or use the source directory without installation:
-python -m eco_scenario_lab --help
+# Use the retained source package with the existing GIS environment:
+PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab --help
 
 python -m eco_scenario_lab plan project.json /work/scenario-project
 python -m eco_scenario_lab run /work/scenario-project --python /existing/native/venv/bin/python

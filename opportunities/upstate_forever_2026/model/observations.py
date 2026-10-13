@@ -24,6 +24,11 @@ MASS_FACTORS = {
 def ingest(workspace, path, metadata):
     """Preserve all rows; admit only explicitly derived annual mass-rate values."""
     metadata = dict(metadata)
+    annual = metadata.get("value_basis") == "annual_mass_rate"
+    constants = {} if annual else metadata.get("constants", {})
+    if not isinstance(constants, dict) or any(not isinstance(k, str) or not isinstance(v, str)
+                                              for k, v in constants.items()):
+        raise ValueError("Context constants must use explicit text field names and values")
     if not metadata.get("title") or not metadata.get("source_uri"):
         raise ValueError("Actual observations need a title and original source URI")
     columns = {key: key for key in ("record_id", "station_id", "catchment_id",
@@ -34,13 +39,13 @@ def ingest(workspace, path, metadata):
     original = retain_file(workspace.root, path, metadata.get("sha256"))
     raw = (workspace.root / original["object"]).read_text(encoding="utf-8-sig")
     table = csv.DictReader(io.StringIO(raw))
-    required = [columns[k] for k in ("catchment_id", "parameter", "value", "unit")]
+    required_keys = ("catchment_id", "parameter", "value", "unit") if annual else ("parameter", "value", "unit")
+    required = [columns[k] for k in required_keys if k not in constants]
     if (not table.fieldnames or len(table.fieldnames) != len(set(table.fieldnames))
             or set(required) - set(table.fieldnames)):
-        raise ValueError("Observation CSV requires distinct headers and the selected catchment, parameter, value and unit columns")
+        raise ValueError("Observation CSV requires distinct headers and the selected parameter, value and unit columns; annual loads also require catchment identifiers")
     parameter_names = {"nitrogen": "nitrogen", "phosphorus": "phosphorus", "sediment": "sediment"}
     parameter_names.update(metadata.get("parameter_mapping", {}))
-    annual = metadata.get("value_basis") == "annual_mass_rate"
     if annual and not metadata.get("annualization_method"):
         raise ValueError("State the original method used to obtain annual load rates")
     accepted_qualifiers = set(str(v) for v in metadata.get("accepted_qualifiers", [""]))
@@ -49,7 +54,7 @@ def ingest(workspace, path, metadata):
         if None in original_row:
             raise ValueError("CSV row has extra cells at line " + str(number))
         def cell(name, default=""):
-            value = original_row.get(columns[name], default)
+            value = constants[name] if name in constants else original_row.get(columns[name], default)
             return str(value).strip() if value is not None else default
         def retained_detail(name):
             value = cell(name)
@@ -77,27 +82,39 @@ def ingest(workspace, path, metadata):
                "source_records": retained_detail("source_records"),
                "admitted": False, "issues": []}
         try:
-            row["value"] = finite(row["value_text"], "Observed value", minimum=0)
+            row["value"] = finite(row["value_text"], "Observed value", minimum=0 if annual else None)
         except (ValueError, TypeError) as error:
-            row["issues"].append(str(error))
-        if not row["catchment_id"]:
-            row["issues"].append("No original catchment ID")
+            if annual:
+                row["issues"].append(str(error))
+            else:
+                row["numeric_status"] = "Original value is not quantified numerically"
+        if annual:
+            if not row["catchment_id"]:
+                row["issues"].append("No original catchment ID")
+            if parameter not in NATIVE:
+                row["issues"].append("This measurement is outside the native N/P/sediment annual-load comparison")
+            elif row["unit"] not in MASS_FACTORS[parameter]:
+                row["issues"].append("Select an explicit annual mass-rate unit")
+            if row["qualifier"] not in accepted_qualifiers:
+                row["issues"].append("Source qualifier is outside the selected accepted qualifier set")
+        if annual or row["period_start"] or row["period_end"]:
+            try:
+                start = dt.date.fromisoformat(row["period_start"])
+                if row["period_end"]:
+                    end = dt.date.fromisoformat(row["period_end"])
+                    if end < start or (annual and end == start):
+                        raise ValueError()
+                    row["period_days"] = (end - start).days + int(
+                        not annual and metadata.get("period_end_inclusive") is True)
+                elif annual:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                row["issues"].append("A complete original observation period is required" if annual
+                                     else "Review the original context date or interval")
         if not annual:
-            row["issues"].append("Retained contextual measurement; no annual load derivation was supplied")
-        if parameter not in NATIVE:
-            row["issues"].append("This measurement is outside the native N/P/sediment annual-load comparison")
-        elif row["unit"] not in MASS_FACTORS[parameter]:
-            row["issues"].append("Select an explicit annual mass-rate unit")
-        if row["qualifier"] not in accepted_qualifiers:
-            row["issues"].append("Source qualifier is outside the selected accepted qualifier set")
-        try:
-            start, end = dt.date.fromisoformat(row["period_start"]), dt.date.fromisoformat(row["period_end"])
-            if end <= start:
-                raise ValueError()
-            row["period_days"] = (end - start).days
-        except (ValueError, TypeError):
-            row["issues"].append("A complete original observation period is required")
-        if not row["issues"]:
+            row["context_kind"] = metadata.get("observation_kind", "source_context")
+            row["time_support"] = metadata.get("time_support", "original")
+        if annual and not row["issues"]:
             row["admitted"] = True
             row["annual_mass"] = row["value"] * MASS_FACTORS[parameter][row["unit"]]
             row["comparison_units"] = NATIVE[parameter][2]

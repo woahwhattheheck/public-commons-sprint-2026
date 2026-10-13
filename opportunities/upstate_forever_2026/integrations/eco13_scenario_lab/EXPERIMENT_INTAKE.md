@@ -1,8 +1,10 @@
-# Original experiment intake
+# Legacy NativeJobsEngine experiment intake
+
+This document covers the older inspection envelope used by the retained NativeJobsEngine adapter. For the current original Upper Savannah model.experiments workflow, start with [UPSTATE_RECEIVING.md](UPSTATE_RECEIVING.md). The ordinary adopt command selects the current receiver when source_format is upstate.experiment/v1.
 
 Version 0.1.1 adds read-only receiving from the existing Upper Savannah
-`NativeJobsEngine.inspect(experiment)` envelope, as published by A73C in Slack
-canvas F0C8PGPP6PL. The original application still plans, submits, supervises,
+`NativeJobsEngine.inspect(experiment)` envelope. The original application still
+plans, submits, supervises,
 cancels and edits its experiments. Intake never invokes its submit or run methods.
 
 Export the original inspection JSON using the application's existing
@@ -92,7 +94,11 @@ and selection; original arguments plus portable argument paths; retained input
 hashes; native result tables and extracted rows. CSV/JSON comparison records
 include original baseline/treatment job keys and the original experiment key.
 The grayscale HTML report uses the same completed comparison data. Full portable
-export/receive keeps these originals; it does not relocate or mutate the sender.
+export/receive keeps these originals. The storage extension retains each exact
+complete native directory once within the received edition, with per-job
+native-reference.json and the actual table path in state.jobs. The sender and
+independently received workspaces keep separate files. See [RETENTION.md](RETENTION.md)
+for the complete storage layout, copy behavior and receiving counters.
 
 Existing incomplete experiments can be received as explicitly incomplete
 comparisons by selecting their completed jobs. Partial results are never screened
@@ -123,12 +129,15 @@ The standalone native-worker fingerprint now hashes the source containing that
 method, not only the small `__init__.py`. The scientific engine remains the
 installed exact InVEST version. Other versions require explicit result bindings.
 
-## Executed software journey
+## Upstream 0.1.1 software journey
 
-`exercise_intake.py` consumes the labeled software carriers from `exercise.py`.
-It receives eight original-style parent jobs / 24 selected result carriers,
-produces 80 matched records, preserves the sender, retains 24 hidden original
-files, and reopens a 197-file portable archive. It also exercises mismatched
+The upstream 0.1.1 execution consumed the labeled software carriers from
+`exercise.py`. It received eight original-style parent jobs / 24 selected result
+carriers, produced 80 matched records, preserved the sender, retained 24 hidden
+original files, and reopened a 197-file portable archive. The retained
+intake-summary.json records that upstream execution. The storage edition's
+exercise_intake.py follows each job's native_storage reference and records the
+actual number of unique hidden files, preserving all 24 logical result selections. It also exercises mismatched
 scientific parameters, original running-job rejection, partial receiving and
 prevention of duplicate execution. Its engine identity remains
 `SOFTWARE-FIXTURE-NOT-INVEST`; actual scientific execution uses the original

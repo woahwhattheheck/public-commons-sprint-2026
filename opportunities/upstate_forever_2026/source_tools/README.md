@@ -2,6 +2,10 @@
 
 These commands prepare the original public inputs for the same `model.workspace.Workspace` used by the operator. Run them from the product root with the equipped GIS interpreter. They retain original response bytes, request URLs, response metadata and SHA256s; completed exact responses are reused after interruption.
 
+## Recover complete source archives
+
+Use [Source archive recovery](SOURCE_BANK_RECOVERY.md) to inspect and extract original ZIPs, gzip source banks and exported Slack source documents. The pure JavaScript decoder works without a native executor. Its Node command verifies the complete archive before recovering files into a new directory and retains the original carrier and full member inventory. The guide includes commands for the actual completed 217-HUC run and the 19-file water-source bank.
+
 ## Streamed downloads and original-object reuse
 
 Use [Streamed original-source capacity](STORAGE_RESOURCES.md) when continuing a large retained source on a shared Linux worker. The receiver distinguishes disk-backed streams from memory-backed appends, accounts for the effective cgroup memory limit and clean reclaimable file cache, and records the next range's actual storage and buffer requirements.
@@ -39,11 +43,11 @@ For an original archive already carried through the maintained SourceArtifacts t
 ```sh
 python -B -m source_tools.raster_sources prism \
   --archive sources/prism/original-annual-normal.zip \
-  --transfer source/prism-annual-normal-20261012/source-transfer.json \
+  --transfer source/prism-precipitation-1991-2020/source-transfer.json \
   --output sources/prepared/precipitation
 ```
 
-This path uses the completed original file, HTTP body identity, actual upload acknowledgment and original destination readback. It performs no source download or Slack upload. The unchanged transfer document becomes a source companion beside the original archive and projected capture receipt. `--capture` and `--transfer` select their respective original capture formats; they cannot be supplied together.
+The exact completed PRISM transfer is retained in [the original source record](../source/prism-precipitation-1991-2020/README.md), including its completed destination recovery. This path uses the completed original file, HTTP body identity, actual upload acknowledgment and original destination readback. It performs no source download or Slack upload. The unchanged transfer document becomes a source companion beside the original archive and projected capture receipt. `--capture` and `--transfer` select their respective original capture formats; they cannot be supplied together.
 
 The capture receipt supplies the original `url`, `bytes`, `sha256` and actual `observed_at`; its URL must be the exact annual-normal source declared in the helper. Omitting `--archive` performs that original download, so reuse the existing source worker's receipt when one is already assigned. The full original ZIP remains a companion, including its metadata and station information. The helper retains the unique original GeoTIFF bytes and its native grid, band scale/offset and tags. Original precipitation units are millimetres; a non-unit native scale becomes an explicit conversion. Regridding to 30 m preserves the product's recorded 800 m source resolution.
 

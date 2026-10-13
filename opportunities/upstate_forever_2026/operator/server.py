@@ -28,30 +28,40 @@ APPLICATION = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(APPLICATION))
 from model.common import atomic_json, canonical, digest, file_digest, held, now, read_json
 from model.workspace import Workspace
+from model.record_catalog import ProjectedFileCache, task_summary
 from model import portable
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rehearsal import Rehearsals, ACTIONS as REHEARSAL_ACTIONS, READS as REHEARSAL_READS
 from model.spatial import SpatialReview
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from customer_reviews import CustomerReviews, ACTIONS as CUSTOMER_REVIEW_ACTIONS, READS as CUSTOMER_REVIEW_READS
 from experiment_operator import ExperimentOperator, ACTIONS as EXPERIMENT_ACTIONS, READS as EXPERIMENT_READS
+from parameter_study_api import ParameterStudyAPI, ACTIONS as PARAMETER_STUDY_ACTIONS, READS as PARAMETER_STUDY_READS
 from model.spatial_exports import SpatialExports
+from implementation_operator import implementation_error
+from delivery_review import read as read_delivery_report, send_preview as send_delivery_report_preview, REPORT_EDITION as CLIENT_REPORT_EDITION
 from extension_registry import ExtensionRegistry
 from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS
+from task_requests import TaskRequests
 
 JSON_LIMIT = 4 * 1024 * 1024
 ACTIVE = {"queued", "running"}
 KINDS = {"sources", "profiles", "scenarios", "grids", "runs", "observations",
          "comparisons", "observation_comparisons", "deliveries", "spatial_reviews", "spatial_exports",
-         "community_tables", "community_plans", "community_reports"}
+         "community_tables", "community_plans", "community_reports",
+         "planning_inventories", "portfolios", "portfolio_reports", "parameter-studies"}
 ACTIONS = {"source.import", "profile.save", "scenario.save", "grid.prepare",
            "run.prepare", "run.start", "run.compare", "observation.import",
            "observation.compare", "delivery.build", "workspace.backup", "workspace.restore",
            "spatial.review.save", "spatial.review.export", "community.table.import", "community.plan.save",
-           "community.report.build"}
+           "community.report.build", "portfolio.inventory.build", "portfolio.preview", "portfolio.save",
+           "portfolio.scenario.prepare", "portfolio.report.build", "portfolio.decision.build",
+           "portfolio.run.prepare", "portfolio.run.start"}
 ACTIONS.update(REHEARSAL_ACTIONS)
 ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)
 ACTIONS.update(EXPERIMENT_ACTIONS)
+ACTIONS.update(PARAMETER_STUDY_ACTIONS)
 ACTIONS.update(PROGRAMME_ACTIONS)
 
 class Fault(Exception):
@@ -90,6 +100,9 @@ def json_body(data):
     return result
 
 def summary_error(error):
+    implementation_detail = implementation_error(error)
+    if implementation_detail is not None:
+        return implementation_detail
     if isinstance(error, Fault):
         return {"code": error.code, "message": str(error)}, error.status
     if isinstance(error, FileNotFoundError):
@@ -115,9 +128,12 @@ class Operator:
         self.spatial_exports = {}
         self.gates = {}
         self.downloads = {}
+        self.task_catalog = ProjectedFileCache()
+        self.task_requests = TaskRequests(self.root)
         self.rehearsals = Rehearsals(self, Fault)
         self.customer_reviews = CustomerReviews(self, Fault)
         self.experiments = ExperimentOperator(self, Fault)
+        self.parameter_studies = ParameterStudyAPI(self, Fault)
         self.programmes = Programmes(self, Fault)
         self.verified = {}
         self.upload_limit = upload_limit
@@ -148,7 +164,7 @@ class Operator:
                                     "title": value.get("title", p.name), "entries": len(value.get("entries", []))}
         self.extensions = ExtensionRegistry(self, Fault,
             builtin_actions=ACTIONS, builtin_kinds=KINDS,
-            builtin_routes=(('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
+            builtin_routes=(('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/operator-session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
             source_roots=source_roots).load()
         for path in (self.root / "tasks").glob("*.json"):
             task = read_json(path)
@@ -196,14 +212,99 @@ class Operator:
             raise Fault("SPATIAL_OPERATION", "Choose a supported native spatial read.")
         return {"workspace_key": workspace, **result}
 
+    def operator_session(self, workspace):
+        ws = self.ws(workspace)
+        path = ws.root / "operator-session.json"
+        if not path.exists():
+            return None
+        value = read_json(path)
+        if not isinstance(value, dict) or value.get("schema") != "upstate.operator-session/v1" or value.get("project_id") != ws.project["id"]:
+            raise Fault("JOURNEY_PROJECT", "The saved operator view belongs to a different project.", 409)
+        return value
+
+    def _save_operator_session(self, workspace, value):
+        ws = self.ws(workspace)
+        journey = value.get("journey")
+        if not isinstance(journey, dict) or journey.get("schema") != "upstate.operating-journey/v1" or journey.get("project_id") != ws.project["id"]:
+            raise Fault("JOURNEY_PROJECT", "Save the selected journey in its original project.")
+        selection = journey.get("selection")
+        if not isinstance(selection, dict) or not isinstance(journey.get("notes", ""), str):
+            raise Fault("JOURNEY_SELECTION", "Save the selected scientific records and text notes.")
+        fields = {"baseline_run_id": "runs", "grid_id": "grids", "profile_id": "profiles",
+                  "scenario_id": "scenarios", "run_id": "runs", "comparison_id": "comparisons",
+                  "spatial_review_id": "spatial_reviews", "spatial_export_id": "spatial_exports",
+                  "delivery_id": "deliveries"}
+        chosen = {}
+        for key, collection in fields.items():
+            selected = selection.get(key, "")
+            if not isinstance(selected, str):
+                raise Fault("JOURNEY_SELECTION", "Choose a saved " + key.replace("_", " ") + ".")
+            chosen[key] = None
+            if not selected:
+                continue
+            if not re.fullmatch(r"[0-9a-f]{64}", selected):
+                raise Fault("JOURNEY_SELECTION", "This workspace does not contain the selected " + key.replace("_", " ") + ".")
+            try:
+                chosen[key] = ws.retained_item(collection, selected)
+            except FileNotFoundError as error:
+                raise Fault("JOURNEY_SELECTION", "This workspace does not contain the selected " + key.replace("_", " ") + ".") from error
+        run, baseline = chosen["run_id"], chosen["baseline_run_id"]
+        if run and any(run.get("selection", {}).get(key) != selection.get(key) for key in ("grid_id", "profile_id", "scenario_id")):
+            raise Fault("JOURNEY_SELECTION", "The selected run uses a different grid, profile or scenario.")
+        comparison = chosen["comparison_id"]
+        if comparison and (comparison.get("baseline_run_id") != (baseline or {}).get("id") or not any(row.get("run_id") == (run or {}).get("id") for row in comparison.get("alternatives", []))):
+            raise Fault("JOURNEY_SELECTION", "The selected comparison uses a different baseline or alternative.")
+        delivery = chosen["delivery_id"]
+        if delivery and (delivery.get("selection", {}).get("baseline_run_id") != (baseline or {}).get("id") or (run or {}).get("id") not in delivery.get("selection", {}).get("scenario_run_ids", [])):
+            raise Fault("JOURNEY_SELECTION", "The selected delivery uses a different baseline or alternative.")
+        pack = chosen["spatial_export_id"]
+        if pack and selection.get("spatial_review_id") and pack.get("review_id") != selection["spatial_review_id"]:
+            raise Fault("JOURNEY_SELECTION", "The map pack belongs to a different saved geographic view.")
+        request_sha256 = digest(journey)
+        current = self.operator_session(workspace)
+        if current and (current.get("request_sha256") == request_sha256 or current.get("journey") == journey):
+            return current
+        if value.get("expected_revision") != (current or {}).get("revision"):
+            raise Fault("JOURNEY_CHANGED", "Another browser saved this workspace view. Refresh to load its saved revision, then save your current view and notes.", 409)
+        journey = json.loads(canonical(journey))
+        versions = []
+        previous = (current or {}).get("journey", {})
+        candidates = [*previous.get("note_versions", []), *journey.get("note_versions", [])]
+        if previous.get("notes") and previous["notes"] != journey.get("notes"):
+            candidates.append({"text": previous["notes"], "recorded_at": current["saved_at"]})
+        for item in candidates:
+            if not isinstance(item, dict) or not isinstance(item.get("text"), str):
+                raise Fault("JOURNEY_NOTES", "Each retained notes version needs its original text.")
+            if not any(row["text"] == item["text"] for row in versions):
+                versions.append({"text": item["text"], "recorded_at": item.get("recorded_at")})
+        journey["note_versions"] = versions
+        saved = {"schema": "upstate.operator-session/v1", "project_id": ws.project["id"],
+                 "revision": digest(journey), "request_sha256": request_sha256,
+                 "saved_at": now(), "journey": journey}
+        atomic_json(ws.root / "operator-session.json", saved)
+        return saved
+
+    def save_operator_session(self, workspace, value):
+        ws = self.ws(workspace)
+        try:
+            with held(ws.root / ".operator-session.lock", blocking=False):
+                return self._save_operator_session(workspace, value)
+        except BlockingIOError as error:
+            raise Fault("JOURNEY_BUSY", "A workspace save is in progress. Save this view again when it finishes.", 409) from error
+
     def public_workspaces(self):
         return [{k: v for k, v in row.items() if k != "directory"} for row in self.registry.values()]
 
     def task(self, key):
         return read_json(self.root / "tasks" / (token(key) + ".json"))
 
-    def task_list(self, workspace=None):
-        items = [read_json(p) for p in (self.root / "tasks").glob("*.json")]
+    def task_list(self, workspace=None, *, compact=False):
+        paths = list((self.root / "tasks").glob("*.json"))
+        if compact:
+            self.task_catalog.retain_paths(paths)
+            items = [self.task_catalog.read(path, task_summary) for path in paths]
+        else:
+            items = [read_json(path) for path in paths]
         if workspace:
             items = [x for x in items if x["workspace"] == workspace]
         return sorted(items, key=lambda x: x["created_at"], reverse=True)
@@ -226,8 +327,15 @@ class Operator:
                 if task["request_sha256"] != request_sha:
                     raise Fault("OPERATION_REUSED", "That operation identity already belongs to a different selection.", 409)
                 return task
-            for task in self.task_list(workspace):
-                if task["state"] in ACTIVE and task["request_sha256"] == request_sha:
+            for candidate in self.task_requests.matching(workspace, request_sha, ACTIVE):
+                # Reopen the exact original record before returning it. Cached
+                # metadata only narrows candidates; task state remains authoritative.
+                try:
+                    task = self.task(candidate["id"])
+                except FileNotFoundError:
+                    continue
+                if (task["workspace"] == workspace and task["state"] in ACTIVE
+                        and task["request_sha256"] == request_sha):
                     return task
             task = {"schema": "upstate.operator-task/v1", "id": key, "operation_id": operation_id,
                     **request, "request_sha256": request_sha, "created_at": now(),
@@ -293,6 +401,8 @@ class Operator:
             return self.rehearsals.invoke(task)
         if self.extensions.handles_action(action):
             return self.extensions.invoke(task)
+        if action in PARAMETER_STUDY_ACTIONS:
+            return self.parameter_studies.invoke(task)
         if action in EXPERIMENT_ACTIONS:
             return self.experiments.invoke(task)
         if action in PROGRAMME_ACTIONS:
@@ -307,6 +417,13 @@ class Operator:
             finally:
                 if cleanup:
                     shutil.rmtree(cleanup)
+        if action == "portfolio.run.prepare":
+            return ws.prepare_portfolio_run(value)
+        if action == "portfolio.run.start":
+            return ws.run_portfolio(value)
+        if action.startswith("portfolio."):
+            from model.portfolios import invoke
+            return invoke(ws, action, value)
         if action.startswith("community."):
             from model.communities import invoke
             return invoke(ws, action, value)
@@ -346,7 +463,10 @@ class Operator:
                         "bytes": destination.stat().st_size, "sha256": file_digest(destination),
                         "members": len(retained["members"]), "selection": retained["selection"],
                         "reused_completed_output": True}
-            return ws.backup(destination, include_intermediates=selection)
+            with held(ws.root / ".operator-session.lock", blocking=False):
+                if value.get("journey") is not None:
+                    self._save_operator_session(task["workspace"], {"journey": value["journey"], "expected_revision": value.get("journey_revision")})
+                return ws.backup(destination, include_intermediates=selection)
         if action == "workspace.restore":
             uploaded = self.upload(required(value, "upload_id"))
             destination = self.restore_root / task["id"]
@@ -576,11 +696,15 @@ class Operator:
         if kind not in KINDS:
             raise Fault("ITEM_KIND", "Choose a retained item type.")
         ws = self.ws(workspace)
-        records = ws.overview().get(kind, [])
-        item = next((x for x in records if x["id"] == token(key)), None)
-        if item is None:
-            raise Fault("ITEM_MISSING", "The selected retained item is absent.", 404)
-        result = json.loads(json.dumps(item))
+        if kind == "parameter-studies":
+            result = self.parameter_studies.inspect(workspace, key)
+            result["_downloads"] = self._files(workspace, result, ws.root / "experiments" / token(key))
+            return result
+        key = token(key)
+        try:
+            result = ws.retained_item(kind, key)
+        except FileNotFoundError as error:
+            raise Fault("ITEM_MISSING", "The selected retained item is absent.", 404) from error
         if kind == "sources":
             downloads = []
             for row in result["entries"]:
@@ -606,80 +730,114 @@ class Operator:
                          "Complete saved community " + ("table" if kind == "community_tables" else "plan"))]
             original, entry = ws.source_file(result["source"]["collection_id"], result["source"]["source_id"])
             downloads.append(self._ticket(workspace, original, entry["body"], "Original community CSV"))
-        elif kind == "community_reports":
+        elif kind == "planning_inventories":
+            from model.planning_inventory import inspect
+            result = inspect(ws, key)
             downloads = self._files(workspace, result, ws.root)
+        elif kind in {"community_reports", "portfolio_reports", "portfolios"}:
+            downloads = self._files(workspace, result, ws.root)
+            if kind == "portfolios":
+                path = ws.root / "portfolios" / (key + ".json")
+                downloads.insert(0, self._ticket(workspace, path,
+                    {"bytes": path.stat().st_size, "sha256": file_digest(path)},
+                    "Saved conservation portfolio"))
+                from model.portfolios import get_portfolio
+                result = get_portfolio(ws, key, details=True)
         elif kind in {"grids", "runs", "comparisons", "deliveries"}:
             downloads = self._files(workspace, result, ws.root / kind / key)
         else:
             downloads = []
         result["_downloads"] = downloads
+        if kind == "deliveries":
+            result["_current_report_edition"] = CLIENT_REPORT_EDITION
         return result
 
     def source_info(self, workspace, collection, source, layer=None):
-        gate = self.gates[token(workspace)]
-        if not gate.acquire(blocking=False):
-            raise Fault("NATIVE_BUSY", "The current model operation is using this workspace. Inspect the retained source after it finishes.", 409)
-        try:
-            path, entry = self.ws(workspace).source_file(collection, source)
-            result = {"source": entry, "download": self._ticket(workspace, path, entry["body"], entry["title"])}
-            if entry["kind"] == "table":
-                import csv
-                with path.open(encoding="utf-8-sig", newline="") as original:
-                    reader = csv.DictReader(original)
+        # Retained sources are immutable; inspection remains available during native execution.
+        path, entry = self.ws(workspace).source_file(collection, source)
+        result = {"source": entry, "download": self._ticket(workspace, path, entry["body"], entry["title"])}
+        if entry["kind"] == "table":
+            import csv
+            with path.open(encoding="utf-8-sig", newline="") as original:
+                reader = csv.DictReader(original)
+                rows = []
+                for row in reader:
+                    rows.append(row)
+                    if len(rows) == 30:
+                        break
+            result.update(columns=reader.fieldnames, sample=rows, sample_limit=30)
+        elif entry["kind"] == "vector":
+            import fiona
+            from model.rasters import vector_environment, native_vector_path
+            native_path = native_vector_path(path)
+            with vector_environment():
+                layers = list(fiona.listlayers(native_path))
+                selected = layer or entry.get("layer") or (layers[0] if layers else None)
+                if selected not in layers:
+                    raise Fault("SOURCE_LAYER", "Select one of the original native vector layers.")
+                with fiona.open(native_path, layer=selected) as original:
+                    result.update(layers=layers, selected_layer=selected, feature_count=len(original),
+                                  geometry_type=original.schema["geometry"], fields=dict(original.schema["properties"]),
+                                  crs=original.crs_wkt or str(original.crs), bounds=list(original.bounds))
                     rows = []
-                    for row in reader:
-                        rows.append(row)
-                        if len(rows) == 30:
+                    for feature in original:
+                        rows.append({"native_id": str(feature.id), **dict(feature.properties)})
+                        if len(rows) == 20:
                             break
-                result.update(columns=reader.fieldnames, sample=rows, sample_limit=30)
-            elif entry["kind"] == "vector":
-                import fiona
-                from model.rasters import vector_environment, native_vector_path
-                native_path = native_vector_path(path)
-                with vector_environment():
-                    layers = list(fiona.listlayers(native_path))
-                    selected = layer or entry.get("layer") or (layers[0] if layers else None)
-                    if selected not in layers:
-                        raise Fault("SOURCE_LAYER", "Select one of the original native vector layers.")
-                    with fiona.open(native_path, layer=selected) as original:
-                        result.update(layers=layers, selected_layer=selected, feature_count=len(original),
-                                      geometry_type=original.schema["geometry"], fields=dict(original.schema["properties"]),
-                                      crs=original.crs_wkt or str(original.crs), bounds=list(original.bounds))
-                        rows = []
-                        for feature in original:
-                            rows.append({"native_id": str(feature.id), **dict(feature.properties)})
-                            if len(rows) == 20:
-                                break
-                        result.update(sample=rows, sample_limit=20)
-            elif entry["kind"] == "raster":
-                import rasterio
-                with rasterio.open(path) as original:
-                    result.update(width=original.width, height=original.height, count=original.count,
-                                  crs=str(original.crs), transform=list(original.transform)[:6],
-                                  resolution=list(original.res), bounds=list(original.bounds),
-                                  dtypes=list(original.dtypes),
-                                  nodata=None if original.nodata is None or not __import__("math").isfinite(original.nodata) else original.nodata,
-                                  native_tags=original.tags())
-            return result
-        finally:
-            gate.release()
+                    result.update(sample=rows, sample_limit=20)
+        elif entry["kind"] == "raster":
+            import math
+            import rasterio
+            from pyproj import CRS
+            with rasterio.open(path) as original:
+                reference = CRS.from_user_input(original.crs) if original.crs else None
+                axes = reference.axis_info[:2] if reference else []
+                metre_grid = bool(reference and reference.is_projected and len(axes) == 2
+                                  and all(abs(axis.unit_conversion_factor - 1) <= 1e-12 for axis in axes))
+                affine = original.transform
+                native_cell = (float(affine.a) if metre_grid and affine.a > 0 and affine.e < 0
+                               and abs(affine.b) <= 1e-12 and abs(affine.d) <= 1e-12
+                               and math.isclose(affine.a, -affine.e, rel_tol=1e-9, abs_tol=1e-12)
+                               and math.isfinite(affine.a) else None)
+                result.update(width=original.width, height=original.height, count=original.count,
+                              crs=str(original.crs), transform=list(original.transform)[:6],
+                              resolution=list(original.res), native_resolution_m=native_cell,
+                              projected_metre_grid=metre_grid, bounds=list(original.bounds),
+                              dtypes=list(original.dtypes),
+                              nodata=None if original.nodata is None or not __import__("math").isfinite(original.nodata) else original.nodata,
+                              native_tags=original.tags())
+        return result
 
-    def state(self, workspace):
+    def state(self, workspace, *, compact=False):
         ws = self.ws(workspace)
-        state = ws.overview()
+        state = ws.operator_overview() if compact else ws.overview()
+        try:
+            state["operator_session"] = self.operator_session(workspace)
+        except (Fault, OSError, ValueError) as error:
+            state["operator_session"] = None
+            state["operator_session_error"] = str(error)
         state = self.extensions.extend_state(workspace, state)
         state["experiments"] = self.experiments.catalog(workspace)
-        state["compute_programmes"] = self.programmes.catalogue(workspace)["programmes"]
-        for row in state["observations"]:
-            row["row_count"] = len(row["rows"])
-            row.pop("rows")
+        state["parameter-studies"] = self.parameter_studies.list(workspace)
+        for study in state["parameter-studies"]:
+            study["case_count"] = len(study.get("cases", []))
+            study.pop("cases", None)
+        from programme_activity import ProgrammeActivity
+        state["compute_programmes"] = ProgrammeActivity(self, Fault).summaries(workspace, state["runs"])
+        # Compact core readers already retain these exact summaries without
+        # repeatedly reading the original rows and stage file inventories.
+        if not compact:
+            for row in state["observations"]:
+                row["row_count"] = len(row["rows"])
+                row.pop("rows")
         for row in state["runs"]:
-            row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at", "reused_from", "reused_at"}}
-                                    | {"file_count": len(stage.get("files", {}))}
-                                    for k, stage in row.get("stages", {}).items()}
+            if not compact:
+                row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at", "reused_from", "reused_at", "runtime"}}
+                                        | {"file_count": len(stage.get("files", {}))}
+                                        for k, stage in row.get("stages", {}).items()}
             row.pop("stages", None)
         return {"workspace_key": workspace, "workspaces": self.public_workspaces(), "data": state,
-                "tasks": self.task_list(workspace), "registered_sources": [
+                "tasks": self.task_list(workspace, compact=compact), "registered_sources": [
                     {k: v for k, v in row.items() if k != "path"} for row in self.registered.values()],
                 "limits": {"upload_bytes": self.upload_limit, "source_extraction_bytes": self.extraction_limit},
                 "closing": self.closing}
@@ -687,12 +845,27 @@ class Operator:
     def task_view(self, key):
         task = self.task(key)
         result = task.get("result", {})
+        core_results = {"source.import": "sources", "profile.save": "profiles", "scenario.save": "scenarios",
+                        "grid.prepare": "grids", "run.prepare": "runs", "run.start": "runs",
+                        "run.compare": "comparisons", "observation.import": "observations",
+                        "observation.compare": "observation_comparisons", "delivery.build": "deliveries",
+                        "portfolio.inventory.build": "planning_inventories", "portfolio.save": "portfolios",
+                        "portfolio.report.build": "portfolio_reports", "portfolio.decision.build": "portfolio_reports",
+                        "portfolio.scenario.prepare": "scenarios", "portfolio.run.prepare": "runs",
+                        "portfolio.run.start": "runs"}
+        if task["state"] == "complete" and task["action"] in core_results and result.get("id"):
+            kind = core_results[task["action"]]
+            task["_item"] = {"kind": kind, "id": result["id"]}
+            task["_downloads"] = self.item(task["workspace"], kind, result["id"])["_downloads"]
         if task["action"] == "workspace.backup" and task["state"] == "complete":
             task["_downloads"] = [self._ticket(task["workspace"], result["path"], result, "Complete scientific workspace")]
         if task["action"] == "spatial.review.save" and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], "spatial_reviews", result["id"])["_downloads"]
         if task["action"] == "spatial.review.export" and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], "spatial_exports", result["id"])["_downloads"]
+        if task["action"] in PARAMETER_STUDY_ACTIONS and task["state"] == "complete" and result.get("id"):
+            task["_item"] = {"kind": "parameter-studies", "id": result["id"]}
+            task["_downloads"] = self.item(task["workspace"], "parameter-studies", result["id"])["_downloads"]
         community_actions = {"community.table.import": "community_tables",
                              "community.plan.save": "community_plans",
                              "community.report.build": "community_reports"}
@@ -819,6 +992,10 @@ class Handler(BaseHTTPRequestHandler):
                 reply = self.app.extensions.file_reply(url.path)
                 return self.send_file(reply["ticket_id"], download=one("download") == "1",
                                       content_security_policy=reply["content_security_policy"])
+            if url.path == "/api/file/delivery-report":
+                self.authorized(file=True)
+                return send_delivery_report_preview(self, one("workspace", self.app.primary), one("id"),
+                                                    report=one("report", "scientific"))
             if url.path.startswith("/api/file/"):
                 self.authorized(file=True)
                 return self.send_file(url.path.rsplit("/", 1)[1], download=one("download") == "1")
@@ -831,12 +1008,16 @@ class Handler(BaseHTTPRequestHandler):
                         rehearsal_reads[url.path], {name: one(name) for name in ("id", "revision")}))
                 if url.path == "/api/extensions":
                     return self.send_json(200, self.app.extensions.manifest())
+                parameter_study_reads = {"/api/parameter-studies/" + name: name for name in PARAMETER_STUDY_READS}
+                if url.path in parameter_study_reads:
+                    return self.send_json(200, self.app.parameter_studies.read(workspace, parameter_study_reads[url.path],
+                        {name: one(name) for name in ("baseline_run_id", "id", "area_id", "pollutant", "offset", "limit")}))
                 experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}
                 if url.path in experiment_reads:
                     return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],
                         {name: one(name) for name in ("experiment_id", "offset", "limit", "case_ids")}))
                 if url.path == "/api/state":
-                    return self.send_json(200, self.app.state(workspace))
+                    return self.send_json(200, self.app.state(workspace, compact=one("compact") == "1"))
                 programme_reads = {"/api/programmes/" + name: name for name in PROGRAMME_READS}
                 if url.path in programme_reads:
                     return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],
@@ -844,9 +1025,13 @@ class Handler(BaseHTTPRequestHandler):
                 review_reads = {"/api/reviews/" + name: name for name in CUSTOMER_REVIEW_READS}
                 if url.path in review_reads:
                     return self.send_json(200, self.app.customer_reviews.read(workspace, review_reads[url.path],
-                        {name: one(name) for name in ("review_id", "before_id", "after_id", "export_id")}))
+                        {name: one(name) for name in ("review_id", "before_id", "after_id", "export_id",
+                                                   "response_id", "handback_id", "revised_review_id")}))
                 if url.path == "/api/spatial/catalog":
                     return self.send_json(200, self.app.spatial_read(workspace, "catalog"))
+                if url.path == "/api/deliveries/report":
+                    return self.send_json(200, read_delivery_report(self.app, workspace, one("id"),
+                                                                  report=one("report", "scientific")))
                 if url.path == "/api/item":
                     return self.send_json(200, self.app.item(workspace, one("kind"), one("id")))
                 if url.path == "/api/source-info":
@@ -881,7 +1066,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'parameter_studies.mjs', 'parameter_studies.css', 'portfolio.mjs', 'portfolio.css', 'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css', 'conservation_optimization_bridge.mjs', 'conservation_optimization.mjs', 'conservation_optimization.css', 'observed_series.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True
@@ -913,6 +1098,9 @@ class Handler(BaseHTTPRequestHandler):
                                                 self.headers.get("Content-Type", "application/octet-stream"))
                 return self.send_json(201, result)
             value = self.body()
+            if url.path == "/api/parameter-studies/preview":
+                return self.send_json(200, self.app.parameter_studies.preview(
+                    value.get("workspace", self.app.primary), value["selection"]))
             if url.path == "/api/experiments/preview":
                 return self.send_json(200, self.app.experiments.preview(value))
             if url.path == "/api/programmes/preview":
@@ -923,6 +1111,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, self.app.programmes.pause(value.get("workspace", self.app.primary), value))
             if url.path == "/api/programmes/delivery-preview":
                 return self.send_json(200, self.app.programmes.delivery_preview(value.get("workspace", self.app.primary), value))
+            if url.path == "/api/operator-session":
+                return self.send_json(200, self.app.save_operator_session(value.get("workspace", self.app.primary), value))
             if url.path == "/api/session":
                 return self.send_json(200, {"connected": True}, cookie=True)
             if url.path == "/api/source-preview":
@@ -1042,10 +1232,6 @@ def main():
         server.server_close()
         server.operator.close()
 
-
-# ASTRA-ECO12-2651 namespaced original-operator integration
-import paired_ensemble as _paired_ensemble_extension
-_paired_ensemble_extension.install(sys.modules[__name__])
 
 if __name__ == "__main__":
     main()

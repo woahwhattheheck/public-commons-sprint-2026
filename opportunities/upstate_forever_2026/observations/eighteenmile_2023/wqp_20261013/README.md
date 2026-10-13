@@ -50,7 +50,7 @@ Import source-manifest.json through the existing source importer:
 python -m model.cli --workspace ACTUAL_WORKSPACE source-import observations/eighteenmile_2023/wqp_20261013/source-manifest.json
 ```
 
-The manifest retains all original and derived companions together. Use the existing Measurements/source context consumer to show the observations beside the published nutrient summaries and completed watershed scenarios. Join on the original monitoring-location and activity identifiers, with date as temporal context. Each quantity remains a lake concentration with its original units; model export tables retain their own mass/time units and source coverage.
+The local manifest retains the original CSV and derived data companions. Use the combined application-root manifest below to import the full report and both observation cohorts together. Use the existing Measurements/source context consumer to show the observations beside the published nutrient summaries and completed watershed scenarios. Join on the original monitoring-location and activity identifiers, with date as temporal context. Each quantity remains a lake concentration with its original units; model export tables retain their own mass/time units and source coverage.
 
 Files:
 
@@ -64,3 +64,31 @@ Files:
 - `source-acquisition.json`: original URLs, byte hashes, counts and derivation rules.
 - `report-reconciliation.json`: original observations and published-source differences.
 - `source-manifest.json`: existing native source-import entry point.
+
+## Original sampling report and offline explorer
+
+Open `lake-observations-report.html` in a browser. It contains all 88 original working records and the exact original three-lake WQP result CSV. Six station/parameter plots share the same vertical scale within each parameter. Filled circles show numeric source values; open downward triangles mark original censoring limits. Station, parameter, condition and text filters update the plotted emphasis and observation table. Selecting a point or station row opens the full original identity, date/time, unit, method, depth and detection fields.
+
+Download the selected original working records as CSV or the complete unchanged WQP result response. Blank censored result and unit fields remain blank in every download. Printing temporarily displays the entire original cohort and restores the current filter afterward. The summary table and static charts remain readable without scripts; preserve the complete source directory for links to all original and derived companions.
+
+Rebuild the report with Node.js using only its standard library:
+
+```sh
+node observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs
+```
+
+The generator accepts an optional source-directory argument and checks the 88 original result/activity joins, source values and units, six censored records and three fifteen-observation chlorophyll statistics before rendering. It keeps original timezone strings and uses dates only for horizontal plot placement. The output embeds its observations, styles and browser behavior, with no network dependency for inspection and CSV export.
+
+## Complete five-station study comparison
+
+The report also incorporates the maintained original 75-record chlorophyll cohort from [PR2833](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2833). Its five-station comparison has independent filters, all 63 original WQP fields in record inspection, complete original-cohort and selected-record CSV downloads, shared-scale plots, reproduced mean/sample-SD/range statistics, and the original printed sample counts alongside measured counts. The original 88-record lake context remains its own complete cohort; the 75-record study includes 45 of those chlorophyll records.
+
+Cohort membership at the two additional-station duplicate dates is shown as the source owner's explicit reconciliation inference. The displayed source clock times, separate SWS-2023 routine activities, original EST/EDT labels and published-summary agreement remain visible. Every selected row is checked field for field against the original WQP responses. All source-owner files under `../cohort_reconciliation_20261013/` remain unchanged.
+
+For the full combined native study import, use the application-root manifest, which retains both source collections and the complete standalone report as a document entry:
+
+```sh
+python -m model.cli --workspace ACTUAL_WORKSPACE source-import eighteenmile_lake_observation_report.sources.json
+```
+
+The report generator uses the three maintained peer files `study_chlorophyll_cohort.csv`, `cohort_summary.csv` and `cohort_reconciliation.json` beside the original WQP files. Keep the complete source directory layout when rebuilding. Both full original-result and full selected-study CSV responses are embedded unchanged in the generated HTML. Print displays all original lake and study records, then restores each section's independent filters.

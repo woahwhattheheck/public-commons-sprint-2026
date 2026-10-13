@@ -212,28 +212,48 @@ behind it.”
 
 ### 8. Save, reopen and transfer
 
-Create the complete native backup through the original workspace form. Open the
-completed backup task and its original download. Separately download
-**Journey selections** and **Operating notes**.
+Choose **Save view and notes** in the header or in this step. The original
+workspace retains the selected baseline, grid, profile, scenario, run,
+comparison, saved map view, map pack, delivery and operating notes in
+`operator-session.json`. The saved time appears beside the project identity.
 
-Restore the native archive with the existing restore form and open the returned
-workspace. Import the journey JSON into that restored project. The importer
-checks the original project identity and resolves every selected record against
-the actual restored project. It checks the selected run's grid, profile,
-scenario and native model scope, the comparison's runs, the delivery's runs, and the map pack's saved
-review before adopting the selections.
+Choose **Save view and transfer project**. This saves the current selection and
+notes, then opens **Project continuity**. Choose **Create complete project**,
+review the selected completed and unfinished operations, and choose a complete
+ZIP or incremental handover. Keep native intermediate files when model stages
+need to continue. The form identifies the saved view that accompanies the
+project. Its original request freezes that view revision with the selected work.
 
-The native archive carries the scientific records and original files. The
-journey file carries the selected operating sequence and your project notes.
-The Markdown operating notes include the selected record IDs, actual retained
-results and timing, step instructions, working definitions and notes.
+For a ZIP, open the completed operation and download the scientific-workspace
+archive. In the receiving operator, choose **Receive a project**, upload that
+archive and choose **Open received project** in the completed operation row.
+For incremental delivery, receive its original manifest and missing parts, then
+choose **Receive independent project**. Both routes register a separate working
+copy and recover the selected original tasks and their required inputs.
+
+Choose **Save or continue the selected analysis** in the received project to return
+to this guide. Review its completed results, then use **Project continuity →
+Resume unfinished work** for the retained operations you want to continue. The saved analysis and notes open automatically in a new browser or
+receiving workspace. The guide resolves each saved ID against the actual
+project and checks the selected run's grid, profile and scenario and native model scope, the
+comparison's runs, the delivery's runs and the map pack's saved review.
+
+The separate **Journey selections** JSON and **Operating notes** Markdown
+downloads remain available. The JSON importer can resume another saved view in
+the same project; the notes include the selected record IDs, actual retained
+results and timing, step instructions and project notes.
+
+A second browser saving the same project receives a revision conflict before
+replacing an intervening save. Refresh, then save the intended local view.
+Distinct previous text is retained in the note versions that accompany the
+next save. Retrying an unchanged backup request uses its original snapshot.
 
 Say: “We can reopen the same project and continue the discussion from the saved
 analysis.”
 
 ## Notes and ongoing work
 
-Notes are retained as they are typed. If another tab changes the notes, distinct
+Draft notes are retained in the browser as they are typed. **Save view and notes** commits them to the original project, and a native backup captures the same selection and text. If another tab changes the notes, distinct
 text is preserved and can be opened in the guide or read in the exported
 operating notes. Each submitted operation also has its own browser storage
 record. An operation completing after the selected case changes remains in the
@@ -278,9 +298,74 @@ print styling.
 
 ## Complete transfer of operator task history
 
-Use the existing original project-transfer component when the receiving operator
-also needs task history and unfinished original inputs. Its
-`operator/project_transfer_cli.py` owns that transfer. Keep its original queue,
-workspace and task references with the receiving operation. The journey importer
-checks the restored scientific project and selected records, clears the imported
-runtime request state, and retains the selected tour and notes in that project.
+Use **Save view and transfer project** and the installed **Project continuity**
+panel to carry task history and unfinished original inputs. Its command-line
+entry point is `operator/project_continuity_cli.py`; the maintained
+`operator/project_transfer_cli.py` supplies the underlying incremental block
+transport. Both use the existing queue and native archive.
+
+On the receiving computer, **Open received project** selects the new workspace.
+**Save or continue the selected analysis** opens its saved guide, and **Resume
+unfinished work** explicitly selects the retained tasks to continue. Completed
+native outputs remain available immediately. Cancelled operations remain
+unchecked until you choose them.
+
+**Create scientific workspace backup** and **Restore workspace archive** remain
+available for the scientific workspace and saved guide alone. Use Project
+continuity when the handoff also needs original operator requests, attempt
+history, unimported uploads or source previews. The separate journey importer
+checks the scientific project and selected records and retains the selected tour
+and notes; the transfer service restores the operating history.
+
+## Save the operating view with the project
+
+The Reopen step includes **Save view and notes**. This saves the selected scientific records, current journey step, native model selection and operating notes in the original workspace. The saved view is available after reopening the operator in a new browser and after restoring a complete workspace archive. The project identity remains the same; the restored workspace has its own receiver key.
+
+Use **Save view and notes** after choosing the analysis and recording decisions. The view displays when it was saved and the original project identity. A save retains the server revision observed by that browser. If another browser has saved a newer view, refresh before saving again; notes from the other saved revision remain available in the notes history.
+
+**Create scientific workspace backup** captures the current journey selection and notes as part of the existing backup request. The server saves that view and creates the workspace archive while holding the same session lock, so another view save cannot intervene between those operations. The archive carries the original scientific workspace, source, records, outputs, application and saved operator view. Restore the archive through the existing operator controls, open the restored workspace, and return to the guided journey to continue the retained analysis.
+
+The separate **Download journey selections** file remains useful for moving a view between browsers that already have the same original project. Its import checks every selected record and the native model selection against that project. Existing browsers retain their own unfinished local request recovery; a received saved view supplies the starting selection for a browser without a matching local view.
+
+A complete Project continuity capture freezes the saved guide revision in its
+original transfer record. Ordinary and incremental capture save that selected
+view under the existing session lock while making the original archive. An
+interrupted transfer reuses its already frozen archive; replay never replaces a
+newer local view with an older captured one. If another browser changes the view
+before the archive is first created, refresh and create a new project selection.
+
+### Source integration
+
+The registered host uses its existing journey controller for backup capture. The joined browser also supports the original direct host, including its delivery form, navigation and stylesheet attachment. Native saved views use the existing authenticated operator API and source-preserving workspace backup. The component manifest records the current browser and this guide; all unrelated host modules and extension owners remain part of the installed application.
+
+## Original source labels and production geography
+
+The map legend and point inspection read land-cover descriptions from the selected original biophysical tables. Discrete grey shades identify categories. The profile detail opens the exact retained table while native work continues. Step 7 opens **Scenario reports** for retained scenario analyses; a completed run also opens comparison selection directly, and a saved comparison carries its baseline and alternatives into the delivery form.
+
+The issuer requires every final Upper Savannah map dataset on a **30 × 30 m raster grid**, including an external modeling buffer whose distance the consultant selects. Each original Gura source edition retains its actual native land-cover grid and a separately recorded upstream buffer. The grid form reads the selected source header; choose that archive's recorded cell size. Select the appropriate original source edition and reporting boundary in the grid form; the saved grid retains both cell size and buffer as distinct values. The regional production maps use Upper Savannah sources and the South Carolina reporting extent with upstream context. See the issuer's combined RFP, PDF page 2, and `../RFP_RESPONSE_MAP.md` for the exact seven map requirements and delivery scope.
+
+Gura has two retained source editions. Select the edition that belongs to the analysis:
+
+| Analysis | Retained grid and source | Receiving command |
+| --- | --- | --- |
+| Original Gura data from the official InVEST 3.20.0 release | **15 m** cells, EPSG:32737; the original rasters have 1939 columns and 603 rows. The original watershed comparison uses an explicit zero upstream buffer. | `source_tools/receive_gura_native.py` |
+| Earlier Gura working demonstration | Its separately retained **300 m** grid and recorded upstream buffer. | `source_tools/receive_gura.py` |
+| Upper Savannah production | **30 m** regional inputs and the selected external modeling buffer. | The retained regional workflow and project inputs. |
+
+The official Gura README describes 30 m elevation resampled to the supplied 15 m land-use grid. A run may cover a smaller watershed window on that same 15 m lattice. Its cell area is **0.0225 hectares**. The legacy 300 m grid has **9 hectares** per cell. Retain the selected grid's cell area when reading annual mass and per-hectare export values; do not exchange conversion factors between editions. Source edition, engine version, grid resolution and upstream buffer remain separate saved values.
+
+For the original 15 m comparison, use the complete application containing the native receiver and original-grid support from PR 2886 and PR 2898, together with its installed InVEST 3.20.0 environment. Point the command at the existing application, scientific workspace and directory containing the unchanged release `NDR.zip` and `SDR.zip`:
+
+```bash
+python "${application_root:?}/source_tools/receive_gura_native.py" \
+  --application "${application_root:?}" \
+  --workspace "${workspace_root:?}" \
+  --inputs "${gura_archive_directory:?}" \
+  --models ndr sdr --mode both
+```
+
+The official source archives are [NDR.zip](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/data/NDR.zip) and [SDR.zip](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/data/SDR.zip). The receiving driver checks the pinned archive identities and original cells before preparing the workspace run. The saved grid retains the chosen resolution and buffer when the project is reopened.
+
+### Current host continuation
+
+The journey installer preserves the current completed-stage predicate when the host already uses `completedModelStage`. A delivery candidate must retain completion times and original files for both NDR and SDR, together with all three export rasters. It also repairs the Rehearsal navigation collection in the shared host so opening the walkthrough marks each navigation button correctly. These joins preserve the current portfolio, delivery inspection, saved journey, source preview and registered desk integrations.

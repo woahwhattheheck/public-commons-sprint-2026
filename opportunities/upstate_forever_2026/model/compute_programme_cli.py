@@ -17,7 +17,7 @@ if __package__ in (None, ""):
     __package__ = "model"
 
 from .common import read_json
-from .compute_programme import ComputeProgrammes
+from .compute_programme import ComputeProgrammes, _error
 from .workspace import Workspace
 
 
@@ -35,12 +35,17 @@ def parser():
     create.add_argument("selection", type=Path)
     create.add_argument("--source-reference",
                         help="The exact installed application revision; otherwise captured file hashes identify it")
-    for name in ("status", "pause", "report", "read-report", "ensemble-candidates"):
+    for name in ("status", "pause", "report", "read-report", "ensemble-candidates", "pair-completion-preview"):
         command = commands.add_parser(name)
         command.add_argument("programme_id")
     ensemble = commands.add_parser("ensemble-selection", help="Export one current same-profile pair cohort for the paired map service")
     ensemble.add_argument("programme_id")
     ensemble.add_argument("candidate_id")
+    completion = commands.add_parser("pair-completion",
+        help="Prepare a derived programme that completes actual missing same-profile native pairs")
+    completion.add_argument("programme_id", help="The original programme whose pair requirements are retained")
+    completion.add_argument("--expected-preview-id", help="Require the exact pair-completion preview previously inspected")
+    completion.add_argument("--run", action="store_true", help="Continue the prepared programme immediately")
     for name in ("execute", "resume"):
         command = commands.add_parser(name)
         command.add_argument("programme_id")
@@ -58,7 +63,7 @@ def parser():
 def _synchronize_completed(programmes, result):
     source = result.get("selection", {}).get("source_reference", "")
     if (result.get("state") != "complete" or not isinstance(source, str)
-            or not source.startswith("upstate.experiment:")):
+            or not source.startswith(("upstate.experiment:", "upstate.programme-pair-completion:"))):
         return result
     from .programme_experiments import sync_completed
     synchronized = sync_completed(programmes.workspace, result)
@@ -81,6 +86,18 @@ def perform(args):
                 "ensemble_candidate_issues", "ensemble_pairing")}
     if args.command == "ensemble-selection":
         return programmes.ensemble_candidate(args.programme_id, args.candidate_id)["selection"]
+    if args.command == "pair-completion-preview":
+        return programmes.pair_completion_preview(args.programme_id)
+    if args.command == "pair-completion":
+        result = programmes.create_pair_completion(args.programme_id,
+            expected_preview_id=args.expected_preview_id)
+        if not args.run:
+            return result
+        try:
+            return _synchronize_completed(programmes, programmes.resume(result["programme_id"]))
+        except Exception as exc:
+            exc.programme_id = result["programme_id"]
+            raise
     if args.command == "pause":
         return programmes.pause(args.programme_id)
     if args.command == "execute":
@@ -106,14 +123,15 @@ def main(argv=None):
     try:
         result = perform(args)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, allow_nan=False), flush=True)
-        if args.command in ("execute", "resume") and result["state"] != "complete":
+        if (args.command in ("execute", "resume")
+                or (args.command == "pair-completion" and args.run)) and result["state"] != "complete":
             return 2
         return 0
     except (ValueError, OSError, KeyError, ImportError, RuntimeError) as exc:
-        result = {"state": "busy" if isinstance(exc, BlockingIOError) else "failed",
-                  "type": type(exc).__name__, "message": str(exc)}
-        if getattr(args, "programme_id", None):
-            result["programme_id"] = args.programme_id
+        result = {"state": "busy" if isinstance(exc, BlockingIOError) else "failed", **_error(exc)}
+        programme_id = getattr(exc, "programme_id", None) or getattr(args, "programme_id", None)
+        if programme_id:
+            result["programme_id"] = programme_id
         print(json.dumps(result, ensure_ascii=False, sort_keys=True), file=sys.stderr, flush=True)
         return 1
 

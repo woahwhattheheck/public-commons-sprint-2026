@@ -29,7 +29,7 @@ from .domain_overlays import _retain, _crs, polygon_rows, _acquisition_masks
 _SOURCE = Path(__file__).resolve().parents[1] / "source"
 if str(_SOURCE) not in sys.path:
     sys.path.insert(0, str(_SOURCE))
-from capture_original_overlays import capture_layer, OriginalResponses, oid_field
+from capture_original_overlays import capture_layer, OriginalResponses, oid_field, source_where
 from capture_upstream_network import PLANNING_SHA
 
 SCHEMA = "upstate.reporting-parcels/v1"
@@ -102,6 +102,11 @@ def _catalog(path):
             if identity in ids:
                 raise ValueError("A provider ID is assigned to more than one county")
             ids.add(identity); local.add(identity)
+            source_where(provider)
+            if "native_county_field" in provider or "native_county_value" in provider:
+                if any(not isinstance(provider.get(name), str) or not provider[name].strip()
+                       for name in ("native_county_field", "native_county_value")):
+                    raise ValueError("Record the exact native county field and value together")
             if (not isinstance(provider.get("url"), str)
                     or not re.match(r"^https://[^/]+/.+/(?:MapServer|FeatureServer)/\d+$",
                                     provider["url"], re.I)):
@@ -180,6 +185,31 @@ def _receive_original_reporting(root):
             if file_digest(target) != expected:
                 raise ValueError("Received reporting member has another original identity: " + name)
             continue
+        # The cumulative application carries these exact original companions.
+        # Reuse them before requesting the same pinned bytes from the network.
+        bundled = _SOURCE/"geography"/"planning_basins2023"/name
+        if bundled.exists():
+            if not bundled.is_file():
+                raise ValueError("Bundled reporting member is not a file: " + name)
+            body = bundled.read_bytes()
+            if hashlib.sha256(body).hexdigest() != expected:
+                raise ValueError("Bundled reporting member has another original identity: " + name)
+            receipt = {"uri": prefix+name, "received_at": now(),
+                       "transfer": "bundled-original-source", "retained_from": str(bundled),
+                       "bytes": len(body), "sha256": expected, "expected_sha256": expected}
+            receipt_path = responses/(name + ".bundled.json")
+            if receipt_path.exists():
+                previous = read_json(receipt_path)
+                for key in ("uri", "transfer", "bytes", "sha256", "expected_sha256"):
+                    if previous.get(key) != receipt[key]:
+                        raise ValueError("Bundled reporting receipt differs: " + name)
+            else:
+                atomic_json(receipt_path, receipt, immutable=True)
+            atomic_bytes(target, body, immutable=True)
+            print(json.dumps({"stage": "reporting-original", "path": str(target),
+                              "bytes": len(body), "sha256": expected,
+                              "transfer": "bundled-original-source"}), flush=True)
+            continue
         attempts = sorted(responses.glob(name + ".attempt-*.json"))
         if attempts:
             previous = read_json(attempts[-1])
@@ -225,6 +255,22 @@ def boundaries(output, *, catalog=DEFAULT_CATALOG, retry_failed=False, archive=N
     with held(root/"capture.lock", blocking=False):
         atomic_json(root/"provider-catalog.json", value, immutable=True)
         _receive_original_reporting(root)
+        retained_index = root/"county-boundaries.json"
+        if retained_index.exists():
+            retained = read_json(retained_index)
+            if (retained.get("schema") != SCHEMA or retained.get("kind") != "county-boundary-capture"
+                    or retained.get("catalog_sha256") != digest(value)
+                    or retained.get("source", {}).get("uri") != value["county_boundary"]["url"]):
+                raise ValueError("The retained county capture belongs to another source selection")
+            captured = retained["source"]
+            _verify_capture(root/"layers", captured)
+            _validate_counties(_body(root/"layers"/captured["path"]), value["county_boundary"])
+            print(json.dumps({"stage": "county-boundaries", "count": 46,
+                              "path": str(root/"layers"/captured["path"]),
+                              "sha256": captured["sha256"], "reused": True}), flush=True)
+            if archive:
+                return bundle(root, archive)
+            return retained
         spec = {**value["county_boundary"], "role": "COUNTY_CONTEXT",
                 "scope": "state", "page_size": 10,
                 "coverage": "All 46 original South Carolina county polygons"}
@@ -480,7 +526,7 @@ def _verify_plan(root):
 def _provider_spec(provider):
     return {"title": provider["title"], "url": provider["url"], "role": "PARCEL",
             "scope": "reporting", "page_size": provider["page_size"],
-            "coverage": COVERAGE}
+            "coverage": COVERAGE, "where": source_where(provider)}
 
 
 def _edition(root, identity):
@@ -509,9 +555,13 @@ def _capture_records(root, plan_value):
             continue
         value = read_json(path)
         if (value.get("id") != identity or value.get("uri") != provider["url"]
-                or value.get("scope") != "reporting" or value.get("coverage") != COVERAGE):
+                or value.get("scope") != "reporting" or value.get("coverage") != COVERAGE
+                or source_where(value) != source_where(provider)):
             raise ValueError("A parcel capture belongs to another native provider or selection")
         _verify_capture(root/"layers", value)
+        selection = read_json(root/"layers"/identity/"selection.json")
+        if source_where(selection) != source_where(provider):
+            raise ValueError("A parcel selection belongs to another original feature predicate")
         records[identity] = value
     return records
 
@@ -537,7 +587,8 @@ def _capture_manifest(root, plan_value, records, failures):
                 "metadata": {"county_fips": county["fips"], "county_name": county["name"],
                     "source_crs": record["source_crs"], "feature_count": record["feature_count"],
                     "edition": edition, "provider": provider,
-                    "coverage": COVERAGE, "plan_sha256": plan_id}})
+                    "coverage": COVERAGE, "plan_sha256": plan_id,
+                    "source_where": source_where(provider)}})
         status = ("complete" if record else "source_required" if not provider
                   else "provider_exception" if key in failures else "pending")
         counties.append({"fips": county["fips"], "name": county["name"],
@@ -545,6 +596,7 @@ def _capture_manifest(root, plan_value, records, failures):
             "provider_id": key, "status": status,
             "selected_native_features": record["feature_count"] if record else None,
             "source_uri": provider["url"] if provider else None,
+            "source_where": source_where(provider) if provider else None,
             "exception": failures.get(key)})
     transfer = read_json(root/"plan-transfer.json")
     entries.append({"id": "reporting-parcel-plan-" + plan_id[:16],
@@ -587,6 +639,7 @@ def _reuse_sources(root, plan_value, masks, originals, fresh_providers):
         for key, record in previous.items():
             if (key not in wanted or key in fresh_providers
                     or wanted[key]["url"] != record["uri"]
+                    or source_where(wanted[key]) != source_where(record)
                     or (root/"layers"/key/"layer-capture.json").exists()):
                 continue
             for item in record["files"]:
@@ -638,7 +691,8 @@ def receive(output, *, plan_directory=None, plan_archive=None, archive_sha256=No
             if key in records:
                 continue
             print(json.dumps({"stage": "county-parcel-capture", "county": county["name"],
-                              "provider": key, "uri": provider["url"]}), flush=True)
+                              "provider": key, "uri": provider["url"],
+                              "source_where": source_where(provider)}), flush=True)
             try:
                 records[key] = capture_layer(root/"layers", key, _provider_spec(provider),
                                             masks, retry_failed=retry_failed)
@@ -815,6 +869,9 @@ def _native_rows(root, plan_value, records, reporting_geometry, county_geometrie
         fields = {row["name"] for row in edition["native_fields"]}
         if not fields.intersection(provider["parcel_id_fields"]):
             raise ValueError("Provider " + key + " no longer publishes its retained parcel reference fields")
+        native_county_field = provider.get("native_county_field")
+        if native_county_field and native_county_field not in fields:
+            raise ValueError("Provider " + key + " no longer publishes its native county field")
         classification = provider.get("classification")
         classification_field = (classification["field"] if classification
                                 else provider.get("native_classification_field"))
@@ -830,6 +887,9 @@ def _native_rows(root, plan_value, records, reporting_geometry, county_geometrie
             "source_data_last_edit_date": edition["data_last_edit_date"],
             "source_status": provider["provenance"],
             "definition_expression": edition["definition_expression"],
+            "source_where": source_where(provider),
+            "native_county_field": native_county_field,
+            "native_county_value": provider.get("native_county_value"),
             "source_selected_features": record["feature_count"],
             "geometry_features": len(rows), "parcel_features": 0, "context_features": 0,
             "zero_area_or_outside_features": 0})
@@ -842,6 +902,10 @@ def _native_rows(root, plan_value, records, reporting_geometry, county_geometrie
                                    "reason": "source_geometry_absent_or_no_polygon_after_recorded_repair"})
         for row in rows:
             native_oid = row["id"]
+            if (native_county_field and row["properties"].get(native_county_field)
+                    != provider["native_county_value"]):
+                raise ValueError("Provider " + key + " returned native OID " + native_oid
+                                 + " outside its exact county selection")
             identity = county["fips"] + ":" + key + ":" + native_oid
             if identity in seen:
                 raise ValueError("A prepared parcel repeats its county/provider/native OID key")
@@ -1041,7 +1105,8 @@ def prepare(capture_directory):
             _csv(staging/"county-coverage.csv", COVERAGE_FIELDS, (row["properties"] for row in summaries))
             source_fields = ("county_fips", "county_name", "provider_id", "source_uri", "source_sha256",
                 "native_id_field", "captured_at", "source_last_edit_date", "source_data_last_edit_date",
-                "source_status", "definition_expression", "source_selected_features", "geometry_features",
+                "source_status", "definition_expression", "source_where", "native_county_field",
+                "native_county_value", "source_selected_features", "geometry_features",
                 "parcel_features", "context_features", "zero_area_or_outside_features")
             _csv(staging/"county-sources.csv", source_fields, source_rows)
             _csv(staging/"excluded-records.csv", ("source_id", "native_oid", "reason"), excluded)

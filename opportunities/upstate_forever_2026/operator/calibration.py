@@ -5,15 +5,21 @@ import csv
 import html
 import io
 import json
+import urllib.parse
 from pathlib import Path
 import zipfile
 
 from model.common import (atomic_bytes, atomic_json, describe_file,
                           held, identifier, read_json, verify_file)
 from model import calibration as science
+from model import calibration_uncertainty as uncertainty_science
+from model import calibration_maps as map_science
+from model import calibration_review as review_science
 
-ACTIONS = frozenset({"calibration.prepare", "calibration.analyze", "calibration.export"})
-READS = frozenset({"catalog", "plan", "report"})
+ACTIONS = frozenset({"calibration.prepare", "calibration.analyze", "calibration.export",
+                     "calibration.uncertainty", "calibration.uncertainty.export",
+                     "calibration.maps.prepare", "calibration.maps.review", "calibration.review.prepare"})
+READS = frozenset({"catalog", "plan", "report", "uncertainty", "maps", "review"})
 UNITS = {"nitrogen": "kg/year", "phosphorus": "kg/year", "sediment": "metric_tonnes/year"}
 COLUMNS = {
     "ranking": ("rank", "run_id", "profile_id", "title", "selected_models", "available_parameters",
@@ -33,7 +39,7 @@ COLUMNS = {
     "exclusions": ("run_id", "observation_id", "catchment_id", "parameter", "reason"),
 }
 TABLE_TITLES = {"ranking": "Candidate ranking", "metrics": "Calibration fit",
-                "validation": "Independent validation", "observations": "Catchment annual reference and modeled load",
+                "validation": "Held-out validation", "observations": "Catchment annual reference and modeled load",
                 "groups": "Catchment groups", "envelope": "Candidate envelope",
                 "stability": "Selection stability", "exclusions": "Retained exclusions"}
 
@@ -223,6 +229,114 @@ def _html_report(view, plan_id, report_id):
             + html.escape(plan_id) + "<br>Analysis " + html.escape(report_id) + "</p></footer></body></html>")
 
 
+UNCERTAINTY_KIND = "calibration-uncertainties"
+UNCERTAINTY_TABLES = {
+    "pairwise": ("run_id", "profile_id", "title", "selected_models", "nominal_gap",
+                 "minimum_gap", "maximum_gap", "state", "numerical_tolerance",
+                 "uncertainty_record_count", "first_tie_standard_errors", "first_tie_state", "missing_record_ids"),
+    "reference_units": ("unit_id", "catchment_id", "group_id", "parameter", "partition", "units",
+                        "observed_annual_mass", "lower_reference", "upper_reference", "state",
+                        "objective_weight", "source_record_ids", "missing_record_ids"),
+    "source_records": ("record_id", "station_id", "catchment_id", "parameter", "unit",
+                       "original_value", "source_standard_error", "source_standard_error_unit",
+                       "comparison_units", "annual_mass", "standard_error", "lower_reference",
+                       "upper_reference", "state", "issues"),
+    "selected_validation": ("unit_id", "catchment_id", "group_id", "parameter", "units",
+                            "observed_annual_mass", "predicted_annual_mass", "lower_reference",
+                            "upper_reference", "minimum_residual", "maximum_residual",
+                            "state", "missing_record_ids"),
+    "source_attribution": ("run_id", "profile_id", "record_id", "station_id", "parameter",
+                           "comparison_units", "gap_coefficient", "standard_error",
+                           "minimum_gap_change", "maximum_gap_change", "minimum_endpoint", "maximum_endpoint"),
+    "candidate_scores": ("run_id", "profile_id", "title", "rank", "selected_models",
+                         "original_objective_score", "reproduced_objective_score",
+                         "absolute_difference", "numerical_tolerance", "state"),
+}
+UNCERTAINTY_TITLES = {
+    "pairwise": "Rank sensitivity against the nominal selected run",
+    "reference_units": "Annual reference ranges by catchment",
+    "source_records": "Original published standard errors",
+    "selected_validation": "Original selected model on reserved validation references",
+    "source_attribution": "Original records contributing to ranking changes",
+    "candidate_scores": "Reproduced nominal candidate scores",
+}
+
+
+REVIEW_POLICY = ("sandbox allow-downloads; default-src 'none'; style-src 'unsafe-inline'; "
+                 "img-src data:; object-src 'none'; base-uri 'none'; form-action 'none'; "
+                 "frame-ancestors 'self'")
+
+
+def _review_summary(record):
+    return {key: record.get(key) for key in (
+        "id", "title", "state", "calibration_id", "plan_id", "uncertainty_id", "map_id",
+        "selected_run_id", "selected_profile_id", "file_count")}
+
+
+def _map_summary(record):
+    return {**{key: record.get(key) for key in (
+        "id", "calibration_id", "plan_id", "created_at", "title", "state",
+        "uncertainty_id", "selected_run_id", "selected_profile_id", "source_collection_id")},
+        "layer_count": len(record.get("layers", []))}
+
+
+def _uncertainty_summary(record):
+    return {key: record.get(key) for key in (
+        "id", "calibration_id", "plan_id", "created_at", "state", "standard_errors",
+        "selected_run_id", "selected_profile_id", "selection_sensitivity", "coverage")}
+
+
+def _uncertainty_rows(record, name):
+    if name == "source_attribution":
+        return [{**item, "run_id": row["run_id"], "profile_id": row["profile_id"]}
+                for row in record.get("pairwise", []) for item in row.get("source_attribution", [])]
+    return record.get(name, [])
+
+
+def _uncertainty_html(record, title):
+    coverage = record.get("coverage", {})
+    sensitivity = record.get("selection_sensitivity", {})
+    sections = []
+    for name, fields in UNCERTAINTY_TABLES.items():
+        rows = _uncertainty_rows(record, name)
+        fields = tuple(fields) + tuple(sorted(set().union(*(set(row) for row in rows)) - set(fields))) if rows else fields
+        sections.append('<section id="' + name + '"><h2>' + html.escape(UNCERTAINTY_TITLES[name])
+                        + '</h2><p><a href="' + name + '.csv">Download ' + str(len(rows))
+                        + ' rows as CSV</a></p>' + _html_table(fields, rows) + '</section>')
+    interpretation = record.get("interpretation", [])
+    if not isinstance(interpretation, list):
+        interpretation = [interpretation]
+    notes = '<ul>' + ''.join('<li>' + html.escape(_display(item)) + '</li>' for item in interpretation) + '</ul>'
+    return ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" '
+            'content="width=device-width,initial-scale=1"><title>' + html.escape(title) + '</title><style>'
+            'body{font:15px system-ui,sans-serif;color:#202020;background:#fff;max-width:1200px;margin:auto;padding:32px}'
+            'h1{font-size:28px}h2{font-size:21px}p,li{line-height:1.55}a{color:#222}section{padding:24px 0;border-top:1px solid #bbb}'
+            '.scroll{overflow:auto}table{border-collapse:collapse;width:100%}th,td{padding:10px;text-align:left;'
+            'vertical-align:top;border-bottom:1px solid #ddd}th{background:#f2f2f2}td{font-variant-numeric:tabular-nums}'
+            'pre{white-space:pre-wrap;overflow-wrap:anywhere}.ids{font:12px ui-monospace,monospace;overflow-wrap:anywhere}'
+            '@media print{body{padding:0;font-size:10px}section{break-inside:avoid}}</style></head><body><header>'
+            '<p>UPPER SAVANNAH · CALIBRATION SENSITIVITY</p><h1>' + html.escape(title) + '</h1><p>'
+            + html.escape(_display(record.get("standard_errors"))) + ' published standard errors; outcome: '
+            + html.escape(str(sensitivity.get("state", record.get("state", ""))).replace("_", " "))
+            + '.</p><p>Each objective gap equals challenger loss minus the original selected run’s loss. '
+            'Positive gaps favor the original selection. The saved pollutant weights, normalization and native '
+            'predictions remain fixed. These ranges describe the stated observation perturbation, not a probability '
+            'or a replacement calibration.</p><p>Standard errors available for '
+            + str(coverage.get("records_with_standard_error", 0)) + ' of '
+            + str(coverage.get("source_record_count", 0)) + ' original records.</p><p>'
+            '<a href="uncertainty.json">Complete sensitivity JSON</a> · '
+            '<a href="calibration.json">Original nominal calibration</a> · '
+            '<a href="selection.json">Original selection</a> · <a href="manifest.json">File inventory</a></p></header>'
+            + ''.join(sections) + '<section><h2>Scientific interpretation</h2>' + notes
+            + '<h3>Source coverage and nominal reproduction</h3><pre>'
+            + html.escape(json.dumps({"coverage": coverage, "nominal_reproduction": record.get("nominal_reproduction"),
+                                     "selected_validation": record.get("selected_validation"),
+                                     "source_stamp": record.get("source_stamp"), "references": record.get("references")},
+                                    ensure_ascii=False, sort_keys=True, indent=2))
+            + '</pre></section><footer class="ids">Sensitivity ' + html.escape(record["id"])
+            + '<br>Nominal calibration ' + html.escape(record["calibration_id"]) + '</footer></body></html>')
+
+
 class CalibrationOperations:
     def __init__(self, operator, fault):
         self.operator = operator
@@ -260,7 +374,11 @@ class CalibrationOperations:
                     "selected_run_id": row.get("selected_run_id"), "selected_profile_id": row.get("selected_profile_id"),
                     "created_at": row.get("created_at"), "state": row.get("state", "complete")}
                    for row in ws._list("calibrations")]
-        return {"calibration_plans": plans, "calibrations": reports}
+        return {"calibration_plans": plans, "calibrations": reports,
+                "calibration_uncertainties": [_uncertainty_summary(row) for row in ws._list(UNCERTAINTY_KIND)],
+                "calibration_maps": [_map_summary(row) for row in ws._list("calibration-maps")],
+                "calibration_map_reviews": ws._list("calibration-map-reviews"),
+                "calibration_reviews": [_review_summary(row) for row in ws._list("calibration-reviews")]}
 
     def read(self, workspace, operation, value=None):
         value = value or {}
@@ -287,7 +405,38 @@ class CalibrationOperations:
             if manifest_path.exists():
                 downloads.extend(self._export_downloads(workspace, key))
             return {"workspace_key": workspace, "report": report, "plan": plan,
-                    "view": _presentation(ws, plan, report), "_downloads": downloads}
+                    "view": _presentation(ws, plan, report), "_downloads": downloads,
+                    "uncertainties": [_uncertainty_summary(row) for row in ws._list(UNCERTAINTY_KIND)
+                                      if row.get("calibration_id") == key],
+                    "maps": [_map_summary(row) for row in ws._list("calibration-maps")
+                             if row.get("calibration_id") == key],
+                    "reviews": [_review_summary(row) for row in ws._list("calibration-reviews")
+                                if row.get("calibration_id") == key]}
+        if operation == "review":
+            key = self._id(value, "id")
+            review = review_science.inspect(ws, key)
+            prefix = "/api/file/calibration-review/" + "/".join(
+                urllib.parse.quote(str(part), safe="") for part in (workspace, key)) + "/"
+            return {"workspace_key": workspace, "review": review, "viewer_url": prefix + "index.html",
+                    "_downloads": self._review_downloads(workspace, review)}
+        if operation == "maps":
+            key = self._id(value, "id")
+            result = map_science.inspect(ws, key)
+            artifacts = self._map_artifacts(workspace, result)
+            return {"workspace_key": workspace, "map": result, "artifacts": artifacts,
+                    "reviews": [row for row in ws._list("calibration-map-reviews") if row["map_id"] == key],
+                    "_downloads": [self._document(workspace, "calibration-maps", key, "Complete residual map edition"),
+                                   *[row["download"] for row in artifacts]]}
+        if operation == "uncertainty":
+            key = self._id(value, "id")
+            analysis = uncertainty_science.inspect(ws, key)
+            report = ws._get("calibrations", analysis["calibration_id"])
+            downloads = [self._document(workspace, UNCERTAINTY_KIND, key, "Complete observation sensitivity"),
+                         self._document(workspace, "calibrations", report["id"], "Original nominal calibration")]
+            if (ws.root / "calibration-uncertainty-exports" / key / "manifest.json").exists():
+                downloads.extend(self._uncertainty_downloads(workspace, key))
+            return {"workspace_key": workspace, "analysis": analysis,
+                    "title": report["title"] + " — observation sensitivity", "_downloads": downloads}
         raise self.Fault("CALIBRATION_READ", "Choose a supported calibration view.", 404)
 
     def preview(self, workspace, selection):
@@ -318,6 +467,44 @@ class CalibrationOperations:
                     "selected_run_id": report["selected_run_id"], "selected_profile_id": report["selected_profile_id"]}
         if task["action"] == "calibration.export":
             return self._export(workspace, self._id(payload, "report_id"))
+        if task["action"] == "calibration.uncertainty":
+            report_id = self._id(payload, "report_id")
+            result = uncertainty_science.analyze(ws, report_id,
+                                                standard_errors=payload.get("standard_errors", 1.0))
+            return {"report_id": report_id, "plan_id": result["plan_id"],
+                    "uncertainty_id": result["id"], "state": result["state"],
+                    "selection_sensitivity": result["selection_sensitivity"]}
+        if task["action"] == "calibration.uncertainty.export":
+            return self._uncertainty_export(workspace, self._id(payload, "uncertainty_id"))
+        if task["action"] == "calibration.review.prepare":
+            report_id = self._id(payload, "report_id")
+            result = review_science.prepare(
+                ws, report_id, uncertainty_id=payload.get("uncertainty_id") or None,
+                map_id=payload.get("map_id") or None, title=payload.get("title"),
+                notes=payload.get("notes", ""))
+            return {"report_id": report_id, "plan_id": result["plan_id"],
+                    "calibration_review_id": result["id"], "state": result["state"],
+                    "uncertainty_id": result["uncertainty_id"], "map_id": result["map_id"]}
+        if task["action"] == "calibration.maps.prepare":
+            report_id = self._id(payload, "report_id")
+            uncertainty_id = payload.get("uncertainty_id")
+            if uncertainty_id is not None:
+                uncertainty_id = self._id(payload, "uncertainty_id")
+            candidates = payload.get("candidate_run_ids")
+            if candidates is not None and (not isinstance(candidates, list)
+                                          or any(not isinstance(key, str) for key in candidates)):
+                raise self.Fault("CALIBRATION_SELECTION", "Choose the retained candidate run list.")
+            result = map_science.prepare(ws, report_id, uncertainty_id=uncertainty_id,
+                                         candidate_run_ids=candidates)
+            return {"report_id": report_id, "plan_id": result["plan_id"], "map_id": result["id"],
+                    "uncertainty_id": result["uncertainty_id"], "source_collection_id": result["source_collection_id"],
+                    "layer_count": len(result["layers"]), "state": result["state"]}
+        if task["action"] == "calibration.maps.review":
+            map_id = self._id(payload, "map_id")
+            link = map_science.save_review(ws, map_id, self._id(payload, "layer_id"))
+            result = map_science.inspect(ws, map_id)
+            return {"map_id": map_id, "report_id": result["calibration_id"], "plan_id": result["plan_id"],
+                    "review_id": link["review_id"], "map_review_id": link["id"], "layer_id": link["layer_id"]}
         raise self.Fault("CALIBRATION_ACTION", "Choose a supported calibration operation.")
 
     def _export(self, workspace, report_id):
@@ -393,6 +580,154 @@ class CalibrationOperations:
                                                    TABLE_TITLES.get(name.removesuffix(".csv"), name)))
         return downloads
 
+
+    def _uncertainty_export(self, workspace, analysis_id):
+        ws = self.operator.ws(workspace)
+        analysis = uncertainty_science.inspect(ws, analysis_id)
+        report_id, plan_id = analysis["calibration_id"], analysis["plan_id"]
+        report = ws._get("calibrations", report_id)
+        ws._get("calibration-plans", plan_id)
+        directory = ws.root / "calibration-uncertainty-exports" / analysis_id
+        directory.mkdir(parents=True, exist_ok=True)
+        manifest_path, archive_path = directory / "manifest.json", directory / "observation-sensitivity.zip"
+        archive_record = directory / "archive.json"
+        with held(directory / ".export.lock", blocking=False):
+            if manifest_path.exists() and archive_record.exists():
+                manifest = read_json(manifest_path)
+                if (manifest.get("uncertainty_id") != analysis_id or manifest.get("report_id") != report_id
+                        or manifest.get("workspace_id") != ws.project["id"]):
+                    raise ValueError("The retained sensitivity package belongs to another analysis")
+                for item in manifest["files"].values():
+                    verify_file(directory, item)
+                item = read_json(archive_record)
+                verify_file(directory, item)
+                return {"uncertainty_id": analysis_id, "report_id": report_id, "plan_id": plan_id,
+                        "archive": item, "files": manifest["files"]}
+            retained = {
+                "uncertainty.json": ws.root / UNCERTAINTY_KIND / (analysis_id + ".json"),
+                "calibration.json": ws.root / "calibrations" / (report_id + ".json"),
+                "selection.json": ws.root / "calibration-plans" / (plan_id + ".json"),
+            }
+            for name, source in retained.items():
+                atomic_bytes(directory / name, source.read_bytes(), immutable=True)
+            for name, fields in UNCERTAINTY_TABLES.items():
+                atomic_bytes(directory / (name + ".csv"),
+                             _csv_bytes(fields, _uncertainty_rows(analysis, name)), immutable=True)
+            title = report["title"] + " — observation sensitivity"
+            atomic_bytes(directory / "index.html", _uncertainty_html(analysis, title).encode("utf-8"), immutable=True)
+            names = [*retained, "index.html", *(name + ".csv" for name in UNCERTAINTY_TABLES)]
+            files = {name: describe_file(directory, directory / name) for name in names}
+            manifest = {"schema": "upstate.calibration-uncertainty-export/v1",
+                        "workspace_id": ws.project["id"], "uncertainty_id": analysis_id,
+                        "report_id": report_id, "plan_id": plan_id, "title": title,
+                        "standard_errors": analysis["standard_errors"], "files": files,
+                        "reading": "Open index.html; uncertainty.json retains the exact scientific result "
+                                   "and calibration.json and selection.json preserve the nominal choice."}
+            atomic_json(manifest_path, manifest, immutable=True)
+            pending = directory / ".observation-sensitivity.pending"
+            pending.unlink(missing_ok=True)
+            try:
+                with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+                    for name in names + ["manifest.json"]:
+                        archive.write(directory / name, name)
+                with pending.open("rb") as stream:
+                    import os
+                    os.fsync(stream.fileno())
+                pending.replace(archive_path)
+            finally:
+                pending.unlink(missing_ok=True)
+            item = describe_file(directory, archive_path)
+            atomic_json(archive_record, item, immutable=True)
+            return {"uncertainty_id": analysis_id, "report_id": report_id, "plan_id": plan_id,
+                    "archive": item, "files": files}
+
+    def _uncertainty_downloads(self, workspace, analysis_id):
+        ws = self.operator.ws(workspace)
+        analysis = uncertainty_science.inspect(ws, analysis_id)
+        directory = ws.root / "calibration-uncertainty-exports" / analysis_id
+        manifest = read_json(directory / "manifest.json")
+        if (manifest.get("uncertainty_id") != analysis_id or manifest.get("workspace_id") != ws.project["id"]
+                or manifest.get("report_id") != analysis["calibration_id"]
+                or manifest.get("plan_id") != analysis["plan_id"]):
+            raise ValueError("The sensitivity package belongs to another retained calibration")
+        downloads = []
+        if (directory / "archive.json").exists():
+            expected = read_json(directory / "archive.json")
+            path = verify_file(directory, expected)
+            downloads.append(self.operator._ticket(workspace, path, expected, "Complete observation sensitivity ZIP"))
+        for name, expected in manifest["files"].items():
+            path = verify_file(directory, expected)
+            label = UNCERTAINTY_TITLES.get(name.removesuffix(".csv"), name)
+            downloads.append(self.operator._ticket(workspace, path, expected, label))
+        return downloads
+
+    def _map_artifacts(self, workspace, result):
+        """Issue only original verified artifact tickets from this inspected map edition."""
+        ws = self.operator.ws(workspace)
+        directory = ws.root / "calibration-map-exports" / identifier(result["selection_id"])
+        if result["directory"] != directory.relative_to(ws.root).as_posix():
+            raise ValueError("The retained map directory differs from the original selection")
+        artifacts = []
+        for expected in result["files"]:
+            path = verify_file(directory, expected)
+            artifacts.append({"file": expected,
+                              "download": self.operator._ticket(workspace, path, expected, expected["path"])})
+        return artifacts
+
+    def _review_downloads(self, workspace, review):
+        ws = self.operator.ws(workspace)
+        directory = ws.root / review["directory"]
+        downloads = []
+        for label, expected in (
+                ("Complete calibration review ZIP", review["archive"]),
+                ("Readable calibration review", review["files"]["index.html"]),
+                ("Complete review file inventory", review["manifest"])):
+            path = verify_file(directory, expected)
+            downloads.append(self.operator._ticket(workspace, path, expected, label))
+        return downloads
+
+    def review_member(self, workspace, review_id, member_path):
+        """Serve one verified original member through authenticated file transport."""
+        ws = self.operator.ws(workspace)
+        path, expected = review_science.member(ws, identifier(review_id), member_path)
+        return self.operator._ticket(workspace, path, expected, expected["path"]), REVIEW_POLICY
+
+    def verify_workspace(self, workspace):
+        """Reopen retained sensitivity dependencies using the scientific validator."""
+        verified = []
+        for item in workspace._list(UNCERTAINTY_KIND):
+            record = uncertainty_science.inspect(workspace, item["id"])
+            verified.append({"id": record["id"], "calibration_id": record["calibration_id"]})
+        maps = {}
+        for item in workspace._list("calibration-maps"):
+            record = map_science.inspect(workspace, item["id"])
+            maps[record["id"]] = record
+        links = []
+        if workspace._list("calibration-map-reviews"):
+            from model.spatial import SpatialReview
+            spatial = SpatialReview(workspace)
+            for link in workspace._list("calibration-map-reviews"):
+                record = maps.get(link.get("map_id"))
+                layer = next((row for row in record["layers"] if row["id"] == link.get("layer_id")), None) if record else None
+                if (link.get("workspace_id") != workspace.project["id"] or not layer
+                        or link.get("source_collection_id") != layer["source_collection_id"]
+                        or link.get("source_id") != layer["source_id"]):
+                    raise ValueError("The retained calibration map review linkage changed")
+                review = workspace._get("spatial-reviews", identifier(link["review_id"]))
+                spatial.validate_saved(review)
+                if (review.get("reference", {}).get("layer_id") != layer["spatial_selection"]["layer_id"]
+                        or review.get("reference", {}).get("where") not in (None, {})):
+                    raise ValueError("The saved calibration spatial review uses a different original layer")
+                links.append({"id": link["id"], "map_id": record["id"], "review_id": review["id"]})
+        reviews = []
+        for row in workspace._list("calibration-reviews"):
+            value = review_science.inspect(workspace, row["id"])
+            reviews.append({"id": value["id"], "calibration_id": value["calibration_id"]})
+        return {"calibration_reviews": reviews, "calibration_uncertainties": verified,
+                "calibration_maps": [{"id": row["id"], "calibration_id": row["calibration_id"]}
+                                     for row in maps.values()],
+                "calibration_map_reviews": links, "verified_count": len(verified) + len(maps) + len(links) + len(reviews)}
+
     def decorate_task(self, task):
         if task["state"] != "complete" or task["action"] not in ACTIONS:
             return task
@@ -406,4 +741,22 @@ class CalibrationOperations:
                                             result["report_id"], "Complete calibration results"))
         if task["action"] == "calibration.export":
             downloads.extend(self._export_downloads(task["workspace"], result["report_id"]))
+        if result.get("uncertainty_id"):
+            downloads.append(self._document(task["workspace"], UNCERTAINTY_KIND,
+                                            result["uncertainty_id"], "Complete observation sensitivity"))
+        if task["action"] == "calibration.uncertainty.export":
+            downloads.extend(self._uncertainty_downloads(task["workspace"], result["uncertainty_id"]))
+        if result.get("map_id"):
+            record = map_science.inspect(self.operator.ws(task["workspace"]), result["map_id"])
+            downloads.append(self._document(task["workspace"], "calibration-maps", record["id"],
+                                            "Complete residual map edition"))
+            if task["action"] == "calibration.maps.prepare":
+                downloads.extend(row["download"] for row in self._map_artifacts(task["workspace"], record))
+        if result.get("review_id"):
+            downloads.append(self._document(task["workspace"], "spatial-reviews",
+                                            result["review_id"], "Original saved spatial review"))
+        if result.get("calibration_review_id"):
+            review = review_science.inspect(self.operator.ws(task["workspace"]),
+                                            result["calibration_review_id"])
+            downloads.extend(self._review_downloads(task["workspace"], review))
         return {**task, "_downloads": downloads}

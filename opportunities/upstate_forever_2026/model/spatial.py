@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import copy
+import csv
 import hashlib
 import json
 import math
@@ -32,6 +33,7 @@ MAX_MARKERS = 200
 MODES = {"single", "compare", "swipe", "difference"}
 KINDS = ("sources", "grids", "runs", "comparisons", "deliveries")
 DIRECTION = "alternative minus baseline"
+VIEW_DIFFERENCE_DIRECTION = "right source minus left source"
 
 
 def _number(value, label, *, minimum=None, maximum=None):
@@ -150,6 +152,7 @@ class SpatialReview:
         self._source_views = {}
         self._descriptions = {}
         self._esri_sources = {}
+        self._category_tables = {}
 
     def _manifest_signature(self):
         root = self.workspace.root
@@ -166,6 +169,7 @@ class SpatialReview:
             if signature == self._catalog_signature:
                 return self._catalog_layers
             ws, layers = self.workspace, {}
+            landcover_sources = set()
 
             def add(group, owner, role, item, *, kind=None, title=None, scope=None, source=None, **metadata):
                 if not isinstance(item, dict) or not {"bytes", "sha256"} <= item.keys():
@@ -202,6 +206,9 @@ class SpatialReview:
                 if state.get("state") != "complete":
                     continue
                 grid = ws.get_grid(state["id"])
+                source_id = grid["spec"].get("input_sources", {}).get("NLCD")
+                if source_id:
+                    landcover_sources.add((grid["spec"]["source_collection_id"], source_id))
                 for role, item in grid["files"].items():
                     add("grid", grid["id"], role, item, scope=path.parent,
                         kind="vector" if role in {"model_domain", "reporting_area"} else None,
@@ -241,13 +248,21 @@ class SpatialReview:
                             **{k: alternative["selection"][k] for k in ("grid_id", "profile_id", "scenario_id")})
             for path in sorted((ws.root / "deliveries").glob("*/delivery-state.json")):
                 delivery = read_json(path)
-                if delivery.get("state") != "complete":
+                if delivery.get("state") not in {"complete", "received_snapshot"}:
                     continue
                 for role, item in delivery.get("files", {}).items():
                     add("delivery", delivery["id"], role, item, scope=path.parent,
                         title=role.replace("_", " ") + " / delivery " + delivery["id"][:12],
                         baseline_run_id=delivery.get("selection", {}).get("baseline_run_id"))
             receiving_water_spatial.add_layers(ws, add)
+            # Source IDs are arbitrary. A completed native grid supplies the
+            # original source-to-land-cover binding without guessing from names.
+            for record in layers.values():
+                public = record["public"]
+                source_key = (public.get("source_collection_id"), public.get("source_id"))
+                if public["group"] == "source" and source_key in landcover_sources:
+                    public["input_role"] = "NLCD"
+                    public["categorical"] = True
             # Atomic source manifests can be added during a native run. Never cache
             # a mixed catalogue signature; the next request rebuilds it if needed.
             observed = self._manifest_signature()
@@ -519,6 +534,107 @@ class SpatialReview:
                 raise ValueError("Fixed scale maximum must exceed its minimum")
         return result
 
+    def _source_categories(self, record):
+        """Read class descriptions from retained tables in this source edition."""
+        public = record["public"]
+        role = str(public.get("input_role") or public.get("role") or "").strip().lower()
+        # A binary contribution mask can carry the same run/profile identity as
+        # land cover. Biophysical class names belong only to land-cover roles.
+        if (not public.get("categorical")
+                or role not in {"nlcd", "landcover", "lulc", "scenario_lulc"}):
+            return {"labels": {}, "sources": [], "conflicts": []}
+        ws = self.workspace
+        collection_id = public.get("source_collection_id")
+        preferred = None
+        if public.get("profile_id"):
+            profile = ws._get("profiles", public["profile_id"])
+            collection_id = profile["source_collection_id"]
+            preferred = profile.get("biophysical_source_id")
+        if not collection_id:
+            return {"labels": {}, "sources": [], "conflicts": []}
+        cache_key = (collection_id, preferred)
+        with self.lock:
+            cached = self._category_tables.get(cache_key)
+            if cached is not None:
+                return copy.deepcopy(cached)
+        collection = ws._get("sources", collection_id)
+        entries = [entry for entry in collection["entries"] if entry["kind"] == "table"]
+        entries.sort(key=lambda entry: (entry["id"] != preferred, entry["id"]))
+        labels, sources, conflicts = {}, [], set()
+        for entry in entries:
+            path, original = ws.source_file(collection_id, entry["id"])
+            if path.suffix.lower() != ".csv":
+                continue
+            with path.open(encoding="utf-8-sig", newline="") as incoming:
+                reader = csv.DictReader(incoming)
+                fields = {str(field).strip().lower(): field for field in reader.fieldnames or []}
+                if not {"lucode", "description"} <= fields.keys():
+                    continue
+                table_labels = {}
+                for index, row in enumerate(reader):
+                    if index >= 4096:
+                        table_labels = {}
+                        break
+                    try:
+                        value = _integer(row.get(fields["lucode"]), "Original land-cover code",
+                                         minimum=-2147483648, maximum=2147483647)
+                    except (TypeError, ValueError):
+                        table_labels = {}
+                        break
+                    description = str(row.get(fields["description"]) or "").strip()
+                    if not description or value in table_labels:
+                        table_labels = {}
+                        break
+                    table_labels[value] = description
+            if not table_labels:
+                continue
+            sources.append({"source_collection_id": collection_id, "source_id": entry["id"],
+                            "sha256": original["body"]["sha256"], "uri": original.get("uri"),
+                            "columns": {"value": "lucode", "label": "description"}})
+            for value, description in table_labels.items():
+                if value in labels and labels[value] != description:
+                    conflicts.add(value)
+                else:
+                    labels[value] = description
+            # A description in the run's selected biophysical table takes priority.
+            if entry["id"] == preferred:
+                break
+        for value in conflicts:
+            labels.pop(value, None)
+        result = {"labels": labels, "sources": sources, "conflicts": sorted(conflicts)}
+        with self.lock:
+            self._category_tables[cache_key] = copy.deepcopy(result)
+        return result
+
+    @staticmethod
+    def _style_categories(samples):
+        """Use one discrete code palette across linked categorical map panels."""
+        import numpy as np
+        selected = [sample for sample in samples
+                    if sample is not None and sample["layer"].get("categorical")]
+        if not selected:
+            return
+        codes = set()
+        for sample in selected:
+            values = np.unique(sample["data"][~sample["mask"]])
+            if np.any(values != np.floor(values)):
+                raise ValueError("The selected categorical raster contains noninteger class codes")
+            if values.size > 4096:
+                raise ValueError("The selected categorical raster contains more than 4096 classes")
+            codes.update(int(value) for value in values)
+            codes.update(sample["category_source"]["labels"])
+        ordered = sorted(codes)
+        # Colour indicates class membership, never a physical magnitude.
+        greys = [round(48 + 176 * index / max(1, len(ordered) - 1))
+                 for index in range(len(ordered))]
+        for sample in selected:
+            original = sample["category_source"]
+            sample["categories"] = [
+                {"value": value,
+                 "label": original["labels"].get(value, "Code " + str(value)),
+                 "colour": "#" + format(grey, "02x") * 3}
+                for value, grey in zip(ordered, greys)]
+
     def _sample(self, selection, record, view, size):
         import numpy as np
         import rasterio
@@ -564,7 +680,8 @@ class SpatialReview:
                         data = data * scale + offset
                     mask |= ~np.isfinite(data)
                 return {"data": data, "mask": mask, "selection": selection,
-                        "layer": record["public"], "units": self._units(original, record, band)}
+                        "layer": record["public"], "units": self._units(original, record, band),
+                        "category_source": self._source_categories(record)}
 
     @staticmethod
     def _statistics(sample):
@@ -597,7 +714,13 @@ class SpatialReview:
         data, mask = sample["data"], sample["mask"]
         low, high = scale["minimum"], scale["maximum"]
         grey = np.full(data.shape, 127, dtype="uint8")
-        if low is not None and high is not None and high > low:
+        if sample.get("categories"):
+            categories = sample["categories"]
+            levels = np.asarray([item["value"] for item in categories], dtype="float64")
+            colours = np.asarray([int(item["colour"][1:3], 16) for item in categories], dtype="uint8")
+            valid = ~mask
+            grey[valid] = colours[np.searchsorted(levels, data[valid])]
+        elif low is not None and high is not None and high > low:
             # Work only on valid cells so NaN, infinity and masked data never
             # participate in conversion or receive an opaque colour.
             valid = ~mask
@@ -617,7 +740,14 @@ class SpatialReview:
         if sample is None:
             return None
         height, width = sample["data"].shape
+        categorical = bool(sample["layer"].get("categorical"))
+        category_source = sample.get("category_source", {})
+        if categorical:
+            scale = {"mode": "categorical", "minimum": None, "maximum": None,
+                     "basis": "Discrete original class codes; grey shade has no magnitude"}
         return {"selection": sample["selection"], "title": sample["layer"]["title"],
+                "categorical": categorical, "categories": sample.get("categories", []),
+                "category_source": {key: value for key, value in category_source.items() if key != "labels"},
                 "units": sample["units"], "mime": "image/png",
                 "png_base64": self._png(sample, scale), "width": width, "height": height,
                 "source_sha256": sample["layer"]["sha256"], "scale": scale,
@@ -626,7 +756,7 @@ class SpatialReview:
 
     def _pair(self, primary, comparison):
         result = {"aligned": False, "comparable": False, "difference_available": False,
-                  "reason": "Select a baseline and an alternative raster", "direction": DIRECTION}
+                  "reason": "Select left and right source rasters", "direction": VIEW_DIFFERENCE_DIRECTION}
         if primary is None or comparison is None:
             return result
         a, b = primary["native"], comparison["native"]
@@ -699,6 +829,7 @@ class SpatialReview:
                 selection, record = self._selected(selected, layers, kind="raster")
                 descriptions[name] = self._describe(selection, record)
                 samples[name] = self._sample(selection, record, view, size)
+        self._style_categories(list(samples.values()))
         pair = self._pair(descriptions["primary"], descriptions["comparison"])
         warnings = []
         if samples["primary"] and samples["comparison"] and samples["primary"]["units"] != samples["comparison"]["units"]:
@@ -720,12 +851,12 @@ class SpatialReview:
             data = alternative["data"] - baseline["data"]
             delta = {"data": data, "mask": baseline["mask"] | alternative["mask"] | ~np.isfinite(data),
                      "selection": {"primary": baseline["selection"], "comparison": alternative["selection"]},
-                     "layer": {**alternative["layer"], "title": "Alternative minus baseline",
+                     "layer": {**alternative["layer"], "title": "Right source minus left source",
                                "sha256": None},
                      "units": baseline["units"]}
             delta_scale = self._scale([delta], requested, signed=True)
             images["difference"] = self._image(delta, delta_scale)
-            images["difference"]["direction"] = DIRECTION
+            images["difference"]["direction"] = VIEW_DIFFERENCE_DIRECTION
             images["difference"]["source_sha256s"] = {
                 "baseline": baseline["layer"]["sha256"], "alternative": alternative["layer"]["sha256"]}
         return {"view": view, "size": size, "images": images, "scale": scale,
@@ -911,11 +1042,18 @@ class SpatialReview:
                 result["reason"] = "nonfinite physical value after original scale and offset"
                 return result
             result.update(valid=True, reason=None, value=_json(value), value_text=_scalar_text(value))
+            if record["public"].get("categorical"):
+                original_categories = self._source_categories(record)
+                code = int(value) if value == int(value) else value
+                result["category"] = {"value": _json(value),
+                                      "label": original_categories["labels"].get(code, "Code " + _scalar_text(value))}
+                result["category_source"] = {key: item for key, item in original_categories.items()
+                                             if key != "labels"}
             return result
 
     def point(self, payload):
         from pyproj import CRS, Transformer
-        from shapely.geometry import shape, Point
+        from shapely.geometry import shape, Point, mapping
         from shapely.ops import transform
         layers = self._layers()
         raw = payload.get("point")
@@ -941,7 +1079,7 @@ class SpatialReview:
             value = pixels["comparison"]["value"] - pixels["primary"]["value"]
             if math.isfinite(value):
                 delta = {"value": value, "value_text": _scalar_text(value),
-                         "units": pixels["primary"]["units"], "direction": DIRECTION}
+                         "units": pixels["primary"]["units"], "direction": VIEW_DIFFERENCE_DIRECTION}
         selections = payload.get("overlays", [])
         if not isinstance(selections, list) or len(selections) > MAX_OVERLAYS:
             raise ValueError("Select up to " + str(MAX_OVERLAYS) + " original vector overlays")
@@ -979,6 +1117,8 @@ class SpatialReview:
                         truncated = True
                         break
                     found.append(self._feature(feature, geometry, geometry_crs=native.to_string(), include_original=True,
+                                               display_geometry=_json(mapping(projected)),
+                                               display_geometry_crs=point_crs.to_string(),
                                                match="covers" if covers else "within selected tolerance",
                                                distance=distance, distance_crs=point_crs.to_string()))
             groups.append({"selection": {**selection, "layer": layer}, "layer": record["public"],
@@ -1085,6 +1225,8 @@ class SpatialReview:
             description = self._describe(choice, record)
             bindings.append(self._binding(choice, record, description["native"]))
         value["bindings"] = bindings
+        from .atlas_reviews import save_context
+        save_context(self.workspace, self, payload, value, layers=layers)
         # Preserve original content identities and native backup lock order.
         # The operator's existing task identity makes a received save retry safe.
         with held(self.workspace.root / ".workspace.lock"):
@@ -1140,4 +1282,6 @@ class SpatialReview:
             previous = self.workspace._get("spatial-reviews", identifier(review["previous_review_id"]))
             if previous.get("project_id") != self.workspace.project["id"]:
                 raise ValueError("Saved spatial review history belongs to another project")
+        from .atlas_reviews import validate_saved_context
+        validate_saved_context(self.workspace, self, review, layers=layers)
         return {"id": review["id"], "project_id": review["project_id"], "bindings": len(bindings), "identity": "MATCH"}

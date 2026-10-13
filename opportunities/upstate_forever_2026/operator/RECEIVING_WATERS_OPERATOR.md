@@ -228,3 +228,130 @@ appears when spatial sources refresh. It reads compact original metadata for the
 catalog and verifies a layer's file when that layer is actually opened. Original
 source selections, full classifications, relationship records and numerical
 summaries remain in their saved plan and analysis records.
+
+
+## Operate the complete browser receiving journey
+
+Use the existing live operator and its original server ready JSON. The native source preparation returns the plan ID; a completed receiving-water analysis can be added when its actual baseline and alternatives are available. The browser command opens every selected original source/contribution pair, every available individual/family priority and physical-change map, saves each view through the original queue, exports and downloads its complete native map ZIP, then closes and opens a fresh browser context to reopen those saved views.
+
+Create a private control JSON using the actual existing paths and IDs:
+
+```json
+{
+  "ready_file": "/actual/operator-ready.json",
+  "output": "/actual/receiving-water-browser",
+  "plan_id": "ACTUAL_64_HEX_PLAN_ID",
+  "analysis_id": "OPTIONAL_ACTUAL_64_HEX_COMPLETED_ANALYSIS_ID",
+  "node_modules": "/actual/installed/node_modules",
+  "chromium": "/actual/installed/chromium",
+  "paper": "letter",
+  "dpi": 220
+}
+```
+
+Omit `analysis_id` for the original utility geography journey. Either a plan or an analysis is required; selecting only an analysis resolves its own saved source plan. The operator ready file selects its original workspace unless `workspace_key` explicitly selects another workspace already registered by that same operator. Omit `node_modules` when the existing runtime sets `CODEX_PRIMARY_RUNTIME_NODE_MODULES` or resolves the installed Playwright package normally; omit `chromium` to use that installation's existing browser. The ready file and capability stay on the native host.
+
+```sh
+node operator/receiving_water_browser.mjs /actual/receiving-browser-control.json
+```
+
+The default case set includes all plan areas, the analysis overview, and every retained baseline/alternative priority and signed pollutant-change artifact. An explicit `subjects` array can select original `{ "id": "...", "kind": "receptor" }` or `{ "id": "...", "kind": "family_union" }` pairs for a specific operating selection. Individual and family areas with the same ID remain separate. Gura and regional source plans retain their own actual geography and native resolution.
+
+The command writes `receiving-water-browser.json`, the actual map ZIPs and native-browser screenshots to the chosen directory. The result identifies the project, source plan, analysis, each target, original queue tasks, saved review/export, exact source bindings and cold-reopened viewport. Resuming the same control selection and application edition reconciles its retained original operation IDs and complete downloads. The operation identity includes the actual installed driver, operator and renderer source hashes, and the command checks that the live server serves those same browser modules. Keep a changed application edition in its own output directory so its exports and screenshots remain distinguishable. Active tasks remain recorded when the observation duration elapses; `task_timeout_seconds` sets that duration. A native exception identifies its original task, stage and message in the same output.
+
+The receiving detail controls retain both subject ID and kind. The spatial workbench refreshes when a source plan or analysis finishes, and saved map titles identify their original statistic and model run. These joins use the existing operator, native spatial renderer, export producer and persisted queue.
+
+
+## Broad source catalogs and receiving-water results
+
+The receiving-water workspace keeps source plans, completed analysis tables, and download lists to 75 visible rows per page. Search and family/type filters apply to the entire saved record before pagination, so a water on the final page is reachable directly by its exact native ID. When the search exactly matches an ID, that ID takes precedence over partial name or source matches. Analysis area type continues to distinguish individual receiving waters from combined family areas when their IDs coincide.
+
+Previous and Next show the current range and matching total. Changing a filter resets the view to the first matching page; continuing an active analysis preserves the current page and clamps it to the available results. Catalog searches reuse each original record's search text within the loaded source edition.
+
+Downloads are listed when their section opens, with search by file name, label, or SHA256 and the same 75-row page size. The plan's original source-selection JSON is also materialized when opened. Every original download and source record remains available; these controls change rendering, not the retained scientific or source artifacts.
+
+The maintained browser journey waits until the exact selected plan or analysis has finished loading, then locates each target through its exact native ID and area type before opening the original map. This operates waters beyond the first page while retaining the same saved map, export, and fresh-context reopening checks. Use the browser command from the same application edition as the served receiving-water UI.
+
+
+## One native invocation owns the service and browser
+
+Use `operator/receiving_water_operate.py` when the native receiving operation
+should start the original operator, run the complete receiving-water browser and
+close its own service in one process/network namespace. It reuses the maintained
+`OperatorProcess`, command runner and private atomic writer from
+`operator/receiving.py`.
+
+The input is the actual `public-water-preparation.json` already produced by the
+original source preparer. The owner opens its absolute scientific Workspace,
+verifies the saved plan, original source collection and receptor IDs, then serves
+that same Workspace. It does not need a manually copied capability, ready URL or
+plan ID.
+
+From the actual application root and existing GIS Python environment:
+
+```sh
+PYTHON -B operator/receiving_water_operate.py \
+  --preparation ACTUAL_PUBLIC_WATER_PREPARATION_JSON \
+  --output-dir OUTSIDE_WORKSPACE \
+  --node ACTUAL_NODE \
+  --node-modules ACTUAL_NODE_MODULES \
+  --chromium ACTUAL_CHROMIUM
+```
+
+`--node` defaults to `CODEX_PRIMARY_RUNTIME_NODE` or installed `node`.
+`--node-modules` defaults to `CODEX_PRIMARY_RUNTIME_NODE_MODULES`; omit it when
+Node resolves the installed Playwright package normally. Omit `--chromium` to use
+that Playwright installation's browser. The command checks explicitly selected
+executables and module paths before starting its own service.
+
+The existing original operator state defaults to the Workspace's sibling
+`WORKSPACE_NAME-operator` directory, matching the original server. An explicit
+`--operator-state` selects an existing operation's actual state location. The
+original state lock prevents a second owner from taking an active service. For
+an already-running operator, continue to use the existing
+`receiving_water_browser.mjs PRIVATE_CONTROL.json` interface with that service's
+own ready file.
+
+Add `--analysis-id` only for a completed analysis of this same prepared plan.
+`--paper`, `--dpi` and `--task-timeout-seconds` retain the browser command's
+original selections. Every original source/contribution pair and selected
+analysis artifact remains in the browser case set.
+
+The owner creates an edition-specific subdirectory beneath `--output-dir`,
+derived from the preparation identity, actual Workspace/plan, installed source
+hashes, runtime paths and map settings. It holds one operation lock, records the
+actual server process and Workspace key, and writes private ready/control JSON
+files for the child browser. The browser performs its original save, export,
+download and cold-context reopening workflow. The owner then drains the service
+it started and removes its private ready/control files.
+
+The complete result is `receiving-water-owner.json`, containing the actual
+preparation, application identities, browser result file digest, exported map
+count and owned process closure. Child stdout/stderr, original browser progress,
+map ZIPs and screenshots remain beside it. A failed stage preserves its actual
+error and the original browser task identities for continuation. Run the same
+command to continue that same edition. Source or runtime changes receive their
+own subdirectory.
+
+If the original operator has marked a previously captured browser save/export
+task `interrupted`, the resumed browser verifies its Workspace, action and
+payload and resumes that exact task ID once in the new browser attempt. It keeps
+the original operation identity and retained map outputs. Failed and cancelled
+task results remain explicit in the progress file for the responsible native
+repair.
+
+The native source/map/export/Workspace journey remains the preceding maintained
+command:
+
+```sh
+PYTHON -B model/receiving_water_journey.py \
+  --preparation ACTUAL_PUBLIC_WATER_PREPARATION_JSON \
+  --output-dir ACTUAL_NATIVE_MAP_OUTPUT \
+  --archive-and-reopen
+```
+
+Both commands consume the same preparation and scientific Workspace. The native
+journey retains its original map/archive result directory; the browser owner
+retains its own browser receiving output. Existing upstream HUC network and
+scenario-source operations can enrich the same Workspace without replacing the
+published utility source boundaries.

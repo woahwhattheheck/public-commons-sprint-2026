@@ -124,7 +124,7 @@ export function attachExperiments(context) {
   let root=null,workspace=null,selected=null,offset=0n,limit=100,jumpText=null;
   let summaryRevision=null,nativeByCase={},nativeRefresh=null;
   let details=null,summary=null,search='',metric='all',kind='all',axes={},methods=[],formModels=['ndr','sdr'];
-  let generation=0,controller=null,previewGeneration=0,previewController=null;
+  let generation=0,controller=null,previewGeneration=0,previewController=null,formGeneration=0;
   let ensembleReport=null,ensemblePreviewKey=null,ensemblePreviewGeneration=0,ensemblePreviewController=null;
 
   const data=()=>getState()?.data || {};
@@ -159,9 +159,14 @@ export function attachExperiments(context) {
   }
   function taskActions(task) {
     if(!task.action?.startsWith('experiment.'))return '';
-    const id=task.result?.id||task.payload?.experiment_id||
+    const id=task.experiment?.id||task.experiment_id||task.result?.id||task.payload?.experiment_id||
       experiments().find(record=>sameDesign(record.selection,task.payload?.selection))?.id;
-    return id?'<div class="page-actions">'+btn('show','Open experiment',id)+'</div>':'';
+    if(!id)return '';
+    const retained=task.experiment||{},error=retained.report_error;
+    const refresh=error||retained.study_report?.state==='stale';
+    return (error?'<div class="notice error">'+esc(error)+'</div>':'')+
+      '<div class="page-actions">'+btn('show','Open experiment',id)+
+      (refresh?btn('report','Rebuild study report',id):'')+'</div>';
   }
   function axisEntries() {
     const entries=Array.isArray(axes)?axes.map(x=>typeof x==='string'?{path:x}:x):
@@ -400,6 +405,7 @@ export function attachExperiments(context) {
     }
   }
   function detach() {
+    formGeneration++;previewGeneration++;previewController?.abort();
     clearTimeout(nativeRefresh);nativeRefresh=null;
     generation++;controller?.abort();controller=null;
     if(root){root.removeEventListener('input',onFilter);root.removeEventListener('change',onFilter);root.removeEventListener('keydown',onCaseKey);}
@@ -407,6 +413,7 @@ export function attachExperiments(context) {
   }
   function mount(container,currentState) {
     if(workspace!==currentState.workspace_key) {
+      formGeneration++;previewGeneration++;previewController?.abort();
       workspace=currentState.workspace_key;details=null;summary=null;summaryRevision=null;nativeByCase={};offset=0n;jumpText=null;search='';metric='all';kind='all';
       try{selected=sessionStorage.getItem(selectionKey());}catch{selected=null;}
     }
@@ -447,17 +454,20 @@ export function attachExperiments(context) {
       scenario_ids:values('experiment_scenario'),profile_ids:values('experiment_profile'),
       design:field('experiment_design').value,axes:selectedAxes};
   }
-  async function newForm(id) {
+  async function newForm(id, options={}) {
     const forWorkspace=getState()?.workspace_key;
+    const initialExecution=options.defaultExecution==='save'?'save':'run';
+    const formRequest=++formGeneration;
+    const currentForm=()=>formRequest===formGeneration&&getState()?.workspace_key===forWorkspace;
     previewGeneration++;previewController?.abort();
     const [schema,methodSource]=await Promise.all([
       api(endpoint('/api/experiments/axes')),api(endpoint('/api/experiments/methods'))]);
-    if(getState()?.workspace_key!==forWorkspace)return;
+    if(!currentForm())return;
     axes=schema.axes||{};methods=methodSource.methods||[];
     let selection={};
     if(id) {
       const record=await api(endpoint('/api/experiments/inspect',{experiment_id:id,limit:1}));
-      if(getState()?.workspace_key!==forWorkspace)return;
+      if(!currentForm())return;
       selection={...record.selection,title:record.title+' — revised'};
     }
     const baselineScenarios=new Set((data().scenarios||[]).filter(s=>s.kind==='baseline').map(s=>s.id));
@@ -493,15 +503,17 @@ export function attachExperiments(context) {
       '<div id="experiment-axis-rows">'+(selection.axes||[]).map(axisRow).join('')+'</div>'+
       btn('axis-add','Add parameter')+'</fieldset>'+
       '<div class="experiment-form-grid"><label>When saving<select name="experiment_execution">'+
-      option('run','Save and run native models',true)+option('save','Save design for later execution')+'</select></label>'+
+      option('run','Save and run native models',initialExecution==='run')+option('save','Save design for later execution',initialExecution==='save')+'</select></label>'+
       '<p class="note">Native runs use the original workspace operation queue. Already completed cases are reused.</p></div>'+
       '<div class="experiment-preview"><div class="page-actions">'+btn('preview','Preview selected cases')+'</div>'+
       '<div id="experiment-preview" role="status" aria-live="polite">Preview the design to inspect its profile and run counts.</div></div></div>';
     openForm(id?'Revise experiment design':'New scenario experiment',
       'Select the actual retained study inputs. Saved designs and completed native cases remain available after reopening.',
-      html,'Save and run',async()=> {
+      html,initialExecution==='save'?'Save design':'Save and run',async()=> {
+        if(!currentForm())throw Error('Reopen this design in its original workspace before submitting.');
         const chosen=readForm(),mode=document.querySelector('[name="experiment_execution"]').value;
-        await submitAction(mode==='save'?'experiment.save':'experiment.run',{selection:chosen});
+        const task=await submitAction(mode==='save'?'experiment.save':'experiment.run',{selection:chosen});
+        if(typeof options.onSubmitted==='function')await options.onSubmitted(task);
       },()=> {
         const mode=document.querySelector('[name="experiment_execution"]');
         mode.addEventListener('change',()=>{document.querySelector('#form-submit').textContent=mode.value==='save'?'Save design':'Save and run';});
@@ -584,6 +596,7 @@ export function attachExperiments(context) {
     }
   }
   async function newEnsembleForm(id) {
+    formGeneration++;
     const forWorkspace=getState()?.workspace_key;
     if(!Array.isArray(data().paired_ensemble_products))throw Error('The paired ensemble view is unavailable in this workspace.');
     const report=summary?.id===id&&summary.state==='complete'?summary:
@@ -685,5 +698,14 @@ export function attachExperiments(context) {
     }
     throw Error('This experiment action is unavailable.');
   }
-  return {mount,detach,dispatch,taskActions};
+  async function openForInvestigation(options={}) {
+    const owner=getState()?.workspace_key;
+    if(!owner || (options.workspace_key&&options.workspace_key!==owner))
+      throw Error('Open the original programme designer in its selected workspace.');
+    if(typeof options.onSubmitted!=='function')
+      throw Error('The originating investigation needs its native task callback.');
+    return newForm(undefined,{defaultExecution:'save',onSubmitted:options.onSubmitted});
+  }
+
+  return {mount,detach,dispatch,taskActions,openForInvestigation};
 }

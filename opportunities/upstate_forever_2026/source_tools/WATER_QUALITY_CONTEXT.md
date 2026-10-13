@@ -81,7 +81,7 @@ The standalone build command accepts --class-id-field, --class-field and
 --class-name-field for exact source-column selection. Ordinary current-source
 builds can omit these flags because the native ID is declared by the source and
 the class/name columns retain their documented defaults. The saved context
-method includes water-quality-context-native-identity-20261013, which gives the
+method includes water-quality-context-native-identity-causes-20261013, which gives the
 corrected build its own reusable artifact identity.
 
 ## Source acquisition
@@ -96,26 +96,31 @@ Run from the existing opportunities/upstate_forever_2026 project root:
 
 The resulting sources.json follows upstate.sources/v1 and enters the original Workspace.import_sources method. The first acquired document request is a real source read, not a test. The implementation does not trigger Actions or a repository test suite.
 
-## Workbook field binding
+## Published workbook field binding
 
-Do not infer column meanings from position. Inspect the publisher workbook:
+The native 96,620-byte published workbook has one sheet, `303D LIST FOR WEB`, with its unique header on row 1. It contains 1,258 assessment rows and the publisher's EPA-addition footnote on worksheet row 1260. All source HUC12 values preserve their leading zero.
 
-    python -B -m source_tools.water_quality_context inspect-table /path/303dList2024.xlsx
+The current source's exact bindings are:
 
-Select the actual sheet/header row and supply explicit source-column names for site, huc12 and cause; optional bindings preserve description, county, use, use_support and TMDL fields. The module rejects lost leading zeros in HUC values so a workbook number cannot silently become a different watershed.
+    {"site":"SITE","huc12":"HUC 12","cause":"CAUSE","description":"DESCRIPTION","county":"COUNTY","use":"IMPAIRED USE"}
 
-Example binding shape:
+The catalogue retains these bindings and the source's `scdes_303d_codes` encoding. The operator reads the original sheet and suggests those exact columns.
 
-    {"site":"ACTUAL_SITE_COLUMN","huc12":"ACTUAL_HUC_COLUMN","cause":"ACTUAL_CAUSE_COLUMN"}
-
-Use actual inspected names in the operator form. The placeholders describe the shape and are not an executable source binding.
-
-Normalize an explicitly selected source:
+Run normalization from the existing project:
 
     python -B -m source_tools.water_quality_context normalize \
-      --input /path/303dList2024.xlsx --source /path/source-entry.json \
-      --bindings /path/actual-field-bindings.json --sheet ACTUAL_SHEET \
-      --header-row ACTUAL_ROW --output /path/assessment-2024.json
+      --input /path/scdes-303d-list-2024.xlsx --source /path/source-entry.json \
+      --bindings /path/field-bindings.json --sheet "303D LIST FOR WEB" \
+      --header-row 1 --output /path/assessment-2024.json
+
+The publisher's own code guide appears on PDF pages 8–9:
+https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf
+
+Multiple listed causes become individual cause records. The current workbook's original punctuation variants `TN. TP, ECOLI` and `HGF PCB` follow the same documented code dictionary. Each record preserves the full original cause cell, combined source use, source worksheet row, exact raw fields and EPA footnote markers. The source-wide footnote remains in the normalized bank. Unique site totals remain deduplicated across causes and selected source editions.
+
+For a future workbook edition, the existing inspection command displays its native sheet and header before binding:
+
+    python -B -m source_tools.water_quality_context inspect-table /path/current-workbook.xlsx
 
 The TMDL importer reads the full original PDF, retains page/row text and extracts the actual status date from its repeated headers:
 
@@ -123,7 +128,7 @@ The TMDL importer reads the full original PDF, retains page/row text and extract
       --input /path/TMDLAttainmentStatus.pdf --source /path/source-entry.json \
       --tmdl-pdf --output /path/tmdl-attainment.json
 
-If a future publisher layout changes, complete parsed records and the exact unmatched row text are retained in the normalized bank. Exit status 2 identifies a source-layout correction needed before declaring a complete table. The current module has not yet executed on the PDF in this runtime because the shared native exec server became unavailable during source preparation.
+If a future publisher layout changes, complete parsed records and the exact unmatched row text are retained in the normalized bank. Exit status 2 identifies a source-layout correction needed before declaring a complete table. The current PDF parser handles the publisher's PEEDEE spelling, SHELLFISH use, multiword report identifiers, spaced In TMDL relation, and adjoining cause/status cells. The native PyMuPDF reader completed all 813 rows on 39 pages with zero unparsed rows. Its normalized bank records the native publisher PDF hash. The original PDF and workbook are also retained with the source collection.
 
 ## Original Workspace integration
 
@@ -142,13 +147,22 @@ The adapter reads every selected source through Workspace.source_file, creates t
 
 The selection and identity-method version identify the artifact folder. The immutable Workspace record has its own digest; this avoids a circular dependency between the output path and record content. Reopening a completed selection verifies the retained file descriptors and reuses it.
 
-Suggested operator registration:
+## Operator panel
 
-- action water_quality_context_create invokes build_workspace_context on the selected workspace.
-- state water_quality_contexts reads workspace._list("water-quality-contexts").
-- native descriptor traversal uses the existing _files function.
-- display the returned summary and existing water-quality-context.html report/downloads.
-The extension does not edit shared server/browser files, which have several active sprint owners.
+The maintained operator loads `operator/extensions/water-quality.json`, the Python provider in `operator/extension_modules/water_quality.py`, and the browser module `operator/web/water_quality.mjs`. Its existing task queue runs `water.quality.context.build` and `water.quality.sources.acquire`. Source acquisition immediately imports complete native source manifests into the selected Workspace.
+
+The Water-quality context panel offers source acquisition, ordinary source import, actual workbook/sheet/header inspection, original domain and reach selection, draft-edition selection, and a complete context build. The vector inspector exposes the typed native OID when a driver presents it as a feature ID. It preserves the separately named nullable field and its display alias.
+
+Results include all selected HUCs, focus utility labels, local/upstream evidence, original assessment rows, class codes and source editions. Filters select utility, focus watersheds, cause, site or HUC. Original task details and authenticated downloads remain available through the existing operator. State is registered under `data.water_quality`; records use item kinds `water_quality_contexts` and `water_quality_acquisitions`.
+
+## Current retained source data
+
+The original 614,545-byte TMDL PDF and 96,620-byte published 2024 impairment workbook are attached to the existing ECO-SOURCE12 page:
+https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e
+
+That page also carries the full publisher text capture, an 813-row CSV, a 217-HUC join and a native `upstate.sources/v1` import manifest. The CSV preserves source page and every published column. Exact HUC joins yield 84 sites in 44 domain watersheds: 79 with Not Supported and five with Fully Supported labels. All 84 rows in that selected TMDL domain join have the ECOLI cause. Choestoea includes SV-108 and SV-301. Every one of the original 217 HUC identifiers appears in the domain output.
+
+The 2024 impairment workbook remains a separate source edition. Its causes and support labels enter the context through explicit inspected bindings. The older Water_Classifications service and the current SCHydroClass service also remain distinct catalogue entries with their original native OID definitions.
 
 ## Join to the watershed decision-report producer
 
@@ -161,3 +175,26 @@ The high-quality-water context supplies official classification codes and origin
 Python 3.10+, the maintained model package, Shapely 2, pyproj, the existing vector-reader dependencies, PyMuPDF for the TMDL PDF, and openpyxl for current XLSX workbooks. Acquisition and CSV-only normalization use the standard library. No new external accounts or paid services are required.
 
 Authored for TokenJunkieLabs.
+
+## Source-water priority and assessment crosswalk
+
+`source_tools.source_priority_assessment` joins the retained NRCS state-HUC context to complete normalized assessment editions through their original HUC12 values. It exports complete JSON, watershed CSV, original state-HUC CSV, edition CSV and a readable HTML comparison. Each state portion, source-water system type, original source identity and assessment edition remains explicit.
+
+```sh
+python -m source_tools.source_priority_assessment \
+  --domain-hucs source/water_context/20261013/domain-huc12s.json \
+  --nrcs-context source/water_context/20261013/full-domain-water-context.json \
+  --assessment /path/303d-2024-native-normalized.json \
+  --assessment /path/tmdl-attainment-native-20260728.json \
+  --output /path/source-priority-context
+```
+
+`source/water-quality-context/native-inputs-sources.json` retains the exact manifest for the acquired 2024 workbook and July 2026 PDF. To import these originals, place that manifest beside the retained original files named by its entries, then use the ordinary source importer. The native files remain in the science workstream's existing source archive.
+
+## Expanded classification names
+
+The existing water-quality desk, watershed table, reach detail, context CSV/GeoJSON and HTML report pair classification codes with readable names. The raw H2OCLASS value, normalized codes, original feature IDs and selected source editions remain separate fields.
+
+Classification **TN means Trout Natural**. Assessment-cause **TN means Total nitrogen**. Other trout classifications expand to Trout Put, Grow, and Take (TPGT) and Trout Put and Take (TPT). Classification names follow [the SCDES publisher copy of R.61-68, Section G](https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf), with the May 23, 2025 amendment listed in its publication history. This display mapping preserves the existing source geometry, classification status and reach selection.
+
+New context outputs add classification_labels on each classified feature/link, direct_classification_labels and upstream_of_high_quality_labels on each watershed, and a publisher reference in method.classification_label_source_uri. Existing saved contexts receive readable names in the browser through the same code mapping, so opening an accepted edition does not require rebuilding its geographic intersections.

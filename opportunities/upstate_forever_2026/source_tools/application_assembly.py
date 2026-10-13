@@ -279,9 +279,22 @@ def join_source_banks(documents):
         layer = layer_from_document(item)
         for name, content in layer.files.items():
             entry = {**layer.metadata[name], "path": name, "content": content}
-            if name in joined and any(joined[name].get(key) != entry.get(key)
-                                      for key in ("bytes", "sha256", "mode")):
-                raise ValueError("Source-bank blocks contain different bodies: " + name)
+            if name in joined:
+                previous = joined[name]
+                if any(previous.get(key) != entry.get(key)
+                       for key in ("bytes", "sha256", "mode")):
+                    raise ValueError("Source-bank blocks contain different bodies: " + name)
+                before, incoming = previous.get("base_sha256"), entry.get("base_sha256")
+                if before is not None and incoming is not None and before != incoming:
+                    raise ValueError("Source-bank blocks select different predecessors: " + name)
+                if before is not None:
+                    entry["base_sha256"] = before
+                declarations = list(previous.get("predecessor_declarations", []))
+                for declared in entry.get("predecessor_declarations", []):
+                    if declared not in declarations:
+                        declarations.append(declared)
+                if declarations:
+                    entry["predecessor_declarations"] = declarations
             joined[name] = entry
         for original in item.get("external_sources", []):
             name = original["path"]
@@ -412,6 +425,41 @@ def decode_complete_transport(text):
     return decoded
 
 
+def decode_application_transport(parts, transports):
+    """Join lean source parts to their separately retained transport identity."""
+    if len(transports) != 1:
+        raise ValueError("Choose one complete application transport identity")
+    transport = transports[0]
+    if (transport.get("encoding") != "gzip+base64"
+            or type(transport.get("parts")) is not int
+            or not 0 < transport["parts"] <= MAX_FILES):
+        raise ValueError("Invalid application source transport")
+    fields = {
+        "schema": PART_SCHEMA,
+        "parts": transport["parts"],
+        "encoding": transport["encoding"],
+        "payload_bytes": transport.get("decoded_bytes"),
+        "payload_sha256": transport.get("decoded_sha256"),
+        "compressed_bytes": transport.get("compressed_bytes"),
+        "compressed_sha256": transport.get("compressed_sha256"),
+    }
+    for key in ("edition", "operation_id"):
+        if key in transport:
+            fields[key] = transport[key]
+    normalized = []
+    for part in parts:
+        for key, expected in fields.items():
+            if key in part and part[key] != expected:
+                raise ValueError("Application source part differs from its transport: " + key)
+        data = part.get("data", part.get("data_base64"))
+        if "data" in part and "data_base64" in part and part["data"] != part["data_base64"]:
+            raise ValueError("Application source part has conflicting encoded bodies")
+        if not isinstance(data, str):
+            raise ValueError("Application source part requires its complete encoded body")
+        normalized.append({**part, **fields, "data": data})
+    return decode_parts(normalized)
+
+
 def decode_carrier(data, _depth=0):
     """Return the complete decoded JSON bytes from a published source carrier."""
     if _depth > 12:
@@ -436,6 +484,7 @@ def decode_carrier(data, _depth=0):
                         text, re.S)
     parts, addon_parts, plain_parts, documents, encoded = [], [], [], [], []
     original_transports = []
+    application_transports = []
     for language, body in blocks:
         if language.lower() == "base64":
             encoded.append(body)
@@ -443,6 +492,8 @@ def decode_carrier(data, _depth=0):
             item = transport_json(body)
             if isinstance(item, dict) and item.get("schema") == "upstate.original-source-transport/v1":
                 original_transports.append(item)
+            elif isinstance(item, dict) and item.get("schema") == "upstate.application-source-transport/v1":
+                application_transports.append(item)
             elif isinstance(item, dict) and item.get("schema") == PART_SCHEMA:
                 parts.append(item)
             elif isinstance(item, dict) and item.get("schema") in CONSERVATION_PART_SCHEMAS:
@@ -453,8 +504,11 @@ def decode_carrier(data, _depth=0):
                 documents.append(body.encode("utf-8"))
     if sum(bool(group) for group in (parts, addon_parts, plain_parts, documents, encoded)) != 1:
         raise ValueError("Choose one complete source carrier per input")
+    if application_transports and not parts:
+        raise ValueError("Application source transport has no complete parts")
     if parts:
-        return decode_parts(parts)
+        return (decode_application_transport(parts, application_transports)
+                if application_transports else decode_parts(parts))
     if addon_parts:
         return decode_addon_parts(addon_parts)
     if plain_parts:
@@ -503,9 +557,80 @@ def _source_fingerprint(value):
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
 
+def _installed_source_directories(root):
+    """Read the installed portable inventory as data, without importing the application."""
+    defaults = ("model", "operator", "source_tools", "source", "ecsa_runs",
+                "integration", "integrations", "tools", "receiving", "eco_intelligence",
+                "observations")
+    portable = root / "model" / "portable.py"
+    if (root / "model").is_symlink() or portable.is_symlink():
+        raise ValueError("Installed portable inventory contains a file alias")
+    if not portable.exists():
+        return defaults
+    fd = os.open(portable, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) |
+                 getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(fd, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_BYTES:
+            raise ValueError("Installed portable inventory is not a regular source file")
+        body = stream.read(MAX_BYTES + 1)
+        if (len(body) != before.st_size or
+                _source_fingerprint(before) != _source_fingerprint(os.fstat(stream.fileno()))):
+            raise ValueError("Installed portable inventory changed during receiving")
+    tree = ast.parse(body, filename=str(portable))
+    declared = []
+
+    def sequence(node):
+        if isinstance(node, ast.Name) and node.id == "APPLICATION_DIRECTORIES":
+            return list(declared)
+        if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+            result = []
+            for item in node.elts:
+                if isinstance(item, ast.Starred):
+                    result.extend(sequence(item.value))
+                elif isinstance(item, ast.Constant) and isinstance(item.value, str):
+                    result.append(item.value)
+                else:
+                    raise ValueError("Portable source directories must contain literal names")
+            return result
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            return sequence(node.left) + sequence(node.right)
+        if isinstance(node, ast.Call) and len(node.args) == 1 and not node.keywords:
+            constructor = (isinstance(node.func, ast.Name)
+                           and node.func.id in {"tuple", "list", "set"})
+            deduplicate = (isinstance(node.func, ast.Attribute)
+                           and node.func.attr == "fromkeys"
+                           and isinstance(node.func.value, ast.Name)
+                           and node.func.value.id == "dict")
+            if constructor or deduplicate:
+                return sequence(node.args[0])
+        raise ValueError("Cannot read the installed portable source-directory declaration")
+
+    for statement in tree.body:
+        if isinstance(statement, ast.Assign):
+            targets, value = statement.targets, statement.value
+        elif isinstance(statement, ast.AnnAssign):
+            targets, value = [statement.target], statement.value
+        elif (isinstance(statement, ast.AugAssign)
+              and isinstance(statement.target, ast.Name)
+              and statement.target.id == "APPLICATION_DIRECTORIES"
+              and isinstance(statement.op, ast.Add)):
+            declared += sequence(statement.value)
+            continue
+        else:
+            continue
+        if any(isinstance(target, ast.Name) and target.id == "APPLICATION_DIRECTORIES"
+               for target in targets):
+            if value is not None:
+                declared = sequence(value)
+    roots = tuple(dict.fromkeys((*defaults, *declared)))
+    for name in roots:
+        member_name(name)
+    return roots
+
+
 def _source_inventory(root):
-    roots = ("model", "operator", "source_tools", "source", "ecsa_runs",
-             "integration", "integrations", "tools", "receiving", "eco_intelligence")
+    roots = _installed_source_directories(root)
     skip = {"__pycache__", ".git", ".venv", "venv", "node_modules"}
     selected = {}
 
@@ -527,11 +652,19 @@ def _source_inventory(root):
         if path.is_file():
             add(path)
     for name in roots:
-        folder = root / name
+        relative = member_name(name)
+        if any(part.startswith(".") or part in skip for part in relative.parts):
+            continue
+        folder = root.joinpath(*relative.parts)
+        for ancestor in (folder, *folder.parents):
+            if ancestor == root:
+                break
+            if ancestor.is_symlink():
+                raise ValueError("Current source directory is an alias: " + name)
         if not folder.exists():
             continue
-        if folder.is_symlink() or not folder.is_dir():
-            raise ValueError("Current source directory is an alias: " + name)
+        if not folder.is_dir():
+            raise ValueError("Current source directory is not a directory: " + name)
         for directory, directories, names in os.walk(folder, followlinks=False):
             directory = Path(directory)
             kept = []
@@ -648,6 +781,31 @@ def read_layer(path, *, payload_sha256=None):
     })
 
 
+def predecessor_sha256(entry, name):
+    """Normalize published predecessor spellings without treating refs as hashes."""
+    declarations = entry.get("predecessor_declarations", [])
+    if not isinstance(declarations, list) or any(not isinstance(item, dict)
+                                                  for item in declarations):
+        raise ValueError("Invalid predecessor declarations: " + name)
+    identities = []
+    for declared in (entry, *declarations):
+        for key in ("base_sha256", "replaces_sha256", "before_sha256"):
+            value = declared.get(key)
+            if value is not None:
+                identities.append((key, value))
+        for key in ("before", "base"):
+            value = declared.get(key)
+            # Existing banks use base="commit-ref"; only objects declare identities.
+            if isinstance(value, dict) and value.get("sha256") is not None:
+                identities.append((key + ".sha256", value["sha256"]))
+    for key, value in identities:
+        if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+            raise ValueError("Invalid predecessor identity " + key + ": " + name)
+    if len({value for _, value in identities}) > 1:
+        raise ValueError("Conflicting predecessor identities: " + name)
+    return identities[0][1] if identities else None
+
+
 def layer_from_document(document, receipt=None):
     """Validate a source-map, current customer component or base64 source bank."""
     if not is_source_document(document):
@@ -655,6 +813,7 @@ def layer_from_document(document, receipt=None):
     raw = document.get("files")
     metadata = document.get("file_metadata", {})
     files, checked = {}, {}
+    text_repairs = []
     if isinstance(raw, dict):
         if raw and all(isinstance(value, dict) for value in raw.values()):
             if metadata:
@@ -697,6 +856,21 @@ def layer_from_document(document, receipt=None):
             if not isinstance(content, str):
                 raise ValueError("Source member requires its complete body: " + name)
             body = content.encode("utf-8")
+            if (len(body) != entry.get("bytes") or sha256(body) != entry.get("sha256")):
+                # Canvas can replace indentation inside a JSON source string.
+                # Recover only the exact source already identified by its publisher.
+                restored = content.replace("\u00a0", " ")
+                restored_body = restored.encode("utf-8")
+                if (restored != content and len(restored_body) == entry.get("bytes")
+                        and sha256(restored_body) == entry.get("sha256")):
+                    text_repairs.append({
+                        "path": name, "operation": "restore_published_ascii_spaces",
+                        "incoming_bytes": len(body), "incoming_sha256": sha256(body),
+                        "source_bytes": len(restored_body),
+                        "source_sha256": sha256(restored_body),
+                        "replaced_characters": content.count("\u00a0"),
+                    })
+                    content, body = restored, restored_body
         try:
             content = body.decode("utf-8")
         except UnicodeError:
@@ -718,11 +892,17 @@ def layer_from_document(document, receipt=None):
             raise ValueError("Unsupported source file mode: " + name)
         record = {"bytes": len(body), "sha256": sha256(body), "git_blob": git_blob, "mode": mode,
                   "encoding": member_encoding}
-        expected_base = entry.get("base_sha256", entry.get("replaces_sha256"))
+        expected_base = predecessor_sha256(entry, name)
         if expected_base is not None:
-            if not isinstance(expected_base, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_base):
-                raise ValueError("Invalid predecessor identity: " + name)
             record["base_sha256"] = expected_base
+        declarations = list(entry.get("predecessor_declarations", []))
+        declared = {key: entry[key] for key in (
+            "base_sha256", "replaces_sha256", "before_sha256", "before_bytes",
+            "before", "base_ref", "base_git_blob", "base") if key in entry}
+        if declared and declared not in declarations:
+            declarations.append(declared)
+        if declarations:
+            record["predecessor_declarations"] = declarations
         files[name], checked[name] = content, record
     if sum(record["bytes"] for record in checked.values()) > MAX_BYTES:
         raise ValueError("Source members exceed the receiving limit")
@@ -733,6 +913,8 @@ def layer_from_document(document, receipt=None):
         receipt.update(payload_sha256=sha256(payload), payload_bytes=len(payload))
     receipt.update(schema=document_schema(document), files=len(files),
                    source_bytes=sum(record["bytes"] for record in checked.values()))
+    if text_repairs:
+        receipt["source_text_repairs"] = [*receipt.get("source_text_repairs", []), *text_repairs]
     for key in ("edition", "source_ref", "merge_ref", "repository", "operation_id",
                 "installation", "native_consumers", "component"):
         if key in document:
@@ -748,8 +930,11 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
     complete_map = base.get("schema") == MAP_SCHEMA and base.get("kind") == MAP_KIND
     recovered_map = (document_schema(base) == "upstate.source-map/v1"
                      and {"model/workspace.py", "operator/server.py"} <= set(layers[0].files))
-    if not (complete_map or recovered_map):
-        raise ValueError("First layer must be a complete application map or recovered application source")
+    native_map = (document_schema(base) == "upstate.complete-application-transport/v1"
+                  and {"model/workspace.py", "operator/server.py"} <= set(layers[0].files))
+    if not (complete_map or recovered_map or native_map):
+        raise ValueError("First layer must be a complete application map, native transport, "
+                         "or recovered application source")
     if not isinstance(edition, str) or not edition.strip():
         raise ValueError("Choose an application edition")
     files, metadata, changes, externals, references = {}, {}, [], {}, {}
@@ -759,24 +944,40 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
             item = dict(layer.metadata[name])
             previous = metadata.get(name)
             expected = item.pop("base_sha256", None)
-            if expected is not None and (previous is None or previous["sha256"] not in
-                                         (expected, item["sha256"])):
-                raise ValueError("Selected predecessor differs for layer " + str(index) + ": " + name)
+            declarations = item.pop("predecessor_declarations", [])
             item["mode"] = item["mode"] or (previous or {}).get("mode") or "100644"
-            if previous and previous["sha256"] == item["sha256"] and item["git_blob"] is None:
-                item["git_blob"] = previous.get("git_blob")
-            prior_origins = list((previous or {}).get("origins", []))
-            item["origins"] = prior_origins + ([origin] if origin not in prior_origins else [])
             if previous is None:
                 action = "added"
             elif previous["sha256"] == item["sha256"] and previous["mode"] == item["mode"]:
                 action = "identical"
             else:
                 action = "replaced"
+            # Complete snapshots belong at layer zero. A changed overlay must
+            # identify the actual member it joins; later arrival is not recency.
+            if ((action == "added" and expected is not None)
+                    or (action == "replaced"
+                        and (expected is None or expected != previous["sha256"]))):
+                current = previous["sha256"] if previous else "<absent>"
+                raise ValueError(
+                    "Source join differs for layer " + str(index) + ": " + name
+                    + "; current_sha256=" + current
+                    + "; incoming_sha256=" + item["sha256"]
+                    + "; expected_predecessor_sha256=" + (expected or "<undeclared>")
+                    + ". Join this member against the current source and publish its "
+                    + "before_sha256; unchanged bodies and new members compose directly.")
+            if previous and previous["sha256"] == item["sha256"] and item["git_blob"] is None:
+                item["git_blob"] = previous.get("git_blob")
+            prior_origins = list((previous or {}).get("origins", []))
+            item["origins"] = prior_origins + ([origin] if origin not in prior_origins else [])
             if index or action != "identical":
-                changes.append({"layer": index, "path": name, "action": action,
-                                "previous_sha256": previous["sha256"] if previous else None,
-                                "sha256": item["sha256"]})
+                change = {"layer": index, "path": name, "action": action,
+                          "previous_sha256": previous["sha256"] if previous else None,
+                          "sha256": item["sha256"]}
+                if expected is not None:
+                    change["base_sha256"] = expected
+                if declarations:
+                    change["predecessor_declarations"] = declarations
+                changes.append(change)
             files[name], metadata[name] = content, item
         def keep_reference(original):
             if (not isinstance(original, dict) or not isinstance(original.get("reference"), str)

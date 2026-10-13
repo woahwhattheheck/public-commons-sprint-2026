@@ -106,4 +106,238 @@ function encodeApplicationCarrier(document, {title="Upper Savannah complete appl
   return {metadata:common,parts,markdown};
 }
 
-export {fromBase64, toBase64, utf8Encode, utf8Decode, sha256Bytes, inflateGzip, gzipBytes, encodeApplicationCarrier};
+
+// Complete native source documents share the existing Python receiver's format.
+const NATIVE_SOURCE_SCHEMA = "upstate.complete-application-transport/v1";
+const NATIVE_SOURCE_BEGIN = "BEGIN_UPSTATE_SOURCE_GZIP_BASE64";
+const NATIVE_SOURCE_END = "END_UPSTATE_SOURCE_GZIP_BASE64";
+function nativeCanonical(value) {
+  if (Array.isArray(value)) return "[" + value.map(nativeCanonical).join(",") + "]";
+  if (value && typeof value === "object")
+    return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + nativeCanonical(value[key])).join(",") + "}";
+  return JSON.stringify(value);
+}
+function nativeSourceMembers(bank) {
+  if (!bank || bank.schema !== NATIVE_SOURCE_SCHEMA || !bank.files ||
+      typeof bank.files !== "object" || Array.isArray(bank.files) ||
+      !bank.file_metadata || typeof bank.file_metadata !== "object" ||
+      Array.isArray(bank.file_metadata))
+    throw Error("A complete native application source bank is required");
+  if (typeof bank.operation_id !== "string" || !bank.operation_id.trim() ||
+      typeof bank.edition !== "string" || !bank.edition.trim())
+    throw Error("The native source bank requires its operation and edition identities");
+  const names = Object.keys(bank.files).sort();
+  if (JSON.stringify(names) !== JSON.stringify(Object.keys(bank.file_metadata).sort()))
+    throw Error("Every native source member needs its original metadata");
+  const seen = new Set();
+  let sourceBytes = 0;
+  function member(path, bytes, metadata) {
+    if (typeof path !== "string" || !path || path.includes("\\") || path.includes("\0") ||
+        path.startsWith("/") || path.split("/").some(part => !part || part === "." || part === ".."))
+      throw Error("Native source paths must be relative to the application");
+    if (seen.has(path)) throw Error("Duplicate native source member: " + path);
+    if (!metadata || metadata.bytes !== bytes.length || metadata.sha256 !== sha256Bytes(bytes))
+      throw Error("Original native source bytes differ: " + path);
+    seen.add(path);
+    sourceBytes += bytes.length;
+  }
+  for (const path of names) {
+    const content = bank.files[path], metadata = bank.file_metadata[path];
+    if (typeof content !== "string" || !metadata ||
+        (metadata.encoding !== undefined && metadata.encoding !== "utf-8"))
+      throw Error("A complete UTF-8 source body is required: " + path);
+    member(path, utf8Encode(content), metadata);
+  }
+  const binary = bank.binary_files === undefined ? [] : bank.binary_files;
+  if (!Array.isArray(binary)) throw Error("Original binary members must be an array");
+  for (const row of binary) {
+    if (!row || typeof row.content_base64 !== "string")
+      throw Error("An original binary source body is required");
+    member(row.path, fromBase64(row.content_base64), row);
+  }
+  return {sourceFileCount: seen.size, sourceBytes};
+}
+function nativeTransportPayload(metadata, base64) {
+  if (!metadata || metadata.schema !== NATIVE_SOURCE_SCHEMA)
+    throw Error("Unsupported native source transport");
+  const compressedBytes = fromBase64(base64);
+  if (compressedBytes.length !== metadata.gzip_bytes ||
+      sha256Bytes(compressedBytes) !== metadata.gzip_sha256)
+    throw Error("The complete compressed source differs from its original transport");
+  const bytes = inflateGzip(compressedBytes);
+  if (bytes.length !== metadata.json_bytes || sha256Bytes(bytes) !== metadata.json_sha256)
+    throw Error("The decoded complete source differs from its original transport");
+  const jsonText = utf8Decode(bytes), bank = JSON.parse(jsonText);
+  const inventory = nativeSourceMembers(bank);
+  if (metadata.operation_id !== bank.operation_id || metadata.edition !== bank.edition)
+    throw Error("The native transport and complete bank have different source identities");
+  if (metadata.source_file_count !== undefined &&
+      metadata.source_file_count !== inventory.sourceFileCount)
+    throw Error("The native source file count differs from its complete inventory");
+  return {metadata, bank, jsonText, base64, compressedBytes, ...inventory};
+}
+function decodeNativeSourceDocuments(documents) {
+  if (typeof documents === "string") documents = [documents];
+  if (!Array.isArray(documents) || !documents.length ||
+      documents.some(text => typeof text !== "string"))
+    throw Error("Provide the complete source document or all of its exported text parts");
+  const received = documents.map(document => {
+    const text = document.replace(/^\uFEFF/, ""), lines = text.split(/\r?\n/);
+    const starts = [], ends = [];
+    lines.forEach((line, index) => {
+      if (line.trim() === NATIVE_SOURCE_BEGIN) starts.push(index);
+      if (line.trim() === NATIVE_SOURCE_END) ends.push(index);
+    });
+    if (starts.length !== 1 || ends.length !== 1 || ends[0] <= starts[0])
+      throw Error("Each source document must contain one complete source part");
+    const headers = lines.slice(0, starts[0]);
+    const metadataRows = headers.filter(line => line.startsWith("SOURCE_TRANSPORT_METADATA="));
+    const partRows = headers.filter(line => line.startsWith("SOURCE_TRANSPORT_PART="));
+    if (metadataRows.length !== 1 || partRows.length > 1)
+      throw Error("Missing or duplicate native source transport metadata");
+    const metadata = JSON.parse(metadataRows[0].slice("SOURCE_TRANSPORT_METADATA=".length));
+    const part = partRows.length ? JSON.parse(partRows[0].slice("SOURCE_TRANSPORT_PART=".length)) : null;
+    const base64 = lines.slice(starts[0] + 1, ends[0]).join("").replace(/\s+/g, "");
+    if (part !== null) {
+      if (!part || !Number.isSafeInteger(part.part) || !Number.isSafeInteger(part.parts) ||
+          part.parts < 1 || part.part < 1 || part.part > part.parts)
+        throw Error("Invalid original source part identity");
+      if (base64.length !== part.base64_chars ||
+          sha256Bytes(utf8Encode(base64)) !== part.base64_sha256)
+        throw Error("An exported source part differs from its original content");
+    }
+    return {metadata, part, base64};
+  });
+  const metadata = received[0].metadata, identity = nativeCanonical(metadata);
+  if (received.some(row => nativeCanonical(row.metadata) !== identity))
+    throw Error("The exported source parts belong to different application editions");
+  let ordered;
+  if (received.every(row => row.part === null)) {
+    if (received.length !== 1)
+      throw Error("Multiple source documents require original numbered part metadata");
+    ordered = received;
+  } else {
+    if (received.some(row => row.part === null))
+      throw Error("A numbered application source part is missing its metadata");
+    const total = received[0].part.parts;
+    ordered = received.slice().sort((a, b) => a.part.part - b.part.part);
+    if (ordered.length !== total ||
+        ordered.some((row, index) => row.part.parts !== total || row.part.part !== index + 1))
+      throw Error("Receive every original application source part exactly once");
+  }
+  return nativeTransportPayload(metadata, ordered.map(row => row.base64).join(""));
+}
+
+function nativeSourceBank(source, operationId) {
+  if (source && source.schema === NATIVE_SOURCE_SCHEMA) return source;
+  if (!source || source.schema !== "commons.source-map/1" ||
+      source.kind !== "upstate.complete-application-source/v1" ||
+      !source.files || !source.file_metadata ||
+      Array.isArray(source.files) || Array.isArray(source.file_metadata))
+    throw Error("Provide a complete native bank or complete application source map");
+  if (JSON.stringify(Object.keys(source.files).sort()) !==
+      JSON.stringify(Object.keys(source.file_metadata).sort()))
+    throw Error("Every application source-map member needs its original metadata");
+  if (source.binary_files !== undefined && !Array.isArray(source.binary_files))
+    throw Error("Original binary members must be an array");
+  const operation = operationId ?? source.operation_id ?? source.source_ref;
+  if (typeof operation !== "string" || !operation.trim())
+    throw Error("A complete source map needs its source_ref or an explicit operationId");
+  const bank = {...source, schema: NATIVE_SOURCE_SCHEMA, operation_id: operation,
+    source_schema: source.schema, files: Object.create(null), file_metadata: Object.create(null),
+    binary_files: [...(source.binary_files || [])]};
+  for (const [path, content] of Object.entries(source.files)) {
+    const metadata = source.file_metadata[path];
+    if (!metadata || typeof content !== "string")
+      throw Error("A complete source-map member is required: " + path);
+    if (metadata.encoding === "base64") {
+      bank.binary_files.push({...metadata, path, content_base64: content});
+    } else {
+      if (metadata.encoding !== undefined && metadata.encoding !== "utf-8")
+        throw Error("Unsupported source-map member encoding: " + path);
+      bank.files[path] = content;
+      bank.file_metadata[path] = {...metadata};
+    }
+  }
+  return bank;
+}
+
+function encodeNativeSourceDocuments(source, options = {}) {
+  const {maxDocumentChars = 900000, maxBase64Chars = 880000, lineWidth = 120,
+         title = "Upper Savannah — complete native application source",
+         sourceReference = "", includeBootstrap, operationId} = options;
+  if (!Number.isSafeInteger(maxDocumentChars) || maxDocumentChars < 4096 ||
+      !Number.isSafeInteger(maxBase64Chars) || maxBase64Chars < 4 ||
+      !Number.isSafeInteger(lineWidth) || lineWidth < 16 || lineWidth > 1024)
+    throw Error("Choose valid native document, base64-part and line-width limits");
+  if (typeof title !== "string" || !title || /[\r\n\0]/.test(title) ||
+      typeof sourceReference !== "string" || /[\r\n\0]/.test(sourceReference))
+    throw Error("Use single-line native source title and reference values");
+  let retained;
+  if (typeof source === "string" || Array.isArray(source)) {
+    retained = decodeNativeSourceDocuments(source);
+  } else {
+    const bank = nativeSourceBank(source, operationId), inventory = nativeSourceMembers(bank);
+    const jsonText = JSON.stringify(bank, null, 2) + "\n", bytes = utf8Encode(jsonText);
+    const compressedBytes = gzipBytes(bytes);
+    retained = {bank, jsonText, compressedBytes, base64: toBase64(compressedBytes),
+      ...inventory, metadata: {
+        schema: NATIVE_SOURCE_SCHEMA, operation_id: bank.operation_id,
+        edition: bank.edition, source_file_count: inventory.sourceFileCount,
+        json_bytes: bytes.length, json_sha256: sha256Bytes(bytes),
+        gzip_bytes: compressedBytes.length, gzip_sha256: sha256Bytes(compressedBytes)
+      }};
+  }
+  if (includeBootstrap !== undefined && typeof includeBootstrap !== "boolean")
+    throw Error("Choose a boolean includeBootstrap option");
+  let bootstrap = "";
+  const receiverPath = "source_tools/receive_drive_source.py";
+  const addBootstrap = includeBootstrap ?? typeof retained.bank.files[receiverPath] === "string";
+  if (addBootstrap) {
+    const path = receiverPath, body = retained.bank.files[path];
+    if (typeof body !== "string")
+      throw Error("The complete bank must retain its native receiver to include the bootstrap");
+    const row = {path, ...retained.bank.file_metadata[path],
+      encoding: "utf-8", content_base64: toBase64(utf8Encode(body))};
+    const bank = {schema: "commons.source-bank/v1",
+      operation_id: retained.bank.operation_id, edition: retained.bank.edition, files: [row]};
+    const fence = String.fromCharCode(96).repeat(3);
+    bootstrap = "\nComplete native bootstrap receiver (same source body contained in the application):\n\n" +
+      fence + "json\n" + JSON.stringify(bank) + "\n" + fence + "\n";
+  }
+  function render(fragment, part, parts) {
+    const metadata = {...retained.metadata, parts};
+    const partMetadata = {part, parts, base64_chars: fragment.length,
+      base64_sha256: sha256Bytes(utf8Encode(fragment))};
+    const wrapped = [];
+    for (let i = 0; i < fragment.length; i += lineWidth) wrapped.push(fragment.slice(i, i + lineWidth));
+    const text = title + " — part " + part + " of " + parts + "\n\n" +
+      (sourceReference ? "Retained original source: " + sourceReference + ".\n" : "") +
+      "Export every part as a complete text/plain file. Pass every original file to the native receiver with repeated --document arguments.\n\n" +
+      "SOURCE_TRANSPORT_METADATA=" + JSON.stringify(metadata) + "\n" +
+      "SOURCE_TRANSPORT_PART=" + JSON.stringify(partMetadata) + "\n" +
+      NATIVE_SOURCE_BEGIN + "\n" + wrapped.join("\n") + "\n" + NATIVE_SOURCE_END + "\n" + bootstrap;
+    const bytes = utf8Encode(text);
+    return {...partMetadata, file_name: "upper-savannah-native-source.part-" + part + ".txt",
+      text, chars: text.length, bytes: bytes.length, sha256: sha256Bytes(bytes)};
+  }
+  const overhead = render("", 1, 1).chars;
+  let capacity = Math.min(maxBase64Chars,
+    Math.floor((maxDocumentChars - overhead - 128) / (1 + 1 / lineWidth)));
+  capacity -= capacity % 4;
+  if (capacity < 4) throw Error("The document limit cannot fit its metadata and complete bootstrap");
+  let documents;
+  while (true) {
+    const parts = Math.ceil(retained.base64.length / capacity);
+    documents = Array.from({length: parts}, (_, index) =>
+      render(retained.base64.slice(index * capacity, (index + 1) * capacity), index + 1, parts));
+    const overrun = Math.max(...documents.map(document => document.chars - maxDocumentChars));
+    if (overrun <= 0) break;
+    capacity -= Math.ceil(overrun / 4) * 4;
+    if (capacity < 4) throw Error("The document limit cannot fit complete source parts");
+  }
+  return {metadata: {...retained.metadata, parts: documents.length},
+    sourceFileCount: retained.sourceFileCount, sourceBytes: retained.sourceBytes, documents};
+}
+
+export {fromBase64, toBase64, utf8Encode, utf8Decode, sha256Bytes, inflateGzip, gzipBytes, encodeApplicationCarrier, decodeNativeSourceDocuments, encodeNativeSourceDocuments};

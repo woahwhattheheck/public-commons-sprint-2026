@@ -364,3 +364,26 @@ result verifies the original descriptors before the UI uses it for authoring.
 The workflow adds no new top-level Workspace collection or parallel job service.
 
 Changing from the area editor to a native inventory or experiment first applies the pending area edits. If an anchor or source reference is invalid, the desk keeps the original watershed mode open and displays the specific error. The matching native selection receives the corrected, fully applied receptor profile.
+
+
+## Prepared original areas and intervention scenarios
+
+Saved watershed studies now offer **Prepare scenario areas**. The operation retains exact original polygon subsets as Workspace vector sources and produces the maintained `upstate.scenario-source-areas/v1` handoff. The prepared result opens Scenario analysis with its complete origin, creates explicit ordered land-cover scenarios, and prepares native runs through the existing application form and queue. Saved scenarios and their runs remain visible from the prepared-area page.
+
+See [`../model/RECEPTOR_SCENARIOS.md`](../model/RECEPTOR_SCENARIOS.md) for the complete operator journey, original geometry and source contracts, explicit land-cover choices, CLI, overlap semantics and retained output. This version requires the current Scenario analysis extension's `createForSourceAreas` method and the standard host form/refresh/item capabilities. Shared application and server files are unchanged.
+
+
+## Open results directly from completed tasks
+
+The current extension host exposes `client.task_actions`. The source-water desk registers authored controls for all six of its queued operations. A completed network, inventory, profile comparison or polygon preparation opens its saved result directly; a completed land-cover scenario opens the original scenario detail or its prepared areas and native runs; a completed package opens the result that was packaged. Existing download links remain in the original task panel.
+
+The registered `receptor-result-` action prefix dispatches through the existing host. Opening a result closes the old task detail, navigates to Source-water areas, and retains the requested immutable result ID until the actual Workspace catalogue has loaded. It handles both an already open desk and a cold controller loaded from another page. Workspace identity is checked before dispatch and again before opening the result. This join uses current `navigate`, `closeDetail`, `taskActions` and action-dispatch capabilities; shared application and host files are preserved.
+
+
+## Paired native programmes from prepared source-water areas
+
+Open a retained prepared-area product and choose **Prepare paired programme**. Select its original completed model grid, original baseline, NDR/SDR scope, explicit saved area scenarios and retained parameter profiles. The preview lists the entire calculation cohort and every profile’s own baseline. The shared experiment planner and native programme retain and execute those exact selections.
+
+The saved source-water programme links directly to **Run programmes**, including its pause/resume, logs and paired-map controls. Return to **Refresh calculation status**, then **Build source-water comparisons** after completion. The existing receiving-area report preserves matching-profile baselines, common valid pixels and native physical units. Completed tasks reopen the saved programme plan or the actual comparison through the original task navigation.
+
+`model/RECEPTOR_PROGRAMMES.md` describes the full UI/CLI workflow, selection schema, source continuity, original programme/experiment services and complete Workspace receiving. New source files are `model/receptor_programmes.py` and `model/receptor_programme_cli.py`. Their `receptor-programmes/` products are retained by the existing recursive Workspace archive.

@@ -13,11 +13,12 @@ from model.compute_programme import ComputeProgrammes
 ACTIONS = {
     "compute.programme.save",
     "compute.programme.experiment",
+    "compute.programme.pair-completion",
     "compute.programme.run",
     "compute.programme.report",
     "compute.programme.delivery",
 }
-READS = {"catalog", "detail", "report"}
+READS = {"catalog", "detail", "report", "pair-completion-preview"}
 
 
 class Programmes:
@@ -57,6 +58,8 @@ class Programmes:
             include_sources = payload.get("include_sources") in (True, 1, "1", "true")
             return {"workspace_key": workspace, **self.catalogue(workspace, include_completed_sources=include_sources)}
         key = self._id(payload)
+        if operation == "pair-completion-preview":
+            return {"workspace_key": workspace, **manager.pair_completion_preview(key)}
         if operation == "detail":
             return {"workspace_key": workspace, **self._decorate(workspace, manager.status(key))}
         if operation == "report":
@@ -100,8 +103,17 @@ class Programmes:
                 raise self.Fault("PROGRAMME_SELECTION", "Create or import a programme selection.")
             return manager.create(selection, source_reference=payload.get("source_reference"))
         key = self._id(payload)
+        if action == "compute.programme.pair-completion":
+            result = manager.create_pair_completion(key, expected_preview_id=payload.get("expected_preview_id"))
+            if payload.get("run") is not True:
+                return result
+            key = result["id"]
+            action = "compute.programme.run"
         if action == "compute.programme.run":
             result = manager.resume(key, only_runs=payload.get("only_runs"))
+            # Preserve completed and partial native results if later summary
+            # or report publication fails in this same queued task.
+            task["result"] = result
             if result.get("state") == "failed" or result.get("counts", {}).get("failed", 0):
                 counts = result.get("counts", {})
                 raise self.Fault(
@@ -121,7 +133,21 @@ class Programmes:
                     result = {**result, "experiment_sync": synchronized}
             return result
         if action == "compute.programme.report":
-            return self._decorate(workspace, manager.report(key))
+            result = manager.report(key)
+            task["result"] = result
+            status = manager.status(key, include_ensemble_candidates=False)
+            if status.get("state") == "complete":
+                from model.programme_experiments import sync_completed
+                try:
+                    synchronized = sync_completed(self.operator.ws(workspace), status)
+                except Exception as exc:
+                    raise self.Fault(
+                        "EXPERIMENT_REPORT_INCOMPLETE",
+                        "The native programme and result catalogue are retained; "
+                        "experiment reporting needs correction: " + str(exc)) from exc
+                if synchronized is not None:
+                    result = {**result, "experiment_sync": synchronized}
+            return self._decorate(workspace, result)
         if action == "compute.programme.delivery":
             selection = payload.get("selection")
             if not isinstance(selection, dict):
@@ -136,21 +162,47 @@ class Programmes:
         payload = task.get("payload", {})
         result = task.get("result", {})
         key = payload.get("programme_id")
+        manager = self._manager(task["workspace"])
+        if task["action"] == "compute.programme.pair-completion":
+            key = result.get("id") or key
+            if not result.get("id") and key and payload.get("expected_preview_id"):
+                try:
+                    parent = manager.status(key, include_ensemble_candidates=False)
+                    continuation = parent.get("pair_completions", {}).get(payload["expected_preview_id"], {})
+                    key = continuation.get("programme_id") or key
+                except (FileNotFoundError, KeyError, ValueError):
+                    pass
         if not key and task["action"] in ("compute.programme.save", "compute.programme.experiment"):
             key = result.get("id")
+        downloads = list(task.get("_downloads") or [])
         if key:
             try:
-                row = self._manager(task["workspace"]).status(key)
+                row = manager.status(key, include_ensemble_candidates=False)
                 task["programme"] = {
                     "id": row["id"], "title": row.get("title"),
                     "state": row.get("state"), "phase": row.get("phase"),
                     "counts": row.get("counts", {}), "pause_requested": row.get("pause_requested", False),
                 }
-            except (FileNotFoundError, KeyError, ValueError):
-                pass
+                downloads.extend(self._decorate(task["workspace"], row)["_downloads"])
+                from model.programme_experiments import experiment_origin
+                origin = experiment_origin(self.operator.ws(task["workspace"]), row)
+                if origin is not None:
+                    task["experiment"] = origin
+                    provider = getattr(self.operator, "experiments", None)
+                    if provider is not None:
+                        retained = provider.retained_result(task["workspace"], origin["experiment_id"])
+                        if retained is not None:
+                            task["experiment"].update(
+                                {name: retained[name] for name in
+                                 ("title", "state", "progress", "study_report") if name in retained})
+                            if retained.get("_report_error"):
+                                task["experiment"]["report_error"] = retained["_report_error"]
+                            downloads.extend(retained["_downloads"])
+            except (OSError, KeyError, ValueError) as error:
+                task["programme_report_error"] = str(error)
         if task.get("state") == "complete" and isinstance(result, dict):
-            downloads = self.operator._files(task["workspace"], result,
-                                            self.operator.ws(task["workspace"]).root)
-            if downloads:
-                task["_downloads"] = downloads
+            downloads.extend(self.operator._files(task["workspace"], result,
+                                                  self.operator.ws(task["workspace"]).root))
+        if downloads:
+            task["_downloads"] = list({item["id"]: item for item in downloads}.values())
         return task

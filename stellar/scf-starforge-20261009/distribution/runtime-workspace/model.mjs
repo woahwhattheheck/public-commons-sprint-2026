@@ -1,3 +1,4 @@
+import { managedResult } from './managed-result.mjs';
 // MIT. Customer workspace over the original runtime installer and profile authority.
 import { constants } from 'node:fs';
 import { mkdir, readdir, open, unlink } from 'node:fs/promises';
@@ -10,7 +11,7 @@ import { prepareRuntimeInstall, installRuntime, inspectRuntimeInstall, upgradeRu
 import { runtimeCatalog, resolveRuntimeProfile } from '../runtime-profile.mjs';
 import { plain, now, digest, json, canonical, fail, need, recordId, operationId, absolute,
   privateDirectory, makePrivate, readJSON, saveJSON, workerAlive, processIdentity,
-  operationLease, operationRunning, tailFile } from './storage.mjs';
+  operationLease, operationRunning, tailFile, runtimeWorkspaceError } from './storage.mjs';
 
 import { managedOperationFields, initializeManagedWorkspace, managedState, openManagedHome, reviewManagedAdoption,
   managedConfig, normalizeManagedOperation, executeManagedOperation, managedCommandAlive,
@@ -49,7 +50,7 @@ export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
 const recordPath = (root, type, id) => join(root, type, recordId(id) + '.json');
 const jobPath = (root, id) => join(root, 'operations', operationId(id));
-const asError = error => ({ code: error.code ?? 'RUNTIME_WORKSPACE_ERROR', message: String(error.message ?? error).slice(0, 2000) });
+const asError = error => runtimeWorkspaceError(error);
 
 async function context(directory) {
   const root = await privateDirectory(absolute(directory));
@@ -136,6 +137,8 @@ async function jobView(root, id) {
   const state = await readJSON(join(directory, 'state.json'), true) ?? { phase: 'QUEUED' };
   const active = state.phase === 'RUNNING' && (await workerAlive(state) || await operationRunning(join(directory, 'worker.lock')));
   const commandActive = state.phase === 'RUNNING' && Boolean(state.commandProcess) && (await managedCommandAlive(state) || active);
+  const outcome = request.operation === 'managed-run' ?
+    managedResult(state, await readJSON(join(directory, 'command-result.json'), true)) : {};
   return { id, operation: request.operation, runtimeId: request.runtimeId ?? request.targetId ?? null,
     homeId: request.homeId ?? null, applicationId: request.applicationId ?? null, terminal: request.terminal === true, commandActive,
     ...(Object.hasOwn(pythonOperationFields, request.operation) ? { python: request.python,
@@ -148,7 +151,7 @@ async function jobView(root, id) {
     contextDirectory: request.contextDirectory ?? null, transferDirectory: request.transferDirectory ?? null,
     containerDirectory: request.containerDirectory ?? null, reviewId: request.reviewId ?? null,
     deploymentReviewId: request.deploymentReviewId ?? null,
-    ...state, workerActive: active,
+    ...state, ...outcome, workerActive: active,
     displayPhase: state.phase === 'RUNNING' && !active && !commandActive ? 'INTERRUPTED' : state.phase };
 }
 async function spawnWorker(root, id) {
@@ -639,6 +642,7 @@ export async function executeRuntimeWorkspaceOperation({ directory, operation: i
       const state = { ...started, phase: 'FAILED', updatedAt: now(), completedAt: now(), error: asError(error) };
       await saveJSON(join(operationDirectory, 'state.json'), state, true);
       process.stderr.write(state.error.code + ': ' + state.error.message + '\n');
+      if (state.error.flock) process.stderr.write(json({ error: state.error.code, flock: state.error.flock }));
       return state;
     }
   } finally { await lease.close(); }

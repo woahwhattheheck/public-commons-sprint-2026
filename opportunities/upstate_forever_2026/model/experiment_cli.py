@@ -4,6 +4,8 @@ Run from the product root:
     python -B -m model.experiment_cli --workspace /owned/project preview selection.json
     python -B -m model.experiment_cli --workspace /owned/project prepare selection.json
     python -B -m model.experiment_cli --workspace /owned/project run EXPERIMENT_ID
+    python -B -m model.experiment_cli --workspace /owned/project sync EXPERIMENT_ID
+    python -B -m model.experiment_cli --workspace /owned/project programme EXPERIMENT_ID
     python -B -m model.experiment_cli --workspace /owned/project inspect EXPERIMENT_ID
     python -B -m model.experiment_cli --workspace /owned/project summary EXPERIMENT_ID
 """
@@ -28,7 +30,7 @@ def main(argv=None):
     for name in ("preview", "prepare", "execute"):
         child = commands.add_parser(name)
         child.add_argument("selection", type=Path)
-    for name in ("run", "summary"):
+    for name in ("run", "sync", "programme", "summary"):
         child = commands.add_parser(name)
         child.add_argument("experiment_id")
     child = commands.add_parser("inspect")
@@ -50,8 +52,12 @@ def main(argv=None):
                 result = experiments.prepare(workspace, selection)
                 if args.command == "execute":
                     result = experiments.execute(workspace, result["id"])
-        elif args.command == "run":
-            result = experiments.execute(workspace, args.experiment_id)
+        elif args.command in ("run", "sync"):
+            result = experiments.execute(workspace, args.experiment_id,
+                                         completed_only=args.command == "sync")
+        elif args.command == "programme":
+            from .programme_experiments import create
+            result = create(workspace, args.experiment_id)
         elif args.command == "inspect":
             result = experiments.inspect(workspace, args.experiment_id,
                                          offset=args.offset, limit=args.limit)

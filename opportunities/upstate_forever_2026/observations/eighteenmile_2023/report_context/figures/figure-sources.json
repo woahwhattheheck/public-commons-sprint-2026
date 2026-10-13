@@ -1,0 +1,111 @@
+{
+  "schema": "upstate.scientific-figure-sources/v1",
+  "inputs": [
+    {
+      "path": "observations/eighteenmile_2023/wqp/derived/selected_chlorophyll.csv",
+      "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+      "bytes": 98672,
+      "study_relative_path": "wqp/derived/selected_chlorophyll.csv"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/derived/chlorophyll_summary.csv",
+      "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70",
+      "bytes": 10709,
+      "study_relative_path": "wqp/derived/chlorophyll_summary.csv"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/study_flow_dates.csv",
+      "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67",
+      "bytes": 27050,
+      "study_relative_path": "wqp/study_flow_dates.csv"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/flow_context_methods.json",
+      "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda",
+      "bytes": 3338,
+      "study_relative_path": "wqp/flow_context_methods.json"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "chlorophyll_time_series.svg",
+      "bytes": 30745,
+      "sha256": "895f4cc0246535fa2280b9dfe2e98dfc69d51e923ccab7b5c7264f48b93244b0"
+    },
+    {
+      "path": "chlorophyll_distributions.svg",
+      "bytes": 23969,
+      "sha256": "c958f42af36013efceb018e53d8a62ec365db91f465a32b23f8f9076f1fc8ba4"
+    },
+    {
+      "path": "sampling_flow_context.svg",
+      "bytes": 13003,
+      "sha256": "7840ea3d5d846801ed9bf7971c2ee405ac4af5a68bcde4083445051deb9f258b"
+    },
+    {
+      "path": "chlorophyll_antecedent_context.svg",
+      "bytes": 30211,
+      "sha256": "435b67f3bc27fa4c6b4e047da0bc0b377acd481e26a5ad0b1a8117a5a721130c"
+    },
+    {
+      "path": "plot-data.csv",
+      "bytes": 109654,
+      "sha256": "a4a39b47b16fb38709ea1057ddbc56c934d90f96c9f429695ca2767c68b3f66a"
+    },
+    {
+      "path": "distribution-statistics.csv",
+      "bytes": 828,
+      "sha256": "f2a7fdb675a74f82985773e958b77d81835c1ea20ad5addd07d99f531c06866c"
+    },
+    {
+      "path": "figure-spec.json",
+      "bytes": 416117,
+      "sha256": "02adae24859bd08e785d235d3988b923beb6405bff59f9fc17ef7dc4e984bde8"
+    }
+  ],
+  "vendor": [
+    {
+      "module": "d3-path",
+      "version": "3.1.0",
+      "path": "vendor/d3-path.cjs",
+      "bytes": 2433,
+      "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2",
+      "source_url": "https://cdn.jsdelivr.net/npm/d3-path@3.1.0/dist/d3-path.min.js",
+      "license_path": "vendor/d3-path.LICENSE.txt",
+      "license_sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa",
+      "license_source_url": "https://raw.githubusercontent.com/d3/d3-path/v3.1.0/LICENSE"
+    },
+    {
+      "module": "d3-array",
+      "version": "3.2.4",
+      "path": "vendor/d3-array.cjs",
+      "bytes": 17204,
+      "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d",
+      "source_url": "https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js",
+      "license_path": "vendor/d3-array.LICENSE.txt",
+      "license_sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4",
+      "license_source_url": "https://raw.githubusercontent.com/d3/d3-array/v3.2.4/LICENSE"
+    },
+    {
+      "module": "d3-shape",
+      "version": "3.2.0",
+      "path": "vendor/d3-shape.cjs",
+      "bytes": 30898,
+      "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5",
+      "source_url": "https://cdn.jsdelivr.net/npm/d3-shape@3.2.0/dist/d3-shape.min.js",
+      "license_path": "vendor/d3-shape.LICENSE.txt",
+      "license_sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884",
+      "license_source_url": "https://raw.githubusercontent.com/d3/d3-shape/v3.2.0/LICENSE"
+    }
+  ],
+  "original_report_url": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+  "original_water_quality_queries": [
+    "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-268&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+    "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-374&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+    "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-838&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+    "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-839&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+    "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-840&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no"
+  ],
+  "original_flow_url": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2023-01-01&endDT=2023-12-31&parameterCd=00060&statCd=00003&siteStatus=all",
+  "hydrology_source_edition": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QAH0AQ2"
+}

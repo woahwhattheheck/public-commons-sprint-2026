@@ -1,0 +1,195 @@
+# Receive Decision studies into the existing scientific operator
+
+This installs the complete native Decision studies desk into the current
+application: the original OPT12 solver and receiver, queue-backed study
+revisions and calculations, retained report/project/selection downloads,
+the browser interface, and complete-workspace transfer.
+
+## Complete joined source
+
+The final component is published as three complete base64 source packets.
+Save their JSON objects using these local filenames. Source bodies use
+content_base64 so Canvas formatting leaves the original bytes intact.
+
+| Local packet | Contents |
+| --- | --- |
+| robust-native.json | Original native package changes, operator provider and descriptor |
+| robust-browser.json | Complete browser module, scoped stylesheet and real-experiment browser journey |
+| robust-receiving.json | Installer, transfer driver, receiving guide and operator guides |
+
+The complete diagnostics-enabled successor contains sixteen authored files,
+including the native diagnostic receiver and maintained command line. A joined
+source packet can supply all sixteen files through one --packet argument;
+otherwise pass the complete source layers in order. Each file includes
+its exact byte count and SHA-256. Known original and earlier published postimages
+are declared using before_sha256, base_sha256 and replaces_sha256 so the guarded
+installer can upgrade the prior component or reuse an identical installed file.
+Unknown newer authored files remain available for explicit composition. A
+preimage field accepts one validated SHA-256 or an explicit nonempty list of
+validated earlier editions; each incoming full body still requires its own
+exact declared byte count and SHA-256.
+
+The complete report-to-Decision navigation edition can also include the two
+original registered host leaves, operator/web/retained_desks.mjs and
+operator/web/experiment_diagnostics.mjs. These optional full postimages join
+Scientific interpretation's action to the registered Workbench's
+openForDiagnostic method with the exact workspace, diagnostic ID and report
+SHA. The installer applies the same known-preimage check to these shared
+leaves and preserves an unknown newer version for composition. The sixteen
+core leaves remain installable without either optional host replacement;
+that mode exposes diagnostic selection within the Decision desk.
+
+The earlier source carriers remain usable as an alternative layer set:
+backend R3 F0C8KE96PM3, UI base F0C8UCL45FE, UI R2 F0C8JG72V43,
+corrected UI guide F0C89CLAZLP, and receiving R4 F0C8NS7SFCN.
+When reading those raw-content packets, the installer repairs a Canvas space
+change only if that body then exactly matches its declared bytes and SHA-256.
+
+Use the native environment already associated with the receiving application.
+The installer itself needs only Python's standard library; the live desk and
+transfer journey use the original OPT12 native dependencies.
+
+## Compose the original host once
+
+The complete 415-file source bank F0C8J16HPGT retains the OPT12 engine but
+does not have installed extension hooks in server.py/app.mjs and does not
+contain the 85E65 experiment_profiles.py component. Compose the original
+extension and sourced-experiment installers if beginning with that bank.
+An already installed current core, such as F0C9JNCF2JC, retains its own
+newer source. Do not replace the application with an older core.
+
+Run the original installers against that existing application using their
+received complete source directories:
+
+    python EXTENSION_SOURCE/install_extensions.py \
+      --application APPLICATION --source-root EXTENSION_SOURCE
+    python SOURCED_EXPERIMENT_SOURCE/install_experiment_workbench.py \
+      --application APPLICATION --source-root SOURCED_EXPERIMENT_SOURCE
+
+SOURCED_EXPERIMENT_SOURCE is the original sixteen-file 85E65 component
+F0C8HR43RS7. Existing profile-desk composition may already have installed
+these dependencies. Continue with the current authored application.
+
+## Apply all Decision studies layers
+
+Extract source/install_robust_workbench.py from this packet after verifying
+its declared bytes and hash, then invoke that extracted script with the
+three final packet paths:
+
+    python STAGING/source/install_robust_workbench.py \
+      --application APPLICATION \
+      --packet STAGING/robust-native.json \
+      --packet STAGING/robust-browser.json \
+      --packet STAGING/robust-receiving.json
+
+The original extension-install.lock coordinates composition. Before any
+source replacement, all incoming files are parsed where applicable and
+all existing replacements are compared with declared preimages. Identical
+incoming files are reused, so the same command resumes an interrupted
+installation. The original native package manifest is checked against the
+assembled files. Unknown newer authored files are preserved with their
+actual hashes for the integrating agent to merge.
+
+The current 415-file bank also includes an earlier action-only registration,
+operator/extensions/robust-decisions.json. Its exact 757-byte original
+SHA-256 is 8c5dfebfddd81df683a4b40fd8e8b893ec7940acf807575edaa0d35cbc8fcd13.
+That descriptor owns the same twelve native actions. The installer retains
+those exact bytes as robust-decisions.json.retired-ECO13-ROBUST-DD6B, outside
+the registry's *.json load pattern, before publishing the new registration.
+It preserves an unknown newer descriptor for composition. Other existing
+owners of any robust.* action are reported before mutation.
+
+Reopen the original operator after installation, using its existing
+workspace and operator state. The installed registry has one robust-workbench
+owner, its six read routes, the original actions plus diagnostic preparation,
+and both browser assets.
+
+## Transfer an editable study with its scientific context
+
+Open a saved Decision study and choose **Transfer editable study**. The original
+selected-study desk collects that study's complete saved revisions, calculations,
+import provenance and operation identities together with its bound native
+experiments, runs, grids and source collections. Prepare and export through the
+existing operator queue, then receive and restore through Complete project
+handover to continue with the original study and scientific identities. Save
+working input edits as a revision before transferring them. **Export complete
+project** remains the original decision-project JSON workflow, whose receive
+operation assigns local study and calculation IDs.
+
+## Receive saved common-support diagnostics
+
+The maintained Decision desk now accepts a saved Scientific interpretation
+report through its diagnostic selector. The exact report SHA, original common
+support and native run identities travel with each prepared study; complete
+local report revisions are verified during workspace receiving. Use the native
+`diagnostic-preview` and `prepare-diagnostic` commands documented in
+operator/ROBUST_WORKBENCH.md when continuing the same workflow from a batch
+receiver. The selected-study transfer component includes this typed diagnostic
+revision and its scientific dependencies through its existing closure.
+
+## Run the retained native workflows
+
+From the assembled application and its native Python environment:
+
+    python source/run_robust_workspace_transfer.py \
+      --output NEW_TRANSFER_DIRECTORY
+
+This executes the original queue and SQLite store through create, revision,
+calculation, transaction replay, native exports, project receive, complete
+workspace backup/restore and restored download reopening. It explicitly
+requires the new registered desk and its read routes. The default input is
+the original OPT12 arithmetic study for operation and transfer mechanics.
+Supply --study COMPLETE_NATIVE_STUDY_JSON to use another retained native
+study.
+
+Run the actual operator browser journey against an existing retained
+ecological experiment:
+
+    node source/run_robust_workbench_browser.mjs \
+      --url-file PRIVATE_OPERATOR_URL_FILE \
+      --experiment RETAINED_EXPERIMENT_ID \
+      --configuration DECISION_CONFIG_JSON \
+      --workspace OPERATOR_WORKSPACE_KEY \
+      --output NEW_BROWSER_DIRECTORY \
+      --video
+
+For a saved scientific diagnostic, use the same native journey with the exact
+report SHA returned by diagnostic-preview:
+
+    node source/run_robust_workbench_browser.mjs \
+      --url-file PRIVATE_OPERATOR_URL_FILE \
+      --diagnostic RETAINED_DIAGNOSTIC_ID \
+      --report-sha256 EXACT_REPORT_SHA256 \
+      --configuration DECISION_CONFIG_JSON \
+      --workspace OPERATOR_WORKSPACE_KEY \
+      --output NEW_BROWSER_DIRECTORY \
+      --video
+
+Choose exactly one source mode. The configuration names actual included
+candidate/profile/metric IDs and explicitly supplies costs, capacity use,
+cost units, fixed scales and weights. Physical outcome cells come from the
+original retained source. Diagnostic mode carries source.diagnostic_design
+with its explicit structural mode and reason, checks the preview and queued
+request against the selected report SHA, and verifies the created study's
+typed immutable report binding. An advanced live report requires a new
+reviewed configuration and its current SHA.
+
+The browser journey uses the visible desk and native task/file transport,
+then receives and reopens its exported study. It also captures the actual
+reopened result at a 390-pixel viewport. The operator URL remains in the
+private local file; the journey report redacts its capability.
+
+Retain the installation result, decision-transfer.json, native exported
+bytes, screenshots, optional video and browser journey.json alongside the
+working application. Publish the working source through the existing shared
+application integration and attach actual task/study/run identities to the
+original #sales sprint thread.
+
+The cumulative twenty-one-file edition also includes the original selected-study
+closure leaves, model/decision_study_transfer.py, model/study_transfer.py and
+operator/STUDY_TRANSFER.md. These are optional to the sixteen-file core and
+use the same exact incoming-body and known-preimage checks. Install the complete
+edition on the maintained application to carry pinned diagnostic revisions,
+their full common-support source roster and original Decision SQLite history
+through selected editable study transfer. The original project archive,
+transfer transport and receiving registration remain the maintained services.

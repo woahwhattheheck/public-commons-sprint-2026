@@ -1,0 +1,83 @@
+{
+  "schema": "commons.parameter-study-operator-integration/v1",
+  "operation": "UPSTATE-PARAMETER-STUDY-NAMESPACE-C8FF-20261013",
+  "engine": {
+    "module": "model.parameter_studies",
+    "schemas": [
+      "upstate.parameter-experiment-selection/v1",
+      "upstate.parameter-experiment/v1"
+    ],
+    "storage": "experiments/<id>/experiment.json",
+    "unchanged_ids": true
+  },
+  "preserve": {
+    "modules": [
+      "model/experiments.py",
+      "operator/experiment_operator.py",
+      "operator/web/experiments.mjs",
+      "operator/web/experiments.css"
+    ],
+    "actions_prefix": "experiment.",
+    "reads_prefix": "/api/experiments/",
+    "view": "experiments"
+  },
+  "server": {
+    "module": "operator/parameter_study_api.py",
+    "class": "ParameterStudyAPI",
+    "constructor": "ParameterStudyAPI(operator, Fault)",
+    "action_members": [
+      "parameter-study.prepare",
+      "parameter-study.run",
+      "parameter-study.summarize"
+    ],
+    "invoke": "parameter_studies.invoke(task)",
+    "overview_collection": "parameter-studies",
+    "overview_value": "parameter_studies.list(workspace_key)",
+    "item_kind": "parameter-studies",
+    "item_value": "parameter_studies.inspect(workspace_key, item_id)",
+    "read_prefix": "/api/parameter-studies/",
+    "read_operations": [
+      "catalog",
+      "results"
+    ],
+    "read_call": "parameter_studies.read(workspace_key, operation, query)",
+    "preview_route": "POST /api/parameter-studies/preview",
+    "preview_call": "parameter_studies.preview(workspace_key, body['selection'])",
+    "artifact_root": "workspace.root / 'experiments' / item_id",
+    "artifact_descriptors": "state.artifacts",
+    "task_artifacts": "task.result.artifacts",
+    "persistent_id_field": "experiment_id"
+  },
+  "browser": {
+    "module": "./parameter_studies.mjs",
+    "stylesheet": "/web/parameter_studies.css",
+    "factory": "attachParameterStudies",
+    "instance": "parameterStudies",
+    "view": "parameter-studies",
+    "view_label": "Parameter studies",
+    "dispatch_prefix": "parameter-study-",
+    "render": "parameterStudies.render()",
+    "mount": "parameterStudies.mount(content)",
+    "detach": "parameterStudies.detach()",
+    "dispatch": "parameterStudies.dispatch(button)",
+    "task_actions": "parameterStudies.taskActions(task)",
+    "host_fields": [
+      "getState",
+      "endpoint",
+      "api",
+      "openForm",
+      "submitAction",
+      "executeAction",
+      "navigate",
+      "openItem",
+      "fileList",
+      "toast",
+      "refreshState"
+    ],
+    "task_labels": {
+      "parameter-study.prepare": "Prepare parameter study",
+      "parameter-study.run": "Run parameter study",
+      "parameter-study.summarize": "Summarize parameter study"
+    }
+  }
+}

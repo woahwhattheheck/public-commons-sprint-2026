@@ -54,7 +54,7 @@ def _reusable(result):
 
 def _recover_received(archive, destination):
     """Recover a rename completed immediately before its receiving record was saved."""
-    from .portable import inspect_archive, member_name
+    from .portable import inspect_archive, member_name, received_delivery
     manifest = inspect_archive(archive["path"], verify=False)
     for name, item in manifest["members"].items():
         path = destination.joinpath(*member_name(name).parts)
@@ -69,7 +69,8 @@ def _recover_received(archive, destination):
             "workspace": str(destination / "workspace"),
             "application": str(destination / "application"),
             "archive_sha256": archive["sha256"], "members": len(manifest["members"]),
-            "selection": manifest["selection"], "identity": "MATCH"}
+            "selection": manifest["selection"], "identity": "MATCH",
+            **received_delivery(manifest, destination)}
 
 
 def _receive(archive, destination, output, model):
@@ -116,6 +117,9 @@ def _receive(archive, destination, output, model):
 def complete_delivery(model_receiving, *, output, workspace_path=None, receive_directory=None):
     from .cartography import MAP_RENDERER_VERSION
     from .scenario_summary import build_summary, write_summary
+    from .delivery_review_version import REPORT_EDITION
+    from .portable import application_digest
+    from .delivery import DELIVERY_EDITION
 
     model, workspace, original = load_receiving(model_receiving, workspace_path)
     output = Path(output).resolve()
@@ -128,7 +132,10 @@ def complete_delivery(model_receiving, *, output, workspace_path=None, receive_d
     selection = {"schema": SCHEMA, "workspace_id": model["workspace_id"],
                  "native_selection_id": model["native_selection_id"],
                  "model_receiving_sha256": hashlib.sha256(original).hexdigest(),
-                 "map_renderer": MAP_RENDERER_VERSION, "receive_directory": str(destination)}
+                 "map_renderer": MAP_RENDERER_VERSION,
+                 "client_report_edition": REPORT_EDITION, "delivery_edition": DELIVERY_EDITION,
+                 "application_sha256": application_digest(),
+                 "receive_directory": str(destination)}
     key = digest(selection)
     progress_path, result_path = output / "progress.json", output / "regional-delivery.json"
     with held(output / ".regional-delivery.lock", blocking=False):
@@ -161,12 +168,19 @@ def complete_delivery(model_receiving, *, output, workspace_path=None, receive_d
             archive = _artifact(directory, delivery["files"]["delivery_archive"])
             maps = {name: _artifact(directory, item) for name, item in delivery["maps"].items()}
             report = _artifact(directory, delivery["files"]["report"])
+            report_companions = {name: _artifact(directory, delivery["files"][name])
+                for name in ("report_html", "report_markdown", "report_data")}
+            asset_paths = set(delivery["manifest"]["project_assets"])
+            project_assets = {name: _artifact(directory, item)
+                for name, item in delivery["files"].items() if item["path"] in asset_paths}
             scales = _artifact(directory, delivery["files"]["display_scales"])
             _progress(progress_path, state, "reopen-editable-project",
                       scenario_summary_id=summary["id"])
             received = _receive(working, destination, output, model)
-            retained = [archive, working, report, scales, *maps.values(), *summary_files.values(),
-                        received["reopened_cli"]]
+            retained = list({item["path"]: item for item in (
+                archive, working, report, scales, *maps.values(), *summary_files.values(),
+                *report_companions.values(), *project_assets.values(), received["reopened_cli"])
+                }.values())
             result = {"schema": SCHEMA, "id": key, "state": "complete",
                       "completed_at": now(), "workspace_id": model["workspace_id"],
                       "native_selection_id": model["native_selection_id"],
@@ -177,7 +191,9 @@ def complete_delivery(model_receiving, *, output, workspace_path=None, receive_d
                       "map_renderer": MAP_RENDERER_VERSION,
                       "map_families": sorted(set(delivery["manifest"]["maps"]) & set(MAP_IDS)),
                       "map_count": len(maps), "maps": maps, "display_scales": scales,
-                      "report": report, "scenario_summary": summary_files,
+                      "report": report, "report_companions": report_companions,
+                      "report_edition": REPORT_EDITION, "delivery_edition": DELIVERY_EDITION,
+                      "project_assets": project_assets, "scenario_summary": summary_files,
                       "delivery_archive": archive, "working_archive": working,
                       "navigator": str(directory / delivery["package"]["path"] / "index.html"),
                       "receiving": received,

@@ -197,18 +197,108 @@ class ExtensionRegistry:
                         **{key: ExtensionRegistry._context_value(name, context) for key, name in keywords.items()})
 
     def load(self):
-        """Read each explicit installed registration once; isolate failed desks."""
+        """Compose installed providers by their declared action dependencies.
+
+        File names control neither provider availability nor load success. A
+        failed or cyclic dependency is attached to its actual component while
+        all independently usable desks continue to register.
+        """
+        # Rebuild registration diagnostics from this installed-manifest pass.
+        # Runtime task/state issues and every active provider stay untouched.
+        for key in tuple(self._issues):
+            if key[1] == "registration":
+                self._issues.pop(key, None)
         if not self.directory.is_dir():
             return self
+        candidates = []
+        identity_paths = {}
         for path in sorted(self.directory.glob("*.json")):
-            extension_id = path.stem
+            recognized_identity = None
             try:
                 manifest = json.loads(path.read_text(encoding="utf-8"))
-                extension_id = manifest.get("id", extension_id)
-                self.register(manifest)
-                self._clear_issue(extension_id, "registration")
+                if not isinstance(manifest, dict) or manifest.get("schema") != SCHEMA:
+                    raise ValueError("Unsupported extension manifest schema.")
+                extension_id = manifest.get("id")
+                if not isinstance(extension_id, str) or not _IDENTIFIER.fullmatch(extension_id):
+                    raise ValueError("An extension needs a stable lowercase id.")
+                recognized_identity = extension_id
+                identity_paths.setdefault(extension_id, []).append(path.name)
+                required = manifest.get("requires_actions", [])
+                backend = manifest.get("backend") or {}
+                if not isinstance(backend, dict):
+                    raise ValueError("The extension backend must be an object.")
+                declared = backend.get("actions", [])
+                for names, label in ((required, "Required actions"), (declared, "Actions")):
+                    if (not isinstance(names, list)
+                            or any(not isinstance(name, str) or not name for name in names)
+                            or len(set(names)) != len(names)):
+                        raise ValueError(label + " must be a list of unique nonempty names.")
+                order = manifest.get("order", 100)
+                if isinstance(order, bool) or not isinstance(order, (int, float)) or not math.isfinite(order):
+                    raise ValueError("Extension order must be a finite number.")
+                candidates.append({
+                    "id": extension_id, "manifest": manifest, "path": path.name,
+                    "required": set(required), "declared": set(declared), "order": order,
+                })
             except Exception as error:
-                self._issue(extension_id, "registration", error)
+                key = recognized_identity or "file:" + path.name
+                self._issue(key, "registration", error)
+
+        for extension_id, paths in identity_paths.items():
+            if len(paths) > 1:
+                self._issue(extension_id, "registration", ValueError(
+                    "Duplicate installed extension id in: " + ", ".join(paths)))
+        pending = []
+        for row in candidates:
+            if len(identity_paths[row["id"]]) > 1:
+                continue
+            if row["id"] in self._extensions:
+                installed = self._extensions[row["id"]]["manifest"]
+                if installed == row["manifest"]:
+                    self._clear_issue(row["id"], "registration")
+                else:
+                    self._issue(row["id"], "registration", ValueError(
+                        "This installed extension changed after startup; reopen the operator to load its new source."))
+            else:
+                pending.append(row)
+
+        pending.sort(key=lambda row: (row["order"], row["id"], row["path"]))
+        while pending:
+            progressed = False
+            deferred = []
+            for row in pending:
+                available = self._builtin_actions | self._actions.keys() | row["declared"]
+                if row["required"] - available:
+                    deferred.append(row)
+                    continue
+                try:
+                    self.register(row["manifest"])
+                    self._clear_issue(row["id"], "registration")
+                except Exception as error:
+                    self._issue(row["id"], "registration", error)
+                progressed = True
+            if not deferred:
+                break
+            if progressed:
+                pending = deferred
+                continue
+            providers = {}
+            for row in deferred:
+                for action in row["declared"]:
+                    providers.setdefault(action, []).append(row["id"])
+            for row in deferred:
+                missing = sorted(row["required"] - (
+                    self._builtin_actions | self._actions.keys() | row["declared"]))
+                details = []
+                for action in missing:
+                    waiting = providers.get(action, [])
+                    suffix = " (waiting on " + ", ".join(sorted(waiting)) + ")" if waiting else ""
+                    details.append(action + suffix)
+                self._issue(row["id"], "registration", ValueError(
+                    "Required actions remain unavailable after loading installed providers: "
+                    + ", ".join(details)
+                    + ". Check the named provider's registration result or its dependency cycle."))
+            break
         return self
 
     def register(self, manifest):

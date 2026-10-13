@@ -5,7 +5,7 @@ Application: opportunities/upstate_forever_2026
 
 This guide joins the retained Upper Savannah sources, regional soil preparation, the original InVEST calculation pipeline, saved-profile ensemble work and the existing operator receiving process. It is for the host operator and scientific integrator. The in-application guided journey and meeting desk consume this same Workspace and its actual results.
 
-Use ECD1's complete cumulative application F0C8JNZTURK and its maintained successor, with the selected source additions below. That receiving base contains 252 complete files and 3,892,300 source bytes. Its source manifest retains the original 72-file carrier F0C8F3MKR3M and eighteen-file map/customer receiving carrier F0C8GLD74CT as lineage. The complete current file map supplies the receiving base; its original source manifests and application modules remain the basis of the calculation.
+Use ECD1’s complete cumulative application F0C8KFCT3S9 (edition 3, 586 files) or its maintained successor, with the current whole components listed below. Preserve the cumulative application’s own source manifest when composing later components. The original source collections, native model and Workspace remain the calculation basis. The retained regional result, source-profile comparisons, soil preparation, native studies and paired raster products open in the same operator.
 
 The selected source identity passed to the commands below comes from the delivered source package. Keep that identity with the prepared plan, Workspace, model handoff and received package.
 
@@ -13,26 +13,45 @@ The selected source identity passed to the commands below comes from the deliver
 
 Run from the directory containing model/, operator/, source_tools/ and source/. Set UPSTATE_PYTHON to the accepting host's equipped interpreter and use it consistently for every stage below. Keep the complete original source and prepared input archives available beside the working project. Use an ordinary disk-backed operation directory for retained national archives, working rasters and the final archive.
 
-Two ECO12 seats contribute different components. The single-artifact seat recorded /mnt/data/eco12-source for its additive source; the multi-pollutant seat is host f5dd7c7e9cd6 and recorded /mnt/data/eco12-delivery/opportunities/upstate_forever_2026. Their receiving messages identify /opt/pyvenv/bin/python, /usr/bin/chromium and Python Playwright in their respective cloud containers. ECD1 supplies the complete cumulative application, and the existing Fleet/ESI/405F workers retain their current regional source and native Workspace operations. Transfer the selected complete source and Workspace archives through the already demonstrated connected Drive file bridge, then use the paths returned by the receiving host. Google_Drive.fetch with download_raw_file=true and include_base64=false returns the complete mounted file reference for that host. The source producer supplies reader access for the receiving account identified by the actual handoff, on the same stable Drive file. Retain the selected file ID, source edition, byte count and SHA256 with the application receipt.
+The demonstrated paired receiving operation uses application root `/workspace/scratch/790ee23f7efd/ensemble-recovery-operation` and interpreter `/workspace/scratch/790ee23f7efd/ensemble-recovery-venv/bin/python`. Its completed archive receive, inspect, export and independent reopen retained 51 files and 36 original GeoTIFF identities. Use the paths supplied by the currently accepting process when continuing on another host.
 
-The current cumulative receiving dispatch addresses ASTRA-ASSEMBLE12/ECD1 and host f5dd7c7e9cd6; use the application root from its actual source receipt: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791851825377939 .
+The native InVEST operation and its actual prepared grid remain on the existing GURA-NATIVE-01 continuation. Source comparison and completed watershed adoption can execute with the standard-library application before the GIS/native dependency environment is ready. Native model execution uses the saved original grid, source edition and required InVEST 3.20 environment. Read the selected raster’s own resolution and CRS; the Gura source owners are reconciling distinct original archive editions, so a resolution from one edition must not be applied to another.
 
-Earlier receiving route: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791849843511819 . Cross-account receiving and its successful original terrain transfer: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791850855205669 .
+Continue these existing operations:
+- Paired/source operator receiving: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791857208632589
+- Saved native study receiving: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791854610917799
+- Current source/native host correction: https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791858035968639
+- Original GURA-NATIVE-01 continuation: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791859115209379?thread_ts=1788567066.179399
 
-The existing htch-runtime inventory records these paths:
+Keep original national archives and working rasters on ordinary disk-backed storage. The complete Library domain transfer in section 2 can feed the retained source directly. For a connected Drive transfer, reuse the mounted file reference returned by `Google_Drive.fetch` with `download_raw_file=true` and `include_base64=false`. Retain the original file identity and bytes in the same receiving operation.
 
-| Component | Recorded existing path |
-| --- | --- |
-| Python | /usr/bin/python3 |
-| Node | /usr/bin/node |
-| Playwright module directory | /home/hatch/workspace/sim-work/rsd400-cf0907/nm/node_modules |
-| Chromium | /home/hatch/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome |
+For the browser journey, use the current native receiver’s Node, Playwright and Chromium paths. Pass its actual Chromium executable explicitly and open the operator’s returned local URL on that same host. The historical htch runtime paths remain recorded at https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791766576205479; they are an inventory reference, not a replacement for the accepting host’s current paths.
 
-That host reported Python 3.12.3, Node 24.20.0, Playwright 1.49.1 and Chrome 156.0.8078.4. Use the current installed paths when the receiving host differs. Pass the Chromium path explicitly: the measured Playwright default browser was absent, while the recorded chromium-1248 executable was available.
+### Open the retained regional product
 
-The existing native model needs its original scientific dependency environment, including the selected InVEST 3.20 installation. The original operator receiver uses the actual Python/Node/browser paths supplied to its command. Keep the model and browser in the same receiving operation so the original Workspace and its local server are accessible.
+For a new source-only project, receive the original regional profiles first:
 
-Source of the recorded runtime inventory: https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791766576205479
+~~~bash
+"$UPSTATE_PYTHON" -B -m source_tools.receive_profile_comparison \
+  --workspace "$UPSTATE_MODEL_WORKSPACE" \
+  --working-regional-example \
+  --create
+~~~
+
+The explicit working example selects the existing source owner’s original regional table, visible working parameters and published Upper Flint alternative. It retains a source comparison, its HTML/CSV/JSON/source ZIP reports and a native-study selection in the actual Workspace. An existing scientific project can instead supply `--baseline-profile`, its original `--workflow-receipt`, or an explicit `--baseline-spec`, together with the chosen profile specifications. These source operations use the standard-library application. Full options and provenance are in `source_tools/RECEIVE_PROFILE_COMPARISON.md`.
+
+The complete 23-file watershed component F0C8SM4T0TB joins the original completed regional run, its network analysis, the current watershed desk and planning briefs. Receive the original embedded archive into the selected Workspace:
+
+~~~bash
+"$UPSTATE_PYTHON" -B -m source_tools.receive_watershed_context \
+  --workspace "$UPSTATE_MODEL_WORKSPACE" \
+  --source-package source/water_context/20261013/completed-run.package.json
+"$UPSTATE_PYTHON" -B operator/install_watershed_context.py --application .
+~~~
+
+The source-tools command calls the maintained operator archive receiver, then attaches the completed connectivity edition to the same saved result. It uses the original 217-watershed run and its retained CSV/source bodies. Open the watershed desk to inspect the selected watershed, downstream and upstream context, original state-area records and classified-water source features. Use **Export RFP focus brief** for the retained four-watershed selection, or export the current chosen watersheds. The native CSV, HTML and Markdown planning briefs preserve their source definitions.
+
+The original completed archive is F0C9JNBA7EU, 121,182 bytes, SHA256 `716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5`. Its regional result is `watershed-4592eb077b7164d59ba4`. The separate completed connectivity files are retained under `outputs/watershed-connectivity-20261013/` and bound to that exact report. The browser’s upload action also receives the original ZIP through the same adoption engine.
 
 ## 2. Recover the retained regional inputs
 
@@ -66,7 +85,7 @@ Shared source metadata: https://app.notion.com/p/3f7dd77231008147bfb0d97e296fda3
 
 ## 3. Capture and prepare regional soil erodibility
 
-Receive the complete maintained soil component F0C88M55E79 as one existing application_assembly --overlay input. It contains eight complete files and 155,606 source bytes: the source, regional capture and coverage modules, their guides, and the original metadata pair. Its application-source-part/v1 gzip/base64 carrier reconstructs a commons.source-bank/v1 document with UTF-8 entries. Preserve the selected application's current core rasters/common modules when composing this component.
+Receive the complete maintained soil component F0C88M55E79 as one existing application_assembly --overlay input. It contains eight complete files: the source, regional capture and coverage modules, their guides, and the original metadata pair. Its application-source-part/v1 gzip/base64 carrier reconstructs a commons.source-bank/v1 document with UTF-8 entries. Preserve the selected application's current core rasters/common modules when composing this component.
 
 The new source_tools.soil_region module has two distinct operations. Capture retains source-native geometry, ratings and metadata for the complete buffered domain and can progress independently of the national land-cover download. It uses Shapely, pyproj, the existing native USDA helpers and Python's SQLite library. Prepare places that retained source on the selected land-cover grid using the existing NumPy, Rasterio, pyproj and Shapely environment.
 
@@ -94,6 +113,8 @@ The operation can use the existing paired metadata files by adding both argument
 ~~~
 
 If that complete pair is omitted, the module captures the current native USDA metadata. Retain the selected metadata edition with the same capture.
+
+Capture writes each validated geometry page into the existing SQLite transaction once. Completed tile rows and their source-bound index checkpoints are reused by `--resume`; original request bodies remain available after an interrupted transaction. The geometry-stage progress includes `reused_indexed_tiles` and `newly_indexed_tiles`. Provider calls stay serial and retain the same tiling, halo, page size and rating definitions.
 
 The capture emits soil-mapunits.geojson.gz with native identities, kw_choice and kw_si; soil-polygons.sqlite with the original WKB index; ratings.json; geometry-capture.json; survey-editions.json; coverage.json; capture.json; progress.json; original/domain companion trees; and a source-manifest.json entry with role SOIL_K_NATIVE.
 
@@ -125,6 +146,12 @@ After preparation, run the maintained per-HUC coverage stage against the prepare
 ~~~
 
 Use the corresponding recovered domain and feature-bindings paths when the original archive is on another host. This stage consumes the prepared soil-k.tif and its source metadata. It emits the HUC12 GeoPackage/CSV, coverage bitmask, summary and a SOIL_SOURCE_COVERAGE manifest entry. Compose that entry beside K_FACTOR. The complete source_tools/SOIL_COVERAGE.md explains the optional reporting-area/layer/where selections.
+
+### Use the integrated regional soil desk
+
+The complete five-file soil desk F0C8UA4B9QU is merged in PR 2839. In Source preparation, select or adopt the retained regional capture, continue its original capture operation, select the actual reference grid, prepare the K raster, inspect HUC coverage, compose the source collection and import it into the selected Workspace. The provider returns each resulting capture and prepared product to the same desk; the existing Workspace backup carries the imported original source.
+
+Register the retained parent directory with the server’s existing `--source-root` option so the actual capture and prepared editions appear in the source catalogue. The desk keeps the original domain identity, acquisition vintage and source metadata pair. Its full operating reference is `operator/REGIONAL_SOIL_DESK.md`.
 
 ## 4. Select the actual native model plan
 
@@ -212,13 +239,73 @@ The source-bound catalogue provides three retained studies:
 
 The source retains the exact primary reference, version, locator and reason for every axis. The complete and SDR studies have four declared factorial combinations per base profile, with the original reference values also retained and equivalent selections reused. Read the actual member/run/pair counts from preview. The full native recipe in model/ENSEMBLES.md retains those counts in ensemble_results/<id>/study-preview.json.
 
-The optional design.models field inherits the selected grid when omitted. The full-model retained plan and native requests canonicalize both models to the historical omitted representation, preserving their original IDs. Partial plans and case requests retain their explicit models. The selected-model engine uses common available N/P/sediment outputs on the same retained grid; native comparison records retain common_artifacts and per-run model scope. An existing NDR-first grid can therefore supply the NDR study while the original source operation completes the full model inputs. This requires the maintained model/model_selection.py implementation in the same application. The complete current selected-model source is revision 2, F0C8N3YVA5U, succeeding F0C8JJQ2JBX. Compose its additive native-stage methods into ECD1's current Workspace while preserving the original Communities methods and later shared joins.
+The optional design.models field inherits the selected grid when omitted. The full-model retained plan and native requests canonicalize both models to the historical omitted representation, preserving their original IDs. Partial plans and case requests retain their explicit models. The selected-model engine uses common available N/P/sediment outputs on the same retained grid; native comparison records retain common_artifacts and per-run model scope. An existing NDR-first grid can therefore supply the NDR study while the original source operation completes the full model inputs. This requires the maintained model/model_selection.py implementation in the same application. The maintained selected-model/native-stage source is revision 3, F0C8JRS1PM3 and its current public successor, succeeding F0C8N3YVA5U and F0C8JJQ2JBX. It includes Workspace.combine_runs and composes with the current Communities methods and shared application joins.
 
 Study dispatch and complete recipe: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791850228723799 .
 
 The selected base profiles supply the retained biophysical tables and original parameter values. The complete table source collection, source ID, SHA256 and load semantics travel with each member. Original profiles stay available; the module records derived working profiles and their parents.
 
 A factorial design evaluates every declared combination. A one_at_a_time design changes each declared axis separately. Both retain the original profiles; duplicate scientific parameter selections are reused. Preview reports the actual member, native-run, land-cover-pair and parameter-pair counts so the operator can understand the requested computation.
+
+### Execute the sourced study and its delivery in one operation
+
+The complete headless workflow is documented in [model/ENSEMBLE_OPERATIONS.md](../model/ENSEMBLE_OPERATIONS.md). It uses the same Workspace, source catalogue, original native runs, scalar reports and paired raster products as the browser. The public command implementation is retained in the complete application; receive its current study CLI, cohort adapter and operation module together.
+
+Read the actual saved selections first:
+
+~~~bash
+"$UPSTATE_PYTHON" -B -m model.ensemble_cli \
+  --workspace "$UPSTATE_MODEL_WORKSPACE" context
+~~~
+
+This returns retained grids, profiles, scenarios, native runs, ensemble records and available source-backed studies. Set UPSTATE_GRID_ID, UPSTATE_BASELINE_ID and UPSTATE_PROFILE_ID to the actual selections in this project. For a land-cover study, set UPSTATE_ALTERNATIVE_ID to its saved alternative. The selected grid and profiles must include the models required by the chosen catalogue study.
+
+~~~bash
+"$UPSTATE_PYTHON" -B -m model.ensemble_cli \
+  --workspace "$UPSTATE_MODEL_WORKSPACE" \
+  run-study routing-lmax-v1 \
+  --grid-id "$UPSTATE_GRID_ID" \
+  --baseline-scenario-id "$UPSTATE_BASELINE_ID" \
+  --base-profile-id "$UPSTATE_PROFILE_ID" \
+  --alternative-scenario-id "$UPSTATE_ALTERNATIVE_ID" \
+  --with-raster-products
+~~~
+
+Use routing-ndr-v1 for the prepared NDR study or routing-lmax-sdr-v1 for SDR. Repeat --base-profile-id to include other retained source profiles and --alternative-scenario-id for additional saved land-cover changes. Omit the alternative option for parameter-only sensitivity. Optional --title and --reason describe the study; the source catalogue supplies their defaults. Equivalent saved selections reuse the same design identity and original completed native stages.
+
+The command prepares the source-backed design, runs its native members, writes the printable scalar release and builds paired raster products and portable ZIPs for the selected land-cover alternatives. Each raster cohort binds a member's baseline and alternative under the identical profile, retains the planned population and pending original run states, and derives its pollutants from the available selected-model outputs. Parameter-only sensitivity stays in the scalar report.
+
+To retain a reviewable design before executing, use study-design with the same study ID and selection flags and redirect stdout to UPSTATE_ENSEMBLE_DESIGN. Its brief workload notice goes to stderr. The existing preview and prepare commands below then operate that exact JSON.
+
+### Continue or export the retained operation
+
+The command prints the saved ensemble identity and operation path before the first native run. Recover that same ID with list or context when continuing an interrupted receiving session:
+
+~~~bash
+"$UPSTATE_PYTHON" -B -m model.ensemble_cli \
+  --workspace "$UPSTATE_MODEL_WORKSPACE" \
+  continue "$UPSTATE_ENSEMBLE_ID" --with-raster-products
+
+"$UPSTATE_PYTHON" -B -m model.ensemble_cli \
+  --workspace "$UPSTATE_MODEL_WORKSPACE" \
+  export "$UPSTATE_ENSEMBLE_ID" --with-raster-products
+~~~
+
+Use continue to resume the original native stages and paused paired selection. Use export after the native models have already completed through the operator or another process. Export refreshes missing physical summaries, writes the report release and computes the requested raster products from those actual completed artifacts. Independent native members continue after ordinary failures; --stop-on-error retains the completed results and stops at the first member failure.
+
+Every complete command returns one JSON result on stdout and sends progress to stderr. The saved ensemble_results/ENSEMBLE_ID/operation.json records the actual producing hostname, PID and interpreter, original selection, native progress, report release, paired product identities and archive paths. The original ensemble and native run files remain the execution state. This gives a successor the concrete operation to continue after a terminal or receiving session ends.
+
+| Retained output | Use |
+| --- | --- |
+| ensemble_results/ENSEMBLE_ID/operation.json | Current command state, actual process and delivered product paths |
+| ensemble_results/ENSEMBLE_ID/paired-selections/SCENARIO_ID.json | Original paired selection for each chosen land-cover alternative |
+| ensemble_reports/REPORT_ID/ | Printable report.html, pairs.csv, sensitivity.csv, robustness.csv, report.json, METHODS.md, release.json and ensemble-report.zip |
+| ensemble-products/ANALYSIS_ID/ | Original paired raster result, reports and retained tile outputs |
+| ensemble_results/ENSEMBLE_ID/paired-exports/ | Complete portable paired-product archives |
+
+Read an exact paired selection with cohort ENSEMBLE_ID --scenario-id SCENARIO_ID. Its response includes the original paired run IDs, available pollutants, planned and selected counts, pending members and readiness. The same cohort function supplies the shared paired browser view and headless consumer.
+
+The command reuses an existing archive when its recorded report revision and actual file hash still match; an updated release receives a new exclusive filename. Exit 0 means the requested operation completed, exit 2 retains an incomplete operation or selection/runtime error, and exit 130 preserves progress after keyboard interruption. Repair the affected original input or native environment and continue the same ensemble ID.
 
 Set UPSTATE_ENSEMBLE_DESIGN to the completed design file:
 
@@ -263,18 +350,18 @@ Native source versions used by the ensemble catalogue:
 
 ## 7. Operate the browser and interpret the results
 
-Receive the maintained selected-model core and ECSA extension host into the same application before applying the five-file ensemble operator contribution. The current installer requires model/model_selection.py and the shared install_extensions.py. Its ensemble descriptor is operator/extensions/ensembles.json; the browser adapter uses the host's existing lifecycle and task services. Its DOM namespace is ensemble-design-, while the existing backend ensemble.* actions and model/ensemble_cli.py remain unchanged.
+Receive the maintained selected-model core and ECSA extension host into the same application before applying the five-file ensemble operator contribution. When composing standalone components, apply the current source-profile comparison8 after the operator5 so its maintained study client supplies the profile handoff; the same client is included by operator5 edition v4. The current installer requires model/model_selection.py and the shared install_extensions.py. Its ensemble descriptor is operator/extensions/ensembles.json; the browser adapter uses the host's existing lifecycle and task services. Its DOM namespace is ensemble-design-, while the existing backend ensemble.* actions and model/ensemble_cli.py remain unchanged.
 
-Receive the complete current F0C8JDNF02Z companion into the same application. Alongside the methods guide and design schema, it now includes the fifteen-file model.paired_ensemble successor and its selected-model profile join. The saved-design engine uses model/ensemble_cli.py; the original single-artifact pixel workflow uses model/ensemble_raster_cli.py; the multi-pollutant product uses model/paired_ensemble/ensemble_cli.py. These are separate retained consumers of the same original native runs.
+Receive the complete current F0C8JDNF02Z companion and its maintained shared-host successor into the same application. The saved-design study engine uses model/ensemble_cli.py. The multi-pollutant raster product uses model/paired_ensemble/ensemble_cli.py and its retained model.paired_ensemble modules. The shared paired browser view is paired-ensemble; it preserves the existing paired_ensemble.* actions and product identities. Its original prepare/openEdition entries remain available, including host.openExtension('paired-ensemble', 'prepare', selection). The complete maintained component retains the original provider, browser desk and stylesheet. These two maintained consumers share the original completed native runs. The historical external single-artifact model.ensemble_raster_cli/model.ensemble_workspace carrier has its own owner and is outside this public receiving cohort.
 
 Apply both authored integrations from that application root:
 
 ~~~bash
 "$UPSTATE_PYTHON" -B operator/integrate_ensembles.py --apply
-"$UPSTATE_PYTHON" -B operator/install_paired_ensemble.py --operator operator
+"$UPSTATE_PYTHON" -B operator/integrate_paired_ensemble.py --apply
 ~~~
 
-The installer defaults to the application root containing its operator/ directory. Use --application with the actual product root when selecting another application directory. The --apply flag writes the composed integration; omitting it returns the composition summary for inspection. The current version migrates the earlier exact ensemble-specific direct registrations into the shared extension host under its existing installation lock. Keep the selected host, ensemble descriptor and browser lifecycle adapter in the application that the receiver will archive. The paired-ensemble installer supplies its own namespaced adapter and original browser navigation. Preserve its model.paired_ensemble, paired_ensemble.* actions, paired_ensemble_products collection and /api/paired-ensemble/ routes when composing the current shared host. Its source manifest retains the earlier exact file identities for migration; apply the authored migration against those identities so the saved-design CLI and report producer retain their own paths.
+The installer defaults to the application root containing its operator/ directory. Use --application with the actual product root when selecting another application directory. The --apply flag writes the composed integration; omitting it returns the composition summary for inspection. The current version migrates the earlier exact ensemble-specific direct registrations into the shared extension host under its existing installation lock. Keep the selected host, ensemble descriptor and browser lifecycle adapter in the application that the receiver will archive. The paired-ensemble installer supplies its namespaced shared-host adapter and paired-ensemble view. The older operator/install_paired_ensemble.py --operator operator entry delegates to this maintained integration; both preserve the original paired operation identities. The completed design cohort uses model.paired_ensemble.designs.design_cohort to bind the actual completed run pairs and declared model scope. Preserve its model.paired_ensemble, paired_ensemble.* actions, paired_ensemble_products collection and /api/paired-ensemble/ routes when composing the current shared host. Its source manifest retains the earlier exact file identities for migration; apply the authored migration against those identities so the saved-design CLI and report producer retain their own paths.
 
 Start the integrated operator on its receiving host using the actual workspace and retained operator-state directory:
 
@@ -330,6 +417,14 @@ For a saved ensemble, show the original inputs and scientific profile, the selec
 
 The canonical JSON report uses schema upstate.ensemble-report/v1. Its rows array contains land-cover comparisons; sensitivity contains cross-profile baselines; robustness contains groups on identical support; members contains the actual selected parameter members. Each paired row retains baseline_run_id, alternative_run_id, comparison_id, profile_id, member_id, scenario_id, pollutant and artifact hashes.
 
+### Compare retained source profiles before choosing a study
+
+The complete source comparison component F0C8JGX43M1 contains the eight-file desk merged in PR 2885 and its maintained source-only receiver. The receiving command above and the browser share the same original profile and comparison APIs. Open **Source profiles**, name the comparison, choose a retained reference profile and one or more alternatives, and optionally choose the actual prepared grid. The comparison reads the original tables and saved parameters. Grid coverage shows the aligned input rectangle’s actual land-cover counts; the reporting mask is applied by the native model.
+
+Save the comparison to retain its complete HTML, coefficient CSV, parameter CSV, JSON and ZIP reports together with the original source files. Select the desired candidates and choose **Use selected source profiles in a native study**. The existing study form opens with the reference profile first, the selected candidates, the saved grid when provided and their common model scope. The normal preview determines compatible study designs. Source comparison can be prepared before a grid exists; select the actual saved grid when preparing the numerical study.
+
+NDR load values keep their original definition: application-rate loading is adjusted by retained efficiency at that step; measured-runoff loading has already passed that step. The report separates differing load definitions and shows derived source coefficients before runoff and routing. Its full scientific and command-line reference is `model/PROFILE_COMPARISON.md`.
+
 ## 8. Carry the same Workspace through operator receiving
 
 The existing receiver consumes the completed native handoff directly:
@@ -344,7 +439,7 @@ The existing receiver consumes the completed native handoff directly:
   --chromium "$UPSTATE_CHROMIUM"
 ~~~
 
-For the recorded htch-runtime browser installation, UPSTATE_NODE is /usr/bin/node, UPSTATE_NODE_MODULES is /home/hatch/workspace/sim-work/rsd400-cf0907/nm/node_modules, and UPSTATE_CHROMIUM is /home/hatch/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome. The CLI arguments also support the current paths on a different receiving host.
+Set UPSTATE_NODE, UPSTATE_NODE_MODULES and UPSTATE_CHROMIUM from the current receiving host’s actual executable/module paths. Keep the selected source commit and native handoff with that same operation.
 
 The receiver backs up the whole Workspace and the application's model/, operator/, source_tools/ and source/ directories, including the additive ensemble and soil modules placed in those directories. It then reopens the actual received CLI and operator. Keep the completed received application and its actual opening route together with the original handoff and result identities.
 
@@ -363,6 +458,9 @@ The complete Workspace retains these original and additive records:
 | `ensemble_results/<ensembleID>/pairs/` | Reusable paired summaries |
 | `runs/<runID>/` | Original native engine arguments, stages, logs and physical outputs |
 | `comparisons/<comparisonID>/` | Original paired differences and their source records |
+| `profile-comparisons/<comparisonID>.json` and `profile-comparison-reports/<comparisonID>/` | Retained source alternatives, coefficient comparison and portable original-source report |
+| `watershed-context/<reportID>/` | Original completed regional run, source inputs and bound connectivity outputs |
+| `watershed-context-exports/<exportID>/` | Selected watershed CSV/JSON and planning briefs |
 
 Create the delivered archive after the intended native and ensemble work has been retained so the receiving operation includes those directories. Use the same completed workspace throughout the original browser, export, backup and transferred-copy opening route. The actual source identity, input collection, grid, profile, scenario and run IDs should remain visible in the received records.
 
@@ -371,6 +469,8 @@ If the host process ends, recover the completed source package, original archive
 The full product's current guided operator journey supplies Bryce's opening, case selection, run, map, export, save and transferred-copy steps. Use its actual received local URL and selected case. The model and source records in this guide supply the scientific meaning and the exact continuation commands behind that journey.
 
 ## 10. Source cohort and operating references
+
+The merged public receiving foundation is PR 2711, commit a25edf3d5f16a426ed93b7428bc6d0e738e385b1, under opportunities/upstate_forever_2026. Its retained guide, scientific ensemble, soil and assembler sources compose with the maintained shared host. The subsequent maintained soil coverage join is PR 2716, merge 0cfae283fdbf17e6301b74b6669d625c423fcf7c. The complete headless study and paired desk join is merged in PR 2806 at 3d544b2db09460f7b8c2dfe09bc7a19e119669b4. The regional soil desk is merged in PR 2839 at 2150d587bbce481e95445e19900a654c2f166d6f; source-profile comparison in PR 2885 at c87176bc7d76592cbbf9207c5f4acc8d6a45a035; completed watershed and network receiving in PR 2905 at 67f39b70f1e1f675dcf811cbce21d0e7a8742249.
 
 The authoritative internal work order and source thread remain:
 
@@ -384,7 +484,7 @@ Retain these compatible carriers in the delivered source manifest:
 
 | Carrier | Source contribution |
 | --- | --- |
-| F0C8JNZTURK and maintained successor | Complete ECD1 cumulative application receiving base: 252 files, 3,892,300 source bytes |
+| F0C8KFCT3S9 and maintained successor | Complete ECD1 cumulative application, edition 3, 586 files |
 | F0C8F3MKR3M | Complete original 72-file source cohort |
 | F0C8GLD74CT | Current eighteen-file map/customer receiving integration |
 | F0C8HMZDJ11 | Original community/report/source and Esri reader closure |
@@ -392,15 +492,18 @@ Retain these compatible carriers in the delivered source manifest:
 | F0C8JRS1PM3 and maintained successor | Current nineteen-file selected-model/native-stage assembly revision 3 with Workspace.combine_runs; follows F0C8N3YVA5U and F0C8JJQ2JBX |
 | F0C8TNEPZB6 and ECSA's maintained successor | Complete shared extension host, typed retained-file routes, programme-aware browser, descriptors and install_extensions.py |
 | F0C9J455NP2 | Paired parameter engine and command-line source |
-| F0C8JDNF02Z | Complete ensemble guide, design schema and fifteen-file model.paired_ensemble companion with selected-model profile support |
+| F0C8JDNF02Z | Complete twenty-four-file ensemble methods, schema and model.paired_ensemble shared-host companion with selected-model profile support |
 | F0C88M55E79 | Complete maintained eight-file soil component, including original metadata and guides; receive as one overlay |
 | F0C8RM735LH | Complete source_tools/soil_region.py capture and preparation module |
 | F0C8HGKG0BD | Full source_tools/SOIL_REGION.md capture, prepare and inspect guide |
 | F0C88E1SJQP | Maintained source_tools/soil_coverage.py and SOIL_COVERAGE.md compatible with the regional prepared K source |
-| F0C8TDW58G4 | Ensemble browser, durable tasks, source integration and report/export modules |
+| F0C8TDW58G4 | Ensemble browser, durable tasks, source integration and report/export modules; compose before profile comparison8 when using an earlier operator edition |
+| F0C8JGX43M1 | Complete source-profile comparison and original-study handoff |
+| F0C8UA4B9QU | Integrated regional soil capture, preparation, coverage and import desk |
+| F0C8SM4T0TB | Maintained completed watershed receiving, native network context and planning briefs |
 | This guide's carrier named in the delivery manifest | End-to-end regional model and ensemble receiving procedure |
 
-The planned-run CLI is model/ensemble_cli.py. The complementary streaming pixel-analysis CLI uses the distinct model/ensemble_raster_cli.py namespace. Pixel benefits named reduction use baseline minus alternative; native physical delta_common uses alternative minus baseline. Convert a benefit to a change only for the same physical quantity, units and exact shared cells, keeping the names and sign explicit.
+The maintained study CLI is model/ensemble_cli.py. The completed multi-pollutant streaming product uses model/paired_ensemble/ensemble_cli.py and model.paired_ensemble.EnsembleWorkspace. Pixel benefits named reduction use baseline minus alternative; native physical delta_common uses alternative minus baseline. Convert a benefit to a change only for the same physical quantity, units and exact shared cells, keeping the names and sign explicit.
 
 Quantiles reverse their order under that sign change: q10(reduction) = -q90(change), q50(reduction) = -q50(change), and q90(reduction) = -q10(change). Minimum reduction is negative maximum change. Each pixel's valid paired-member count uses members whose own baseline and alternative are both valid at that pixel; retain the requested population separately. Fraction reduced is the count of positive paired reductions divided by that valid paired-member count. The pixel product's declared support rule and original mask determine where these quantities are reported; whole-area scalar ranges continue grouping by exact common-support masks.
 
@@ -412,11 +515,11 @@ The multi-pollutant companion consumes the actual completed pairs through model.
   --selection "$UPSTATE_PAIRED_RASTER_SELECTION"
 ~~~
 
-UPSTATE_PAIRED_RASTER_SELECTION is the retained selection JSON built from the original completed baseline and alternative run IDs. Select pollutants explicitly from those runs\' shared native outputs: an NDR-only study supplies its available nitrogen and phosphorus outputs, an SDR-only study supplies sediment, and a combined study can supply all three. The companion\'s omitted pollutant selection defaults to all three. The current profile join accepts the selected model family while preserving the original grid, native masks, source records, case identities and product/result paths. Use the companion\'s complete retained selection schema in its delivered guide to name those exact run pairs and support rule.
+UPSTATE_PAIRED_RASTER_SELECTION is the retained selection JSON built from the original completed baseline and alternative run IDs. Select pollutants explicitly from those runs' shared native outputs: an NDR-only study supplies its available nitrogen and phosphorus outputs, an SDR-only study supplies sediment, and a combined study can supply all three. The companion's omitted pollutant selection defaults to all three. The current profile join accepts the selected model family while preserving the original grid, native masks, source records, case identities and product/result paths. Use the companion's complete retained selection schema in its delivered guide to name those exact run pairs and support rule.
 
 Original paired-raster request contract: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791849843511819 . Paired engine/raster joining guidance: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791849475421189 .
 
-The paired engine, operator and integrated guide use the existing commons.source-bank/v1 carrier. Each files[] entry declares encoding: "utf-8" and retains the original file bytes in content_base64, with its path, byte count and SHA256. The complete seventeen-file science companion and eight-file soil component use ordered upstate.application-source-part/v1 gzip/base64 blocks around the same complete source-bank representation. Save the full actual carrier text as the local receiving input, including every numbered part when that transport is present. Add each complete carrier to the current application_assembly invocation as --overlay followed by its actual local path. The existing assembler accepts the standard bank and numbered-part formats, reconstructs the inner document and decodes the declared bodies. Preserve the selected current core when composing these overlays.
+The paired engine, operator and integrated guide use the existing commons.source-bank/v1 carrier. Each files[] entry declares encoding: "utf-8" and retains the original file bytes in content_base64, with its path, byte count and SHA256. The complete twenty-four-file science companion and eight-file soil component use ordered upstate.application-source-part/v1 gzip/base64 blocks around the same complete source-bank representation. Save the full actual carrier text as the local receiving input, including every numbered part when that transport is present. Add each complete carrier to the current application_assembly invocation as --overlay followed by its actual local path. The existing assembler accepts the standard bank and numbered-part formats, reconstructs the inner document and decodes the declared bodies. Preserve the selected current core when composing these overlays.
 
 The operator carrier includes operator/integrate_ensembles.py and operator/extensions/ensembles.json to join the feature into the selected existing application. Run its --apply command from section 7 after the compatible selected-model and extension-host source is present. Use the current complete source package to reconcile original and additive files before starting the receiving operation.
 
@@ -432,3 +535,108 @@ Public source references:
 - InVEST SDR method: https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/sdr.html
 
 Prepared for TokenJunkieLabs' Upper Savannah application. Preserve the existing original-source and dependency license notices in the delivered source and receiving package.
+## Reopen the selected paired-raster result
+
+In **Paired raster analysis**, receive the original result ZIP, open its completed task, then select **Open analysis**. The result view presents its actual common-support basin summaries, quantitative raster previews, original member totals, source references and full report. **Export complete result ZIP** retains the same analysis identity and all result members for independent receiving.
+
+Selecting a result now saves that analysis ID in `paired-ensemble-view.json` in the scientific Workspace. Reopening the paired desk restores the selected result. The complete Workspace archive carries this view alongside its original analysis directory; receiving a result-only ZIP creates a result in the chosen Workspace, where opening it saves that Workspace's selected view. This display selection leaves the analysis identity and quantitative files intact.
+
+The result view checks which original run IDs are available in the receiving Workspace. Available runs open directly. Native continuation appears when the matching original Workspace run records are present; otherwise the view retains the original run references and directs the operator to the scientific Workspace backup for calculations. Report inspection, quantitative downloads and result export remain available for the received result.
+
+
+
+## 11. Use completed studies for decisions and annual-load evaluation
+
+The existing **Scenario sensitivity** view now keeps the scientific handoff beside its saved design. Open a study and choose **Physical decisions** or **Evaluate annual loads**. The form shows the actual completed baseline candidates and baseline/land-cover pairs, preserves unfinished members, and lets you choose the retained profiles and physical outputs. Physical decisions also retain the original land-cover selection and reference profile. The operation uses the application's existing task queue; its saved result offers a complete decision report, physical input, CSV tables and ZIP, or the original calibration and source-uncertainty records.
+
+For annual-load evaluation, select an existing observation/catchment definition or choose retained annual observations and their original upstream polygon source and identity field. The existing calibration model retains its original objectives, periods, spatial groups and validation selections. The published standard-error multiplier is optional. The result labels the objective outputs actually evaluated; the wider available native outputs remain separate. Nitrogen and phosphorus retain kg/year, and sediment retains metric tonnes/year.
+
+The complete operator, CLI, restart and interpretation guide is [model/ENSEMBLE_CONSUMERS.md](../model/ENSEMBLE_CONSUMERS.md). From the original application root, inspect the saved study and build its physical decision edition with:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli --workspace "$UPSTATE_WORKSPACE" inspect --ensemble-id "$UPSTATE_ENSEMBLE_ID"
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli --workspace "$UPSTATE_WORKSPACE" decision --ensemble-id "$UPSTATE_ENSEMBLE_ID"
+```
+
+The decision operation reuses each completed profile's original baseline and alternatives, creates the maintained comparison, and measures the cells shared by the chosen runs. The explicit pollutant option can narrow the common completed outputs. A saved consumer ID supports the original decision-resume or calibration-resume command after interruption.
+
+## 12. Original 2020–2025 discharge for the downstream domain
+
+The complete acquisition is retained in [source/hydrology-huc05-07-20261013/](../source/hydrology-huc05-07-20261013/). It contains eight unchanged USGS response bodies, all six annual daily series for 2020–2025, the original station inventory and series catalogue, request URLs and dates, all 26,242 source rows in a usable CSV, and 78 station/year coverage records with exact gaps. Original approved, provisional, estimated and nonnumeric values remain attached to their source rows. Thirteen daily-mean discharge series overlap the requested period; seven contain all 2,192 numeric days.
+
+The source HUC8 selection covers 03060105–03060107. Join the publisher's NAD83 station coordinates to the original retained 217-polygon domain to obtain the exact model and reporting membership. For modeled annual-load comparison, retain each monitoring location's original contributing catchment, measurement period, concentration observations and chosen annual-load method. A73C / OBS12 / AE11 maintain that observation pipeline. The package's [README](../source/hydrology-huc05-07-20261013/README.md) gives the original quantities, qualifiers, source provenance and an offline Node command that reproduces the derived tables from the eight retained responses.
+
+## 13. Use an imported annual reference directly with a saved study
+
+The Annual load observations desk retains the selected original observation
+edition together with its source catchments. After an import completes, choose
+**Evaluate saved study** on that operation, then choose the existing saved
+parameter study. The Scenario sensitivity desk opens the same calibration form
+with the original observation and catchment identities already bound.
+
+The form shows the publisher's source, methods, annual mass units, original
+periods, admitted records and available published standard errors. The study
+supplies its completed baseline candidates. Select the relevant parameters and
+analysis groups; the original calibration engine applies the requested objective
+and temporal weighting. The existing **Open calibration** route remains available
+for a manually selected candidate cohort.
+
+The same original import is available from the command line:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$UPSTATE_WORKSPACE" annual-references
+
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$UPSTATE_WORKSPACE" calibration \
+  --ensemble-id "$UPSTATE_ENSEMBLE_ID" \
+  --annual-import-id "$UPSTATE_ANNUAL_IMPORT_ID"
+```
+
+Set `UPSTATE_ANNUAL_IMPORT_ID` to the completed import's actual task ID from
+the returned catalog. Optional `--reference-options` accepts a retained JSON file
+containing observation-record selection, spatial groups, objective, source notes
+and temporal weighting. Its original observation and catchment binding stays
+fixed. Optional `--standard-errors` invokes the maintained published-source
+sensitivity after calibration. The resulting plan retains the original import,
+source summary and exact source binding alongside its selected baseline runs.
+The normal Workspace backup carries the import records, consumer plans and
+results into an independent receiving directory.
+
+## 14. Original daily-flow gauge and catchment source
+
+The complete source edition in
+`source/hydrology-huc05-07-20261013/nldi/` accompanies the original discharge
+records in section 12. It contains all 13 original NLDI gauge features and 13
+original contributing-basin responses, source station/network bindings, full
+GeoJSON views and an offline standard-library Node derivation.
+
+From the current application root, import its three source views into the same
+scientific Workspace:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.cli --workspace "$UPSTATE_WORKSPACE" \
+  source-import source/hydrology-huc05-07-20261013/nldi/model-sources.json
+```
+
+The retained source IDs are:
+
+| Source view | Source ID | Identity field |
+|---|---|---|
+| Original gauge locations | `nldi-daily-flow-gauge-locations-20261013` | `station_id` |
+| Whole upstream catchments | `nldi-daily-flow-whole-catchments-20261013` | `basin_id` |
+| Station and basin bindings | `nldi-daily-flow-station-basin-bindings-20261013` | `station_id` |
+
+Each native source includes the original companions needed for portable
+receiving. The original `simplified=false&splitCatchment=false` basin response
+retains the complete local NHDPlus catchment at each gauge's source reach.
+The registered gauge point, its source reach measure, this whole-catchment
+context and any later exact gauge-split geometry retain their own identities.
+For annual calibration, use the geometry declared by the imported annual
+estimator's original binding in section 13.
+
+The regional station-geography workflow joins the original points and catchments
+to the existing 217-HUC domain and its reporting, upstream and utility selections.
+HUC8 catalog membership remains source context; the original polygon geometry
+determines the spatial relationship. See the source edition's complete README
+and capture manifest for all request URLs, original dates and geometry details.

@@ -6,11 +6,11 @@ Use this entrypoint for the current Ecosystem Sciences product. Existing stand-a
 
 ## Install into the assembled source
 
-The complete original ECO13 package is preserved under:
+The complete current package is installed under:
 
     integrations/eco13_scenario_lab/
 
-Place these additive leaves in that package:
+The Workspace entrypoint consists of these leaves within that complete package:
 
 - eco_scenario_lab/workspace_driver.py
 - eco_scenario_lab/workspace_cli.py
@@ -18,7 +18,7 @@ Place these additive leaves in that package:
 - examples/workspace-selection.template.json
 - examples/workspace-runs.template.json
 
-Keep the original 15-file cohort present. The model package remains the assembled application's current model/ package. The bridge imports the existing Workspace, common, profiles, native and rasters modules directly. It does not require changes to the shared model core, the original workbench engine, or either existing CLI.
+Install the complete current source package, including current ECO13 0.1.2, the Workspace bridge and the retention integration. The complete carrier preserves original files omitted by the upstream 17-file upgrade and supplies all maintained postimages and Workspace/storage additions. The model package remains the assembled application's current model/ package. The bridge imports its existing Workspace, common, profiles, native and rasters modules directly. [RETENTION.md](RETENTION.md) describes input copying, complete native objects and portable receiving; [UPSTATE_RECEIVING.md](UPSTATE_RECEIVING.md) documents the current original Workspace experiment route; [EXPERIMENT_INTAKE.md](EXPERIMENT_INTAKE.md) retains the legacy NativeJobsEngine inspection route.
 
 Run from the assembled application root, with its existing equipped interpreter:
 
@@ -146,23 +146,34 @@ The report export contains its frozen inputs, scenario preparation, complete cop
 
 For a revised native scenario or case, create a new plan with this integration command. Historical stand-alone workbench revisions continue through their own original entrypoint.
 
-## Source and receiving status
+## Source contract and receiving
 
-Operation: UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012.
-Integration edition: ED6E-WORKSPACE-BRIDGE-20261013-2.
+The complete workbench 0.1.1 with Workspace bridge edition2 was merged in
+[PR2750](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2750),
+commit 77b65a741c84c812ff78a6d7eb63c8e9cd74a974. The current workbench composes
+that original bridge with native experiment receiving and independent file
+retention. Retain the bridge's recorded version identity when reopening its
+existing selections and reports.
 
-The preserved original ECO13 cohort is the 15-file eco_scenario_lab 0.1.0 source, original JSON SHA256 4bc4aba0767a8f64cd9c5fbf26b674703661ac7656ba1cf26b3a27604454acd7:
-
-https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8Q0H2XM0
-
-The current selected-model core reference is the complete postimage overlay at commit 8174e0503c6429cec6086eca37bb757e79c6c1e8:
+The selected-model integration reference is the complete source overlay at
+commit 8174e0503c6429cec6086eca37bb757e79c6c1e8:
 
 https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/8174e0503c6429cec6086eca37bb757e79c6c1e8/opportunities/upstate_forever_2026/integration/selected-model-core-overlay.json
 
-Native result identifiers and units were joined to S1's InVEST 3.20 semantics registry, SHA256 364c0b790b01938b9f77d6fae978a447e9ad8ab0c7258aeeb769a354ba8fc1b6.
+Native result identifiers and units follow the original InVEST 3.20 semantics
+registry. The reviewed registry source has SHA256
+364c0b790b01938b9f77d6fae978a447e9ad8ab0c7258aeeb769a354ba8fc1b6.
 
-The native stage reuse join follows 70CB's stage cache and completed-model revision 3, Canvas F0C8JRS1PM3, decoded bank 381,750 bytes, SHA256 6868ca85e30000399d2efbfd513336add1dd6370f93e5480859df9f3e7f1534c. Both copied original arguments and separately retained requested_arguments are supported. The original stage signature can predate companion-bearing signatures, and selected_completed_stage assembly may accept exact native data in another encoding. Full nested reuse provenance and the current run's per-model assembly input_matches are preserved.
+Native stage reuse supports both copied original arguments and separately
+retained requested_arguments. An original stage signature can predate
+companion-bearing signatures, and selected_completed_stage assembly may accept
+exact native data in another encoding. Full nested reuse provenance and the
+current run's per-model assembly input_matches are preserved.
 
-The complete implementation is authored against these retained source contracts. The equipped receiver should execute the adopt/run path against its actual accepted native baseline and alternative and return the resulting native bindings and report. That path supplies the direct runtime confirmation and brings the existing scientific work into the completed product.
-
-Retained current reuse-source leaves: model/run_assembly.py (22,762 bytes, SHA256 4c28a89f390f918bb6e1033279f680158cac6635551c3ed985cb012d911f9017); model/native_arguments.py (943 bytes, SHA256 f91a6202a66ffbffd955485198358fd3526e7bd127ea5e427323370a7e87144d); model/stage_cache.py (8,504 bytes, SHA256 6dac1240440e0d220b772637d1be55a22cb79c8005d9918952567a4525aeb8aa).
+The reviewed reuse interfaces are model/run_assembly.py, model/native_arguments.py
+and model/stage_cache.py. Install this bridge alongside the maintained native
+implementation, preserving subsequent changes to those shared modules. On the
+receiving host, use the actual accepted native baseline and alternative with the
+adopt/run commands above, then open the retained native bindings and comparison
+report. Export and independently receive the resulting edition through the same
+original Workspace workflow.

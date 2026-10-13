@@ -269,15 +269,37 @@ class ExperimentOperator:
             execution[case_id] = _native_execution(ws, row, cache)
         if "cases" in result or requested_cases:
             result["native_execution_by_case"] = execution
-        result["_downloads"] = self.app._files(workspace, result, scope)
+        # Native binding recovery can invalidate a summary without deleting
+        # its prior bytes. The maintained reader applies the current plan and
+        # binding rules before any result is presented as downloadable.
+        current_summary = experiments.read_summary(ws, key)
+        result["_downloads"] = (self.app._files(workspace, result, scope)
+                                if current_summary is not None else [])
         marker = scope / "operator-report.json"
         summary_path = scope / "summary.json"
-        if marker.is_file() and summary_path.is_file():
+        if marker.is_file() and current_summary is not None:
             retained = read_json(marker)
             if retained.get("summary_sha256") == file_digest(summary_path):
                 extra = self.app._files(workspace, {"files": {"report": retained["report"]}}, scope)
                 seen = {row["id"] for row in result["_downloads"]}
                 result["_downloads"].extend(row for row in extra if row["id"] not in seen)
+        study_marker = scope / "study-report.json"
+        if study_marker.is_file() and summary_path.is_file():
+            retained = read_json(study_marker)
+            if (retained.get("schema") == "upstate.study-report-downloads/v1"
+                    and retained.get("experiment_id") == key
+                    and retained.get("workspace_id") == ws.project["id"]):
+                current = (current_summary is not None
+                           and retained.get("summary_sha256") == file_digest(summary_path))
+                result["study_report"] = {
+                    "state": "current" if current else "stale",
+                    "generated_at": retained.get("generated_at"),
+                    "summary_sha256": retained.get("summary_sha256"),
+                }
+                if current:
+                    extra = self.app._files(workspace, retained, scope)
+                    seen = {row["id"] for row in result["_downloads"]}
+                    result["_downloads"].extend(row for row in extra if row["id"] not in seen)
         return result
 
     def read(self, workspace, operation, value):
@@ -310,6 +332,8 @@ class ExperimentOperator:
         with held(scope / ".experiment.lock", blocking=False):
             # Read the retained summary while its original writer is excluded.
             summary = experiments.read_summary(ws, key)
+            if summary is None:
+                raise ValueError("Build an updated experiment summary before creating its report.")
             summary_path = scope / "summary.json"
             summary_sha256 = file_digest(summary_path)
             text = render_report(summary)
@@ -330,7 +354,11 @@ class ExperimentOperator:
                         {"summary_sha256": summary_sha256, "report": record})
             result = dict(summary)
             result["files"] = dict(result.get("files", {}), report=record)
-            return result
+        # The complete report takes the same summary lock. Refresh it only
+        # after this writer releases that lock, retaining its original context.
+        from model.study_report import refresh_existing
+        refresh_existing(ws, key)
+        return result
 
     def invoke(self, task):
         ws = self.app.ws(task["workspace"])
@@ -345,12 +373,19 @@ class ExperimentOperator:
                 raise ValueError("Choose a saved experiment or provide its selection.")
             key = experiments.prepare(ws, selection)["id"]
         key = _id(key)
+        # The queue retains this exact identity even when execution or report
+        # rendering raises before a result can be returned.
+        task["experiment_id"] = key
+        task.pop("study_report_error", None)
         if action == "experiment.run":
             try:
                 experiments.execute(ws, key)
             except Exception:
-                with contextlib.suppress(Exception):
+                try:
                     self._report(task["workspace"], key)
+                except Exception as report_error:
+                    task["study_report_error"] = {
+                        "type": type(report_error).__name__, "message": str(report_error)}
                 raise
             summary = experiments.read_summary(ws, key)
         elif action == "experiment.summarize":
@@ -359,10 +394,45 @@ class ExperimentOperator:
             raise ValueError("Unknown experiment operation.")
         return self._report(task["workspace"], key, summary)
 
+    def retained_result(self, workspace, key):
+        """Expose current retained files without starting or resuming a model."""
+        ws = self.app.ws(workspace)
+        key = _id(key)
+        summary = experiments.read_summary(ws, key)
+        if summary is None:
+            return None
+        try:
+            return self._decorate(workspace, summary)
+        except (OSError, ValueError, KeyError) as error:
+            # A damaged report must remain actionable without hiding the
+            # separately retained scientific summary and comparison CSV.
+            return {**summary,
+                    "_downloads": self.app._files(
+                        workspace, summary, ws.root / "experiments" / key),
+                    "_report_error": str(error)}
+
     def decorate_task(self, task):
-        if task.get("action") in ACTIONS and task.get("state") == "complete":
-            result = task.get("result", {})
-            if result.get("id"):
-                decorated = self._decorate(task["workspace"], result)
-                task["_downloads"] = decorated["_downloads"]
+        if task.get("action") not in ACTIONS:
+            return task
+        result = task.get("result") or {}
+        key = (task.get("experiment_id") or result.get("id")
+               or task.get("payload", {}).get("experiment_id"))
+        if not key:
+            return task
+        task["experiment"] = {"id": _id(key)}
+        if task.get("study_report_error"):
+            task["experiment"]["report_error"] = task["study_report_error"]["message"]
+        if task.get("state") not in {"complete", "failed", "interrupted", "cancelled"}:
+            return task
+        try:
+            record = self.retained_result(task["workspace"], key)
+            if record is not None:
+                task["experiment"].update(
+                    {name: record[name] for name in
+                     ("title", "state", "progress", "study_report") if name in record})
+                if record.get("_report_error"):
+                    task["experiment"]["report_error"] = record["_report_error"]
+                task["_downloads"] = record["_downloads"]
+        except (OSError, ValueError, KeyError) as error:
+            task["experiment"]["report_error"] = str(error)
         return task

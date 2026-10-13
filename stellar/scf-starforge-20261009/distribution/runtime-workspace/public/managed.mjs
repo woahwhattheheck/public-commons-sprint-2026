@@ -93,6 +93,7 @@ export function createManagedWorkspaceView({ api, getState, operation, refreshWo
       if (job.commandProcess) article.append(node('p', 'Original process ' + job.commandProcess.pid +
         (job.commandActive ? ' · running' : ' · ended') + ' · ' + job.commandProcess.cwd, 'note'));
       if (job.error) article.append(node('p', job.error.code + ': ' + job.error.message));
+      if (job.error?.flock) article.append(detail('Original lock process diagnostics', job.error.flock));
       const actions = node('div', undefined, 'actions');
       const log = node('button', 'Open retained output'); log.type = 'button';
       log.addEventListener('click', () => openLog({ operationId: job.id }).catch(error)); actions.append(log);
@@ -108,6 +109,7 @@ export function createManagedWorkspaceView({ api, getState, operation, refreshWo
       }
       article.append(actions);
       if (job.result) article.append(detail('Original result', job.result));
+      if (job.resultSource) article.append(node('p', 'Original receipt: ' + job.resultSource));
       element.append(article);
     }
   }

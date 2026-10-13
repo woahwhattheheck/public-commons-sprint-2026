@@ -4,7 +4,7 @@ This companion turns the retained SC DES classification capture into original-ge
 
 ## Run with the sprint's original sources
 
-Install the source file at `opportunities/upstate_forever_2026/source_tools/high_quality_water_crosswalk.py`. The existing `source/capture_upstream_network.py` supplies polygon-ring reconstruction; it remains unchanged. The runtime needs Python 3.10+, Shapely 2, pyproj, and Fiona with GeoPackage support. Version 1.0.2 caches coordinate transforms and batches GeoPackage writes for the statewide native crossing.
+Install the source file at `opportunities/upstate_forever_2026/source_tools/high_quality_water_crosswalk.py`. The existing `source/capture_upstream_network.py` supplies polygon-ring reconstruction; it remains unchanged. The runtime needs Python 3.10+, Shapely 2, pyproj, and Fiona with GeoPackage support. The current producer caches coordinate transforms and batches GeoPackage writes for the native crossing.
 
 From `opportunities/upstate_forever_2026/`:
 
@@ -24,6 +24,51 @@ Paths above are local deployment examples. `--project-source` is the retained da
 The module reads the original `geography/planning_basins2023/PlanningBasins2023.shp`, its sidecars, and `geography/wbd_20261012/selected-four-huc12.json.gz`. It checks the pinned original shapefile SHA256, then selects `Basin == "Upper Savannah"`, native record 5. Extra HUC inputs accept original Esri FeatureSets, GeoJSON, a single HUC12 vector layer, or the existing upstream capture's `network-selection.json` with its exact page/feature locators. Duplicate HUC IDs reuse topologically identical geometry. Conflicting geometry editions identify the exact HUC and must be reconciled to one native edition.
 
 The reporting mask is the South Carolina planning boundary. The four focus HUC12 IDs are 030601010703, 030601010704, 030601020507, and 030601020502. Full upstream scope comes from the supplied upstream network selection. A focus HUC polygon alone does not define a utility's complete intake catchment.
+
+## Use geography selected from an existing Workspace
+
+Version 1.2.0 accepts original geography restored by `Workspace.source_file`.
+The maintained source workbench can pass the selected files directly:
+
+```python
+planning_path, planning_entry = workspace.source_file(
+    planning_selection["source_collection_id"], planning_selection["source_id"])
+focus_path, focus_entry = workspace.source_file(
+    focus_selection["source_collection_id"], focus_selection["source_id"])
+network_path, network_entry = workspace.source_file(
+    network_selection["source_collection_id"], network_selection["source_id"])
+
+result = build_crosswalk(
+    capture_root, mapping_path, None, output_root,
+    planning_path=planning_path,
+    focus_path=focus_path,
+    huc_paths=(network_path,),
+    registry_paths=(registry_path,),
+    workspace_root=workspace_root,
+)
+```
+
+The workbench supplies these selected identities and verified paths. Its source
+snapshot retains each original body and its companions. A standalone caller can
+use `--planning-basins ORIGINAL_SHP --focus-hucs ORIGINAL_FOCUS_RESPONSE` with
+the same `--huc`, `--capture`, `--mapping`, `--registry` and output arguments.
+When both explicit geography paths are supplied, `--project-source` is optional.
+A supplied source directory remains the fallback for either omitted override.
+
+The planning input must still be the pinned original PlanningBasins2023 shapefile.
+Its .shx, .dbf and .prj companions must remain adjacent; optional sidecars are
+retained when present. The producer still checks the original SHP hash and
+selects `Basin == "Upper Savannah"`, native record 5. The focus input remains the
+original four-HUC response; its four native IDs are checked before any extra
+upstream polygons are loaded. For the complete upstream domain, the selected
+`network-selection.json` must retain its original relative geometry pages,
+receipts and source manifest companions. A body without those referenced files
+cannot supply the actual native geometry.
+
+This input mode preserves the output schema, physical measurements, geographic
+roles and legal-association meanings. Complete original source bytes remain in
+the emitted source edition. Existing 1.1.0 editions continue to open in the
+source-review and designation desks.
 
 ## Map actual metadata fields
 

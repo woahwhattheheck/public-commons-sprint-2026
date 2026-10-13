@@ -33,9 +33,16 @@ numeric exceptions. ORW and ONRW retain previous-class criteria. TPT uses FW
 standards. Receiving-resource connections are separate attributes: upstream land
 can matter to a protected receiving water while its own named class remains FW.
 
-The current profile binds the May 2023 state edition and December 2023 EPA
-approval. The 2026 proposed edition can be included as a separate resource context;
-effective class inheritance retains the current edition.
+The classified-reach profile retains R.61-69's May 26, 2023 state edition and
+recorded December 12, 2023 EPA approval. Its associated R.61-68 standards have a
+separate current state edition: May 23, 2025, State Register Document 5333. The
+profile records that edition in associated_standards_edition and in the
+sc_r61_68 source entry. The classification edition ID remains sc-r61-69-2023.
+The state standards PDF's history is on page 2; the state code PDF's history is
+on page 28. Older retained EPA copies keep their own original publication edition.
+
+The 2026 proposed edition can be included as a separate resource context;
+effective reach inheritance continues to use the retained R.61-69 edition.
 
 The graph's resolution controls the output. HUC12 graphs produce watershed-scale
 receiving-resource context. Only water_reach graphs resolve reach classifications.
@@ -47,6 +54,8 @@ Primary references:
 - https://www.scstatehouse.gov/coderegs/Chapter%2061-69.pdf
 - https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf
 - https://des.sc.gov/programs/bureau-water/water-quality-standards
+- https://www.scstatehouse.gov/coderegs/Chapter%2061-68.pdf
+- https://des.sc.gov/permits-regulations/regulations-regulatory-updates/regulations-currently-under-amendment-recently-finalized
 
 ## Connect ASTRA-S1's current crosswalk
 
@@ -96,8 +105,8 @@ source edition. Unmatched geometry/HUC associations remain visible in the output
 
 ## Direct source crosswalk and delivery import
 
-The adapter consumes the published S1 v1.0.1 output without rerunning GIS
-intersections. It reads crosswalk.json, provenance.json, source_reaches.geojson
+The adapter consumes retained S1 crosswalk output, including v1.1.0, without
+rerunning GIS intersections. It reads crosswalk.json, provenance.json, source_reaches.geojson
 and, when present, legal_associations.json from the same completed edition.
 
     python source_tools/designation_crosswalk.py \
@@ -138,9 +147,11 @@ resource records, source provenance and sources.json with HIGH_QUALITY_WATERS.
 The optional workspace argument calls the existing Workspace.import_sources
 method. The printed result includes the source collection, source entry ID,
 selected feature count, mapped resource counts by kind and graph node count.
-It also returns delivery_selection_patch with the actual imported collection ID
-and source ID in both overlays.high_quality_waters and
-source_roles.HIGH_QUALITY_WATERS. Merge those two choices into the current
+It also returns delivery_selection_patch with the actual source choice in both
+overlays.high_quality_waters and source_roles.HIGH_QUALITY_WATERS. The import-only
+route uses the imported source. With --save-desk-selection, both the patch and
+overlay_choice use the saved desk source and preserve its selection_id,
+rule_reference and native_source_sha256. Merge those two choices into the current
 selection while preserving its other configured roles and overlays.
 
 
@@ -212,16 +223,22 @@ Open the retained source in the installed desk with this exact choice:
         DESIGNATION_SELECTION/water-designation-choice.json
 
 The desk choice selects the complete already-selected feature set and carries
-the primary rule reference, source hash, and interpretation notes. Its default
-inspection page does not limit subsequent native feature selection.
+the primary rule reference, source hash, and interpretation notes. Its
+source_context object retains the complete rule_profile, source_catalog,
+source_labels and interpretation. The native desk saves and reopens this context
+with the selection. Its default inspection page does not limit subsequent native
+feature selection.
 
 Add --save-desk-selection to the existing crosswalk command to save through
 model.water_designations.save. This requires the existing water-designations
 module and its native dependencies in the assembled application. The returned
 water_designation object contains the actual saved selection ID, source summary
-and delivery overlay. With --delivery-selection and --build-delivery, the adapter
-uses this saved overlay in both overlays.high_quality_waters and
-source_roles.HIGH_QUALITY_WATERS before calling Workspace.build_delivery.
+and delivery overlay. With --delivery-selection, the saved route calls the native
+model.water_designations.apply_to_delivery operation. It retains the saved
+selection identity, rule reference, source hash and native lineage note, then
+uses that same complete overlay in source_roles.HIGH_QUALITY_WATERS. The optional
+--build-delivery calls Workspace.build_delivery on this completed selection.
+The import-only route continues through prepare_delivery_selection.
 
     python source_tools/designation_crosswalk.py \
         --crosswalk-root COMPLETED_S1_CROSSWALK \

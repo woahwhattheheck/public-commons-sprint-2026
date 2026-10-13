@@ -160,6 +160,28 @@ The native workspace archive already walks the retained scientific workspace and
 
 Use the existing **Create complete backup** and restore workflow. The original workspace identity, plan/result identifiers, completed comparison progress and exported files remain available after restoration. The extension registration lives in the backed-up application source, alongside the native scientific modules and other operator capabilities.
 
+## Open a retained annual-source binding
+
+The annual-source desk can open this existing form through the maintained extension host after its original Workspace import and state refresh:
+
+```javascript
+await extensions.openExtension('calibration', 'openForObservations', {
+  observation_id: binding.observation_id,
+  catchments: binding.catchments,
+  temporal_weighting: binding.recommended_temporal_weighting,
+  title: 'Annual-load calibration',
+  workspace_key: state.workspace_key,
+});
+```
+
+The optional `workspace_key` guards the selected operator workspace; it is the original operator key, not the internal project UUID. The method verifies that the actual observation edition is admitted in the current catalog and that the selected catchment source is a retained vector entry. The source desk refreshes the ordinary workspace state after its bind task completes, so that new source entry is available.
+
+This opens the normal calibration form with the original observation and catchment identities. It preserves the workspace draft's selected native grid, baseline, candidate run IDs, objective weights, title, notes and catchment-group choices. A new observation edition clears record filters and delivered external loads tied to the preceding observation IDs. Catchment filters come from the new binding. The normal preview resolves the actual spatial groups before a plan is saved.
+
+An explicit saved period-weighting choice remains the user's choice. Otherwise, the form initializes from the supplied binding's weighting or the selected observation metadata's `recommended_temporal_weighting`. Changing observations follows their actual recommendation until the user edits the period control. Saved plans and drafts from earlier editions keep their original weighting.
+
+The binding remains in the workspace draft even if no completed native baseline candidate exists yet. After a baseline finishes, **New calibration** reopens that original observation and catchment selection. Newer form requests supersede earlier pending catalog reads, candidate checkboxes restore by original run ID, and a previous task response leaves a subsequently opened draft intact.
+
 ## Operator API
 
 The descriptor registers these routes with the existing authenticated local operator and selected workspace. Its state contribution is `state.data.calibration`, containing `calibration_plans` and `calibrations`. The original `/api/item` route also accepts the registered kinds `calibration-plans` and `calibrations`.
@@ -181,3 +203,186 @@ The original-source preview takes the workspace's existing native-operation gate
 `operator/calibration.py` adapts the scientific records and writes comparison exports. `operator/web/calibration.mjs` provides the existing operator's calibration view and forms. `operator/web/calibration.css` supplies scoped monochrome styling. `operator/extensions/calibration.json` binds them to the maintained extension host. `operator/install_calibration.py` performs current-source registration and migration; `source_tools/calibration_assembly.py` composes the complete receiving edition before its final source identities are recorded.
 
 The scientific model API remains `catalog(workspace)`, `preview(workspace, selection)`, `prepare(workspace, selection)`, `inspect(workspace, plan_id)`, and `analyze(workspace, plan_id)`. See the companion model guide for the complete scientific input schema and source-native command-line workflow.
+
+## Published observation-error sensitivity
+
+Open a completed nominal calibration and select **Analyze published observation errors**. The existing task queue reuses its original modeled predictions, selected candidate, catchment groups, pollutant weights and normalization scales. Choose a finite nonnegative standard-error multiplier. The default is **1**; **0** reproduces the nominal comparison.
+
+The source is the standard error retained with each original annual observation. The scientific module retains conversion to annual comparison units and the temporal aggregation already used by the nominal calibration. Missing standard errors remain explicit in source coverage and affected comparison rows. No default percentage or replacement error is supplied.
+
+The completed analysis appears in **Published observation uncertainty** on the original calibration page. Open it to inspect:
+
+- **Ranking sensitivity:** each challenger's nominal, minimum and maximum objective gap relative to the originally selected run. A positive gap favors the original selection. The plot marks zero, the source-error range and the nominal gap; the complete table remains searchable and sortable.
+- **First-tie multiplier:** the earliest standard-error multiplier that can produce a tie under the fixed objective and nonnegative source bounds. Missing contributing errors, equivalent predictions and thresholds outside finite numerical representation retain their exact scientific state.
+- **Annual reference ranges:** original catchment, hydrologic group, pollutant, annual mass, source record IDs and complete or incomplete uncertainty coverage.
+- **Published standard errors:** original source values and units, converted annual standard errors and each retained source issue.
+- **Source contributions:** coefficients and endpoints for original records contributing to each challenger comparison. A shared original record ID retains one source perturbation across all references that use it.
+- **Selected validation:** modeled annual load and residual ranges for the originally selected model on reserved validation catchments, with native/source coverage retained. No challenger ranking uses these rows.
+- **Nominal reproduction:** original and reproduced calibration objective values, absolute differences and numerical tolerance.
+
+These are deterministic sensitivity ranges over the declared marginal source bounds. They do not assign a probability to a possible reversal or change the nominal selected profile. Dependence among distinct original estimates is not assumed away. Validation catchments remain outside challenger ranking; their reference bands and selected-model residual ranges are descriptive. Overall partial coverage can coexist with an exact comparison when the missing record's shared coefficient cancels, or at multiplier zero.
+
+### Retained records and operations
+
+| Action | Payload | Result |
+| --- | --- | --- |
+| `calibration.uncertainty` | `{"report_id":"<original calibration ID>","standard_errors":1}` | Retained `uncertainty_id`, original `report_id` / `plan_id`, coverage state and selection sensitivity. |
+| `calibration.uncertainty.export` | `{"uncertainty_id":"<retained analysis ID>"}` | Complete report package and file inventory. |
+
+`GET /api/calibration/uncertainty?id=<ID>` uses the existing workspace query context and returns the original scientific analysis with retained downloads. The registered item kind is `calibration-uncertainties`. Existing calibration state includes `calibration_uncertainties`, allowing the open nominal result to show newly completed analyses after the ordinary task refresh.
+
+The provider delegates scientific work to:
+
+```python
+from model import calibration_uncertainty
+
+analysis = calibration_uncertainty.analyze(
+    workspace, original_calibration_id, standard_errors=1.0
+)
+retained = calibration_uncertainty.inspect(workspace, analysis["id"])
+```
+
+The equations, nonnegative bounds, source conversions, shared-record coefficients and nominal reproduction rules are in [CALIBRATION_UNCERTAINTY.md](../model/CALIBRATION_UNCERTAINTY.md).
+
+### Complete sensitivity package
+
+Select **Export sensitivity package** in the sensitivity view. The retained directory is `calibration-uncertainty-exports/<analysis ID>/`; the task exposes the complete ZIP and each individual file through the original verified operator ticket transport.
+
+| File | Content |
+| --- | --- |
+| `index.html` | Readable printable analysis, signed-gap interpretation, complete result tables and source coverage. |
+| `uncertainty.json` | Complete scientific sensitivity record. |
+| `calibration.json` | Original nominal calibration, preserved exactly. |
+| `selection.json` | Original saved calibration plan, preserved exactly. |
+| `pairwise.csv` | Signed challenger gaps, ranking states and first-tie multipliers. |
+| `reference_units.csv` | Catchment/pollutant annual reference bounds and source support. |
+| `source_records.csv` | Original source standard errors and converted annual mass ranges. |
+| `source_attribution.csv` | Original record contributions to each candidate's gap range. |
+| `selected_validation.csv` | Selected-model annual predictions and residual ranges on reserved validation catchments. |
+| `candidate_scores.csv` | Nominal objective reproduction for each retained candidate. |
+| `manifest.json` | Exact member byte lengths, SHA-256s and original analysis identities. |
+
+CSV output retains additional scientific fields, serializes structured source details as JSON and protects spreadsheet cells beginning with formula characters. Reopening an existing export checks retained member and archive identities before offering downloads.
+
+### Install and restore
+
+This edition adds `model/calibration_uncertainty.py` and `model/CALIBRATION_UNCERTAINTY.md` to the complete calibration source cohort. Use the receiving application's maintained `install_extensions.py` through the same calibration installer and cumulative assembly commands described above. The installer records the exact current observation-handoff browser and provider predecessors, preserving independent native core and shared host edits.
+
+The maintained portable workspace inventory walks the complete workspace, including `calibration-uncertainties` and `calibration-uncertainty-exports`. The registered `verify_workspace` hook reopens each retained sensitivity record through the scientific module's `inspect` validator. It checks the original calibration, plan, observation edition, source object bytes, source stamp, selected identities and fixed objective. Restore does not rerun the nominal model or sensitivity calculation.
+
+
+## Original-catchment residual maps
+
+A completed calibration now opens its original catchment geometry as a retained
+map source, grayscale atlas and editable GIS project. The same Calibration desk
+owns the selection, queue, saved result and reopening. The source-error page can
+also create a map edition using its exact retained standard-error multiplier and
+missing-error coverage.
+
+### Operate the complete map workflow
+
+1. Open a completed nominal calibration and choose **Prepare residual maps**.
+   From an observation sensitivity result choose **Map these reference ranges**
+   to preselect that retained sensitivity edition.
+2. Keep the original selected run. Optionally include eligible challenger runs
+   from the same saved calibration. The selected run includes calibration and
+   held-out descriptive rows; challenger layers contain calibration rows only.
+   The form identifies each original native candidate and its calibration loss.
+3. Submit **Prepare maps** through the existing workspace task queue. This calls
+   the maintained `model.calibration_maps.prepare` and retains the source collection,
+   map edition, CSV tables, SVG pages, PDF atlas and original scientific records.
+   The completed task exposes those verified file downloads immediately.
+4. Return to the same calibration. Its **Catchment residual maps** section lists
+   every retained map edition. Open one, filter the layer list by candidate or
+   pollutant, and choose **Atlas and files**. The page shows calibration/held-out
+   row counts, incomplete native rows, units and the shared per-pollutant residual
+   display cap. PDF opens its exact verified file ticket in the existing detail viewer; SVG pages appear directly
+   and remain downloadable.
+5. **Open source map** uses the original spatial viewer's `spatial-item` action
+   with kind `source-info`, exact source collection and source ID. That viewer
+   supplies boundaries and original scalar attribute inspection.
+6. **Save original spatial review** queues the science module's original
+   `SpatialReview.save` join. Calibration overlays are solid; held-out overlays
+   are dashed. The immutable `calibration-map-reviews` link retains map, layer and
+   original spatial review IDs. The saved-review button appears after the normal
+   task/state refresh and reopens the existing spatial desk.
+7. **Build editable GIS project** sends the map's exact `gis_selection` directly
+   to the maintained `gis.project.export` action. The selected vector sources and
+   their required context preserve GeoJSON, CSV, atlas pages and original source
+   records in the ordinary GIS project. The existing completed task and
+   **Editable GIS projects** view expose its ZIP, QGIS project and offline viewer.
+8. Back up and reopen the original workspace. Existing recursive workspace and
+   application collection includes `calibration-maps`, `calibration-map-reviews`,
+   `calibration-map-exports`, the ordinary source objects and original spatial
+   reviews. The extension receiving hook reopens each map through the science
+   validator and validates linked reviews through `SpatialReview.validate_saved`.
+
+### Scientific map meaning
+
+A residual is the saved predicted annual load minus the time-weighted original
+annual reference. Native modeled load and any explicitly retained delivered
+external load remain separate attributes. Pollutant mass units, temporal/source
+identities, native support and the calibration/held-out role travel with each
+catchment. Incomplete native support stays null.
+
+The atlas uses one absolute-residual display cap per pollutant across the chosen
+candidate maps. Each panel retains an original catchment, including holes and
+disconnected parts, in the actual saved model-grid CRS. GeoJSON uses EPSG:4326.
+Nested or overlapping upstream catchments stay separate; their loads and
+residuals are not summed into regional totals. The ordinary spatial source view
+shows outline geometry and scalar attributes; the PDF/SVG atlas carries the
+signed grayscale residual rendering.
+
+When a source-error analysis is selected, the map retains that exact analysis's
+reference bounds and missing-error state. It does not perform another native run,
+change the original nominal profile or rank challengers using held-out values.
+
+### Current implementation contract
+
+The extension adds these original queue actions:
+
+- `calibration.maps.prepare`: `{report_id, candidate_run_ids?, uncertainty_id?}`.
+  Omitted candidate IDs select only the nominal run. Every explicit selection
+  must include that run; all candidates must belong to the retained report.
+- `calibration.maps.review`: `{map_id, layer_id}`.
+
+`GET /api/calibration/maps?id=MAP_ID` returns `{workspace_key, map, reviews,
+artifacts, _downloads}`. Every `artifacts` entry contains the exact original
+relative file descriptor and its verified operator download ticket. Collection
+item kind `calibration-maps` uses that same read operation. State includes compact
+`calibration_maps` summaries and immutable `calibration_map_reviews` links.
+
+The separate browser source `operator/web/calibration_maps.mjs` is imported by
+the existing calibration module and declared in its maintained extension assets.
+It owns map view state and narrow controls; the current shared app, spatial
+viewer and GIS provider remain their own implementations. Workspace/request
+guards discard stale map reads and form submissions. Source and review buttons
+use the original app's native action contract.
+
+Receive the complete science files `model/calibration_maps.py` and
+`model/CALIBRATION_MAPS.md` with all eight operator/cohort files, then run the
+same `operator/install_calibration.py --application ACTUAL_APP --source COHORT`.
+The installer knows the exact merged PR2850 predecessors and still rejects
+unrecognized competing edits. The cumulative assembly driver includes the new
+module and browser asset while treating `model/spatial.py` as a shared native
+dependency.
+
+Native preparation needs the application's existing Fiona, Shapely, PyProj and
+Matplotlib environment. The maintained original SpatialReview and Editable GIS
+1.2.1 providers supply the review and GIS joins. Installed source should include
+the current `operator/extensions/gis-projects.json`; no new GIS exporter or
+shared-host fork is introduced. Scientific dependency and map-method details are
+in [CALIBRATION_MAPS.md](../model/CALIBRATION_MAPS.md).
+
+A focused native receiving check can compile `model/calibration_maps.py` and
+`operator/calibration.py`, import the original provider, then prepare one actual
+completed calibration's map edition, open its first PDF/SVG and scalar source,
+save a review, export its GIS project and reopen the same workspace. Use actual
+retained report IDs from that study.
+
+
+## Complete retained calibration review
+
+The completed comparison now includes **Complete calibration reviews**. Use **Prepare review package** to choose the exact saved error/map editions, title and notes. The existing queue builds one immutable report with all original tables, source records, catchment companions and map artifacts. Open it through **Read report**, or extract its complete ZIP and open `index.html` offline. Its print layout and full source links travel together.
+
+The same calibration extension owns the `calibration.review.prepare` action, `calibration-reviews` item and authenticated nested report-member route. Current source-error and map records keep their original identities. Review selection enforces an exact map/error pairing when a map contains error bands. The full producer, API, restart and source-preservation contract is [Complete calibration review](../model/CALIBRATION_REVIEW.md).
