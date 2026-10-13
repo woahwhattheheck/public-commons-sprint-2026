@@ -1,0 +1,14 @@
+test_original_identity_receive_and_lossless_output (test_existing_workspace.ExistingWorkspaceJourney.test_original_identity_receive_and_lossless_output) ... ok
+test_codec_comparison_and_manifest (test_journeys.Journeys.test_codec_comparison_and_manifest) ... ok
+test_lease_fence_recovery_crash_and_cancel (test_journeys.Journeys.test_lease_fence_recovery_crash_and_cancel) ... ok
+test_source_mutation_and_idempotency (test_journeys.Journeys.test_source_mutation_and_idempotency) ... ok
+test_source_preserving_binding_repair_and_cli (test_journeys.Journeys.test_source_preserving_binding_repair_and_cli) ... ok
+test_warm_batch_retained_compare_report_receive (test_journeys.Journeys.test_warm_batch_retained_compare_report_receive) ... {"journey": "warm_batch_receive_edit", "runs": 6, "rows_per_run": 6000, "workers": 2, "elapsed_seconds": 2.65, "archive_bytes": 346369}
+ok
+test_original_queue_loss_recovery_portable_native_reopening (test_upstate_operator.OriginalOperatorJourney.test_original_queue_loss_recovery_portable_native_reopening) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 6.575s
+
+OK
+{"journey": "original_operator_native_tree", "native_calls": 1, "operator_attempts": 2, "received_files": 13, "queue_jobs_added": 0, "changed_call_sites": 1, "independent_received_run": true}

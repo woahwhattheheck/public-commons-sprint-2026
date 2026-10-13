@@ -1,0 +1,157 @@
+{
+  "schema": "upstate-source-catalog/v1",
+  "edition": "20261012",
+  "geography": {
+    "reporting_candidate": "geography/planning_basins2023",
+    "native_hydrology": "geography/wbd_20261012",
+    "administrative_source": "geography/wbd_20261012/south-carolina-state-2026.json.gz",
+    "focus_huc12": [
+      "030601010703",
+      "030601010704",
+      "030601020507",
+      "030601020502"
+    ],
+    "planning_definition": "https://des.sc.gov/sites/des/files/Documents/BOW/Water%20Resources/Hydrology/Upper%20Savannah/FinalUpperSavannahRiverBasinPlan2025.pdf",
+    "reporting_selection": {
+      "source": "geography/planning_basins2023",
+      "field": "Basin",
+      "value": "Upper Savannah",
+      "original_shp_record_number": 5,
+      "crs": "EPSG:26917",
+      "selection": "whole original polygon"
+    }
+  },
+  "parameter_profiles": [
+    {
+      "id": "benez-secanho-dwivedi-2019-nlcd-a1",
+      "file": "parameters/georgia-2019-nlcd-biophysical.csv",
+      "source_table": "A1",
+      "source_land_cover": "NLCD 2006",
+      "rows": 15,
+      "load_units": "kg/ha/year",
+      "load_type_n": "measured-runoff",
+      "load_type_p": "measured-runoff",
+      "crit_len_n": 30,
+      "crit_len_p": 30,
+      "proportion_subsurface_n": 0
+    },
+    {
+      "id": "benez-secanho-dwivedi-2019-globcover-a2",
+      "file": "parameters/georgia-2019-globcover-biophysical.csv",
+      "source_table": "A2",
+      "source_land_cover": "GlobCover",
+      "rows": 21,
+      "load_units": "kg/ha/year",
+      "load_type_n": "measured-runoff",
+      "load_type_p": "measured-runoff",
+      "crit_len_n": 290,
+      "crit_len_p": 290,
+      "proportion_subsurface_n": 0
+    }
+  ],
+  "provider_routes": [
+    {
+      "id": "usgs-3dep",
+      "kind": "numeric-elevation-service",
+      "metadata_url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer?f=pjson",
+      "source": "parameters/usgs-3dep-service.json.gz",
+      "export_url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage"
+    },
+    {
+      "id": "mrlc-annual-nlcd",
+      "kind": "land-cover",
+      "collection": "Annual NLCD CONUS Collection 1.2",
+      "released": "2026-06-10",
+      "years": [
+        1985,
+        2025
+      ],
+      "catalog_url": "https://www.mrlc.gov/data",
+      "aoi_url": "https://www.mrlc.gov/viewer/",
+      "native_service": "https://dmsdata.cr.usgs.gov/geoserver/",
+      "native_layer": "mrlc_Land-Cover-Native_conus_year_data:Land-Cover-Native_conus_year_data",
+      "source_application": {
+        "url": "https://www.mrlc.gov/viewer/main.b6ba7f1995f273bdcd91.js",
+        "sha256": "bb6d0a004c3c6ba33c9267a6dc80295c9ce587deb1d34d077f7ea69d5b0d1d40",
+        "bytes": 598434,
+        "observed_at": "2026-10-12T05:32:45.911756+00:00"
+      },
+      "numeric_acquisition": "Native WCS or original free MRLC AOI download, preserving actual DescribeCoverage/grid/time and 2025 class values"
+    },
+    {
+      "id": "nrcs-sda",
+      "kind": "soil-tabular-and-geometry",
+      "tabular_url": "https://SDMDataAccess.sc.egov.usda.gov/Tabular/post.rest",
+      "wfs_url": "https://SDMDataAccess.sc.egov.usda.gov/Spatial/SDMWGS84Geographic.wfs",
+      "dictionary_url": "https://sdmdataaccess.sc.egov.usda.gov/documents/TableColumnDescriptionsReport.pdf",
+      "format": "JSON+COLUMNNAME+METADATA",
+      "record_limit": 100000
+    },
+    {
+      "id": "nrcs-rusle2-climate",
+      "kind": "historical-regional-reference",
+      "catalog_url": "https://fargo.nserl.purdue.edu/rusle2_dataweb/NRCS_Climate_Database.htm",
+      "directory_url": "https://fargo.nserl.purdue.edu/RUSLE2_ftp/Climate_data/"
+    },
+    {
+      "id": "noaa-r-factor",
+      "kind": "historical-erosivity-reference",
+      "metadata_url": "https://www.fisheries.noaa.gov/inport/item/48224",
+      "download_url": "https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip",
+      "grid_metres": 800,
+      "source_period": "1975–1997",
+      "processed_year": 2013,
+      "source_units": "hundreds ft-tonf-in/(ac-h-yr)"
+    },
+    {
+      "id": "usgs-padus",
+      "kind": "protected-area-reference",
+      "version": "4.1",
+      "released": "2025-03",
+      "doi": "10.5066/P96WBCHS",
+      "catalog_url": "https://www.usgs.gov/programs/gap-analysis-project/science/pad-us-data-download"
+    },
+    {
+      "id": "scdes-classified-waters",
+      "kind": "regulatory-classification",
+      "catalog_url": "https://des.sc.gov/programs/bureau-water/water-quality-standards",
+      "effective_sources": [
+        "R.61-68",
+        "R.61-69"
+      ],
+      "proposed_edition": {
+        "notice": "2026-09-25",
+        "comment_closes": "2026-10-26"
+      }
+    },
+    {
+      "id": "oconee-parcels",
+      "kind": "county-parcel",
+      "catalog_url": "https://oconeesc.com/departments/gis",
+      "layer_url": "https://arcserver2.oconeesc.com/arcgis/rest/services/PARCELDATA/MapServer/1",
+      "object_id_field": "OBJECTID",
+      "source_identifier_fields": [
+        "GPIN",
+        "GPIN_TEXT",
+        "TMS_NUMBER"
+      ],
+      "source_wkid": 2273,
+      "max_record_count": 1000
+    },
+    {
+      "id": "oconee-native-parcels",
+      "kind": "parcel-vector",
+      "metadata_url": "https://arcserver2.oconeesc.com/arcgis/rest/services/PARCELDATA/MapServer/1?f=pjson",
+      "query_url": "https://arcserver2.oconeesc.com/arcgis/rest/services/PARCELDATA/MapServer/1/query",
+      "source_crs": "EPSG:2273",
+      "vertical_crs": "EPSG:5703",
+      "edition_id_field": "OBJECTID",
+      "parcel_identifier_fields": [
+        "GPIN",
+        "TMS_NUMBER"
+      ],
+      "max_record_count": 1000,
+      "observed_at": "2026-10-12T05:31:45.676839+00:00"
+    }
+  ]
+}
