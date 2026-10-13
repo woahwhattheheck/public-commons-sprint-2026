@@ -1,0 +1,895 @@
+{
+  "schema": "tjl.oacaa.reader-edition-plan.v1",
+  "id": "oacaa-reader-assistance-supplement-2026-v1",
+  "version": 1,
+  "sourceDocumentId": "oacaa-ohio-saipe-2024-working",
+  "title": "Ohio reader edition: public support and health coverage",
+  "description": "Append a source-bound reader chapter and full assistance directory to the same report after the original reader edition and assistance cohort have been applied.",
+  "sourcePlanNames": [
+    "reader-edition-plan.json",
+    "assistance-working-plan.json"
+  ],
+  "expectedExistingSectionIds": [
+    "reader-opening",
+    "reader-statewide",
+    "state",
+    "reader-ages",
+    "acs-age-depth",
+    "acs-seniors",
+    "acs-race-summary",
+    "reader-families-work",
+    "family-all",
+    "work-experience",
+    "reader-basic-needs",
+    "food-ohio",
+    "rental-gap",
+    "rental-burdens",
+    "reader-financial-resilience",
+    "asset-latest-comparison",
+    "reader-place",
+    "county-rates",
+    "county-counts",
+    "reader-change",
+    "longitudinal-annual-ohio",
+    "longitudinal-annual-us",
+    "reader-action",
+    "appendix-a",
+    "understanding",
+    "acs-context",
+    "measurement-overview",
+    "measurement-thresholds",
+    "measurement-guidelines",
+    "measurement-methods",
+    "uncertainty",
+    "appendix-b",
+    "county-directory-1",
+    "county-directory-2",
+    "county-directory-3",
+    "county-directory-4",
+    "county-acs5-overview",
+    "county-acs5-all",
+    "county-acs5-child",
+    "county-acs5-adult",
+    "county-acs5-senior",
+    "longitudinal-counties",
+    "appendix-c",
+    "acs-age-all",
+    "acs-age-white_non_hispanic",
+    "acs-age-black",
+    "acs-age-asian",
+    "acs-age-multiracial",
+    "acs-age-hispanic",
+    "acs-primary-1",
+    "acs-primary-2",
+    "appendix-d",
+    "family-overview",
+    "family-white-nonhispanic",
+    "family-black",
+    "family-asian",
+    "family-multiracial",
+    "family-hispanic",
+    "family-work-married",
+    "family-work-male",
+    "family-work-female",
+    "work-employment-status",
+    "appendix-e",
+    "household-budget-method",
+    "household-assumptions",
+    "rental-thresholds",
+    "appendix-f",
+    "food-county-counts",
+    "food-county-income",
+    "food-county-cost",
+    "food-source-revision",
+    "food-history",
+    "appendix-g",
+    "longitudinal-overview",
+    "longitudinal-history",
+    "measurement-dynamics-summary",
+    "measurement-dynamics-24",
+    "measurement-dynamics-36",
+    "asset-cushion-overview",
+    "asset-history-series",
+    "asset-source-reconciliation",
+    "appendix-h",
+    "assistance-source-periods",
+    "assistance-health",
+    "assistance-heap",
+    "assistance-snap",
+    "assistance-medicaid",
+    "assistance-labour"
+  ],
+  "sections": [
+    {
+      "id": "reader-assistance",
+      "title": "Public support and health coverage",
+      "summary": "Programme receipt, coverage and employment describe distinct needs",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-assistance-purpose",
+          "type": "paragraph",
+          "text": "Income measures describe the resources available to people and families. Assistance and health-coverage records answer additional questions: how many people received a particular benefit, how many households used a programme, and how many people lacked insurance. These figures help agencies understand different parts of local need. They describe overlapping populations and cannot be added into a single count of people needing or receiving support.",
+          "sourceIds": [
+            "assist-ohio-snap",
+            "assist-ohio-medicaid",
+            "assist-ohio-heap",
+            "assist-census-insurance"
+          ]
+        },
+        {
+          "id": "reader-assistance-health",
+          "type": "paragraph",
+          "text": "In the 2024 one-year American Community Survey, an estimated 782,626 Ohioans had no health insurance, or 6.7% of the civilian noninstitutionalized population. That population is the denominator for the health-coverage measure; it differs from the population used for poverty estimates. The complete county directory uses the 2020–2024 five-year release so that every county has the same measurement period.",
+          "sourceIds": [
+            "assist-census-insurance"
+          ]
+        },
+        {
+          "id": "reader-assistance-health-releases",
+          "type": "paragraph",
+          "text": "The separate five-year statewide estimate is 746,399 uninsured people, or 6.4%. These are different survey releases with different measurement periods, rather than two observations in a year-to-year trend. The original report’s statewide 6.4% figure matches the five-year release even though its footnote names a one-year source. Both statewide observations and the original source cells remain available in this edition.",
+          "sourceIds": [
+            "assist-census-insurance",
+            "assist-original-table10"
+          ]
+        },
+        {
+          "id": "reader-assistance-snap",
+          "type": "paragraph",
+          "text": "Ohio’s June 2025 SNAP report records 1,388,233 active members in 711,651 households receiving benefits. These are actual monthly programme counts, not an annual average or a percentage of all Ohio residents. The complete reporting-office rows reconcile to the statewide totals. Combined offices and unassigned recipients remain separate, so readers can see how the published total is assembled.",
+          "sourceIds": [
+            "assist-ohio-snap"
+          ]
+        },
+        {
+          "id": "reader-assistance-snap-population",
+          "type": "paragraph",
+          "text": "The programme’s adult and child categories follow the definitions printed in the PAMS source. They do not use the under-18 child population found in the poverty and food-insecurity chapters. When an agency compares local SNAP receipt with a poverty or food-insecurity estimate, it should retain those differences in population, period and reporting geography.",
+          "sourceIds": [
+            "assist-ohio-snap",
+            "census-saipe-2024-ohio",
+            "food-mmg-2026"
+          ]
+        },
+        {
+          "id": "reader-assistance-medicaid",
+          "type": "paragraph",
+          "text": "The Medicaid directory retains HPIO’s county snapshot retrieved from the Ohio Department of Medicaid on February 19, 2025. Its enrollment month is not stated, and its population denominator comes from the 2019–2023 ACS five-year release. Expansion enrollees are included in total Medicaid enrollment. The two enrollment columns show related measures rather than separate groups to be added together.",
+          "sourceIds": [
+            "assist-ohio-medicaid"
+          ]
+        },
+        {
+          "id": "reader-assistance-energy",
+          "type": "paragraph",
+          "text": "The energy-assistance directory uses the government’s published 2024 HEAP county file. Its count is labeled applications, while the accompanying housing-needs narrative describes participating households. This edition preserves that distinction. The source does not establish a count of approved payments or unique households, and its published household percentages are retained without reconstructing an unstated denominator release.",
+          "sourceIds": [
+            "assist-ohio-heap"
+          ]
+        },
+        {
+          "id": "reader-assistance-labour",
+          "type": "paragraph",
+          "text": "The revised official annual unemployment rate for Ohio in 2024 is 4.4%. The earlier release reported 4.3% for that same year. This difference is a benchmark revision, not evidence of change between two years. Unemployment uses the civilian labour force as its denominator; it is distinct from the past-year work-experience categories in the family and work chapter.",
+          "sourceIds": [
+            "assist-ohio-laus",
+            "work-employment-acs-2024"
+          ]
+        },
+        {
+          "id": "reader-assistance-planning",
+          "type": "paragraph",
+          "text": "For local planning, read the county and reporting-office records together with the income, housing and food chapters. A programme count can help describe service reach, but it does not by itself identify everyone who is eligible or everyone whose needs remain unmet. Retain the source period and population when selecting a local comparison, and use actual programme eligibility and service records for questions about access or outcomes.",
+          "sourceIds": [
+            "assist-ohio-snap",
+            "assist-ohio-medicaid",
+            "assist-ohio-heap",
+            "assist-census-insurance"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "appendix-assistance",
+      "title": "Assistance, coverage and labour · source supplement",
+      "summary": "Complete programme and county records, with their actual periods",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-assistance-directory-intro",
+          "type": "paragraph",
+          "text": "The following six source sections extend the main statistical appendices with five additional datasets. They retain complete county or reporting-office coverage, original definitions, selected source releases and the recorded differences from the earlier report. Together with the 27 datasets listed in Appendix H, this supplement makes a 32-dataset source edition. Dataset rows overlap and are not a population total.",
+          "sourceIds": [
+            "assist-ohio-laus",
+            "assist-census-insurance",
+            "assist-ohio-heap",
+            "assist-ohio-snap",
+            "assist-ohio-medicaid",
+            "assist-original-table10"
+          ]
+        },
+        {
+          "id": "reader-assistance-directory-table",
+          "type": "table",
+          "caption": "Five additional assistance, coverage and labour datasets",
+          "columns": [
+            {
+              "key": "dataset",
+              "label": "Dataset",
+              "widthPercent": 31
+            },
+            {
+              "key": "period",
+              "label": "Measurement period / source date",
+              "widthPercent": 34
+            },
+            {
+              "key": "coverage",
+              "label": "Coverage",
+              "widthPercent": 35
+            }
+          ],
+          "rows": [
+            {
+              "dataset": "Health insurance coverage",
+              "period": "2020–2024 ACS five-year; separate 2024 one-year state estimate",
+              "coverage": "Ohio and all 88 counties; 90 release-specific rows"
+            },
+            {
+              "dataset": "Annual labour-force estimates, two releases",
+              "period": "2024 annual averages; April 2025 and May 2026 releases",
+              "coverage": "Ohio and all 88 counties; 89 rows with both vintages"
+            },
+            {
+              "dataset": "SNAP benefit receipt",
+              "period": "June 2025",
+              "coverage": "87 reporting rows, including statewide, combined offices and unassigned recipients"
+            },
+            {
+              "dataset": "HEAP applications and published household shares",
+              "period": "2024",
+              "coverage": "All 88 counties; original measure-label distinction retained"
+            },
+            {
+              "dataset": "Medicaid county enrollment snapshot",
+              "period": "Retrieved February 19, 2025; enrollment month unstated",
+              "coverage": "All 88 counties; ACS 2019–2023 population denominator"
+            }
+          ],
+          "sourceIds": [
+            "assist-ohio-laus",
+            "assist-census-insurance",
+            "assist-ohio-heap",
+            "assist-ohio-snap",
+            "assist-ohio-medicaid"
+          ]
+        },
+        {
+          "id": "reader-assistance-directory-use",
+          "type": "paragraph",
+          "text": "The health directory retains both the one-year and five-year state observations alongside all county five-year estimates. The labour directory retains both benchmark releases for every geography. Programme directories retain published counts, shares and reporting labels. Select the intended measure and source edition before comparing places or preparing a member graphic; an explicitly reviewed correction preserves the earlier source and presentation.",
+          "sourceIds": [
+            "assist-ohio-laus",
+            "assist-census-insurance",
+            "assist-ohio-heap",
+            "assist-ohio-snap",
+            "assist-ohio-medicaid"
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "reading-opening",
+      "kind": "reading",
+      "title": "Opening",
+      "sectionIds": [
+        "reader-opening"
+      ]
+    },
+    {
+      "id": "reading-income",
+      "kind": "reading",
+      "title": "1. Statewide income",
+      "sectionIds": [
+        "reader-statewide",
+        "state"
+      ]
+    },
+    {
+      "id": "reading-age",
+      "kind": "reading",
+      "title": "2. Age and demographic differences",
+      "sectionIds": [
+        "reader-ages",
+        "acs-age-depth",
+        "acs-seniors",
+        "acs-race-summary"
+      ]
+    },
+    {
+      "id": "reading-work",
+      "kind": "reading",
+      "title": "3. Families and work",
+      "sectionIds": [
+        "reader-families-work",
+        "family-all",
+        "work-experience"
+      ]
+    },
+    {
+      "id": "reading-needs",
+      "kind": "reading",
+      "title": "4. Food and housing",
+      "sectionIds": [
+        "reader-basic-needs",
+        "food-ohio",
+        "rental-gap",
+        "rental-burdens"
+      ]
+    },
+    {
+      "id": "reading-assets",
+      "kind": "reading",
+      "title": "5. Financial resilience",
+      "sectionIds": [
+        "reader-financial-resilience",
+        "asset-latest-comparison"
+      ]
+    },
+    {
+      "id": "reading-place",
+      "kind": "reading",
+      "title": "6. Local need",
+      "sectionIds": [
+        "reader-place",
+        "county-rates",
+        "county-counts"
+      ]
+    },
+    {
+      "id": "reading-change",
+      "kind": "reading",
+      "title": "7. Change over time",
+      "sectionIds": [
+        "reader-change",
+        "longitudinal-annual-ohio",
+        "longitudinal-annual-us"
+      ]
+    },
+    {
+      "id": "reading-assistance",
+      "kind": "reading",
+      "title": "Public support and coverage",
+      "sectionIds": [
+        "reader-assistance"
+      ]
+    },
+    {
+      "id": "reading-use",
+      "kind": "reading",
+      "title": "8. Community Action planning",
+      "sectionIds": [
+        "reader-action"
+      ]
+    },
+    {
+      "id": "appendix-a",
+      "kind": "appendix",
+      "title": "Appendix A · Income measures, definitions and uncertainty",
+      "sectionIds": [
+        "appendix-a",
+        "understanding",
+        "acs-context",
+        "measurement-overview",
+        "measurement-thresholds",
+        "measurement-guidelines",
+        "measurement-methods",
+        "uncertainty"
+      ]
+    },
+    {
+      "id": "appendix-b",
+      "kind": "appendix",
+      "title": "Appendix B · Complete Ohio county income profiles",
+      "sectionIds": [
+        "appendix-b",
+        "county-directory-1",
+        "county-directory-2",
+        "county-directory-3",
+        "county-directory-4",
+        "county-acs5-overview",
+        "county-acs5-all",
+        "county-acs5-child",
+        "county-acs5-adult",
+        "county-acs5-senior",
+        "longitudinal-counties"
+      ]
+    },
+    {
+      "id": "appendix-c",
+      "kind": "appendix",
+      "title": "Appendix C · Age, race, Hispanic origin and education",
+      "sectionIds": [
+        "appendix-c",
+        "acs-age-all",
+        "acs-age-white_non_hispanic",
+        "acs-age-black",
+        "acs-age-asian",
+        "acs-age-multiracial",
+        "acs-age-hispanic",
+        "acs-primary-1",
+        "acs-primary-2"
+      ]
+    },
+    {
+      "id": "appendix-d",
+      "kind": "appendix",
+      "title": "Appendix D · Family structure and work",
+      "sectionIds": [
+        "appendix-d",
+        "family-overview",
+        "family-white-nonhispanic",
+        "family-black",
+        "family-asian",
+        "family-multiracial",
+        "family-hispanic",
+        "family-work-married",
+        "family-work-male",
+        "family-work-female",
+        "work-employment-status"
+      ]
+    },
+    {
+      "id": "appendix-e",
+      "kind": "appendix",
+      "title": "Appendix E · Household costs and rental thresholds",
+      "sectionIds": [
+        "appendix-e",
+        "household-budget-method",
+        "household-assumptions",
+        "rental-thresholds"
+      ]
+    },
+    {
+      "id": "appendix-f",
+      "kind": "appendix",
+      "title": "Appendix F · Complete county food evidence",
+      "sectionIds": [
+        "appendix-f",
+        "food-county-counts",
+        "food-county-income",
+        "food-county-cost",
+        "food-source-revision",
+        "food-history"
+      ]
+    },
+    {
+      "id": "appendix-g",
+      "kind": "appendix",
+      "title": "Appendix G · Historical income and financial resilience",
+      "sectionIds": [
+        "appendix-g",
+        "longitudinal-overview",
+        "longitudinal-history",
+        "measurement-dynamics-summary",
+        "measurement-dynamics-24",
+        "measurement-dynamics-36",
+        "asset-cushion-overview",
+        "asset-history-series",
+        "asset-source-reconciliation"
+      ]
+    },
+    {
+      "id": "appendix-assistance",
+      "kind": "appendix",
+      "title": "Assistance, coverage and labour · source supplement",
+      "sectionIds": [
+        "appendix-assistance",
+        "assistance-source-periods",
+        "assistance-health",
+        "assistance-heap",
+        "assistance-snap",
+        "assistance-medicaid",
+        "assistance-labour"
+      ]
+    },
+    {
+      "id": "appendix-h",
+      "kind": "appendix",
+      "title": "Appendix H · Statistical sources and dataset directory",
+      "sectionIds": [
+        "appendix-h"
+      ]
+    }
+  ],
+  "sectionOrder": [
+    "reader-opening",
+    "reader-statewide",
+    "state",
+    "reader-ages",
+    "acs-age-depth",
+    "acs-seniors",
+    "acs-race-summary",
+    "reader-families-work",
+    "family-all",
+    "work-experience",
+    "reader-basic-needs",
+    "food-ohio",
+    "rental-gap",
+    "rental-burdens",
+    "reader-financial-resilience",
+    "asset-latest-comparison",
+    "reader-place",
+    "county-rates",
+    "county-counts",
+    "reader-change",
+    "longitudinal-annual-ohio",
+    "longitudinal-annual-us",
+    "reader-assistance",
+    "reader-action",
+    "appendix-a",
+    "understanding",
+    "acs-context",
+    "measurement-overview",
+    "measurement-thresholds",
+    "measurement-guidelines",
+    "measurement-methods",
+    "uncertainty",
+    "appendix-b",
+    "county-directory-1",
+    "county-directory-2",
+    "county-directory-3",
+    "county-directory-4",
+    "county-acs5-overview",
+    "county-acs5-all",
+    "county-acs5-child",
+    "county-acs5-adult",
+    "county-acs5-senior",
+    "longitudinal-counties",
+    "appendix-c",
+    "acs-age-all",
+    "acs-age-white_non_hispanic",
+    "acs-age-black",
+    "acs-age-asian",
+    "acs-age-multiracial",
+    "acs-age-hispanic",
+    "acs-primary-1",
+    "acs-primary-2",
+    "appendix-d",
+    "family-overview",
+    "family-white-nonhispanic",
+    "family-black",
+    "family-asian",
+    "family-multiracial",
+    "family-hispanic",
+    "family-work-married",
+    "family-work-male",
+    "family-work-female",
+    "work-employment-status",
+    "appendix-e",
+    "household-budget-method",
+    "household-assumptions",
+    "rental-thresholds",
+    "appendix-f",
+    "food-county-counts",
+    "food-county-income",
+    "food-county-cost",
+    "food-source-revision",
+    "food-history",
+    "appendix-g",
+    "longitudinal-overview",
+    "longitudinal-history",
+    "measurement-dynamics-summary",
+    "measurement-dynamics-24",
+    "measurement-dynamics-36",
+    "asset-cushion-overview",
+    "asset-history-series",
+    "asset-source-reconciliation",
+    "appendix-assistance",
+    "assistance-source-periods",
+    "assistance-health",
+    "assistance-heap",
+    "assistance-snap",
+    "assistance-medicaid",
+    "assistance-labour",
+    "appendix-h"
+  ],
+  "claimReferences": [
+    {
+      "sectionId": "reader-assistance",
+      "blockId": "reader-assistance-purpose",
+      "sourceIds": [
+        "assist-ohio-snap",
+        "assist-ohio-medicaid",
+        "assist-ohio-heap",
+        "assist-census-insurance"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-assistance",
+      "blockId": "reader-assistance-health",
+      "sourceIds": [
+        "assist-census-insurance"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-assistance-health-2024-releases",
+          "rowId": "assistance-health-39-one-year",
+          "column": "uninsured",
+          "value": "782626"
+        },
+        {
+          "datasetId": "ohio-assistance-health-2024-releases",
+          "rowId": "assistance-health-39-one-year",
+          "column": "rate",
+          "value": "6.7"
+        },
+        {
+          "datasetId": "ohio-assistance-health-2024-releases",
+          "rowId": "assistance-health-39-one-year",
+          "column": "period",
+          "value": "2024"
+        },
+        {
+          "datasetId": "ohio-assistance-health-2024-releases",
+          "rowId": "assistance-health-39-one-year",
+          "column": "universe",
+          "value": "Civilian noninstitutionalized population"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-assistance",
+      "blockId": "reader-assistance-health-releases",
+      "sourceIds": [
+        "assist-census-insurance",
+        "assist-original-table10"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-assistance-health-2024-releases",
+          "rowId": "assistance-health-39-five-year",
+          "column": "uninsured",
+          "value": "746399"
+        },
+        {
+          "datasetId": "ohio-assistance-health-2024-releases",
+          "rowId": "assistance-health-39-five-year",
+          "column": "rate",
+          "value": "6.4"
+        },
+        {
+          "datasetId": "ohio-assistance-health-2024-releases",
+          "rowId": "assistance-health-39-five-year",
+          "column": "period",
+          "value": "2020–2024"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-assistance",
+      "blockId": "reader-assistance-snap",
+      "sourceIds": [
+        "assist-ohio-snap"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-assistance-snap-2025-06",
+          "rowId": "assistance-snap-statewide",
+          "column": "members",
+          "value": "1388233"
+        },
+        {
+          "datasetId": "ohio-assistance-snap-2025-06",
+          "rowId": "assistance-snap-statewide",
+          "column": "households",
+          "value": "711651"
+        },
+        {
+          "datasetId": "ohio-assistance-snap-2025-06",
+          "rowId": "assistance-snap-statewide",
+          "column": "period",
+          "value": "2025-06"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-assistance",
+      "blockId": "reader-assistance-snap-population",
+      "sourceIds": [
+        "assist-ohio-snap",
+        "census-saipe-2024-ohio",
+        "food-mmg-2026"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-assistance",
+      "blockId": "reader-assistance-medicaid",
+      "sourceIds": [
+        "assist-ohio-medicaid"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-assistance",
+      "blockId": "reader-assistance-energy",
+      "sourceIds": [
+        "assist-ohio-heap"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-assistance",
+      "blockId": "reader-assistance-labour",
+      "sourceIds": [
+        "assist-ohio-laus",
+        "work-employment-acs-2024"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-assistance-labour-2024-vintages",
+          "rowId": "assistance-laus-39",
+          "column": "rate",
+          "value": "4.4"
+        },
+        {
+          "datasetId": "ohio-assistance-labour-2024-vintages",
+          "rowId": "assistance-laus-39",
+          "column": "prior_rate",
+          "value": "4.3"
+        },
+        {
+          "datasetId": "ohio-assistance-labour-2024-vintages",
+          "rowId": "assistance-laus-39",
+          "column": "period",
+          "value": "2024 annual average"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-assistance",
+      "blockId": "reader-assistance-planning",
+      "sourceIds": [
+        "assist-ohio-snap",
+        "assist-ohio-medicaid",
+        "assist-ohio-heap",
+        "assist-census-insurance"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-assistance",
+      "blockId": "reader-assistance-directory-intro",
+      "sourceIds": [
+        "assist-ohio-laus",
+        "assist-census-insurance",
+        "assist-ohio-heap",
+        "assist-ohio-snap",
+        "assist-ohio-medicaid",
+        "assist-original-table10"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-assistance",
+      "blockId": "reader-assistance-directory-table",
+      "sourceIds": [
+        "assist-ohio-laus",
+        "assist-census-insurance",
+        "assist-ohio-heap",
+        "assist-ohio-snap",
+        "assist-ohio-medicaid"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-assistance",
+      "blockId": "reader-assistance-directory-use",
+      "sourceIds": [
+        "assist-ohio-laus",
+        "assist-census-insurance",
+        "assist-ohio-heap",
+        "assist-ohio-snap",
+        "assist-ohio-medicaid"
+      ],
+      "datasetCells": []
+    }
+  ],
+  "datasetDirectory": [
+    {
+      "datasetId": "ohio-assistance-health-2024-releases",
+      "path": "datasets/ohio-assistance-health-2024-releases.json",
+      "title": "Health insurance coverage",
+      "period": "2020–2024 ACS five-year; separate 2024 one-year state estimate",
+      "coverage": "Ohio and all 88 counties; 90 release-specific rows",
+      "rowCount": 90,
+      "sourceIds": [
+        "assist-census-insurance"
+      ]
+    },
+    {
+      "datasetId": "ohio-assistance-labour-2024-vintages",
+      "path": "datasets/ohio-assistance-labour-2024-vintages.json",
+      "title": "Annual labour-force estimates, two releases",
+      "period": "2024 annual averages; April 2025 and May 2026 releases",
+      "coverage": "Ohio and all 88 counties; 89 rows with both vintages",
+      "rowCount": 89,
+      "sourceIds": [
+        "assist-ohio-laus"
+      ]
+    },
+    {
+      "datasetId": "ohio-assistance-snap-2025-06",
+      "path": "datasets/ohio-assistance-snap-2025-06.json",
+      "title": "SNAP benefit receipt",
+      "period": "June 2025",
+      "coverage": "87 reporting rows, including statewide, combined offices and unassigned recipients",
+      "rowCount": 87,
+      "sourceIds": [
+        "assist-ohio-snap"
+      ]
+    },
+    {
+      "datasetId": "ohio-assistance-heap-2024",
+      "path": "datasets/ohio-assistance-heap-2024.json",
+      "title": "HEAP applications and published household shares",
+      "period": "2024",
+      "coverage": "All 88 counties; original measure-label distinction retained",
+      "rowCount": 88,
+      "sourceIds": [
+        "assist-ohio-heap"
+      ]
+    },
+    {
+      "datasetId": "ohio-assistance-medicaid-2025-snapshot",
+      "path": "datasets/ohio-assistance-medicaid-2025-snapshot.json",
+      "title": "Medicaid county enrollment snapshot",
+      "period": "Retrieved February 19, 2025; enrollment month unstated",
+      "coverage": "All 88 counties; ACS 2019–2023 population denominator",
+      "rowCount": 88,
+      "sourceIds": [
+        "assist-ohio-medicaid"
+      ]
+    }
+  ],
+  "derivedClaims": [],
+  "sourceNotes": [
+    {
+      "sourceIds": [
+        "assist-original-table10",
+        "assist-census-insurance"
+      ],
+      "note": "The retained original table transcription supplies the footnote comparison; both actual ACS releases supply the numerical source facts."
+    },
+    {
+      "sourceIds": [
+        "assist-ohio-laus"
+      ],
+      "note": "The two rates refer to the same measurement year and are differentiated by benchmark release."
+    },
+    {
+      "sourceIds": [
+        "assist-ohio-snap",
+        "assist-ohio-heap",
+        "assist-ohio-medicaid"
+      ],
+      "note": "Programme observations retain their actual month, source-date or application label. No missing month, payment status or unique-household count is inferred."
+    }
+  ],
+  "operatingGuide": "READER_ASSISTANCE_SUPPLEMENT.md",
+  "manuscript": "READER_ASSISTANCE_MANUSCRIPT.md",
+  "preservation": {
+    "sameReport": true,
+    "keepExistingSectionBlocks": true,
+    "keepExistingSectionRelativeOrder": true,
+    "keepExistingPlanIdentities": true,
+    "appendNativeJournalOperation": true,
+    "preserveOperatorEditsOnReplay": true,
+    "retainClaimSourceRevisions": true
+  }
+}
