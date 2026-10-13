@@ -165,7 +165,8 @@ def _csv(rows, preferred):
     writer.writerow(fields)
     for row in rows:
         # Preserve original strings, nested records and nulls in the complete companion JSON.
-        writer.writerow([_text(row.get(key)) for key in fields])
+        writer.writerow([("'" + row[key] if isinstance(row.get(key), str) and row[key].lstrip().startswith(("=", "+", "-", "@"))
+                          else _text(row.get(key))) for key in fields])
     return output.getvalue().encode("utf-8-sig")
 
 

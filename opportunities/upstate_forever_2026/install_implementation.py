@@ -19,6 +19,13 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "model/field_deployment.py",
+    "model/monitoring_packet.py",
+    "model/monitoring_common.py",
+    "operator/field_deployment.py",
+    "operator/extensions/field-deployment.json",
+    "operator/web/implementation_deployment.mjs",
+    "docs/FIELD_CREW_DEPLOYMENT.md",
     "model/scientific_briefing.py",
     "source_tools/prepare_scientific_briefing.py",
     "operator/source_report_editions.py",

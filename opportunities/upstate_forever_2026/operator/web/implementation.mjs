@@ -24,7 +24,7 @@ function parseOptionalObject(value){const s=String(value||'').trim();if(!s)retur
 function docEqual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
 export class ImplementationWorkbench {
   constructor(root,host={},catalog=null){
-    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.selectionDraft=null;this.selectionPreviewTurn=0;this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();this.planReportSource=null;
+    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.selectionDraft=null;this.selectionPreviewTurn=0;this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();this.planReportSource=null;this.fieldDeployment=null;this.deploymentModule=null;
     this.onClick=e=>{const b=e.target.closest('[data-impl]');if(!b||!this.root.contains(b))return;this.act(b).catch(x=>this.fail(x));};
     this.onChange=e=>this.change(e).catch(x=>this.fail(x));
     this.onInput=e=>{if(e.target.name==='source_filter')this.syncSourceSelection();};
@@ -127,6 +127,16 @@ export class ImplementationWorkbench {
     if(!this.qcModule)this.qcModule=await import('./implementation_qc.mjs');
     if(this.gone||turn!==this.generation||this.plan?.id!==selected||this.nativePlan?.revision!==revision||this.workspace!==workspace||this.host.getState?.()?.workspace_key!==workspace)return;
     await this.qcModule.openImplementationQC(this);
+  }
+  async deploymentCapability(){
+    if(!this.native)throw Error('Open the original native workspace to prepare field crew packets.');
+    if(!this.deploymentModule)this.deploymentModule=await import('./implementation_deployment.mjs');
+    return this.deploymentModule;
+  }
+  deploymentPanel(){
+    if(!this.native)return '';
+    if(this.deploymentModule)return this.deploymentModule.render(this);
+    return '<section class="iw-notice"><h3>Field crew packets</h3><p>Retain a saved visit selection with crew sheets, protocols, calendar, site geometry and the complete offline field editor.</p>'+button('deployment-open','Prepare or reopen crew packet')+'</section>';
   }
   async dispatchCapability(){
     if(!this.native)throw Error('Open the original native workspace to prepare retained laboratory requests.');
@@ -260,7 +270,7 @@ export class ImplementationWorkbench {
   }
 
   readLocal(){try{const data=JSON.parse(localStorage.getItem(this.storageKey)||'{"plans":{}}');this.offlineCopies=data.plans||{};}catch(e){this.message='Browser storage could not be read. Export JSON to retain your work.';}}
-  cache(){if(!this.plan)return;this.offlineCopies[this.plan.id]={document:clone(this.plan),dirty:this.dirty,pending:this.pending?clone(this.pending):null,observationFlow:this.observationFlow?clone(this.observationFlow):null,observationReceipts:clone(this.observationReceipts||[]),labIntake:this.labIntake?clone(this.labIntake):null,briefingIntake:this.briefingIntake?clone(this.briefingIntake):null,labDispatch:this.labDispatch?clone(this.labDispatch):null,planReportSource:this.planReportSource?clone(this.planReportSource):null,resultView:normalizeResultsView(this.resultView),updated_at:new Date().toISOString()};try{localStorage.setItem(this.storageKey,JSON.stringify({schema:'upstate.implementation-drafts/v1',plans:this.offlineCopies}));}catch(e){this.message='Browser storage is full or unavailable. Use Export JSON to save the current plan.';}}
+  cache(){if(!this.plan)return;this.offlineCopies[this.plan.id]={document:clone(this.plan),dirty:this.dirty,pending:this.pending?clone(this.pending):null,observationFlow:this.observationFlow?clone(this.observationFlow):null,observationReceipts:clone(this.observationReceipts||[]),labIntake:this.labIntake?clone(this.labIntake):null,briefingIntake:this.briefingIntake?clone(this.briefingIntake):null,labDispatch:this.labDispatch?clone(this.labDispatch):null,planReportSource:this.planReportSource?clone(this.planReportSource):null,fieldDeployment:this.fieldDeployment?.plan_id===this.plan.id?clone(this.fieldDeployment):null,resultView:normalizeResultsView(this.resultView),updated_at:new Date().toISOString()};try{localStorage.setItem(this.storageKey,JSON.stringify({schema:'upstate.implementation-drafts/v1',plans:this.offlineCopies}));}catch(e){this.message='Browser storage is full or unavailable. Use Export JSON to save the current plan.';}}
   status(message){this.message=message;this.error='';this.render();}
   fail(error){if(this.gone)return;this.error=error?.message||String(error);const dialog=this.root.querySelector('dialog[open]');if(dialog){let notice=dialog.querySelector('.iw-form-error');if(!notice){notice=document.createElement('pre');notice.className='iw-error iw-form-error';notice.setAttribute('role','alert');dialog.querySelector('[data-impl-dialog]').prepend(notice);}notice.textContent=this.error;}else this.render();this.host.toast?.(this.error.slice(0,180));}
   async outcomeCapability(){
@@ -287,7 +297,7 @@ export class ImplementationWorkbench {
     else if(remote){this.plan=clone(remote);this.dirty=false;}
     else if(local){this.plan=clone(local.document);this.dirty=!!local.dirty;}
     else throw Error('This plan is not available in the selected workspace.');
-    this.history=history;this.downloads=downloads;this.reports=reports;this.nativePlan=remote?clone(remote):null;this.importedFile=!remote&&this.native&&this.plan.revision>0;this.pending=local?.pending||null;this.observationFlow=local?.observationFlow||null;this.observationReceipts=local?.observationReceipts||[];this.labIntake=local?.labIntake||null;this.briefingIntake=local?.briefingIntake||null;if(['uploading','opening','previewing'].includes(this.briefingIntake?.stage)){this.briefingIntake.stage='selecting';this.briefingIntake.preview=null;}this.planReportSource=local?.planReportSource||null;if(this.planReportSource?.stage==='previewing')this.planReportSource=null;this.labDispatch=local?.labDispatch||null;if(['loading','previewing','reconciling','opening','report-previewing'].includes(this.labDispatch?.stage)){this.labDispatch.stage='editing';this.labDispatch.preview=null;this.labDispatch.reconciliation=null;if(this.labDispatch.reportFlow?.stage==='previewing'){this.labDispatch.reportFlow.preview=null;this.labDispatch.reportFlow.stage='idle';}}this.resultView=normalizeResultsView(local?.resultView);if(['uploading','inspecting','previewing'].includes(this.labIntake?.stage)){this.labIntake.stage='mapping';this.labIntake.preview=null;}if(this.observationFlow?.stage==='previewing')this.observationFlow=null;this.error='';this.message=remote&&local?.dirty&&remote.revision!==local.document.revision?'A newer native revision exists. Your browser draft is retained; export it before choosing Reopen native.':'';this.cache();this.render();
+    this.history=history;this.downloads=downloads;this.reports=reports;this.nativePlan=remote?clone(remote):null;this.importedFile=!remote&&this.native&&this.plan.revision>0;this.pending=local?.pending||null;this.observationFlow=local?.observationFlow||null;this.observationReceipts=local?.observationReceipts||[];this.labIntake=local?.labIntake||null;this.briefingIntake=local?.briefingIntake||null;if(['uploading','opening','previewing'].includes(this.briefingIntake?.stage)){this.briefingIntake.stage='selecting';this.briefingIntake.preview=null;}this.fieldDeployment=local?.fieldDeployment||null;if(this.fieldDeployment&&['previewing','opening'].includes(this.fieldDeployment.stage)){this.fieldDeployment.stage='selecting';this.fieldDeployment.preview=null;}this.planReportSource=local?.planReportSource||null;if(this.planReportSource?.stage==='previewing')this.planReportSource=null;this.labDispatch=local?.labDispatch||null;if(['loading','previewing','reconciling','opening','report-previewing'].includes(this.labDispatch?.stage)){this.labDispatch.stage='editing';this.labDispatch.preview=null;this.labDispatch.reconciliation=null;if(this.labDispatch.reportFlow?.stage==='previewing'){this.labDispatch.reportFlow.preview=null;this.labDispatch.reportFlow.stage='idle';}}this.resultView=normalizeResultsView(local?.resultView);if(['uploading','inspecting','previewing'].includes(this.labIntake?.stage)){this.labIntake.stage='mapping';this.labIntake.preview=null;}if(this.observationFlow?.stage==='previewing')this.observationFlow=null;this.error='';this.message=remote&&local?.dirty&&remote.revision!==local.document.revision?'A newer native revision exists. Your browser draft is retained; export it before choosing Reopen native.':'';this.cache();this.render();
   }
   async receiveSavedPlan(payload){
     if(!this.native||this.gone||payload?.workspace_key!==this.workspace||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the saved plan in its received workspace.');
@@ -438,6 +448,7 @@ export class ImplementationWorkbench {
       if(this.labDispatch?.operation_id===pending.operation_id){this.labDispatch.stage=this.labDispatch.preview?'review':'editing';this.labDispatch.operation_id=null;this.labDispatch.after_save=null;}
       if(this.labDispatch?.reportFlow?.operation_id===pending.operation_id){this.labDispatch.reportFlow.operation_id=null;this.labDispatch.reportFlow.stage=this.labDispatch.reportFlow.preview?'review':'idle';this.labDispatch.stage='editing';}
       if(pending.action==='implementation.report-source.import'&&this.planReportSource)this.planReportSource.stage='review';
+      if(pending.action==='implementation.field-deployment.prepare'&&this.fieldDeployment)this.fieldDeployment.stage=this.fieldDeployment.preview?'review':'selecting';
       this.pending=null;this.cache();if(!this.root.querySelector('dialog[open]'))this.render();return;
     }
     if(task.state!=='complete')return;
@@ -446,6 +457,7 @@ export class ImplementationWorkbench {
     this.resolvingOperation=pending.operation_id;const turn=this.generation;
     const current=()=>!this.gone&&turn===this.generation&&this.plan?.id===pending.plan_id&&this.pending?.operation_id===pending.operation_id;
     try{
+      if(pending.action==='implementation.field-deployment.prepare'){const deployment=await this.deploymentCapability();if(!current())return;deployment.finish(this,pending,task.result);return;}
       if(pending.action==='implementation.report-source.import'){if(!current())return;this.finishPlanReportSource(pending,task.result);return;}
       if(pending.action==='implementation.observations.import'){
         if(!current())return;
@@ -501,7 +513,7 @@ export class ImplementationWorkbench {
     if(this.tab==='outcomes')return this.outcomePanel();
     if(this.tab==='field'){
       const show=(collection,heads,cells,label)=>'<div class="iw-section-head"><h3>'+label+'</h3><div class="iw-actions">'+this.addButton(collection)+button('csv','Export','data-collection="'+collection+'"')+'</div></div>'+this.table(heads,p[collection].map(cells));
-      return this.dispatchPanel()+this.labPanel()+this.fieldObservationPanel()+'<div class="iw-section-head"><h3>Field capture</h3>'+button('field-form','Use a structured field form','','iw-primary')+(this.native?button('sample-qc','Sample quality control'):'')+'</div>'+show('visits',['Planned','Site','Observer','Status','Actual time',''],v=>[esc(v.planned_date||''),esc(p.sites.find(s=>s.id===v.site_id)?.label||v.site_id),esc(v.observer||''),esc(v.status),esc(v.visited_at||''),this.editButton('visits',v.id)+this.evidence.recordButton('visits',v.id)+button('field-sheet','Field sheet','data-id="'+esc(v.id)+'"')],'Field visits')+show('activities',['Activity','Visit','Kind','Sample ID','Collected',''],a=>[esc(a.id),esc(a.visit_id),esc(a.kind),esc(a.sample_id||''),esc(a.collected_at||''),this.editButton('activities',a.id)+this.evidence.recordButton('activities',a.id)],'Samples and activities')+renderResults(this);
+      return this.deploymentPanel()+this.dispatchPanel()+this.labPanel()+this.fieldObservationPanel()+'<div class="iw-section-head"><h3>Field capture</h3>'+button('field-form','Use a structured field form','','iw-primary')+(this.native?button('sample-qc','Sample quality control'):'')+'</div>'+show('visits',['Planned','Site','Observer','Status','Actual time',''],v=>[esc(v.planned_date||''),esc(p.sites.find(s=>s.id===v.site_id)?.label||v.site_id),esc(v.observer||''),esc(v.status),esc(v.visited_at||''),this.editButton('visits',v.id)+this.evidence.recordButton('visits',v.id)+button('field-sheet','Field sheet','data-id="'+esc(v.id)+'"')],'Field visits')+show('activities',['Activity','Visit','Kind','Sample ID','Collected',''],a=>[esc(a.id),esc(a.visit_id),esc(a.kind),esc(a.sample_id||''),esc(a.collected_at||''),this.editButton('activities',a.id)+this.evidence.recordButton('activities',a.id)],'Samples and activities')+renderResults(this);
     }
     if(this.tab==='sources'){
       return briefingFollowup.render(this)+'<div class="iw-section-head"><h3>Conservation and intervention selections</h3><div class="iw-actions">'+(this.native?button('source-import','Import native selection','','iw-primary'):'')+this.addButton('candidates','Add source-linked candidate')+'</div></div><p class="iw-muted">Selected rows retain the original scientific source and model references. Community-area totals stay with their original area; source snapshots can be inspected below.</p>'+this.table(['Candidate','Whole area (ha)','Source / native identity','Retained quantities',''],p.candidates.map(c=>[esc(c.label),esc(c.area_ha??''),'<code>'+esc(textObject(c.source))+'</code>','<code>'+esc(textObject(c.modeled_benefits||[]))+'</code>',button('inspect','Inspect source','data-collection="candidates" data-id="'+esc(c.id)+'"')]))+'<div class="iw-section-head"><h3>Source register</h3>'+this.addButton('source_links')+'</div>'+this.table(['Reference','Kind','Location',''],p.source_links.map(s=>{const link=safeLink(s.reference);return [esc(s.label),esc(s.kind),link?'<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(s.reference)+'</a>':esc(format(s.reference)),button('inspect','Inspect','data-collection="source_links" data-id="'+esc(s.id)+'"')];}));
@@ -517,6 +529,7 @@ export class ImplementationWorkbench {
   async act(b){
     if(b.dataset.impl.startsWith('briefing-')){await briefingFollowup.act(this,b);return;}
     const action=b.dataset.impl;
+    if(action.startsWith('deployment-')){const turn=this.generation,selected=this.plan?.id;const deployment=await this.deploymentCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await deployment.act(this,b);return;}
     if(action==='plan-report-preview'){await this.previewPlanReportSource(b.dataset.reportId);return;}
     if(action==='plan-report-register'){await this.registerPlanReportSource();return;}
     if(action==='plan-report-open'){await this.openPlanReportSource();return;}
@@ -579,6 +592,7 @@ export class ImplementationWorkbench {
     if(action==='delete'){const collection=b.dataset.collection,id=b.dataset.id;this.commitLocal(deleteRow(this.plan,collection,id),'Record removed from this draft; native revision history remains retained.');return;}
   }
   async change(e){
+    if(e.target.matches('[data-deployment-filter],[data-deployment-title],[data-deployment-visit]')){const turn=this.generation,selected=this.plan?.id;const deployment=await this.deploymentCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await deployment.change(this,e);return;}
     if(e.target.matches('[data-outcome-control]')){const controller=await this.outcomeCapability();if(!this.gone)controller.change(e);return;}
     if(e.target.dataset.resultFilter){const key=e.target.dataset.resultFilter;this.resultView=normalizeResultsView({...this.resultView,[key]:key==='page_size'?Number(e.target.value):e.target.value,page:0});this.cache();this.render();return;}
     if(e.target.matches('[data-briefing-file],[data-briefing-field],[data-briefing-entry]')){await briefingFollowup.change(this,e);return;}
