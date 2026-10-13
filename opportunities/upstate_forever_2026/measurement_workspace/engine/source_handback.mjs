@@ -11,6 +11,7 @@ import {MeasurementWorkspace} from './workspace.mjs';
 import {zipMembers} from './collection_zip.mjs';
 import {buildSourceHandback,returnedTable,handbackCsv,HANDBACK_FORMAT} from './source_handback_core.mjs';
 import {textWorkbook} from './source_handback_xlsx.mjs';
+import {originalWorkbookReturns} from './source_workbook_returns.mjs';
 installLargeFileReads(MeasurementWorkspace);
 const json=v=>JSON.stringify(v,null,2)+'\n';
 const identity=v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
@@ -34,7 +35,7 @@ function selection(input,publish=false){
  }
  return out;
 }
-const DELIVERY_EDITION=2;
+const DELIVERY_EDITION=3;
 function snapshot(w,request){
  const value=w.fullSnapshot({expected_revision:request.expectedRevision}),collections=captureCollections(w,request.sourceIds,value.portable);
  return {...value,nativeDomainBound:w.nativeDomain!==null,companionInventory:collections.inventory,companionMembers:collections.members};
@@ -51,7 +52,8 @@ function deliveryContext(s){
   bindingNote:'Complete included project and native context are bound. Only the freshly generated portable export createdAt is excluded from the project digest; original source, event, intake and result timestamps remain included. Every matching collection and companion file is bound by its original identity and exact bytes.'};
 }
 function viewOf(s,input,edition=DELIVERY_EDITION){
- const original=buildSourceHandback(s,input),view=edition===1?original:{...original,deliveryEdition:DELIVERY_EDITION,deliveryContext:deliveryContext(s)};
+ const original=buildSourceHandback(s,input),view=edition===1?original:{...original,deliveryEdition:edition,deliveryContext:deliveryContext(s)};
+ if(edition>=3){s.originalWorkbookReturn=originalWorkbookReturns(s.portable,original);view.originalWorkbooks=s.originalWorkbookReturn.workbooks;}
  return {...view,previewSha256:hash(stable(view))};
 }
 export function previewHandback(w,input){const request=selection(input);return viewOf(snapshot(w,request),request);}
@@ -63,7 +65,7 @@ export function handbackCatalog(w){
 function requestId(request){return hash(stable({format:HANDBACK_FORMAT,request}));}
 function checkManifest(m){
  need(m?.format===HANDBACK_FORMAT&&identity(m.id)&&m.requestFingerprint===m.id,'Unknown source return manifest');
- need(m.deliveryEdition===undefined||m.deliveryEdition===1||m.deliveryEdition===DELIVERY_EDITION,'Unsupported source return delivery edition');
+ need(m.deliveryEdition===undefined||m.deliveryEdition===1||m.deliveryEdition===2||m.deliveryEdition===DELIVERY_EDITION,'Unsupported source return delivery edition');
  const request=selection(m.selection,true);need(requestId(request)===m.id&&m.revision===request.expectedRevision&&m.title===request.title&&m.note===request.note,'Handback selection differs from its identity');
  need(typeof m.createdAt==='string'&&Number.isFinite(Date.parse(m.createdAt))&&Array.isArray(m.files),'Incomplete return manifest');
  const names=new Set();for(const f of m.files){safeName(f.name);need(f.name!=='manifest.json'&&!names.has(f.name)&&identity(f.sha256)&&Number.isSafeInteger(f.bytes)&&f.bytes>=0,'Invalid retained member');names.add(f.name);}
@@ -79,7 +81,7 @@ export function handbackMember(w,id,name){
  if(name==='manifest.json')return {data:Buffer.from(json(manifest)),type:'application/json'};
  const member=manifest.files.find(x=>x.name===name);need(member,'Source return member not found',404);
  const data=fs.readFileSync(path.join(fileRoot(w,id),name));need(data.length===member.bytes&&hash(data)===member.sha256,'Retained source return member changed: '+name);
- const type=name.endsWith('.csv')?'text/csv; charset=utf-8':name.endsWith('.json')?'application/json':name.endsWith('.html')?'text/html; charset=utf-8':name.endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/octet-stream';
+ const type=name.endsWith('.csv')?'text/csv; charset=utf-8':name.endsWith('.json')?'application/json':name.endsWith('.html')?'text/html; charset=utf-8':name.endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':name.endsWith('.xlsm')?'application/vnd.ms-excel.sheet.macroEnabled.12':'application/octet-stream';
  return {data,type};
 }
 export function readHandbackView(w,id){const value=JSON.parse(handbackMember(w,id,'source-return.json').data);const m=readManifest(w,id);need(value.previewSha256===m.selection.previewSha256,'Returned view differs from its manifest');return value;}
@@ -135,11 +137,26 @@ function receivedCollections(m,members,project){
  return {inventory,members:retained};
 }
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function originalWorkbookReport(view){
+ if(view.deliveryEdition<3||!Array.isArray(view.originalWorkbooks)||!view.originalWorkbooks.length)return '';
+ return '<h2>Original workbooks with reviewed sheets</h2><p>Each reviewed copy preserves all original worksheet, formula, style, media and macro parts. Added literal-text sheets identify the original worksheet and row, preparation and native revision. The unchanged original is included separately.</p>'+
+ view.originalWorkbooks.map(x=>'<section><h3>'+escape(x.originalFilenames.join(' / '))+'</h3><p><a href="'+escape(x.originalPath.split('/').map(encodeURIComponent).join('/'))+'">Unchanged original workbook</a> · <a href="'+escape(x.lineagePath.split('/').map(encodeURIComponent).join('/'))+'">Complete source and row lineage</a>'+
+ (x.returnedPath?' · <a href="'+escape(x.returnedPath.split('/').map(encodeURIComponent).join('/'))+'">Editable workbook with review sheets</a> · <a href="'+escape(x.partsPath.split('/').map(encodeURIComponent).join('/'))+'">Original part comparison</a>':'')+'</p>'+
+ (x.state==='ready'?'<p>'+x.sheets.map(s=>escape(s.name)+' → '+escape(s.sourceSheet)+' ('+s.rows+' original rows)').join('<br>')+'</p><p>'+x.unchangedPartCount+' original package parts retain identical bytes. Three package catalogs register the added sheets. Workbook calculations and macros remain for the recipient’s chosen spreadsheet application.</p>':'<p>'+escape(x.reason)+'</p>')+'</section>').join('');
+}
+function originalWorkbookInstructions(view){
+ if(view.deliveryEdition<3||!view.originalWorkbooks?.length)return '';
+ return '\n## Original workbook review copies\n\n'+view.originalWorkbooks.map(x=>
+  x.originalFilenames.join(' / ')+'\n- Exact original: '+x.originalPath+'\n- Complete source/worksheet/physical-row binding: '+x.lineagePath+'\n'+
+  (x.state==='ready'?'- Editable reviewed copy: '+x.returnedPath+'\n- Full part comparison: '+x.partsPath+'\n- Added review worksheets: '+x.sheets.map(s=>s.name+' → '+s.sourceSheet).join('; ')+'\n':
+   '- Original retained without appended sheets: '+x.reason+'\n')).join('\n')+
+  '\nEvery original worksheet, formula, style, macro, media and external-link part remains byte-identical. Only the workbook, its relationship catalog and content types change to register the new worksheets. The ZIP container is rebuilt; the complete original ZIP remains unchanged separately. Review cells are literal text. The exporter runs no spreadsheet formulas or macros. Keep this entire source return for exact native replay and provenance.\n';
+}
 function report(view,request,sourceFiles,workbook){
- const attribution=view.deliveryEdition===DELIVERY_EDITION?'<p>Prepared by TokenJunkieLabs</p>':'';
+ const attribution=view.deliveryEdition>=2?'<p>Prepared by TokenJunkieLabs</p>':'';
  const sources=view.sources.map((s,i)=>'<tr><td>'+escape(s.label)+'</td><td>'+s.counts.rows+'</td><td>'+s.counts.linkedRows+'</td><td>'+s.counts.rejectedRows+'</td><td>'+s.counts.unmatchedRows+'</td><td><a href="'+sourceFiles[i].originalPath+'">Original</a> · <a href="'+sourceFiles[i].returnedPath+'">Returned CSV</a> · <a href="'+sourceFiles[i].rowsPath+'">Complete rows</a></td></tr>').join('');
  const records=view.records.map(r=>'<tr><td>'+escape(r.stationId)+'<br><code>'+escape(r.sourceResultId||r.id)+'</code></td><td>'+escape(r.sampledDate)+'<br>'+escape(r.sampledAt)+'<br>'+escape(r.timeZone)+'</td><td>'+escape(r.characteristic)+'<br>'+escape(r.basis)+' / '+escape(r.fraction)+'</td><td>'+escape(r.reportedValue)+' '+escape(r.reportedUnit)+'</td><td>'+escape(r.value??'')+' '+escape(r.unit)+'<br>'+escape(r.censor)+' ['+escape(r.lower??'')+', '+escape(r.upper??'')+']</td><td>'+escape(r.mapping?.reachId||'Unassigned')+'</td><td>'+escape(r.review.state)+'<br>'+escape(r.eligible.reasons.join(', ')||'Eligible measured input')+'</td></tr>').join('');
- return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(request.title)+'</title><style>body{font:15px/1.5 system-ui,sans-serif;margin:0;color:#222;background:#fff}main{max-width:1280px;margin:auto;padding:24px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:28px}a{color:inherit;text-decoration:underline}p{max-width:90ch;white-space:pre-wrap}table{border-collapse:collapse;width:100%;min-width:750px}th,td{padding:10px;border:1px solid #ccc;text-align:left;vertical-align:top}th{background:#eee}code{overflow-wrap:anywhere}.scroll{overflow:auto}small{color:#555}@media(max-width:600px){main{padding:14px}h1{font-size:24px}}</style><main>'+attribution+'<h1>'+escape(request.title)+'</h1><p>'+escape(request.note)+'</p><p>Measurements revision '+view.revision+' · '+view.counts.sourceRows+' source rows · '+view.counts.records+' native records · '+view.counts.savedResults+' selected saved results.</p><p>'+(workbook?'<a href="returned-workbook.xlsx">Open returned workbook</a> · ':'')+'<a href="source-return.json">Complete row return</a> · <a href="project.json">Editable native project</a> · <a href="README.md">Working instructions</a></p><p>Original files remain unchanged. Return columns contain the current native review, mapping and eligibility. Selected saved results retain their own original revision. Workbook values are literal text; CSV formula-like fields carry an apostrophe for safe spreadsheet opening.</p><h2>Original sources and complete returns</h2><div class="scroll"><table><thead><tr><th>Source</th><th>Rows</th><th>Linked</th><th>Rejected</th><th>Unmatched</th><th>Files</th></tr></thead><tbody>'+sources+'</tbody></table></div><h2>Native measurements and reviews</h2><div class="scroll"><table><thead><tr><th>Station / result</th><th>Source date / time</th><th>Constituent</th><th>Reported</th><th>Normalized / bounds</th><th>Reach</th><th>Review / eligibility</th></tr></thead><tbody>'+records+'</tbody></table></div><h2>Saved scientific results</h2><ul>'+view.results.map((r,i)=>'<li><a href="results/'+i+'.json">'+escape(r.kind)+'</a> · original revision '+r.revision+' · '+escape(r.id)+'</li>').join('')+'</ul></main></html>';
+ return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(request.title)+'</title><style>body{font:15px/1.5 system-ui,sans-serif;margin:0;color:#222;background:#fff}main{max-width:1280px;margin:auto;padding:24px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:28px}a{color:inherit;text-decoration:underline}p{max-width:90ch;white-space:pre-wrap}table{border-collapse:collapse;width:100%;min-width:750px}th,td{padding:10px;border:1px solid #ccc;text-align:left;vertical-align:top}th{background:#eee}code{overflow-wrap:anywhere}.scroll{overflow:auto}small{color:#555}@media(max-width:600px){main{padding:14px}h1{font-size:24px}}</style><main>'+attribution+'<h1>'+escape(request.title)+'</h1><p>'+escape(request.note)+'</p><p>Measurements revision '+view.revision+' · '+view.counts.sourceRows+' source rows · '+view.counts.records+' native records · '+view.counts.savedResults+' selected saved results.</p><p>'+(workbook?'<a href="returned-workbook.xlsx">Open returned workbook</a> · ':'')+'<a href="source-return.json">Complete row return</a> · <a href="project.json">Editable native project</a> · <a href="README.md">Working instructions</a></p><p>Original files remain unchanged. Return columns contain the current native review, mapping and eligibility. Selected saved results retain their own original revision. Workbook values are literal text; CSV formula-like fields carry an apostrophe for safe spreadsheet opening.</p>'+originalWorkbookReport(view)+'<h2>Original sources and complete returns</h2><div class="scroll"><table><thead><tr><th>Source</th><th>Rows</th><th>Linked</th><th>Rejected</th><th>Unmatched</th><th>Files</th></tr></thead><tbody>'+sources+'</tbody></table></div><h2>Native measurements and reviews</h2><div class="scroll"><table><thead><tr><th>Station / result</th><th>Source date / time</th><th>Constituent</th><th>Reported</th><th>Normalized / bounds</th><th>Reach</th><th>Review / eligibility</th></tr></thead><tbody>'+records+'</tbody></table></div><h2>Saved scientific results</h2><ul>'+view.results.map((r,i)=>'<li><a href="results/'+i+'.json">'+escape(r.kind)+'</a> · original revision '+r.revision+' · '+escape(r.id)+'</li>').join('')+'</ul></main></html>';
 }
 function buildMembers(w,s,view,request){
  const members=[],add=(name,data)=>members.push({name:safeName(name),data:Buffer.isBuffer(data)?data:Buffer.from(data)}),sourceFiles=[],tables=[];
@@ -151,10 +168,15 @@ function buildMembers(w,s,view,request){
  }
  for(let i=0;i<view.results.length;i++)add('results/'+i+'.json',json(view.results[i]));
  if(w)for(const item of s.companionMembers||[])add(item.name,item.data);
+ if(view.deliveryEdition>=3){
+  const reviewed=s.originalWorkbookReturn||originalWorkbookReturns(s.portable,view);
+  need(stable(reviewed.workbooks)===stable(view.originalWorkbooks),'The original-workbook preview changed before publication.');
+  for(const item of reviewed.members)add(item.name,item.data);
+ }
  let workbook=null,workbookNote='';
  try{const value=textWorkbook(tables);add('returned-workbook.xlsx',value.data);workbook=value.sheets;}catch(e){if(!(e instanceof InputError))throw e;workbookNote=e.message;}
- const instructions='# '+request.title+'\n\n'+(view.deliveryEdition===DELIVERY_EDITION?'Prepared by TokenJunkieLabs.\n\n':'')+request.note+'\n\n## Open and use this return\n\nOpen report.html for the complete source inventory and native reviews. returned-workbook.xlsx keeps original columns first and appends current native review/result columns. All workbook cells are literal text, preserving leading zeros, source dates, timezone strings and formula text. Individual returns/*.csv contain the same rows. Spreadsheet-formula-like CSV cells are prefixed with an apostrophe; the unchanged originals and exact row JSON retain the original strings. Malformed surplus cells are retained in explicit extra columns. Blank source rows and rejected/unmatched rows remain visible.\n\nEach selected source is retained byte-for-byte under originals/. All members of its retained source collection, including companion workbooks, formulas, merged cells and cached values, remain unchanged under collections/. The returned workbook is a separate review file; original workbook cells are never rewritten.\n\nsource-return.json and returns/*.json retain complete row identities, original values, native records, reviews, eligibility, rejection reasons and saved-result associations. Results/*.json keep complete saved results with their original workspace revision, input, temporal support, rationale and assumptions. No result is recalculated or annualized by this return operation.\n\n## Continue scientific work\n\nproject.json is the complete original Measurements portable project, including all original imports and their reviews. Reopen it through the existing Measurements receive operation into an empty native Measurements workspace. It may include other imports needed for the original complete project. native-context.json retains the complete corresponding native display and domain context. Use the original mapping/review/calculation controls for scientific changes.\n\nTo reopen this exact return on another installation, use Receive returned ZIP in Source returns, or the source-handback-receive CLI. Receiving a return retains its self-contained edition without replacing the current scientific project. Original companions and this edition can be inspected independently.\n\nThis edition pins measurements revision '+view.revision+'. Current eligibility and a selected older saved result can differ because the result keeps its own revision. Discrete sample concentration and daily-flow pairing retain their original support; native annual model loads remain separate. Source dates/timezones, censoring, constituents, fractions, units and review choices are not inferred by the exporter.\n\n'+(workbookNote?'## Workbook capacity\n\n'+workbookNote+'\n':'');
- add('README.md',instructions);add('report.html',report(view,request,sourceFiles,workbook));
+ const instructions='# '+request.title+'\n\n'+(view.deliveryEdition>=2?'Prepared by TokenJunkieLabs.\n\n':'')+request.note+'\n\n## Open and use this return\n\nOpen report.html for the complete source inventory and native reviews. returned-workbook.xlsx keeps original columns first and appends current native review/result columns. All workbook cells are literal text, preserving leading zeros, source dates, timezone strings and formula text. Individual returns/*.csv contain the same rows. Spreadsheet-formula-like CSV cells are prefixed with an apostrophe; the unchanged originals and exact row JSON retain the original strings. Malformed surplus cells are retained in explicit extra columns. Blank source rows and rejected/unmatched rows remain visible.\n\nEach selected source is retained byte-for-byte under originals/. All members of its retained source collection, including companion workbooks, formulas, merged cells and cached values, remain unchanged under collections/. The returned workbook is a separate review file; original workbook cells are never rewritten.\n\nsource-return.json and returns/*.json retain complete row identities, original values, native records, reviews, eligibility, rejection reasons and saved-result associations. Results/*.json keep complete saved results with their original workspace revision, input, temporal support, rationale and assumptions. No result is recalculated or annualized by this return operation.\n\n## Continue scientific work\n\nproject.json is the complete original Measurements portable project, including all original imports and their reviews. Reopen it through the existing Measurements receive operation into an empty native Measurements workspace. It may include other imports needed for the original complete project. native-context.json retains the complete corresponding native display and domain context. Use the original mapping/review/calculation controls for scientific changes.\n\nTo reopen this exact return on another installation, use Receive returned ZIP in Source returns, or the source-handback-receive CLI. Receiving a return retains its self-contained edition without replacing the current scientific project. Original companions and this edition can be inspected independently.\n\nThis edition pins measurements revision '+view.revision+'. Current eligibility and a selected older saved result can differ because the result keeps its own revision. Discrete sample concentration and daily-flow pairing retain their original support; native annual model loads remain separate. Source dates/timezones, censoring, constituents, fractions, units and review choices are not inferred by the exporter.\n\n'+(workbookNote?'## Workbook capacity\n\n'+workbookNote+'\n':'');
+ add('README.md',instructions+originalWorkbookInstructions(view));add('report.html',report(view,request,sourceFiles,workbook));
  return {members,sourceFiles,workbook,workbookNote};
 }
 function publishMembers(w,manifest,members,{receiving=false}={}){
@@ -179,7 +201,7 @@ export function publishHandback(w,input){
  const request=selection(input,true),id=requestId(request);
  if(fs.existsSync(path.join(fileRoot(w,id),'manifest.json')))return readManifest(w,id);
  const s=snapshot(w,request),view=viewOf(s,request);need(view.previewSha256===request.previewSha256,'Original source view changed after inspection. Preview it again.');
- const built=buildMembers(w,s,view,request),manifest={format:HANDBACK_FORMAT,deliveryEdition:DELIVERY_EDITION,id,requestFingerprint:id,revision:s.revision,createdAt:new Date().toISOString(),title:request.title,note:request.note,selection:request,counts:view.counts,sources:built.sourceFiles,workbook:built.workbook,workbookNote:built.workbookNote,files:built.members.map(m=>({name:m.name,bytes:m.data.length,sha256:hash(m.data)}))};
+ const built=buildMembers(w,s,view,request),manifest={format:HANDBACK_FORMAT,deliveryEdition:DELIVERY_EDITION,id,requestFingerprint:id,revision:s.revision,createdAt:new Date().toISOString(),title:request.title,note:request.note,selection:request,counts:view.counts,sources:built.sourceFiles,workbook:built.workbook,workbookNote:built.workbookNote,originalWorkbooks:view.originalWorkbooks,files:built.members.map(m=>({name:m.name,bytes:m.data.length,sha256:hash(m.data)}))};
  return publishMembers(w,checkManifest(manifest),built.members);
 }
 /** Only the exact ordinary stored ZIP emitted above is accepted; no path extraction or executable processing. */
@@ -220,9 +242,11 @@ export function receiveHandbackBytes(w,data){
  const project=JSON.parse(members.get('project.json')),context=JSON.parse(members.get('native-context.json')),returned=JSON.parse(members.get('source-return.json'));
  validateNativeContext(project,context);
  const collections=receivedCollections(m,members,project),edition=m.deliveryEdition??1;
- const rebuilt=viewOf({...context,portable:project,companionInventory:collections.inventory},m.selection,edition);need(rebuilt.previewSha256===m.selection.previewSha256&&stable(rebuilt)===stable(returned),'Returned rows differ from their complete native sources');
+ const retained={...context,portable:project,companionInventory:collections.inventory};
+ const rebuilt=viewOf(retained,m.selection,edition);need(rebuilt.previewSha256===m.selection.previewSha256&&stable(rebuilt)===stable(returned),'Returned rows differ from their complete native sources');
  need(Array.isArray(m.sources)&&stable(m.sources.map(x=>x.id))===stable(rebuilt.sourceIds),'Return source inventory differs');
- const generated=buildMembers(null,{...context,portable:project},rebuilt,m.selection);
+ const generated=buildMembers(null,retained,rebuilt,m.selection);
+ if(edition>=3)need(stable(m.originalWorkbooks)===stable(rebuilt.originalWorkbooks),'The original-workbook inventory differs from its source-bound return.');
  need(stable(m.sources)===stable(generated.sourceFiles)&&stable(m.workbook)===stable(generated.workbook)&&m.workbookNote===generated.workbookNote&&stable(m.counts)===stable(rebuilt.counts),'Return inventory or workbook definition differs');
  const allowed=new Set(generated.members.map(x=>x.name));
  for(const x of generated.members)need(members.get(x.name)?.equals(x.data),'Derived return file differs from its original native values: '+x.name);
@@ -242,5 +266,9 @@ export function handbackOperation(w,method,parts,query,body={}){
  if(parts.length===1&&method==='GET')return readManifest(w,parts[0]);
  if(parts.length===2&&parts[1]==='view'&&method==='GET')return readHandbackView(w,parts[0]);
  if(parts.length===2&&parts[1]==='bundle'&&method==='GET')return handbackBundle(w,parts[0]);
+ if(parts.length===2&&parts[1]==='member'&&method==='GET'){
+  const member=handbackMember(w,parts[0],query.name);
+  return {name:query.name,type:member.type,bytes:member.data.length,sha256:hash(member.data),contentBase64:member.data.toString('base64')};
+ }
  throw new InputError('Source return operation not found',404);
 }
