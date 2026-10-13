@@ -23,12 +23,20 @@ def parser():
         ("source-import", "Retain original source bytes from a local edition manifest"),
         ("profile-save", "Save a sourced biophysical and native-parameter profile"),
         ("scenario-save", "Save an explicit baseline or land-cover scenario"),
-        ("grid-prepare", "Prepare the original 30 m alignment and source/reporting masks"),
+        ("grid-prepare", "Prepare the selected source alignment and source/reporting masks"),
         ("run-prepare", "Bind an immutable grid/profile/scenario selection"),
         ("delivery-build", "Build seven map families, report, GIS and native working handoff"),
         ("community-table-import", "Import an original registered community table"),
         ("community-plan-save", "Save an immutable community intervention plan"),
         ("community-report-build", "Build the complete saved community report"),
+        ("planning-inventory-build", "Build a native planning inventory from retained original polygons and runs"),
+        ("portfolio-preview", "Compare conservation parcels, priorities and resource constraints"),
+        ("portfolio-save", "Retain a complete conservation portfolio and weight analysis"),
+        ("portfolio-scenario", "Turn selected parcels into a native land-cover scenario"),
+        ("portfolio-run-prepare", "Prepare the selected portfolio's original native model run"),
+        ("portfolio-run", "Run the portfolio through its selected original native models"),
+        ("portfolio-report", "Build the selected parcel portfolio's complete planning report"),
+        ("portfolio-decision", "Compare the modeled portfolio and explicit costs in the economic decision desk"),
     ):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("selection", type=Path)
@@ -90,7 +98,15 @@ def perform(args):
                   "delivery-build": workspace.build_delivery,
                   "community-table-import": workspace.import_community_table,
                   "community-plan-save": workspace.save_community_plan,
-                  "community-report-build": workspace.build_community_report}
+                  "community-report-build": workspace.build_community_report,
+                  "planning-inventory-build": workspace.build_planning_inventory,
+                  "portfolio-preview": workspace.preview_portfolio,
+                  "portfolio-save": workspace.save_portfolio,
+                  "portfolio-scenario": workspace.prepare_portfolio_scenario,
+                  "portfolio-run-prepare": workspace.prepare_portfolio_run,
+                  "portfolio-run": workspace.run_portfolio,
+                  "portfolio-report": workspace.build_portfolio_report,
+                  "portfolio-decision": workspace.build_portfolio_decision}
     if args.command in operations:
         return operations[args.command](read_json(args.selection))
     if args.command == "source-import":

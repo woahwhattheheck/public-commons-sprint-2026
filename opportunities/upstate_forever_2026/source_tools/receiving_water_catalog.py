@@ -789,6 +789,7 @@ def inspect_sources(workspace, selectors=None):
 
 def write_catalog(compiled, output_dir):
     """Write full reusable artifacts and a machine-readable byte manifest."""
+    from model.common import atomic_bytes
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
     bodies = {
@@ -825,11 +826,10 @@ def write_catalog(compiled, output_dir):
         path = directory / name
         if path.exists() and path.read_bytes() != body:
             raise FileExistsError(f"Existing artifact differs: {path}; choose a new output directory.")
+    # Publish each complete body atomically, with the completion manifest last.
+    # A stopped writer leaves missing files which an exact replay can complete.
     for name, body in bodies.items():
-        path = directory / name
-        if not path.exists():
-            with path.open("xb") as stream:
-                stream.write(body)
+        atomic_bytes(directory / name, body, immutable=True)
     return {"directory": str(directory.resolve()), **manifest}
 
 
@@ -850,19 +850,19 @@ def main(argv=None):
     workspace = Workspace(args.workspace, create=False)
 
     if args.command == "inspect":
-        selectors = json.loads(Path(args.selectors).read_text(encoding="utf-8")) if args.selectors else None
+        selectors = _json_payload(Path(args.selectors)) if args.selectors else None
         result = inspect_sources(workspace, selectors)
         target = Path(args.output)
         target.parent.mkdir(parents=True, exist_ok=True)
         body = _canonical(result) + b"\n"
         if target.exists() and target.read_bytes() != body:
             raise FileExistsError(f"Source inventory already exists with different bytes: {target}")
-        if not target.exists():
-            target.write_bytes(body)
+        from model.common import atomic_bytes
+        atomic_bytes(target, body, immutable=True)
         print(json.dumps({"inventory": str(target.resolve()), "candidates": len(result["candidates"])}))
         return 0
 
-    request = json.loads(Path(args.request).read_text(encoding="utf-8"))
+    request = _json_payload(Path(args.request))
     compiled = compile_catalog(workspace, request)
     result = write_catalog(compiled, args.output_dir)
     if args.prepare:
