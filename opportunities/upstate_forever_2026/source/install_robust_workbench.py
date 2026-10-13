@@ -21,6 +21,13 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "integration/component_fragments/geographic-study-receiving.json",
+    "model/geographic_study_receiving.py",
+    "operator/geographic_receiving.py",
+    "operator/web/geographic_received_studies.mjs",
+    "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+    "source_tools/geographic_headwaters_handover.py",
+    "source_tools/simulated_headwaters_handover.py",
     "model/geographic_programme.py",
     "source_tools/adopt_geographic_headwaters_programme.py",
     "source_tools/GEOGRAPHIC_PROGRAMME.md",
@@ -341,6 +348,13 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "integration/component_fragments/geographic-study-receiving.json",
+    "model/geographic_study_receiving.py",
+    "operator/geographic_receiving.py",
+    "operator/web/geographic_received_studies.mjs",
+    "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+    "source_tools/geographic_headwaters_handover.py",
+    "source_tools/simulated_headwaters_handover.py",
     "model/geographic_programme.py",
     "source_tools/adopt_geographic_headwaters_programme.py",
     "source_tools/GEOGRAPHIC_PROGRAMME.md",
@@ -1258,7 +1272,48 @@ def verify_geographic_programme_dependencies(application, pending):
         raise ValueError("Retain Geographic adoption in the original Programme family")
 
 
+def verify_geographic_received_study_dependencies(application, pending):
+    """Keep the original selected Geographic receipt readable and navigable."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    reader = source("model/study_receiving.py")
+    helper = source("model/geographic_study_receiving.py")
+    if helper is None and (reader is None or b"geographic_study_receiving" not in reader):
+        return
+    members = (
+        "integration/component_fragments/geographic-study-receiving.json",
+        "model/geographic_study_transfer.py",
+        "model/geographic_study_receiving.py",
+        "operator/geographic_receiving.py",
+        "operator/web/geographic_received_studies.mjs",
+        "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+        "source_tools/geographic_headwaters_handover.py",
+        "source_tools/simulated_headwaters_handover.py",
+        "CURRENT_OWNER_DIRECTION.md",
+    )
+    for name in members + (
+            "model/common.py", "model/study_transfer.py", "model/study_receiving.py",
+            "operator/study_receiving.py", "operator/extensions/study-transfer.json",
+            "operator/web/received_studies.mjs", "operator/geographic_preparation.py",
+            "operator/web/geographic_workbench.mjs"):
+        assembled_data(application, pending, name)
+    descriptor = json.loads(assembled_data(
+        application, pending, "operator/extensions/study-transfer.json"))
+    if "geographic_received_studies.mjs" not in descriptor.get("assets", []):
+        raise ValueError("Retain the Geographic received-study view in the original Study descriptor")
+    fragment = json.loads(assembled_data(
+        application, pending, "integration/component_fragments/geographic-study-receiving.json"))
+    family = fragment.get("components", {}).get("geographic-study-receiving", {})
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "geographic-study-receiving"
+            or not set(members).issubset(set(family.get("paths", [])))
+            or not {"geographic-operator", "study-transfer"}.issubset(set(family.get("requires", [])))):
+        raise ValueError("Retain the original Geographic received-study component")
+
+
 def verify_composition(application, pending):
+    verify_geographic_received_study_dependencies(application, pending)
     verify_geographic_programme_dependencies(application, pending)
     verify_geographic_study_dependencies(application, pending)
     verify_geographic_allocation_dependencies(application, pending)
