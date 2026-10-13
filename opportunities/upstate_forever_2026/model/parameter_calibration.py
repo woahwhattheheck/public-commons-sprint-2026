@@ -92,6 +92,10 @@ def candidates(workspace, experiment_id, *, candidate_run_ids=None):
     }
     if reference:
         handoff["reference_run_id"] = reference
+    from .calibration_followup import for_study
+    annual_reference = for_study(workspace, study)
+    if annual_reference is not None:
+        handoff["annual_reference"] = annual_reference
     return {
         "schema": SCHEMA, "workspace_id": workspace.project["id"], "study_id": key,
         "title": study["selection"]["title"], "study_state": study["state"],

@@ -44,7 +44,10 @@ FILES = ("model/calibration_execution.py", "model/calibration.py", "model/CALIBR
          "model/multivariate_control_study_transfer.py",
          "operator/parameter_receiving.py",
          "operator/web/parameter_received_studies.mjs",
-         "operator/web/extensions/study_transfer.mjs")
+         "operator/web/extensions/study_transfer.mjs",
+         "model/calibration_followup.py", "model/calibration_study_transfer.py",
+         "model/CALIBRATION_FOLLOWUP.md",
+         "integration/component_fragments/calibration-reference-followup.json")
 SHARED = ("operator/server.py", "operator/web/app.mjs", "operator/web/index.html",
           "model/scientific_figures.py")
 DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.mjs",
@@ -202,6 +205,16 @@ PREDECESSORS.setdefault("operator/web/extensions/study_transfer.mjs", set()).add
 PREDECESSORS.setdefault("model/study_transfer.py", set()).add("05a1bd1dae27f08a4526020ea5ad49e031a2d2ed6f8c2dae191069620614d693")
 
 PREDECESSORS.setdefault("operator/web/extensions/study_transfer.mjs", set()).add("02f2e07fd10739da774af8b886072e378f6bbb874622d6123082ee28f1cbe8ec")
+
+# Exact complete predecessors for the annual-reference follow-up workflow.
+PREDECESSORS.setdefault("model/calibration.py", set()).add("de6f0adf23791674a606a4a03332884c916cacc98ff5bc099bf55ebc291f4e63")
+PREDECESSORS.setdefault("model/parameter_calibration.py", set()).add("18d7f2228ebe14a35ae79478aad6f15c03572e10cc549127f6538598760cf59e")
+PREDECESSORS.setdefault("model/calibration_study_transfer.py", set()).add("234ebe30d1afff3a4246fa5f5dc9059e29d24a3e261dabb1d76137d8de840f34")
+PREDECESSORS.setdefault("model/parameter_report_source.py", set()).add("d229620b4c150c7259c551d9ca935f8b8f509612e08eae3810483eb1ecf9dbbc")
+PREDECESSORS.setdefault("model/parameter_study_transfer.py", set()).add("292ec1f1227d85586a1fe0b2d144238ebfa9da04de920641c6cca023c9d1eb43")
+PREDECESSORS.setdefault("operator/calibration.py", set()).add("2cc21211bb7685e6f4d34c8bca11eb94bf5bf78fcb3e52c4a05a920ae7621789")
+PREDECESSORS.setdefault("operator/web/calibration.mjs", set()).add("4874c1968b36bfff9e643ce07af72e426a97284c4ea83b7a71a748d3daaa071d")
+PREDECESSORS.setdefault("operator/install_calibration.py", set()).add("bb2dee4e058aa49519ce0fd8abc8332c7aa2d488834c39b5c2cf14b5403357cf")
 
 def _hash(data):
     return hashlib.sha256(data).hexdigest()

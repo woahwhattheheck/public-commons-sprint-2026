@@ -1,0 +1,67 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "calibration-reference-followup",
+  "source_reference": "model/CALIBRATION_FOLLOWUP.md",
+  "extend_components": {
+    "calibration": {
+      "paths": [
+        "model/calibration_followup.py",
+        "model/calibration.py",
+        "model/parameter_calibration.py",
+        "model/calibration_study_transfer.py",
+        "model/parameter_report_source.py",
+        "model/parameter_study_transfer.py",
+        "operator/calibration.py",
+        "operator/web/calibration.mjs",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_FOLLOWUP.md",
+        "integration/component_fragments/calibration-reference-followup.json"
+      ]
+    },
+    "parameter-studies": {
+      "paths": [
+        "model/calibration_followup.py",
+        "model/calibration.py",
+        "model/parameter_calibration.py",
+        "model/calibration_study_transfer.py",
+        "model/parameter_report_source.py",
+        "model/parameter_study_transfer.py",
+        "operator/calibration.py",
+        "operator/web/calibration.mjs",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_FOLLOWUP.md",
+        "integration/component_fragments/calibration-reference-followup.json"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/calibration_followup.py",
+        "model/calibration.py",
+        "model/parameter_calibration.py",
+        "model/calibration_study_transfer.py",
+        "model/parameter_report_source.py",
+        "model/parameter_study_transfer.py",
+        "operator/calibration.py",
+        "operator/web/calibration.mjs",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_FOLLOWUP.md",
+        "integration/component_fragments/calibration-reference-followup.json"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "model/calibration_followup.py",
+        "model/calibration.py",
+        "model/parameter_calibration.py",
+        "model/calibration_study_transfer.py",
+        "model/parameter_report_source.py",
+        "model/parameter_study_transfer.py",
+        "operator/calibration.py",
+        "operator/web/calibration.mjs",
+        "operator/install_calibration.py",
+        "model/CALIBRATION_FOLLOWUP.md",
+        "integration/component_fragments/calibration-reference-followup.json"
+      ]
+    }
+  }
+}

@@ -27,7 +27,7 @@ _ALLOWED = {
     "schema", "title", "candidate_run_ids", "reference_run_id", "observation_id",
     "catchments", "observation_record_ids", "catchment_groups",
     "calibration_group_ids", "validation_group_ids", "objective",
-    "delivered_external_loads", "notes", "leave_group_out", "temporal_weighting",
+    "delivered_external_loads", "notes", "leave_group_out", "temporal_weighting", "prior_evaluation",
 }
 REFERENCES = [
     "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/calibration_freshwater.html",
@@ -485,7 +485,10 @@ def _basis(workspace, selection):
         unit["partition"] = "calibration" if unit["group_id"] in calibration else "validation"
     for group in spatial["groups"]:
         group["partition"] = "calibration" if group["id"] in calibration else "validation"
+    from .calibration_followup import describe as describe_reference_history
+    reference_history = describe_reference_history(workspace, selection, units)
     return {
+        **({"reference_history": reference_history} if reference_history is not None else {}),
         "selection": selection, "candidates": candidates, "units": units,
         "native_execution": execution,
         "candidate_count": len(candidates),
@@ -872,6 +875,7 @@ def analyze(workspace, plan_id):
                               if len(known_outputs) == len(plan["candidates"]) else None)
             result = workspace._save(RESULT_KIND, {
                 "version": VERSION, "plan_id": plan_id, "workspace_id": workspace.project["id"],
+                **({"reference_history": plan["reference_history"]} if "reference_history" in plan else {}),
                 "candidate_count": len(plan["candidates"]), "distinct_profile_count": profile_count,
                 "predicted_parameters": [parameter for parameter in PARAMETERS if parameter in plan["selection"]["objective"]],
                 "common_parameters": ([parameter for parameter in PARAMETERS if parameter in common_outputs]
