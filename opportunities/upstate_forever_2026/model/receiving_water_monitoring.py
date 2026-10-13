@@ -184,13 +184,11 @@ def _context(workspace, selection):
         key = water._huc(properties[water._field(properties, selection["catchments"]["id_field"])])
         original = water._polygon(row["geometry"], "Original catchment " + key)
         overlap = original.intersection(geometry)
-        if overlap.is_empty or overlap.area <= 0:
-            continue
         if any(str(name).startswith(PREFIX) for name in properties):
             raise ValueError("Original catchment fields already use the reserved rwmon_ prefix")
         selected.append({**row, "huc": key, "geometry": original, "overlap": overlap})
     selected.sort(key=lambda row: row["huc"])
-    if not selected:
+    if not selected or not any(row["overlap"].area > 0 for row in selected):
         raise ValueError("No original catchment has positive-area overlap with this receiving-water scope")
     # A partition is required: don't count overlapping source HUC polygons twice.
     from shapely.strtree import STRtree
@@ -220,6 +218,8 @@ def _priority_totals(context, progress):
                          "invalid_cells": 0} for row in rows}
     shapes = [row["geometry"] for row in rows]
     index = STRtree(shapes)
+    coverage = {"unassigned_scope_cells": 0, "unassigned_valid_cells": 0,
+                "unassigned_priority": 0.0}
     with rasterio.open(context["raster_path"]) as source:
         grid = context["analysis"]["grid"]
         if (source.count != 1 or source.width != grid["width"] or source.height != grid["height"]
@@ -237,17 +237,21 @@ def _priority_totals(context, progress):
             bounds = box(min(x for x, y in corners), min(y for x, y in corners),
                          max(x for x, y in corners), max(y for x, y in corners))
             candidates = sorted((int(i) for i in index.query(bounds)), reverse=True)
-            if not candidates:
-                continue
             # Replacement order gives the lexically first HUC a shared boundary centre.
-            labels = rasterize([(mapping(shapes[i]), i + 1) for i in candidates],
-                               out_shape=(int(window.height), int(window.width)),
-                               transform=window_transform, fill=0, dtype="int32", all_touched=False)
+            labels = (rasterize([(mapping(shapes[i]), i + 1) for i in candidates],
+                                out_shape=(int(window.height), int(window.width)),
+                                transform=window_transform, fill=0, dtype="int32", all_touched=False)
+                      if candidates else np.zeros((int(window.height), int(window.width)), dtype="int32"))
             scope = water._inside(grid, context["geometry"], window)
             values = source.read(1, window=window, masked=True)
             finite = np.isfinite(values.data)
-            valid = (~np.ma.getmaskarray(values)) & finite & scope & (labels > 0)
-            if np.any(valid & ((values.data < 0) | (values.data > 1))):
+            source_valid = (~np.ma.getmaskarray(values)) & finite & scope
+            valid = source_valid & (labels > 0)
+            coverage["unassigned_scope_cells"] += int(np.count_nonzero(scope & (labels == 0)))
+            unassigned = source_valid & (labels == 0)
+            coverage["unassigned_valid_cells"] += int(np.count_nonzero(unassigned))
+            coverage["unassigned_priority"] += float(np.sum(values.data[unassigned], dtype="float64")) * pixel_ha
+            if np.any(source_valid & ((values.data < 0) | (values.data > 1))):
                 raise ValueError("Saved dimensionless priority contains values outside [0, 1]")
             for i in candidates:
                 member = (labels == i + 1) & scope
@@ -261,7 +265,7 @@ def _priority_totals(context, progress):
                 progress({"phase": "receiving_water_monitoring_weights", "completed_windows": completed})
     if sum(row["valid_cells"] for row in stats.values()) == 0:
         raise ValueError("Selected catchments contain no valid cells in this saved priority raster")
-    return stats, pixel_ha
+    return stats, pixel_ha, coverage
 
 
 def _link_verified(source, destination):
@@ -320,14 +324,18 @@ def _write_prepared(workspace, selection, context, directory, intent, progress):
     from shapely.geometry import mapping
     from shapely.ops import transform
 
-    stats, pixel_ha = (None, None)
+    stats, pixel_ha, raster_coverage = (None, None, None)
     if selection["mode"] == "priority_weighted_area":
-        stats, pixel_ha = _priority_totals(context, progress)
+        stats, pixel_ha, raster_coverage = _priority_totals(context, progress)
     project = Transformer.from_crs(context["crs"], CRS.from_epsg(4326), always_xy=True)
     features, total = [], {"catchments": len(context["rows"]), "overlap_ha": 0.0,
                            "priority": 0.0, "valid_cells": 0, "scope_cells": 0,
                            "invalid_cells": 0, "external_downstream_edges": 0}
     retained_ids = {row["huc"] for row in context["rows"]}
+    recommended_excluded = [row["huc"] for row in context["rows"] if row["overlap"].area <= 0]
+    total.update(in_scope_catchments=len(retained_ids) - len(recommended_excluded),
+                 context_catchments=len(recommended_excluded),
+                 scope_area_ha=context["geometry"].area / 10000)
     graph = context["graph"]
     for row in context["rows"]:
         key = row["huc"]
@@ -337,7 +345,7 @@ def _write_prepared(workspace, selection, context, directory, intent, progress):
         props = dict(row["properties"])
         props.update(rwmon_huc12=key, rwmon_tohuc=downstream,
                      rwmon_original_feature_id=row["id"],
-                     rwmon_overlap_ha=overlap_ha,
+                     rwmon_overlap_ha=overlap_ha, rwmon_in_scope=overlap_ha > 0,
                      rwmon_priority=metric["priority"] if metric is not None else overlap_ha,
                      rwmon_mode=selection["mode"],
                      rwmon_units="priority_weighted_ha" if metric is not None else "ha",
@@ -358,6 +366,10 @@ def _write_prepared(workspace, selection, context, directory, intent, progress):
             and downstream not in retained_ids)
         features.append({"type": "Feature", "id": row["id"], "properties": props,
                          "geometry": mapping(transform(project.transform, row["geometry"]))})
+    total["unassigned_overlap_ha"] = max(0.0, total["scope_area_ha"] - total["overlap_ha"])
+    if raster_coverage is not None:
+        total.update(raster_coverage)
+        total["unassigned_valid_ha"] = raster_coverage["unassigned_valid_cells"] * pixel_ha
     if stats is None:
         for name in ("valid_cells", "scope_cells", "invalid_cells"):
             total[name] = None
@@ -382,7 +394,10 @@ def _write_prepared(workspace, selection, context, directory, intent, progress):
         "station_source": context["station_identity"],
         "relations": context["relations"],
         "original_plan": {"id": context["plan"]["id"], "record_sha256": context["plan"]["record_sha256"]},
-        "geometry": "Complete original HUC geometries projected to WGS84; positive-area scope intersection selects candidate HUCs without clipping or creating station coordinates",
+        "geometry": "Complete original HUC geometries and ToHUC graph projected to WGS84; positive-area scope intersection identifies candidate HUCs without clipping or creating station coordinates",
+        "candidate_scope_field": "rwmon_in_scope",
+        "recommended_excluded_ids": recommended_excluded,
+        "candidate_policy": "Outside-scope HUCs retain zero weight and complete flow-path context; the existing design excluded_ids can restrict candidate selection without removing graph nodes",
         "station_policy": "Original point coordinates and explicit source fields; boundary/outside-domain assignments remain visible; upstream credit requires original Boolean outlet verification",
         "topology": "Original ToHUC target text retained, including targets outside selected candidate HUCs",
         "outlet_values": sorted({"", "0", "000000000000", *[str(row["value"]) for row in graph["terminal_markers"]]}),
