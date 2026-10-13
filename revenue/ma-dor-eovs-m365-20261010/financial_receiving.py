@@ -117,9 +117,10 @@ def run(plan_path, workspace_path, output, *, create=False, resume=False):
         for entry in result["archives"]:
             _, actual = read_original(entry["path"], entry["sha256"], entry["bytes"])
             inspect_delivery(entry["path"])
-        with MigrationWorkspace(result["second_receiver"]["workspace"]) as current:
-            require(current.project["id"] == result["workspace_id"], "FINANCE_PROGRAMME_WORKSPACE", "Received workspace identity changed.")
-            finance.verify(current)
+        for retained_receiver in (result["first_receiver"], result["second_receiver"]):
+            with MigrationWorkspace(retained_receiver["workspace"]) as current:
+                require(current.project["id"] == result["workspace_id"], "FINANCE_PROGRAMME_WORKSPACE", "Received workspace identity changed.")
+                finance.verify(current)
         return {**result, "reused": True, "later_edits_preserved": True}
     files, records = {}, {}
     source_root = Path(__file__).parent
