@@ -32,6 +32,9 @@ CODE_FILES = (
     "measurement_workspace/sv833_observations.py",
     "measurement_workspace/rl18151_observations.py",
     "measurement_workspace/three_twenty_observations.py",
+    "measurement_workspace/three_twenty_historical_observations.py",
+    "measurement_workspace/THREE_TWENTY_HISTORICAL_OBSERVATIONS.md",
+    "source_tools/receive_three_twenty_historical_study.py",
     "measurement_workspace/ORIGINAL_RESULT_SELECTION.md",
     "measurement_workspace/RL18151_OBSERVATIONS.md",
     "source_tools/receive_original_study.py",
@@ -308,6 +311,9 @@ def main():
         if manifest.is_file():
             originals = context_source_files(source, manifest)
             data_files.extend(originals)
+    from measurement_workspace import three_twenty_historical_observations as historical
+    if (source / historical.MANIFEST).is_file():
+        data_files.extend(historical.source_files(source))
     from measurement_workspace import rl18151_observations as rl18151
     if (source / rl18151.MANIFEST).is_file():
         data_files.extend(rl18151.source_files(source))
@@ -376,7 +382,7 @@ def main():
         "extension": "published-studies", "view": "published-studies",
         "action": "published-study.import",
         "builtin_id": "scdes-eighteenmile-lake-2023",
-        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []) + (["scdes-sv833-water-quality-2021-2026"] if (source / "sv833_water_quality.sources.json").is_file() else []) + ([rl18151.BUILTIN_ID] if (source / rl18151.MANIFEST).is_file() else []) + (["scdes-three-twenty-water-quality-2026"] if (source / "three_twenty_2026.sources.json").is_file() else []),
+        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []) + (["scdes-sv833-water-quality-2021-2026"] if (source / "sv833_water_quality.sources.json").is_file() else []) + ([rl18151.BUILTIN_ID] if (source / rl18151.MANIFEST).is_file() else []) + (["scdes-three-twenty-water-quality-2026"] if (source / "three_twenty_2026.sources.json").is_file() else []) + ([historical.BUILTIN_ID] if (source / historical.MANIFEST).is_file() else []),
         "files": [{"path": name, "sha256": digest(application / name)} for name in [
             *expected, "model/portable.py", "model/scientific_report_study_transfer.py",
             *(str(path.relative_to(application)) for path, _, _ in receiving_updates)]],

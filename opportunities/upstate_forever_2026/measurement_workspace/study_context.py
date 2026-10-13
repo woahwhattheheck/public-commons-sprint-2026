@@ -19,6 +19,15 @@ STREAM_ROOT = "application-context/stream-nutrients"
 PHYSICAL_ROOT = "application-context/physical-water-quality"
 
 FAMILIES = {
+    "three_twenty_historical.sources.json": {
+        "studies": ("three-twenty-historical-2021-2025",),
+        "retained_root": "application-context/three-twenty-historical",
+        "prefixes": ("observations/three_twenty_history_2021_2025/",
+                     "source/three-twenty-history-20261013/",
+                     "source/three-twenty-water-quality-20261013/",
+                     "source/sv833-water-quality-20261013/"),
+        "paths": ("source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",),
+    },
     "three_twenty_2026.sources.json": {
         "studies": ("scdes-three-twenty-water-quality-2026",),
         "retained_root": "application-context/three-twenty-2026",

@@ -128,12 +128,60 @@ def load_observations(files, parser):
                   for row in selected}
     if len(activities) != index.get("activity_count"):
         raise ValueError("Original observation activity count changed.")
+    _annotate_statistical_exclusions(files, selected)
     if RESULT_SELECTION_INDEX in files:
         if SELECTION_INDEX in files:
             raise ValueError("Choose one original result or microbial selection per study.")
         return _result_selection_records(files, selected)
     return _selection_records(files, selected)
 
+
+
+STATISTICAL_EXCLUSIONS_SCHEMA = "upstate.original-statistical-exclusions/v1"
+
+
+def _annotate_statistical_exclusions(files, complete):
+    """Validate explicit source-owned exclusions before any study or UI selection."""
+    study = json.loads(files.get("study.json", b"{}").decode("utf-8-sig"))
+    declaration = study.get("observation_statistical_exclusions")
+    if declaration is None:
+        return
+    if (not isinstance(declaration, dict)
+            or declaration.get("schema") != STATISTICAL_EXCLUSIONS_SCHEMA
+            or declaration.get("observation_index_sha256") != hashlib.sha256(files[INDEX]).hexdigest()
+            or type(declaration.get("original_record_count")) is not int
+            or declaration["original_record_count"] != len(complete)):
+        raise ValueError("Statistical exclusions must bind the complete original observation index.")
+    declared = declaration.get("records")
+    if not isinstance(declared, list) or not declared:
+        raise ValueError("Declare exact original results and reasons for statistical exclusions.")
+    available = {}
+    for row in complete:
+        identifier = row.get("original_result_identifier")
+        if not isinstance(identifier, str) or not identifier or identifier in available:
+            raise ValueError("Statistical exclusions require distinct original ResultIdentifiers.")
+        available[identifier] = row
+    fields = ("original_source_path", "original_source_sha256", "source_csv_row",
+              "monitoring_location_id", "activity_id", "original_result_identifier")
+    seen = set()
+    for reference in declared:
+        if not isinstance(reference, dict):
+            raise ValueError("A statistical exclusion requires an exact source-row reference.")
+        identifier = reference.get("original_result_identifier")
+        row = available.get(identifier) if isinstance(identifier, str) else None
+        reason = reference.get("reason")
+        number = reference.get("source_csv_row")
+        if (row is None or identifier in seen or type(number) is not int or number < 2
+                or set(reference) != set(fields) | {"reason"}
+                or any(reference.get(field) != row.get(field) for field in fields)
+                or not isinstance(reason, str) or not reason.strip()):
+            raise ValueError("A statistical exclusion differs from its retained original row or lacks a reason.")
+        seen.add(identifier)
+        row["statistical_exclusion"] = {**{field: reference[field] for field in fields},
+                                      "reason": reason,
+                                      "schema": STATISTICAL_EXCLUSIONS_SCHEMA,
+                                      "observation_index_sha256": declaration["observation_index_sha256"]}
+        row["statistical_exclusion_reason"] = reason
 
 
 RESULT_SELECTION_INDEX = "result-selection.json"
@@ -365,6 +413,8 @@ def observation_files(original, available):
     for entry in index["sources"]:
         paths.update(_path(item["path"]) for item in metadata_entries(entry))
     result = {INDEX: body, **{path: original(path) for path in sorted(paths)}}
+    if "study.json" in available:
+        result["study.json"] = original("study.json")
     if RESULT_SELECTION_INDEX in available:
         result[RESULT_SELECTION_INDEX] = original(RESULT_SELECTION_INDEX)
     if SELECTION_INDEX in available:
@@ -386,11 +436,20 @@ def observation_files(original, available):
 AGREEING_ACTIVITY_BASIS = "agreeing_original_activity_characteristic/v1"
 
 
-def statistical_rows(records, study):
-    """Give agreeing original activity/characteristic values one statistical weight."""
+def statistical_rows(records, study, *, include_excluded=False):
+    """Preserve canonical measurements and apply only validated source-owned exclusions."""
+    declaration = study.get("observation_statistical_exclusions")
+    if declaration is not None:
+        references = {item["original_result_identifier"]: item for item in declaration["records"]}
+        for row in records:
+            reference = references.get(row.get("original_result_identifier"))
+            if reference is not None:
+                checked = row.get("statistical_exclusion")
+                if not isinstance(checked, dict) or any(checked.get(key) != value for key, value in reference.items()):
+                    raise ValueError("Validate source-bound exclusions against the complete original index before statistics.")
     basis = study.get("observation_statistic_basis")
     if basis is None:
-        return records
+        return list(records) if include_excluded else [row for row in records if not row.get("statistical_exclusion")]
     if basis != AGREEING_ACTIVITY_BASIS:
         raise ValueError("Unsupported original observation statistic basis.")
     groups = {}
@@ -429,8 +488,13 @@ def statistical_rows(records, study):
             "measurement_original_result_ids": sorted(identifiers),
             "measurement_original_records": originals,
             "statistic_basis": AGREEING_ACTIVITY_BASIS,
+            **({"statistical_exclusions": [row["statistical_exclusion"] for row in group
+                                           if row.get("statistical_exclusion")],
+                "statistical_exclusion_reason": "; ".join(dict.fromkeys(
+                    row["statistical_exclusion_reason"] for row in group if row.get("statistical_exclusion")))}
+               if any(row.get("statistical_exclusion") for row in group) else {}),
         })
-    return output
+    return output if include_excluded else [row for row in output if not row.get("statistical_exclusions")]
 
 
 def builtin_companion(root):
