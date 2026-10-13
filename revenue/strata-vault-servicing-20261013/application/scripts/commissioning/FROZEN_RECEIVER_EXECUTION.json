@@ -1,0 +1,16 @@
+{
+  "schema": "strata.commissioning-original-renderer-course/v1",
+  "nativeExecuted": false,
+  "providerCalls": 0,
+  "filesystem": "in-memory NodeFS contract fixture; no physical permission claim",
+  "actualCLIAndModuleBodies": true,
+  "checks": [
+    "Interrupted full-source materialization recovers original bodies after installed report upgrade",
+    "Artifact-only retry routes through exact original receiver",
+    "Manifest-first interrupted report publishing resumes the original renderer",
+    "Complete four-artifact verification succeeds",
+    "Co-edited report+manifest rejected by original renderer recomputation"
+  ],
+  "resumeStatus": "ARTIFACTS_REOPENED",
+  "verifyStatus": "COMPLETE_CAPTURE_AND_FOUR_ARTIFACTS_VERIFIED"
+}
