@@ -2303,6 +2303,264 @@
           "reference_lines": []
         }
       ]
+    },
+    {
+      "id": "utility-focus-upstream-context",
+      "title": "Utility focus areas and distinct upstream context",
+      "caption": "Panel A compares each issuer focus pair with its unique original-network upstream union using the same native-cell area. The union includes the anchors. Panel B preserves gross forest-class gains, losses and net change for those four footprints; negative loss marks are a plotting convention. Whole-HUC12 planning extents are distinct from intake-point catchments and service areas. Source classifications are 2023 and 2025; the source table records original network memberships and all eight group balances.",
+      "panels": [
+        {
+          "title": "A. Focal anchors versus unique contributing land",
+          "x": {
+            "label": "Native classified area",
+            "unit": "ha",
+            "domain": [
+              -6000,
+              300000
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 50000,
+                "label": "50000"
+              },
+              {
+                "value": 100000,
+                "label": "100000"
+              },
+              {
+                "value": 150000,
+                "label": "150000"
+              },
+              {
+                "value": 200000,
+                "label": "200000"
+              },
+              {
+                "value": 250000,
+                "label": "250000"
+              },
+              {
+                "value": 300000,
+                "label": "300000"
+              }
+            ]
+          },
+          "y": {
+            "label": "Utility",
+            "unit": "",
+            "domain": [
+              -0.5,
+              1.5
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "ARJWS"
+              },
+              {
+                "value": 1,
+                "label": "PRWD"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Focus anchors",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 18911.970013573187,
+                  "y": 0,
+                  "group": "ARJWS focus anchors"
+                },
+                {
+                  "x": 34096.230024470984,
+                  "y": 1,
+                  "group": "PRWD focus anchors"
+                }
+              ]
+            },
+            {
+              "label": "Upstream union",
+              "geometry": "scatter",
+              "marker": "diamond",
+              "points": [
+                {
+                  "x": 42799.77003071754,
+                  "y": 0,
+                  "group": "ARJWS distinct upstream union"
+                },
+                {
+                  "x": 256297.14018394536,
+                  "y": 1,
+                  "group": "PRWD distinct upstream union"
+                }
+              ]
+            }
+          ],
+          "reference_lines": [
+            {
+              "axis": "x",
+              "value": 0,
+              "label": "Zero"
+            }
+          ]
+        },
+        {
+          "title": "B. Forest-class gains, losses and net changes",
+          "x": {
+            "label": "Area entering (+), leaving (−), or net change",
+            "unit": "ha",
+            "domain": [
+              -1400,
+              1400
+            ],
+            "ticks": [
+              {
+                "value": -1000,
+                "label": "-1000"
+              },
+              {
+                "value": -500,
+                "label": "-500"
+              },
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 500,
+                "label": "500"
+              },
+              {
+                "value": 1000,
+                "label": "1000"
+              }
+            ]
+          },
+          "y": {
+            "label": "",
+            "unit": "",
+            "domain": [
+              -0.5,
+              3.5
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "ARJWS anchors"
+              },
+              {
+                "value": 1,
+                "label": "ARJWS union"
+              },
+              {
+                "value": 2,
+                "label": "PRWD anchors"
+              },
+              {
+                "value": 3,
+                "label": "PRWD union"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Gain",
+              "geometry": "scatter",
+              "marker": "square",
+              "points": [
+                {
+                  "x": 47.25000003391149,
+                  "y": 0.15,
+                  "group": "ARJWS anchors"
+                },
+                {
+                  "x": 127.35000009139954,
+                  "y": 1.15,
+                  "group": "ARJWS union"
+                },
+                {
+                  "x": 216.27000015521773,
+                  "y": 2.15,
+                  "group": "PRWD anchors"
+                },
+                {
+                  "x": 935.1000006711245,
+                  "y": 3.15,
+                  "group": "PRWD union"
+                }
+              ]
+            },
+            {
+              "label": "Loss",
+              "geometry": "scatter",
+              "marker": "triangle-open",
+              "points": [
+                {
+                  "x": -219.78000015773688,
+                  "y": -0.15,
+                  "group": "ARJWS anchors"
+                },
+                {
+                  "x": -462.6900003320743,
+                  "y": 0.85,
+                  "group": "ARJWS union"
+                },
+                {
+                  "x": -277.47000019914117,
+                  "y": 1.85,
+                  "group": "PRWD anchors"
+                },
+                {
+                  "x": -1248.300000895909,
+                  "y": 2.85,
+                  "group": "PRWD union"
+                }
+              ]
+            },
+            {
+              "label": "Net",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": -172.53000012382537,
+                  "y": 0,
+                  "group": "ARJWS anchors"
+                },
+                {
+                  "x": -335.3400002406747,
+                  "y": 1,
+                  "group": "ARJWS union"
+                },
+                {
+                  "x": -61.20000004392345,
+                  "y": 2,
+                  "group": "PRWD anchors"
+                },
+                {
+                  "x": -313.2000002247848,
+                  "y": 3,
+                  "group": "PRWD union"
+                }
+              ]
+            }
+          ],
+          "reference_lines": [
+            {
+              "axis": "x",
+              "value": 0,
+              "label": "Zero"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

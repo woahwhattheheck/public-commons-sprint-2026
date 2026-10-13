@@ -71,6 +71,21 @@
       "path": "observations/wbd_station_join_20261013/query-plan.json",
       "bytes": 813824,
       "sha256": "498652d776ff4eef2fac4c94f0bf62742c8441b12beb9bebaaf08375f943aad7"
+    },
+    {
+      "path": "outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv",
+      "bytes": 111728,
+      "sha256": "3f25af3b660a0949d01218c7cfb1fcb48be7e5092641f35da3be2921c47debfc"
+    },
+    {
+      "path": "outputs/watershed-connectivity-20261013/watershed-connectivity-summary.json",
+      "bytes": 36440,
+      "sha256": "00a94474c5b24370b05b3c1dd22afd5313b84563b5da02d030b3979976212b44"
+    },
+    {
+      "path": "source/receptor-topology/20261013/utility-focus-profile.json",
+      "bytes": 2169,
+      "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
     }
   ],
   "vendor": [
@@ -112,14 +127,34 @@
   ],
   "outputs": [
     {
+      "path": "observations/landcover_observation_profiles_20261013/report/utility-context.json",
+      "bytes": 33781,
+      "sha256": "716fae36267d6f0251f6c0a3ee18d7e5d38dafd9b7c8e0337047769f1718859f"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/utility-scope-summary.csv",
+      "bytes": 1688,
+      "sha256": "e197f2f6356c23e9c67455b5177c503799d5e3b66d6014dbd384c3bf3ae995aa"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/utility-group-balances.csv",
+      "bytes": 9527,
+      "sha256": "c725453955e0af83aeaef673f124c80bed5e0bdab6e690067468cf425c1e817e"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/utility-focus-upstream-context.svg",
+      "bytes": 9741,
+      "sha256": "663b9ae633a103fb71311f1ef7e0404e1fc14d58c81fc725c0c2d3c935eaf208"
+    },
+    {
       "path": "observations/landcover_observation_profiles_20261013/report/scientific-context.json",
-      "bytes": 17104,
-      "sha256": "f66b64a0934b7f14146b651d7f30e312f990e7fc4ff6b419be7f49142e7d8ac8"
+      "bytes": 23697,
+      "sha256": "c18ec10b060c0e719c45b082200a5badd8121a0bc04dba6abac9df0179331552"
     },
     {
       "path": "observations/landcover_observation_profiles_20261013/report/figure-spec.json",
-      "bytes": 91706,
-      "sha256": "13f416a1dd581e68a32b35cdada5634f6288ac53e6c7a71f900fbed0e0326aa8"
+      "bytes": 98878,
+      "sha256": "2af68f4588c13e19032ae7d3ac6c85a50b194aa32b09a635e22983c26f8c7100"
     },
     {
       "path": "observations/landcover_observation_profiles_20261013/report/regional-classification-and-point-evidence.svg",
@@ -136,5 +171,7 @@
       "bytes": 974,
       "sha256": "9287ce3fa99e2528777877ada1d298e30ca17dc0d402d5d2e9928234064c9530"
     }
-  ]
+  ],
+  "original_profile_report_commit": "c7ff3b39ac5ff7fcc959535acaa62b65bcfa79aa",
+  "utility_sources": "Original issuer utility profile and retained original ToHUC network; replayed reverse traversal"
 }
