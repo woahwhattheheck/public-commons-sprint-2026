@@ -287,6 +287,9 @@ def _receive_evidence(workspace, parent, configuration, args):
 
 
 def main():
+    if "--verify-native-observation-received" in sys.argv[1:]:
+        from source_tools.sampling_native_observation_receiving import cold_main
+        return cold_main()
     if "--verify-evidence-received" in sys.argv[1:]:
         return _evidence_cold_main()
     parser = argparse.ArgumentParser(description=__doc__)
@@ -296,6 +299,8 @@ def main():
     parser.add_argument("--design-configuration", required=True, type=Path)
     parser.add_argument("--operation-id", required=True)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--native-observation-course", type=Path,
+        help="Authored continuation using complete original native observation records")
     parser.add_argument("--evidence-selection", type=Path,
         help="Explicit authored native-evidence child selection for the same original course")
     parser.add_argument("--evidence-successor-selection", type=Path)
@@ -406,11 +411,14 @@ def main():
         "received_operation_recovery_equal": True,
         "browser_course": "Operate this populated original application and all outgoing files at desktop and390px; record actual images separately."}
     retain(output / "sampling-course-result.json", result)
+    continuations = {}
     if args.evidence_selection:
-        evidence = _receive_evidence(workspace, selected, configuration, args)
-        print(json.dumps({"original_course": result, "native_evidence": evidence}, ensure_ascii=False, indent=2))
-    else:
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        continuations["native_evidence"] = _receive_evidence(workspace, selected, configuration, args)
+    if args.native_observation_course:
+        from source_tools.sampling_native_observation_receiving import receive
+        continuations["native_observations"] = receive(workspace, result, args)
+    print(json.dumps({"original_course": result, **continuations} if continuations else result,
+                     ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

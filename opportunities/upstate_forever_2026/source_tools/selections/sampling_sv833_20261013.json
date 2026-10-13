@@ -1,0 +1,682 @@
+{
+  "schema": "upstate.sampling-native-observation-course/v1",
+  "operation_id": "ECO-SAMPLING-RIVER13-15227-20261013-SV833",
+  "original_operation_id": "ECO-SAMPLING-RIVER13-15227-20261013",
+  "project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
+  "recorded_at": "2026-10-13T19:10:15Z",
+  "observation_id": "2e3b1856bdacf538699044b4d11948287a4e8f9a188aef7c8bd94131bc0c1a36",
+  "observation_original": {
+    "bytes": 78656,
+    "sha256": "f6cf205ce830b97d8208839460d788993a890ddd95890634e5bf88ebddaebf2e",
+    "row_count": 208,
+    "record_snapshot": {
+      "bytes": 672461,
+      "sha256": "2d4dcc91223863b34a1616c70c0db3721e4aeac2d30b02fd2dc6e94c2b41b9b0",
+      "encoding": "JSON sorted keys, compact separators, UTF-8"
+    }
+  },
+  "network": {
+    "title": "SV-833 original nutrient measurements — retained WBD and WQP station network",
+    "domain_collection_id": "e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023",
+    "domain_source_id": "upstate-wbd-upstream-domain-20261012",
+    "domain_expected": {
+      "bytes": 3732669,
+      "sha256": "6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9"
+    },
+    "station_collection_id": "5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64",
+    "station_source_id": "utility-ecoli-native-wgs84",
+    "station_expected": {
+      "bytes": 82842,
+      "sha256": "7eafc3e00b862aded0cdf3289a208e5e004df157007bf282529f106e0ab3c0b7"
+    },
+    "options": {
+      "id_field": "huc12",
+      "downstream_field": "tohuc",
+      "station_id_field": "MonitoringLocationIdentifier"
+    },
+    "required_station": {
+      "id": "21SC60WQ_WQX-SV-833",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.636966,
+          34.704792
+        ]
+      },
+      "huc_id": "030601010701",
+      "outlet_verified": false
+    }
+  },
+  "context": {
+    "title": "SV-833 original 208 nutrient measurements — concentration-only observed context",
+    "flow_availability": "not_received",
+    "station_mapping": {
+      "21SC60WQ_WQX-SV-833": "21SC60WQ_WQX-SV-833"
+    },
+    "interpretation": {
+      "columns": {
+        "activity": "ActivityIdentifier",
+        "fraction": "ResultSampleFractionText",
+        "depth": "ActivityDepthHeightMeasure/MeasureValue",
+        "depth_unit": "ActivityDepthHeightMeasure/MeasureUnitCode",
+        "method_authority": "ResultAnalyticalMethod/MethodIdentifierContext",
+        "value_type": "ResultValueTypeName",
+        "project": "ProjectIdentifier",
+        "time": "ActivityStartTime/Time",
+        "timezone": "ActivityStartTime/TimeZoneCode",
+        "reporting_limit": "DetectionQuantitationLimitMeasure/MeasureValue",
+        "reporting_limit_unit": "DetectionQuantitationLimitMeasure/MeasureUnitCode",
+        "activity_type": "ActivityTypeCode",
+        "sample_media": "ActivityMediaName",
+        "sample_media_subdivision": "ActivityMediaSubdivisionName",
+        "method_name": "ResultAnalyticalMethod/MethodName",
+        "method_specification": "MethodDescriptionText",
+        "organization_id": "OrganizationIdentifier",
+        "result_depth": "ResultDepthHeightMeasure/MeasureValue",
+        "result_depth_unit": "ResultDepthHeightMeasure/MeasureUnitCode",
+        "weight_basis": "ResultWeightBasisText",
+        "time_basis": "ResultTimeBasisText",
+        "temperature_basis": "ResultTemperatureBasisText",
+        "particle_size_basis": "ResultParticleSizeBasisText",
+        "comment": "ResultCommentText"
+      },
+      "below_qualifiers": [
+        "Present Below Quantification Limit"
+      ],
+      "above_qualifiers": [],
+      "numeric_qualifiers": [
+        ""
+      ],
+      "nonnegative": true,
+      "use_limit_unit_when_missing": true
+    },
+    "expected": {
+      "source_observations": 208,
+      "censored_observations": 49,
+      "original_missing_measurement_units": 49,
+      "selected_station_count": 1,
+      "no_flow": true
+    }
+  },
+  "sampling": {
+    "title": "SV-833 nutrient winter coverage — original concentration records",
+    "operator": "TJLabs engineering receiving course",
+    "planning_basis": "An explicitly authored source-bound planning comparison using four original NPS-2013 laboratory cohorts, a five-date historical winter coverage goal and three proposed future rounds. The prime retains scientific method and sampling programme decisions. No regulatory minimum, expected information gain, trend significance or measured-load conversion is claimed.",
+    "notes": "All208originalrows and nine depth/method/value-type analytical series remain in the context. The five SWS-2024 depth0.3m rows, including calculated Total Nitrogen, are preserved as separate source evidence and are not pooled into the four selected cohorts. Native evidence stays absent until a complete relevant report source and explicit applicability are available. The four analytes share one station's physical visits; unknown assay costs stay null.",
+    "evidence_start": "2021-01-20",
+    "evidence_end": "2026-04-01",
+    "targets": [
+      {
+        "id": "sv833-ammonia",
+        "source_station_id": "21SC60WQ_WQX-SV-833",
+        "original_row_ids": [
+          "2",
+          "10",
+          "11",
+          "14",
+          "16",
+          "24",
+          "25",
+          "29",
+          "33",
+          "38",
+          "41",
+          "45",
+          "51",
+          "54",
+          "61",
+          "63",
+          "65",
+          "69",
+          "73",
+          "78",
+          "82",
+          "84",
+          "85",
+          "86",
+          "87",
+          "89",
+          "95",
+          "105",
+          "108",
+          "110",
+          "118",
+          "133",
+          "134",
+          "141",
+          "142",
+          "147",
+          "152",
+          "153",
+          "155",
+          "161"
+        ],
+        "expected_source_cohort": {
+          "parameter": "Ammonia",
+          "unit": "mg/L",
+          "fraction": "Unfiltered",
+          "speciation": "Ammonia",
+          "method": "LACHAT 10-107-06-1-C",
+          "method_authority": "21SC60WQ_WQX",
+          "depth": "",
+          "depth_unit": "",
+          "value_type": "Actual",
+          "project_ids": [
+            "NPS-2013"
+          ]
+        },
+        "target": {
+          "id": "sv833-ammonia",
+          "station_id": "21SC60WQ_WQX-SV-833",
+          "months": [
+            1,
+            11,
+            12
+          ],
+          "minimum_dates_per_month": 5,
+          "proposed_visits": 3,
+          "reporting_limit": null,
+          "reporting_limit_basis": "",
+          "flow_goal": "any",
+          "reason": "Review original winter sampling coverage for Ammonia at SV-833 using only its retained method, unfiltered fraction and NPS-2013 cohort. The five-date goal is an authored planning comparison, not a regulatory threshold or a prescribed monitoring frequency.",
+          "priority": 1,
+          "included": true,
+          "setup_cost": null,
+          "per_visit_cost": null,
+          "cost_basis": "Complete constituent-specific field and laboratory costs are not supplied. The separate native calendar retains the original engineer-authored visit-cost scenario; it is not a laboratory quote.",
+          "sensitivity_basis": "No quantitative sensitivity or model information gain is assigned. Native landscape annual source exports are not these measured concentrations."
+        },
+        "independent_original_counts": {
+          "rows": 40,
+          "censored": 19,
+          "months": [
+            {
+              "month": 1,
+              "observations": 5,
+              "distinct_dates": [
+                "2021-01-20",
+                "2022-01-25",
+                "2023-01-19",
+                "2024-01-11",
+                "2025-01-07"
+              ]
+            },
+            {
+              "month": 11,
+              "observations": 5,
+              "distinct_dates": [
+                "2021-11-08",
+                "2022-11-29",
+                "2023-11-29",
+                "2024-11-07",
+                "2024-11-25"
+              ]
+            },
+            {
+              "month": 12,
+              "observations": 3,
+              "distinct_dates": [
+                "2021-12-06",
+                "2022-12-19",
+                "2023-12-13"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "sv833-kjeldahl-nitrogen",
+        "source_station_id": "21SC60WQ_WQX-SV-833",
+        "original_row_ids": [
+          "3",
+          "4",
+          "12",
+          "15",
+          "18",
+          "19",
+          "27",
+          "28",
+          "36",
+          "42",
+          "43",
+          "52",
+          "53",
+          "56",
+          "57",
+          "64",
+          "68",
+          "70",
+          "71",
+          "72",
+          "81",
+          "88",
+          "99",
+          "102",
+          "104",
+          "111",
+          "112",
+          "114",
+          "115",
+          "117",
+          "122",
+          "125",
+          "132",
+          "135",
+          "145",
+          "146",
+          "148",
+          "156",
+          "158",
+          "164",
+          "168",
+          "170",
+          "172",
+          "176",
+          "179",
+          "180",
+          "184",
+          "186",
+          "192",
+          "193",
+          "194",
+          "197",
+          "198",
+          "205"
+        ],
+        "expected_source_cohort": {
+          "parameter": "Kjeldahl nitrogen",
+          "unit": "mg/L",
+          "fraction": "Unfiltered",
+          "speciation": "Kjeldahl nitrogen",
+          "method": "10-107-06-2-E",
+          "method_authority": "LACHAT",
+          "depth": "",
+          "depth_unit": "",
+          "value_type": "Actual",
+          "project_ids": [
+            "NPS-2013"
+          ]
+        },
+        "target": {
+          "id": "sv833-kjeldahl-nitrogen",
+          "station_id": "21SC60WQ_WQX-SV-833",
+          "months": [
+            1,
+            11,
+            12
+          ],
+          "minimum_dates_per_month": 5,
+          "proposed_visits": 3,
+          "reporting_limit": null,
+          "reporting_limit_basis": "",
+          "flow_goal": "any",
+          "reason": "Review original winter sampling coverage for Kjeldahl nitrogen at SV-833 using only its retained method, unfiltered fraction and NPS-2013 cohort. The five-date goal is an authored planning comparison, not a regulatory threshold or a prescribed monitoring frequency.",
+          "priority": 1,
+          "included": true,
+          "setup_cost": null,
+          "per_visit_cost": null,
+          "cost_basis": "Complete constituent-specific field and laboratory costs are not supplied. The separate native calendar retains the original engineer-authored visit-cost scenario; it is not a laboratory quote.",
+          "sensitivity_basis": "No quantitative sensitivity or model information gain is assigned. Native landscape annual source exports are not these measured concentrations."
+        },
+        "independent_original_counts": {
+          "rows": 54,
+          "censored": 7,
+          "months": [
+            {
+              "month": 1,
+              "observations": 7,
+              "distinct_dates": [
+                "2021-01-20",
+                "2022-01-25",
+                "2023-01-19",
+                "2024-01-11",
+                "2025-01-07",
+                "2026-01-14"
+              ]
+            },
+            {
+              "month": 11,
+              "observations": 6,
+              "distinct_dates": [
+                "2021-11-08",
+                "2022-11-29",
+                "2023-11-29",
+                "2024-11-07",
+                "2024-11-25",
+                "2025-11-13"
+              ]
+            },
+            {
+              "month": 12,
+              "observations": 4,
+              "distinct_dates": [
+                "2021-12-06",
+                "2022-12-19",
+                "2023-12-13",
+                "2025-12-02"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "sv833-nitrate-nitrite",
+        "source_station_id": "21SC60WQ_WQX-SV-833",
+        "original_row_ids": [
+          "1",
+          "5",
+          "6",
+          "7",
+          "9",
+          "17",
+          "20",
+          "26",
+          "31",
+          "37",
+          "39",
+          "40",
+          "50",
+          "55",
+          "59",
+          "60",
+          "66",
+          "79",
+          "80",
+          "83",
+          "91",
+          "97",
+          "98",
+          "100",
+          "103",
+          "106",
+          "109",
+          "119",
+          "120",
+          "123",
+          "127",
+          "131",
+          "139",
+          "143",
+          "149",
+          "151",
+          "160",
+          "162",
+          "163",
+          "166",
+          "167",
+          "173",
+          "177",
+          "178",
+          "185",
+          "187",
+          "188",
+          "190",
+          "195",
+          "200",
+          "201",
+          "204",
+          "206"
+        ],
+        "expected_source_cohort": {
+          "parameter": "Nitrate + Nitrite",
+          "unit": "mg/L",
+          "fraction": "Unfiltered",
+          "speciation": "Nitrate + Nitrite",
+          "method": "10-107-04-1-C",
+          "method_authority": "LACHAT",
+          "depth": "",
+          "depth_unit": "",
+          "value_type": "Actual",
+          "project_ids": [
+            "NPS-2013"
+          ]
+        },
+        "target": {
+          "id": "sv833-nitrate-nitrite",
+          "station_id": "21SC60WQ_WQX-SV-833",
+          "months": [
+            1,
+            11,
+            12
+          ],
+          "minimum_dates_per_month": 5,
+          "proposed_visits": 3,
+          "reporting_limit": null,
+          "reporting_limit_basis": "",
+          "flow_goal": "any",
+          "reason": "Review original winter sampling coverage for Nitrate + Nitrite at SV-833 using only its retained method, unfiltered fraction and NPS-2013 cohort. The five-date goal is an authored planning comparison, not a regulatory threshold or a prescribed monitoring frequency.",
+          "priority": 1,
+          "included": true,
+          "setup_cost": null,
+          "per_visit_cost": null,
+          "cost_basis": "Complete constituent-specific field and laboratory costs are not supplied. The separate native calendar retains the original engineer-authored visit-cost scenario; it is not a laboratory quote.",
+          "sensitivity_basis": "No quantitative sensitivity or model information gain is assigned. Native landscape annual source exports are not these measured concentrations."
+        },
+        "independent_original_counts": {
+          "rows": 53,
+          "censored": 0,
+          "months": [
+            {
+              "month": 1,
+              "observations": 7,
+              "distinct_dates": [
+                "2021-01-20",
+                "2022-01-25",
+                "2023-01-19",
+                "2024-01-11",
+                "2025-01-07",
+                "2026-01-14"
+              ]
+            },
+            {
+              "month": 11,
+              "observations": 6,
+              "distinct_dates": [
+                "2021-11-08",
+                "2022-11-29",
+                "2023-11-29",
+                "2024-11-07",
+                "2024-11-25",
+                "2025-11-13"
+              ]
+            },
+            {
+              "month": 12,
+              "observations": 3,
+              "distinct_dates": [
+                "2021-12-06",
+                "2023-12-13",
+                "2025-12-02"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "sv833-phosphorus",
+        "source_station_id": "21SC60WQ_WQX-SV-833",
+        "original_row_ids": [
+          "8",
+          "13",
+          "21",
+          "22",
+          "23",
+          "30",
+          "32",
+          "34",
+          "35",
+          "44",
+          "46",
+          "47",
+          "48",
+          "49",
+          "58",
+          "62",
+          "67",
+          "74",
+          "75",
+          "76",
+          "77",
+          "90",
+          "92",
+          "93",
+          "94",
+          "96",
+          "101",
+          "107",
+          "113",
+          "116",
+          "121",
+          "126",
+          "128",
+          "129",
+          "130",
+          "136",
+          "150",
+          "154",
+          "157",
+          "159",
+          "165",
+          "169",
+          "171",
+          "174",
+          "175",
+          "181",
+          "182",
+          "183",
+          "189",
+          "191",
+          "196",
+          "199",
+          "202",
+          "203",
+          "207",
+          "208"
+        ],
+        "expected_source_cohort": {
+          "parameter": "Phosphorus",
+          "unit": "mg/L",
+          "fraction": "Unfiltered",
+          "speciation": "Phosphorus",
+          "method": "LACHAT 10-115-01-1-E",
+          "method_authority": "21SC60WQ_WQX",
+          "depth": "",
+          "depth_unit": "",
+          "value_type": "Actual",
+          "project_ids": [
+            "NPS-2013"
+          ]
+        },
+        "target": {
+          "id": "sv833-phosphorus",
+          "station_id": "21SC60WQ_WQX-SV-833",
+          "months": [
+            1,
+            11,
+            12
+          ],
+          "minimum_dates_per_month": 5,
+          "proposed_visits": 3,
+          "reporting_limit": null,
+          "reporting_limit_basis": "",
+          "flow_goal": "any",
+          "reason": "Review original winter sampling coverage for Phosphorus at SV-833 using only its retained method, unfiltered fraction and NPS-2013 cohort. The five-date goal is an authored planning comparison, not a regulatory threshold or a prescribed monitoring frequency.",
+          "priority": 1,
+          "included": true,
+          "setup_cost": null,
+          "per_visit_cost": null,
+          "cost_basis": "Complete constituent-specific field and laboratory costs are not supplied. The separate native calendar retains the original engineer-authored visit-cost scenario; it is not a laboratory quote.",
+          "sensitivity_basis": "No quantitative sensitivity or model information gain is assigned. Native landscape annual source exports are not these measured concentrations."
+        },
+        "independent_original_counts": {
+          "rows": 56,
+          "censored": 22,
+          "months": [
+            {
+              "month": 1,
+              "observations": 7,
+              "distinct_dates": [
+                "2021-01-20",
+                "2022-01-25",
+                "2023-01-19",
+                "2024-01-11",
+                "2025-01-07",
+                "2026-01-14"
+              ]
+            },
+            {
+              "month": 11,
+              "observations": 6,
+              "distinct_dates": [
+                "2021-11-08",
+                "2022-11-29",
+                "2023-11-29",
+                "2024-11-07",
+                "2024-11-25",
+                "2025-11-13"
+              ]
+            },
+            {
+              "month": 12,
+              "observations": 4,
+              "distinct_dates": [
+                "2021-12-06",
+                "2022-12-19",
+                "2023-12-13",
+                "2025-12-02"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "expected": {
+      "targets": 4,
+      "selected_full_cohort_rows": 203,
+      "winter_observations": 63,
+      "missing_dates_to_operator_goal": 6
+    }
+  },
+  "design_configuration": {
+    "budget": "4800.00",
+    "calendar": {
+      "blackout_dates": [
+        "2027-01-01"
+      ],
+      "crew_day_minutes": 480,
+      "crews": 1,
+      "day_start": "08:00",
+      "end_date": "2027-01-04",
+      "interval_days": 28,
+      "round_window_days": 8,
+      "start_date": "2026-11-02",
+      "travel_buffer_minutes": 60,
+      "visit_minutes": 60,
+      "weekdays": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "coverage_mode": "local",
+    "default_cost": {
+      "basis": "Engineer-authored planning assumptions for comparing source-catchment coverage; USD",
+      "per_visit": "150.00",
+      "setup": "250.00"
+    },
+    "existing_station_ids": [],
+    "max_sites": 1,
+    "min_sites": 1,
+    "program_overhead": "600.00",
+    "required_ids": [
+      "030601010701"
+    ]
+  },
+  "source_data": {
+    "metadata_blob": "44528152b4f8929d0136df1a4c5f97ab28cdc6ce",
+    "metadata_sha256": "112ab94adb4352b07b87c710be22fe36a007ea24f1a67a86e095fc6c2560b818"
+  },
+  "native_status": "authored_not_executed"
+}

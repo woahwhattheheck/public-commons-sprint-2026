@@ -1,3 +1,4 @@
+import {attachNativeObservedContext} from './monitoring-native-context.mjs';
 import {attachMonitoringFieldSelection} from './monitoring-field-selection.mjs';
 import {attachMonitoringFrontiers} from './monitoring-frontiers.mjs';
 import {attachMonitoringFieldReturn} from './monitoring_field_return.mjs';
@@ -5,7 +6,7 @@ import {attachMonitoringFieldwork} from './monitoring_fieldwork.mjs';
 import {attachMonitoringReport} from './monitoring-report.mjs';
 import {attachMonitoringStudyTransfer} from './monitoring-study-transfer.mjs';
 /* Native host adapter: original authorization, task queue and file tickets. */
-const READS = new Set(['comparison.preview','comparison.get','comparison.list','campaign.fieldwork.preview-return','context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
+const READS = new Set(['context.native.catalog','context.native.preview','comparison.preview','comparison.get','comparison.list','campaign.fieldwork.preview-return','context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
 let componentReady;
 function component() {
   // The component is derived from the same shipped legacy entry, with external
@@ -47,12 +48,27 @@ export function attachMonitoring(host) {
     const raw=new TextEncoder().encode(JSON.stringify(request));
     const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',raw))].map(x=>x.toString(16).padStart(2,'0')).join('');
     const storedKey='eco-monitoring-request:'+key+':'+hash;
+    const durable=action==='context.native.prepare';
+    const keep=value=>{
+      if(!durable){storage.set(storedKey,JSON.stringify(value));return;}
+      const encoded=JSON.stringify(value);pendingMemory.set(storedKey,encoded);
+      sessionStorage.setItem(storedKey,encoded);
+      if(sessionStorage.getItem(storedKey)!==encoded)throw Error('The original observation request could not be retained. No replacement operation was sent.');
+    };
     let pending;
-    try {pending=JSON.parse(storage.get(storedKey)||'null');} catch {pending=null;}
-    if(!pending){pending={operation_id:crypto.randomUUID()};storage.set(storedKey,JSON.stringify(pending));}
+    if(durable){
+      const raw=sessionStorage.getItem(storedKey)||pendingMemory.get(storedKey)||'null';
+      try{pending=JSON.parse(raw);}catch{throw Error('The retained observation save request is malformed. Keep it for recovery.');}
+      if(pending&&(typeof pending.operation_id!=='string'||!pending.operation_id||pending.request_body!==JSON.stringify(request)))
+        throw Error('The retained observation save request differs from its original body.');
+    }else{
+      try {pending=JSON.parse(storage.get(storedKey)||'null');} catch {pending=null;}
+    }
+    if(!pending)pending={operation_id:crypto.randomUUID(),...(durable?{request_body:JSON.stringify(request)}:{})};
+    keep(pending);
     if(campaignMutation)request.payload.operation_id=pending.operation_id;
     let task=await api('/api/actions',{method:'POST',body:{...request,operation_id:pending.operation_id}});
-    pending.task_id=task.id;storage.set(storedKey,JSON.stringify(pending));
+    pending.task_id=task.id;keep(pending);
     while(['queued','running'].includes(task.state)){
       await wait(600);
       task=await api('/api/task?'+new URLSearchParams({workspace:key,id:task.id}));
@@ -63,7 +79,7 @@ export function attachMonitoring(host) {
     }
     // Refresh through the original task decorator for authenticated file links.
     task=await api('/api/task?'+new URLSearchParams({workspace:key,id:task.id}));
-    storage.remove(storedKey);
+    if(durable){pending.task_id=task.id;pending.state=task.state;keep(pending);}else storage.remove(storedKey);
     return task.result;
   }
   async function openNetwork(selection) {
@@ -176,6 +192,9 @@ export function attachMonitoring(host) {
     active=node;root.replaceChildren(node);
     await node.ready;
     if(ticket!==generation || workspace()!==key)return;
+    node.nativeObservedContext ||= attachNativeObservedContext(node,host,key);
+    await node.nativeObservedContext.mount();
+    if(ticket!==generation || workspace()!==key)return;
     node.monitoringFrontiers ||= attachMonitoringFrontiers(node,host,key);
     await node.monitoringFrontiers.mount();
     if(ticket!==generation || workspace()!==key)return;
@@ -190,6 +209,7 @@ export function attachMonitoring(host) {
     if(ticket===generation && workspace()===key)await fieldReturn.mount(root,key);
   }
   async function update() {
+    active?.nativeObservedContext?.update();
     active?.monitoringReport?.update();
     active?.monitoringStudyTransfer?.update();
     if (!active?.isConnected || active.busy || updating) return;
@@ -197,7 +217,7 @@ export function attachMonitoring(host) {
     const current = () => active === node && generation === version &&
       node.isConnected && workspace() === key;
     const completed = JSON.stringify((getState()?.tasks || []).filter(task =>
-      task.state === 'complete' && (task.action?.startsWith('monitoring.') || task.action?.startsWith('source.') || task.action==='receiving.water.monitoring')
+      task.state === 'complete' && (task.action?.startsWith('monitoring.') || task.action?.startsWith('source.') || task.action?.startsWith('observations.') || task.action==='receiving.water.monitoring')
     ).map(task => task.id).sort());
     if (completed === completedByWorkspace.get(key)) return;
     updating = true;
@@ -206,6 +226,8 @@ export function attachMonitoring(host) {
       if (!current()) return;
       await node.refreshSources();
       if (!current()) return;
+      await node.nativeObservedContext?.refresh();
+      if (!current()) return;
       await node.monitoringFrontiers?.update();
       if (!current()) return;
       await fieldwork.update();
@@ -213,6 +235,6 @@ export function attachMonitoring(host) {
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;networkOpening++;active?.monitoringFrontiers?.detach();active?.monitoringReport?.detach();active?.monitoringStudyTransfer?.detach();active?.monitoringFieldSelection?.detach();fieldwork.detach();fieldReturn.detach();if(active)active.remove();active=null;}
+  function detach(){generation++;networkOpening++;active?.nativeObservedContext?.detach();active?.monitoringFrontiers?.detach();active?.monitoringReport?.detach();active?.monitoringStudyTransfer?.detach();active?.monitoringFieldSelection?.detach();fieldwork.detach();fieldReturn.detach();if(active)active.remove();active=null;}
   return {mount,update,detach,openNetwork,openStudy,render:()=>'',dispatch:()=>false};
 }

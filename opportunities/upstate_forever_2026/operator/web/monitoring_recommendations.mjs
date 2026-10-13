@@ -281,10 +281,10 @@ export function attachMonitoringRecommendations(host){
   async function guarded(state,fn){const version=generation,ticket=++request,owner={};state.busyOwner=owner;state.busy=true;updateActions(state);try{await fn(()=>current(state,version)&&ticket===request);}catch(error){if(current(state,version)&&ticket===request)fail(state,error);}finally{if(state.busyOwner===owner){state.busy=false;state.busyOwner=null;if(current(state,version))render(state);}}}
   function discard(state){return !(state.dirty||state.designDirty)||confirm('Replace the unsaved sampling targets or design configuration with the selected saved evidence?');}
   async function refresh(state){await guarded(state,async valid=>{const value=await read(state,'catalog');if(!valid())return;state.catalog=value;status(state,(value.contexts||[]).length+' saved observation contexts · '+(value.recommendations||[]).length+' saved sampling editions.');});}
-  async function loadContext(state,id){
+  async function loadContext(state,id,isCurrent=()=>true){
     if(!ID.test(id))throw Error('Choose a saved context identity.');
     if(!discard(state)){render(state);return;}
-    await guarded(state,async valid=>{const value=await read(state,'context',{context_id:id});if(!valid())return;if(value.context_id!==id)throw Error('The original context identity changed.');state.context=value;state.designDraft=designDraft(value.design_configuration);state.designDirty=false;state.draft=newDraft(value);state.saved=null;state.preview=null;state.design=null;state.downloads=[];state.dirty=false;status(state,'Original context opened. Enter the historical evidence window and explicit future targets.');});
+    await guarded(state,async valid=>{const value=await read(state,'context',{context_id:id});if(!valid()||!isCurrent())return;if(value.context_id!==id)throw Error('The original context identity changed.');state.context=value;state.designDraft=designDraft(value.design_configuration);state.designDirty=false;state.draft=newDraft(value);state.saved=null;state.preview=null;state.design=null;state.downloads=[];state.dirty=false;status(state,'Original context opened. Enter the historical evidence window and explicit future targets.');});
   }
   async function openSaved(state,id,{force=false}={}){
     if(!ID.test(id||''))throw Error('Choose a retained sampling edition.');
@@ -377,5 +377,16 @@ export function attachMonitoringRecommendations(host){
   async function update(){if(root&&workspace()!==active?.key){clearEvents();generation++;request++;const key=workspace();if(!key){active=null;root.innerHTML='<p>Select an original Workspace.</p>';return;}active=stateFor(key);active.busy=false;active.busyOwner=null;render(active);await refresh(active);}}
   function detach(){clearEvents();generation++;request++;root=null;active=null;}
   async function openSavedEntry(selection){if(selection?.workspace_key&&selection.workspace_key!==workspace())throw Error('Open this recommendation in its original Workspace.');if(!root||!active)throw Error('Open Sampling priorities first.');if(active.busy||(active.pending&&!terminal.has(active.pending.state)))throw Error('Resume the original sampling operation before opening another saved edition.');await openSaved(active,selection?.recommendation_id||selection?.id);return {workspace_key:active.key,recommendation_id:active.saved?.id||active.saved?.recommendation_id};}
-  return {mount,update,detach,render:()=>'',dispatch:()=>false,openSaved:openSavedEntry};
+  async function openContextEntry(selection){
+    if(selection?.workspace_key!==workspace())throw Error('Open these observations in their original Workspace.');
+    if(!ID.test(selection?.context_id||''))throw Error('Choose an exact saved observational context.');
+    if(!root||!active)throw Error('Open Sampling priorities first.');
+    if(active.busy||(active.pending&&!terminal.has(active.pending.state)))throw Error('Resume the original sampling operation before opening another context.');
+    const state=active,key=state.key,id=selection.context_id;
+    if(typeof selection.isCurrent==='function'&&!selection.isCurrent())return {opened:false};
+    await loadContext(state,id,()=>typeof selection.isCurrent!=='function'||selection.isCurrent());
+    if(!current(state)||workspace()!==key||(typeof selection.isCurrent==='function'&&!selection.isCurrent()))return {opened:false};
+    return {workspace_key:key,context_id:state.context?.context_id||null,opened:state.context?.context_id===id};
+  }
+  return {mount,update,detach,render:()=>'',dispatch:()=>false,openSaved:openSavedEntry,openContext:openContextEntry};
 }
