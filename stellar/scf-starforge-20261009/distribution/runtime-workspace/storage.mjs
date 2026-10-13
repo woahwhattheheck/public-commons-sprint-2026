@@ -288,11 +288,80 @@ export async function workspaceReceivingState(directory) {
       UUID.test(marker.bindingReview.reviewId ?? '') && HASH.test(marker.bindingReview.reviewSha256 ?? '')) &&
     ['RESTORING', 'BINDINGS_REVIEW_REQUIRED', 'BINDINGS_REVIEWED'].includes(marker.phase) &&
     (config ? config.schema === 'stellar-forge.runtime-workspace.v1' &&
-      config.workspaceId === marker.workspaceId && config.directory === root : marker.phase === 'RESTORING'),
+      config.workspaceId === marker.workspaceId && config.directory === (marker.mode === 'new-host' ? marker.originalDirectory : root) : marker.phase === 'RESTORING'),
   'RUNTIME_WORKSPACE_RECEIVING_INVALID', 'The retained receiving identity does not match this workspace.', 409);
   absolute(marker.storageDirectory);
+  if (marker.mode !== undefined) {
+    need(marker.mode === 'new-host' && plain(marker.receivedHistory), 'RUNTIME_WORKSPACE_RECEIVING_INVALID');
+    absolute(marker.originalDirectory); absolute(marker.sourceDirectory);
+    need(Array.isArray(marker.nestedWorkspaces ?? []) && (marker.nestedWorkspaces ?? []).every(item =>
+      plain(item) && typeof item.path === 'string' && item.path && !item.path.startsWith('/') &&
+      !item.path.split('/').some(part => !part || part === '.' || part === '..') &&
+      UUID.test(item.workspaceId) && absolute(item.originalDirectory)), 'RUNTIME_WORKSPACE_RECEIVING_INVALID');
+    const history = marker.receivedHistory;
+    for (const name of ['operations', 'runtimes', 'managedHomes'])
+      need(Array.isArray(history[name]) && new Set(history[name]).size === history[name].length &&
+        history[name].every(id => (name === 'operations' ? UUID : /^[a-f0-9]{24}$/).test(id)),
+        'RUNTIME_WORKSPACE_RECEIVING_INVALID');
+    need(plain(history.applications) && Object.entries(history.applications).every(([id, sha]) =>
+      /^[a-f0-9]{24}$/.test(id) && HASH.test(sha)), 'RUNTIME_WORKSPACE_RECEIVING_INVALID');
+    if (marker.phase === 'BINDINGS_REVIEWED') {
+      const binding = marker.hostBindings;
+      need(plain(binding) && typeof binding.actor === 'string' && typeof binding.note === 'string' &&
+        Array.isArray(binding.runtimes) && Array.isArray(marker.runtimeEntries), 'RUNTIME_WORKSPACE_RECEIVING_INVALID');
+      absolute(binding.runtimeHome);
+      need(new Set(binding.runtimes.map(item => item.runtimeId)).size === binding.runtimes.length &&
+        binding.runtimes.every(item => history.runtimes.includes(item.runtimeId) && absolute(item.directory) &&
+          marker.runtimeEntries.some(row => row.runtimeId === item.runtimeId && row.directory === item.directory &&
+            row.status === 'PRESENT' && row.sourceVerified === true)),
+      'RUNTIME_WORKSPACE_RECEIVING_INVALID');
+    }
+  }
   return marker;
 }
+
+// Receiving changes only active selections. Original records and their absolute
+// paths remain readable without transformation.
+export async function receivedOperation(root, id) {
+  operationId(id);
+  const marker = await workspaceReceivingState(root);
+  return marker?.mode === 'new-host' && marker.receivedHistory.operations.includes(id) ? marker : null;
+}
+export async function requireCurrentOperation(root, id) {
+  need(!await receivedOperation(root, id), 'RUNTIME_WORKSPACE_RECEIVED_HISTORY',
+    'This imported request is retained history. Review current inputs and prepare a new request on this host; the original UUID and state remain unchanged.', 409);
+}
+export async function receivedApplication(root, id, value = null) {
+  recordId(id);
+  const marker = await workspaceReceivingState(root), expected = marker?.receivedHistory?.applications?.[id];
+  if (marker?.mode !== 'new-host' || !expected) return false;
+  // Compare the exact archived head bytes; a normal reviewed Save creates its
+  // successor through the existing writer, retaining this revision.
+  return digest(await regular(join(root, 'applications', id, 'application.json'))) === expected;
+}
+export async function requireCurrentApplication(root, id) {
+  need(!await receivedApplication(root, id), 'APPLICATION_HOST_REVIEW_REQUIRED',
+    'Review and save this received application against current runtime and data paths before connecting or starting it. Original settings and runs remain in history.', 409);
+}
+export async function receivedManagedHome(root, id) {
+  const marker = await workspaceReceivingState(root);
+  return marker?.mode === 'new-host' && marker.receivedHistory.managedHomes.includes(recordId(id)) ? marker : null;
+}
+export async function currentRuntimeEntry(root, value, required = true) {
+  const marker = await workspaceReceivingState(root);
+  if (marker?.mode !== 'new-host' || !marker.receivedHistory.runtimes.includes(value.id)) return value;
+  const selected = marker.phase === 'BINDINGS_REVIEWED' ?
+    marker.hostBindings.runtimes.find(item => item.runtimeId === value.id) : null;
+  if (!selected) {
+    need(!required, 'RUNTIME_WORKSPACE_HOST_BINDING_REQUIRED',
+      'This original runtime has no current-host binding. Select and review its recovered runtime, or attach a current installation through the existing Runtime operator.', 409);
+    return { ...value, originalDirectory: value.directory, directory: null, receivedHistory: true,
+      phase: 'UNBOUND', hostBindingRequired: true };
+  }
+  return { ...value, originalDirectory: value.directory, directory: selected.directory,
+    receivingId: marker.receivingId, bindingReview: marker.bindingReview };
+}
+
 async function requireWorkspaceWritable(root) {
   const marker = await workspaceReceivingState(root);
   need(!marker || marker.phase === 'BINDINGS_REVIEWED', 'RUNTIME_WORKSPACE_BINDINGS_REVIEW_REQUIRED',
@@ -360,6 +429,15 @@ async function recordWorkspaceRoots(path) {
 }
 async function withRecordWrite(path, callback, options = {}) {
   const roots = await recordWorkspaceRoots(path);
+  for (const root of roots) {
+    const relative = resolve(path).slice(root.length + 1);
+    const receiving = await workspaceReceivingState(root);
+    need(!(receiving?.nestedWorkspaces ?? []).some(item => relative === item.path || relative.startsWith(item.path + '/')),
+      'RUNTIME_WORKSPACE_NESTED_RECEIVING_REQUIRED',
+      'This nested Runtime workspace is retained imported history. Use its own original workspace receiving at a separately selected destination before changing or starting it.', 409);
+    const match = /^operations\/([a-f0-9-]{36})(?:\/|$)/.exec(relative);
+    if (match) await requireCurrentOperation(root, match[1]);
+  }
   const enter = index => index === roots.length ? callback() :
     withWorkspaceWrite(roots[index], () => enter(index + 1), options);
   return enter(0);

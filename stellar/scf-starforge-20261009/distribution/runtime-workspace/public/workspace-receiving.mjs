@@ -1,4 +1,4 @@
-// MIT. Full workspace backup, archive intake and original-location receiving.
+// MIT. Full workspace backup, archive intake and reviewed receiving on this host.
 const node = (tag, text, className) => {
   const value = document.createElement(tag);
   if (text !== undefined) value.textContent = text;
@@ -46,7 +46,7 @@ export function createWorkspaceReceivingView({ root, api, getState, getToken, ge
   root.innerHTML = '<div class="section-title"><div><h2>Workspace backup and receiving</h2>' +
     '<p class="muted">Keep the complete workspace records, included files and original operating history together.</p></div>' +
     '<button type="button" id="wb-refresh">Refresh</button></div>' +
-    '<p class="note">Restoration preserves the original workspace location. Review external runtime, managed-home and data bindings separately before reopening.</p>' +
+    '<p class="note">Receive at the original location or select a new host directory. The complete archived records remain intact. Review current runtime locations before reopening and save current application settings through Applications.</p>' +
     '<form id="wb-storage-form" class="panel"><h3>Backup storage</h3><label>Private directory outside every Runtime workspace' +
     '<input id="wb-storage" autocomplete="off" placeholder="/absolute/private/workspace.backups"></label>' +
     '<button>Open backup storage</button><p class="note">The selected directory retains reviews, archives, uploads and receiving operations across server restarts.</p></form>' +
@@ -95,7 +95,7 @@ export function createWorkspaceReceivingView({ root, api, getState, getToken, ge
     return value?.storageDirectory === storageDirectory ? value : null;
   };
   function setDisabled() {
-    root.querySelectorAll('form button').forEach(value => { value.disabled = Boolean(busy); });
+    root.querySelectorAll('form button, form input, form select, form textarea').forEach(value => { value.disabled = Boolean(busy); });
     $('wb-storage').disabled = Boolean(busy);
   }
   async function action(fn) {
@@ -118,6 +118,105 @@ export function createWorkspaceReceivingView({ root, api, getState, getToken, ge
     if (!current(scope)) return null;
     if (JSON.stringify(pending()) === JSON.stringify(saved)) save('-request', null);
     return value;
+  }
+  function scopedDraft(kind, id) {
+    const value = readSaved('-' + kind + '-' + id);
+    return value?.storageDirectory === storageDirectory ? value.value : null;
+  }
+  function retainDraft(kind, id, value) {
+    save('-' + kind + '-' + id, { storageDirectory, value });
+  }
+  function bindingDraft(value, receivingId) {
+    return scopedDraft('host-bindings', receivingId) ?? {
+      runtimeHome: value.hostBindings?.runtimeHome ?? '',
+      runtimes: rows(value.hostBindings?.runtimes).map(item => ({ runtimeId: item.runtimeId, directory: item.directory })),
+      actor: value.hostBindings?.actor ?? '', note: value.hostBindings?.note ?? '',
+    };
+  }
+  function canonicalBindings(value) {
+    return JSON.stringify({
+      runtimeHome: String(value?.runtimeHome ?? '').trim(),
+      runtimes: rows(value?.runtimes).filter(item => String(item.directory ?? '').trim())
+        .map(item => ({ runtimeId: item.runtimeId, directory: String(item.directory).trim() }))
+        .sort((a, b) => String(a.runtimeId).localeCompare(String(b.runtimeId))),
+      actor: String(value?.actor ?? '').trim(), note: String(value?.note ?? ''),
+    });
+  }
+  function rememberBindingReview(receivingId, value) {
+    selectedReceiving = receivingId; bindingReview = value;
+    save('-binding-review', { storageDirectory, receivingId, value });
+  }
+  function bindingDraftMatches(value, receivingId) {
+    return value.mode !== 'new-host' || Boolean(value.hostBindings) &&
+      canonicalBindings(bindingDraft(value, receivingId)) === canonicalBindings(value.hostBindings);
+  }
+  function hostBindingsForm(value, receivingId) {
+    const form = node('form'), draft = bindingDraft(value, receivingId);
+    form.append(node('h4', 'Current host locations'),
+      node('p', 'Select the private runtime home and any recovered runtime installations to use on this host. Leave an installation blank to keep it unbound; it can be attached later through the existing Runtime controls.', 'note'));
+    const homeLabel = node('label', 'Private runtime home on this host'), home = node('input');
+    home.id = 'wb-current-runtime-home'; home.value = draft.runtimeHome; home.required = true;
+    home.autocomplete = 'off'; home.placeholder = '/absolute/private/runtimes'; homeLabel.append(home); form.append(homeLabel);
+    function changed() {
+      retainDraft('host-bindings', receivingId, draft);
+      const accept = $('wb-record-bindings');
+      if (accept) accept.disabled = Boolean(busy) || !value.canOpen || !bindingDraftMatches(value, receivingId);
+      const status = $('wb-binding-draft-state');
+      if (status) status.textContent = bindingDraftMatches(value, receivingId) ?
+        'These locations match the saved review.' : 'Current choices are saved in this browser. Review them before recording the receiving result.';
+    }
+    home.addEventListener('input', () => { if (!busy) { draft.runtimeHome = home.value; changed(); } });
+    const entries = rows(value.runtimeEntries);
+    if (entries.length) form.append(table(['Runtime', 'Original location and source', 'Current installation', 'Review status'],
+      entries.map(item => {
+        const label = node('label', item.label || item.runtimeId), currentPath = node('input');
+        currentPath.value = rows(draft.runtimes).find(row => row.runtimeId === item.runtimeId)?.directory ?? '';
+        currentPath.autocomplete = 'off'; currentPath.placeholder = 'Leave blank to attach later';
+        currentPath.setAttribute('aria-label', 'Current installation for ' + (item.label || item.runtimeId));
+        label.append(currentPath);
+        currentPath.addEventListener('input', () => {
+          if (busy) return;
+          draft.runtimes = rows(draft.runtimes).filter(row => row.runtimeId !== item.runtimeId);
+          if (currentPath.value) draft.runtimes.push({ runtimeId: item.runtimeId, directory: currentPath.value });
+          changed();
+        });
+        const original = node('div');
+        original.append(node('p', item.originalDirectory ?? 'Original location unavailable'),
+          detail('Original runtime source identity', { runtimeId: item.runtimeId, sourceDirectory: item.sourceDirectory, expected: item.expected }));
+        const status = node('div');
+        status.append(node('p', item.status ?? 'Not reviewed'),
+          node('p', item.sourceVerified ? 'Source identity verified' : 'No accepted source binding', 'note'));
+        if (item.error) status.append(detail('Location review message', item.error));
+        if (item.comparisons) status.append(detail('Source comparisons', item.comparisons));
+        return [item.label || item.runtimeId, original, label, status];
+      })));
+    else form.append(node('p', 'This archive has no saved runtime installations to map. Use Runtime to attach an installation after reopening.', 'empty'));
+    const actorLabel = node('label', 'Reviewed by'), actor = node('input');
+    actor.value = draft.actor; actor.required = true; actor.maxLength = 160; actorLabel.append(actor);
+    const noteLabel = node('label', 'Location review note'), note = node('textarea');
+    note.value = draft.note; note.rows = 3; note.maxLength = 4000; noteLabel.append(note);
+    actor.addEventListener('input', () => { if (!busy) { draft.actor = actor.value; changed(); } });
+    note.addEventListener('input', () => { if (!busy) { draft.note = note.value; changed(); } });
+    const status = node('p', bindingDraftMatches(value, receivingId) ? 'These locations match the saved review.' :
+      'Review current host locations to prepare this workspace for reopening.', 'note'); status.id = 'wb-binding-draft-state';
+    const submit = node('button', 'Review selected locations');
+    form.append(actorLabel, noteLabel, status, submit);
+    form.addEventListener('submit', event => {
+      event.preventDefault(); action(async scope => {
+        retainDraft('host-bindings', receivingId, draft);
+        const hostBindings = JSON.parse(canonicalBindings(draft));
+        if (!hostBindings.runtimeHome.startsWith('/') || hostBindings.runtimes.some(item => !item.directory.startsWith('/')))
+          throw new Error('Use absolute paths for the current runtime home and each selected installation.');
+        if (!hostBindings.actor) throw new Error('Enter who reviewed these locations.');
+        const result = await retainedPost('/api/workspace-backups/bindings',
+          { ...base(), receivingId, hostBindings }, scope, 'Review current host locations');
+        if (!result || !current(scope)) return;
+        rememberBindingReview(receivingId, result); renderBindings();
+        message(result.canOpen ? 'Current host locations reviewed. Record this exact review to reopen.' :
+          'Location review saved. Resolve the listed source or directory details, then review the same choices.');
+      });
+    });
+    return form;
   }
   function bindingsTable(bindings) {
     return table(['Binding', 'Purpose', 'Availability', 'Expected source'],
@@ -174,19 +273,43 @@ export function createWorkspaceReceivingView({ root, api, getState, getToken, ge
     target.append(node('h4', 'External bindings to review on this host'),
       bindingsTable(review.externalBindings));
     if (review.externalBindingDiscovery) target.append(detail('Embedded path discovery coverage', review.externalBindingDiscovery));
-    const form = node('form'), label = node('label', 'Restore to this exact original directory');
-    const destination = node('input'); destination.value = review.directory; destination.readOnly = true;
-    label.append(destination); form.append(label);
-    const submit = node('button', 'Restore original workspace'); submit.disabled = Boolean(busy);
-    form.append(submit, node('p', 'The destination must be vacant or belong to this same original receiving operation. Existing contents are preserved by the receiver’s identity checks.', 'note'));
+    const saved = scopedDraft('restore', value.archiveId) ?? { mode: 'original', directory: '' };
+    const form = node('form'), modeLabel = node('label', 'Receiving location'), mode = node('select');
+    mode.id = 'wb-restore-mode'; mode.append(new Option('Original workspace location', 'original'), new Option('A new directory on this host', 'new-host'));
+    mode.value = saved.mode; modeLabel.append(mode);
+    const label = node('label', 'Destination directory'), destination = node('input');
+    destination.id = 'wb-restore-directory'; destination.autocomplete = 'off'; destination.required = true;
+    destination.value = mode.value === 'new-host' ? saved.directory : review.directory;
+    destination.readOnly = mode.value !== 'new-host'; label.append(destination);
+    const note = node('p', '', 'note');
+    const explain = () => { note.textContent = mode.value === 'new-host' ?
+      'The archived workspace identity, application settings and operation records remain unchanged. After receiving, review current runtime locations and save successor application settings through Applications.' :
+      'The workspace is restored to its original location. Review its external bindings before reopening.'; };
+    explain();
+    mode.addEventListener('change', () => {
+      if (busy) return;
+      saved.mode = mode.value; destination.readOnly = mode.value !== 'new-host';
+      destination.value = mode.value === 'new-host' ? saved.directory : review.directory;
+      retainDraft('restore', value.archiveId, saved); explain();
+    });
+    destination.addEventListener('input', () => {
+      if (busy || mode.value !== 'new-host') return;
+      saved.directory = destination.value; retainDraft('restore', value.archiveId, saved);
+    });
+    const submit = node('button', 'Receive complete workspace'); submit.disabled = Boolean(busy);
+    form.append(modeLabel, label, note, submit, node('p', 'The destination must be vacant or belong to this same receiving operation. Its request and complete archive identity are retained before work starts.', 'note'));
     form.addEventListener('submit', event => {
       event.preventDefault(); action(async scope => {
+        const directory = mode.value === 'new-host' ? saved.directory.trim() : review.directory;
+        if (!directory.startsWith('/')) throw new Error('Choose an absolute receiving directory.');
+        retainDraft('restore', value.archiveId, saved);
         const result = await retainedPost('/api/workspace-backups/restore', { ...base(),
           requestId: crypto.randomUUID(), archiveId: value.archiveId,
-          manifestSha256: value.manifestSha256, directory: review.directory,
-        }, scope, 'Restore original workspace');
+          manifestSha256: value.manifestSha256, directory,
+          ...(mode.value === 'new-host' ? { mode: 'new-host' } : {}),
+        }, scope, mode.value === 'new-host' ? 'Receive workspace on this host' : 'Restore original workspace');
         if (!result || !current(scope)) return;
-        await refresh(); message('Original-location receiving is retained. Review its external bindings after restoration completes.');
+        await refresh(); message('Workspace receiving is retained. Review its locations after restoration completes.');
       });
     });
     target.append(form, button('Download this archive', () => action(() => download(value.archiveId)), Boolean(busy)));
@@ -196,11 +319,17 @@ export function createWorkspaceReceivingView({ root, api, getState, getToken, ge
     target.hidden = !saved; target.replaceChildren();
     if (saved) {
       target.append(node('h3', 'Retained request'), node('p', saved.label),
-        node('p', 'Request: ' + saved.input.requestId, 'note'),
+        node('p', 'Request: ' + (saved.input.requestId ?? saved.input.receivingId), 'note'),
+        detail('Exact retained input', saved.input),
         button('Continue this exact request', () => action(async scope => {
           const result = await retainedPost(saved.path, saved.input, scope, saved.label);
           if (!result || !current(scope)) return;
           if (saved.path.endsWith('/review')) selectedReview = result;
+          if (saved.path.endsWith('/bindings')) rememberBindingReview(saved.input.receivingId, result);
+          if (saved.path.endsWith('/open')) {
+            openedReceiving = { ...result, receivingId: saved.input.receivingId };
+            save('-opened-receiving', { storageDirectory, value: openedReceiving });
+          }
           await refresh(); renderReview();
           message('The original request has been reconciled.');
         }), Boolean(busy)),
@@ -225,36 +354,50 @@ export function createWorkspaceReceivingView({ root, api, getState, getToken, ge
   async function reviewBindings(receivingId, scope) {
     const result = await api('/api/workspace-backups/bindings', { ...base(), receivingId });
     if (!current(scope)) return;
-    selectedReceiving = receivingId; bindingReview = result; renderBindings();
+    rememberBindingReview(receivingId, result); renderBindings();
   }
   function renderBindings() {
     const target = $('wb-bindings'); target.hidden = !bindingReview;
     if (!bindingReview) return;
     const value = bindingReview, receivingId = selectedReceiving;
-    facts(target, [['Restored workspace', value.directory], ['Runtime home available', value.runtimeHomeReady ? 'Yes' : 'No'],
-      ['Binding review', value.canOpen ? 'Ready to record' : 'Resolve listed bindings, then review again'],
-      ['Source readiness', value.sourceReadiness]]);
-    target.prepend(node('h3', 'Review restored bindings'));
-    target.append(bindingsTable(value.bindings), node('p',
-      'This review checks retained locations and source identities. Use the original runtime and Applications controls to inspect readiness and start selected work.', 'note'));
-    const actions = node('div', undefined, 'actions');
-    actions.append(button('Refresh binding review', () => action(scope => reviewBindings(receivingId, scope)), Boolean(busy)));
-    actions.append(button('Record review and show reopening command', () => action(async scope => {
-      const result = await api('/api/workspace-backups/open', { ...base(), receivingId,
-        reviewId: value.reviewId, reviewSha256: value.reviewSha256 });
-      if (!current(scope)) return;
-      openedReceiving = { ...result, receivingId };
-      renderBindings();
-      message('The binding review is recorded. The original workspace is ready for its explicit reopening command.');
-    }), Boolean(busy) || !value.canOpen));
-    target.append(actions);
     const recorded = openedReceiving?.receivingId === receivingId ? openedReceiving :
       rows(state?.operations).find(item => item.operationId === receivingId)?.receiving;
+    const accepted = recorded?.phase === 'BINDINGS_REVIEWED';
+    const draftMatches = bindingDraftMatches(value, receivingId);
+    facts(target, [['Restored workspace', value.directory], ['Original workspace location', value.originalDirectory ?? value.directory],
+      ['Receiving mode', value.mode === 'new-host' ? 'New host directory' : 'Original location'],
+      ['Runtime home available', value.runtimeHomeReady ? 'Yes' : 'No'],
+      ['Binding review', accepted ? 'Recorded' : value.canOpen && draftMatches ? 'Ready to record' : 'Review current locations'],
+      ['Imported operation records', value.importedOperationCount ?? '—'], ['Source readiness', value.sourceReadiness]]);
+    target.prepend(node('h3', 'Review restored bindings'));
+    if (value.mode === 'new-host' && !accepted) target.append(hostBindingsForm(value, receivingId));
+    if (accepted && value.hostBindings) target.append(detail('Recorded current host locations', value.hostBindings));
+    target.append(node('h4', value.mode === 'new-host' ? 'Historical external path references' : 'Original external bindings'),
+      bindingsTable(value.bindings), node('p', value.mode === 'new-host' ?
+        'These paths remain part of the archived history. Current runtime locations are recorded separately. Imported operations remain readable history; choose current work through the existing Runtime and Applications controls.' :
+        'This review checks retained locations and source identities. Use the original Runtime and Applications controls to inspect readiness and start selected work.', 'note'));
+    if (!accepted) {
+    const actions = node('div', undefined, 'actions');
+    actions.append(button('Refresh binding review', () => action(scope => reviewBindings(receivingId, scope)), Boolean(busy)));
+    const accept = button('Record review and show reopening command', () => action(async scope => {
+      if (!bindingDraftMatches(value, receivingId)) throw new Error('Review the current location choices before recording this result.');
+      save('-binding-review', { storageDirectory, receivingId, value });
+      const result = await retainedPost('/api/workspace-backups/open', { ...base(), receivingId,
+        reviewId: value.reviewId, reviewSha256: value.reviewSha256 }, scope, 'Record reviewed receiving locations');
+      if (!result || !current(scope)) return;
+      openedReceiving = { ...result, receivingId };
+      save('-opened-receiving', { storageDirectory, value: openedReceiving });
+      renderBindings();
+      message('The selected review is recorded. Use its reopening command, then review current application settings.');
+    }), Boolean(busy) || !value.canOpen || !draftMatches);
+    accept.id = 'wb-record-bindings'; actions.append(accept); target.append(actions);
+    }
     if (recorded?.phase === 'BINDINGS_REVIEWED') {
       const command = 'starforge runtime-workspace serve --workspace ' + shellQuote(recorded.directory ?? value.directory);
       const output = node('div', undefined, 'result');
       output.append(node('h4', 'Reopen the restored workspace'), node('pre', command),
         node('p', 'Open the private URL printed by this command. The restored workspace retains its original application and operation records.', 'note'),
+        value.mode === 'new-host' ? node('p', 'In the reopened workspace, choose Applications. Open each application’s saved settings, select its current runtime and input paths, then use Review and Save to create an attributed successor. Attach any unbound installation through Runtime. Historical operations remain available from Operations.', 'note') : node('span'),
         detail('Complete receiving result', recorded));
       target.append(output);
     }
@@ -268,7 +411,8 @@ export function createWorkspaceReceivingView({ root, api, getState, getToken, ge
       title.append(node('h4', item.kind === 'EXPORT' ? 'Workspace backup' : 'Workspace receiving'),
         node('span', item.phase, 'status'));
       article.append(title, node('p', item.operationId + ' · ' + dateText(item.createdAt), 'note'));
-      if (item.input?.directory) article.append(node('p', 'Original destination: ' + item.input.directory));
+      if (item.input?.directory) article.append(node('p', 'Receiving destination: ' + item.input.directory));
+      if (item.input?.mode === 'new-host') article.append(node('p', 'New host receiving · archived identities and history retained', 'note'));
       if (item.error) article.append(node('p', item.error.code + ': ' + item.error.message));
       if (item.observation) article.append(detail('Current worker observation', item.observation));
       const actions = node('div', undefined, 'actions');
@@ -354,6 +498,16 @@ export function createWorkspaceReceivingView({ root, api, getState, getToken, ge
         selectedReview = [...value.reviews].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).at(-1);
       if (selectedArchive && !rows(value.inspections).some(item => item.archiveId === selectedArchive))
         selectedArchive = null;
+      if (!bindingReview) {
+        const retained = readSaved('-binding-review');
+        if (retained?.storageDirectory === storageDirectory && rows(value.operations).some(item => item.operationId === retained.receivingId)) {
+          selectedReceiving = retained.receivingId; bindingReview = retained.value;
+        }
+      }
+      if (!openedReceiving) {
+        const retained = readSaved('-opened-receiving');
+        if (retained?.storageDirectory === storageDirectory) openedReceiving = retained.value;
+      }
       render();
     } finally { if (loading === scope) loading = null; }
   }

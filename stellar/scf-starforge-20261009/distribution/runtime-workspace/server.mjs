@@ -407,11 +407,11 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
       if (url.pathname === '/api/workspace-backups/inspect')
         return send(200, await model.workspaceBackupInspect(await body(req, ['archivePath', 'uploadId', 'sha256', 'storageDirectory'])));
       if (url.pathname === '/api/workspace-backups/restore')
-        return send(202, await model.workspaceBackupRestore(await body(req, ['requestId', 'archiveId', 'manifestSha256', 'directory', 'storageDirectory'])));
+        return send(202, await model.workspaceBackupRestore(await body(req, ['requestId', 'archiveId', 'manifestSha256', 'directory', 'mode', 'storageDirectory'])));
       if (url.pathname === '/api/workspace-backups/continue')
         return send(202, await model.workspaceBackupContinue(await body(req, ['operationId', 'storageDirectory'])));
       if (url.pathname === '/api/workspace-backups/bindings')
-        return send(200, await model.workspaceBackupBindings(await body(req, ['receivingId', 'storageDirectory'])));
+        return send(200, await model.workspaceBackupBindings(await body(req, ['receivingId', 'hostBindings', 'storageDirectory'])));
       if (url.pathname === '/api/workspace-backups/open')
         return send(200, await model.workspaceBackupOpen(await body(req, ['receivingId', 'reviewId', 'reviewSha256', 'storageDirectory'])));
       if (url.pathname === '/api/workspace-backups/download') {
