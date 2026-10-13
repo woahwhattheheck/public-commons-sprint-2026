@@ -620,16 +620,34 @@ export function createWatershedContextDesk(host) {
         '>Save reviewed selection and reports</button> <button type="button" data-wc-review-clear>Clear review</button>' : '') +
       (!saved ? '<p class="wc-note">Open or build the original regional report to continue this review.</p>' : '') + '</section>';
   }
+  function sourceReviewDocument(text) {
+    if (typeof text !== 'string' || new TextEncoder().encode(text).length > 256 * 1024)
+      throw new Error('Keep the complete source review within 256 KiB.');
+    const document = JSON.parse(text), selection = document?.selection;
+    if (document?.schema !== 'upstate.watershed-source-review/v1' ||
+        !Array.isArray(selection?.huc12s) || !selection.huc12s.length ||
+        selection.huc12s.some(id => typeof id !== 'string' || !/^\d{12}$/.test(id)) ||
+        new Set(selection.huc12s).size !== selection.huc12s.length)
+      throw new Error('Choose the original source explorer selection JSON with distinct HUC12s.');
+    if (!document.discussion || typeof document.discussion !== 'object' ||
+        discussionFields.some(([key]) => typeof document.discussion[key] !== 'string' ||
+          document.discussion[key].length > 20000))
+      throw new Error('The source review must retain all eight discussion fields as text of at most 20,000 characters.');
+    return document;
+  }
   async function receiveSourceReview(file) {
     if (!file || busy) return;
     const key = workspace, version = epoch, request = ++sourceReviewRequest;
     if (!key || currentWorkspace() !== key) throw new Error('Choose the receiving project.');
     if (file.size > 256 * 1024) throw new Error('Choose the source explorer JSON selection, up to 256 KiB.');
-    const text = await file.text(), document = JSON.parse(text);
+    let text;
+    try { text = await file.text(); }
+    catch (error) {
+      if (!guard(version,key) || request !== sourceReviewRequest) return;
+      throw error;
+    }
     if (!guard(version, key) || currentWorkspace() !== key || request !== sourceReviewRequest) return;
-    if (document?.schema !== 'upstate.watershed-source-review/v1' ||
-        !Array.isArray(document.selection?.huc12s) || !document.selection.huc12s.length)
-      throw new Error('Choose the original source explorer selection JSON.');
+    const document = sourceReviewDocument(text);
     sourceReview = {text, document, sourceExportId:null, modified:false};
     errorText = '';
     render();
@@ -637,13 +655,16 @@ export function createWatershedContextDesk(host) {
   async function reopenSavedReview() {
     if (busy || !savedExport?.source_review) return;
     const key = workspace, version = epoch, request = ++sourceReviewRequest, exportId = savedExport.id;
-    const result = await read('export', {export_id:exportId,include_source_review:true});
+    let result;
+    try { result = await read('export', {export_id:exportId,include_source_review:true}); }
+    catch (error) {
+      if (!guard(version,key) || request !== sourceReviewRequest || selectedExportId !== exportId) return;
+      throw error;
+    }
     if (!guard(version,key) || request !== sourceReviewRequest || selectedExportId !== exportId) return;
     if (result.id !== exportId || typeof result._source_review_text !== 'string')
       throw new Error('Reopen the saved original review from its retained export.');
-    const text = result._source_review_text, document = JSON.parse(text);
-    if (document.schema !== 'upstate.watershed-source-review/v1')
-      throw new Error('The retained original file is not a watershed source review.');
+    const text = result._source_review_text, document = sourceReviewDocument(text);
     sourceReview = {text,document,sourceExportId:exportId,modified:false};
     errorText = ''; render();
     root?.querySelector('[data-wc-review-export]')?.scrollIntoView({block:'nearest'});
@@ -1054,6 +1075,7 @@ export function createWatershedContextDesk(host) {
   async function exportRows(huc12s, utilityKey = null, sourceReviewText = null, reviewParentId = null) {
     if (busy) return;
     if (!saved || !huc12s.length) throw new Error('Choose watershed records to export.');
+    if (sourceReviewText !== null) sourceReviewDocument(sourceReviewText);
     const key = workspace, version = epoch, reportId = saved.id;
     const choice = evidenceChoice(), include = evidenceIncluded();
     const payload = {report_id:reportId, huc12s:[...huc12s], include_evidence:include,
