@@ -22,7 +22,7 @@ def run_summary(value):
     stages = value.get("stages", {})
     retained = {
         name: {key: item for key, item in stage.items()
-               if key in {"started_at", "completed_at", "reused_from", "reused_at"}}
+               if key in {"started_at", "completed_at", "reused_from", "reused_at", "runtime"}}
         for name, stage in stages.items()
     }
     result["stage_summary"] = {
