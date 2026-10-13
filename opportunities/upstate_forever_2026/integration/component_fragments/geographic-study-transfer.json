@@ -33,7 +33,9 @@
         "model/receptor_study_transfer.py",
         "model/geographic_programme.py",
         "model/geographic_operator_transfer.py",
-        "docs/GEOGRAPHIC_OPERATOR_TRANSFER.md"
+        "docs/GEOGRAPHIC_OPERATOR_TRANSFER.md",
+        "model/geographic_gis_study_transfer.py",
+        "model/native_run_history.py"
       ]
     }
   }
