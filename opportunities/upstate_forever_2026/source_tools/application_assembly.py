@@ -29,10 +29,12 @@ import zipfile
 
 try:
     from .application_components import (CATALOG_PATH, MODULE_PATH,
-        inspect as inspect_components, require_complete as require_components)
+        inspect as inspect_components, require_complete as require_components,
+        validate_catalog, source_manifest_members)
 except ImportError:
     from application_components import (CATALOG_PATH, MODULE_PATH,
-        inspect as inspect_components, require_complete as require_components)
+        inspect as inspect_components, require_complete as require_components,
+        validate_catalog, source_manifest_members)
 
 MAX_BYTES = 256 * 1024 * 1024
 MAX_FILES = 10000
@@ -636,6 +638,46 @@ def _installed_source_directories(root):
     return roots
 
 
+def _declared_source_members(root):
+    """Retain catalogue paths even outside the ordinary installed source roots."""
+    catalog_path = root / CATALOG_PATH
+    if not catalog_path.exists():
+        return set()
+    for path in (catalog_path, *catalog_path.parents):
+        if path == root:
+            break
+        if path.is_symlink():
+            raise ValueError("Selected catalogue contains a source alias")
+    catalog = validate_catalog(transport_json(catalog_path.read_text("utf-8")))
+    selected = set()
+
+    def select(name):
+        if name in selected:
+            return
+        selected.add(name)
+        for dependency in catalog["components"][name].get("requires", []):
+            select(dependency)
+
+    for name in catalog["required_components"]:
+        select(name)
+    members = {path for name in selected for path in catalog["components"][name]["paths"]}
+    manifests = {path for name in selected
+                 for path in catalog["components"][name].get("source_manifests", [])}
+    members.update(manifests)
+    for name in sorted(manifests):
+        path = root.joinpath(*member_name(name).parts)
+        for ancestor in (path, *path.parents):
+            if ancestor == root:
+                break
+            if ancestor.is_symlink():
+                raise ValueError("Native source manifest contains an alias: " + name)
+        if not path.is_file():
+            continue
+        value = transport_json(path.read_text("utf-8"))
+        members.update(row["path"] for row in source_manifest_members(name, value))
+    return members
+
+
 def _source_inventory(root):
     roots = _installed_source_directories(root)
     skip = {"__pycache__", ".git", ".venv", "venv", "node_modules"}
@@ -687,6 +729,16 @@ def _source_inventory(root):
                 if child.startswith(".") or child.endswith((".pyc", ".pyo", ".lock")):
                     continue
                 add(directory / child)
+    for name in sorted(_declared_source_members(root)):
+        relative = member_name(name)
+        path = root.joinpath(*relative.parts)
+        for ancestor in (path, *path.parents):
+            if ancestor == root:
+                break
+            if ancestor.is_symlink():
+                raise ValueError("Selected source contains an alias: " + name)
+        if path.exists():
+            add(path)
     return dict(sorted(selected.items()))
 
 
@@ -699,6 +751,7 @@ def snapshot_application(root):
     if not (root / "model/workspace.py").is_file() or not (root / "operator/server.py").is_file():
         raise ValueError("Choose the complete current Upper Savannah application directory")
     initial = _source_inventory(root)
+    declared = _declared_source_members(root)
     files, metadata, external = {}, {}, []
     binary_suffixes = {".zip", ".gz", ".pdf", ".tif", ".tiff", ".png", ".jpg", ".jpeg",
                        ".webp", ".mp4", ".gpkg", ".shp", ".shx", ".dbf", ".sqlite", ".sqlite3"}
@@ -710,7 +763,8 @@ def snapshot_application(root):
             if not stat.S_ISREG(status.st_mode) or _source_fingerprint(status) != before:
                 raise ValueError("Source changed before snapshot: " + name)
             retain = (status.st_size <= MAX_BYTES and
-                      (path.suffix.lower() not in binary_suffixes or status.st_size <= INLINE_ASSET_BYTES))
+                      (name in declared or path.suffix.lower() not in binary_suffixes
+                       or status.st_size <= INLINE_ASSET_BYTES))
             chunks, digest = [], hashlib.sha256()
             for block in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(block)
@@ -724,7 +778,7 @@ def snapshot_application(root):
         except UnicodeError:
             content = None
         if content is None or "\0" in content:
-            if data is None or status.st_size > INLINE_ASSET_BYTES:
+            if data is None or (name not in declared and status.st_size > INLINE_ASSET_BYTES):
                 external.append({"path": name, "bytes": status.st_size, "sha256": digest.hexdigest(),
                                  "retained_local_path": str(path)})
                 continue
