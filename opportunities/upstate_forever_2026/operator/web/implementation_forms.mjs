@@ -27,6 +27,36 @@ function catalogNumber(item,text){
   return value;
 }
 function docEqual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+
+function sourceSelectionFields(workbench,choices){
+  const draft=workbench.selectionDraft||{},preview=draft.preview,selected=new Set(draft.selected_ids||[]);
+  let body=field('Original saved selection',select('source_choice',choices,draft.choice||'','required'));
+  if(!choices.length)return body+'<p>No saved source selection is available yet. Save a community or conservation plan in its existing desk, then reopen this picker.</p>';
+  body+='<p>Choose the original work or planning units to attach. Each selected row keeps its original status, quantities and source context.</p>';
+  if(draft.loading)return body+'<p role="status" aria-live="polite">Reading the original saved selection…</p>';
+  if(draft.error)return body+'<div class="iw-source-preview"><p class="iw-error" role="alert">'+esc(draft.error)+'</p>'+button('source-preview-retry','Read source again')+'</div>';
+  if(!preview)return body+'<p role="status">Choose a saved selection to preview its original rows.</p>';
+  const rows=preview.rows||[];
+  body+='<div class="iw-source-preview"><h4>'+esc(preview.title||'Original source rows')+'</h4>';
+  if(draft.notice)body+='<p class="iw-notice" role="status">'+esc(draft.notice)+'</p>';
+  if(!rows.length)return body+'<p role="status">This source contains no importable rows. Choose another saved selection.</p></div>';
+  body+=field('Find source rows',input('source_filter',draft.filter||'','search','autocomplete="off"'))+
+    '<div class="iw-actions">'+button('source-select-visible','Select visible rows')+button('source-clear','Clear selection')+'</div>'+
+    '<p data-source-selection-count aria-live="polite">'+selected.size+' of '+rows.length+' rows chosen.</p>'+
+    '<p data-source-no-selection class="iw-hint" '+(selected.size?'hidden':'')+'>Choose at least one row. Proposed work can be chosen explicitly; its original proposed status is retained.</p>'+
+    '<p data-source-no-matches class="iw-hint" hidden>No source rows match this search.</p>'+
+    '<div class="iw-source-rows">';
+  for(const row of rows){
+    const chosen=selected.has(row.id),context=row.source_context||{},status=row.status||'Status not supplied';
+    const area=[row.area_ha===null||row.area_ha===undefined?'':'Whole unit: '+row.area_ha+' ha',row.reporting_area_ha===null||row.reporting_area_ha===undefined?'':'Reporting area: '+row.reporting_area_ha+' ha'].filter(Boolean).join(' · ');
+    const summary=typeof row.context_summary==='string'?row.context_summary:'';
+    const search=[row.label,row.status,summary,JSON.stringify(context)].filter(Boolean).join(' ').toLocaleLowerCase();
+    body+='<div class="iw-source-row" data-source-row data-source-search="'+esc(search)+'"><label class="iw-source-choice"><input type="checkbox" name="source_row" value="'+esc(row.id)+'" '+(chosen?'checked':'')+'><span><strong>'+esc(row.label)+'</strong><span class="iw-source-meta">'+esc(status)+(area?' · '+esc(area):'')+'</span>'+(summary?'<span class="iw-source-meta">'+esc(summary)+'</span>':'')+'</span></label><details><summary>Original source context</summary><pre class="iw-json">'+esc(JSON.stringify({id:row.id,...context},null,2))+'</pre></details></div>';
+  }
+  body+='</div><details class="iw-source-context"><summary>Saved selection reference</summary><pre class="iw-json">'+esc(JSON.stringify({title:preview.title,kind:preview.kind,source_id:preview.source_id,reference:preview.source_ref,context:preview.context||{}},null,2))+'</pre></details></div>';
+  return body;
+}
+
 export function openImplementationDialog(kind,id){
     const p=this.plan,row=id?clone(p[kind].find(r=>r.id===id)):null;
     const title=kind==='settings'?'Plan settings':kind==='method'?'Add a complete method workflow':kind==='source-import'?'Import a saved native selection':kind==='field-form'?'Record a structured field visit':(row?'Edit ':'Add ')+(LABELS[kind]||kind);
@@ -41,7 +71,7 @@ export function openImplementationDialog(kind,id){
       body=sel('Method','method_id',this.catalog.method_templates.map(m=>[m.id,m.label]),this.catalog.method_templates[0]?.id)+sel('Candidate','candidate_id',refs('candidates'),'')+'<p>Named steps and dependencies will be added. Enter local durations, assignments and estimates in the work plan.</p>';
     }else if(kind==='source-import'){
       const choices=[...(this.selectionChoices?.conservation_portfolios||[]).map(x=>['conservation_portfolio:'+x.id,'Conservation · '+x.title]),...(this.selectionChoices?.community_plans||[]).map(x=>['community_plan:'+x.id,'Community · '+x.title])];
-      body=field('Original saved selection',select('source_choice',choices,choices[0]?.[0]||'','required'))+(choices.length?'':'<p>No saved source selection is available yet. Save the original community or conservation plan in its existing desk, then reopen this picker.</p>')+ta('Specific selected IDs (optional)','selected_ids','','Separate IDs with commas or new lines. Leave empty to use the original selected rows.')+'<p>The native importer reads the retained original source and carries its complete snapshot into this plan.</p>';
+      body=sourceSelectionFields(this,choices);
     }else if(kind==='field-form'){
       const template=this.catalog.field_forms.find(f=>f.id===this.activeFormId)||this.catalog.field_forms[0];
       if(!template)throw Error('No field form templates are installed.');
@@ -58,7 +88,12 @@ export function openImplementationDialog(kind,id){
         }else if(item.type==='date')body+=f(item.label,name,'','date',required);
         else if(item.type==='monitoring_plan_ref')body+=field(item.label,select(name,refs('monitoring_plans'),'',required),'Choose a monitoring plan containing this visit site.');
         else if(item.type==='activity_refs')body+=field(item.label,area(name,'',required),'Existing activity IDs, one per line. Each activity must belong to the selected visit.')+'<details><summary>Available activity IDs</summary><ul>'+p.activities.map(a=>'<li><code>'+esc(a.id)+'</code> · '+esc(a.sample_id||a.kind)+' · '+esc(a.visit_id)+'</li>').join('')+'</ul></details>';
-        else body+=field(item.label,area(name,'',required),item.type==='attachment_refs'?'Existing file or photograph references, one per line.':item.type==='attachment_ref'?'Record the original file, procedure or photograph reference.':'');
+        else if(item.type==='attachment_refs'){
+          const files=p.source_links.filter(link=>link.kind==='local_file');
+          body+='<fieldset class="iw-field iw-file-choices"><legend>'+esc(item.label)+'</legend>'+(files.length?files.map(link=>'<label class="iw-source-choice"><input type="checkbox" name="'+esc(name)+'" value="'+esc(link.id)+'"><span>'+esc(link.label||link.original_filename)+'<small>'+esc(link.original_filename||link.id)+'</small></span></label>').join(''):'<p>No original files attached. Add files from the visit or Handover view before completing this field.</p>')+(item.required?'<small>Choose at least one attached file.</small>':'')+'</fieldset>';
+        }else if(item.type==='attachment_ref'){
+          body+=field(item.label,input(name,'','text',required+' list="'+esc(name)+'__files"')+'<datalist id="'+esc(name)+'__files">'+p.source_links.map(link=>'<option value="'+esc(link.id)+'">'+esc(link.label)+'</option>').join('')+'</datalist>','Choose an original source reference or enter the documented procedure/reference.');
+        }else body+=field(item.label,area(name,'',required));
       }
     }else if(kind==='tasks'){
       const r=row||{title:'',candidate_id:'',phase:'prepare',assignee:'',status:'planned',duration_days:null,depends_on:[],progress_pct:0,notes:''};
@@ -88,7 +123,9 @@ export function openImplementationDialog(kind,id){
       if(row)body=f('Title','label',row.label,'text','required')+'<details><summary>Original source reference</summary><pre>'+esc(JSON.stringify(row,null,2))+'</pre></details>';
       else body=f('Title','label','','text','required')+sel('Source kind','kind',[['record','Record'],['guidance','Guidance'],['dataset','Dataset'],['plan','Plan'],['method','Method']],'record')+f('Original reference','reference','','text','required');
     }
-    this.dialog('<form data-impl-form="'+esc(kind)+'" data-id="'+esc(id||'')+'"><h3>'+esc(title)+'</h3><div class="iw-form-grid">'+body+'</div><div class="iw-dialog-actions"><button type="submit" class="iw-primary">'+(kind==='source-import'?'Import original selection':'Save')+'</button>'+button('close-dialog','Cancel')+(row&&!['candidates','source_links'].includes(kind)?button('delete','Remove record','data-collection="'+kind+'" data-id="'+esc(id)+'"','iw-remove'):'')+'</div></form>');
+    const unavailable=kind==='source-import'&&(!this.selectionDraft?.preview||this.selectionDraft.loading||!(this.selectionDraft.selected_ids||[]).length);
+    this.dialog('<form data-impl-form="'+esc(kind)+'" data-id="'+esc(id||'')+'"><h3>'+esc(title)+'</h3><div class="iw-form-grid">'+body+'</div><div class="iw-dialog-actions"><button type="submit" class="iw-primary" '+(unavailable?'disabled':'')+'>'+(kind==='source-import'?'Import chosen rows':'Save')+'</button>'+button('close-dialog','Cancel')+(row&&!['candidates','source_links'].includes(kind)?button('delete','Remove record','data-collection="'+kind+'" data-id="'+esc(id)+'"','iw-remove'):'')+'</div></form>');
+    if(kind==='source-import')this.syncSourceSelection?.();
   }
 export async function saveImplementationForm(form){
     const kind=form.dataset.implForm,id=form.dataset.id,values=Object.fromEntries(new FormData(form)),v=n=>values[n]||'',existing=id?clone(this.plan[kind].find(r=>r.id===id)):null;
@@ -103,7 +140,7 @@ export async function saveImplementationForm(form){
       if(taskId&&!this.plan.tasks.some(t=>t.id===taskId))throw Error('Select a work task in this plan.');
       const p=clone(this.plan),activityId=uid('field-activity'),answers={},rawAnswers={},observations=[];
       for(const item of template.fields){
-        const key='answer__'+item.key,raw=v(key),text=raw.trim(),unitRaw=v(key+'__unit'),unit=unitRaw.trim();
+        const key='answer__'+item.key,raw=item.type==='attachment_refs'?new FormData(form).getAll(key).map(String).join('\n'):v(key),text=raw.trim(),unitRaw=v(key+'__unit'),unit=unitRaw.trim();
         rawAnswers[item.key]=raw;
         if(item.type==='quantity')rawAnswers[item.key+'__unit']=unitRaw;
         if(item.required&&!text)throw Error('Complete '+item.label+'.');
@@ -128,15 +165,28 @@ export async function saveImplementationForm(form){
               const linked=p.activities.find(a=>a.id===reference);
               if(!linked||linked.visit_id!==visit.id||linked.site_id!==visit.site_id)throw Error('Activity '+reference+' must exist at this visit and site.');
             }
+            if(item.type==='attachment_refs'&&references.some(reference=>!p.source_links.some(link=>link.id===reference&&link.kind==='local_file')))throw Error('Choose attached original files for '+item.label+'.');
             answers[item.key]={references,original_text:raw};
           }else answers[item.key]=raw;
           observations.push({id:uid('field-result'),activity_id:activityId,parameter:item.label,result_type:'text',value:null,original_text:raw,unit:'',method:'Field form '+template.id+' '+template.version,qa_status:'field_record',notes:''});
         }
       }
-      p.activities.push({id:activityId,visit_id:visit.id,site_id:visit.site_id,kind:activityKind,sample_id:sampleId,collected_at:v('collected_at'),method:'Field form '+template.id+' '+template.version,notes:'',implementation_task_id:taskId,form_response:{catalog_id:this.catalog.id,catalog_version:this.catalog.version,template:clone(template),answers,raw_answers:rawAnswers,recorded_at:new Date().toISOString()}});
+      p.activities.push({id:activityId,visit_id:visit.id,site_id:visit.site_id,kind:activityKind,sample_id:sampleId,collected_at:v('collected_at'),method:'Field form '+template.id+' '+template.version,notes:'',implementation_task_id:taskId,evidence_refs:[...new Set(Object.values(answers).flatMap(answer=>Array.isArray(answer?.references)?answer.references.filter(reference=>p.source_links.some(link=>link.id===reference&&link.kind==='local_file')):[]))],form_response:{catalog_id:this.catalog.id,catalog_version:this.catalog.version,template:clone(template),answers,raw_answers:rawAnswers,recorded_at:new Date().toISOString()}});
       p.observations.push(...observations);this.commitLocal(p,'Structured field activity and original results recorded.');return;
     }
-    if(kind==='source-import'){if(this.dirty||!this.nativePlan)throw Error('Save this plan’s native revision before attaching a native source selection.');await this.queue('implementation.selection.import',{id:this.plan.id,expected_revision:this.plan.revision,source_id:v('source_choice').slice(v('source_choice').indexOf(':')+1),kind:v('source_choice').split(':')[0],...(v('selected_ids')?{selected_ids:list(v('selected_ids'))}:{})});return;}
+    if(kind==='source-import'){
+      if(this.dirty||!this.nativePlan)throw Error('Save this plan’s native revision before attaching a native source selection.');
+      const draft=this.selectionDraft,preview=draft?.preview;
+      if(!preview||draft.loading||draft.choice!==v('source_choice'))throw Error('Read the selected source before choosing its rows.');
+      const selectedIds=[...new Set(new FormData(form).getAll('source_row').map(String))],available=new Set(preview.rows.map(row=>row.id));
+      if(!selectedIds.length)throw Error('Choose at least one original source row to import.');
+      if(selectedIds.some(key=>!available.has(key)))throw Error('The selected rows differ from the current source preview. Read the source again.');
+      if(!/^[a-f0-9]{64}$/.test(preview.source_digest||''))throw Error('The source preview did not return its retained edition. Read the source again.');
+      await this.queue('implementation.selection.import',{id:this.plan.id,expected_revision:this.plan.revision,source_id:preview.source_id,kind:preview.kind,selected_ids:selectedIds,expected_source_digest:preview.source_digest});
+      if(this.gone)return;
+      this.selectionDraft=null;this.selectionPreviewTurn++;
+      this.root.querySelector('dialog[open]')?.close();this.render();return;
+    }
     const row=existing||{id:uid(kind.replaceAll('_','-'))};
     if(kind==='tasks')Object.assign(row,{title:v('title').trim(),candidate_id:v('candidate_id')||null,phase:v('phase'),assignee:v('assignee'),status:v('status'),duration_days:v('duration_days')===''?null:finite(v('duration_days'),'Duration'),depends_on:list(v('depends_on')),progress_pct:finite(v('progress_pct'),'Progress')??0,notes:v('notes'),evidence_refs:row.evidence_refs||[]});
     if(kind==='tasks'){if(v('start_not_before'))row.start_not_before=v('start_not_before');else delete row.start_not_before;if(row.status==='complete')row.progress_pct=100;}
@@ -150,3 +200,48 @@ export async function saveImplementationForm(form){
     if(kind==='source_links'){if(existing)row.label=v('label').trim();else Object.assign(row,{label:v('label').trim(),kind:v('kind'),reference:v('reference')});}
     this.commitLocal(updateRow(this.plan,kind,row));
   }
+export function implementationSourceChoices(){
+    return [...(this.selectionChoices?.conservation_portfolios||[]).map(row=>({choice:'conservation_portfolio:'+row.id,kind:'conservation_portfolio',id:row.id})),...(this.selectionChoices?.community_plans||[]).map(row=>({choice:'community_plan:'+row.id,kind:'community_plan',id:row.id}))];
+  }
+export async function previewImplementationSource(choice){
+    if(!this.native)throw Error('Open this picker in the native workspace containing the original source.');
+    const source=this.sourceChoices().find(row=>row.choice===choice),previous=this.selectionDraft;
+    const draft={choice:source?.choice||'',loading:!!source,preview:null,selected_ids:[],filter:previous?.choice===choice?previous.filter||'':'',error:'',notice:''};
+    this.selectionDraft=draft;
+    const request=++this.selectionPreviewTurn,turn=this.generation,planId=this.plan.id;
+    this.openDialog('source-import');
+    if(!source)return;
+    const current=()=>!this.gone&&turn===this.generation&&this.plan?.id===planId&&request===this.selectionPreviewTurn&&this.selectionDraft===draft&&!!this.root.querySelector('dialog[open] [data-impl-form="source-import"]');
+    try{
+      const result=await this.read('/api/implementation/selection-preview',{kind:source.kind,source_id:source.id});
+      if(!current())return;
+      const preview=result.preview||result,ids=new Set();
+      if(preview.schema!=='upstate.implementation-selection-preview/v1'||preview.kind!==source.kind||preview.source_id!==source.id||!/^[a-f0-9]{64}$/.test(preview.source_digest||'')||!Array.isArray(preview.rows))throw Error('The original source preview is incomplete. Read the saved selection again.');
+      for(const row of preview.rows){
+        if(!row||typeof row.id!=='string'||!row.id||typeof row.label!=='string'||!row.label||ids.has(row.id))throw Error('The original source preview contains an invalid or duplicate row.');
+        ids.add(row.id);
+      }
+      const same=previous?.choice===choice&&previous.preview?.source_digest===preview.source_digest;
+      draft.preview=preview;draft.loading=false;
+      draft.selected_ids=same?(previous.selected_ids||[]).filter(id=>ids.has(id)):preview.rows.filter(row=>row.default_selected===true).map(row=>row.id);
+      if(previous?.preview&&!same)draft.notice='The saved source edition changed. Review its current rows and choose the work to import.';
+      this.openDialog('source-import');
+    }catch(error){
+      if(!current())return;
+      draft.loading=false;draft.error=error?.message||String(error);this.openDialog('source-import');
+    }
+  }
+export function syncImplementationSource(){
+    const form=this.root.querySelector('dialog[open] [data-impl-form="source-import"]'),draft=this.selectionDraft;
+    if(!form||!draft)return;
+    const available=new Set((draft.preview?.rows||[]).map(row=>row.id));
+    draft.selected_ids=[...form.querySelectorAll('input[name="source_row"]:checked')].map(input=>input.value).filter(id=>available.has(id));
+    draft.filter=form.elements.source_filter?.value||'';
+    const query=draft.filter.trim().toLocaleLowerCase();let visible=0;
+    for(const row of form.querySelectorAll('[data-source-row]')){row.hidden=!!query&&!row.dataset.sourceSearch.includes(query);if(!row.hidden)visible++;}
+    const count=form.querySelector('[data-source-selection-count]');if(count)count.textContent=draft.selected_ids.length+' of '+available.size+' rows chosen'+(query?' · '+visible+' visible':'')+'.';
+    const empty=form.querySelector('[data-source-no-selection]');if(empty)empty.hidden=draft.selected_ids.length>0;
+    const noMatches=form.querySelector('[data-source-no-matches]');if(noMatches)noMatches.hidden=visible>0||available.size===0;
+    const submit=form.querySelector('button[type="submit"]');if(submit)submit.disabled=!draft.preview||draft.loading||!!this.pending||draft.selected_ids.length===0;
+  }
+
