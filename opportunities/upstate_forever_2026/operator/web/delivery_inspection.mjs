@@ -6,7 +6,7 @@ const human=value=>String(value||'').replaceAll('_',' ').replaceAll('.',' / ');
 const formatBytes=value=>{let n=Number(value)||0,i=0;const units=['B','KiB','MiB','GiB','TiB'];while(n>=1024&&i<units.length-1){n/=1024;i++;}return n.toLocaleString(undefined,{maximumFractionDigits:i?1:0})+' '+units[i];};
 const safeURL=value=>typeof value==='string'&&/^\/api\/file\/[^?#\s]+$/.test(value)?value:null;
 const button=(action,label,attrs='')=>'<button type="button" data-action="delivery-inspection-'+action+'" '+attrs+'>'+esc(label)+'</button>';
-const groups=[['reports','Scientific reports'],['analysis','Saved scenario analysis'],['economics','Economic edition'],['receiving','Receiving-water results'],['maps','Maps and atlas'],['gis','Physical GIS and metadata'],['archives','Complete archives'],['sources','Sources and methods'],['other','Other original files']];
+const groups=[['reports','Scientific reports'],['analysis','Saved scenario analysis'],['economics','Economic edition'],['receiving','Receiving-water results'],['maps','Maps and atlas'],['gis','GIS datasets and metadata'],['archives','Complete archives'],['sources','Sources and methods'],['other','Other original files']];
 const previewable=path=>/\.(?:html?|pdf)$/i.test(path);
 const canPreview=row=>Boolean(row&&previewable(row.path)&&(!row.fallback||/\.pdf$/i.test(row.path)));
 const groupFor=row=>{
@@ -26,13 +26,14 @@ export function deliveryFileRows(files){
   const keys=list(row.keys).map(String),path=String(row.path||row.filename||'');
   const result={...row,path,key:row.key||path,keys,title:row.title||row.label||row.filename||path,url:safeURL(row.url),preview_url:safeURL(row.preview_url),index};
   result.group=groupFor(result);
+  result.isGIS=/\.(?:tiff?|gpkg|shp|xml|vrt|msk|ovr|tfw|tiff?w|wld|tab|rpb)$/i.test(path)||keys.some(key=>/^files\.gis_(?:dataset|metadata|companion)_/.test(key));
   result.search=[path,result.title,result.sha256,...keys].join(' ').toLowerCase();
   return result;
  }).filter(row=>row.url).sort((a,b)=>a.path.localeCompare(b.path));
 }
 export function deliveryFilePage(files,{query='',group='',page=0,pageSize=50}={}){
  const words=String(query).trim().toLowerCase().split(/\s+/).filter(Boolean);
- const selected=files.filter(row=>(!group||row.group===group)&&words.every(word=>row.search.includes(word)));
+ const selected=files.filter(row=>(!group||(group==='gis'?row.isGIS:row.group===group))&&words.every(word=>row.search.includes(word)));
  const size=[25,50,100,250].includes(Number(pageSize))?Number(pageSize):50;
  const pages=Math.max(1,Math.ceil(selected.length/size));
  const current=Math.min(Math.max(0,Math.trunc(Number(page)||0)),pages-1);
@@ -114,6 +115,12 @@ export function attachDeliveryInspection(host){
    previewControl(atlas,'Preview complete map atlas')+nav('atlas','Open map atlas and selections',row.id)+
    previewControl(economic,'Open retained economic desk')+download(mainArchive,'Download complete delivery ZIP')+download(working,'Download editable workspace')+'</div>'+
    '<p class="note">The linked preview adds navigation to the original HTML while preserving the report content. Companion links open only declared files from this delivery. Downloads retain the original bytes; the complete ZIP retains the offline directory structure.</p>'+
+   '<h3 class="subheading">Editable map datasets</h3><div class="page-actions">'+
+   previewControl(atlas,'Browse map datasets and metadata')+
+   download(match('map_atlas_csv'),'Download map-to-dataset CSV')+
+   download(match('map_atlas_index'),'Download dataset and lineage JSON')+
+   button('gis-files','Show GIS files and metadata')+'</div>'+
+   '<p class="note">Each linked map panel retains its actual GIS dataset and FGDC XML, including signed scenario changes and dimensionless priorities in current deliveries. Download accompanying files beside the GeoTIFF, or use the complete ZIP to keep relative paths intact. The atlas index records units, original grid, valid-support method, selected runs and source lineage.</p>'+
    '<h3 class="subheading">Original analysis and source context</h3>'+
    (links.analysis_id?'<p>'+esc(links.analysis_title||'Saved scenario analysis')+' · <code>'+esc(links.analysis_id)+'</code></p><p class="note">'+esc(links.source_area_count)+' retained analysis areas. Original record SHA256 '+esc(links.analysis_sha256||'Retained with the analysis')+'.</p>':'')+
    '<div class="page-actions">'+nav('analysis','Open saved scenario analysis',links.analysis_id)+nav('watershed-report','Open source watershed report',links.watershed_report_id)+
@@ -128,7 +135,7 @@ export function attachDeliveryInspection(host){
    '<section data-delivery-inspection-preview hidden></section>'+
    '<h3 class="subheading">Retained files</h3><p class="note">'+files.length+' retained original files · '+formatBytes(files.reduce((n,row)=>n+(Number(row.bytes)||0),0))+'. All filters apply to the complete file inventory.</p>'+
    '<div class="filters"><label>Search original files<input type="search" data-delivery-inspection-search value="'+esc(value.display.query)+'" placeholder="Path, label, retained field or SHA256"></label>'+
-   '<label>File group<select data-delivery-inspection-group><option value="">All original files</option>'+groups.map(([id,title])=>'<option value="'+id+'"'+(value.display.group===id?' selected':'')+'>'+esc(title)+' ('+files.filter(row=>row.group===id).length+')</option>').join('')+'</select></label>'+
+   '<label>File group<select data-delivery-inspection-group><option value="">All original files</option>'+groups.map(([id,title])=>'<option value="'+id+'"'+(value.display.group===id?' selected':'')+'>'+esc(title)+' ('+files.filter(row=>id==='gis'?row.isGIS:row.group===id).length+')</option>').join('')+'</select></label>'+
    '<label>Rows per page<select data-delivery-inspection-size>'+[25,50,100,250].map(size=>'<option value="'+size+'"'+(value.display.pageSize===size?' selected':'')+'>'+size+'</option>').join('')+'</select></label></div>'+
    '<div data-delivery-inspection-files></div></section>';
  }
@@ -223,6 +230,13 @@ export function attachDeliveryInspection(host){
   if(action==='page'){
    const step=Number(node.dataset.direction);if(![-1,1].includes(step))throw Error('Choose a previous or next file page.');
    value.display.page+=step;renderFiles(true);return;
+  }
+  if(action==='gis-files'){
+   value.display.group='gis';value.display.query='';value.display.page=0;
+   const group=root?.querySelector('[data-delivery-inspection-group]');
+   const search=root?.querySelector('[data-delivery-inspection-search]');
+   if(group)group.value='gis';if(search)search.value='';
+   renderFiles(true);return;
   }
   if(action==='preview'){showPreview(file(node.dataset.path));return;}
   if(action==='preview-back'){

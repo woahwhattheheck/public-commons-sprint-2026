@@ -121,6 +121,21 @@ def _scale(panel):
             ("<br><span class=\"muted\">" + _text(scale["label"]) + "</span>" if scale.get("label") else ""))
 
 
+def _dataset_links(panel, included):
+    dataset = panel.get("dataset")
+    if not isinstance(dataset, dict):
+        return '<span class="muted">Original raster is retained in the editable workspace for this atlas edition.</span>'
+    raster, metadata = dataset.get("file") or {}, dataset.get("metadata") or {}
+    required = [raster, metadata, *dataset.get("companions", [])]
+    if any(not isinstance(item, dict) or item.get("path") not in included for item in required):
+        return '<span class="muted">Dataset members are unavailable in this captured edition. Open its editable workspace.</span>'
+    links = [_link(raster["path"], "Download GeoTIFF", download=True),
+             _link(metadata["path"], "FGDC metadata XML", download=True)]
+    for item in dataset.get("companions", []):
+        links.append(_link(item["path"], "Companion " + PurePosixPath(item["path"]).name, download=True))
+    return '<div class="actions">' + "".join(links) + '</div><code class="hash">' + _text(raster["path"]) + "</code>"
+
+
 def _sheet(row, atlas, included):
     path = _path(row["file"]["path"])
     if path not in included:
@@ -136,7 +151,10 @@ def _sheet(row, atlas, included):
     for panel in row["panels"]:
         rows.append("<tr><td>" + _text(panel["title"]) + "</td><td>" + _text(panel["units"]) +
                     "</td><td>" + ("Alternative minus baseline" if panel.get("signed") else "Original value") +
-                    "</td><td>" + _scale(panel) + "</td></tr>")
+                    "</td><td>" + _scale(panel) + "</td><td>" + _dataset_links(panel, included) + "</td></tr>")
+    dataset_ids = {panel.get("dataset", {}).get("id") for panel in row["panels"]}
+    dataset_records = [dataset for dataset in (atlas.get("datasets") or {}).get("datasets", [])
+                       if dataset.get("id") in dataset_ids]
     native_sources = [{"panel": panel["title"], "units": panel["units"],
                        "workspace_raster": panel["source_raster"],
                        "display_scale": panel.get("display_scale")} for panel in row["panels"]]
@@ -152,8 +170,9 @@ def _sheet(row, atlas, included):
             _link(path, "Open map PDF") + _link(path, "Download map", download=True) +
             _link(atlas["file"]["path"], "Open atlas at this page", page=row["page"]) +
             '</div><div class="table-wrap"><table><thead><tr><th>Panel</th><th>Physical units / index</th>'
-            '<th>Quantity</th><th>Retained display range</th></tr></thead><tbody>' +
+            '<th>Quantity</th><th>Retained display range</th><th>Editable GIS dataset</th></tr></thead><tbody>' +
             "".join(rows) + "</tbody></table></div>" +
+            _details("Dataset units, support, derivation and original sources", dataset_records) +
             _details("Original native raster and scale", native_sources) +
             _details("Rendered source overlays", row.get("overlays")) +
             _details("Original PDF file", row["file"]) + "</article>")
@@ -267,7 +286,7 @@ def render(state, manifest, *, browser_path=BROWSER_PATH, manifest_path="deliver
                                                                "overlays": source.get("overlays")}) +
             _details("Complete retained source context", source) +
             '</section><section aria-labelledby="files"><h2 id="files">Delivered files</h2>'
-            '<p class="muted">These paths are selected by this delivery manifest. Native workspace raster paths in each sheet identify the retained calculation inside the working archive.</p>'
+            '<p class="muted">These paths are selected by this delivery manifest. Each map panel links its exact GeoTIFF, FGDC metadata and actual companions when captured. Preserve companion filenames beside the raster. Native workspace paths retain the original calculation lineage; map display scales leave dataset values unchanged.</p>'
             '<div class="table-wrap"><table><thead><tr><th>Original package member</th><th>Size</th><th>Open / download</th></tr></thead>'
             '<tbody>' + "".join(file_rows) + "</tbody></table></div></section></main>"
             '<footer>Atlas renderer ' + _text(atlas["version"]) +
