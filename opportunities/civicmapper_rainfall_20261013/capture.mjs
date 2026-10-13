@@ -18,13 +18,14 @@ async function get(url,init={}) {
 }
 async function capture(){
  if(!args.out)throw Error("capture needs --out.");
+ if(args.units && args.units!=="inches")throw Error("The configured 3RWW API returns inches; --units must be inches.");
  let task;
  const taskPath=args.out+".job.json";
  if(args.resume==="yes"){task=await json(taskPath);if(task.schema!=="rainfall-capture-job/v1")throw Error("Unknown capture job.");}
  else{
   const sensors=String(args.sensors||"").split(",").map(x=>x.trim()).filter(Boolean);
   const interval=Number(args.interval||15),product=args.product||"historic15",sensor=args.sensor||"gauge";
-  const metadata={label:args.label||product+" "+args.start,product,sensor_type:sensor,sensors,start:args.start,end:args.end,interval_minutes:interval,units:args.units||"inches",timestamp_label:args["timestamp-label"]||"end",retrieved_at:new Date().toISOString(),source_url:root+"v2/"+sensor+"/"+product+"/"};
+  const metadata={label:args.label||product+" "+args.start,product,sensor_type:sensor,sensors,start:args.start,end:args.end,interval_minutes:interval,units:"inches",timestamp_label:args["timestamp-label"]||"end",retrieved_at:new Date().toISOString(),source_url:root+"v2/"+sensor+"/"+product+"/"};
   R.metadata(metadata);
   if(product==="historic5"&&interval!==5)throw Error("historic5 requires a 5 minute interval.");
   if(interval===5&&product!=="historic5")throw Error("Use historic5 for five-minute data.");
@@ -33,6 +34,7 @@ async function capture(){
   try{await fs.access(taskPath);throw Error("An existing job file is present. Resume it or select a new output path.");}catch(e){if(e.code!=="ENOENT")throw e;}
   await save(taskPath,task);
  }
+ if(task.metadata?.units!=="inches")throw Error("The retained job must record the configured API units as inches.");
  const started=Date.now(),maxMs=Number(args["max-minutes"]||15)*60000;
  if(!Number.isFinite(maxMs)||maxMs<60000)throw Error("max-minutes must be at least one.");
  while(Date.now()-started<maxMs){
@@ -52,8 +54,9 @@ async function capture(){
    try{text=await get(envelope.meta.artifactUrl);}
    catch(e){
     const refreshed=JSON.parse(await get(sameOrigin(task.url),{method:"POST"}));
-    if(refreshed.meta?.artifactUrl){try{text=await get(refreshed.meta.artifactUrl);}catch(e){if(!refreshed.meta?.inlineUrl)throw e;text=await get(sameOrigin(refreshed.meta.inlineUrl));}}
-    else if(refreshed.meta?.inlineUrl)text=await get(sameOrigin(refreshed.meta.inlineUrl));
+    const inlineUrl=refreshed.meta?.inlineUrl||envelope.meta?.inlineUrl;
+    if(refreshed.meta?.artifactUrl){try{text=await get(refreshed.meta.artifactUrl);}catch(e){if(!inlineUrl)throw e;text=await get(sameOrigin(inlineUrl));}}
+    else if(inlineUrl)text=await get(sameOrigin(inlineUrl));
     else throw e;
    }
   }
@@ -77,7 +80,10 @@ async function review(){
  await fs.writeFile(path.join(args.out,"report.html"),R.report(releases,notes));
  await save(path.join(args.out,"summary.json"),{version:R.VERSION,releases:releases.map(x=>({metadata:x.metadata,fingerprint:x.fingerprint,summaries:x.summaries,warnings:x.warnings})),comparison:comparison?{summary:comparison.summary,source_transitions:comparison.sourceTransitions}:null});
  if(comparison)await fs.writeFile(path.join(args.out,"interval-comparison.csv"),R.csv(comparison.rows));
- for(let i=0;i<releases.length;i++)await fs.writeFile(path.join(args.out,"release-"+(i+1)+"-coverage.csv"),R.csv(releases[i].summaries));
+ for(let i=0;i<releases.length;i++){
+  await fs.writeFile(path.join(args.out,"release-"+(i+1)+"-coverage.csv"),R.csv(releases[i].summaries));
+  await fs.writeFile(path.join(args.out,"release-"+(i+1)+"-intervals.csv"),R.csv(R.intervalRows(releases[i])));
+ }
  process.stdout.write("Created review project, HTML report, summaries and CSV exports in "+args.out+"\n");
 }
 try {

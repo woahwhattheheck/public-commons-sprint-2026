@@ -40,7 +40,7 @@ The UI accepts files up to 40 MB. Review windows are limited to one million sele
 
 The capture metadata explicitly specifies the accumulation window's start and end, the interval length, units, and whether provider timestamps label the interval start, interval end, or an explicit start/end range. With end labels, expected observations are (start, end], one per interval. Start labels are shifted to their interval end. Explicit ranges must have the selected interval length.
 
-All timestamps must contain a UTC offset or Z. The software will not silently interpret an ambiguous local time using the operator's browser timezone. Original timestamp strings remain in the capture; comparison normalizes instants to UTC. Millimetres are converted to inches using 25.4 mm/in.
+All timestamps must contain a UTC offset or Z. The software will not silently interpret an ambiguous local time using the operator's browser timezone. Original timestamp strings remain in the capture; comparison normalizes instants to UTC. The configured 3RWW capture command records its provider values as inches and rejects a request to relabel them. Generic imported releases may explicitly use millimetres, which are converted to inches using 25.4 mm/in.
 
 Zero is a valid observation. Null, blank, negative, nonnumeric, and absent observations remain separate categories. The source codes G-0 and N/D indicate unavailable observations and are excluded even when a numeric placeholder is present. Unknown source codes are retained and flagged for interpretation. Identical duplicate observations count once; conflicting duplicates stop review so the source conflict can be resolved.
 
@@ -58,6 +58,7 @@ The second capture is optional. Add --notes notes.txt to include working notes. 
 - report.html — standalone printable review.
 - summary.json — machine-readable coverage, source information, and comparison.
 - release-1-coverage.csv and release-2-coverage.csv — per-sensor coverage.
+- release-N-intervals.csv — each original interval, including explicit absent intervals, original values/timestamps and source codes.
 - interval-comparison.csv — every aligned interval when comparing two releases.
 
 ## Capture format
