@@ -351,3 +351,50 @@ context, NRCS CSV, exact HUC array and classification coverage use their
 source entry and companion reconstruction. The sources in this module join
 that workflow as the independently selectable native NHDPlus stream-order
 and South Carolina freshwater editions.
+
+## Freshwater source context for parcel criteria
+
+Every freshwater intake entry declares its actual `FW` class scope and native
+classification field under `metadata.parcel_criteria`. The maintained parcel
+source profile recognizes this edition as a freshwater classification source.
+The shared SCHydroClass service URI does not cause a freshwater-only edition
+to replace the separate ORW/TN/TPGT source.
+
+A complete physical-domain capture may additionally declare:
+
+~~~json
+{
+  "criteria_coverage": {
+    "method": "provider_intersects_each_original_domain_polygon",
+    "huc12_field": "HUC12",
+    "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6",
+    "vintage": "Original retained model-domain polygon edition"
+  }
+}
+~~~
+
+Use the exact field present in the retained domain. Intake checks the original
+HUC set, every queried polygon, native query count/ID union and selected source
+IDs. It adds a `SOURCE_COVERAGE` vector entry that points to the unchanged original
+domain gzip already retained in the edition. Its exact source reference,
+geometry hash and criterion class scope travel in `parcel-coverage.json`.
+
+The freshwater entry's `metadata.criteria_coverage.source` initially contains
+only its related `source_id`. This explicitly means the same imported source
+collection. The parcel resolver supplies that collection's actual immutable ID;
+a supplied cross-collection reference remains explicit. Export and receive keep
+the original polygon bytes and relative source relationship intact.
+
+`bind_workspace` returns `parcel_criteria_sources.classifications` with real
+collection/source IDs, native fields, `class_scope: ["FW"]`, the original
+attribute filter and, for physical captures, its original coverage binding.
+Pass this object as the `sources.classifications` override to the existing
+parcel-criteria builder. Automatic selection prefers the complete physical
+freshwater context over the publisher-HUC-only freshwater edition.
+
+A parcel with a retained FW intersection is positive. An absent intersection
+can become a complete negative only inside the actually queried coverage.
+Outside that coverage, the existing criterion remains unknown. Publisher-HUC
+captures without the complete physical-domain query retain no inferred polygon
+coverage. Original high-quality, impairment and freshwater sources retain their
+separate class scope and scientific meaning.

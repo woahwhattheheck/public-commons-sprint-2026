@@ -102,7 +102,7 @@ vintage display. It does not infer an acquisition time.
 
 ## Complete retained outputs
 
-- capture.json: ordinary upstate.water-context-capture/v1 descriptor for the
+- capture-criteria.json: ordinary upstate.water-context-capture/v1 descriptor for the
   distinct sc-hydroclass-fw-physical-domain source.
 - comparison/cohorts.json: full publisher, physical, shared, physical-only and
   publisher-only native ID arrays.
@@ -122,3 +122,26 @@ source ID. Bindings from the existing Workspace importer feed Water and Habitat
 Context and parcel criteria selections. The original sc-hydroclass-fw edition
 remains available beside it. Ordinary source ZIP export/receive carries the exact
 native geometry, domain, query and comparison companions into another Workspace.
+
+## Parcel-context edition and an already completed capture
+
+The current companion returns `capture-criteria.json`. This additive descriptor
+selects the same native freshwater features and declares the complete original
+polygon coverage for parcel criteria. An earlier `capture.json` remains intact.
+All original count/ID requests, geometry pages, domain and cohort comparisons
+resume from the same capture directory.
+
+For a capture that already produced a source edition, use a new edition and
+archive name for this added context, such as
+`fw-physical-domain-criteria-edition` and
+`fw-physical-domain-criteria-edition.zip`. The source acquisition directory stays
+the same. With all native requests retained, `--offline` creates this edition
+without new provider requests. Ordinary import returns the complete
+`parcel_criteria_sources.classifications` selector with its actual source
+collection and original coverage source.
+
+The imported source manifest contains the native FW body and an additional
+`SOURCE_COVERAGE` entry backed by the unchanged original model-domain gzip.
+The default source profile selects it as freshwater and retains ORW/TN/TPGT in
+the separate high-quality role. A native criterion evaluated wholly inside this
+captured domain can distinguish a measured absence from missing coverage.
