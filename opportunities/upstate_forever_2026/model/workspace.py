@@ -16,6 +16,7 @@ from .profiles import checked_parameters, inspect_table, scenario_spec
 from .model_selection import (normalize_selection, selected, grid_models, run_models,
                               required_roles, validate_completed_run)
 from .grid_reuse import retain_grid_definition, reuse_grid_inputs
+from .record_catalog import ProjectedFileCache, delivery_summary
 
 class Workspace:
     def __init__(self, root, *, create=False, title="Upper Savannah scientific workspace"):
@@ -27,6 +28,7 @@ class Workspace:
                 if not manifest.exists():
                     atomic_json(manifest, {"schema": SCHEMA, "id": str(uuid.uuid4()),
                                            "title": title, "created_at": now()}, immutable=True)
+        self._delivery_catalog_cache = ProjectedFileCache()
         self.project = read_json(self.root / "workspace.json")
         if self.project.get("schema") != SCHEMA:
             raise ValueError("Select an original Upper Savannah scientific workspace")
@@ -50,6 +52,17 @@ class Workspace:
         return [self._get(kind, p.stem) for p in sorted(folder.glob("*.json"))] if folder.exists() else []
 
     def overview(self):
+        """Return all original records, preserving the complete model API."""
+        return self._overview()
+
+    def operator_overview(self):
+        """Catalogue projection for opt-in live operator polling."""
+        paths = sorted((self.root / "deliveries").glob("*/delivery-state.json"))
+        self._delivery_catalog_cache.retain_paths(paths)
+        rows = [self._delivery_catalog_cache.read(path, delivery_summary) for path in paths]
+        return self._overview(delivery_rows=rows)
+
+    def _overview(self, *, delivery_rows=None):
         return {"project": self.project, "sources": self.sources(),
                 "profiles": self._list("profiles"), "scenarios": self._list("scenarios"),
                 "grids": [read_json(p) for p in sorted((self.root / "grids").glob("*/grid.json"))],
@@ -68,7 +81,38 @@ class Workspace:
                 "spatial_exports": [read_json(p) for p in sorted((self.root / "spatial-exports").glob("*/export.json"))],
                 "observation_comparisons": self._list("observation-comparisons"),
                 "comparisons": [read_json(p) for p in sorted((self.root / "comparisons").glob("*/comparison.json"))],
-                "deliveries": [read_json(p) for p in sorted((self.root / "deliveries").glob("*/delivery-state.json"))]}
+                "deliveries": delivery_rows if delivery_rows is not None else
+                    [read_json(p) for p in sorted((self.root / "deliveries").glob("*/delivery-state.json"))]}
+
+    def retained_item(self, kind, key):
+        """Open one original record without enumerating unrelated workspace data."""
+        immutable = {
+            "sources": "sources", "profiles": "profiles", "scenarios": "scenarios",
+            "observations": "observations", "community_tables": "community-tables",
+            "community_plans": "community-plans", "community_reports": "community-reports",
+            "planning_inventories": "planning-inventories", "portfolios": "portfolios",
+            "portfolio_reports": "portfolio-reports", "spatial_reviews": "spatial-reviews",
+            "customer_reviews": "reviews", "customer_review_responses": "review-responses",
+            "observation_comparisons": "observation-comparisons",
+        }
+        if kind in immutable:
+            return self._get(immutable[kind], key)
+        mutable = {
+            "grids": ("grids", "grid.json"),
+            "runs": ("runs", "run.json"),
+            "scenario_analyses": ("analyses", "summary.json"),
+            "spatial_exports": ("spatial-exports", "export.json"),
+            "comparisons": ("comparisons", "comparison.json"),
+            "deliveries": ("deliveries", "delivery-state.json"),
+        }
+        if kind not in mutable:
+            raise ValueError("Unknown retained record kind: " + str(kind))
+        key = identifier(key)
+        folder, filename = mutable[kind]
+        value = read_json(self.root / folder / key / filename)
+        if value.get("id") != key:
+            raise ValueError("Retained " + kind + " item identity changed")
+        return value
 
     def sources(self):
         return self._list("sources")
