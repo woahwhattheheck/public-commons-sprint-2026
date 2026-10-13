@@ -288,11 +288,15 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       '<p>Complete the retained baseline and at least one alternative on its grid.</p>');
     renderCaseChoices();renderSaved();renderAuthoring();
   }
+  const nativeRunLabel = run => run?.error ? 'Retained run unavailable: '+run.error :
+    (run?.models||[]).map(info=>info.model.toUpperCase()+': '+info.label).join('; ') || 'Producing model version unavailable';
   function renderCaseChoices() {
     const checkList=(rows,field,title)=>'<div><h3>'+title+'</h3>'+rows.map(row=>
       '<label class="rc-check"><input type="checkbox" data-rc-filter="'+field+'" value="'+esc(row.id)+'" '+
       (draft[field]===null||draft[field].includes(row.id)?'checked':'')+'><span>'+esc(row.title)+
-      (row.total_cases===undefined?'':'<small>'+row.complete_cases+' / '+row.total_cases+' cases complete</small>')+'</span></label>').join('')+'</div>';
+      (row.total_cases===undefined?'':'<small>'+row.complete_cases+' / '+row.total_cases+' cases complete</small>')+
+      (row.baseline?'<small>Own baseline '+esc(short(row.baseline_run_id))+' · '+esc(nativeRunLabel(row.baseline))+'</small>':'')+
+      (row.completed_runs?.length?'<small>Completed alternatives: '+esc([...new Set(row.completed_runs.map(nativeRunLabel))].join(' | '))+'</small>':'')+'</span></label>').join('')+'</div>';
     node('[data-rc-case-filters]').innerHTML=profileOptions.length ?
       '<div class="rc-choices">'+checkList(profileOptions,'profile_ids','Parameter profiles')+
       checkList(scenarioOptions,'scenario_ids','Land-cover scenarios')+'</div>' : '';
@@ -365,7 +369,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     finally{if(epoch===generation)fetching=false;}
   }
   async function preview() {
-    const value=selection();
+    const value=selection(), context=viewContext();
     if(draft.mode==='network') {
       const requested=workspace, epoch=generation, signature=JSON.stringify(value);
       status('Following the original watershed links to the selected receiving areas…');
@@ -392,10 +396,15 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     const loaded=await api(endpoint('/api/receptors/plan'),{method:'POST',body:{workspace:requested,selection:value}});
     if(epoch!==generation||workspace!==requested||!frame)return;
     if(JSON.stringify(selection())!==signature){status('The selection changed. Preview its current profile groups.');return;}
+    if(!currentView(context))return;
     planned=loaded;profileOptions=loaded.profiles;scenarioOptions=loaded.scenarios;renderCaseChoices();
-    node('[data-rc-plan]').innerHTML='<h3>Selected profile groups</h3><p>'+loaded.selected_cases+' selected land-cover cases · '+loaded.pending_cases+' native cases progressing.</p><div class="rc-scroll"><table><thead><tr><th>Profile</th><th>Own baseline</th><th>Completed alternatives</th></tr></thead><tbody>'+
-      loaded.groups.map(group=>'<tr><td>'+esc(group.profile_title)+'</td><td><code>'+esc(short(group.baseline_run_id))+'</code></td><td>'+group.alternative_run_ids.length+'</td></tr>').join('')+'</tbody></table></div>';
-    status('The original profile-to-baseline mappings are ready.');
+    const compatibility=loaded.compatible===false?
+      '<p class="rc-error" role="alert">'+esc(loaded.compatibility_error||'The selected native cohort is incompatible.')+'</p><p>Select parameter profiles and land-cover scenarios above, then preview the selected subgroup. Each profile keeps its own baseline.</p>':'';
+    node('[data-rc-plan]').innerHTML='<h3>Selected profile groups</h3>'+compatibility+'<p>'+loaded.selected_cases+' selected land-cover cases · '+loaded.pending_cases+' native cases progressing.</p><div class="rc-scroll"><table><thead><tr><th>Profile</th><th>Own baseline and producing models</th><th>Completed alternatives</th></tr></thead><tbody>'+
+      loaded.groups.map(group=>'<tr><td>'+esc(group.profile_title)+'</td><td><code>'+esc(short(group.baseline_run_id))+'</code><br>'+esc(nativeRunLabel(group.baseline))+'</td><td>'+group.alternative_run_ids.length+
+        '<details><summary>Original scenario executions</summary>'+ (group.alternatives||[]).map(run=>'<p><strong>'+esc(run.scenario_title)+'</strong> · <code>'+esc(short(run.id))+'</code><br>'+esc(nativeRunLabel(run))+'</p>').join('')+'</details></td></tr>').join('')+'</tbody></table></div>';
+    status(loaded.compatible===false?'Select a compatible profile and scenario subgroup; the original choices remain available.':'The original profile-to-baseline mappings are ready.',loaded.compatible===false);
+    return loaded;
   }
   async function submit(action,payload) {
     if(pending&&active(pending.state)){status('The current workspace task is '+pending.state+'.');return;}
@@ -448,7 +457,9 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       '<div class="rc-toolbar">'+(report?'<a class="rc-button" href="'+esc(report)+'" target="_blank" rel="noopener">Printable report</a>':'')+
       '<button type="button" data-receptor-action="export">Export complete results package</button>'+
       '<button type="button" data-receptor-action="reuse">Use this saved selection</button></div>'+
-      '<div data-rc-package>'+downloadLinks(packageFiles)+'</div><p class="rc-note">Quantities describe modeled annual export from contributing land to the stream network. Change is alternative minus baseline on the same valid pixels. Each experiment profile retains its own baseline; receiving areas can share upstream land.</p>';
+      '<div data-rc-package>'+downloadLinks(packageFiles)+'</div><p class="rc-note">Quantities describe modeled annual export from contributing land to the stream network. Change is alternative minus baseline on the same valid pixels. Each experiment profile retains its own baseline; receiving areas can share upstream land.</p>'+
+      (result._native_executions?.length?'<details class="rc-detail"><summary>Original producing models and versions</summary><div class="rc-scroll"><table><thead><tr><th>Native run</th><th>Model</th><th>Version and original basis</th><th>Stage completed</th><th>Stage reuse</th></tr></thead><tbody>'+
+        result._native_executions.map(row=>'<tr><td><code>'+esc(short(row.run_id))+'</code></td><td>'+esc(row.model.toUpperCase())+'</td><td>'+esc(row.label)+'</td><td>'+esc(row.stage_completed_at||'Unavailable')+'</td><td>'+esc(row.reused_from?JSON.stringify(row.reused_from):'Original run')+'</td></tr>').join('')+'</tbody></table></div></details>':'');
     const choices=(field)=>[...new Set(rows.map(row=>row[field]||'').filter(Boolean))].sort();
     node('[data-rc-result-filters]').innerHTML='<div class="rc-controls">'+[
       ['profile','profile_title','Profile'],['scenario','scenario_title','Scenario'],
@@ -604,11 +615,11 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     const pages=Math.max(1,Math.ceil(rows.length/50));page=Math.max(0,Math.min(page,pages-1));
     const shown=rows.slice(page*50,page*50+50);
     node('[data-rc-quantities]').innerHTML='<div class="rc-scroll" tabindex="0"><table><caption>Annual contributing-land export and change</caption><thead><tr>'+
-      (result._kind==='comparison'?'<th>Profile</th>':'')+'<th>Receiving area</th><th>Scenario</th><th>Pollutant</th><th>Baseline</th><th>Alternative</th><th>Change</th><th>Change, %</th><th>Unit</th><th>Compared / selected pixels</th><th>Parameters</th></tr></thead><tbody>'+
+      (result._kind==='comparison'?'<th>Profile</th>':'')+'<th>Receiving area</th><th>Scenario</th><th>Pollutant</th><th>Baseline</th><th>Alternative</th><th>Change</th><th>Change, %</th><th>Unit</th><th>Producing model</th><th>InVEST version</th><th>Compared / selected pixels</th><th>Parameters</th></tr></thead><tbody>'+
       shown.map(row=>'<tr>'+(result._kind==='comparison'?'<td>'+esc(row.profile_title)+'</td>':'')+
       '<td>'+esc(row.receptor_title)+'</td><td>'+esc(row.scenario_title)+'</td><td>'+esc(metricName(row.pollutant))+'</td>'+
       ['common_baseline_export','common_alternative_export','alternative_minus_baseline','change_percent'].map(key=>'<td class="rc-number">'+esc(number(row[key]))+'</td>').join('')+
-      '<td>'+esc(row.unit)+'</td><td>'+esc(number(row.common_valid_cells))+' / '+esc(number(row.selected_cells))+'</td><td>'+esc(row.profile_changed?'Profile differs':'Same profile')+'</td></tr>').join('')+
+      '<td>'+esc(row.unit)+'</td><td>'+esc(row.native_model?.toUpperCase()||'—')+'</td><td>'+esc(row.native_version||'—')+'</td><td>'+esc(number(row.common_valid_cells))+' / '+esc(number(row.selected_cells))+'</td><td>'+esc(row.profile_changed?'Profile differs':'Same profile')+'</td></tr>').join('')+
       '</tbody></table></div><div class="rc-toolbar"><button type="button" data-receptor-action="previous" '+(page===0?'disabled':'')+'>Previous</button><span>'+rows.length+' matching rows · Page '+(page+1)+' of '+pages+'</span><button type="button" data-receptor-action="next" '+(page+1>=pages?'disabled':'')+'>Next</button></div>';
   }
   function renderRanges() {
@@ -630,7 +641,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       const prefix='receptor-inventories/'+group.inventory_id+'/';
       const files=(result._downloads||[]).filter(file=>file.label?.startsWith(prefix));
       const report=ticketURL(result._profile_reports?.[prefix+'index.html']);
-      const named=files.map(file=>({...file,label:({'contributing-areas.gpkg':'Editable GeoPackage','memberships.csv':'Original HUC memberships','scenario-exports.csv':'Physical quantities','inventory.json':'Inventory record','network.json':'Original network'}[file.filename]||file.filename)}));
+      const named=files.map(file=>({...file,label:({'contributing-areas.gpkg':'Editable GeoPackage','memberships.csv':'Original HUC memberships','scenario-exports.csv':'Physical quantities','inventory.json':'Inventory record','network.json':'Original network','native-execution.json':'Original producing stages and output bindings'}[file.filename]||file.filename)}));
       return '<article><h4>'+esc(group.profile_title)+'</h4><p>'+(group.areas?.length||0)+' receiving areas · '+esc((group.pollutants||[...new Set((group.scenario_exports||[]).map(row=>row.pollutant))]).map(metricName).join(', '))+'</p>'+
         (report?'<p><a href="'+esc(report)+'" target="_blank" rel="noopener">Open area report</a></p>':'')+
         '<p class="rc-download-links">'+downloadLinks(named.filter(file=>!['index.html','result.json'].includes(file.filename)))+'</p></article>';
@@ -1069,7 +1080,14 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     if(action==='native-run')return openItem('runs',target.dataset.id);
     if(action==='refresh')return loadCatalog();
     if(action==='plan'){applyPendingAuthoring();return preview();}
-    if(action==='build'){applyPendingAuthoring();return submit(draft.mode==='experiment'?'receptor.experiment.build':draft.mode==='network'?'receptor.network.build':'receptor.inventory.build',{selection:selection()});}
+    if(action==='build'){
+      applyPendingAuthoring();const context=viewContext();
+      if(draft.mode==='experiment'){
+        const check=await preview();
+        if(!currentView(context)||!check||check.compatible===false)return;
+      }
+      return submit(draft.mode==='experiment'?'receptor.experiment.build':draft.mode==='network'?'receptor.network.build':'receptor.inventory.build',{selection:selection()});
+    }
     if(action==='author-start')return beginAuthoring();
     if(action==='author-source')return openResult('network',draft.area_authoring.network_id);
     if(action==='author-new')return editArea(null);

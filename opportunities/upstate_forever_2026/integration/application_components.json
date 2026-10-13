@@ -1126,13 +1126,43 @@
       ]
     },
     "receptors": {
-      "title": "receptors",
+      "title": "Source-water areas, native comparison and original-domain receiving",
       "paths": [
-        "operator/extensions/receptors.json"
+        "model/RECEPTORS.md",
+        "model/RECEPTOR_EXPERIMENTS.md",
+        "model/RECEPTOR_NETWORK.md",
+        "model/RECEPTOR_PROGRAMMES.md",
+        "model/RECEPTOR_SCENARIOS.md",
+        "model/receptor_cli.py",
+        "model/receptor_execution.py",
+        "model/receptor_experiment_cli.py",
+        "model/receptor_experiments.py",
+        "model/receptor_network.py",
+        "model/receptor_network_cli.py",
+        "model/receptor_programme_cli.py",
+        "model/receptor_programmes.py",
+        "model/receptor_scenario_cli.py",
+        "model/receptor_scenarios.py",
+        "model/receptors.py",
+        "operator/RECEPTORS_OPERATOR.md",
+        "operator/extensions/receptors.json",
+        "operator/receptor_operator.py",
+        "operator/web/receptors.css",
+        "operator/web/receptors.mjs",
+        "source/receptor-profiles/utility-focus-20261012.json",
+        "source_tools/ORIGINAL_SOURCE_WATER_RECEIVING.md",
+        "source_tools/receive_original_source_water.py"
       ],
       "requires": [
         "core"
-      ]
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "application_base": "653e1811502e090793b6b54f52e280b429e8f827",
+        "native_execution_pr": 3304,
+        "lifecycle_pr": 3281,
+        "edition": "source-water-compatible-cohort-20261013"
+      }
     },
     "regional-soil": {
       "title": "regional soil",

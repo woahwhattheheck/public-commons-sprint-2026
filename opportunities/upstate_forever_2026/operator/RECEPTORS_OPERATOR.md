@@ -33,6 +33,50 @@ The form retains its draft and pending operation identity for each workspace.
 Workspace changes invalidate in-flight browser reads. State updates preserve
 the current form, selected result and filters.
 
+## Selecting a compatible native cohort
+
+The experiment preview always exposes the original parameter profiles and
+land-cover scenarios for a valid experiment selection. Each profile shows its
+own retained baseline, completed alternatives and the native model versions
+that produced those runs. The version label distinguishes completed-stage
+runtime evidence, observed run runtime and the requested version retained by
+an older run.
+
+If the selected completed cohort has incompatible native versions, models
+or physical output units, the preview shows the actual compatibility
+reason beside these controls. Select a compatible profile/scenario subgroup
+and preview again. Each selected profile keeps its original baseline. Building
+rechecks the current selection before queueing it; the engine repeats strict
+native execution validation when it builds the retained result.
+
+Run and preview pollutant labels follow each run's explicit model selection.
+An unrelated output left in a run directory does not add that model to its
+comparison cohort. Saved native products expose producing-run/model/version
+rows, the complete native-execution JSON and original quantity CSVs with their
+native model/version fields. These downloads retain the original execution
+binding, including requested, observed and completed-stage provenance where
+available.
+
+The browser keeps completion handling attached to the exact mounted desk,
+Workspace and task identity. An older completion cannot clear a newer pending
+operation after the desk is remounted in the same Workspace.
+
+## Complete application component
+
+The maintained `receptors` component in
+`integration/application_components.json` enumerates all 24 source-water
+engine, CLI, guide, operator, original profile and source-receiving files,
+including `model/receptor_execution.py`. Its `core` dependency remains the
+existing complete scientific application. The cumulative installer preserves
+the complete supplied application tree and inspects local imports and
+extension dependencies; this inventory makes the source-water family explicit
+within that existing process.
+
+For an equipped receiver, use the current complete application and
+`source_tools/ORIGINAL_SOURCE_WATER_RECEIVING.md`. The original 217-feature
+domain and source-water Workspace receiving operation retains its original
+source identity, network product, prepared areas and portable backup.
+
 ## Original watershed connections
 
 Select the original vector source already retained in the workspace. The
