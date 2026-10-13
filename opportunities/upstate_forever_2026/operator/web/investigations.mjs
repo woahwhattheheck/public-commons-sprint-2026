@@ -1,3 +1,4 @@
+import {createLineageNavigator} from './investigation_lineage.mjs';
 
 /** Investigations in the original authenticated Upper Savannah operator. */
 const json = value => JSON.stringify(value);
@@ -406,6 +407,7 @@ export function attachInvestigations(host) {
  const failure=error=>notice(error?.message||String(error));
  const client=createInvestigationClient({api:host.api,getWorkspace:()=>workspaceId(host.getState()),storage:host.storage,
   randomUUID:host.randomUUID,onNotice:notice,onChange:state=>{latest=state;if(root && state.workspace===workspace)renderData(state);}});
+ const lineage=createLineageNavigator({host,onNotice:notice,onSelectRefs:refs=>client.selectSources(refs),onOpenCollection:()=>show('sources')});
  const field=(label,id,type='input',value='')=>{const wrap=el('label',label),n=el(type);nodes[id]=n;n.dataset.intelligenceField=id;
   if(type==='input')n.type='text';if(type==='textarea')n.rows=4;n.value=draft.fields?.[id]??value;wrap.append(n);return wrap;};
  const section=(name,title)=>{const node=el('section',null,'intelligence-panel');node.id='intelligence-panel-'+name;node.dataset.panel=name;
@@ -464,7 +466,7 @@ export function attachInvestigations(host) {
    const rows=inventory[name]||[];let count=0;
    for(const row of rows){if(term&&!json(row).toLowerCase().includes(term))continue;count++;
     const b=button('',()=>{selected={kind,id:row.id};nodes.selection.textContent=resourceLabel(row);remember();renderResources(state);});
-    b.className='intelligence-resource';b.setAttribute('aria-pressed',String(selected?.kind===kind&&selected?.id===row.id));
+    b.className='intelligence-resource';b.dataset.resourceKind=kind;b.dataset.resourceId=row.id;b.setAttribute('aria-pressed',String(selected?.kind===kind&&selected?.id===row.id));
     b.append(el('strong',resourceLabel(row)),el('small',[row.model||row.kind, row.status||row.state].filter(Boolean).join(' · ')||row.id));
     nodes.resources.append(b);
    }
@@ -675,7 +677,7 @@ export function attachInvestigations(host) {
     results.map(([name,m])=>[name,m.units,m.baseline_total,m.alternative_total,m.delta,m.reduction,m.relative_change_pct,m.paired_cells,m.coverage_fraction])));
    else card.append(el('p','No retained metrics for this case on the original programme record.','intelligence-muted'));
    if(originalId(item.run_id)&&execution?.state!=='unprepared')
-    card.append(button('Open native run',()=>host.openItem('runs',item.run_id)));
+    card.append(button('Open native run',()=>host.openItem('runs',item.run_id)),button('Open input lineage',async()=>{show('analyze');await lineage.open({run_id:item.run_id});}));
    if((execution?.stages||[]).length)card.append(dataTable(['Native model','Execution','Source run'],
     execution.stages.map(stage=>[stage.model,stage.mode,stage.source_run_id||'This run'])));
    card.append(details('Original case and native execution',{case:item,native_execution:execution||null}));target.append(card);
@@ -766,7 +768,7 @@ export function attachInvestigations(host) {
   if(state.collection){const at=rows.findIndex(row=>row.id===state.collection.id);if(at>=0)rows[at]=state.collection;else rows.push(state.collection);}
   if(!rows.length)nodes.sourceExports.append(el('p','Exported source collections remain with this investigation and can be reopened here.','intelligence-muted'));
   for(const record of rows){
-   const article=el('article',null,'intelligence-export');article.append(el('h3',record.title),el('p',displayTime(record.created_at)));
+   const article=el('article',null,'intelligence-export');article.dataset.collectionId=record.id;article.append(el('h3',record.title),el('p',displayTime(record.created_at)));
    article.append(metrics([['Selected records',record.selected_records],['Files with companions',record.copied_files],['Original bytes',record.copied_bytes]]));
    if(record.files){
     for(const file of record.files){const link=downloadLink(file);if(link)article.append(link,el('small',displayNumber(file.bytes)+' bytes · SHA-256 '+file.sha256));}
@@ -882,8 +884,8 @@ export function attachInvestigations(host) {
    if(!refs.length)throw Error('This resource has no registered source files. Refresh the originals.');
    client.selectSources(refs);show('sources');
   });
-  selectedRow.append(nodes.selection,inspectButton,addSources);analyze.append(selectedRow,el('p','Analysis covers the complete original file and retains its source identity, coverage and units.','intelligence-muted'));
-  nodes.result=el('div');analyze.append(nodes.result);
+  selectedRow.append(nodes.selection,inspectButton,addSources,button('Open input lineage',()=>lineage.openResource(selected,latest),'intelligence-lineage-open'));analyze.append(selectedRow,el('p','Analysis covers the complete original file and retains its source identity, coverage and units.','intelligence-muted'));
+  nodes.result=el('div');nodes.lineage=el('section',null,'intelligence-plan');nodes.lineage.dataset.intelligenceLineage='true';analyze.append(nodes.result,nodes.lineage);
   const compare=el('form',null,'intelligence-form');compare.append(el('h3','Compare original files'),field('Baseline / observed file','baseline','select'),field('Candidate / predicted file','candidate','select'),field('Comparison','comparison','select'));
   selectOptions(nodes.comparison,[{value:'raster_compare',label:'Aligned raster cells'},{value:'table_compare',label:'Exact-key observed / predicted rows'}]);
   nodes.tableFields=el('div',null,'intelligence-form-group');nodes.tableFields.append(field('Pairing columns, separated by commas','keys','input','date'),field('Observed column','compareObserved','input','observed_sediment'),field('Predicted column','comparePredicted','input','predicted_sediment'));
@@ -943,12 +945,12 @@ export function attachInvestigations(host) {
  async function mount(node,state=host.getState()){
   detach();root=node;workspace=workspaceId(state);epoch++;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastDiagnostic=lastProgramme=lastNativeTask=lastSubmission='';
   latest=client.snapshot();draft=clone(latest.draft||{fields:{}});panel=draft.panel||'analyze';selected=clone(draft.selected||null);
-  build();renderData(latest);await client.refresh(workspace);
+  build();renderData(latest);await Promise.all([client.refresh(workspace),lineage.mount(nodes.lineage,workspace)]);
  }
  function update(state=host.getState()){
   if(!root || workspace!==workspaceId(state))return;
   if(!refreshInFlight){refreshInFlight=client.acceptState(state).catch(failure).finally(()=>refreshInFlight=null);}
  }
- function detach(){if(root&&workspace)remember();epoch++;root=null;workspace=null;selected=null;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastDiagnostic=lastProgramme=lastNativeTask=lastSubmission='';for(const key of Object.keys(nodes))delete nodes[key];}
+ function detach(){lineage.detach();if(root&&workspace)remember();epoch++;root=null;workspace=null;selected=null;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastDiagnostic=lastProgramme=lastNativeTask=lastSubmission='';for(const key of Object.keys(nodes))delete nodes[key];}
  return {mount,update,detach,client,openForDiagnostic};
 }

@@ -14,6 +14,12 @@ import subprocess
 import tempfile
 
 FILES = (
+    "model/scenario_mask_sources.py",
+    "operator/intelligence_lineage.py",
+    "operator/web/investigation_lineage.mjs",
+    "operator/INPUT_LINEAGE.md",
+    "receiving/eco_intelligence/receive_input_lineage.py",
+    "receiving/eco_intelligence/receive_input_lineage.mjs",
     "SCIENTIFIC_CATALOG.md",
     "install_intelligence.py",
     "install_intelligence_operator.py",
@@ -56,6 +62,7 @@ KNOWN_PREDECESSORS = {
         "bab8bfcd3c8e3fde60f7ff66f7108c6bf1dafeadfdd3c64c9b6217ebf58273e8"
     ],
     "install_intelligence_operator.py": [
+        "f830626506fbeba85bb9ce41ee277f0dac04faea547cfecbb85ac892a8877439",
         "07452e2eb484c2ec76ceebe5a38c1702679e96d06761c07aa58fff0a68f0dd52",
         "17b174dd42cdd4e8f9076139ea7c474099c4e2e991b492fd195aceaded443b0d",
         "1db81965622ea7d852f69dda6cbcf5a18e4c8b27a3c05e67b3c805ed901d2e57",
@@ -122,6 +129,7 @@ KNOWN_PREDECESSORS = {
         "fd86e59a6223fb0671a5cff79c49a3ee945d4e5b19d3ce934d8b7c2458651d9b"
     ],
     "operator/extensions/investigations.json": [
+        "4409ba89d3ba1e3613792b03451567257f27145c0ca1de6aa74b3bcf32eba4c8",
         "13e05713869e3bf075a943fb337bbc4c789dc33dc113a7be09c9255b3f3c4485",
         "156e78e3c71b3434b46d8a643025bdf63184f7a73fbc4516c90daaa618436de9",
         "21454e5a8cc1cc54d63e78ea41436bc5773bcd581af1e417df197cdd2f56ba5a",
@@ -138,6 +146,7 @@ KNOWN_PREDECESSORS = {
         "3a2a458e9e3fd9bc20d8222a8c6fbfcf00b18bade91ceb6b136d3d8be598021f"
     ],
     "operator/intelligence.py": [
+        "28479fea1a50b4e5569f785d129fa0578fe1b531190e44def35bfe6af0578efc",
         "13a62bb1467352c5dcb1a61a0bd3d8dea0a2bc478be910383fdf0c3f2c845748",
         "1b99431e21436c4e2c2e7b31aa10a0420749079e4a1c0c25a24321b8e51ab914",
         "26a3775a65df019ee6b6123ec6396154446987ba4e58aafba27459464d8b56d4",
@@ -172,6 +181,7 @@ KNOWN_PREDECESSORS = {
         "561df37cbe5658556c987ba39479a843aeda129541fc80200adc67762ac7e8e5"
     ],
     "operator/science_catalog.py": [
+        "a365baa72d963f0d28757b35e0435daed6aa56e20200015cf41044414860a097",
         "a365baa72d963f0d28757b35e0435daed6aa56e20200015cf41044414860a097"
     ],
     "operator/web/experiment_diagnostics.css": [
@@ -197,6 +207,7 @@ KNOWN_PREDECESSORS = {
         "d65d94a33a0733dfe1ac1d5ebfb1379a5f9f25da3a621e6c7a17bbc7fa97dd9c"
     ],
     "operator/web/investigations.mjs": [
+        "4e254032db659e0ea5930281801d4622552505063b04ebde1cf3b082f7ed5d68",
         "161d4ad63f80abfbcba08c44eab3f2113e078d1958015d193ae88672a36ef838",
         "30813b0c7056d9add3866af9eed493049d6c4bbb0ac794d510c43f98aba77099",
         "552f04414f38897cd18de20edfef52db273b26c4b9f146c04c3a7e01c276bf01",
@@ -331,6 +342,10 @@ def install(application, source_root, dry_run=False):
         with tempfile.TemporaryDirectory(prefix="investigations-source-") as folder:
             script=Path(folder)/"investigations.mjs"
             script.write_bytes(after["operator/web/investigations.mjs"])
+            check=subprocess.run([node,"--check",str(script)],capture_output=True,text=True,timeout=45)
+            if check.returncode:raise ValueError(check.stderr)
+            script=Path(folder)/"investigation_lineage.mjs"
+            script.write_bytes(after["operator/web/investigation_lineage.mjs"])
             check=subprocess.run([node,"--check",str(script)],capture_output=True,text=True,timeout=45)
             if check.returncode:raise ValueError(check.stderr)
             script=Path(folder)/"experiments.mjs"

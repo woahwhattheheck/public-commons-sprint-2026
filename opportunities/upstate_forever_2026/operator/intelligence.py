@@ -23,6 +23,7 @@ from eco_intelligence.common import IntelligenceError
 from eco_intelligence.schemas import Action, Inspect, SessionCreate
 from eco_intelligence.report import report as investigation_html
 from intelligence_collections import CollectionExports
+from intelligence_lineage import InvestigationLineage, OPERATIONS as LINEAGE_READS
 
 ACTIONS = frozenset({
     "intelligence.session.create", "intelligence.diagnostic.open",
@@ -32,7 +33,7 @@ ACTIONS = frozenset({
 })
 READS = frozenset({"catalog", "session", "evidence", "plan", "export",
                    "native-task", "diagnostic", "experiment",
-                   "collection_sources", "collection"})
+                   "collection_sources", "collection", *LINEAGE_READS})
 SESSION_ID = re.compile(r"^(?:[0-9a-f]{32}|[0-9a-f]{64})$")
 EVIDENCE_ID = re.compile(r"^E[0-9a-f]{24}$")
 RECEIPT_SCHEMA = "upstate.intelligence-operator-receipt/v1"
@@ -211,6 +212,7 @@ class IntelligenceFeature:
                             "The Workspace binding must expose " + method + "(workspace_key).", 503)
         self.integration = integration
         self.collections = CollectionExports(operator)
+        self.lineage = InvestigationLineage(operator)
 
     def _engine(self, workspace):
         self.operator.ws(workspace)
@@ -406,6 +408,8 @@ class IntelligenceFeature:
                     "actions": ["analyze_collection", *(
                         name for name in ("run_job", "ensemble", "calibration") if name in methods)],
                 }
+            if operation in LINEAGE_READS:
+                return self.lineage.read(workspace, engine.repo, operation, value)
             if operation == "collection_sources":
                 return self.collections.sources(workspace, engine.repo)
             if operation == "collection":

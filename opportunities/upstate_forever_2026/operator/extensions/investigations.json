@@ -6,7 +6,8 @@
   "order": 65,
   "assets": [
     "investigations.mjs",
-    "investigations.css"
+    "investigations.css",
+    "investigation_lineage.mjs"
   ],
   "requires_actions": [
     "run.start"
@@ -161,6 +162,45 @@
           "GET"
         ],
         "operation": "collection",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/lineage",
+        "methods": [
+          "GET"
+        ],
+        "operation": "lineage",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/lineage-source",
+        "methods": [
+          "GET"
+        ],
+        "operation": "lineage-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/intelligence/lineage-file",
+        "methods": [
+          "GET"
+        ],
+        "operation": "lineage-file",
         "handler": "read",
         "args": [
           "workspace_key",
