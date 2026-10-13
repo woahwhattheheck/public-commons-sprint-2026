@@ -7,7 +7,6 @@ import re
 from .common import digest, file_digest, identifier, read_json, relative_file
 from .native_execution import inspect_execution
 from .native_worker import identity_matches
-from .parameter_views import DEFAULT_VIEWS, _study_active, _bind_case
 
 SCHEMA = "upstate.parameter-case-console/v1"
 
@@ -272,6 +271,7 @@ def read_run(workspace, run_id, *, attempt_id=None, stream="native",
 
 def read(workspace, study_id, run_id, **options):
     """Read one exact saved study case without changing its original state."""
+    from .parameter_views import DEFAULT_VIEWS, _study_active, _bind_case
     study_id, run_id = identifier(study_id), identifier(run_id)
     study, matches, context = DEFAULT_VIEWS.case_context(workspace, study_id, run_id)
     cases = [{name: case.get(name) for name in ("id", "label", "run_id", "profile_id", "overrides")}
