@@ -262,7 +262,7 @@ UNCERTAINTY_TITLES = {
 }
 
 
-REVIEW_POLICY = ("sandbox allow-downloads; default-src 'none'; style-src 'unsafe-inline'; "
+REVIEW_POLICY = ("sandbox allow-downloads allow-same-origin; default-src 'none'; style-src 'unsafe-inline'; "
                  "img-src data:; object-src 'none'; base-uri 'none'; form-action 'none'; "
                  "frame-ancestors 'self'")
 

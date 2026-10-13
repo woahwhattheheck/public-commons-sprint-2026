@@ -2,7 +2,7 @@
 import {createMerchantWorkspaceRuntime} from '../../fhir_eltss/connected/runtime.mjs';
 import {gravityReferralNativeRoute,gravityReferralUploadRoute} from '../../fhir_referral/connected/runtime.mjs';
 import {HumanServicesDirectoryConnection} from './connection.mjs';
-import {humanServicesDirectoryMerchantTools,directoryBodyRoutes,directoryNativeContract,directorySourceContract,directoryConformanceContract,directoryOperatingPlansContract,directoryOperatingReturnsContract,directoryCorrectionsContract,
+import {humanServicesDirectoryMerchantTools,directoryBodyRoutes,directoryNativeContract,directorySourceContract,directoryConformanceContract,directoryOperatingPlansContract,directoryOperatingReturnsContract,directoryCorrectionsContract,directoryCorrectionWorksheetsContract,
   validateHumanServicesDirectoryArguments,nativeInputActions,directoryForeignKeyQueries} from './catalog.mjs';
 import {EXPORT_SCHEMA,RESULT_SCHEMA,MANIFEST_NAME,parseHumanServicesDirectoryExport,checked,SHA} from './contracts.mjs';
 export {humanServicesDirectoryMerchantTools} from './catalog.mjs';
@@ -18,6 +18,15 @@ function filename(member,fallback){
     value:fallback;
 }
 export function humanServicesDirectoryNativeRoute(action,args){
+  if(action==='directory_correction_worksheet_rows')return {method:'GET',
+    target:query(path(args.collection,args.recordId,'rows'),{offset:args.offset,limit:args.limit,rowKey:args.rowKey,state:args.state})};
+  if(action==='directory_correction_worksheet_document')return {method:'GET',
+    target:path('correctionWorksheets',args.worksheetId,'document')};
+  if(action==='directory_correction_worksheet_file')return {method:'GET',
+    target:path(args.collection,args.recordId,'files',args.fileKind),kind:'directory-export-file',
+    filename:'Directory_Worksheet_'+args.recordId+'_'+args.fileKind+
+      (['rows','changes','decisions'].includes(args.fileKind)?'.jsonl':'.json')};
+
   if(action==='directory_correction_rows')return {method:'GET',
     target:query(path(args.collection,args.recordId,'rows'),{offset:args.offset,limit:args.limit})};
   if(action==='directory_correction_file')return {method:'GET',
@@ -113,11 +122,16 @@ export function humanServicesDirectoryUploadRoute(kind,args,upload,options){
     checked(args.importProfileId,SHA,'saved directory import profile');
     return {method:'PUT',target:path('imports',args.importProfileId,'content')};
   }
+  if(kind==='directory-correction-worksheet-return'){
+    checked(args.importId,SHA,'saved worksheet import');
+    return {method:'PUT',target:path('correction-worksheets','imports',args.importId,'content')};
+  }
   return gravityReferralUploadRoute(kind,args,upload,options);
 }
 export const MerchantHumanServicesDirectory=createMerchantWorkspaceRuntime({
   Connection:HumanServicesDirectoryConnection,tools:humanServicesDirectoryMerchantTools,
   validateArguments:validateHumanServicesDirectoryArguments,inputActions:nativeInputActions,
+  nativeJsonInputLimits:Object.fromEntries(Object.keys(nativeInputActions).filter(action=>action.startsWith('directory_correction_')).map(action=>[action,33554432])),
   routeFor:humanServicesDirectoryNativeRoute,uploadRoute:humanServicesDirectoryUploadRoute,
   configKey:'humanServicesDirectory',exportNamespace:'human-services-directory',
   exportSchema:EXPORT_SCHEMA,resultSchema:RESULT_SCHEMA,manifestName:MANIFEST_NAME,
@@ -127,16 +141,19 @@ export const MerchantHumanServicesDirectory=createMerchantWorkspaceRuntime({
     handoff_import:'handoff',artifact_import:'artifact',referral_workspace_import:'workspace',
     referral_handoff_import:'referral-handoff',referral_published_examples_import:'published-examples',
     directory_source_import:'directory-source',directory_workspace_import:'workspace',
-    directory_handoff_import:'directory-handoff'},
+    directory_handoff_import:'directory-handoff',directory_correction_worksheet_receive:'directory-correction-worksheet-return'},
   receivingKinds:{source:'source-packet',packet:'dataset-packet',workspace:'workspace-packet',
     handoff:'handoff-packet',artifact:'artifact-file','referral-handoff':'referral-handoff-packet',
-    'directory-source':'directory-source-file','directory-handoff':'directory-handoff-packet'},
+    'directory-source':'directory-source-file','directory-handoff':'directory-handoff-packet',
+    'directory-correction-worksheet-return':'directory-export-file'},
   schemaMetadata:{
     nativeDirectory:'stellar-forge.human-services-directory.v1',
     directory:directoryNativeContract,source:directorySourceContract,conformance:directoryConformanceContract,
     operatingPlans:directoryOperatingPlansContract,
     operatingReturns:directoryOperatingReturnsContract,
     corrections:directoryCorrectionsContract,
+    correctionWorksheets:directoryCorrectionWorksheetsContract,
+    worksheetSemantics:'Original selected rows stay immutable. A complete returned file is retained before typed field comparison. Every change needs one explicit review decision; a prepared correction plan does not preview or accept itself. Omitted rows make no proposal. Full original files remain available above the page budget.',
     correctionSemantics:'Exact original HSDS row/resource/member hashes bind ordered JSON-pointer or physical CSV edits. Original bytes remain retained. Preview produces complete derived sources, an immutable candidate edition and full comparison; acceptance records that exact candidate without replacing a mutable head or writing to a provider.',
     foreignKeySemantics:'Only declarations in the selected immutable HSDS tabular edition are evaluated. Complete outcomes, candidates, matches and coverage remain retained. Existence can pass while resolution is ambiguous; original null markers, physical absence and values stay distinct. Earlier seven-file assessments remain exact and do not gain inferred relationships.',
     operatingPlanSemantics:'The unchanged original OperatingPlan owns full revisions, exact-prefix receiving, copy and registration comparison. Prepared records retain the original complete basis and command catalogue; accepting a preview saves its exact reviewed document. Steps record human procedures and do not execute native commands.',

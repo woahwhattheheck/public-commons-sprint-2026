@@ -2,13 +2,14 @@
   "schema": "upstate.operator-extension/v1",
   "id": "calibration",
   "title": "Calibration and validation",
-  "version": "7",
+  "version": "7+source-design1",
   "order": 65,
   "assets": [
     "calibration.mjs",
     "calibration.css",
     "calibration_maps.mjs",
-    "calibration_review.mjs"
+    "calibration_review.mjs",
+    "calibration_design.mjs"
   ],
   "backend": {
     "module": "calibration",

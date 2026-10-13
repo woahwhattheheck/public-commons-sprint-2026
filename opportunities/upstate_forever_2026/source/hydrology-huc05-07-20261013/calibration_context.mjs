@@ -1,7 +1,7 @@
 /** Comparable discharge context from the retained A74F original USGS records.
  * Uses the existing observed-hydrology numerical conventions without changing its dated edition.
  */
-export function calibrationBuild(records, manifest, inventory) {
+function dischargeSource(records, manifest, inventory) {
   const DAY=86400000, CFS_TO_CMS=0.028316846592, SQMI_TO_M2=2589988.110336;
   const selected=manifest.selection.selected_series, bySite=new Map(), metadata=new Map(inventory.map(r=>[r.site_no,r]));
   const selectedKeys=new Set(selected.map(r=>r.site_no+"/"+r.ts_id)), seen=new Set();
@@ -59,6 +59,11 @@ export function calibrationBuild(records, manifest, inventory) {
       source_huc8:meta.huc_cd,absent_date_ranges:ranges(absent),
       non_numeric_date_ranges:ranges(all.filter(r=>r.value_cfs===null).map(r=>r.date))};
   };
+  return {selected,metadata,bySite,summarize,q,flags,CFS_TO_CMS,SQMI_TO_M2};
+}
+
+export function calibrationBuild(records, manifest, inventory) {
+  const {selected,metadata,summarize,q,flags,CFS_TO_CMS,SQMI_TO_M2}=dischargeSource(records,manifest,inventory);
   const annual=[],monthly=[],study=[],context=[];
   for(const series of selected){
     for(let y=Number(manifest.period.start.slice(0,4));y<=Number(manifest.period.end.slice(0,4));y++){
@@ -118,4 +123,140 @@ export function calibrationBuild(records, manifest, inventory) {
     {path:"derived/calibration_stations_nad83.geojson",text:json({type:"FeatureCollection",crs:{type:"name",properties:{name:"EPSG:4269"}},features})}
   ];
   return {files,coverage,annual,monthly,study,context};
+}
+
+
+/** Exact hydrology support for original observation periods. End dates are exclusive. */
+export function calibrationPeriodSupport(records, manifest, inventory, binding) {
+  const src=dischargeSource(records,manifest,inventory);
+  const DAY=86400000;
+  const date=(value,label)=>{
+    if(typeof value!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(value))throw Error(label+" must be YYYY-MM-DD");
+    const n=Date.parse(value+"T00:00:00Z");
+    if(!Number.isFinite(n)||new Date(n).toISOString().slice(0,10)!==value)throw Error(label+" is not a calendar date");
+    return n;
+  };
+  const token=millis=>new Date(millis).toISOString().slice(0,10);
+  const sourceStart=date(manifest.period.start,"Original source start");
+  const sourceEnd=date(manifest.period.end,"Original inclusive source end")+DAY;
+  if(sourceEnd<=sourceStart)throw Error("Original source period is empty");
+  if(!binding||typeof binding!=="object"||Array.isArray(binding)||!Array.isArray(binding.reference_records))throw Error("Select the original binding reference_records array");
+  const selected=new Map(src.selected.map(s=>[String(s.site_no),s]));
+  const siteId=value=>{
+    if(typeof value!=="string")return null;
+    const match=/^(?:USGS-)?(\d{8,15})$/.exec(value);
+    return match?match[1]:null;
+  };
+  const ranges=dates=>{
+    const out=[];
+    for(const d of dates){const n=date(d,"Original daily date"),last=out.at(-1);if(last&&last.end===d){last.end=token(n+DAY);last.days++;}else out.push({start:d,end:token(n+DAY),days:1});}
+    return out;
+  };
+  const states=rows=>{
+    const counts={};
+    for(const r of rows)counts[String(r.qualifiers)]=(counts[String(r.qualifiers)]||0)+1;
+    return Object.fromEntries(Object.entries(counts).sort(([a],[b])=>a.localeCompare(b)));
+  };
+  const seen=new Set(), support=[];
+  for(const input of binding.reference_records){
+    if(!input||typeof input!=="object"||Array.isArray(input))throw Error("Each reference record must be an object");
+    const id=input.id??input.record_id;
+    if(typeof id!=="string"||!id.trim())throw Error("Original reference record ID is required");
+    const observationId=input.observation_id??binding.observation_id??null;
+    const key=String(observationId??"")+"/"+id;
+    if(seen.has(key))throw Error("Duplicate original observation/record identity: "+key);
+    seen.add(key);
+    const start=date(input.period_start,"Reference period start"),end=date(input.period_end,"Reference exclusive period end");
+    if(end<=start)throw Error("Reference period must have a positive number of days: "+id);
+    const originalSource=input.source_records??null;
+    const nested=originalSource&&typeof originalSource==="object"&&!Array.isArray(originalSource)?originalSource:{};
+    const declaredFlow=input.flow_station_id??nested.flow_station_id??null;
+    const stationId=input.station_id??null;
+    const originalSite=siteId(stationId);
+    const resolvedSite=declaredFlow!==null?siteId(declaredFlow):originalSite;
+    const basis=declaredFlow!==null?"original_explicit_flow_station_id":originalSite?"same_original_usgs_station_id":"unresolved_original_flow_station";
+    const series=resolvedSite?selected.get(resolvedSite):null;
+    const requestedMethod=input.flow_ts_id??nested.flow_ts_id??input.flow_binding?.ts_id??null;
+    if(series&&requestedMethod!==null&&String(requestedMethod)!==String(series.ts_id))throw Error("Original flow time-series identity differs for "+id);
+    const overlapStart=Math.max(sourceStart,start),overlapEnd=Math.min(sourceEnd,end);
+    const overlapDays=Math.max(0,(overlapEnd-overlapStart)/DAY),expected=(end-start)/DAY;
+    const base={record_id:id,observation_id:observationId,original_preparation_id:binding.original_preparation_id??null,
+      station_id:stationId,flow_station_id:declaredFlow??(originalSite?"USGS-"+originalSite:null),
+      flow_binding_basis:basis,flow_site_no:resolvedSite,flow_ts_id:series?String(series.ts_id):requestedMethod===null?null:String(requestedMethod),
+      catchment_id:input.catchment_id??null,parameter:input.parameter??null,method:input.method??null,
+      original_period_start:input.period_start,original_period_end:input.period_end,period_end_exclusive:true,
+      expected_days:expected,source_period_start:token(sourceStart),source_period_end:token(sourceEnd),
+      captured_period_intersection:overlapDays?{start:token(overlapStart),end:token(overlapEnd),days:overlapDays}:null,
+      days_outside_captured_period:expected-overlapDays,original_reference_record:input};
+    if(!series){
+      support.push({...base,status:resolvedSite?"flow_station_outside_selected_source":"flow_station_binding_required",
+        source_record_days:null,numeric_days:null,coverage_fraction:null,fully_supported_reference_period:false,
+        covered_days_volume_m3:null,complete_reference_period_volume_m3:null,summary:null});
+      continue;
+    }
+    // Reuse the source author's inclusive summary kernel with the exact exclusive end translated once.
+    const summary=src.summarize(series,input.period_start,token(end-DAY),"reference_period_support");
+    const all=(src.bySite.get(resolvedSite)||[]).filter(r=>r.date>=input.period_start&&r.date<input.period_end);
+    const numeric=all.filter(r=>r.value_cfs!==null);
+    const numericRanges=ranges(numeric.map(r=>r.date));
+    const complete=summary.valid_days===expected&&overlapDays===expected;
+    support.push({...base,status:overlapDays===0?"outside_captured_period":complete?"complete_numeric_support":"partial_numeric_support",
+      source_record_days:summary.record_days,numeric_days:summary.valid_days,coverage_fraction:summary.coverage_fraction,
+      fully_supported_reference_period:complete,approved_complete_reference_period:complete&&summary.approved_days===expected,
+      covered_days_volume_m3:summary.observed_volume_m3,complete_reference_period_volume_m3:complete?summary.observed_volume_m3:null,
+      source_qualifier_counts:states(all),numeric_qualifier_counts:states(numeric),numeric_date_ranges:numericRanges,
+      source_members:[...new Set(all.map(r=>r.source_path))].sort().map(path=>{
+        const member=manifest.originals.find(x=>x.path===path);
+        if(!member)throw Error("Original daily member is absent from source manifest: "+path);
+        return {path:member.path,bytes:member.bytes,sha256:member.sha256,url:member.url};
+      }),summary});
+  }
+  const calendarIndex=src.selected.map(series=>{
+    const all=src.bySite.get(series.site_no)||[],numeric=all.filter(r=>r.value_cfs!==null);
+    return {station_id:"USGS-"+series.site_no,site_no:series.site_no,ts_id:String(series.ts_id),
+      period_start:token(sourceStart),period_end:token(sourceEnd),period_end_exclusive:true,
+      source_record_days:all.length,numeric_days:numeric.length,source_qualifier_counts:states(all),
+      numeric_date_ranges:ranges(numeric.map(r=>r.date)),
+      approved_numeric_date_ranges:ranges(numeric.filter(r=>src.flags(r).includes("A")).map(r=>r.date)),
+      estimated_numeric_date_ranges:ranges(numeric.filter(r=>src.flags(r).includes("e")).map(r=>r.date)),
+      provisional_numeric_date_ranges:ranges(numeric.filter(r=>src.flags(r).includes("P")).map(r=>r.date)),
+      non_numeric_records:all.filter(r=>r.value_cfs===null).map(r=>({date:r.date,reported_value:r.reported_value,qualifiers:r.qualifiers,source_path:r.source_path,source_line:r.source_line}))};
+  });
+  const statusCounts={};for(const row of support)statusCounts[row.status]=(statusCounts[row.status]||0)+1;
+  return {schema:"upstate.discharge-reference-period-support/v1",binding,
+    source_operation_id:manifest.operation_id,original_source_schema:manifest.schema,
+    source_period:{start:token(sourceStart),end:token(sourceEnd),end_exclusive:true},
+    source_originals:manifest.originals,source_domain_context:manifest.domain_context,
+    record_count:support.length,status_counts:statusCounts,
+    methods:{source_parameter:"00060",source_statistic:"00003",source_unit:"ft3/s",
+      source_kernel:"calibration_context.mjs dischargeSource/summarize; original exact decimal sums and interpolated daily quantiles",
+      period:"Original reference periods and numeric_date_ranges use [start,end); summary.period_end retains the source kernel's inclusive last date",
+      covered_volume:"Sum of the original numeric daily means times 0.028316846592 m3/ft3 and a nominal 86400 seconds per reported day; no gap filling or annualization",
+      mapping:"Use original explicit flow_station_id; otherwise the same original USGS station ID only. Water-quality station proximity and catchment names never select a gauge",
+      qualification:"A/e/P/R flags retain independent source counts; complete numeric support can include estimated or provisional values",
+      source_support:"A daily flow period does not alter an admitted observation, load estimator, catchment geometry or original native temporal weighting"},
+    records:support,station_date_support:calendarIndex};
+}
+
+export function calibrationSupportFiles(result){
+  if(result?.schema!=="upstate.discharge-reference-period-support/v1")throw Error("Choose a discharge reference-period support result");
+  const cell=value=>{const t=value===null||value===undefined?"":typeof value==="object"?JSON.stringify(value):String(value);return /[",\r\n]/.test(t)?'"'+t.replaceAll('"','""')+'"':t;};
+  const rows=result.records.map(r=>({
+    record_id:r.record_id,observation_id:r.observation_id,station_id:r.station_id,flow_station_id:r.flow_station_id,
+    flow_ts_id:r.flow_ts_id,catchment_id:r.catchment_id,parameter:r.parameter,period_start:r.original_period_start,period_end_exclusive:r.original_period_end,
+    status:r.status,expected_days:r.expected_days,captured_intersection_days:r.captured_period_intersection?.days??0,days_outside_captured_period:r.days_outside_captured_period,
+    source_record_days:r.source_record_days,numeric_days:r.numeric_days,coverage_fraction:r.coverage_fraction,
+    approved_days:r.summary?.approved_days??null,estimated_days:r.summary?.estimated_days??null,provisional_days:r.summary?.provisional_days??null,
+    absent_date_days:r.summary?.absent_date_days??null,non_numeric_days:r.summary?.non_numeric_days??null,
+    mean_observed_cfs:r.summary?.mean_cfs??null,p05_daily_cfs:r.summary?.p05_daily_cfs??null,p50_daily_cfs:r.summary?.p50_daily_cfs??null,p95_daily_cfs:r.summary?.p95_daily_cfs??null,
+    covered_days_volume_m3:r.covered_days_volume_m3,complete_reference_period_volume_m3:r.complete_reference_period_volume_m3,
+    flow_binding_basis:r.flow_binding_basis,source_qualifier_counts:r.source_qualifier_counts??null,
+    numeric_date_ranges:r.numeric_date_ranges??null
+  }));
+  const columns=Object.keys(rows[0]||{record_id:null,observation_id:null,status:null});
+  return [
+    {path:"reference-period-support.json",text:JSON.stringify(result,null,2)+"\n"},
+    {path:"reference-period-support.csv",text:[columns.join(","),...rows.map(r=>columns.map(k=>cell(r[k])).join(","))].join("\n")+"\n"},
+    {path:"station-date-support.json",text:JSON.stringify({schema:"upstate.discharge-date-support/v1",source_period:result.source_period,source_operation_id:result.source_operation_id,source_originals:result.source_originals,stations:result.station_date_support},null,2)+"\n"}
+  ];
 }
