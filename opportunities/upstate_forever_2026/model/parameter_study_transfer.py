@@ -83,7 +83,7 @@ def _captured(closure, entry):
     key = identifier(selection.get("experiment_id"))
     result_sha = identifier(selection.get("expected_artifact_sha256"))
     project = selection.get("workspace_id")
-    if (type(selection.get("edition")) is not int or selection["edition"] not in (1, 2, 3)
+    if (type(selection.get("edition")) is not int or selection["edition"] not in (1, 2, 3, 4)
             or not isinstance(project, str) or not project
             or metadata.get("experiment_id") != key or recipe.get("edition") != result_sha
             or entry.get("uri") != "urn:upstate:parameter-study:" + key + ":" + result_sha):
@@ -179,6 +179,23 @@ def _captured(closure, entry):
                     "grid_id": grid["id"], "run_selection": checkpoint["baseline_selection"]}
         if basis["reference"] != expected:
             raise ValueError("The Parameter source changed its fixed comparison reference")
+    origin = checkpoint["selection"].get("calibration_origin")
+    if origin:
+        from .parameter_calibration import continuation_origin
+        report = original("calibration-origin/result.json")
+        plan = original("calibration-origin/plan.json")
+        observed = original("calibration-origin/observations.json")
+        for value, kind, key in ((report, "calibrations", origin["calibration_id"]),
+                                 (plan, "calibration-plans", origin["plan_id"]),
+                                 (observed, "observations", origin["observation_id"])):
+            if value.get("schema") != "upstate." + kind + "/v1" or digest(value) != key:
+                raise ValueError("The Parameter source changed its original annual-reference record.")
+        report, plan = {**report, "id": origin["calibration_id"]}, {**plan, "id": origin["plan_id"]}
+        if (origin != continuation_origin(report, plan, project)
+                or checkpoint["selection"]["baseline_run_id"] != origin["selected_run_id"]
+                or basis.get("calibration_origin") != origin
+                or not _same(observed["original"], members.get("calibration-origin/observations-original.csv", {}))):
+            raise ValueError("The Parameter source changed its original selected-profile lineage.")
     return recipe, basis, checkpoint, cases, inventory, members, seen
 
 
@@ -210,30 +227,24 @@ def _operation(closure, operation_id, study_id, project):
     return operation, entries[0]
 
 
-def _local(closure, collection_id, entry, recipe, basis, captured, cases, inventory, members, seen):
-    key, project = captured["id"], captured["workspace_id"]
+def native_record(closure, key, *, reason="Original editable Parameter study"):
+    """Resolve a saved Parameter design without requiring a report source."""
+    key = identifier(key)
+    project = closure.workspace.project["id"]
     prefix = "experiments/" + key
     spec = closure.read("experiment-specs/" + key + ".json")
     if spec.get("schema") != "upstate.experiment-specs/v1" or digest(spec) != key:
         raise ValueError("The original Parameter specification changed")
     state = closure.read(prefix + "/experiment.json")
     expected = {name: value for name, value in spec.items() if name != "schema"}
-    for checkpoint in (captured, state):
-        if (checkpoint.get("schema") != STUDY_SCHEMA or checkpoint.get("id") != key
-                or checkpoint.get("workspace_id") != project
-                or {name: value for name, value in checkpoint.get("selection", {}).items()
-                    if name != "schema"} != expected
-                or checkpoint.get("baseline_selection") != captured["baseline_selection"]):
-            raise ValueError("The editable Parameter study changed its original specification")
-    current_cases = _cases(state)
-    if list(current_cases) != list(cases):
-        raise ValueError("The editable Parameter study changed its original case order")
+    if (state.get("schema") != STUDY_SCHEMA or state.get("id") != key
+            or state.get("workspace_id") != project
+            or {name: value for name, value in state.get("selection", {}).items()
+                if name != "schema"} != expected):
+        raise ValueError("The editable Parameter study changed its original specification")
+    cases = _cases(state)
     required = []
-    for case_id, original in cases.items():
-        current = current_cases[case_id]
-        if any(current.get(name) != original.get(name) for name in
-               ("label", "profile_id", "run_id", "overrides", "axis_values", "run_selection")):
-            raise ValueError("The editable Parameter study changed a prepared case selection")
+    for case_id, current in cases.items():
         run_id = current["run_id"]
         run = closure.read("runs/" + run_id + "/run.json")
         selection = run.get("selection")
@@ -249,8 +260,122 @@ def _local(closure, collection_id, entry, recipe, basis, captured, cases, invent
             raise ValueError("The original prepared Parameter run changed its inputs")
         closure.need("runs", run_id, "Original Parameter case, including unfinished cases")
         required.append({"kind": "runs", "id": run_id})
+    origin = state["selection"].get("calibration_origin")
+    if origin:
+        from .calibration_study_transfer import record
+        from .parameter_calibration import continuation_origin
+        reason = "Original annual-reference evaluation selecting this Parameter baseline"
+        report = record(closure, "calibrations", origin["calibration_id"], reason)
+        plan = record(closure, "calibration-plans", origin["plan_id"], reason)
+        if (origin != continuation_origin(report, plan, project)
+                or state["selection"]["baseline_run_id"] != origin["selected_run_id"]):
+            raise ValueError("The editable Parameter study changed its original calibration lineage.")
+        required.extend([{"kind": "calibrations", "id": report["id"]},
+                         {"kind": "calibration-plans", "id": plan["id"]}])
     closure._native_selection(state["baseline_selection"], "Original Parameter comparison reference")
     closure._source_refs(state["selection"], "Original Parameter reporting-area sources")
+    closure.tree(prefix)
+    if state.get("comparison_id"):
+        comparison = identifier(state["comparison_id"])
+        value = closure.read("comparisons/" + comparison + "/comparison.json")
+        cohort = [value.get("baseline_run_id"), *[row.get("run_id") for row in value.get("alternatives", [])]]
+        if (value.get("baseline_run_id") != state["selection"]["baseline_run_id"]
+                or any(run_id not in {case["run_id"] for case in cases.values()} for run_id in cohort)):
+            raise ValueError("The Parameter comparison belongs to another original run cohort")
+        closure.need("comparisons", comparison, "Original Parameter native comparison")
+    token = ("parameter-studies", key)
+    node = closure.nodes.setdefault(token, {"kind": token[0], "id": key,
+        "title": state["selection"]["title"], "state": state.get("state"), "reasons": []})
+    if reason not in node["reasons"]:
+        node["reasons"].append(reason)
+    return state, cases, required
+
+
+def _native_binding(state, required):
+    from collections import Counter
+    return {
+        "schema": "upstate.parameter-study-lineage/v1",
+        "experiment_id": state["id"], "workspace_id": state["workspace_id"],
+        "selection": deepcopy(state["selection"]),
+        "baseline_run_id": state["selection"]["baseline_run_id"],
+        "baseline_selection": deepcopy(state["baseline_selection"]),
+        "calibration_origin": deepcopy(state["selection"].get("calibration_origin")),
+        "cases": [{name: deepcopy(row[name]) for name in
+                   ("id", "label", "run_id", "profile_id", "overrides", "axis_values", "run_selection")
+                   if name in row} for row in state["cases"]],
+        "required_records": sorted(required, key=lambda row: (row["kind"], row["id"])),
+        "captured_state": {
+            "state": state.get("state"), "case_count": len(state["cases"]),
+            "case_states": dict(Counter(row.get("state") or "unspecified" for row in state["cases"])),
+            "progress": deepcopy(state.get("progress", {})), "comparison_id": state.get("comparison_id"),
+        },
+    }
+
+
+def visit(closure, kind, key, value, reason):
+    if kind != "parameter-studies":
+        return False
+    state, cases, required = native_record(closure, key, reason=reason)
+    if state != value:
+        raise ValueError("The original Parameter checkpoint changed during selection")
+    closure.parameter_study_records[key] = _native_binding(state, required)
+    return True
+
+
+def native_receipt(closure):
+    return [deepcopy(value) for _, value in sorted(closure.parameter_study_records.items())]
+
+
+def verify_native_receipt(closure, retained):
+    seen = set()
+    for original in retained:
+        key = identifier(original.get("experiment_id"))
+        if key in seen:
+            raise ValueError("The received Study repeats a Parameter design")
+        seen.add(key)
+        current = closure.parameter_study_records.get(key)
+        stable = lambda value: {name: item for name, item in value.items() if name != "captured_state"}
+        if current is None or stable(current) != stable(original):
+            raise ValueError("The received Study changed its original Parameter design or calibration lineage")
+    if seen != set(closure.parameter_study_records):
+        raise ValueError("The received Study has a different original Parameter selection")
+
+
+def catalogue(workspace):
+    from . import parameter_studies
+    rows = []
+    for path in sorted((workspace.root / "experiments").glob("*/experiment.json")):
+        key = identifier(path.parent.name)
+        try:
+            state = parameter_studies._read(workspace, key)
+            rows.append({"kind": "parameter-studies", "id": key,
+                         "title": state["selection"]["title"], "state": state.get("state"),
+                         "models": state.get("models", []), "updated_at": state.get("updated_at", ""),
+                         "selection": {name: deepcopy(state["selection"].get(name)) for name in
+                                       ("baseline_run_id", "design", "calibration_origin")},
+                         "counts": deepcopy(state.get("progress", {}))})
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            rows.append({"kind": "parameter-studies", "id": key, "title": key[:16],
+                         "state": "unreadable", "error": {"message": str(error)}})
+    return rows
+
+
+def _local(closure, collection_id, entry, recipe, basis, captured, cases, inventory, members, seen):
+    key, project = captured["id"], captured["workspace_id"]
+    if project != closure.workspace.project["id"]:
+        raise ValueError("The editable Parameter study belongs to another original project")
+    state, current_cases, required = native_record(closure, key)
+    prefix = "experiments/" + key
+    if (captured.get("schema") != STUDY_SCHEMA or captured.get("id") != key
+            or captured.get("selection") != state["selection"]
+            or captured.get("baseline_selection") != state["baseline_selection"]
+            or list(current_cases) != list(cases)):
+        raise ValueError("The editable Parameter study changed its original captured specification")
+    for case_id, original in cases.items():
+        current = current_cases[case_id]
+        if any(current.get(name) != original.get(name) for name in
+               ("label", "profile_id", "run_id", "overrides", "axis_values", "run_selection")):
+            raise ValueError("The editable Parameter study changed a prepared case selection")
     for binding in inventory.get("source_bindings", []):
         original_collection = identifier(binding.get("source_collection_id"))
         value = closure.read("sources/" + original_collection + ".json")
@@ -347,7 +472,8 @@ def include_source(closure, collection_id, entry):
 
 
 def lock_paths(closure):
-    paths = set()
+    paths = {"experiments/" + identifier(key) + "/.experiment.lock"
+             for kind, key in closure.nodes if kind == "parameter-studies"}
     for record in closure.report_source_records.values():
         if record.get("report_context_kind") == CONTEXT and record.get("relationship") == "same_project":
             paths.add("experiments/" + identifier(record["experiment_id"]) + "/.experiment.lock")
