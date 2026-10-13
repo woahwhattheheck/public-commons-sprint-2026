@@ -6,7 +6,7 @@ import { reviewRuntimeTransfer, exportRuntimeTransfer, inspectRuntimeTransfer, b
   installReceivedRuntime } from '../runtime-transfer.mjs';
 import { MAX_MANIFEST_BYTES, MAX_PART_BYTES } from '../runtime-transfer-lock.mjs';
 import { plain, now, digest, canonical, json, need, absolute, recordId, operationId,
-  privateDirectory, makePrivate, readJSON, saveJSON, operationLease, operationRunning } from './storage.mjs';
+  privateDirectory, optionalPrivateEntries, makePrivate, readJSON, saveJSON, operationLease, operationRunning } from './storage.mjs';
 
 export const transferOperationFields = {
   'transfer-export': ['runtimeId', 'label', 'cache', 'offline', 'lockSha256', 'partBytes'],
@@ -56,8 +56,7 @@ function summary(item, view) {
     cacheDirectory: view.cacheDirectory ?? null, filesDirectory: view.filesDirectory ?? null };
 }
 export async function runtimeTransferWorkspaceState(root, { cacheTransferId = null } = {}) {
-  await initializeTransferWorkspace(root);
-  const ids = (await readdir(join(base(root), 'records'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name));
+  const ids = (await optionalPrivateEntries(join(base(root), 'records'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name));
   const transfers = [];
   for (const name of ids) {
     const item = await readJSON(join(base(root), 'records', name));

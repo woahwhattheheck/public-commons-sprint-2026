@@ -126,9 +126,35 @@ Every query tile intersects the exact acquisition domain. Original source featur
 
 `inspect(workspace, operation_id)` returns compact current state while a capture runs and the retained result afterward. Progress contains `stage`, `completed`, `total`, `details`. Stages distinguish soil native keys, original geometry, reused soil geometry, original attributes, original flood-zone capture, and source import.
 
-`prepare(workspace, selection)` is an operator-compatible alias for capture. A resumed call is `capture(workspace, operation_id, retry_failed=True)`.
+`prepare(workspace, selection)` is an operator-compatible alias for capture. The maintained continuation entry point is `continue_capture(workspace, operation_id, retry_failed=True)`. It resumes the same operation when its source-processing implementation matches, and creates a linked successor when the application has been updated.
 
 The maintained operator integration uses the existing queue for `conservation.sources.capture`, reads `source-capture` by operation ID, and supplies the retained `parcel_criteria_selection` to `conservation.criteria.prepare`. This makes acquisition, criterion computation, point scoring, portfolio selection and the existing native scenario/experiment continuation use the same original study context.
+
+## Continuing after an application update
+
+The saved operation binds its original normalized request, resolved reused-source choices and query domain to the source-processing implementation that created it. Updating the application can change how those original responses are interpreted. The operator's **Continue with current application** action and the CLI `resume` command use the same continuation entry point.
+
+A continuation keeps the original operation and its imported source editions available. When the implementation changes, it creates a separate operation whose selection retains the exact original request, resolved source choices and domain, records the new implementation identity, and binds `continued_from` to its predecessor. Repeating the same continuation resolves to the same successor. It does not run the automatic source picker again.
+
+Only original provider response caches are eligible for reuse. The current query must match the retained request identity before its cached response is used. SDA request bodies and FEMA URL/query parameters remain part of that match; response hashes are verified. A same-label request with different parameters requires its own original provider response. Retained failed attempts and provider retry timing travel with the corresponding request, so continuing cannot discard an active Retry-After interval.
+
+Completed family outputs, derived geometries, coverage classifications and imported source collections are recalculated for the successor. The current processing application therefore consumes the retained original responses through its ordinary collectors and source importer. The predecessor's result remains available with its original source IDs.
+
+The returned continuation metadata exposes:
+
+| Field | Meaning |
+|---|---|
+| `continuation.previous_operation_id` | Original predecessor operation. |
+| `continuation.previous_implementation`, `current_implementation` | Source-processing identities on each side of the continuation. |
+| `continuation.reused_requests`, `reused_bytes` | Actual reused request count and original HTTP body bytes recorded by the successor. |
+| `continuation.reused_stored_bytes` | Retained compressed response storage reused. |
+| `continuation.successful_responses`, `retained_failures` | Successful responses and preserved failed attempts, reported separately. |
+| `continuation.donor_directory` | Original predecessor directory, relative to the workspace. |
+| `continuation.families` | Reuse quantities for each source family. |
+| `continued_as` | Successors found from their own retained continuation records; the predecessor is not rewritten. |
+| `implementation_changed` | Whether the currently installed source-processing implementation differs from this operation's retained selection. |
+
+The acquisition list shows whether an application update is available or an operation continues an earlier acquisition. Opening a result exposes the predecessor, continued acquisitions, their current states and the response reuse counts. Existing completed results can still prepare criteria from their retained source edition.
 
 ## Original data and retention
 
@@ -182,7 +208,7 @@ The component uses the maintained model workspace, common file helpers, original
 
 New SDA queries and existing native WKB capture reuse require `source_tools/soil_sources.py` and its maintained dependencies from the current soil source component. The current whole-region source producer also supplies `soil_region.py`, its completed native geometry captures and their import manifest.
 
-FEMA capture reuses `source/capture_original_overlays.py` and `source/capture_upstream_network.py`. Their existing native ID pagination, original coordinate references, raw response retention and provider curve handling remain the capture implementation.
+Continuation response reuse uses `source_tools/source_response_reuse.py`; its source identity participates in the acquisition implementation identity. FEMA capture reuses `source/capture_original_overlays.py` and `source/capture_upstream_network.py`. Their existing native ID pagination, original coordinate references, raw response retention and provider curve handling remain the capture implementation.
 
 The current parcel builder includes verified empty-GeoJSON support: an actual `features: []` document can be used with its actual nonempty certainty footprint. When certainty itself contains no polygons, this adapter emits no coverage binding. The builder then preserves unresolved coverage in the resulting criterion table.
 

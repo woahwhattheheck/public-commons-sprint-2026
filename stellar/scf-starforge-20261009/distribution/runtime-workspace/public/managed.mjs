@@ -16,7 +16,7 @@ function choices(element, values, empty, preferred = element.value) {
 function detail(label, value) {
   const item = node('details'); item.append(node('summary', label), node('pre', JSON.stringify(value, null, 2))); return item;
 }
-export function createManagedWorkspaceView({ api, getState, operation, refreshWorkspace, openLog, switchView, message, error }) {
+export function createManagedWorkspaceView({ api, getState, operation, refreshWorkspace, refreshOperation, openLog, switchView, message, error }) {
   let current = null, homeId = null, workspaceId = null, review = null, config = null, loading = false, generation = 0, reviewRequest = null;
   const container = $('managed-workspace');
   container.innerHTML = '<div class="section-title"><div><p class="eyebrow">ORIGINAL SF46 INSTALLATION</p><h2>Managed releases</h2></div><span id="managed-phase" class="status">EMPTY</span></div>' +
@@ -91,10 +91,16 @@ export function createManagedWorkspaceView({ api, getState, operation, refreshWo
       top.append(node('h3', job.operation.replace('managed-', '')), node('span', job.displayPhase, 'status'));
       article.append(top, node('p', job.id + ' · ' + job.createdAt, 'note'));
       if (job.commandProcess) article.append(node('p', 'Original process ' + job.commandProcess.pid +
-        (job.commandActive ? ' · running' : ' · ended') + ' · ' + job.commandProcess.cwd, 'note'));
+        (job.commandActive === null ? ' · status unavailable' : job.commandActive ? ' · running' : ' · ended') + ' · ' + job.commandProcess.cwd, 'note'));
       if (job.error) article.append(node('p', job.error.code + ': ' + job.error.message));
+      if (job.observation?.status === 'UNAVAILABLE') {
+        article.append(node('p', 'Current process status is unavailable. Retained output remains accessible.', 'note'),
+          detail('Status check detail', job.observation));
+      }
       if (job.error?.flock) article.append(detail('Original lock process diagnostics', job.error.flock));
       const actions = node('div', undefined, 'actions');
+      const observe = node('button', 'Refresh operation status'); observe.type = 'button';
+      observe.addEventListener('click', () => refreshOperation(job.id).catch(error)); actions.append(observe);
       const log = node('button', 'Open retained output'); log.type = 'button';
       log.addEventListener('click', () => openLog({ operationId: job.id }).catch(error)); actions.append(log);
       if (job.operation === 'managed-run' && job.phase === 'RUNNING') {

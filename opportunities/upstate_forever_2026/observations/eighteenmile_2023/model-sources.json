@@ -389,10 +389,36 @@
         "study_id": "scdes-eighteenmile-lake-2023",
         "row_count": 14,
         "record_key": "site_id;year;month",
-        "period_start": "2023-04-05",
-        "period_end": "2023-10-17",
+        "period_start": "2023-04-06",
+        "period_end": "2023-10-31",
         "units": "Original units retained in column names or row fields",
-        "source_tables": "Original table and PDF page retained on each numeric row"
+        "source_tables": "Original table and PDF page retained on each numeric row",
+        "period_basis": "Union of original continuous-monitoring station records; monthly summaries retain their original n_days",
+        "station_periods": {
+          "SV-838": {
+            "period_start": "2023-04-06",
+            "period_end": "2023-10-23"
+          },
+          "SV-839": {
+            "period_start": "2023-04-06",
+            "period_end": "2023-10-31"
+          }
+        },
+        "record_interval_minutes": 30,
+        "measurement_depth_m_approximate": 0.5,
+        "time_support_source": {
+          "path": "study.json",
+          "fields": [
+            "continuous.table_record_start",
+            "continuous.table_record_ends",
+            "continuous.interval_minutes",
+            "continuous.approximate_depth_m"
+          ],
+          "source_pdf_pages": [
+            18,
+            19
+          ]
+        }
       },
       "companions": [
         {
@@ -460,10 +486,36 @@
         "study_id": "scdes-eighteenmile-lake-2023",
         "row_count": 14,
         "record_key": "site_id;year;month",
-        "period_start": "2023-04-05",
-        "period_end": "2023-10-17",
+        "period_start": "2023-04-06",
+        "period_end": "2023-10-31",
         "units": "Original units retained in column names or row fields",
-        "source_tables": "Original table and PDF page retained on each numeric row"
+        "source_tables": "Original table and PDF page retained on each numeric row",
+        "period_basis": "Union of original continuous-monitoring station records; monthly summaries retain their original n_days",
+        "station_periods": {
+          "SV-838": {
+            "period_start": "2023-04-06",
+            "period_end": "2023-10-23"
+          },
+          "SV-839": {
+            "period_start": "2023-04-06",
+            "period_end": "2023-10-31"
+          }
+        },
+        "record_interval_minutes": 30,
+        "measurement_depth_m_approximate": 0.5,
+        "time_support_source": {
+          "path": "study.json",
+          "fields": [
+            "continuous.table_record_start",
+            "continuous.table_record_ends",
+            "continuous.interval_minutes",
+            "continuous.approximate_depth_m"
+          ],
+          "source_pdf_pages": [
+            18,
+            19
+          ]
+        }
       },
       "companions": [
         {
@@ -997,12 +1049,21 @@
       "metadata": {
         "row_count": 15,
         "study_id": "scdes-eighteenmile-lake-2023",
-        "period_start": "2023-01-01",
-        "period_end": "2023-12-31",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
         "source_capture_date": "2026-10-13",
         "source_basis": "Original agency WQP results; per-record source identity retained",
         "original_result_rows": 920,
-        "units": "Original per-row units and detection qualifiers retained"
+        "units": "Original per-row units and detection qualifiers retained",
+        "period_basis": "Observed dates of the selected CHLA cohort",
+        "source_query_period_start": "2023-01-01",
+        "source_query_period_end": "2023-12-31",
+        "distinct_observed_dates": 15,
+        "time_support_source": {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "date_field": "sample_date",
+          "query_capture_path": "wqp/capture.json"
+        }
       },
       "companions": [
         {
@@ -1129,12 +1190,21 @@
       "metadata": {
         "row_count": 75,
         "study_id": "scdes-eighteenmile-lake-2023",
-        "period_start": "2023-01-01",
-        "period_end": "2023-12-31",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
         "source_capture_date": "2026-10-13",
         "source_basis": "Original agency WQP results; per-record source identity retained",
         "original_result_rows": 920,
-        "units": "Original per-row units and detection qualifiers retained"
+        "units": "Original per-row units and detection qualifiers retained",
+        "period_basis": "Observed dates of the selected CHLA cohort",
+        "source_query_period_start": "2023-01-01",
+        "source_query_period_end": "2023-12-31",
+        "distinct_observed_dates": 15,
+        "time_support_source": {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "date_field": "sample_date",
+          "query_capture_path": "wqp/capture.json"
+        }
       },
       "companions": [
         {
@@ -1261,12 +1331,21 @@
       "metadata": {
         "row_count": 5,
         "study_id": "scdes-eighteenmile-lake-2023",
-        "period_start": "2023-01-01",
-        "period_end": "2023-12-31",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
         "source_capture_date": "2026-10-13",
         "source_basis": "Original agency WQP results; per-record source identity retained",
         "original_result_rows": 920,
-        "units": "Original per-row units and detection qualifiers retained"
+        "units": "Original per-row units and detection qualifiers retained",
+        "period_basis": "Observed dates of the selected CHLA cohort",
+        "source_query_period_start": "2023-01-01",
+        "source_query_period_end": "2023-12-31",
+        "distinct_observed_dates": 15,
+        "time_support_source": {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "date_field": "sample_date",
+          "query_capture_path": "wqp/capture.json"
+        }
       },
       "companions": [
         {

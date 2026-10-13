@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-updates",
   "title": "Source updates",
-  "version": "8",
+  "version": "9",
   "order": 25,
   "assets": [
     "source-refresh.html",
@@ -81,6 +81,13 @@
     "state": {
       "key": "source_updates",
       "handler": "updates",
+      "args": [
+        "workspace"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.source_refresh_receiving",
+      "handler": "verify_all",
       "args": [
         "workspace"
       ]
