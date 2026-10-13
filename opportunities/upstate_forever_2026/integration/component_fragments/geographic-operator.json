@@ -9,7 +9,8 @@
         "operator/extensions/geographic-headwaters.json",
         "operator/web/geographic_workbench.mjs",
         "operator/web/geographic_workbench.css",
-        "operator/GEOGRAPHIC_HEADWATERS.md"
+        "operator/GEOGRAPHIC_HEADWATERS.md",
+        "operator/web/geographic_allocation.mjs"
       ],
       "requires": [
         "source-preparation",
