@@ -759,7 +759,7 @@ function observationForm(){
    if(!file||context.observationCSVFile!==file)throw Error('Choose the original CSV and wait for its column mapping.');
    const columns={},parameter_mapping={};
    for(const key of keys)if(val('column_'+key))columns[key]=val('column_'+key);
-   for(const node of $('[data-parameter-row]',form)){
+   for(const node of $$('[data-parameter-row]',form)){
     const key=val('parameter_from',node).trim();if(Object.hasOwn(parameter_mapping,key))throw Error('An original parameter label is mapped twice.');parameter_mapping[key]=val('parameter_to',node);
    }
    const metadata={...(context.observationMetadata||{}),title:val('title'),source_uri:val('source_uri'),value_basis:val('basis'),annualization_method:val('annualization_method'),columns,parameter_mapping,accepted_qualifiers:[...(form.elements.namedItem('blank_qualifier').checked?['']:[]),...lines(val('qualifiers'))]};
@@ -818,7 +818,8 @@ function observationForm(){
     $('#form-error').hidden=true;
    }catch(error){if(current()){context.observationCSVError=error.message;$('#form-error').textContent=error.message;$('#form-error').hidden=false;}}
    finally{if(current())context.observationCSVLoading=false;}
-  }); });
+  });
+ });
 }
 function observationCompareForm(id){
  requireSources();const complete=state.data.runs.filter(x=>x.state==='complete'),observations=state.data.observations;
