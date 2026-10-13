@@ -155,6 +155,13 @@ def main():
                 "model/communities.py", "model/community_reports.py", "model/community_cli.py",
                 "model/COMMUNITIES.md", "operator/web/community.mjs", "operator/web/community.css",
                 "operator/community_receiving.py", "operator/community_receiving.mjs", "operator/server.py",
+                "operator/community_scientific_receiving.mjs",
+                "model/community_report_context.py", "model/community_report_handover.py",
+                "model/scientific_report_editions.py", "model/COMMUNITY_REPORT_CONTEXT.md",
+                "operator/community_report_context.py", "operator/source_report_editions.py",
+                "operator/web/community_report_handover.mjs", "operator/web/source_reports.mjs",
+                "operator/web/source_report_editions.mjs",
+                "operator/extensions/community-report-context.json",
                 "operator/web/app.mjs", "operator/web/journey.mjs",
                 "operator/web/regional_journey.mjs", "operator/web/extension_host.mjs",
                 "source/communities-rfp-20261012/rfp-table1.csv",
@@ -202,6 +209,32 @@ def main():
                 from model.common import verify_file
                 if verify_file(Workspace(received_workspace).root, report["files"]["received-interventions.csv"]).read_bytes() != imported["source"]["text"].encode("utf-8"):
                     raise ValueError("The cold receiving report changed the exact mapped original CSV")
+            if mapping_course:
+                scientific = stage.get("community_scientific")
+                if not scientific or scientific["project_id"] != workspace.project["id"]:
+                    raise ValueError("Retain the complete original mapped report/source/composer course")
+                from model import community_report_handover, scientific_report_editions
+                report_archive = scientific["archive"]
+                actual_archive = record(Path(report_archive["path"]))
+                if any(actual_archive[key] != report_archive[key] for key in ("bytes", "sha256")):
+                    raise ValueError("The complete scientific report archive changed")
+                destination = Workspace(received_workspace)
+                for selected_source in (scientific["original_source"], scientific["received_source"]):
+                    collection = destination._get("sources", selected_source["source"]["source_collection_id"])
+                    if collection != selected_source["collection"]:
+                        raise ValueError("The independent Workspace changed an original source collection")
+                cold_record, cold_directory, cold_result = scientific_report_editions.inspect(
+                    destination, scientific["scientific_report_id"])
+                if cold_record != scientific["report"]["edition"]:
+                    raise ValueError("The independent Workspace changed the complete scientific report edition")
+                original_handover = scientific["handover"]["original"]
+                retained_handover = verify_file(destination.root, original_handover["file"])
+                inspected_handover = community_report_handover.inspect_archive(
+                    retained_handover, expected_sha256=scientific["handover"]["archive"]["sha256"])
+                if (inspected_handover["report_id"] != report["id"]
+                        or inspected_handover["original_project_id"] != workspace.project["id"]
+                        or inspected_handover["report_sha256"] != report["files"]["community-report.json"]["sha256"]):
+                    raise ValueError("The independent Workspace changed the retained Community source handover")
             if (initial_plan["table_id"] != table["id"] or revised_plan["table_id"] != table["id"]
                     or revised_plan["previous_plan_id"] != initial_plan["id"]
                     or report["table_id"] != table["id"] or report["plan_id"] != revised_plan["id"]):
@@ -229,6 +262,7 @@ def main():
                 original_report_ids=([args.mapped_report, report["id"]] if mapping_course else [report["id"]]),
                 received=received, workspace_archive=archive,
                 browser_result=record(browser_result_path), browser_progress=record(progress_path),
+                community_scientific=final_browser.get("community_scientific"),
                 delivered_cli=record(cli_log))
             attempts[-1]["complete"] = True
             atomic(result_path, result)
