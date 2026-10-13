@@ -33,6 +33,12 @@
       ],
       "requires": [
         "core"
+      ],
+      "retained_only": [
+        {
+          "path": "measurement_workspace/web/extension.mjs",
+          "reason": "Original byte-identical relocation template. Its executable installed member is operator/web/measured_observations_extension.mjs, already required by this component together with measured_collections.mjs and measured_observations.mjs in operator/web. The original template remains retained without treating its pre-install location as a runtime module."
+        }
       ]
     }
   },
