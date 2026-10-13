@@ -1,6 +1,6 @@
 {
   "schema": "upstate.focal-landcover-report-reconciliation/v1",
-  "edition": "original-focal-landcover-v1",
+  "edition": "original-focal-landcover-v2",
   "source_members": [
     {
       "path": "selected-annual-inputs.json",
