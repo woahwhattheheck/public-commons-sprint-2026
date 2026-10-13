@@ -15,7 +15,7 @@ import tempfile
 from typing import Mapping
 from urllib.parse import urlsplit
 
-BRIEF_FORMAT = "upstate.watershed-selection-brief/v6"
+BRIEF_FORMAT = "upstate.watershed-selection-brief/v8"
 BRIEF_FILENAME = "watershed-selection-brief.md"
 HTML_FILENAME = "watershed-selection-brief.html"
 
@@ -532,7 +532,7 @@ caption{text-align:left;font-size:12px;font-weight:600;padding:0 0 8px;color:#55
 th,td{border:1px solid #c8c8c8;padding:8px 10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 thead th{background:#eee}
 tbody th{font-weight:600;background:#fafafa}
-@media(max-width:600px){main{padding:24px 16px}h1{font-size:25px}th,td{padding:7px}}
+@media(max-width:600px){main{padding:24px 16px}h1{font-size:25px}table{min-width:720px}th,td{padding:7px}}
 @media print{main{max-width:none;padding:0}body{font-size:10pt}.table-scroll{overflow:visible}
 h1,h2,h3{break-after:avoid}tr{break-inside:avoid}a{overflow-wrap:anywhere}}
 """
