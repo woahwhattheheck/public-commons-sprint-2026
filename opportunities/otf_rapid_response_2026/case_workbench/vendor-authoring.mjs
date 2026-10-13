@@ -67,7 +67,7 @@ export async function reviewVendorDraft(draft){
  try{budget=await buildVendorBudget(input);}catch(error){budgetError=error.message;}
  const quality={needs:[...new Set([...base.needs,...(budget?.mapping.missing??[])])],warnings:[...base.warnings,...(budgetError?["Original issuer workbook: "+budgetError]:[])]};
  const submissionIssues=[];let submissionMarkdown=null,attachmentResult={files:[],manifest:[]};
- try{attachmentResult=await validateVendorAttachmentsAsync(input,sha256);}catch(error){quality.warnings.push("Outgoing attachment: "+error.message);}
+ try{attachmentResult=await validateVendorAttachmentsAsync(input,sha256);}catch(error){submissionIssues.push("Outgoing attachment: "+error.message);}
  const internalMarkdown=render(input,quality,{audience:"internal"});
  if(quality.needs.length||quality.warnings.length)submissionIssues.push(...quality.needs,...quality.warnings);
  else if(submissionIssues.length===0){try{submissionMarkdown=render(input,quality,{audience:"submission",attachments:attachmentResult.manifest});}catch(error){submissionIssues.push(error.message);}}
