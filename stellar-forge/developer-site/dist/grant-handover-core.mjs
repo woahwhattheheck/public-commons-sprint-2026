@@ -76,6 +76,18 @@ export function hydrateAuthorSnapshot(draft,snapshot) {
     need(canonical(metadata)===canonical(source),'The frozen planning metadata differs from its retained original file.');
     return clone(retained);
   });
+  const bundleId=result.productSourceAuthoring?.selection?.bundleId;
+  if(bundleId){
+    const bundle=(draft.handover?.bundles||[]).find(row=>row.id===bundleId);
+    need(bundle,'Retain the complete product-source reviewer edition selected by this prepared submission.');
+    const hashes=new Set(bundle.body.files.map(file=>file.sha256));
+    // A frozen author snapshot excludes recursive handover history. Hydration
+    // reconnects only its selected original source files from the parent draft.
+    result.handover=emptyHandover();
+    result.handover.bundles=[clone(bundle)];
+    result.handover.objects=(draft.handover?.objects||[]).filter(row=>hashes.has(row.sha256)).map(clone);
+    result.handover.selection.bundleId=bundleId;
+  }
   return result;
 }
 function descriptor(value,objects,name='Original file') {

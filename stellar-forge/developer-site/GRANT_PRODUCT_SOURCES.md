@@ -51,3 +51,10 @@ A declaration whose chapter is absent leaves its product sources unchanged. When
 Source intake happens before the existing public-link projection, so original repository, path and selected commit remain available when the reader uses an authenticated-source label. The declaration's filename, full byte count and hashes are retained in composition metadata. External parent directory names are excluded from that metadata. The composer also records both the re-export and actual registry-core Git blob identities.
 
 The registry is the unchanged maintained Merchant module; product authors continue to own their source declarations there and can receive the same files in this distribution. Runtime execution continues through each product's existing installed command and customer workspace.
+
+
+## Author product sources in the saved application
+
+Open `/grant-submission.html` and choose **Product sources**, or **Author product sources** from the current Source editions view. The editor receives complete registration files, reads original chapters and measured source identities from the selected retained reviewer bundle, previews the same registry as the CLI, and exports a complete declaration ZIP. Author notes, original imports and editable declarations use the application's existing saved versions and full-draft export/reopen flow. Prepared submission snapshots retain their selected authoring source through the existing handover.
+
+See [GRANT_PRODUCT_AUTHORING.md](GRANT_PRODUCT_AUTHORING.md) for the full chapter selection, import, preview, save, independent reopening and composer-file workflow.
