@@ -29,6 +29,7 @@ from . import paired_ensemble_study_transfer as paired_transfer
 from . import report_changes_study_transfer as report_changes_transfer
 from . import multivariate_control_study_transfer as control_transfer
 from . import climate_forcing_study_transfer as forcing_transfer
+from . import terrain_conditioning_study_transfer as terrain_transfer
 from . import climate_management_study_transfer as climate_management_transfer
 from . import management_case_study_transfer as management_transfer
 from . import calibration_study_transfer as calibration_transfer
@@ -54,12 +55,12 @@ ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "par
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
               *community_transfer.ROOT_KINDS, *receptor_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS,
               *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS,
-              *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS, *forcing_transfer.ROOT_KINDS, *climate_management_transfer.ROOT_KINDS,
+              *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS, *forcing_transfer.ROOT_KINDS, *terrain_transfer.ROOT_KINDS, *climate_management_transfer.ROOT_KINDS,
               *management_transfer.ROOT_KINDS)
 IMMUTABLE_KINDS = ("parameter-working", "sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
                    *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
-                   *community_transfer.IMMUTABLE_KINDS, *customer_review_transfer.IMMUTABLE_KINDS,
+                   *community_transfer.IMMUTABLE_KINDS, *customer_review_transfer.IMMUTABLE_KINDS, *terrain_transfer.IMMUTABLE_KINDS,
                    *management_transfer.IMMUTABLE_KINDS)
 DOCUMENTS = {
     "grids": "grid.json", "runs": "run.json", "experiments": "plan.json",
@@ -94,7 +95,7 @@ LABELS = {
     **calibration_transfer.LABELS,
     **community_transfer.LABELS,
     **receptor_transfer.LABELS, **conservation_transfer.LABELS,
-    **customer_review_transfer.LABELS, **management_transfer.LABELS,
+    **customer_review_transfer.LABELS, **terrain_transfer.LABELS, **management_transfer.LABELS,
 }
 
 # Chemistry selected-study lineage: v1
@@ -511,6 +512,8 @@ class _Closure:
             pass
         elif management_transfer.visit(self, kind, key, value):
             pass
+        elif terrain_transfer.visit(self, kind, key, value):
+            pass
         elif forcing_transfer.visit(self, kind, key, value):
             pass
         elif control_transfer.visit(self, kind, key, value):
@@ -734,7 +737,7 @@ def _capture_locks(stack, closure, already):
                      *process_transfer.lock_paths(closure), *customer_review_transfer.lock_paths(closure), *ensemble_transfer.lock_paths(closure),
                      *gauge_transfer.lock_paths(closure), *paired_transfer.lock_paths(closure),
                      *report_changes_transfer.lock_paths(closure), *control_transfer.lock_paths(closure),
-                     *forcing_transfer.lock_paths(closure), *climate_management_transfer.lock_paths(closure), *management_transfer.lock_paths(closure)):
+                     *forcing_transfer.lock_paths(closure), *terrain_transfer.lock_paths(closure), *climate_management_transfer.lock_paths(closure), *management_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))
@@ -1165,6 +1168,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
             continue
         if selected_kind in climate_management_transfer.ROOT_KINDS:
             for row in climate_management_transfer.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind in terrain_transfer.ROOT_KINDS:
+            for row in terrain_transfer.catalogue(workspace, selected_kind):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue

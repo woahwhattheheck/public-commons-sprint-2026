@@ -33,7 +33,19 @@
         "operator/extensions/climate-management.json",
         "operator/web/climate_management.mjs",
         "operator/web/climate_management.css",
-        "operator/CLIMATE_MANAGEMENT.md"
+        "operator/CLIMATE_MANAGEMENT.md",
+        "model/terrain_conditioning_study_transfer.py",
+        "model/terrain_conditioning_report_source.py",
+        "model/terrain_conditioning_scientific_report.py",
+        "operator/extensions/terrain-conditioning.json",
+        "operator/terrain_conditioning_native.py",
+        "operator/web/terrain_conditioning.css",
+        "operator/web/terrain_conditioning.mjs",
+        "source_tools/TERRAIN_CONDITIONING.md",
+        "source_tools/terrain_conditioning.py",
+        "source_tools/terrain_conditioning_report.py",
+        "source_tools/terrain_conditioning_response.py",
+        "source_tools/terrain_flood.cpp"
       ]
     },
     "calibration": {
@@ -66,7 +78,19 @@
         "operator/extensions/climate-management.json",
         "operator/web/climate_management.mjs",
         "operator/web/climate_management.css",
-        "operator/CLIMATE_MANAGEMENT.md"
+        "operator/CLIMATE_MANAGEMENT.md",
+        "model/terrain_conditioning_study_transfer.py",
+        "model/terrain_conditioning_report_source.py",
+        "model/terrain_conditioning_scientific_report.py",
+        "operator/extensions/terrain-conditioning.json",
+        "operator/terrain_conditioning_native.py",
+        "operator/web/terrain_conditioning.css",
+        "operator/web/terrain_conditioning.mjs",
+        "source_tools/TERRAIN_CONDITIONING.md",
+        "source_tools/terrain_conditioning.py",
+        "source_tools/terrain_conditioning_report.py",
+        "source_tools/terrain_conditioning_response.py",
+        "source_tools/terrain_flood.cpp"
       ]
     },
     "study-transfer": {
@@ -99,7 +123,19 @@
         "operator/extensions/climate-management.json",
         "operator/web/climate_management.mjs",
         "operator/web/climate_management.css",
-        "operator/CLIMATE_MANAGEMENT.md"
+        "operator/CLIMATE_MANAGEMENT.md",
+        "model/terrain_conditioning_study_transfer.py",
+        "model/terrain_conditioning_report_source.py",
+        "model/terrain_conditioning_scientific_report.py",
+        "operator/extensions/terrain-conditioning.json",
+        "operator/terrain_conditioning_native.py",
+        "operator/web/terrain_conditioning.css",
+        "operator/web/terrain_conditioning.mjs",
+        "source_tools/TERRAIN_CONDITIONING.md",
+        "source_tools/terrain_conditioning.py",
+        "source_tools/terrain_conditioning_report.py",
+        "source_tools/terrain_conditioning_response.py",
+        "source_tools/terrain_flood.cpp"
       ]
     },
     "scientific-report-editions": {
@@ -132,7 +168,19 @@
         "operator/extensions/climate-management.json",
         "operator/web/climate_management.mjs",
         "operator/web/climate_management.css",
-        "operator/CLIMATE_MANAGEMENT.md"
+        "operator/CLIMATE_MANAGEMENT.md",
+        "model/terrain_conditioning_study_transfer.py",
+        "model/terrain_conditioning_report_source.py",
+        "model/terrain_conditioning_scientific_report.py",
+        "operator/extensions/terrain-conditioning.json",
+        "operator/terrain_conditioning_native.py",
+        "operator/web/terrain_conditioning.css",
+        "operator/web/terrain_conditioning.mjs",
+        "source_tools/TERRAIN_CONDITIONING.md",
+        "source_tools/terrain_conditioning.py",
+        "source_tools/terrain_conditioning_report.py",
+        "source_tools/terrain_conditioning_response.py",
+        "source_tools/terrain_flood.cpp"
       ]
     }
   }

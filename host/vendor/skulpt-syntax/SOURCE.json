@@ -1,0 +1,25 @@
+{
+  "schema": "commons.upstream-source.v1",
+  "upstream": {
+    "repository": "https://github.com/skulpt/skulpt-dist",
+    "commit": "1473759236009587a04bd9875c7afd812d9f02d2",
+    "path": "skulpt.min.js",
+    "git_blob": "86e34f3d2d1e6a8a356f36d0c17aa3a71520e600",
+    "bytes": 559460,
+    "sha256": "52e007d8d557b97470131e04c8645dbe940b1ab208049905f1aeb058b218d92a"
+  },
+  "build": {
+    "repository": "https://github.com/skulpt/skulpt",
+    "commit": "6c99c2196851bb29f0e503afccb01804f089cb60",
+    "date": "2021-02-23T18:59:26.986Z"
+  },
+  "license": {
+    "path": "LICENSE",
+    "source_url": "https://github.com/skulpt/skulpt/blob/6c99c2196851bb29f0e503afccb01804f089cb60/LICENSE",
+    "git_blob": "adfc24deade705edc9e754dcc33e6e90a4e3ac39",
+    "bytes": 1579,
+    "sha256": "e407544486b5cff8bdb1faa9930ae5d980fd363d1003d3a032f9915674da0fa9"
+  },
+  "modifications": "None. Full upstream parser and full tagged license retained unchanged.",
+  "purpose": "Syntax-to-CST parsing only; no selected Python source execution, native CPython claim or replacement of the original Python source collector."
+}
