@@ -118,7 +118,7 @@ export function render(doc,quality,{audience='internal',attachments=[]}={}){
     '## 2. Primary requested services and loaded hourly rates',
     ...asArray(doc.services).map((x,i)=>`${i+1}. **${safe(SERVICE_LABELS[asString(obj(x).category)]||'INVALID CATEGORY')}**: ${sentence(obj(x).offering)} Method: ${safe(obj(x).method)}`),
     '',
-    '| Labor category | Loaded USD / hour | Standard commercial USD / hour (optional) |',
+    '| Role | Loaded USD/h | Commercial USD/h (optional) |',
     '|---|---:|---:|',
     ...(asArray(doc.laborRates).length?asArray(doc.laborRates).map(x=>`| ${safe(obj(x).title)} | ${money(obj(x).loadedHourlyCents)} | ${'commercialHourlyCents' in obj(x)?money(obj(x).commercialHourlyCents):'Not specified'} |`):['| Actual categories to be supplied | Not provided | Not provided |']),
     '',
