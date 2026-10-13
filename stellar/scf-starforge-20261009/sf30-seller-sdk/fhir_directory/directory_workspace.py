@@ -15,6 +15,7 @@ from directory_selection import DirectorySelection
 from directory_referral import DirectoryReferral
 from directory_receiving import DirectoryReceiving
 from directory_conformance import DirectoryConformance
+from directory_operating_plans import DirectoryOperatingPlans
 
 def digest(kind,record):
     return source.sha(source.jbytes({"kind":kind,"value":{k:v for k,v in record.items()if k not in {"id","createdAt"}}}))
@@ -28,7 +29,7 @@ def clean_record(kind,record):
         raise InputError("The native acquisition must retain its original operation identity")
     return record
 
-class Workspace(DirectoryConformance,DirectoryReceiving,DirectoryReferral,DirectorySelection,DirectoryMapping,DirectorySources,BaseWorkspace):
+class Workspace(DirectoryOperatingPlans,DirectoryConformance,DirectoryReceiving,DirectoryReferral,DirectorySelection,DirectoryMapping,DirectorySources,BaseWorkspace):
     def __init__(self,root,create=False,credentials_file=None):
         super().__init__(root,create=create,credentials_file=credentials_file)
         try:
@@ -188,6 +189,7 @@ class Workspace(DirectoryConformance,DirectoryReceiving,DirectoryReferral,Direct
             "receivingReviews":["label","handoffId","archiveSha256","disposition","owner","actor"],
             "receives":["state","archiveSha256","workspaceId","kind","handoffId","updatedAt","error"],
             "importProfiles":["profile"],
+            "operatingPlans":["schema","workspaceId","stage","planId","revision","predecessorRecordId","preparedFromId","originRecordId","action","requestSha256","summary","files","actor"],
             "conformancePlans":["label","actor","subjectKind","subjectId","family","tables","profileDisposition"],
             "conformanceAssessments":["label","actor","planId","subjectKind","subjectId","family","summary","files"],
             "conformanceReviews":["label","actor","assessmentId","disposition","predecessorId","summary","files"],

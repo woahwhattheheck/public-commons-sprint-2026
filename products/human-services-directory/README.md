@@ -13,6 +13,7 @@ The product connects original Open Referral HSDS source with HL7 FHIR Human Serv
 - Select a service using retained criteria, capacity and schedule interpretation, with explicit dispositions for the original candidates.
 - Join the chosen directory destination to the exact original Gravity Task and ServiceRequest bindings in a successor edition.
 - Prepare a complete handoff, receive it into another editable workspace, reopen it and retain the receiving decision.
+- Prepare a complete operating procedure from the selected native records, edit and reopen its original revision history, receive customer copies and export JSON, Markdown and HTML.
 - Operate the same workspace through the browser, native CLI, typed SDK, Merchant MCP and installed Applications.
 
 ## Product entry points
@@ -24,6 +25,7 @@ The product connects original Open Referral HSDS source with HL7 FHIR Human Serv
 | Exact original source versions and retained identities | [SOURCE.json](SOURCE.json) |
 | Native source acquisition and index API | [SOURCE_API.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_API.md) |
 | Standards assessment, finding review and complete packages | [Conformance](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE.md) |
+| Full operating procedures, revisions and receiving | [Operating Plans](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_PLANS.md) |
 | Connected SDK, MCP and CLI | [Connected operator](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/README.md) |
 | Managed application setup and reopening | [Applications](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/APPLICATIONS.md) |
 | Published source attribution | [Source notice](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_NOTICE.md) |

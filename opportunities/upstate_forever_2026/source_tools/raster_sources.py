@@ -17,7 +17,6 @@ import urllib.parse
 import urllib.request
 import zipfile
 from model.common import atomic_json, describe_file, digest, file_digest, held, now, read_json
-from model import rasters
 
 DEM_SERVICE = "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer"
 PRISM_ANNUAL = "https://data.prism.oregonstate.edu/normals/us/800m/ppt/monthly/prism_ppt_us_30s_2020_avg_30y.zip"
@@ -109,6 +108,7 @@ def capture(url, path, *, maximum_bytes):
             raise
 
 def source_grid(reference, domain, *, layer=None, where=None, buffer_m=1000):
+    from model import rasters
     import rasterio
     from pyproj import CRS
     if not math.isfinite(buffer_m) or buffer_m <= 0:
@@ -120,14 +120,23 @@ def source_grid(reference, domain, *, layer=None, where=None, buffer_m=1000):
     grid = rasters.grid_definition(reference, geometry)
     return grid
 
-def _tile_requests(grid, maximum):
+def _tile_requests(grid, maximum, *, image_sr=None):
     width, height = grid["width"], grid["height"]
     a, b, left, d, e, top = grid["transform"]
     if b or d or a != 30 or e != -30:
         raise ValueError("DEM preparation requires the retained unrotated 30m reference grid")
     from pyproj import CRS
-    epsg = CRS.from_user_input(grid["crs"]).to_epsg()
-    image_sr = str(epsg) if epsg else json.dumps({"wkt": grid["crs"]}, separators=(",", ":"))
+    reference_crs = CRS.from_user_input(grid["crs"])
+    if image_sr is None:
+        epsg = reference_crs.to_epsg()
+        image_sr = str(epsg) if epsg else json.dumps({"wkt": grid["crs"]}, separators=(",", ":"))
+    elif not isinstance(image_sr, str) or not image_sr:
+        raise ValueError("The original request coordinate system is missing")
+    elif re.fullmatch(r"[1-9][0-9]*", image_sr):
+        if not reference_crs.equals(CRS.from_epsg(int(image_sr)), ignore_axis_order=True):
+            raise ValueError("The original numeric request CRS differs from its saved grid")
+    elif image_sr != json.dumps({"wkt": grid["crs"]}, separators=(",", ":")):
+        raise ValueError("The original request WKT differs from its saved grid")
     for row in range(0, height, maximum):
         for col in range(0, width, maximum):
             w, h = min(maximum, width-col), min(maximum, height-row)
@@ -229,11 +238,29 @@ def _load_dem_plan(directory):
                 "interpolation": "RSP_BilinearInterpolation", "compression": "LZ77"}
     if any(plan.get(key) != value for key, value in expected.items()):
         raise ValueError("The source plan no longer uses its original numeric elevation request")
-    tiles = list(_tile_requests(grid, size))
     request_path = directory / "requests.json"
-    if request_path.exists() and read_json(request_path) != {
-            "plan_sha256": digest(plan), "tiles": tiles}:
-        raise ValueError("The original tile requests changed")
+    if request_path.exists():
+        requests = read_json(request_path)
+        if (not isinstance(requests, dict) or set(requests) != {"plan_sha256", "tiles"}
+                or requests["plan_sha256"] != digest(plan)
+                or not isinstance(requests["tiles"], list) or not requests["tiles"]
+                or not isinstance(requests["tiles"][0], dict)
+                or not isinstance(requests["tiles"][0].get("url"), str)):
+            raise ValueError("The saved requests no longer bind the original source plan")
+        # Preserve the original wire CRS across GIS versions: authority inference
+        # can change while the retained WKT, source grid and requests stay the same.
+        query = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(requests["tiles"][0]["url"]).query,
+            keep_blank_values=True, strict_parsing=True)
+        spatial_references = query.get("imageSR", [])
+        if len(spatial_references) != 1:
+            raise ValueError("The original request has no unique coordinate system")
+        tiles = list(_tile_requests(grid, size, image_sr=spatial_references[0]))
+        if requests != {"plan_sha256": digest(plan), "tiles": tiles}:
+            raise ValueError("The original tile requests changed")
+    else:
+        # Existing one-command preparations predate the separate request carrier.
+        tiles = list(_tile_requests(grid, size))
     return plan, tiles
 
 
@@ -453,6 +480,7 @@ def acquire_dem(directory, *, workers=1, progress=None):
 
 def assemble_dem(directory, *, progress=None):
     """Assemble only retained original tiles; this phase makes no HTTP requests."""
+    from model import rasters
     import numpy as np
     import rasterio
     from rasterio.windows import Window
@@ -472,12 +500,14 @@ def assemble_dem(directory, *, progress=None):
         started = now()
         clock = time.monotonic()
 
-        def emit_assembly(state, finished_tiles, valid_cells, nodata_cells):
+        def emit_assembly(state, finished_tiles, valid_cells, nodata_cells, *, error=None):
             item = {"schema": "upstate.3dep-assembly/v1", "plan_sha256": digest(plan),
                     "state": state, "started_at": started, "updated_at": now(),
                     "elapsed_seconds": round(time.monotonic() - clock, 6),
                     "tile_count": len(tiles), "assembled_tiles": finished_tiles,
                     "valid_cells": valid_cells, "nodata_cells": nodata_cells}
+            if error is not None:
+                item["error"] = error
             atomic_json(directory / "assembly-progress.json", item)
             if progress:
                 progress(item)
@@ -488,46 +518,59 @@ def assemble_dem(directory, *, progress=None):
         pending = directory / "dem.tif.partial"
         profile = rasters.output_profile(grid)
         valid, missing, low, high = 0, 0, None, None
-        with rasterio.Env(GDAL_CACHEMAX=64*1024*1024), rasterio.open(pending, "w", **profile) as out:
-            for tile_index, tile in enumerate(tiles):
-                with rasterio.open(directory / tile["file"]) as original:
-                    for _, window in original.block_windows(1):
-                        data = original.read(1, window=window, masked=True)
-                        raw = np.ma.getdata(data)
-                        bad = np.ma.getmaskarray(data) | ~np.isfinite(raw)
-                        values = raw.copy()
-                        values[bad] = profile["nodata"]
-                        good = values[~bad]
-                        valid += int(good.size)
-                        missing += int(bad.sum())
-                        if good.size:
-                            low = float(good.min()) if low is None else min(low, float(good.min()))
-                            high = float(good.max()) if high is None else max(high, float(good.max()))
-                        target = Window(window.col_off+tile["col"], window.row_off+tile["row"], window.width, window.height)
-                        out.write(values, 1, window=target)
-                emit_assembly("assembling", tile_index + 1, valid, missing)
-            out.update_tags(units="m", source=DEM_SERVICE, source_vintage=vintage,
-                            rendering_rule="None", assembly="Original aligned Float32 tile values, no further resampling")
-        if not valid:
-            raise ValueError("The original elevation exports contain no finite numeric cells")
-        with pending.open("rb") as handle:
-            os.fsync(handle.fileno())
-        os.replace(pending, destination)
-        _fsync_directory(directory)
-        companions = [describe_file(directory, directory / name)
-                      for name in ["plan.json", "tiles.json", metadata_filename]]
-        for tile in tiles:
-            for name in (tile["file"], tile["file"]+".capture.json"):
-                companions.append(describe_file(directory, directory / name))
-        entry = {"id": "usgs-3dep-dem-" + digest(plan)[:16], "title": "USGS 3DEP original elevation mosaic",
-                 "kind": "raster", "role": "DEM", "uri": DEM_SERVICE, "vintage": vintage, "units": "m",
-                 "resampling": "bilinear", **describe_file(directory, destination), "companions": companions,
-                 "preparation_sha256": digest(plan), "grid": grid,
-                 "observed": {"valid_cells": valid, "nodata_cells": missing, "minimum_m": low, "maximum_m": high},
-                 "derivation": "Provider exports on the original NLCD-aligned 30m grid; exact disjoint pixel assembly"}
-        atomic_json(result_path, entry, immutable=True)
-        emit_assembly("complete", len(tiles), valid, missing)
-        return entry
+        finished_tiles = 0
+        try:
+            with rasterio.Env(GDAL_CACHEMAX=64*1024*1024), rasterio.open(pending, "w", **profile) as out:
+                for tile_index, tile in enumerate(tiles):
+                    with rasterio.open(directory / tile["file"]) as original:
+                        for _, window in original.block_windows(1):
+                            data = original.read(1, window=window, masked=True)
+                            raw = np.ma.getdata(data)
+                            bad = np.ma.getmaskarray(data) | ~np.isfinite(raw)
+                            values = raw.copy()
+                            values[bad] = profile["nodata"]
+                            good = values[~bad]
+                            valid += int(good.size)
+                            missing += int(bad.sum())
+                            if good.size:
+                                low = float(good.min()) if low is None else min(low, float(good.min()))
+                                high = float(good.max()) if high is None else max(high, float(good.max()))
+                            target = Window(window.col_off+tile["col"], window.row_off+tile["row"], window.width, window.height)
+                            out.write(values, 1, window=target)
+                    finished_tiles = tile_index + 1
+                    emit_assembly("assembling", finished_tiles, valid, missing)
+                out.update_tags(units="m", source=DEM_SERVICE, source_vintage=vintage,
+                                rendering_rule="None", assembly="Original aligned Float32 tile values, no further resampling")
+            if not valid:
+                raise ValueError("The original elevation exports contain no finite numeric cells")
+            with pending.open("rb") as handle:
+                os.fsync(handle.fileno())
+            os.replace(pending, destination)
+            _fsync_directory(directory)
+            companions = [describe_file(directory, directory / name)
+                          for name in ["plan.json", "tiles.json", metadata_filename]]
+            for tile in tiles:
+                for name in (tile["file"], tile["file"]+".capture.json"):
+                    companions.append(describe_file(directory, directory / name))
+            entry = {"id": "usgs-3dep-dem-" + digest(plan)[:16], "title": "USGS 3DEP original elevation mosaic",
+                     "kind": "raster", "role": "DEM", "uri": DEM_SERVICE, "vintage": vintage, "units": "m",
+                     "resampling": "bilinear", **describe_file(directory, destination), "companions": companions,
+                     "preparation_sha256": digest(plan), "grid": grid,
+                     "observed": {"valid_cells": valid, "nodata_cells": missing, "minimum_m": low, "maximum_m": high},
+                     "derivation": "Provider exports on the original NLCD-aligned 30m grid; exact disjoint pixel assembly"}
+            atomic_json(result_path, entry, immutable=True)
+            emit_assembly("complete", len(tiles), valid, missing)
+            return entry
+        except BaseException as error:
+            try:
+                emit_assembly(
+                    "interrupted" if isinstance(error, (KeyboardInterrupt, SystemExit)) else "failed",
+                    finished_tiles, valid, missing,
+                    error={"type": type(error).__name__, "message": str(error)})
+            except Exception:
+                # Preserve the original failure if progress storage or its callback fails.
+                pass
+            raise
 
 def prepare_dem(reference, domain, metadata_path, directory, *, vintage, layer=None,
                 where=None, buffer_m=1000, tile_size=2048, workers=1, progress=None):

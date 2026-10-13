@@ -8,6 +8,7 @@ import {TOOL_PREFIX,SHA,ALIAS,plain,need,canonical} from './contracts.mjs';
 export const directoryNativeContract=JSON.parse(readFileSync(new URL('../directory-schema.json',import.meta.url),'utf8'));
 export const directorySourceContract=JSON.parse(readFileSync(new URL('../directory-source-schema.json',import.meta.url),'utf8'));
 export const directoryConformanceContract=JSON.parse(readFileSync(new URL('../directory-conformance-schema.json',import.meta.url),'utf8'));
+export const directoryOperatingPlansContract=JSON.parse(readFileSync(new URL('../directory-operating-plans-schema.json',import.meta.url),'utf8'));
 export const directoryInputSchemas=directoryNativeContract.inputSchemas;
 export const directorySourceInputSchemas=directorySourceContract.inputSchemas;
 const sourceRoutes=[
@@ -66,7 +67,7 @@ export const directoryBodyRoutes=Object.freeze([
   ...sourceRoutes.map(row=>({...row,schemaValue:directorySourceInputSchemas[row.schema],target:'/api/directory/'+row.path})),
   ...directoryNativeContract.actions.map(row=>({
     action:'directory_'+row.id.replaceAll('-','_'),key:row.input,schema:row.input,
-    schemaValue:directoryInputSchemas[row.input],target:row.path,
+    schemaValue:directoryInputSchemas[row.input],target:row.path,readOnly:row.readOnly===true,
     description:'Apply the complete native '+row.id+' input to the selected original directory workspace.'
   }))
 ]);
@@ -81,7 +82,7 @@ const selected={workspace:alias};
 export const directoryCollections=Object.freeze([
   'connections','discoveries','requests','importProfiles','sources','editions','comparisons','operations',
   'mappings','mappingPreviews','sourceConversions','selections','referralJoins','handoffs','exports','receivingReviews','receives',
-  ...directoryConformanceContract.recordKinds
+  ...directoryConformanceContract.recordKinds,'operatingPlans'
 ]);
 function tool(action,description,properties={},required=[],options={}){
   return {name:TOOL_PREFIX+action,description,
@@ -107,7 +108,7 @@ const added=[
   },['collection','recordId']),
   ...directoryBodyRoutes.map(row=>tool(row.action,row.description,{
     [row.key]:{...row.schemaValue,description:'Complete native '+row.schema+' input; source semantics remain with the original workspace.'}
-  },[row.key],{mutates:true,external:!!row.external})),
+  },[row.key],{mutates:!row.readOnly,external:!!row.external})),
   ...['advance','pause','resume'].map(action=>tool('directory_'+action,
     action==='advance'?'Continue the same directory acquisition and retain its exact provider response and pagination state.':
       action==='pause'?'Pause local progress of the same original directory acquisition.':
@@ -185,6 +186,15 @@ const added=[
     recordId:hash('Exact saved conformance record ID.'),
     fileKind:str('Select a file declared in this record’s files map.',{enum:directoryConformanceContract.fileKinds})
   },['collection','recordId','fileKind']),
+  tool('directory_operating_catalog','Read the complete original command registration catalogue used by the selected Directory product.'),
+  ...['document','draft','input','basis'].map(kind=>tool('directory_operating_'+kind,
+    {document:'Read every saved revision of the complete original OperatingPlan.',
+      draft:'Reopen the selected original revision as an editable draft with its native base revision.',
+      input:'Read the complete accepted or prepared procedure input with its original request identity.',
+      basis:'Read the exact original Directory record basis, hashes and observation time.'}[kind],
+    {recordId:hash('Exact original native operatingPlans record ID.'),
+      ...(kind==='draft'?{revision:{...directoryInputSchemas.operating_plan_compare.properties.revision,description:'Selected saved original revision; omission uses the current document revision.'}}:{})},
+    ['recordId'])),
   tool('directory_handoff_file','Retain the full selected directory handoff with editable workspace and original source custody.',{
     handoffId:hash('Original handoff ID.')
   },['handoffId']),

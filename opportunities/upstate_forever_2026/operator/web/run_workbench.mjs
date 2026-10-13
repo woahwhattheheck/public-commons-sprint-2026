@@ -8,11 +8,38 @@ const activeStates = new Set(['queued', 'running']);
 const resumableStates = new Set(['failed', 'interrupted', 'cancelled']);
 const idPattern = /^[0-9a-f]{64}$/;
 const pageSize = 50;
+const modelOrder = ['ndr', 'sdr'];
+const modelOutputs = {ndr: ['nitrogen_export', 'phosphorus_export'], sdr: ['sediment_export']};
+const allOutputs = modelOrder.flatMap(model => modelOutputs[model]);
 const quantity = value => value === null || value === undefined ? '—' :
   typeof value === 'number' ? value.toLocaleString(undefined, {maximumFractionDigits: 6}) : escapeHTML(value);
 const title = row => row?.title || row?.metadata?.title || row?.spec?.title || row?.selection?.title || String(row?.id || '').slice(0, 12);
 const short = value => String(value || '').slice(0, 12);
-const selectionKey = selection => [selection.grid_id, selection.profile_id, selection.scenario_id].join(':');
+const modelsOf = value => {
+  const original = Array.isArray(value) ? value : value?.models;
+  const values = original === undefined ? modelOrder : original;
+  if (!Array.isArray(values) || !values.length || values.some(name => typeof name !== 'string'))
+    throw Error('Select the native nutrient model, sediment model, or both.');
+  const names = values.map(name => name.trim().toLowerCase());
+  if (new Set(names).size !== names.length || names.some(name => !modelOrder.includes(name)))
+    throw Error('Select each native model once: NDR or SDR.');
+  return modelOrder.filter(name => names.includes(name));
+};
+const modelKey = models => modelsOf(models).join('+');
+const modelLabel = models => modelsOf(models).map(name => name.toUpperCase()).join(' + ');
+const tripleKey = selection => [selection.grid_id, selection.profile_id, selection.scenario_id].join(':');
+const selectionKey = selection => tripleKey(selection) + ':' + modelKey(selection);
+const requestModels = (selection, grids) => modelsOf(Object.hasOwn(selection, 'models') ?
+  selection : grids.get(selection.grid_id)?.spec);
+const nativeSelection = (selection, models) => ({
+  grid_id: selection.grid_id, profile_id: selection.profile_id, scenario_id: selection.scenario_id,
+  ...(modelKey(models) === 'ndr+sdr' ? {} : {models: modelsOf(models)})
+});
+const selectedOutputsComplete = run => !!run && run.state === 'complete' &&
+  modelsOf(run.selection).every(model => Object.hasOwn(run.stages || run.stage_summary || {}, model) &&
+    modelOutputs[model].every(name => !!run.artifacts?.[name]));
+const fullOutputsComplete = run => selectedOutputsComplete(run) &&
+  modelKey(run.selection) === 'ndr+sdr' && allOutputs.every(name => !!run.artifacts?.[name]);
 const canonical = value => JSON.stringify(value, (_, item) => {
   if (item && typeof item === 'object' && !Array.isArray(item)) {
     return Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]]));
@@ -26,30 +53,83 @@ const htmlButton = (action, label, values = {}, disabled = false, primary = fals
 const option = (value, label, selected, disabled = false) =>
   '<option value="' + escapeHTML(value) + '"' + (selected ? ' selected' : '') + (disabled ? ' disabled' : '') + '>' + escapeHTML(label) + '</option>';
 
-export function runDeskRows(snapshot, draft, programmeStatuses = []) {
+
+function comparisonKey(baselineId, alternativeIds) {
+  return baselineId + ':' + [...alternativeIds].sort().join(',');
+}
+function runDeskIndex(snapshot) {
   const data = snapshot?.data || {};
   const profiles = new Map((data.profiles || []).map(row => [row.id, row]));
   const scenarios = new Map((data.scenarios || []).map(row => [row.id, row]));
-  const runs = new Map();
+  const grids = new Map((data.grids || []).map(row => [row.id, row]));
+  const runs = new Map(), runsById = new Map(), retainedScopes = new Map();
+  function retainScope(selection, models) {
+    const key = tripleKey(selection);
+    if (!retainedScopes.has(key)) retainedScopes.set(key, new Map());
+    retainedScopes.get(key).set(modelKey(models), models);
+  }
   for (const run of data.runs || []) {
-    const key = selectionKey(run.selection || {});
-    const before = runs.get(key);
+    runsById.set(run.id, run);
+    const selection = run.selection || {};
+    const key = selectionKey(selection), before = runs.get(key);
     if (!before || String(run.created_at || '') > String(before.created_at || '')) runs.set(key, run);
+    retainScope(selection, modelsOf(selection));
   }
   const tasks = [...(snapshot?.tasks || [])]
     .filter(task => !task.workspace || task.workspace === snapshot.workspace_key)
     .sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || '')));
-  const preparationBySelection = new Map(), startByRun = new Map();
+  const preparationBySelection = new Map(), startByRun = new Map(), runningTasks = new Map();
+  const activeComparisons = new Map(), comparisons = new Map();
   for (const task of tasks) {
+    if (task.action === 'compute.programme.run' && task.state === 'running') runningTasks.set(task.id, task);
+    if (task.action === 'run.compare' && activeStates.has(task.state) && Array.isArray(task.payload?.run_ids)) {
+      const key = comparisonKey(task.payload.run_ids[0], task.payload.run_ids.slice(1));
+      if (!activeComparisons.has(key)) activeComparisons.set(key, task);
+    }
     const index = task.action === 'run.prepare' ? preparationBySelection : task.action === 'run.start' ? startByRun : null;
     if (!index) continue;
-    const key = task.action === 'run.prepare' ? selectionKey(task.payload || {}) : task.payload?.run_id;
+    let key = task.payload?.run_id;
+    if (task.action === 'run.prepare') {
+      const payload = task.payload || {}, models = requestModels(payload, grids);
+      key = selectionKey(nativeSelection(payload, models));
+      retainScope(payload, models);
+    }
     if (!key) continue;
     if (!index.has(key)) index.set(key, []);
     index.get(key).push(task);
   }
+  for (const row of data.comparisons || []) {
+    const key = comparisonKey(row.baseline_run_id, (row.alternatives || []).map(value => value.run_id));
+    if (!comparisons.has(key)) comparisons.set(key, row);
+  }
+  return {data: snapshot?.data, taskSource: snapshot?.tasks, workspace: snapshot?.workspace_key,
+    profiles, scenarios, grids, runs, runsById, tasks, retainedScopes, preparationBySelection, startByRun,
+    runningTasks, activeComparisons, comparisons};
+}
+function selectedFamilies(rows, compatibleOnly = false) {
+  const families = new Map();
+  for (const row of rows) {
+    if (!row.selected || compatibleOnly && !row.compatible) continue;
+    const id = row.selection.profile_id;
+    if (!families.has(id)) families.set(id, new Map());
+    const scopes = families.get(id);
+    if (!scopes.has(row.modelKey)) scopes.set(row.modelKey, []);
+    scopes.get(row.modelKey).push(row);
+  }
+  return families;
+}
+
+export function runDeskRows(snapshot, draft, programmeStatuses = [], index = runDeskIndex(snapshot)) {
+  const {profiles, scenarios, grids, runs, tasks, preparationBySelection, startByRun, runningTasks} = index;
+  const requested = requestModels({grid_id: draft.grid_id, ...(draft.models ? {models: draft.models} : {})}, grids);
+  const requestedKey = modelKey(requested), gridModels = modelsOf(grids.get(draft.grid_id)?.spec);
+  const programmeScopes = new Map();
+  function retainScope(selection, models) {
+    const key = tripleKey(selection);
+    if (!programmeScopes.has(key)) programmeScopes.set(key, new Map());
+    programmeScopes.get(key).set(modelKey(models), models);
+  }
   const programmeByRun = new Map(), programmeBySelection = new Map();
-  const runningTasks = new Map(tasks.filter(task => task.action === 'compute.programme.run' && task.state === 'running').map(task => [task.id, task]));
   for (const retained of programmeStatuses) {
     const task = runningTasks.get(retained.task_id), status = retained.status;
     if (!task || status?.active !== true || !Array.isArray(status.runs)) continue;
@@ -62,93 +142,114 @@ export function runDeskRows(snapshot, draft, programmeStatuses = []) {
       const programme = {id: status.programme_id || status.id, key: binding.key, current: binding.key === currentKey, task};
       if (idPattern.test(binding.run_id || '') && (!programmeByRun.has(binding.run_id) || programme.current))
         programmeByRun.set(binding.run_id, programme);
-      const selection = binding.native_selection || binding.selection;
-      if (selection && ['grid_id', 'profile_id', 'scenario_id'].every(key => idPattern.test(selection[key] || '')) &&
-          (!programmeBySelection.has(selectionKey(selection)) || programme.current))
-        programmeBySelection.set(selectionKey(selection), programme);
+      const original = binding.native_selection || binding.selection;
+      if (original && ['grid_id', 'profile_id', 'scenario_id'].every(key => idPattern.test(original[key] || ''))) {
+        const models = binding.native_selection ? modelsOf(original) :
+          requestModels({...original, ...(binding.models ? {models: binding.models} : {})}, grids);
+        const selection = nativeSelection(original, models);
+        const key = selectionKey(selection);
+        retainScope(selection, models);
+        if (!programmeBySelection.has(key) || programme.current) programmeBySelection.set(key, programme);
+      }
     }
   }
-  const excluded = new Set(draft.excluded || []);
+  const excluded = new Set(draft.excluded || []), included = new Set(draft.included || []);
   const rows = [];
   for (const profileId of draft.profile_ids || []) {
     const profile = profiles.get(profileId);
     if (!profile) continue;
+    const profileModels = modelsOf(profile);
     for (const scenarioId of draft.scenario_ids || []) {
       const scenario = scenarios.get(scenarioId);
       if (!scenario) continue;
-      const selection = {grid_id: draft.grid_id, profile_id: profileId, scenario_id: scenarioId};
-      const key = selectionKey(selection);
-      const run = runs.get(key);
-      const preparations = preparationBySelection.get(key) || [];
-      const starts = run ? startByRun.get(run.id) || [] : [];
-      const activePreparation = preparations.find(task => activeStates.has(task.state));
-      const activeStart = starts.find(task => activeStates.has(task.state));
-      const programme = (run && programmeByRun.get(run.id)) || programmeBySelection.get(key);
-      const task = programme?.task || activeStart || activePreparation || starts[0] || preparations[0];
-      let state = 'missing', label = 'Needs preparation';
-      if (run?.state === 'complete') { state = 'complete'; label = 'Complete'; }
-      else if (programme) { state = programme.current ? 'running' : 'queued'; label = programme.current ? 'Running in programme' : 'Selected in active programme'; }
-      else if (activeStart) { state = activeStart.state; label = activeStart.state === 'queued' ? 'Queued to run' : 'Running'; }
-      else if (activePreparation) { state = 'preparing'; label = activePreparation.state === 'running' ? 'Preparing' : 'Preparation queued'; }
-      else if (run && starts[0] && resumableStates.has(starts[0].state)) { state = 'attention'; label = starts[0].state === 'failed' ? 'Run needs attention' : 'Continuation available'; }
-      else if (run?.state === 'prepared') { state = 'ready'; label = 'Ready to run'; }
-      else if (run) { state = 'attention'; label = run.state === 'failed' ? 'Run needs attention' : 'Continuation available'; }
-      else if (task && resumableStates.has(task.state)) { state = 'attention'; label = 'Preparation needs attention'; }
-      rows.push({
-        key, selection, profile, scenario, run, task, state, label, programme,
-        selected: !excluded.has(key),
-        preparable: !run && !activePreparation && !programme,
-        startable: !!run && run.state !== 'complete' && !activeStart && !activePreparation && !programme,
-        queuedTask: [activeStart, activePreparation].find(value => value?.state === 'queued')
-      });
+      const choice = {grid_id: draft.grid_id, profile_id: profileId, scenario_id: scenarioId};
+      const originalKey = tripleKey(choice);
+      const scopes = new Map([[requestedKey, requested], ...(index.retainedScopes.get(originalKey) || []), ...(programmeScopes.get(originalKey) || [])]);
+      for (const [scopeKey, models] of scopes) {
+        const selection = nativeSelection(choice, models);
+        const key = selectionKey(selection);
+        const run = runs.get(key);
+        const preparations = preparationBySelection.get(key) || [];
+        const starts = run ? startByRun.get(run.id) || [] : [];
+        const activePreparation = preparations.find(task => activeStates.has(task.state));
+        const activeStart = starts.find(task => activeStates.has(task.state));
+        const programme = (run && programmeByRun.get(run.id)) || programmeBySelection.get(key);
+        const task = programme?.task || activeStart || activePreparation || starts[0] || preparations[0];
+        const unavailable = models.filter(name => !gridModels.includes(name) || !profileModels.includes(name));
+        const compatible = !unavailable.length;
+        const complete = selectedOutputsComplete(run);
+        let state = 'missing', label = 'Needs preparation';
+        if (complete) { state = 'complete'; label = modelLabel(models) + ' complete'; }
+        else if (programme) { state = programme.current ? 'running' : 'queued'; label = programme.current ? 'Running in programme' : 'Selected in active programme'; }
+        else if (run?.state === 'complete') { state = 'attention'; label = 'Selected exports need attention'; }
+        else if (activeStart) { state = activeStart.state; label = activeStart.state === 'queued' ? 'Queued to run' : 'Running'; }
+        else if (activePreparation) { state = 'preparing'; label = activePreparation.state === 'running' ? 'Preparing' : 'Preparation queued'; }
+        else if (run && starts[0] && resumableStates.has(starts[0].state)) { state = 'attention'; label = starts[0].state === 'failed' ? 'Run needs attention' : 'Continuation available'; }
+        else if (run?.state === 'prepared') { state = 'ready'; label = 'Ready to run'; }
+        else if (run) { state = 'attention'; label = run.state === 'failed' ? 'Run needs attention' : 'Continuation available'; }
+        else if (task && resumableStates.has(task.state)) { state = 'attention'; label = 'Preparation needs attention'; }
+        else if (!compatible) { state = 'attention'; label = 'Grid or profile excludes ' + modelLabel(unavailable); }
+        rows.push({
+          key, selection, models, modelKey: scopeKey, profile, scenario, run, task, state, label, compatible, programme,
+          selected: !excluded.has(key) && !(excluded.has(originalKey) && scopeKey === requestedKey) &&
+            (scopeKey === requestedKey || included.has(key)),
+          preparable: compatible && !run && !activePreparation && !programme,
+          startable: compatible && !!run && run.state !== 'complete' && !activeStart && !activePreparation && !programme,
+          queuedTask: [activeStart, activePreparation].find(value => value?.state === 'queued')
+        });
+      }
     }
   }
   return rows;
 }
 
-export function runDeskComparisons(snapshot, draft, rows = runDeskRows(snapshot, draft)) {
-  const baseline = (snapshot?.data?.scenarios || []).find(row => row.id === draft.baseline_scenario_id);
+export function runDeskComparisons(snapshot, draft, rows = null, index = runDeskIndex(snapshot)) {
+  rows ||= runDeskRows(snapshot, draft, [], index);
+  const baseline = index.scenarios.get(draft.baseline_scenario_id);
   if (!baseline || baseline.kind !== 'baseline') return [];
-  const selected = rows.filter(row => row.selected);
-  const groups = [];
+  const families = selectedFamilies(rows), groups = [];
   for (const profileId of draft.profile_ids || []) {
-    const family = selected.filter(row => row.selection.profile_id === profileId);
-    const base = family.find(row => row.scenario.id === baseline.id);
-    const alternatives = family.filter(row => row.scenario.id !== baseline.id && row.scenario.kind === 'landcover');
-    if (!base || !alternatives.length) continue;
-    const complete = alternatives.filter(row => row.run?.state === 'complete');
-    const runIds = base.run?.state === 'complete' ? [base.run.id, ...complete.map(row => row.run.id)] : [];
-    const signature = [...runIds.slice(1)].sort().join(',');
-    const retained = runIds.length > 1 ? (snapshot.data.comparisons || []).find(row =>
-      row.baseline_run_id === runIds[0] && (row.alternatives || []).map(value => value.run_id).sort().join(',') === signature) : null;
-    const task = runIds.length > 1 ? (snapshot.tasks || []).find(row =>
-      row.action === 'run.compare' && row.payload?.run_ids?.[0] === runIds[0] &&
-      [...row.payload.run_ids.slice(1)].sort().join(',') === signature &&
-      activeStates.has(row.state)) : null;
-    groups.push({profileId, profile: base.profile, baseline: base, alternatives, complete, runIds, retained, task});
+    for (const [scopeKey, family] of families.get(profileId) || []) {
+      const base = family.find(row => row.scenario.id === baseline.id);
+      const alternatives = family.filter(row => row.scenario.id !== baseline.id && row.scenario.kind === 'landcover');
+      if (!base || !alternatives.length) continue;
+      const complete = alternatives.filter(row => selectedOutputsComplete(row.run));
+      const runIds = selectedOutputsComplete(base.run) ? [base.run.id, ...complete.map(row => row.run.id)] : [];
+      const key = runIds.length > 1 ? comparisonKey(runIds[0], runIds.slice(1)) : '';
+      const retained = key ? index.comparisons.get(key) || null : null;
+      const task = key ? index.activeComparisons.get(key) || null : null;
+      groups.push({key: profileId + ':' + scopeKey, profileId, profile: base.profile, models: base.models,
+        modelKey: scopeKey, baseline: base, alternatives, complete, runIds, retained, task,
+        canDeliver: runIds.length > 1 && fullOutputsComplete(base.run) && complete.every(row => fullOutputsComplete(row.run))});
+    }
   }
   return groups;
 }
 
-export function runDeskProgrammes(snapshot, draft, rows = runDeskRows(snapshot, draft)) {
-  const grid = (snapshot?.data?.grids || []).find(row => row.id === draft.grid_id && row.state === 'complete');
-  if (!grid) return [];
-  const selected = rows.filter(row => row.selected), programmes = [];
+export function runDeskProgrammes(snapshot, draft, rows = null, index = runDeskIndex(snapshot)) {
+  rows ||= runDeskRows(snapshot, draft, [], index);
+  const grid = index.grids.get(draft.grid_id);
+  if (!grid || grid.state !== 'complete') return [];
+  const families = selectedFamilies(rows, true), programmes = [];
   for (const profileId of draft.profile_ids || []) {
-    const family = selected.filter(row => row.selection.profile_id === profileId);
-    const baseline = family.find(row => row.scenario.id === draft.baseline_scenario_id && row.scenario.kind === 'baseline');
-    if (!baseline) continue;
-    const alternatives = family.filter(row => row.scenario.id !== baseline.scenario.id && row.scenario.kind === 'landcover');
-    const selection = {
-      schema: 'upstate.compute-programme-selection/v1',
-      title: 'Native runs · ' + title(baseline.profile),
-      grid_id: draft.grid_id,
-      baseline_run: 'baseline',
-      runs: [{key: 'baseline', title: title(baseline.scenario), profile_id: profileId, scenario_id: baseline.scenario.id},
-        ...alternatives.map(row => ({key: row.scenario.id, title: title(row.scenario),
-          profile_id: profileId, scenario_id: row.scenario.id}))]
-    };
-    programmes.push({profileId, profile: baseline.profile, baseline, selection});
+    for (const [scopeKey, family] of families.get(profileId) || []) {
+      const baseline = family.find(row => row.scenario.id === draft.baseline_scenario_id && row.scenario.kind === 'baseline');
+      if (!baseline) continue;
+      const alternatives = family.filter(row => row.scenario.id !== baseline.scenario.id && row.scenario.kind === 'landcover');
+      const entry = (row, key) => ({
+        key, title: title(row.scenario), profile_id: profileId, scenario_id: row.scenario.id,
+        ...(scopeKey === 'ndr+sdr' ? {} : {models: [...row.models]})
+      });
+      const selection = {
+        schema: 'upstate.compute-programme-selection/v1',
+        title: 'Native runs · ' + title(baseline.profile) + (scopeKey === 'ndr+sdr' ? '' : ' · ' + modelLabel(baseline.models)),
+        grid_id: draft.grid_id,
+        baseline_run: 'baseline',
+        runs: [entry(baseline, 'baseline'), ...alternatives.map(row => entry(row, row.scenario.id))]
+      };
+      programmes.push({key: profileId + ':' + scopeKey, profileId, profile: baseline.profile,
+        models: baseline.models, modelKey: scopeKey, baseline, selection});
+    }
   }
   return programmes;
 }
@@ -157,7 +258,20 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   let host = null, current = null, workspaceKey = null, draft = null;
   let busy = false, notice = '', page = 0, filter = 'all', search = '';
   let storageMessage = '', submission = null;
-  let programmeStatuses = [], programmeRead = null, programmeEpoch = 0, programmeMessage = '';
+  let programmeStatuses = [], programmeRead = null, programmeCache = null, programmeEpoch = 0, programmeMessage = '';
+  let sourceIndex = null, rowCache = null, selectionRevision = 0;
+  function currentIndex() {
+    if (!sourceIndex || sourceIndex.data !== current?.data || sourceIndex.taskSource !== current?.tasks ||
+        sourceIndex.workspace !== current?.workspace_key) sourceIndex = runDeskIndex(current);
+    return sourceIndex;
+  }
+  function currentRows() {
+    const index = currentIndex();
+    if (!rowCache || rowCache.index !== index || rowCache.revision !== selectionRevision || rowCache.programmes !== programmeStatuses)
+      rowCache = {index, revision: selectionRevision, programmes: programmeStatuses,
+        rows: runDeskRows(current, draft, programmeStatuses, index)};
+    return rowCache.rows;
+  }
   function programmeOpener() {
     if (typeof openProgramme === 'function') return openProgramme;
     const programme = typeof getProgramme === 'function' ? getProgramme() : null;
@@ -166,7 +280,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
 
   function resetProgrammeTracking() {
     programmeEpoch++;
-    programmeStatuses = []; programmeRead = null; programmeMessage = '';
+    programmeStatuses = []; programmeRead = null; programmeCache = null; programmeMessage = '';
   }
   function runningProgrammeTasks(snapshot) {
     const byProgramme = new Map();
@@ -181,7 +295,13 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     if (!host || !target) return;
     const tasks = runningProgrammeTasks(snapshot);
     if (!tasks.length) { resetProgrammeTracking(); return; }
-    const signature = tasks.map(task => task.id + ':' + task.payload.programme_id).sort().join('|');
+    // Stage progress already arrives in /api/state. Full programme bindings only
+    // need rereading on an execution-state transition, periodic lock reconciliation,
+    // or immediately before an operator starts more work.
+    const signature = tasks.map(task => task.id + ':' + task.payload.programme_id + ':' + (task.started_at || '')).sort().join('|') +
+      '#' + (snapshot.data?.runs || []).map(run => run.id + ':' + run.state).join('|');
+    if (!required && programmeCache?.workspace === target && programmeCache.signature === signature &&
+        Date.now() - programmeCache.observedAt < 30000) return programmeCache.result;
     let request = programmeRead;
     if (!request || request.workspace !== target || request.signature !== signature) {
       request = {workspace: target, signature, epoch: programmeEpoch, promise: null};
@@ -198,6 +318,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
         const errors = results.filter(row => row.status === 'rejected').map(row => row.reason?.message || String(row.reason));
         if (host && programmeRead === request && request.epoch === programmeEpoch && getState()?.workspace_key === target) {
           programmeStatuses = records;
+          programmeCache = {workspace: target, signature, observedAt: Date.now(), result: {records, errors}};
           programmeMessage = errors.length ? 'Programme progress could not be refreshed: ' + [...new Set(errors)].join(' ') : '';
           paint();
         }
@@ -220,7 +341,9 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const selectedScenario = (data.scenarios || []).find(row => row.id === last?.selection?.scenario_id) || baseline || data.scenarios?.[0];
     return {schema: 'upstate.operator-run-desk/v1', project_id: data.project.id, grid_id: grid?.id || '',
       profile_ids: profile ? [profile.id] : [], scenario_ids: [...new Set([baseline?.id, selectedScenario?.id].filter(Boolean))],
-      baseline_scenario_id: baseline?.id || '', excluded: []};
+      baseline_scenario_id: baseline?.id || '',
+      models: modelsOf(last && last.selection?.grid_id === grid?.id ? last.selection : grid?.spec),
+      excluded: [], included: []};
   }
   function parseDraft(value, snapshot) {
     if (!value || value.schema !== 'upstate.operator-run-desk/v1' || value.project_id !== snapshot.data.project.id)
@@ -231,18 +354,27 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     }
     if (value.grid_id && !idPattern.test(value.grid_id)) throw Error('The run selection has an invalid grid identity.');
     if (value.baseline_scenario_id && !idPattern.test(value.baseline_scenario_id)) throw Error('The run selection has an invalid baseline identity.');
+    const grid = (snapshot.data.grids || []).find(row => row.id === value.grid_id);
+    const models = modelsOf(Object.hasOwn(value, 'models') ? value : grid?.spec);
+    const cellKeys = values => Array.isArray(values) ? [...new Set(values.flatMap(key => {
+      if (typeof key !== 'string') return [];
+      const parts = key.split(':');
+      if (![3, 4].includes(parts.length) || !parts.slice(0, 3).every(id => idPattern.test(id))) return [];
+      if (parts.length === 3) return [key + ':' + modelKey(models)];
+      return ['ndr', 'sdr', 'ndr+sdr'].includes(parts[3]) ? [key] : [];
+    }))] : [];
     return {schema: value.schema, project_id: value.project_id, grid_id: value.grid_id || '',
       profile_ids: [...value.profile_ids], scenario_ids: [...value.scenario_ids],
-      baseline_scenario_id: value.baseline_scenario_id || '',
-      excluded: Array.isArray(value.excluded) ? value.excluded.filter(key => typeof key === 'string' &&
-        key.split(':').length === 3 && key.split(':').every(id => idPattern.test(id))) : []};
+      baseline_scenario_id: value.baseline_scenario_id || '', models,
+      excluded: cellKeys(value.excluded), included: cellKeys(value.included)};
   }
   function synchronize(snapshot) {
     if (!snapshot?.data) return;
     current = snapshot;
     if (workspaceKey === snapshot.workspace_key && draft) return;
-    workspaceKey = snapshot.workspace_key;
     resetProgrammeTracking();
+    workspaceKey = snapshot.workspace_key;
+    sourceIndex = null; rowCache = null; selectionRevision++;
     draft = initialDraft(snapshot);
     notice = ''; storageMessage = ''; page = 0; filter = 'all'; search = '';
     try {
@@ -253,31 +385,34 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     }
   }
   function persist() {
+    selectionRevision++;
     try { localStorage.setItem(storageKey(workspaceKey), JSON.stringify(draft)); storageMessage = ''; }
     catch { storageMessage = 'Download this run selection to keep it across browser sessions.'; }
   }
   function selectionIssues() {
     if (!current || !draft) return [];
     const data = current.data, issues = [];
-    const grid = (data.grids || []).find(row => row.id === draft.grid_id);
+    const index = currentIndex(), grid = index.grids.get(draft.grid_id);
     if (!grid) issues.push('Choose a retained model grid.');
     else if (grid.state !== 'complete') issues.push('Complete the selected model grid before preparing its runs.');
+    if (grid && modelsOf(draft).some(name => !modelsOf(grid.spec).includes(name)))
+      issues.push('Choose native models included in the selected grid.');
     if (!draft.profile_ids.length) issues.push('Select at least one parameter profile.');
     if (!draft.scenario_ids.length) issues.push('Select at least one land-cover scenario.');
     for (const [field, collection, label] of [['profile_ids', 'profiles', 'profile'], ['scenario_ids', 'scenarios', 'scenario']]) {
       for (const id of draft[field]) {
-        if (!(data[collection] || []).some(row => row.id === id)) issues.push('The selected ' + label + ' ' + short(id) + ' is unavailable in this workspace.');
+        if (!index[collection].has(id)) issues.push('The selected ' + label + ' ' + short(id) + ' is unavailable in this workspace.');
       }
     }
     return issues;
   }
   function checkedList(kind, selected) {
-    const rows = current.data[kind] || [];
+    const rows = current.data[kind] || [], selectedIds = new Set(selected);
     if (!rows.length) return '<p class="note">Save an original ' + (kind === 'profiles' ? 'parameter profile' : 'land-cover scenario') + ' to select it here.</p>';
     return rows.map(row => '<label class="check"><input type="checkbox" data-rd-focus="' + kind + '-' + escapeHTML(row.id) +
-      '" data-rd-choice="' + kind + '" value="' + escapeHTML(row.id) + '"' + (selected.includes(row.id) ? ' checked' : '') +
+      '" data-rd-choice="' + kind + '" value="' + escapeHTML(row.id) + '"' + (selectedIds.has(row.id) ? ' checked' : '') +
       (busy ? ' disabled' : '') + '><span><strong>' + escapeHTML(title(row)) + '</strong><small>' +
-      escapeHTML(kind === 'profiles' ? 'Table ' + short(row.biophysical_source_id) : row.kind + (row.patches?.length ? ' · ' + row.patches.length + ' retained changes' : '')) +
+      escapeHTML(kind === 'profiles' ? 'Table ' + short(row.biophysical_source_id) + ' · ' + modelLabel(modelsOf(row)) : row.kind + (row.patches?.length ? ' · ' + row.patches.length + ' retained changes' : '')) +
       '</small></span></label>').join('');
   }
   function stageText(row) {
@@ -291,7 +426,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     return rows.map(row => '<tr><td><input type="checkbox" data-rd-row="' + escapeHTML(row.key) + '" data-rd-focus="cell-' +
       escapeHTML(row.key) + '" aria-label="Select ' + escapeHTML(title(row.scenario)) + ' with ' + escapeHTML(title(row.profile)) + '"' +
       (row.selected ? ' checked' : '') + (busy ? ' disabled' : '') + '></td><td class="name-cell"><strong>' + escapeHTML(title(row.scenario)) +
-      '</strong><small>' + escapeHTML(title(row.profile)) + '</small><small class="mono">' + escapeHTML(row.run ? short(row.run.id) : 'Selection ' + short(row.scenario.id)) +
+      '</strong><small>' + escapeHTML(title(row.profile)) + ' · ' + escapeHTML(modelLabel(row.models)) + '</small><small class="mono">' + escapeHTML(row.run ? short(row.run.id) : 'Selection ' + short(row.scenario.id)) +
       '</small></td><td><span class="status ' + escapeHTML(row.state) + '">' + escapeHTML(row.label) + '</span><small class="rd-stage">' +
       escapeHTML(stageText(row)) + '</small>' + ((row.task?.error || row.run?.error) ? '<small class="rd-error">' +
       escapeHTML(row.task?.error?.message || row.run?.error?.message || 'Open the retained task for the original error.') + '</small>' : '') +
@@ -308,32 +443,37 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   }
   function matchingRows(rows) {
     const query = search.trim().toLocaleLowerCase();
-    return rows.filter(row => (!query || [title(row.profile), title(row.scenario), row.run?.id, row.label].join(' ').toLocaleLowerCase().includes(query)) &&
+    return rows.filter(row => (!query || [title(row.profile), title(row.scenario), modelLabel(row.models), row.run?.id, row.label].join(' ').toLocaleLowerCase().includes(query)) &&
       (filter === 'all' || filter === 'selected' && row.selected || filter === 'missing' && row.preparable ||
        filter === 'ready' && row.startable || filter === 'active' && ['preparing', 'queued', 'running'].includes(row.state) ||
        filter === 'complete' && row.state === 'complete' || filter === 'attention' && row.state === 'attention'));
   }
   function renderGroups(rows) {
-    const groups = runDeskComparisons(current, draft, rows);
-    if (!groups.length) return '<p class="note">Select an unchanged baseline and at least one land-cover alternative under the same profile to prepare a comparison or delivery.</p>';
-    return groups.map(group => '<article class="rd-comparison"><div><h3>' + escapeHTML(title(group.profile)) + '</h3><p>' +
+    const groups = runDeskComparisons(current, draft, rows, currentIndex());
+    if (!groups.length) return '<p class="note">Select an unchanged baseline and at least one land-cover alternative under the same profile and native model selection.</p>';
+    return groups.map(group => '<article class="rd-comparison"><div><h3>' + escapeHTML(title(group.profile)) + ' · ' +
+      escapeHTML(modelLabel(group.models)) + '</h3><p>' +
       escapeHTML(title(group.baseline.scenario)) + ' → ' + group.complete.length + ' of ' + group.alternatives.length + ' selected alternatives complete.</p>' +
-      '<small>' + (group.baseline.run?.state === 'complete' ? 'Baseline complete. ' : 'Baseline awaiting completion. ') +
-      'Every pair uses the selected grid and this original parameter profile.</small></div><div class="rd-row-actions">' +
+      '<small>' + (selectedOutputsComplete(group.baseline.run) ? 'Baseline complete. ' : 'Baseline awaiting completion. ') +
+      'Every pair uses the same grid, parameter profile and native models. Full delivery uses completed nitrogen, phosphorus and sediment exports.</small></div><div class="rd-row-actions">' +
       (group.retained ? htmlButton('comparison-open', 'Open retained comparison', {id: group.retained.id}) :
         group.task ? htmlButton('task', 'Comparison ' + group.task.state, {id: group.task.id}) :
-        htmlButton('compare', 'Compare ' + group.complete.length + ' completed alternative' + (group.complete.length === 1 ? '' : 's'), {profile: group.profileId}, busy || group.runIds.length < 2)) +
-      htmlButton('delivery', 'Prepare delivery from completed pairs', {profile: group.profileId}, busy || group.runIds.length < 2) + '</div></article>').join('');
+        htmlButton('compare', 'Compare ' + group.complete.length + ' completed alternative' + (group.complete.length === 1 ? '' : 's'),
+          {profile: group.profileId, models: group.modelKey}, busy || group.runIds.length < 2)) +
+      htmlButton('delivery', 'Prepare full delivery', {profile: group.profileId, models: group.modelKey},
+        busy || !group.canDeliver) + '</div></article>').join('');
   }
-  function renderProgrammes(rows) {
+  function renderProgrammes(rows, hasIssues) {
     if (!programmeOpener()) return '';
-    const groups = runDeskProgrammes(current, draft, rows);
-    if (!groups.length) return '<div class="section-body"><p class="note">Choose a complete working grid and check an unchanged baseline under a selected profile to open its execution programme.</p></div>';
-    return '<div class="section-body"><p class="note">Retain a programme for each profile to prepare and execute its selected runs, reuse completed native stages, and continue from saved progress.</p>' +
-      groups.map(group => '<article class="rd-comparison"><div><h3>' + escapeHTML(title(group.profile)) + '</h3><p>' +
+    const groups = runDeskProgrammes(current, draft, rows, currentIndex());
+    if (!groups.length) return '<div class="section-body"><p class="note">Choose a complete working grid and check an unchanged baseline under a compatible profile to open its execution programme.</p></div>';
+    return '<div class="section-body"><p class="note">Each programme retains one parameter profile and native model selection, reuses completed stages, and continues from saved progress.</p>' +
+      groups.map(group => '<article class="rd-comparison"><div><h3>' + escapeHTML(title(group.profile)) + ' · ' +
+        escapeHTML(modelLabel(group.models)) + '</h3><p>' +
         group.selection.runs.length + ' selected native run' + (group.selection.runs.length === 1 ? '' : 's') +
         ' · unchanged baseline: ' + escapeHTML(title(group.baseline.scenario)) + '</p><small>Uses this working grid, this profile and the checked land-cover alternatives.</small></div>' +
-        '<div class="rd-row-actions">' + htmlButton('programme', 'Inspect execution programme', {profile: group.profileId}, busy || !!selectionIssues().length) +
+        '<div class="rd-row-actions">' + htmlButton('programme', 'Inspect execution programme',
+          {profile: group.profileId, models: group.modelKey}, busy || hasIssues) +
         '</div></article>').join('') + '</div>';
   }
   function paint() {
@@ -342,7 +482,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const focusKey = focused?.dataset.rdFocus;
     const start = focused?.selectionStart, end = focused?.selectionEnd;
     const scroll = [...host.querySelectorAll('[data-rd-scroll]')].map(node => [node.dataset.rdScroll, node.scrollLeft, node.scrollTop]);
-    const rows = runDeskRows(current, draft, programmeStatuses), selected = rows.filter(row => row.selected), issues = selectionIssues();
+    const rows = currentRows(), selected = rows.filter(row => row.selected), issues = selectionIssues();
     const shown = matchingRows(rows), pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
     page = Math.min(page, pageCount - 1);
     const visible = shown.slice(page * pageSize, (page + 1) * pageSize);
@@ -350,17 +490,23 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     const startable = selected.filter(row => row.startable).length;
     const queued = new Set(selected.flatMap(row => row.queuedTask ? [row.queuedTask.id] : [])).size;
     const grids = current.data.grids || [];
-    const baselineChoices = (current.data.scenarios || []).filter(row => row.kind === 'baseline' && draft.scenario_ids.includes(row.id));
+    const gridModels = modelsOf(grids.find(row => row.id === draft.grid_id)?.spec);
+    const modelChoices = [['ndr', 'sdr'], ['ndr'], ['sdr']].filter(models => models.every(name => gridModels.includes(name)));
+    const selectedScenarios = new Set(draft.scenario_ids);
+    const baselineChoices = (current.data.scenarios || []).filter(row => row.kind === 'baseline' && selectedScenarios.has(row.id));
     host.innerHTML = '<div class="run-desk" data-run-desk><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>' +
       '<h1>Native run desk</h1><p>Select retained scientific inputs, prepare their run matrix, and queue the original NDR and SDR engines.</p></div>' +
       '<div class="page-actions">' + htmlButton('download-selection', 'Download run selection', {}, busy) + htmlButton('import-selection', 'Open run selection', {}, busy) +
       '</div></header>' +
-      '<section class="section"><header class="section-header"><div><h2>1. Select the original inputs</h2><p>Each checked cell is one immutable grid, profile and scenario selection.</p></div></header>' +
+      '<section class="section"><header class="section-header"><div><h2>1. Select the original inputs</h2><p>Each checked cell is one immutable grid, profile, scenario and native model selection.</p></div></header>' +
       '<div class="section-body rd-selector"><div><label>Complete model grid<select data-rd-field="grid_id" data-rd-focus="grid"' + (busy ? ' disabled' : '') + '>' +
-      option('', 'Choose a retained grid…', !draft.grid_id) + grids.map(row => option(row.id, title(row) + ' · ' + row.state, row.id === draft.grid_id, row.state !== 'complete')).join('') +
+      option('', 'Choose a retained grid…', !draft.grid_id) + grids.map(row => option(row.id, title(row) + ' · ' + row.state + ' · ' + modelLabel(modelsOf(row.spec)), row.id === draft.grid_id, row.state !== 'complete')).join('') +
       '</select></label><p class="note">' + escapeHTML(grids.find(row => row.id === draft.grid_id)?.grid?.resolution_m ?
         'Working ' + grids.find(row => row.id === draft.grid_id).grid.resolution_m + ' m grid; reporting boundary and upstream model context remain in its retained record.' :
         'Prepare the actual reporting grid in Model grids before queueing native runs.') + '</p>' +
+      '<label>Native models<select data-rd-field="models" data-rd-focus="models"' + (busy ? ' disabled' : '') + '>' +
+      modelChoices.map(models => option(modelKey(models), modelLabel(models), modelKey(models) === modelKey(draft))).join('') +
+      '</select></label><p class="note">The chosen models select the default rows. Retained runs with other model selections remain visible and can be checked individually.</p>' +
       '<label>Unchanged baseline for paired results<select data-rd-field="baseline_scenario_id" data-rd-focus="baseline"' + (busy ? ' disabled' : '') + '>' +
       option('', 'Choose a selected baseline…', !draft.baseline_scenario_id) + baselineChoices.map(row => option(row.id, title(row), row.id === draft.baseline_scenario_id)).join('') +
       '</select></label><div class="rd-row-actions"><button type="button" data-view="grids" class="small">Model grids</button>' +
@@ -374,7 +520,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       '<section class="section"><header class="section-header"><div><h2>2. Prepare and queue native runs</h2><p>' + selected.length + ' of ' + rows.length +
       ' matrix cells selected · ' + selected.filter(row => row.state === 'complete').length + ' complete · ' +
       selected.filter(row => ['queued', 'running', 'preparing'].includes(row.state)).length + ' active.</p></div></header>' +
-      renderProgrammes(rows) + '<div class="rd-operation-bar">' + htmlButton('prepare', 'Prepare missing (' + preparable + ')', {}, busy || !!issues.length || !preparable, true) +
+      renderProgrammes(rows, !!issues.length) + '<div class="rd-operation-bar">' + htmlButton('prepare', 'Prepare missing (' + preparable + ')', {}, busy || !!issues.length || !preparable, true) +
       htmlButton('start', 'Queue / continue prepared runs (' + startable + ')', {}, busy || !!issues.length || !startable, true) +
       htmlButton('cancel', 'Cancel queued (' + queued + ')', {}, busy || !queued) +
       '<button type="button" data-action="runtime" class="small">Runtime versions</button></div>' +
@@ -392,7 +538,8 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       (visible.length ? tableRows(visible) : '<tr><td colspan="7">Select the original inputs above or change the display filter.</td></tr>') + '</tbody></table></div>' +
       '<footer class="rd-pager"><span>Page ' + (page + 1) + ' of ' + pageCount + ' · ' + (shown.length ? page * pageSize + 1 : 0) + '–' + Math.min((page + 1) * pageSize, shown.length) +
       ' of ' + shown.length + ' cells</span><div>' + htmlButton('previous-page', 'Previous', {}, page === 0) + htmlButton('next-page', 'Next', {}, page + 1 >= pageCount) +
-      '</div>' + htmlButton('download-results', 'Download selected native totals', {}, !selected.some(row => row.run)) + '</footer></section>' +
+      '</div>' + htmlButton('download-results', 'Download selected native totals', {},
+        !selected.some(row => row.models.some(model => modelOutputs[model].some(name => !!row.run?.artifacts?.[name])))) + '</footer></section>' +
       '<section class="section"><header class="section-header"><div><h2>3. Compare and deliver completed pairs</h2><p>Signed comparison outputs use alternative minus baseline. The completed pairs below retain one common profile and grid.</p></div></header>' +
       '<div class="section-body">' + renderGroups(rows) + '</div></section></div>';
     for (const [key, left, top] of scroll) {
@@ -410,6 +557,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     }
   }
   function update(snapshot) {
+    sourceIndex = null; rowCache = null;
     synchronize(snapshot);
     refreshProgrammeActivity().catch(error => { programmeMessage = error.message; paint(); });
     paint();
@@ -420,7 +568,11 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       const field = node.dataset.rdField;
       if (field === 'search') search = node.value;
       else if (field === 'filter') filter = node.value;
-      else if (!busy) { draft[field] = node.value; draft.excluded = []; persist(); }
+      else if (!busy) {
+        draft[field] = field === 'models' ? modelsOf(node.value.split('+')) : node.value;
+        if (field === 'grid_id') draft.models = modelsOf((current.data.grids || []).find(row => row.id === node.value)?.spec);
+        draft.excluded = []; draft.included = []; persist();
+      }
       page = 0; paint(); return;
     }
     if (busy) return;
@@ -434,9 +586,10 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       persist(); page = 0; paint();
     }
     if (node.dataset.rdRow) {
-      const excluded = new Set(draft.excluded);
-      if (node.checked) excluded.delete(node.dataset.rdRow); else excluded.add(node.dataset.rdRow);
-      draft.excluded = [...excluded]; persist(); paint();
+      const excluded = new Set(draft.excluded), included = new Set(draft.included || []);
+      if (node.checked) { excluded.delete(node.dataset.rdRow); included.add(node.dataset.rdRow); }
+      else { excluded.add(node.dataset.rdRow); included.delete(node.dataset.rdRow); }
+      draft.excluded = [...excluded]; draft.included = [...included]; persist(); paint();
     }
   }
   function input(event) { if (event.target.dataset.rdField === 'search') change(event); }
@@ -447,6 +600,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   function detach() {
     if (host) { host.removeEventListener('change', change); host.removeEventListener('input', input); }
     host = null;
+    sourceIndex = null; rowCache = null;
     resetProgrammeTracking();
   }
   function assertWorkspace(expected) {
@@ -460,7 +614,11 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   async function submitOriginal(target, action, payload) {
     assertWorkspace(target);
     const identity = canonical(payload);
-    const tasks = (getState()?.tasks || []).filter(row => row.workspace === target && row.action === action && canonical(row.payload) === identity)
+    const grids = new Map((getState()?.data?.grids || []).map(row => [row.id, row]));
+    const matchesPayload = candidate => action === 'run.prepare' ?
+      selectionKey(nativeSelection(candidate, requestModels(candidate, grids))) ===
+        selectionKey(nativeSelection(payload, requestModels(payload, grids))) : canonical(candidate) === identity;
+    const tasks = (getState()?.tasks || []).filter(row => row.workspace === target && row.action === action && matchesPayload(row.payload || {}))
       .sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || '')));
     const active = tasks.find(row => activeStates.has(row.state));
     if (active) return {task: active, reused: true};
@@ -506,7 +664,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       const activity = mode !== 'cancel' ? await refreshProgrammeActivity(true) : null;
       assertWorkspace(target);
       synchronize(getState());
-      rows = runDeskRows(current, draft, activity?.records || programmeStatuses).filter(row => key ? row.key === key : row.selected);
+      rows = runDeskRows(current, draft, activity?.records || programmeStatuses, currentIndex()).filter(row => key ? row.key === key : row.selected);
       rows = rows.filter(row => mode === 'prepare' ? row.preparable : mode === 'start' ? row.startable : !!row.queuedTask);
       if (!rows.length) { notice = 'The selected cells already reflect the retained operator state.'; return; }
       submission.message = 'Submitting original ' + mode + ' operations…'; paint();
@@ -575,13 +733,15 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     notice = 'Opened the original run selection. Existing run records and tasks are resolved from this workspace.'; paint();
   }
   function downloadResults() {
-    const columns = ['project_id','grid_id','profile_id','profile_title','scenario_id','scenario_title','scenario_kind','run_id','invest_version','run_state','export','annual_reporting_total','total_units','valid_cells'];
+    const columns = ['project_id','grid_id','profile_id','profile_title','scenario_id','scenario_title','scenario_kind','run_id','invest_version','models','run_state','export','annual_reporting_total','total_units','valid_cells'];
     const records = [];
     for (const row of runDeskRows(getState(), draft).filter(value => value.selected && value.run)) {
-      for (const metric of ['nitrogen_export', 'phosphorus_export', 'sediment_export']) {
+      for (const metric of row.models.flatMap(model => modelOutputs[model])) {
         const artifact = row.run.artifacts?.[metric];
+        if (!artifact) continue;
         records.push([current.data.project.id, row.selection.grid_id, row.profile.id, title(row.profile), row.scenario.id, title(row.scenario), row.scenario.kind,
-          row.run.id, row.run.selection.invest_version, row.run.state, metric, artifact?.sum, artifact?.sum_units || artifact?.units, artifact?.valid_cells]);
+          row.run.id, row.run.selection.invest_version, modelLabel(row.models), row.run.state, metric,
+          artifact.sum, artifact.sum_units || artifact.units, artifact.valid_cells]);
       }
     }
     const cell = value => {
@@ -591,11 +751,14 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     };
     download('upper-savannah-native-run-totals.csv', [columns, ...records].map(row => row.map(cell).join(',')).join('\r\n') + '\r\n', 'text/csv;charset=utf-8');
   }
-  async function compare(profileId, delivery = false) {
+  async function compare(profileId, scopeKey, delivery = false) {
     synchronize(getState());
-    const group = runDeskComparisons(current, draft).find(row => row.profileId === profileId);
-    if (!group || group.runIds.length < 2) throw Error('Complete the selected baseline and at least one selected land-cover alternative under this profile.');
-    if (delivery) return openDelivery({baseline_run_id: group.runIds[0], scenario_run_ids: group.runIds.slice(1)});
+    const group = runDeskComparisons(current, draft).find(row => row.profileId === profileId && row.modelKey === scopeKey);
+    if (!group || group.runIds.length < 2) throw Error('Complete the selected baseline and at least one land-cover alternative under this profile and native model selection.');
+    if (delivery) {
+      if (!group.canDeliver) throw Error('Full delivery requires the retained nitrogen, phosphorus and sediment exports for the baseline and each selected completed alternative.');
+      return openDelivery({baseline_run_id: group.runIds[0], scenario_run_ids: group.runIds.slice(1)});
+    }
     if (group.retained) return openItem('comparisons', group.retained.id);
     if (group.task) return showTask(group.task.id);
     if (busy) return;
@@ -622,13 +785,14 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       synchronize(getState());
       const issues = selectionIssues();
       if (issues.length) throw Error(issues.join(' '));
-      const group = runDeskProgrammes(current, draft).find(row => row.profileId === button.dataset.profile);
+      const group = runDeskProgrammes(current, draft).find(row =>
+        row.profileId === button.dataset.profile && row.modelKey === button.dataset.models);
       if (!group) throw Error('Check an unchanged baseline under this profile to open its retained execution programme.');
       const open = programmeOpener();
       if (!open) throw Error('The current application has no programme controls attached.');
       return open(group.selection);
     }
-    if (action === 'compare' || action === 'delivery') return compare(button.dataset.profile, action === 'delivery');
+    if (action === 'compare' || action === 'delivery') return compare(button.dataset.profile, button.dataset.models, action === 'delivery');
     if (action === 'download-selection') return downloadSelection();
     if (action === 'download-results') return downloadResults();
     if (action === 'import-selection') {
@@ -653,9 +817,12 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     if (!draft.scenario_ids.includes(draft.baseline_scenario_id)) draft.baseline_scenario_id = '';
     if (!draft.baseline_scenario_id) draft.baseline_scenario_id = (current.data.scenarios || []).find(row => row.kind === 'baseline' && draft.scenario_ids.includes(row.id))?.id || '';
     const rows = runDeskRows(current, draft);
-    if (action === 'select-cells') draft.excluded = [];
-    if (action === 'clear-cells') draft.excluded = rows.map(row => row.key);
-    if (action === 'select-incomplete') draft.excluded = rows.filter(row => row.state === 'complete').map(row => row.key);
+    if (action === 'select-cells') { draft.excluded = []; draft.included = rows.map(row => row.key); }
+    if (action === 'clear-cells') { draft.excluded = rows.map(row => row.key); draft.included = []; }
+    if (action === 'select-incomplete') {
+      draft.excluded = rows.filter(row => row.state === 'complete').map(row => row.key);
+      draft.included = rows.filter(row => row.state !== 'complete').map(row => row.key);
+    }
     persist(); page = 0; paint();
   }
   return {mount, update, detach, dispatch};

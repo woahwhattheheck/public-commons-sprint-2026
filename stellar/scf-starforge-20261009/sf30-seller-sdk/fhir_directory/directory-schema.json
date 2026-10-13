@@ -1423,6 +1423,1073 @@
         "afterAssessmentId",
         "scopeNote"
       ]
+    },
+    "operating_plan_create": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "customer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        },
+        "period": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "receiving": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32000
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        },
+        "savedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+        },
+        "basis": {
+          "type": "object",
+          "properties": {
+            "editionId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "mappingId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "previewId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "conversionId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "selectionId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "referralJoinId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "handoffId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "contextSourceIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            },
+            "comparisonIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            },
+            "conformanceAssessmentIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            },
+            "receivingReviewIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "editionId"
+          ],
+          "additionalProperties": false
+        },
+        "outputDirectory": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "recorded": {
+          "type": "boolean"
+        },
+        "continuations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "instruction": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32000
+              },
+              "inputs": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 32000
+              },
+              "expectedResult": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 32000
+              },
+              "owner": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 300
+              },
+              "due": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 10
+              },
+              "argv": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 32000
+                },
+                "maxItems": 256
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "instruction"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 20
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        },
+        "previewRecordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "customer",
+        "period",
+        "owner",
+        "receiving",
+        "savedAt",
+        "basis",
+        "outputDirectory",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_plan_save": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "draft": {
+          "type": "object",
+          "properties": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "stellar-forge.operating-plan-draft.v1"
+              ]
+            },
+            "planId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "baseRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "content": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "customer": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 1000
+                },
+                "purpose": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 32000
+                },
+                "period": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 1000
+                },
+                "owner": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 1000
+                },
+                "receiving": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 32000
+                },
+                "notes": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 32000
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+                      },
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      },
+                      "instruction": {
+                        "type": "string",
+                        "minLength": 0,
+                        "maxLength": 32000
+                      },
+                      "inputs": {
+                        "type": "string",
+                        "minLength": 0,
+                        "maxLength": 32000
+                      },
+                      "expectedResult": {
+                        "type": "string",
+                        "minLength": 0,
+                        "maxLength": 32000
+                      },
+                      "owner": {
+                        "type": "string",
+                        "minLength": 0,
+                        "maxLength": 300
+                      },
+                      "due": {
+                        "type": "string",
+                        "maxLength": 10
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "planned",
+                          "in-progress",
+                          "completed",
+                          "skipped"
+                        ]
+                      },
+                      "recordedResult": {
+                        "type": "string",
+                        "minLength": 0,
+                        "maxLength": 32000
+                      },
+                      "argv": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 32000
+                        },
+                        "maxItems": 256
+                      },
+                      "selection": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "package": {
+                                "type": "object"
+                              },
+                              "capturedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 0,
+                                    "maxLength": 32000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "item": {
+                                "type": "object"
+                              },
+                              "sources": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object"
+                                }
+                              },
+                              "runtimeGroups": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object"
+                                }
+                              }
+                            },
+                            "required": [
+                              "package",
+                              "capturedAt",
+                              "item",
+                              "sources",
+                              "runtimeGroups"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "instruction",
+                      "inputs",
+                      "expectedResult",
+                      "owner",
+                      "due",
+                      "status",
+                      "recordedResult",
+                      "argv",
+                      "selection"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "maxItems": 1000
+                }
+              },
+              "required": [
+                "title",
+                "customer",
+                "purpose",
+                "period",
+                "owner",
+                "receiving",
+                "notes",
+                "steps"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "schema",
+            "planId",
+            "baseRevision",
+            "content"
+          ],
+          "additionalProperties": false
+        },
+        "savedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "recordId",
+        "draft",
+        "savedAt",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_plan_receive": {
+      "type": "object",
+      "properties": {
+        "document": {
+          "type": "object",
+          "properties": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "stellar-forge.operating-plan.v1"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "createdAt": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+            },
+            "origin": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "revision",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revisions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "customer": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 1000
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 32000
+                  },
+                  "period": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 1000
+                  },
+                  "owner": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 1000
+                  },
+                  "receiving": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 32000
+                  },
+                  "notes": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 32000
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "instruction": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 32000
+                        },
+                        "inputs": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 32000
+                        },
+                        "expectedResult": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 32000
+                        },
+                        "owner": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 300
+                        },
+                        "due": {
+                          "type": "string",
+                          "maxLength": 10
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "planned",
+                            "in-progress",
+                            "completed",
+                            "skipped"
+                          ]
+                        },
+                        "recordedResult": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 32000
+                        },
+                        "argv": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 0,
+                            "maxLength": 32000
+                          },
+                          "maxItems": 256
+                        },
+                        "selection": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "package": {
+                                  "type": "object"
+                                },
+                                "capturedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 0,
+                                      "maxLength": 32000
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "item": {
+                                  "type": "object"
+                                },
+                                "sources": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object"
+                                  }
+                                },
+                                "runtimeGroups": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "package",
+                                "capturedAt",
+                                "item",
+                                "sources",
+                                "runtimeGroups"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "instruction",
+                        "inputs",
+                        "expectedResult",
+                        "owner",
+                        "due",
+                        "status",
+                        "recordedResult",
+                        "argv",
+                        "selection"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 1000
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "savedAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+                  }
+                },
+                "required": [
+                  "title",
+                  "customer",
+                  "purpose",
+                  "period",
+                  "owner",
+                  "receiving",
+                  "notes",
+                  "steps",
+                  "revision",
+                  "savedAt"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "schema",
+            "id",
+            "createdAt",
+            "origin",
+            "revisions"
+          ],
+          "additionalProperties": false
+        },
+        "expectedRecordId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "basis": {
+          "type": "object",
+          "properties": {
+            "editionId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "mappingId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "previewId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "conversionId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "selectionId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "referralJoinId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "handoffId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "contextSourceIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            },
+            "comparisonIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            },
+            "conformanceAssessmentIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            },
+            "receivingReviewIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "editionId"
+          ],
+          "additionalProperties": false
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "document",
+        "expectedRecordId",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_plan_copy": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "savedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "recordId",
+        "id",
+        "savedAt",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_plan_compare": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "recordId"
+      ],
+      "additionalProperties": false
+    },
+    "operating_plan_export": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "json",
+            "markdown",
+            "html"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "recordId",
+        "format",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_plan_step": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "instruction": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        },
+        "inputs": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        },
+        "expectedResult": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300
+        },
+        "due": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "in-progress",
+            "completed",
+            "skipped"
+          ]
+        },
+        "recordedResult": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        },
+        "argv": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 32000
+          },
+          "maxItems": 256
+        },
+        "itemId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
     }
   },
   "actions": [
@@ -1509,6 +2576,72 @@
       "method": "POST",
       "path": "/api/directory/conformance/comparisons",
       "python": "compare_directory_conformance"
+    },
+    {
+      "id": "operating-plan-step",
+      "python": "directory_operating_step",
+      "input": "operating_plan_step",
+      "path": "/api/directory/operating-plans/step",
+      "method": "POST",
+      "label": "Prepare a step using the actual original command registration or explicit manual work",
+      "readOnly": true
+    },
+    {
+      "id": "operating-plan-preview",
+      "python": "preview_directory_operating_plan",
+      "input": "operating_plan_create",
+      "path": "/api/directory/operating-plans/preview",
+      "method": "POST",
+      "label": "Prepare a complete procedure from original retained Directory records"
+    },
+    {
+      "id": "operating-plan-create",
+      "python": "create_directory_operating_plan",
+      "input": "operating_plan_create",
+      "path": "/api/directory/operating-plans/create",
+      "method": "POST",
+      "label": "Save the complete Directory procedure and original source bindings"
+    },
+    {
+      "id": "operating-plan-save",
+      "python": "save_directory_operating_plan",
+      "input": "operating_plan_save",
+      "path": "/api/directory/operating-plans/save",
+      "method": "POST",
+      "label": "Append the reviewed draft to the current original procedure history"
+    },
+    {
+      "id": "operating-plan-receive",
+      "python": "receive_directory_operating_plan",
+      "input": "operating_plan_receive",
+      "path": "/api/directory/operating-plans/receive",
+      "method": "POST",
+      "label": "Receive a complete original OperatingPlan history into this Directory"
+    },
+    {
+      "id": "operating-plan-copy",
+      "python": "copy_directory_operating_plan",
+      "input": "operating_plan_copy",
+      "path": "/api/directory/operating-plans/copy",
+      "method": "POST",
+      "label": "Retain the complete original history under an explicitly selected new plan ID"
+    },
+    {
+      "id": "operating-plan-compare",
+      "python": "compare_directory_operating_plan",
+      "input": "operating_plan_compare",
+      "path": "/api/directory/operating-plans/compare",
+      "method": "POST",
+      "label": "Compare original command registrations with the actual selected toolkit",
+      "readOnly": true
+    },
+    {
+      "id": "operating-plan-export",
+      "python": "export_directory_operating_plan",
+      "input": "operating_plan_export",
+      "path": "/api/directory/operating-plans/export",
+      "method": "POST",
+      "label": "Retain a complete editable or readable procedure in the existing export store"
     }
   ],
   "limits": {
@@ -1517,7 +2650,11 @@
     "maxMappingRules": 1024,
     "maxInteractiveBytes": 1048576,
     "maxRecordBytes": 67108864,
-    "maxReceivingBytes": 2147483648
+    "maxReceivingBytes": 2147483648,
+    "maxOperatingPlanDocumentBytes": 33554432,
+    "maxOperatingPlanRequestBytes": 67108864,
+    "maxOperatingPlanBasisBytes": 4194304,
+    "maxOperatingPlanBasisRecords": 1000
   },
   "recordKinds": [
     "connections",
@@ -1540,7 +2677,8 @@
     "conformancePlans",
     "conformanceAssessments",
     "conformanceReviews",
-    "conformanceComparisons"
+    "conformanceComparisons",
+    "operatingPlans"
   ],
   "mutableKinds": [
     "acquisitions",
@@ -1564,7 +2702,12 @@
     "No result is a blanket certification. A reviewed receiving disposition retains all findings and coverage limitations.",
     "Comparison reports complete rule-outcome counts and row populations, without silently matching entities from different sources.",
     "Whole editable export includes every assessment index, finding, rule, report and original subject.",
-    "Accept-for-receiving requires an explicit accepted-deviation or not-applicable disposition for every error; grouped decisions freeze every matched original finding ID. Findings are never removed."
+    "Accept-for-receiving requires an explicit accepted-deviation or not-applicable disposition for every error; grouped decisions freeze every matched original finding ID. Findings are never removed.",
+    "The unchanged OperatingPlan model owns complete history validation, historical drafts, saved revisions, explicit copies and exact prefix-history receiving.",
+    "Prepared and saved procedure records are immutable. Only saved records participate in the per-plan head chain; a reviewed preparation retains its exact accepted input and original source basis.",
+    "Procedure editing and export do not execute commands, acquire provider data, reserve services or send messages.",
+    "Complete editable receiving includes every procedure history, native basis, original catalogue and accepted input; receiver-local import receipts retain their original Directory semantics."
   ],
-  "conformanceCatalogueFile": "directory-conformance-schema.json"
+  "conformanceCatalogueFile": "directory-conformance-schema.json",
+  "operatingPlansCatalogueFile": "directory-operating-plans-schema.json"
 }
