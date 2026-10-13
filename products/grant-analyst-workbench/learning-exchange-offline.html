@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Learning review · Offline workspace</title><style>/*EXCHANGE_STYLE*/</style></head>
+<body><header><div class="eyebrow">Grant Analyst · Offline review</div><h1>Learning review</h1><p id="subtitle">Opening the complete issued context…</p><div id="identity" class="meta"></div></header>
+<main><div id="notice" role="status" aria-live="polite"></div><section class="toolbar" aria-label="Review files">
+<label class="file">Open saved packet, draft, return or bundle<input id="open" type="file" accept=".json,application/json"></label>
+<button id="save">Save draft file</button><button id="html">Save offline HTML</button><button id="return">Create return file</button><button id="bundle">Export complete exchange</button></section>
+<section id="recovery" hidden><h2>Another saved draft is present</h2><p id="recovery-text"></p><button id="recover">Open the saved local draft</button> <button id="keep-file">Keep the opened file as a separate draft</button></section><div class="layout"><aside><section><h2>Review assignment</h2><dl id="assignment"></dl><p class="muted">This page works offline. Returning a file does not apply a decision to the original workspace.</p></section>
+<section><h2>Finding and evidence</h2><div id="finding"></div><label>Complete context section<select id="context-select"></select></label><div id="context-summary"></div><div class="table-wrap"><table id="report"><thead></thead><tbody></tbody></table></div><div class="pager"><button id="previous">Previous rows</button><span id="page-info"></span><button id="next">Next rows</button></div><details><summary>Full literal section</summary><pre id="context-text"></pre></details><button id="context-download">Download complete section</button></section>
+<section><h2>Saved work</h2><p id="save-state"></p><label>Earlier saved revision<select id="history"></select></label><pre id="history-text"></pre><details><summary>Complete packet and provenance</summary><pre id="packet-text"></pre></details></section></aside>
+<section class="editor"><h2 id="decision-heading">Your proposed decision</h2><p id="mode-help"></p><form id="form"><label>Reviewing operator<input id="reviewer" required autocomplete="name"></label><div id="review-fields"><label>Stable native review ID<input id="review-id" required pattern="[A-Za-z0-9][A-Za-z0-9._:\-]{0,119}"></label><label>Interpretation<textarea id="interpretation" rows="5" required></textarea></label><label>Limits of the available evidence<textarea id="limitations" rows="4" required></textarea></label></div><div id="actions"></div><p class="muted">Keep the actual responsible owner, due date and success criteria. State the evidence and rationale for every action decision. The live operator will review the complete return before applying it.</p></form>
+<section><h2>Return history</h2><div id="returns"></div></section></section></div></main>
+<footer>Complete context, draft history and returned decisions stay in your saved files. Hashes bind file contents; names are reviewer declarations, not digital signatures.</footer>
+<script id="exchange-payload" type="application/json">/*EXCHANGE_PAYLOAD*/</script>
+<script id="exchange-sources" type="application/json">/*EXCHANGE_SOURCES*/</script>
+<script>/*EXCHANGE_DOMAIN*/</script>
+<script>/*EXCHANGE_UI*/</script></body></html>

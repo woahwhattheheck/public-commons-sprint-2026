@@ -1,0 +1,716 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "grant-analyst-workbench",
+  "heading": "## Grant Analyst Workbench: complete source review, Learning decisions and commissioned-study receiving",
+  "sources": [
+    {
+      "id": "grant-analyst-maintained-contract-1",
+      "label": "Maintained Applications/product distribution composition",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/specification.mjs",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 29002,
+          "sha256": "c1bc927b90c033aa0789642cac6b53a27a93df3968b672341de60825d1ea7a6f",
+          "git_blob": "c6d3ca93a5afc233c2b642dbf56c9cf566f4b7d0"
+        }
+      ]
+    },
+    {
+      "id": "grant-analyst-maintained-contract-2",
+      "label": "Exact source selection and complete declared support",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/source-selection.mjs",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 14936,
+          "sha256": "2f572fadba76be2332b33a5e575aac656707bfee36a4983619f004547be9d8aa",
+          "git_blob": "7ee2721f6787fa0f59cd44b1d4e9e9d6d0e5012c"
+        }
+      ]
+    },
+    {
+      "id": "grant-analyst-maintained-contract-3",
+      "label": "Installed product package identity",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/product-package.mjs",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 3764,
+          "sha256": "e1f33fd1940b62c7ede90288ff2ad36da529a197b06e059e8b3b6e27fba1e76d",
+          "git_blob": "2c668933f214f201137ac6d3c6b7410525955c9b"
+        }
+      ]
+    },
+    {
+      "id": "grant-analyst-maintained-contract-4",
+      "label": "Original grant workspace and Installation contribution",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/grant-workspace.json",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 6388,
+          "sha256": "e092b7ae2c716b84b66b489d718e84899258aa19713956bc232301f9785703f4",
+          "git_blob": "db44f2451fa5c6efcb017cf713aaed9ce1e76691"
+        }
+      ]
+    },
+    {
+      "id": "grant-analyst-maintained-contract-5",
+      "label": "Maintained Merchant provider registration",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-provider-tools.json",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 737,
+          "sha256": "64b29c1293acb077c3f318a0dee1b6dd17985d61de07755e49996d7d2673995c",
+          "git_blob": "ef9552d29cd899b60e5f9317bb0f8398cb8dd0da"
+        }
+      ]
+    },
+    {
+      "id": "grant-analyst-installed-prepare-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/prepare.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/prepare.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 6761,
+          "sha256": "73f24babb02be809d968c58e0169d2d0d463acff0670e5ef630e99704a449a36",
+          "git_blob": "f8e04ef19a94c42fa3f2ac39645d6c0e394f40b7"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-preparation-py",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/preparation.py",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/preparation.py",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 43566,
+          "sha256": "53b6d3c6777886aebcdc2878350e40e0cb129b6f41b2ef90db0f51bc60cf3b29",
+          "git_blob": "0c4ad67d454432a4b5ff11694044e1f58481bb2f"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-preparing-md",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/PREPARING.md",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/PREPARING.md",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 23408,
+          "sha256": "291ff997b2322de6b09fd204844b1418d4bc698a7977e4446023527b0f0396a3",
+          "git_blob": "7f6c46cd1d6ff6192eb136309486c1d4d987b921"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-connection-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/connection.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/connection.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 19358,
+          "sha256": "5318350e762f6700a23a5fdcce28f2e45b57f5cc3920ce4de0d2031d5f36aa60",
+          "git_blob": "db77d209b89772af0c25016f762bcd2fc8188430"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-managed-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/managed.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/managed.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 15653,
+          "sha256": "6ddc0cc1b840b2a5de80bf8b7cf317e852968a92be070a3c144e9de2c7b5d8e1",
+          "git_blob": "644795fcf6cbe7ca9aef689cfc13bb16eb55d326"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-managed-host-py",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/managed_host.py",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/managed_host.py",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 33209,
+          "sha256": "f5632e9e88c1407add2c414762640b597db3e57f0de60e081fd9a83df132658b",
+          "git_blob": "5d4aa6b4a128d25859e7faef99b68793a3515247"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-application-provider-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/application-provider.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/application-provider.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 5973,
+          "sha256": "a70632443475a8f58898f8f8ee77bdd328d1095bc06dd556d92273e663bfb0ea",
+          "git_blob": "abb28c6e69f41f58e48fb934f600407d866cc986"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-cli-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/cli.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/cli.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 4783,
+          "sha256": "8a01df9424df377767d97a162642f88c8fb96fb256647484bb16489f201b53b6",
+          "git_blob": "e9dc74fc9a69325d52806d83f9fcfc48972ba600"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-receive-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/receive.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/receive.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 580,
+          "sha256": "93980c92726d707e3a50a9d8e7c3dcd1cf8e998f15aa4d97c31348fa4fb0bde9",
+          "git_blob": "ba7a26032f68109e770bd43c52a61b499e553cba"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-tools-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/tools.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/tools.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 6334,
+          "sha256": "89bc25d8f198b90c2de878efc69c680eb2eaccacea6e89dfa45aa9ef3479b66e",
+          "git_blob": "c57b1f6dbd5169d7b6fe53f81b4e9a69ccb1391e"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-mcp-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/mcp.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/mcp.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 23367,
+          "sha256": "3dbdfa407608d1cc2a7c8139fc2763c4db91f9faa56773dbcb3c7521f5cb048e",
+          "git_blob": "17d2faf396ee869338d01fb803f0a4ea504db328"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-files-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/files.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/files.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 11536,
+          "sha256": "1b01a05088fccd325701b2c3a11789b820e898e716337dd7f56828af8770a453",
+          "git_blob": "c790529a0d4a9c7c3812f85c47b864a75eb1ca08"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-requests-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/requests.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/requests.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 6871,
+          "sha256": "7e668e3086aef7411152967ecb3649fa1af9d98cffe7a21e02ff8cfb447f7a87",
+          "git_blob": "15c316a2ce8b79eeb01dd64141407677a742fa30"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-merchant-provider-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/merchant-provider.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/merchant-provider.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 3523,
+          "sha256": "3a9bc13dd85f381185f92a8667fa12aca101590b3daa36ac6a709c7604dec854",
+          "git_blob": "b74ded83b4e42a06013390cb228bd6b7f539376c"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-setup-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/setup.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/setup.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 3597,
+          "sha256": "4c36b35d3845cfafd7182f13ef37ea40b2784566a69a0434160b14634c3eebdb",
+          "git_blob": "2012dd9f6dcae82fd8f8b820f357f90ab152e231"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-runtime-package-json",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/runtime-package.json",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/runtime-package.json",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 167,
+          "sha256": "72a0e54f1860787bf84b817e5a1beb296ee4ec3f135d7c34febbf3f5d6b164ac",
+          "git_blob": "0fd6eaf86cb27fa76e976fc60c214a87be7b3478"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-source-manifest-schema-json",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/source-manifest.schema.json",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/source-manifest.schema.json",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 925,
+          "sha256": "f162e51d8687a7fa2a17cd069f375e3b6ffc82c924bce3d56390ae59a733ad4d",
+          "git_blob": "2a4e9280a187445bd2d75c74c346eb2491f5e04a"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-operating-md",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/OPERATING.md",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/OPERATING.md",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 27470,
+          "sha256": "cc24ea486c9d8b5fc564d159bbc87ac41ea5125d7115b0b5033cfb09ff0020ac",
+          "git_blob": "1c21fbc3a54f9c139990e88e3a513e6c94f78b10"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-stellar-scf-2026-sf49-data-commissioning-installation-workorders-grant-analyst-workbench-json",
+      "label": "Complete installed Grant Analyst source: stellar/scf_2026/sf49_data_commissioning/installation-workorders/grant-analyst-workbench.json",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/grant-analyst-workbench.json",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 14522,
+          "sha256": "0e23e5c94539526c97a0847e8954d57edce7597d91ef90e7ea5b6117f3c00c95",
+          "git_blob": "cb2e35be059f0ca42cc40a8da7391a9299f73296"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-stellar-scf-starforge-20261009-distribution-contributions-grant-analyst-workbench-json",
+      "label": "Complete installed Grant Analyst source: stellar/scf-starforge-20261009/distribution/contributions/grant-analyst-workbench.json",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/grant-analyst-workbench.json",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 4785,
+          "sha256": "e576223e9921520ff584cafd829570ec12c99bd9eaa109272908d74cb452101a",
+          "git_blob": "9a8a06fd3dd1d9aaa6e327da1257bcf7844cfd7b"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-stellar-scf-starforge-20261009-distribution-selections-grant-analyst-workbench-json",
+      "label": "Complete installed Grant Analyst source: stellar/scf-starforge-20261009/distribution/selections/grant-analyst-workbench.json",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/selections/grant-analyst-workbench.json",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 11036,
+          "sha256": "94ad35409f684e666d3ba358357fdfbf520b2960992343a765c6e5717185b4a4",
+          "git_blob": "4c92ec0e42774fc3539b0f03772b5004bb049799"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-receiving-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/receiving.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/receiving.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 53978,
+          "sha256": "4e11f5c5067add9a5d204c86ad97741a4228cdf87ae871abf90f55f3c02eaafb",
+          "git_blob": "c366acbfc2e4389c8175ac8ce310a06b95933ae0"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-receiving-original-py",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/receiving-original.py",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/receiving-original.py",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 43372,
+          "sha256": "126c364cd82fe64b6ebb439f0f32b0da6068f1d5751acc787dd70e4596927d33",
+          "git_blob": "7fa4fd0f362adf0304da7b0581ceb3b723772bd6"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-receiving-browser-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/receiving-browser.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/receiving-browser.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 36823,
+          "sha256": "471ddb746376ebb67009d30464e1e8a38ddf9e2c3bb1fcc661334a0d241f3e2e",
+          "git_blob": "5b60b8fd7ce8ba30565e1fb6b1fbfe0a6586a45a"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-receiving-md",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/RECEIVING.md",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/RECEIVING.md",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 23220,
+          "sha256": "65dfccb1d7d48aca9d5e54962dcd178b2b0dc498fb11311683e27041d9fe727f",
+          "git_blob": "7a7b157fc6ee562ccfe5bdf6c269036d3a5adae5"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-host-py",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange-host.py",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange-host.py",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 7234,
+          "sha256": "4fb6354ede302e89b5e86ef92a92258c1640b1521e0a1e8c43865f7974b60828",
+          "git_blob": "06fe07069014d7655dd4597335ef6e51492b8173"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-host-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange-host.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange-host.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 25674,
+          "sha256": "412afea65de036922617f321e7ff1fa41b6d81c46bca87202655bf2abcd51eb5",
+          "git_blob": "aa3fc2c246bc82bb8573d7a7707ac554d28e8e25"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-host-css",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange-host.css",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange-host.css",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 3507,
+          "sha256": "94f446272f75523ee2a50d440d951bd7e29c23b80a5866a0f592e61b5101ab2e",
+          "git_blob": "4f925712db9128efa073d96fc6e858c979d40483"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 26916,
+          "sha256": "53a16c64424208acded09c5f16824d1af12ba9f3678892015493fb25151a9a74",
+          "git_blob": "b09a8c4608dfb4ce2f2c1194e58b738067aa4f06"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-offline-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange-offline.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange-offline.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 19246,
+          "sha256": "c911b871f174d8500723536060b6ed4140d34d9bd47dcdf6226b12bfd271bd3e",
+          "git_blob": "afb680fd2cfab882ace43844c72b66c2cbfeca99"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-offline-css",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange-offline.css",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange-offline.css",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 3590,
+          "sha256": "e74bbb5e981a13ca564cc6417720ab6bdc962ebd6c11ed84064710af816ad9b2",
+          "git_blob": "a0c50ed5c0e1c274fbcca26113f680670d64d88a"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-offline-html",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange-offline.html",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange-offline.html",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 3632,
+          "sha256": "33728d7df9cdc18b990f3322463cdcdb793e21fbd8af3741dae3201285dc3cbf",
+          "git_blob": "48e41021b312fdaf076989152493259e6c1ecdc9"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-render-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange-render.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange-render.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 2671,
+          "sha256": "c747cea7e54e20647af5a4812097e55f846356013fc6f887f378bfba79f73d68",
+          "git_blob": "146f1e1d543a219430a0a6892e521d45c59fedb7"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-md",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/LEARNING_EXCHANGE.md",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/LEARNING_EXCHANGE.md",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 17995,
+          "sha256": "dc09a7f9bb36a124c093b6d958d569e081b26d6b8a3f66f804c55b20d493ee57",
+          "git_blob": "167bfa9b490d8c082326bbc73cf1090d01ead5af"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-browser-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange-browser.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange-browser.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 23848,
+          "sha256": "962d392a4d1239f6c57f2cf391935d3ecd027bf8df0f6f82fe04fd9b50ecfea6",
+          "git_blob": "ec2861198bb1d5161a50dc0c10be75ecc009193d"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-receiving-mjs",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/learning-exchange-receiving.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/learning-exchange-receiving.mjs",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 14615,
+          "sha256": "45b9e90303da330a49fcad3767a078f18d38fb04c53420ae98f9018232371550",
+          "git_blob": "cc4e235325c7160b41c9d4f9a80f92f9716c9d44"
+        }
+      ],
+      "required": false
+    },
+    {
+      "id": "grant-analyst-installed-learning-exchange-receiving-md",
+      "label": "Complete installed Grant Analyst source: products/grant-analyst-workbench/LEARNING_EXCHANGE_RECEIVING.md",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/grant-analyst-workbench/LEARNING_EXCHANGE_RECEIVING.md",
+      "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+      "editions": [
+        {
+          "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+          "bytes": 16709,
+          "sha256": "431c39aa0fc78b000ef986a2a4396336f3868b544b7b51ffe2d94ce3be102951",
+          "git_blob": "6522c2d76dc7b238acc413b495cd1d542fa526c3"
+        }
+      ],
+      "required": false
+    }
+  ]
+}
