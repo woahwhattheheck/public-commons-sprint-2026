@@ -625,9 +625,7 @@ def _installed_source_directories(root):
                 declared = sequence(value)
     roots = tuple(dict.fromkeys((*defaults, *declared)))
     for name in roots:
-        path = member_name(name)
-        if len(path.parts) != 1:
-            raise ValueError("Portable source directory must be a top-level name: " + name)
+        member_name(name)
     return roots
 
 
@@ -654,13 +652,19 @@ def _source_inventory(root):
         if path.is_file():
             add(path)
     for name in roots:
-        if name.startswith(".") or name in skip:
+        relative = member_name(name)
+        if any(part.startswith(".") or part in skip for part in relative.parts):
             continue
-        folder = root / name
+        folder = root.joinpath(*relative.parts)
+        for ancestor in (folder, *folder.parents):
+            if ancestor == root:
+                break
+            if ancestor.is_symlink():
+                raise ValueError("Current source directory is an alias: " + name)
         if not folder.exists():
             continue
-        if folder.is_symlink() or not folder.is_dir():
-            raise ValueError("Current source directory is an alias: " + name)
+        if not folder.is_dir():
+            raise ValueError("Current source directory is not a directory: " + name)
         for directory, directories, names in os.walk(folder, followlinks=False):
             directory = Path(directory)
             kept = []
