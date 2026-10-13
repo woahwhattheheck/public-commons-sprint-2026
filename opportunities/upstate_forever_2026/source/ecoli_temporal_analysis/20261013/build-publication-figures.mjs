@@ -2,6 +2,9 @@
 import fs from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import path from "node:path";
+import {createRequire} from "node:module";
+import {renderScientificFigureSvg} from "../../../observations/flow_seasonality_20261013/figures/render_svg.mjs";
+import {buildFigureGallery} from "./figure-gallery.mjs";
 import {buildPublicationFigures} from "./publication-figures.mjs";
 import {csvOutput} from "./analysis.mjs";
 const here=path.dirname(fileURLToPath(import.meta.url));
@@ -10,4 +13,8 @@ const files=Object.fromEntries(await Promise.all(names.map(async name=>[name,awa
 const {spec,audit}=buildPublicationFigures(files);
 await fs.writeFile(path.join(here,"publication-figures.json"),JSON.stringify(spec,null,2)+"\n");
 await fs.writeFile(path.join(here,"publication-figure-source-points.csv"),csvOutput(audit));
+const require=createRequire(import.meta.url),d3={...require("../../../observations/eighteenmile_2023/figures/vendor/d3-path.cjs"),...require("../../../observations/eighteenmile_2023/figures/vendor/d3-shape.cjs")};
+const svgFiles={};await fs.mkdir(path.join(here,"figures"),{recursive:true});
+for(const figure of spec.figures){const name=figure.id+".svg";svgFiles[name]=renderScientificFigureSvg(figure,d3);await fs.writeFile(path.join(here,"figures",name),svgFiles[name]);}
+await fs.writeFile(path.join(here,"publication-figures.html"),buildFigureGallery(spec,svgFiles));
 console.log(JSON.stringify({figures:spec.figures.length,panels:spec.figures.reduce((n,f)=>n+f.panels.length,0),retained_plot_points:audit.length}));
