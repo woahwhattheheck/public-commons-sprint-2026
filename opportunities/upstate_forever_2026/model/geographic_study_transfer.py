@@ -908,23 +908,27 @@ def _native_preparation_matches(value, selected, project_id, grid_id, profile_id
 def _native_saved_contexts(closure, prepared, captured=None):
     """Follow completed original contexts, never create a report or preparation."""
     from .common import read_json
-    kinds = ("geographic-receiving-contexts", "geographic-scenario-contexts")
+    from . import geographic_gis_study_transfer as saved_gis
+    kinds = ("geographic-receiving-contexts", "geographic-scenario-contexts", saved_gis.KIND)
     candidates = []
     if captured is None:
         for kind in kinds:
             directory = closure.root / kind
             if directory.is_symlink():
                 raise ValueError("Geographic contexts must retain their original directories")
-            for path in sorted(directory.glob("*/context.json")):
+            filename = "record.json" if kind == saved_gis.KIND else "context.json"
+            for path in sorted(directory.glob("*/" + filename)):
                 if path.is_symlink() or path.parent.is_symlink():
                     continue
                 try:
                     value = read_json(path)
                 except (OSError, ValueError, TypeError):
                     continue
-                if (isinstance(value, dict) and value.get("state") == "complete"
-                        and value.get("project_id") == prepared["project_id"]
-                        and value.get("prepared_id") == prepared["id"]):
+                selected = (saved_gis.matches(value, prepared) if kind == saved_gis.KIND else
+                            isinstance(value, dict) and value.get("state") == "complete"
+                            and value.get("project_id") == prepared["project_id"]
+                            and value.get("prepared_id") == prepared["id"])
+                if selected:
                     candidates.append({"kind": kind, "id": identifier(path.parent.name)})
     else:
         if not isinstance(captured, list):
@@ -936,9 +940,12 @@ def _native_saved_contexts(closure, prepared, captured=None):
         if kind not in kinds or (kind, key) in seen:
             raise ValueError("The native Study repeats or changes a Geographic context")
         seen.add((kind, key))
-        relative = kind + "/" + key + "/context.json"
+        filename = "record.json" if kind == saved_gis.KIND else "context.json"
+        relative = kind + "/" + key + "/" + filename
         value = closure.read(relative)
-        if (value.get("state") != "complete" or value.get("id") != key
+        if kind == saved_gis.KIND:
+            saved_gis.include(closure, prepared, key)
+        elif (value.get("state") != "complete" or value.get("id") != key
                 or value.get("project_id") != prepared["project_id"]
                 or value.get("prepared_id") != prepared["id"]):
             raise ValueError("The native Study names another saved Geographic context")
@@ -953,7 +960,7 @@ def _native_saved_contexts(closure, prepared, captured=None):
                 if not entry.get("uri", "").startswith(ALLOCATION):
                     raise ValueError("The saved allocation source has another original producer")
                 include_source(closure, choice["source_collection_id"], entry)
-        else:
+        elif kind == "geographic-scenario-contexts":
             choice = value.get("source")
             if not isinstance(choice, dict):
                 raise ValueError("The original Geographic interpretation lost its source")
@@ -1047,7 +1054,8 @@ def related_native_cohort(closure):
 
 def lock_paths(closure):
     from .geographic_operator_transfer import lock_paths as operator_lock_paths
-    paths = set(operator_lock_paths(closure))
+    from .geographic_gis_study_transfer import lock_paths as gis_lock_paths
+    paths = set(operator_lock_paths(closure)) | set(gis_lock_paths(closure))
     for relative in closure.files:
         parts = PurePosixPath(relative).parts
         if len(parts) < 3:
