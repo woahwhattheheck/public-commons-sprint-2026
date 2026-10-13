@@ -434,7 +434,7 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
                     name = member_name("workspace/runs/" + original["id"] + "/" + relative).as_posix()
                     retained = manifest["members"].get(name)
                     if (retained is None or retained["sha256"] != artifact["sha256"]
-                            or retained["bytes"] != artifact["bytes"]):
+                            or ("bytes" in artifact and retained["bytes"] != artifact["bytes"])):
                         raise ValueError("Receiving changed a completed native result")
         # Finish identity reads and response construction before publication.
         # The retained descriptor stays bound to the same opened archive edition.
