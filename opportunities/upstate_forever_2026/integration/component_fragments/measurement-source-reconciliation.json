@@ -1,0 +1,32 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-source-reconciliation",
+  "source_reference": "ECO-SOURCE-RECONCILIATION-15227-20261013: complete source edition comparison using the original Measurements review, source archive, report snapshot and portable receiver.",
+  "components": {
+    "measurement-source-reconciliation": {
+      "title": "Original measurement source versions, explicit decisions and complete retained comparison reports",
+      "paths": [
+        "integration/component_fragments/measurement-source-reconciliation.json",
+        "measurement_workspace/SOURCE_RECONCILIATION.md",
+        "measurement_workspace/engine/cli.mjs",
+        "measurement_workspace/engine/http.mjs",
+        "measurement_workspace/engine/reconciliation_cli.mjs",
+        "measurement_workspace/engine/source_reconciliation.mjs",
+        "measurement_workspace/operator.py",
+        "measurement_workspace/web/source_reconciliation.css",
+        "measurement_workspace/web/source_reconciliation.mjs",
+        "measurement_workspace/web/workspace.js",
+        "operator/extensions/measured-observations.json",
+        "operator/web/measured_observations.mjs",
+        "operator/web/source_reconciliation.css",
+        "operator/web/source_reconciliation.mjs"
+      ],
+      "requires": [
+        "measurement-large-files"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-source-reconciliation"
+  ]
+}
