@@ -1,8 +1,8 @@
 # Receive the complete observed watershed change feature
 
-This source package closes the original LANDCHANGE3028 / 4814 native receiving family. The original fifteen-file source bank is preserved byte for byte. Seven unchanged dependencies from the same published source are included so the report builder, recipient delivery, selected Study readers and every descriptor-declared browser asset travel together.
+This source package closes the original LANDCHANGE3028 / 4814 native receiving family. The fifteen-file source bank includes the original author's reviewed PR4326 receiver and guide; its other thirteen source bodies are preserved byte for byte. Seven unchanged dependencies from the same published source are included so the report builder, recipient delivery, selected Study readers and every descriptor-declared browser asset travel together.
 
-The source bank is `observed-landcover-native-complete-20261013.json`, beside this guide. Its complete UTF-8 identity is **378823 bytes / SHA256 c50700e8c3a0faa50e74c3e31911b6fd955b6b69ea87549fa87621b2f07b5e97**, with 22 files and 358844 source bytes. The original source commit is `6fc6b6b4798e65b63bbd6408657dabe302f326dd`; the preceding fifteen-file bank is `553b3329b1bcecb8d85ff41b85fb8b616456872d`.
+The source bank is `observed-landcover-native-complete-20261013.json`, beside this guide. Its complete UTF-8 identity is **380695 bytes / SHA256 8931f79effdfa5802302f0c76a865c991ad5bbaa2da9254016b0e2cc741c7e05**, with 22 files and 360405 source bytes. The current feature source is merged PR4326 / `394a2c2e2bc4daf127d8055064efa19a56255fb7`, with fifteen-file bank `ce2c6a02a35bdf498e6d4cb2e85bc35224682331`. The seven unchanged dependency bodies retain original source commit `6fc6b6b4798e65b63bbd6408657dabe302f326dd`.
 
 ## Whole source and maintained dependencies
 
@@ -22,7 +22,7 @@ The bank includes all seven `model/observed_landcover*.py` modules and all five 
 
 This is a feature package for the maintained application. Its `shared_application_dependencies` field identifies the original source/report/Study/queue/portable services to retain from the receiving application. Preserve their current code and the receiving application's current owner instructions. The existing extension registry owns the desk; a second controller is unnecessary.
 
-The source-intake replay correction belongs to the original receiver author at Slack1791895425.750449. When adopting that published successor, compose its exact receiver and guide over this pinned baseline. A source receipt already admitted by that successor stays on its actual code version.
+The original author's PR4326 source-intake replay correction is included. The receiver reconciles the saved original path/analysis selection and authoritative native import task before requiring temporary staging bytes for a new intake. Completed import replay works after the temporary manifest is removed, including when its same explicit option is repeated. New and unadmitted imports still require their original complete bytes and SHA. Preserve already accepted task IDs and original configuration; use the existing `--resume-failed --reviewed-source-revision 394a2c2e2bc4daf127d8055064efa19a56255fb7` controls for an already-recorded incomplete course at its closed source boundary.
 
 ## Use the existing source receiver
 
@@ -36,7 +36,7 @@ PYTHON -B MATERIALIZER/source_tools/materialize_source_banks.py \
   --output NEW_SOURCE_STAGE \
   --application NEW_APPLICATION_COPY \
   --workspace NEW_RECEIVING_WORKSPACE \
-  --expect-source-sha256 c50700e8c3a0faa50e74c3e31911b6fd955b6b69ea87549fa87621b2f07b5e97
+  --expect-source-sha256 8931f79effdfa5802302f0c76a865c991ad5bbaa2da9254016b0e2cc741c7e05
 ```
 
 Replace each uppercase path with the actual receiving path. The existing receiver verifies the complete original bank, all members, modes, Python syntax and protected roots before publishing the source directory. Its `receiving.json` returns the actual source path. Stage the component from that directory into the existing owned application copy through its maintained source-adoption operation. Preserve a different newer file and compose its original authored join rather than replacing it with a predecessor. Keep `AGENTS.md` and `CURRENT_OWNER_DIRECTION.md` beside the staged source for the complete receiving instructions.
