@@ -189,6 +189,7 @@ def request(workspace, selection):
     normal = {"title": selection.get("title") or entry["title"] + " · editable GIS",
               "scenario_run_ids": ids, "comparison_ids": list(comparisons),
               "include_grid": True, "notes": list(selection.get("notes", [])),
+              "metadata_contact": gis_workspace._metadata_contact(selection),
               "sources": [{"source_collection_id": collection["id"], "source_id": entry["id"]}]}
     if selection.get("project_crs"):
         normal["project_crs"] = selection["project_crs"]
