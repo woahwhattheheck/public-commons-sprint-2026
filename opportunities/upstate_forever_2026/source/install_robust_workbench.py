@@ -21,6 +21,20 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/receiving_water_report_transfer.py",
+    "model/RECEIVING_WATER_REPORT_TRANSFER.md",
+    "integration/component_fragments/receiving-water-report-transfer.json",
+    "model/scientific_report_study_transfer.py",
+    "model/calibration_study_transfer.py",
+    "model/study_report_transfer.py",
+    "model/monitoring_study_transfer.py",
+    "operator/web/extensions/study_transfer.mjs",
+    "operator/web/source_report_editions.mjs",
+    "operator/web/app.mjs",
+    "operator/SCIENTIFIC_REPORT_EDITIONS.md",
+    "model/SCIENTIFIC_REPORT_STUDY_TRANSFER.md",
+    "operator/CALIBRATION_REPORT_TRANSFER.md",
+    "integration/component_fragments/scientific-report-study-transfer.json",
     "model/native_versions.py",
     "model/robust_decisions/eco_robust/decision_delivery.py",
     "model/delivery.py",
@@ -51,6 +65,21 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/receiving_water_report_transfer.py",
+    "model/RECEIVING_WATER_REPORT_TRANSFER.md",
+    "integration/component_fragments/receiving-water-report-transfer.json",
+    # Optional selected-report continuation composes original study owners.
+    "model/scientific_report_study_transfer.py",
+    "model/calibration_study_transfer.py",
+    "model/study_report_transfer.py",
+    "model/monitoring_study_transfer.py",
+    "operator/web/extensions/study_transfer.mjs",
+    "operator/web/source_report_editions.mjs",
+    "operator/web/app.mjs",
+    "operator/SCIENTIFIC_REPORT_EDITIONS.md",
+    "model/SCIENTIFIC_REPORT_STUDY_TRANSFER.md",
+    "operator/CALIBRATION_REPORT_TRANSFER.md",
+    "integration/component_fragments/scientific-report-study-transfer.json",
     "model/native_versions.py",
     # Optional full current postimages bind original native atlas delivery.
     "model/delivery.py",
@@ -241,6 +270,25 @@ def verify_composition(application, pending):
     if transfer is not None and b"study_delivery_transfer" in transfer:
         assembled_data(application, pending, "model/study_delivery_transfer.py")
         assembled_data(application, pending, PACKAGE_ROOT + "eco_robust/decision_delivery.py")
+    if transfer is not None:
+        for module in ("scientific_report_study_transfer", "calibration_study_transfer",
+                       "study_report_transfer", "monitoring_study_transfer"):
+            if module.encode("ascii") in transfer:
+                assembled_data(application, pending, "model/" + module + ".py")
+        if b"calibration_study_transfer" in transfer:
+            for dependency in ("model/calibration.py", "model/calibration_uncertainty.py",
+                               "model/calibration_maps.py", "model/calibration_review.py",
+                               "model/calibration_report_source.py"):
+                assembled_data(application, pending, dependency)
+        if b"scientific_report_study_transfer" in transfer:
+            for dependency in ("model/observed_context.py", "model/observed_report_render.py",
+                               "model/receiving_water_report_transfer.py",
+                               "operator/source_report_editions.py"):
+                assembled_data(application, pending, dependency)
+            lineage = assembled_data(application, pending, "model/study_report_transfer.py")
+            monitoring = assembled_data(application, pending, "model/monitoring_study_transfer.py")
+            if b"def include_calibration(" not in lineage or b"def include_source(" not in monitoring:
+                raise ValueError("Receive the matching original calibration and Monitoring report lineage helpers")
     server = assembled_data(application, pending, "operator/server.py").decode("utf-8")
     client = assembled_data(application, pending, "operator/web/app.mjs").decode("utf-8")
     if "ExtensionRegistry" not in server or "self.extensions" not in server or "createExtensionHost" not in client:
