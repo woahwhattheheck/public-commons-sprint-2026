@@ -10,11 +10,12 @@ import json
 from pathlib import Path
 
 from model import monitoring_recommendations as recommendations
+from model import monitoring_working_copies as working_copies
 from model.common import identifier, verify_file
 from model.monitoring_common import atomic_json, digest, file_sha256, held, load_json
 
 PREFIX = "monitoring.recommendations."
-ACTIONS = {PREFIX + action for action in ("prepare", "design", "export")}
+ACTIONS = {PREFIX + action for action in ("prepare", "design", "export", "working-save", "working-export")}
 
 
 def _object(value, label):
@@ -44,19 +45,30 @@ def perform(operator, task):
         values = _payload(task, ("recommendation_id", "configuration", "title"))
         return recommendations.design(
             workspace, operation_id=identifier(task["id"]), **values)
+    if action == PREFIX + "working-save":
+        values = _payload(task, ("working_file", "parent_id", "expected_parent_digest"))
+        return working_copies.save(
+            workspace, operation_id=identifier(task["id"]), **values)
     return _export_task(operator, workspace, task)
 
 
 def _export_task(operator, workspace, task):
     """Retain the exact selected edition and reuse the completed export on retry."""
-    payload = _payload(task, ("recommendation_id",))
-    recommendation_id = identifier(payload.get("recommendation_id"))
+    working = task["action"] == PREFIX + "working-export"
+    payload = _payload(task, ("working_id", "format") if working else ("recommendation_id",))
+    if working:
+        payload = {"working_id": identifier(payload.get("working_id")),
+                   "format": payload.get("format", "bundle")}
+        if payload["format"] not in {"bundle", "workspace"}:
+            raise ValueError("Choose a working bundle or original Workspace export")
+    else:
+        payload = {"recommendation_id": identifier(payload.get("recommendation_id"))}
     task_id = identifier(task["id"])
     root = operator.root / "outputs" / "monitoring-recommendations" / task_id
     request = {
         "workspace": task["workspace"], "project_id": workspace.project["id"],
         "task_id": task_id, "action": task["action"],
-        "payload": {"recommendation_id": recommendation_id},
+        "payload": payload,
     }
     request_sha256 = digest(request)
     intent_path, result_path = root / "selection.json", root / "completed.json"
@@ -75,8 +87,11 @@ def _export_task(operator, workspace, task):
             result = completed["result"]
             _export_path(operator, task["id"], result)
             return result
-        result = recommendations.export_recommendations(
-            workspace, recommendation_id=recommendation_id, export_root=root)
+        if working:
+            result = working_copies.export(workspace, export_root=root, **payload)
+        else:
+            result = recommendations.export_recommendations(
+                workspace, recommendation_id=payload["recommendation_id"], export_root=root)
         _export_path(operator, task["id"], result)
         atomic_json(result_path, {"request_sha256": request_sha256, "result": result},
                     immutable=True)
@@ -134,7 +149,22 @@ def read(operator, workspace_key, payload):
     if action == "catalog":
         if values:
             raise ValueError("Sampling catalog takes no selection")
-        return {"workspace_key": workspace_key, **recommendations.catalog(workspace)}
+        return {"workspace_key": workspace_key, "project_id": workspace.project["id"],
+                **recommendations.catalog(workspace)}
+    if action == "working-list":
+        if values:
+            raise ValueError("Saved working-copy list takes no selection")
+        return {"workspace_key": workspace_key, **working_copies.list_saved(workspace)}
+    if action == "working-preview":
+        if set(values) != {"working_file"}:
+            raise ValueError("Working preview needs the complete original file")
+        return {"workspace_key": workspace_key, **working_copies.preview(
+            workspace, working_file=values["working_file"], workspace_key=workspace_key)}
+    if action == "working-get":
+        if set(values) != {"working_id"}:
+            raise ValueError("Choose one immutable working copy")
+        return {"workspace_key": workspace_key, **working_copies.get(
+            workspace, identifier(values["working_id"]), workspace_key=workspace_key)}
     if action == "list":
         if values:
             raise ValueError("Saved sampling list takes no selection")
@@ -154,10 +184,12 @@ def read(operator, workspace_key, payload):
     if action == "get":
         if set(values) != {"recommendation_id"}:
             raise ValueError("Choose one complete saved sampling edition")
-        return {"workspace_key": workspace_key,
-                **_evidence_downloads(operator, workspace_key,
-                    recommendations.inspect(workspace, identifier(values["recommendation_id"]))),
-                "saved_designs": recommendations.designs(workspace, identifier(values["recommendation_id"]))}
+        original = recommendations.inspect(workspace, identifier(values["recommendation_id"]))
+        designs = recommendations.designs(workspace, original["id"])
+        return {"workspace_key": workspace_key, "project_id": workspace.project["id"],
+                **_evidence_downloads(operator, workspace_key, original),
+                "recommendation_digest": digest(original),
+                "saved_designs": [{**row, "working_digest": digest(row)} for row in designs]}
     raise ValueError("Choose catalog, context, list, preview or get for sampling priorities")
 
 
@@ -166,13 +198,18 @@ def decorate_task(operator, task):
         return task
     public = deepcopy(task)
     result = _object(public.get("result"), "Completed sampling result")
-    if task["action"] == PREFIX + "export":
+    if task["action"] in {PREFIX + "export", PREFIX + "working-export"}:
         target = _export_path(operator, task["id"], result)
         ticket = operator._ticket(task["workspace"], target, result,
                                   "Sampling priorities and original observations")
         result.pop("path", None)
         result["download_url"] = "/api/file/" + ticket["id"] + "?download=1"
         public["_downloads"] = [ticket]
+    elif task["action"] == PREFIX + "working-save":
+        public["_sampling_recommendations"] = {
+            "view": "monitoring-recommendations", "working_id": result["id"],
+            "recommendation_id": result["working_file"]["recommendation_id"],
+        }
     else:
         public["_sampling_recommendations"] = {
             "view": "monitoring-recommendations",
@@ -183,4 +220,5 @@ def decorate_task(operator, task):
 
 
 def verify_workspace(workspace):
-    return recommendations.verify_workspace(workspace)
+    return {**recommendations.verify_workspace(workspace),
+            **working_copies.verify_workspace(workspace)}
