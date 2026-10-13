@@ -1,0 +1,5 @@
+CustomerRef,FullName,EmailAddress,Organization,Phone,Amount,Postal
+B101,Mara J. Ellis,mara@example.test,Northline Services,5550100101,9007199254740993.02,00102
+B102,Theo Kim,theo@example.test,Fieldstone Design,5550100102,240.00,02134
+B103,Inez Shaw,inez@example.test,Ridgeway Studio,5550100103,18.75,00420
+B105,Cleo Arden,cleo@example.test,Willow Lane,5550100109,23.45,00001

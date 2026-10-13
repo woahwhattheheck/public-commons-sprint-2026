@@ -1,0 +1,510 @@
+{
+  "schema": "commons.public-product-source.v1",
+  "product": "record-mastering-workspace",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "source": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "033a03db1ed1a8543cbe51a957bea9f0a579cb85",
+    "complete_original_files": 40,
+    "complete_original_bytes": 290277,
+    "code_checkpoint": {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "git_blob": "780d1029083a283d5fee8d4ccdf11f00e5eec8db",
+      "bytes": 321551,
+      "sha256": "35afa71a5d2853114d4cf949f35b649c3d8e5157825e9ba513038026bb80ac14"
+    },
+    "originals": [
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/selections/record-mastering-workspace.json",
+        "git_blob": "1bbd1c1f7a187bcf6b761b2c310edc5d13d3cfe0",
+        "bytes": 11187,
+        "sha256": "b36cda1e3826ef4fe6449cd2b2f816d32d6f9d7d0255f2be3f9f3fc89d72fd8a",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/record-mastering.json",
+        "git_blob": "61e7352e11e96d2354f6a8aa41bada1486142ec1",
+        "bytes": 1276,
+        "sha256": "d0bcd9aa71db599643e39ede0c745d62ed6fcda7899fa74fdda4c2a4d5f5bf38",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/record-mastering-workspace.json",
+        "git_blob": "67f8aec49e62e8b713840d7e33ebb75124ae4914",
+        "bytes": 643,
+        "sha256": "fef33995cc29f019a7c2653c2ca6bb15b80ef82ebdb2d259e97435f2ac001398",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "products/record-mastering/receiving/README.md",
+        "git_blob": "2351b6a7f32d5ecdf732c884d6a14265e35ba270",
+        "bytes": 5714,
+        "sha256": "83709718382bd3fb6ab42f31069296b9116e957d605023a638f59239a14243c4",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "products/record-mastering/OPERATING.md",
+        "git_blob": "ce6818b419e872546ef1b639888e82109849c305",
+        "bytes": 17800,
+        "sha256": "9f667451ed9196013376083e1851d3f55b673e36a5cb3feec4869bd25377521e",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "products/record-mastering/cli.mjs",
+        "git_blob": "2c33585f1314260c517a5a1c93c13274259da795",
+        "bytes": 4874,
+        "sha256": "0afb7cbe6bfa11b0463aa1bf38d1b2ecb31508981c48f53b3652134aa4a8feb4",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "products/record-mastering/workspace.mjs",
+        "git_blob": "dc254e0139208bc1e5f51544f56d0c3cfef272bb",
+        "bytes": 19150,
+        "sha256": "4dec41a959c0ab33ba5d883cc7f17dd38333c51c3f8bc9a52671d342cc1e2fab",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "products/record-mastering/receiving/installed-receiving.mjs",
+        "git_blob": "e582a2b4c14aea057b9bb142b5be8dc50272dc4e",
+        "bytes": 27784,
+        "sha256": "544c34fd19ba719255f79e717e7f5f29494778192b77d9b859888d56497e892c",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "products/record-mastering/receiving/preparation.example.json",
+        "git_blob": "e65833100e5c499720dbf76e02ab2a11d5eda6e6",
+        "bytes": 641,
+        "sha256": "e0831b8368bbffe2562b7b39041389f50c3fba3c997149210d614461396ae42c",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "products/record-mastering/receiving/prepare-installed.mjs",
+        "git_blob": "c1ec1ed4a913cd1ce2818ec4a87ffcbe60c8be91",
+        "bytes": 8562,
+        "sha256": "e99632042b735f0fa506f4a9f2afc2bd59ca5d3ae54714a1227d41feb8923b08",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/EXERCISE.mjs",
+        "git_blob": "b385f7d927f99767f7df4caf44c13ce44164dde2",
+        "bytes": 10126,
+        "sha256": "46500963b99b124f383c23ecff03a74e78a0929dede88e2de202b4220d7b431f",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/LICENSE",
+        "git_blob": "abbdfa2906fbca24096151f0575330d7c0f3b2cb",
+        "bytes": 1074,
+        "sha256": "a013def64d46550c0c51c20e2280341720fe6fc1847021d8bf5f2e97b1a99d77",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/README.md",
+        "git_blob": "1691c2101bbd2d572f4fec23746713f510313f5d",
+        "bytes": 14083,
+        "sha256": "6d25df4b15c1faccda7d42db8422d85e097cb36ad9b0779668e91c9943f65457",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/application-provider.mjs",
+        "git_blob": "9bc5d0a22e0116073f79772b48d0c522c95747f7",
+        "bytes": 948,
+        "sha256": "6e1f4f7454556740f7bab9e0a395e5d49bf3aa3d5b8768ce9a10dbcf8fc7f2bb",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/application.mjs",
+        "git_blob": "6023ca2b4fddeb806b49749cb4f6622f296a8e47",
+        "bytes": 5740,
+        "sha256": "9b3f762d4b1584e9187f6914b10553d79485abd770d445d924eb68fe9741e64c",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/browser-assets.json",
+        "git_blob": "9f59f187e9abc616d48579b3aa839647b4f88e09",
+        "bytes": 348,
+        "sha256": "95dcfce847b24f5b535f5a4b398550a909f147028e45a607bd0a0277ac70a475",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/cli.mjs",
+        "git_blob": "6fc152b306eb5ac73858d248b8a0dea8e3dd62ea",
+        "bytes": 4663,
+        "sha256": "0c264393100e9bcb528fab27a2f39e07613b53f78c34ee0fb5e03a4c43f3bd0f",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/client.d.mts",
+        "git_blob": "b26c5491d035c3813ae23802f19f8500536f3d59",
+        "bytes": 11084,
+        "sha256": "d78804946e73ae5ff6366d73956ad302f7ce7c73f4c15a415572801ab31322d9",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/client.mjs",
+        "git_blob": "f45d197ae1c3c930bc6e1e07531fa84854199891",
+        "bytes": 1580,
+        "sha256": "32948b04742823211ae555fd9a3d4a4ffb3e58474000382e62cc3862d9874e73",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/core.mjs",
+        "git_blob": "16d93cf69a946a5e446b691bc27acddf24c1fcc7",
+        "bytes": 32745,
+        "sha256": "ee554c6a90ac50191c67ceea37e6fd829b7c2f858152c6c269cc9ee8b8e62351",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/csv.mjs",
+        "git_blob": "69ab48d3d770c008140415a42d580753961b00d1",
+        "bytes": 2434,
+        "sha256": "e0152ec7bfaa1c9a49d7e49e65586cc26f8c481cab731cd2051c322eeec9d5a5",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example-workspace.mjs",
+        "git_blob": "926446a526185ab02f049a87391d8543ae104cec",
+        "bytes": 3377,
+        "sha256": "117f7d12cf5bca514175eee12c5c94470fc7363ebdc168f302b8063013589ea0",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/launch-example.mjs",
+        "git_blob": "cfa368a1236a31ea70e22ab01a2b1327c95c237f",
+        "bytes": 1649,
+        "sha256": "745bb63f20ec7353da9d490a26f1827750369d9e6e376e8ff3fc50f363cb4e10",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/mcp-tools.mjs",
+        "git_blob": "20b4cabec534e9769a0a623303486320d0137270",
+        "bytes": 3816,
+        "sha256": "5fdd2530759a63225dd5b9e450dbed2b7923d55a8930e09d2064cc9d001739e5",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/mcp.mjs",
+        "git_blob": "47061ff1695607c972bd35aebd3ffc0ce4903296",
+        "bytes": 15726,
+        "sha256": "0852154e392153399072eeada2c8be0e10731119aa6d88f8d017f85bd99fa515",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/merchant-provider.mjs",
+        "git_blob": "b9b69adc17c2fd805d2cb42e0c4e7498e5f4d3c4",
+        "bytes": 1999,
+        "sha256": "5ebce0024021f12b3873e8b7e6e09445f8946022fee966a22422e2ab55448402",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/package.json",
+        "git_blob": "ba793d3f91cdc41c520841bf2aa5e27f3c21cd32",
+        "bytes": 599,
+        "sha256": "ecd7deedc9fc3cd6cf13d4ba132d7d3f890e2d8c40da03f08975ba58886e6571",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/packet-reader.mjs",
+        "git_blob": "12eb9d404dbc39ce4f2421ae659c5c721cb2b791",
+        "bytes": 5077,
+        "sha256": "eda6b964d713ec435862e58fc11266331470f0e31aa0d367ace34cee0d5abbcf",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/portable.mjs",
+        "git_blob": "e47855d8b18008298bc5bc51668b4a5436e82db5",
+        "bytes": 12524,
+        "sha256": "dfb0be18034ad3ecbcc7658609a995c2b2599bfdca3aa2969cef7f848a75f8b8",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/projection.mjs",
+        "git_blob": "eca6de40ac9b826f9873511e06eafd9047ba0acc",
+        "bytes": 9604,
+        "sha256": "71e0ad212699e3da74af342179c65d30d1efaabb1947f8256956487474e17835",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/schema.sql",
+        "git_blob": "5209cd49b18a7abe814841a94e803c5d51d01dc1",
+        "bytes": 2421,
+        "sha256": "ebda8fef06489e74c197c10364846e76ed9277033933418413902027802fc43e",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/server.mjs",
+        "git_blob": "4f5d329cea50f5bea6fcc63d76fdb2961ab04a72",
+        "bytes": 6867,
+        "sha256": "2f3af612c689cf71ff029b5c8e33fe4b7affb2a64cd39b348afaae2cb1e6a96c",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/EXAMPLE.md",
+        "git_blob": "a087ff5679f48a5cc580cea15029830a61669a48",
+        "bytes": 980,
+        "sha256": "a5013658f8399a3501fcad156436e37d264c9fe11f4b37b767c4fb3a98c17ed6",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/billing-corrections.csv",
+        "git_blob": "b2a80eb609569c6e6c75bf19d25b17bc0d31e789",
+        "bytes": 380,
+        "sha256": "ec00515866754f2e34eba6bc348808c380a8135176785cb235305a38e9f686a8",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/billing.csv",
+        "git_blob": "05638c5415f86634379f226a2daed97083ca8134",
+        "bytes": 386,
+        "sha256": "81697fc3d6eae5a30e181f731c6a84281180f8adfd73e4937f646d14feed8046",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/crm.csv",
+        "git_blob": "b77cbae770f0a536dbf5c9427a095cadd77d2cd0",
+        "bytes": 607,
+        "sha256": "3d24537bbe7c49d1b1623437498a1919b6a4c29071074dbbae40db5c1b25c5be",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/customer-delivery.gz",
+        "git_blob": "c163acb2517c4c34be1747b4ac53422165fc9503",
+        "bytes": 7205,
+        "sha256": "16b23c27e19e556d786c63a809cbcd49593cd567aacadf90b43eeb1ffb94e2e8",
+        "encoding": "base64"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/ui/app.js",
+        "git_blob": "c6259a9142a90e81f61d7fbf24431edb381ae035",
+        "bytes": 26463,
+        "sha256": "9041862c2a96cdd0a04b20de701b5ee4c71bca6097e890236ae5f575d9469f5e",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/ui/index.html",
+        "git_blob": "fdef093891ef16affe9bbc491846c5e054bb1eca",
+        "bytes": 1291,
+        "sha256": "2910942800627176672df813ca9526e48890e8ced4f080e3f4b178a1d3d7c695",
+        "encoding": "utf-8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/ui/style.css",
+        "git_blob": "34fb7ade73f34d7066c32bd05705bb7b2de5d3c4",
+        "bytes": 6850,
+        "sha256": "4f7cab06b57027be1c339aafad30b8be2bf954a9995fec9109320f62b120ae5e",
+        "encoding": "utf-8"
+      }
+    ]
+  },
+  "publicPackage": {
+    "selection": "stellar/scf-starforge-20261009/distribution/selections/record-mastering-workspace.json",
+    "entry": "products/record-mastering/PACKAGE_README.md",
+    "instructions": "products/record-mastering/AGENTS.md",
+    "changes": [
+      "Use the existing complete record-mastering-workspace recipe with the public repository identity and package entry guide.",
+      "Preserve the complete original application, generic installed product and receiving source lineage with the explicitly recorded maintenance below; keep the fictional example/customer-delivery.gz distribution exclusion.",
+      "Reuse the current source-owned Runtime Applications, Merchant provider, SF82 release-store and distribution interfaces. No separate Grant Installation profile or shared registry is added."
+    ],
+    "files": [
+      {
+        "path": "products/record-mastering/PACKAGE_README.md",
+        "bytes": 10266,
+        "sha256": "5a921c2314cea5953cd8a1cef2811b86bf5899fb61d28acf77fa2fe1ba3757b9"
+      },
+      {
+        "path": "products/record-mastering/AGENTS.md",
+        "bytes": 4994,
+        "sha256": "dd6c11227fed17fd81b18a456a41e36abe30e7103ab190733444120d5837d527"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/selections/record-mastering-workspace.json",
+        "bytes": 11185,
+        "sha256": "6840a9b28310bf54357743564ec3da3ebc43ca7a9b28f32f48063cb269600de2"
+      }
+    ]
+  },
+  "sharedInterfaces": {
+    "source_commit": "11a548b9ca5c8d573807aa8161d5b263fd3ab355",
+    "files": [
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/source-selection.mjs",
+        "git_blob": "b792444200a7d95d42d899bea846c0097e4becc3",
+        "bytes": 10353,
+        "sha256": "0e694a9aac52045689d56960ff2aadb9fece91c3f61e1ce120cd0a9e86ae24f7"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/specification.mjs",
+        "git_blob": "a1eb20c79f2bd6486c9d01149ee8cf19605ac43f",
+        "bytes": 26279,
+        "sha256": "6f0232c5cd5ecc5a82670b6ce0116f0fa06e75bd5780d0054c38d84deaed3ed0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/build.mjs",
+        "git_blob": "ee1c91b0a7d65c7ceadcd855dc4dc3d830049d05",
+        "bytes": 32630,
+        "sha256": "a363b714c4c6715eb630e64b51d8861d6ab58fe80a5f3ef578f4da8b73634389"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/distribution.json",
+        "git_blob": "9015c2283f26710496509069313cfbe347e7060b",
+        "bytes": 79313,
+        "sha256": "d69e41fbefa5b37aab2644ffca147429e1e183c7550b92b590182b43a034285a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/product-package.mjs",
+        "git_blob": "2c668933f214f201137ac6d3c6b7410525955c9b",
+        "bytes": 3764,
+        "sha256": "e1f33fd1940b62c7ede90288ff2ad36da529a197b06e059e8b3b6e27fba1e76d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/browser-assets.mjs",
+        "git_blob": "aefe2df3b0c799a0b21b617c31ea64c4d8c33df5",
+        "bytes": 7009,
+        "sha256": "068fc68209fcc86b77c484376353e938751a029460fb2d6ebe48f226019fdf09"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-provider-tools.json",
+        "git_blob": "ef9552d29cd899b60e5f9317bb0f8398cb8dd0da",
+        "bytes": 737,
+        "sha256": "64b29c1293acb077c3f318a0dee1b6dd17985d61de07755e49996d7d2673995c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-console-browser-assets.json",
+        "git_blob": "d4990d79b5da6803fe6f507cf0d119adf1c92581",
+        "bytes": 416,
+        "sha256": "380fe3b4eed9172b6e69fad28a275f4dcd1bb981b822358bf0551da423cde809"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/managed-source.mjs",
+        "git_blob": "3f26907e8c12919cabea1b653a167eb3a560f231",
+        "bytes": 2689,
+        "sha256": "c22586e7cd78122df9d922de6387ef8f30caa4e014f3ce3ade0f0062d8c75b89"
+      }
+    ]
+  },
+  "composition": {
+    "source_base": "11a548b9ca5c8d573807aa8161d5b263fd3ab355",
+    "initial_files": 904,
+    "contributions": [
+      "merchant-console-browser-assets",
+      "merchant-provider-tools",
+      "record-mastering-workspace",
+      "record-mastering"
+    ],
+    "commands": [
+      "installation",
+      "runtime-profile",
+      "runtime-install",
+      "runtime-workspace",
+      "runtime-transfer",
+      "releases",
+      "merchant-mcp",
+      "merchant-mcp-stdio",
+      "merchant-mcp-client-config",
+      "buyer",
+      "buyer-node",
+      "seller",
+      "merchant",
+      "dataset",
+      "client",
+      "dataset-refresh",
+      "merchant-providers",
+      "record-mastering-workspace",
+      "record-mastering"
+    ],
+    "components": 14,
+    "supportFiles": 106,
+    "missing_required": [],
+    "missing_components": [],
+    "unselected_originals": [
+      "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/customer-delivery.gz"
+    ],
+    "managed_manifests": [],
+    "maintenance_source": {
+      "git_blob": "4f49e7aca0f67620117161bc2b82a53a78922181",
+      "bytes": 156167,
+      "sha256": "f8ceeae4a8112dc22bd00d2e0869531a282958f8b1875ee1bfffa0a7028b9cfc"
+    },
+    "added_maintained_helpers": [
+      "products/record-mastering/receiving/application-lifetime.mjs"
+    ],
+    "scope": "Actual unchanged pure registration composition and initial Git inventory selection executed in V8. Final native module/browser import closure, package archive, runtime installation, SQLite operation and viewed browser/attachment receiving belong to the original equipped course."
+  },
+  "custody": {
+    "public_source": "Generic implementation and explicitly fictional committed examples.",
+    "private_inputs": "Actual customer workspace, source lists, runtime settings, credentials and native records remain separately supplied to their existing authorized owner.",
+    "continuation": "An existing installed programme keeps its immutable source/runtime/request selection. A deliberate public source upgrade uses the maintained new selection and reviewed setup without relabeling historical results."
+  },
+  "publicMaintenance": {
+    "checkpoint": {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "git_blob": "4f49e7aca0f67620117161bc2b82a53a78922181",
+      "bytes": 156167,
+      "sha256": "f8ceeae4a8112dc22bd00d2e0869531a282958f8b1875ee1bfffa0a7028b9cfc"
+    },
+    "changes": [
+      "Persist the exact prepared native export descriptor and bytes before publishing its digest-named file; replay retains that same snapshot after a receipt interruption and later workspace edits.",
+      "Attempt all owned constructor, CLI listener, portable workspace and MCP provider cleanup; retain the original failure and allow the same owner's close operation to retry.",
+      "Retain the selected native Start request before dispatch, reconcile uncertain dispatch using the same original IDs, and require original cancellation or confirmed owned-command closure before releasing receiving ownership.",
+      "Keep interrupted first/reopen runs and their positive closure evidence; continue through separately retained resume attempts without relabeling completed original actions.",
+      "Attempt receiving browser, Merchant transport, native-client and application closure independently, preserving failures and the original receiving lease until owned cleanup completes. Preserve public release and connectionReady admission.",
+      "Add the application-lifetime helper inside the existing whole-product component and update the consumed receiving guide. The existing recipe selects that helper without another profile or registry."
+    ],
+    "files": [
+      {
+        "path": "products/record-mastering/receiving/README.md",
+        "original_sha256": "83709718382bd3fb6ab42f31069296b9116e957d605023a638f59239a14243c4",
+        "bytes": 7715,
+        "sha256": "7f56e612018fe94e25be03813240a501b91dc98dd50464eac16c5a50180beade"
+      },
+      {
+        "path": "products/record-mastering/workspace.mjs",
+        "original_sha256": "4dec41a959c0ab33ba5d883cc7f17dd38333c51c3f8bc9a52671d342cc1e2fab",
+        "bytes": 19277,
+        "sha256": "e576b733affc859059981062c511b7a667c1e5690f8ded762333b5de7910fcb7"
+      },
+      {
+        "path": "products/record-mastering/receiving/installed-receiving.mjs",
+        "original_sha256": "544c34fd19ba719255f79e717e7f5f29494778192b77d9b859888d56497e892c",
+        "bytes": 30990,
+        "sha256": "17f40b105fbb13285131598fb1f970d0cdb18f1f63dc295ddab7e9bcdcfcfd77"
+      },
+      {
+        "path": "products/record-mastering/receiving/prepare-installed.mjs",
+        "original_sha256": "e99632042b735f0fa506f4a9f2afc2bd59ca5d3ae54714a1227d41feb8923b08",
+        "bytes": 9394,
+        "sha256": "44b985fb34528a80acf0f8e427f87a60f6c8435a74974c95b7391d372c4551da"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/cli.mjs",
+        "original_sha256": "0c264393100e9bcb528fab27a2f39e07613b53f78c34ee0fb5e03a4c43f3bd0f",
+        "bytes": 6731,
+        "sha256": "f72f0e9862cb84ed51250358d8b7e51505e1cec2a34be9686fecf1360b936db5"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/core.mjs",
+        "original_sha256": "ee554c6a90ac50191c67ceea37e6fd829b7c2f858152c6c269cc9ee8b8e62351",
+        "bytes": 33788,
+        "sha256": "6b15c47c56ee7a2711f471566a70c623c24e179a7bb99244532cd41f74ba4540"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/mcp.mjs",
+        "original_sha256": "0852154e392153399072eeada2c8be0e10731119aa6d88f8d017f85bd99fa515",
+        "bytes": 19029,
+        "sha256": "d1d8d451e30d44cfd502cc2eed6baec305554b64110d49cde03ce56ec2defb40"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/portable.mjs",
+        "original_sha256": "dfb0be18034ad3ecbcc7658609a995c2b2599bfdca3aa2969cef7f848a75f8b8",
+        "bytes": 14281,
+        "sha256": "d62f8e9cc924e61a67db600b12e9c5c0e1e72eef3f587b2172daebbdfaecf84c"
+      },
+      {
+        "path": "products/record-mastering/receiving/application-lifetime.mjs",
+        "added": true,
+        "bytes": 9445,
+        "sha256": "8d1446a3deee42c5e1297bdfd299fa2f6c91fc35a438ea4e1e9db0512e51dc36"
+      }
+    ]
+  }
+}
