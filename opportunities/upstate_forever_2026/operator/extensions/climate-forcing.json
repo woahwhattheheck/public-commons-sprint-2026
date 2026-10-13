@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "climate-forcing",
   "title": "Climate forcing",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "order": 51,
   "assets": [
     "climate_forcing.mjs",
@@ -70,6 +70,20 @@
         ],
         "path": "/api/climate-forcing/preview",
         "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-forcing/run-request",
+        "operation": "run-request",
         "handler": "read",
         "args": [
           "operator",

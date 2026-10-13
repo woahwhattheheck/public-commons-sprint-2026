@@ -67,10 +67,10 @@ def parser():
         if name == "course":
             child.add_argument("--execute-alternatives", action="store_true",
                                help="Explicitly execute only this study's prepared alternatives through Workspace.run")
-    for name in ("show", "run", "report", "reopen"):
+    for name in ("show", "run", "run-request", "report", "reopen"):
         child = commands.add_parser(name)
         child.add_argument("--study", required=True)
-        if name == "run":
+        if name in ("run", "run-request"):
             child.add_argument("--case", required=True, help="One prepared alternative case ID; baseline execution is prohibited")
         if name == "reopen":
             child.add_argument("--report-id", help="Exact saved report; otherwise original latest report")
@@ -111,6 +111,8 @@ def main(argv=None):
                          "reopening": "Fresh Workspace instance; use reopen in the copied application for a separate process"}
     elif args.command == "show":
         value = climate_forcing.get(workspace, args.study)
+    elif args.command == "run-request":
+        value = climate_forcing.run_request(workspace, args.study, args.case)
     elif args.command == "run":
         value = climate_forcing.run_case(workspace, args.study, args.case)
     elif args.command == "report":

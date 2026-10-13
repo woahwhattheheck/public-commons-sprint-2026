@@ -162,6 +162,24 @@ def invoke_original_run(operator, task: dict, workspace, run_id: str) -> dict:
         task['retention'] = {**meta, 'recovered_from_attempt': prior}
         return result
 
+    donor_ids = None
+    if 'reuse_source_run_ids' in task['payload']:
+        donor_ids = task['payload']['reuse_source_run_ids']
+        if ('source_runs' in task['payload'] or not isinstance(donor_ids, list)
+                or not donor_ids or any(not isinstance(value, str) for value in donor_ids)
+                or len(set(donor_ids)) != len(donor_ids)):
+            raise ValueError('Select unique original donor IDs separately from completed-model assembly')
+        donor_ids = [_identifier(value) for value in donor_ids]
+        if run_id in donor_ids:
+            raise ValueError('A receiving run cannot reuse itself')
+    forcing_context = task['payload'].get('climate_forcing_context')
+    if forcing_context is not None:
+        from model.climate_forcing import run_request
+        expected = run_request(workspace, _identifier(forcing_context['study_id']),
+                               forcing_context['case_id'])
+        if task['payload'] != expected:
+            raise ValueError('Preserve the original forcing case and selected donor')
+
     if 'source_runs' in task['payload']:
         from model.run_assembly import seed_completed_models
         original_selection = workspace.inspect_run(run_id)['selection']
@@ -177,7 +195,8 @@ def invoke_original_run(operator, task: dict, workspace, run_id: str) -> dict:
     for name, path in native_files.items():
         sha, size = retention.store.put_file(path, expected=expected_files.get(name))
         frozen[name] = retention.store.blob_path(sha)
-    result = workspace.run(run_id)  # THE ORIGINAL native.execute_run path.
+    result = (workspace.run(run_id, reuse_source_run_ids=donor_ids)
+              if donor_ids is not None else workspace.run(run_id))  # Original native engine.
     if not isinstance(result, dict) or result.get('state') != 'complete' or result.get('id') != run_id:
         raise ValueError('Original native run did not return this completed run')
     if result.get('selection') != inputs['selection']:
@@ -210,7 +229,7 @@ def invoke_original_run(operator, task: dict, workspace, run_id: str) -> dict:
 
 
 # Advertise the maintained run.start payload consumed above.
-ORIGINAL_RUN_CAPABILITIES = {"run.start": {"source_runs": True}}
+ORIGINAL_RUN_CAPABILITIES = {"run.start": {"source_runs": True, "reuse_source_run_ids": True}}
 
 
 def integrate_operator(source: str | Path, *, write: bool = False) -> dict:

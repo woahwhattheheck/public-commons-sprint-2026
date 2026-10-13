@@ -115,9 +115,31 @@ export function createClimateForcing(context) {
       '<div class="cf-actions">' + button('run-all','Queue unfinished cases',(busy || !runnable.length)?'disabled':'') +
       button('refresh','Refresh run states',busy?'disabled':'') +
       button('report','Compare completed cases',busy?'disabled':'') +
-      (typeof context.openDesk==='function'?button('export-study','Export editable study',busy?'disabled':''):'') + '</div>' +
-      '<p class="cf-meta">Completed runs are reused. The comparison retains the actual completed-case roster and reports the common finite area. Additional completed cases produce a new retained report.</p>' +
+      (typeof context.openDesk==='function'?button('export-study','Export editable study',busy?'disabled':''):'') +
+      (typeof context.openDesk==='function' && getState()?.climate_management?button('management','Compare management across periods',busy?'disabled':''):'') + '</div>' +
+      '<p class="cf-meta">Completed runs are reused. New cases offer their completed baseline to the native input matcher, which reuses only equivalent original model stages and calculates the remaining stages. The comparison records the actual reuse outcome, completed-case roster and common finite area. Additional completed cases produce a new retained report.</p>' +
       details('Study selection and forcing diagnostics',study) + '</section>';
+  }
+  function reuseMarkup() {
+    if(!report?.native_reuse)return '';
+    const rows=Object.entries(report.native_reuse).flatMap(([caseId,observed])=>
+      Object.entries(observed.models || {}).map(([model,stage])=>({
+        caseLabel:(report.cases || []).find(row=>row.id===caseId)?.label || caseId,
+        model,stage
+      })));
+    if(!rows.length)return '';
+    const outcome=value=>({
+      reused_original_stage:'Verified original stage reused',
+      completed_without_reuse_record:'Completed; no reuse record',
+      not_complete:'Not complete'
+    })[value] || 'Outcome not recorded';
+    return '<h3>Observed native stage reuse</h3>' +
+      '<p>The original native matcher checks each candidate stage. This table describes the retained outcome; a proposed baseline donor does not establish reuse or a time saving.</p>' +
+      '<div class="cf-table"><table><thead><tr><th>Case</th><th>Native model</th><th>Observed outcome</th><th>Original donor run</th><th>Retained completion</th></tr></thead><tbody>' +
+      rows.map(({caseLabel,model,stage})=>'<tr><th scope="row">'+escape(caseLabel)+'</th><td>'+escape(model.toUpperCase())+'</td><td>'+
+        escape(outcome(stage.outcome))+'</td><td>'+escape(stage.source?.run_id || '—')+'</td><td>'+
+        escape(stage.reused_at || stage.completed_at || '—')+'</td></tr>').join('') +
+      '</tbody></table></div>'+details('Original reuse records and candidate decisions',report.native_reuse);
   }
   function reportMarkup() {
     if(!report)return '';
@@ -145,7 +167,7 @@ export function createClimateForcing(context) {
       (report.limitations?.length?'<ul>'+report.limitations.map(value=>'<li>'+escape(typeof value==='string'?value:JSON.stringify(value))+'</li>').join('')+'</ul>':'') +
       '<p>Positive change means greater annual mass delivered to streams; negative change means less. Comparisons use each reported common finite area. A dash for percentage means the baseline or support cannot define a percentage.</p>' +
       (rows.some(row=>row.support_changed)?'<p class="cf-warning">Input or output coverage differs in one or more comparisons. Read the retained valid-cell and full-area totals alongside the matched-area results.</p>':'') +
-      details('Executed native versions',report.native_versions) + details('Spatial forcing diagnostics',report.forcing_diagnostics) +
+      reuseMarkup() + details('Executed native versions',report.native_versions) + details('Spatial forcing diagnostics',report.forcing_diagnostics) +
       details('Reporting support and complete retained result',report) +
       '<p>Use the original workspace backup or full application delivery to carry source files, studies, model outputs and these reports together.</p></section>';
   }
@@ -259,7 +281,8 @@ export function createClimateForcing(context) {
     return submitRequest(request);
   }
   async function queueRuns(rows) {
-    const target=workspace,generation=epoch;
+    const target=workspace,generation=epoch,selectedStudy=study;
+    if(!selectedStudy?.id)throw new Error('Open the original retained forcing study.');
     for(const row of rows) {
       if(!active(target,generation))return;
       const current=[...tasks,...(Array.isArray(getState()?.tasks)?getState().tasks:[])].find(task=>task.action==='run.start' && (!task.workspace || task.workspace===target) && task.payload?.run_id===row.run_id && !terminal(task.state));
@@ -269,7 +292,16 @@ export function createClimateForcing(context) {
         persist();continue;
       }
       if(uncertain)continue;
-      await submit('run.start',{run_id:row.run_id});
+      const payload=await api(url('run-request',{id:selectedStudy.id,case_id:row.id}));
+      if(!active(target,generation))return;
+      const binding=payload?.climate_forcing_context;
+      if(payload?.run_id!==row.run_id || binding?.schema!=='upstate.climate-forcing-native-case/v1' ||
+         binding.study_id!==selectedStudy.id || binding.case_id!==row.id || binding.run_id!==row.run_id ||
+         binding.workspace_id!==selectedStudy.workspace_id ||
+         !Array.isArray(payload.reuse_source_run_ids) || payload.reuse_source_run_ids.length!==1 ||
+         payload.reuse_source_run_ids[0]!==selectedStudy.selection.baseline_run_id)
+        throw new Error('The operator returned a different forcing case or baseline donor.');
+      await submit('run.start',payload);
     }
     if(!active(target,generation))return;
     notice='Native runs are retained in the existing operator queue.';
@@ -317,6 +349,9 @@ export function createClimateForcing(context) {
       } else if(action==='export-study') {
         if(!study || typeof context.openDesk!=='function')throw new Error('Open a retained study in the original operator.');
         await context.openDesk('study-transfer','openForStudies',{workspace_key:workspace,roots:[{kind:'climate-forcing-studies',id:study.id,title:study.title,state:study.state}]});
+      } else if(action==='management') {
+        if(!study || !getState()?.climate_management || typeof context.openDesk!=='function')throw new Error('Open the installed management comparison desk from a retained forcing study.');
+        await context.openDesk('climate-management','openForStudy',{workspace_key:workspace,study_id:study.id});
       } else if(action==='new') {
         draft=newDraft();draftRevision++;preview=null;study=null;report=null;selectedId='';persist();
       } else if(action==='add-case') {

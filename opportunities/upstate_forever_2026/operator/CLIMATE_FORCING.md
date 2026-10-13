@@ -1,5 +1,7 @@
 # Spatial climate-forcing studies
 
+Follow `../CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.4`, and the original active run owner. Open and visually inspect the exact outgoing desktop and narrow-screen application, exercise its important controls, and open every delivered report, map, archive and editable project in its normal recipient workflow before presenting it.
+
 This desk connects retained source editions to the original Upper Savannah native model. A completed run supplies the baseline configuration. Alternative cases change explicitly selected precipitation/runoff-proxy and rainfall-erosivity sources, create new immutable source/grid/run records, execute through the original native run queue, and compare actual completed outputs on verified common support.
 
 ## Operator course
@@ -10,13 +12,32 @@ This desk connects retained source editions to the original Upper Savannah nativ
 4. Select optional retained polygon reporting sources or layers. Each checkbox selects the entire source/layer, combining its polygon features, and adds a summary inside the baseline reporting mask. The complete baseline reporting mask is included in every report.
 5. Preview. Inspect the source identities, model scope, units, spatial checks and normalization diagnostics. Preparing uses the exact preview identity so changed source bytes cannot silently replace the inspected inputs.
 6. Prepare the cases. This is an original operator task. The saved study records each new grid/run and its source bindings.
-7. Queue unfinished native cases together or individually. Each request is the existing \`run.start\` action with its original \`run_id\`. The original queue, detached native process supervisor, logs, cancellation and task retention remain the execution owner.
+7. Queue unfinished native cases together or individually. The desk first retrieves the exact retained case request, then submits the existing `run.start` action with its original `run_id`, completed-baseline donor and source-bound climate context. The original queue, detached native process supervisor, logs, cancellation and task retention remain the execution owner.
 8. Compare completed cases. The report retains the actual completed-case roster, native versions, common finite support, annual mass changes, forcing diagnostics and selected GIS differences. Further completed cases can produce a new report without altering previous reports.
 9. Download the retained report files and open the resulting source collection in the original workspace. Choose **Export editable study** to open the selected Study delivery desk with this study selected. Its preview includes the baseline and case runs, grids, source collections, reporting geometry, frozen selection and saved reports. Export and receive the editable archive, then choose **Open climate forcing study** in the received catalogue to reopen the original selection and report. The full application/workspace delivery remains available.
 
 Opening a saved study explicitly loads its original selection into the editor. Editing it and preparing again creates a new study identity; ordinary refresh preserves the current draft. The selected Study receipt freezes the report membership present at export, so later reports do not change an older receipt. See **CLIMATE_FORCING_STUDY_DELIVERY.md** for the complete export, relocation and receiving course.
 
 Pending browser submissions retain their exact operation identity and payload. **Reconcile pending submissions** resends that same request. Completed baseline and alternative runs are reused. Browser draft storage is optional; the operator owns submitted tasks and retained studies.
+
+## Native stage reuse and actual outcomes
+
+A changed forcing grid can retain an unchanged model stage. A precipitation-only case may retain SDR inputs; an erosivity-only case may retain NDR inputs. The application offers the completed original baseline as a donor candidate. The original per-model input matcher checks the actual scientific input bodies, lattice, scenario and effective land cover, parameters and native runtime/version. A matching stage is copied and verified through the maintained native stage cache; a nonmatching stage is calculated by the same native engine.
+
+The expected unchanged model list is an eligibility explanation. It is not proof that reuse happened. Reports retain the actual stage outcome, donor run, input signature, native arguments, timestamps, transfer details and rejected candidates. The browser and offline report distinguish **Verified original stage reused** from **Completed; no reuse record**. Neither infers saved elapsed time. Previously completed runs are reopened without solving them again.
+
+The original two-model `source_runs` contract is unchanged. Do not send a one-model `source_runs` object. This path uses the existing independent `reuse_source_run_ids` donor capability. Its exact climate context freezes the original study/case, baseline selection, completed baseline stage hashes and original artifact descriptors. Both the operator and detached worker check that context before the original execution path.
+
+For an existing application and Workspace, the same CLI can show the exact request without starting a model:
+
+```bash
+python3 source_tools/climate_forcing_study.py --workspace /actual/original/workspace \
+  run-request --study ACTUAL_STUDY_ID --case ACTUAL_CASE_ID
+```
+
+The existing `run --study ... --case ...` and explicitly authorized `course --execute-alternatives` use that same request through `Workspace.run`. Preserve the sole active native owner and original queued task; do not start the CLI beside a task already executing that case. After completion use `report` and `reopen` to inspect the saved outcomes and original sources.
+
+The installed application must include the matched model, CLI, operator provider/descriptor/browser, `ecsa_runs/upstate.py`, `operator/native_jobs.py` and `model/native_worker.py` successors. The shared worker files carry the current ensemble lifecycle and are also used by the structural-study owner; compose the complete published successors rather than replacing them with an older climate-only body.
 
 ## Scientific meaning
 
@@ -60,6 +81,7 @@ The current original application discovers the installed extension manifest. If 
 | POST /api/climate-forcing/preview | Read-only source-bound preview of the selected cases |
 | GET /api/climate-forcing/study?id=ID | Reconciled original run state for a retained study |
 | GET /api/climate-forcing/report?id=ID&report_id=ID | Read-only retrieval of an existing verified report and download tickets |
+| GET /api/climate-forcing/run-request?id=STUDY&case_id=CASE | Read-only exact original native request and eligible completed-baseline donor |
 | climate-forcing.prepare | Original queued study preparation |
 | run.start | Existing native run execution for the prepared run ID |
 | climate-forcing.report | Original queued comparison/report creation |
