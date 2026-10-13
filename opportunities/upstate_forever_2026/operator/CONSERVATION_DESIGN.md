@@ -6,7 +6,9 @@ This extension joins the existing Conservation plan store, ASTRA-DESIGN12's comp
 
 Open **Scenario design** beside Conservation. Choose a completed original portfolio and one of its four explicit geometry views, then **Prepare original plan**. The operation retains the complete original binding JSON, editable project JSON and editable ZIP inside the same Workspace. Its prepared project preserves every selected native string ID, source-edition reference, original candidate quantities and input descriptors.
 
-Download **Complete editable project ZIP**. Start the supplied original editor:
+Choose **Edit this original project** in the prepared result to use the original geometry editor inside this operator. It opens the same original project ID and current saved revision. Create an alternative, edit its polygons and export the complete native handover from **Land-cover scenario**, then use **Save and return to Scenario design**. Full embedded transport and revision details are in CONSERVATION_DESIGN_EDITOR.md.
+
+For portable standalone work, download **Complete editable project ZIP** and start the supplied original editor:
 
     cd scenario-design
     python server.py --workspace /absolute/path/to/your/design-workspace
@@ -21,20 +23,23 @@ The view keeps unsent field selections and the original browser File across tab 
 
 ## Source composition
 
-Receive every file in this package at the maintained application root. The original scenario-design directory is complete, including its browser, command-line tools, guides and original tests. The only changes to that owner's existing source are three guarded imports: two in scenario-design/conservation.py and one in scenario-design/engine.py. They let the same editor work as a private package and as its existing standalone CLI. scenario-design/__init__.py is additive. No global engine or conservation module aliases are installed.
+Receive every file in this package at the maintained application root. The original scenario-design directory is complete, including its browser, command-line tools, guides and original tests. The owner's original modules use guarded imports for private-package and standalone use: conservation.py and engine.py, plus the original server.py and eco_bridge.py now loaded for the embedded Store. Original browser source remains intact; exact transport, initialization and recovery substitutions are applied only to the retained served assets. scenario-design/__init__.py is additive. No global engine or conservation module aliases are installed.
 
 Additive runtime files:
 
 - model/conservation_design.py
+- model/conservation_design_editor.py
 - operator/conservation_design.py
 - operator/extensions/conservation-design.json
 - operator/web/conservation_design.mjs
+- operator/web/conservation_design_editor.mjs
+- operator/web/conservation_design_frame.js
 - operator/web/conservation_design.css
 - scenario-design/__init__.py
 
-The ordinary registered extension host reads the descriptor, mounts the client, dispatches the two queue actions, serves its assets, and retains existing authentication and file tickets. There is no shared server or Conservation browser edit. The native editor requires its existing Shapely and PyProj dependencies, already used by the scientific application.
+The ordinary registered extension host reads the descriptor, mounts the client, dispatches the preparation, receiving and original editor queue actions, serves its assets, and retains existing authentication and file tickets. There is no shared server or Conservation browser edit. The native editor requires its existing Shapely and PyProj dependencies, already used by the scientific application.
 
-The original editor source and the complete editable receiving must remain under scenario-design/. Its SOURCE_MANIFEST.json is regenerated from the complete package with the import-compatible source and initializer. The original 69,719-byte upstream ZIP had SHA256 77f5a0122d1ffda1512c15ec4f907a90e37c6daa3bbdd622a74a1fcfce3f93b4. The source composition document retains all three exact import guards and original hashes. The supplied start.sh retains its executable mode.
+The original editor source and the complete editable receiving must remain under scenario-design/. Its SOURCE_MANIFEST.json is regenerated from the complete package with the import-compatible source and initializer. The original 69,719-byte upstream ZIP had SHA256 77f5a0122d1ffda1512c15ec4f907a90e37c6daa3bbdd622a74a1fcfce3f93b4. The source composition document retains the exact import guards and original hashes. The supplied start.sh retains its executable mode.
 
 Workspace state is under conservation-design/preparations/<preparation-id>/ and conservation-design/received/<receiving-id>/. Browser originals and original upload receipts are retained under conservation-design/uploads/ before receiving; portable capture includes them. These hold views and receiving receipts; authoritative plans, source collections, scenarios and runs remain in their existing directories. A portable Workspace capture must include all Workspace files and the full scenario-design application directory. The editor may retain its independent editable drafts in the directory explicitly selected at startup; export those complete drafts when handing them to another operator.
 
@@ -108,6 +113,6 @@ Python entry points are prepare(workspace, value), receive(workspace, value), ge
 
 ## Validation and receiving
 
-The complete original editor ZIP was decoded and every member matched its owner's SOURCE_MANIFEST before composition. All three package import edits match exact original strings, and all output file hashes are included in the complete carrier. The additive browser module was syntax-compiled and exercised in the JavaScript runtime with injected host, storage and DOM contracts. Focused checks covered a 3 MiB raw File producing a 186-byte queue request, a late Workspace change suppressing task submission, a rejected request preserving editability and reusing its original upload, newest-history-request wins, original operation recovery, per-Workspace draft/File retention, and native scenario/run links. The native call sequence and result fields were checked against the maintained Workspace, binding and scenario modules. Actual GIS/Chromium receiving uses the accepting original application host.
+The complete original editor ZIP was decoded and every member matched its owner's SOURCE_MANIFEST before composition. All package import edits match exact original strings, and all output file hashes are included in the complete carrier. The additive browser module was syntax-compiled and exercised in the JavaScript runtime with injected host, storage and DOM contracts. Focused checks covered a 3 MiB raw File producing a 186-byte queue request, a late Workspace change suppressing task submission, a rejected request preserving editability and reusing its original upload, newest-history-request wins, original operation recovery, per-Workspace draft/File retention, and native scenario/run links. The native call sequence and result fields were checked against the maintained Workspace, binding and scenario modules. Actual GIS/Chromium receiving uses the accepting original application host.
 
 The accepting original application receiver should use its existing actual regional plan: prepare the project; open and edit its original geometry; export the full native handover; receive it through the queue; reload that receiving record and compare its unchanged IDs/files. If an actual compatible native grid/profile is selected, retain that run_id and continue it through the existing run operation. This workflow reuses the selected original operation and does not rerun unrelated native cases.

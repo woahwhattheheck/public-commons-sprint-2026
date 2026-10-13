@@ -15,10 +15,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
 
-from eco_bridge import compile_plan
-from conservation import import_binding, export_landcover, source_summary
-from engine import (DesignError, SCHEMA, encode, digest, now, new_project, validate_project,
-                    export_bundle, receive_bundle, geometry_info, geometry_cache_stats, realize)
+if __package__:
+    from .eco_bridge import compile_plan
+    from .conservation import import_binding, export_landcover, source_summary
+    from .engine import (DesignError, SCHEMA, encode, digest, now, new_project, validate_project,
+                         export_bundle, receive_bundle, geometry_info, geometry_cache_stats, realize)
+else:
+    from eco_bridge import compile_plan
+    from conservation import import_binding, export_landcover, source_summary
+    from engine import (DesignError, SCHEMA, encode, digest, now, new_project, validate_project,
+                        export_bundle, receive_bundle, geometry_info, geometry_cache_stats, realize)
 
 LIMIT = 100 * 1024 * 1024
 WEB = Path(__file__).resolve().parent / "web"

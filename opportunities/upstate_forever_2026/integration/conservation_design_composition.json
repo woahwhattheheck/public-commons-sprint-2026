@@ -23,6 +23,16 @@
       "path": "scenario-design/engine.py",
       "before": "        from conservation import binding_for\n        binding_for(project)",
       "after": "        if __package__:\n            from .conservation import binding_for\n        else:\n            from conservation import binding_for\n        binding_for(project)"
+    },
+    {
+      "path": "scenario-design/eco_bridge.py",
+      "before": "from engine import DesignError, digest, encode, realize, validate_project, receive_bundle, export_bundle",
+      "after": "if __package__:\n    from .engine import DesignError, digest, encode, realize, validate_project, receive_bundle, export_bundle\nelse:\n    from engine import DesignError, digest, encode, realize, validate_project, receive_bundle, export_bundle"
+    },
+    {
+      "path": "scenario-design/server.py",
+      "before": "from eco_bridge import compile_plan\nfrom conservation import import_binding, export_landcover, source_summary\nfrom engine import (DesignError, SCHEMA, encode, digest, now, new_project, validate_project,\n                    export_bundle, receive_bundle, geometry_info, geometry_cache_stats, realize)",
+      "after": "if __package__:\n    from .eco_bridge import compile_plan\n    from .conservation import import_binding, export_landcover, source_summary\n    from .engine import (DesignError, SCHEMA, encode, digest, now, new_project, validate_project,\n                         export_bundle, receive_bundle, geometry_info, geometry_cache_stats, realize)\nelse:\n    from eco_bridge import compile_plan\n    from conservation import import_binding, export_landcover, source_summary\n    from engine import (DesignError, SCHEMA, encode, digest, now, new_project, validate_project,\n                        export_bundle, receive_bundle, geometry_info, geometry_cache_stats, realize)"
     }
   ],
   "source_before": {
@@ -42,7 +52,11 @@
     "operator/extensions/conservation-design.json",
     "operator/web/conservation_design.mjs",
     "operator/web/conservation_design.css",
-    "operator/CONSERVATION_DESIGN.md"
+    "operator/CONSERVATION_DESIGN.md",
+    "model/conservation_design_editor.py",
+    "operator/web/conservation_design_editor.mjs",
+    "operator/web/conservation_design_frame.js",
+    "operator/CONSERVATION_DESIGN_EDITOR.md"
   ],
   "portable_application_directory": "scenario-design",
   "native_dependencies": [
@@ -183,11 +197,77 @@
     "native_resolution": "operator.upload → copy_verified into Workspace → model.receive(file)",
     "maximum_bytes": 104857600
   },
+  "embedded": {
+    "parent_commit": "4b349a8b5096a5c53b3030a96a886d0112fde822",
+    "parent_pr": 2952,
+    "source_canvas": "F0C9KBK9PR6",
+    "store": "original scenario-design.server.Store in Workspace conservation-design/editor/projects.sqlite",
+    "source_guards": [
+      {
+        "before": "/** Original saved-plan export and edited-design receiving in the native operator. */",
+        "after": "/** Original saved-plan export and edited-design receiving in the native operator. */\nimport {OriginalDesignEditor} from './conservation_design_editor.mjs';"
+      },
+      {
+        "before": "    this.overview = null; this.record = null; this.error = \"\"; this.notice = \"\";",
+        "after": "    this.overview = null; this.record = null; this.error = \"\"; this.notice = \"\";\n    this.editor = null;"
+      },
+      {
+        "before": "    if(action===\"refresh\"){await this.reload();return;}",
+        "after": "    if(action===\"refresh\"){await this.reload();return;}\n    if(action===\"edit\"){\n      if(this.record?.kind!==\"preparation\")throw Error(\"Open the original prepared project first.\");\n      const editor=new OriginalDesignEditor(this.host,this.record,async()=>{\n        this.editor=null;this.notice=\"The original editor saved this project in the selected Workspace.\";this.render();\n      });\n      this.editor=editor;this.render();\n      try{await editor.start();}catch(error){editor.detach();this.editor=null;this.render();throw error;}\n      return;\n    }"
+      },
+      {
+        "before": "  render() {\n    if(this.gone)return;",
+        "after": "  render() {\n    if(this.gone)return;\n    if(this.editor){this.editor.render(this.root);return;}"
+      },
+      {
+        "before": "      \"</dl>\"+((record.scenario_id||record.run_id)?",
+        "after": "      \"</dl>\"+(record.kind===\"preparation\"?'<div class=\"cd-actions\">'+button(\"edit\",\"Edit this original project\")+\"</div>\":\"\")+\n      ((record.scenario_id||record.run_id)?"
+      },
+      {
+        "before": "      '<p>Download the complete editable project ZIP. In the existing Scenario Design editor, use Receive project, create an alternative, edit its polygons, and export the complete native handover from Land-cover scenario.</p>'+\n      '<p>Start the supplied editor from <code>scenario-design/</code> with <code>python server.py --workspace PATH_TO_DESIGN_WORKSPACE</code>.</p></section>'+",
+        "after": "      '<p>Choose Edit this original project in its prepared result. Create an alternative, edit its polygons, and export the complete native handover from Land-cover scenario. The original editor saves its project and revisions inside this Workspace.</p>'+\n      '<p>The complete editable ZIP also opens in the supplied standalone editor for portable work.</p></section>'+"
+      },
+      {
+        "before": "  detach(){this.gone=true;this.controller.abort();this.generation++;}",
+        "after": "  detach(){this.gone=true;this.editor?.detach();this.editor=null;this.controller.abort();this.generation++;}"
+      }
+    ],
+    "frame_selector": "iframe[data-design-editor]",
+    "edit_control": "data-design-action=edit",
+    "actions": [
+      "conservation.design.editor.open",
+      "conservation.design.editor.write"
+    ],
+    "file_route": "/api/file/conservation-design/{workspace_key}/editor/{member_path...}",
+    "pure_read": "POST /api/conservation-design/editor",
+    "transport": "original host.api parent bridge; original raw upload for file-backed requests; original SHA+bytes download tickets",
+    "browser_checks": [
+      {
+        "original_bytes": 33391,
+        "guarded_app_compiles": true,
+        "transport_compiles": true,
+        "all_direct_fetches_routed": true,
+        "recovery_storage_scoped_by_workspace": true
+      },
+      {
+        "workspace": "captured original",
+        "project_revision": 7,
+        "saved_revision": 8,
+        "export": "unchanged original ArrayBuffer",
+        "direct_export_fetch": "routed"
+      }
+    ],
+    "native_receiving": "Same-plan companion F0C9KDDCVFS, current v1.1, uses existing accepting host"
+  },
   "public_integration": {
     "pull_request": 2952,
     "application_prefix": "opportunities/upstate_forever_2026",
     "portable_application_directory": "scenario-design",
     "launcher_mode": "100755",
-    "complete_source_carrier": "F0C9KBK9PR6"
+    "complete_source_carrier": "F0C9KBK9PR6",
+    "base_public_commit": "4b349a8b5096a5c53b3030a96a886d0112fde822",
+    "embedded_source_carrier": "F0C8P5F457Y",
+    "browser_receiving_carrier": "F0C9KDDCVFS",
+    "original_project_identity": "Unchanged original engine key, including original UUID project IDs; native task/preparation/upload IDs retain64hex contract."
   }
 }
