@@ -296,7 +296,7 @@ missing-error coverage.
    every retained map edition. Open one, filter the layer list by candidate or
    pollutant, and choose **Atlas and files**. The page shows calibration/held-out
    row counts, incomplete native rows, units and the shared per-pollutant residual
-   display cap. PDF uses the existing preview action; SVG pages appear directly
+   display cap. PDF opens its exact verified file ticket in the existing detail viewer; SVG pages appear directly
    and remain downloadable.
 5. **Open source map** uses the original spatial viewer's `spatial-item` action
    with kind `source-info`, exact source collection and source ID. That viewer

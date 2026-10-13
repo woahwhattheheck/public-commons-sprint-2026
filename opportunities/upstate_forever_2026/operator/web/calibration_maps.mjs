@@ -11,7 +11,7 @@ const section=(title,description,body,actions='')=>'<section class="section"><he
 const spatialButton=(kind,id,label,collection='')=>'<button type="button" class="small" data-action="spatial-item" data-kind="'+esc(kind)+'" data-id="'+esc(id)+'"'+(collection?' data-collection="'+esc(collection)+'"':'')+'>'+esc(label)+'</button>';
 
 /** Views and actions share the parent's workspace and request-generation guard. */
-export function createCalibrationMaps({current,read,submitAction,openForm,fileList,repaint,
+export function createCalibrationMaps({current,read,submitAction,openForm,fileList,detail,repaint,
     getReport,getUncertainty,getData,openReport,openUncertainty,activate}){
   let packet=null,request=0,formRequest=0,filter='',selectedLayer=null;
   const active=()=>packet?.workspace_key===current();
@@ -94,6 +94,19 @@ export function createCalibrationMaps({current,read,submitAction,openForm,fileLi
     if(!expected)return null;
     return (packet.artifacts??[]).find(row=>row.file.path===expected.path&&row.file.sha256===expected.sha256)?.download??null;
   }
+  function retainedFiles(files){
+    return fileList(files).replaceAll('data-action="preview-file"','data-action="calibration-maps-preview"');
+  }
+  function preview(fileId){
+    if(!active())throw Error('Open this workspace’s retained map edition.');
+    const item=(packet.artifacts??[]).find(row=>row.download.id===fileId)?.download;
+    if(!item||!item.filename.toLowerCase().endsWith('.pdf'))throw Error('Choose a retained PDF from this original map edition.');
+    detail(item.label||item.filename,
+      '<div class="preview-options"><span>'+esc(number(item.bytes))+' bytes · <span class="mono">'+esc(short(item.sha256))+'</span></span>'+
+      '<a class="button" href="'+esc(item.url)+'?download=1" download>Download original PDF</a></div>'+
+      '<iframe class="preview-frame" title="'+esc(item.filename)+'" src="'+esc(item.url)+'"></iframe>',
+      {kind:'file',id:item.id});
+  }
   function layerFiles(value){
     return [value.geojson,value.csv,value.pdf,...(value.svg_pages??[])].filter(Boolean).map(ticketFor).filter(Boolean);
   }
@@ -115,7 +128,7 @@ export function createCalibrationMaps({current,read,submitAction,openForm,fileLi
       ].map(([label,v,note])=>'<div class="card"><h3>'+esc(label)+'</h3><strong class="calibration-card-value">'+esc(v)+'</strong><p>'+esc(note)+'</p></div>').join('')+'</div>'+
       '<div class="section-body"><p>The source viewer shows original boundaries and scalar attributes. The retained atlas renders signed residuals as separate catchment panels; overlapping basins are not added together.</p><div class="page-actions">'+
       sourceButton(value)+button('review','Save original spatial review',value.id)+reviewsFor(value)+'</div></div>'+
-      fileList(files)+(previews?'<div class="calibration-map-atlas">'+previews+'</div>':'')+
+      retainedFiles(files)+(previews?'<div class="calibration-map-atlas">'+previews+'</div>':'')+
       '<details class="technical"><summary>Original layer identity, spatial selection and display scale</summary><pre class="json-view">'+
       esc(json({run_id:value.run_id,profile_id:value.profile_id,selected_models:value.selected_models,
         source_collection_id:value.source_collection_id,source_id:value.source_id,
@@ -145,7 +158,7 @@ export function createCalibrationMaps({current,read,submitAction,openForm,fileLi
       section('Editable GIS and complete source files',
         'Build the retained ordinary GIS project from this exact source selection. Its task retains the editable ZIP, QGIS project and offline viewer.',
         '<div class="section-body"><div class="page-actions">'+button('gis','Build editable GIS project',map.id)+'<button type="button" data-view="gis-projects">Open editable GIS projects</button></div></div>'+
-        fileList(packet._downloads??[])+
+        retainedFiles(packet._downloads??[])+
         '<ul class="calibration-notes">'+notes.map(note=>'<li>'+esc(typeof note==='string'?note:json(note))+'</li>').join('')+'</ul>'+
         '<details class="technical"><summary>Original calibration, catchment lineage and GIS selection</summary><pre class="json-view">'+
         esc(json({id:map.id,calibration_id:map.calibration_id,plan_id:map.plan_id,uncertainty_id:map.uncertainty_id,
@@ -158,6 +171,7 @@ export function createCalibrationMaps({current,read,submitAction,openForm,fileLi
   }
   async function dispatch(node){
     const action=node.dataset.action?.replace(/^calibration-maps-/,''),id=node.dataset.id;
+    if(action==='preview')return preview(node.dataset.fileId);
     if(action==='prepare')return prepareForm(id,node.dataset.uncertainty||null);
     if(action==='open')return open(id);
     if(action==='layer'){layer(id);selectedLayer=id;return repaint();}
