@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "monitoring",
   "title": "Monitoring design",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "order": 85,
   "assets": [
     "monitoring.mjs",
@@ -26,7 +26,9 @@
       "monitoring.context.prepare",
       "monitoring.context.export",
       "monitoring.campaign.fieldwork",
-      "monitoring.campaign.fieldwork.return"
+      "monitoring.campaign.fieldwork.return",
+      "monitoring.comparison.prepare",
+      "monitoring.comparison.export"
     ],
     "invoke": {
       "handler": "perform",

@@ -17,7 +17,7 @@ def perform(operator, task):
     action = task["action"]
     if action not in ACTIONS: raise ValueError("Select a registered monitoring write")
     workspace = operator.ws(task["workspace"])
-    if action in {"monitoring.export", "monitoring.context.export"}:
+    if action in {"monitoring.export", "monitoring.context.export", "monitoring.comparison.export"}:
         return export_task(operator, workspace, task)
     result = invoke(workspace, action.removeprefix("monitoring."), task["payload"],
                     export_root=operator.root / "outputs" / "monitoring")
@@ -101,7 +101,7 @@ def decorate_task(operator, task):
             {"bytes": attachment["size_bytes"], "sha256": attachment["sha256"]}, attachment["label"])]
         public["_item"] = {"kind": "implementation_plans", "id": result["plan_id"]}
         return public
-    if task.get("action") not in {"monitoring.export", "monitoring.context.export"} or task.get("state") != "complete": return task
+    if task.get("action") not in {"monitoring.export", "monitoring.context.export", "monitoring.comparison.export"} or task.get("state") != "complete": return task
     result = task.get("result", {})
     target = Path(result["path"]).resolve(strict=True)
     allowed = (operator.root / "outputs" / "monitoring").resolve()
@@ -165,4 +165,6 @@ def verify_workspace(workspace):
             service.get("plans", record["plan_id"])
             service.get("networks", record["network_id"])
     from model.monitoring_observed_context import verify_workspace as verify_observed
-    return {**counts, "campaigns": len(campaigns), **verify_observed(workspace)}
+    from model.monitoring_frontier_comparison import verify_workspace as verify_comparisons
+    return {**counts, "campaigns": len(campaigns), **verify_observed(workspace),
+            **verify_comparisons(workspace)}

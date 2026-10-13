@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-budget-comparison",
+  "components": {
+    "monitoring-budget-comparison": {
+      "title": "Saved original Monitoring budget comparison and source report",
+      "requires": [
+        "monitoring"
+      ],
+      "paths": [
+        "model/monitoring_frontier_comparison.py",
+        "model/MONITORING_BUDGET_COMPARISON.md",
+        "model/monitoring_actions.py",
+        "operator/monitoring_native.py",
+        "operator/extensions/monitoring.json"
+      ]
+    }
+  },
+  "required_components": [
+    "monitoring-budget-comparison"
+  ]
+}
