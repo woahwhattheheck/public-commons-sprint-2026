@@ -48,6 +48,7 @@ FILES = (
     "model/implementation_observations.py",
     "model/implementation_observation_quality.py",
     "model/implementation_outcomes.py",
+    "model/implementation_outcome_figures.py",
     "model/implementation_outcome_context.py",
     "model/observed_context.py",
     "model/scientific_figures.py",

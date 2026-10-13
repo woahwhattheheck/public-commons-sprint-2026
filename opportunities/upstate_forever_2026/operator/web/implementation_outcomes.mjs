@@ -20,6 +20,33 @@ export function outcomeIntervalText(interval){
   return (lower===null||lower===undefined||interval.lower_open?'(':'[')+(lower===null||lower===undefined?'−∞':String(lower))+', '+
     (upper===null||upper===undefined?'+∞':String(upper))+(upper===null||upper===undefined||interval.upper_open?')':']');
 }
+
+export function outcomeFiguresPanel(result){
+  const figures=Array.isArray(result.figures)?result.figures:[];
+  if(!figures.length)return '';
+  const files=Array.isArray(result.files)?result.files:[],downloads=Array.isArray(result._downloads)?result._downloads:[];
+  const panels=figures.map(figure=>{
+    const path=typeof figure.path==='string'?figure.path:'';
+    const matches=files.filter(file=>file.name===path);
+    const file=matches.length===1?matches[0]:null;
+    const retained=file&&typeof file.path==='string'&&(file.path===path||file.path.endsWith('/'+path))&&
+      /^[A-Za-z0-9_-]+\.svg$/.test(path)&&Number.isSafeInteger(file.bytes)&&file.bytes>0&&digestPattern.test(file.sha256||'');
+    const tickets=retained?downloads.filter(ticket=>ticket.filename===path&&ticket.bytes===file.bytes&&ticket.sha256===file.sha256&&
+      (!result.workspace_key||ticket.workspace===result.workspace_key)&&typeof ticket.url==='string'&&/^\/api\/file\/[0-9a-f]{64}$/.test(ticket.url)):[];
+    const ticket=tickets[0],title=figure.title||'Saved comparison figure',caption=figure.caption||'';
+    if(!ticket)return '<figure><figcaption><strong>'+esc(title)+'</strong><p>'+esc(caption)+'</p></figcaption>'+
+      '<p class="iw-notice">The saved figure link is unavailable in this response. Reopen this evaluation to refresh its original file links.</p></figure>';
+    return '<figure><div class="iw-table-wrap"><img loading="lazy" decoding="async" src="'+esc(ticket.url)+
+      '" alt="'+esc([title,caption].filter(Boolean).join('. '))+'"></div><figcaption><strong>'+esc(title)+
+      '</strong><p>'+esc(caption)+'</p><div class="iw-actions"><a href="'+esc(ticket.url)+
+      '" target="_blank" rel="noopener">Open original SVG</a><a href="'+esc(ticket.url)+
+      '?download=1" download="'+esc(path)+'">Download original SVG</a></div><details><summary>Original figure identity</summary><small>'+
+      esc(path)+' · '+esc(file.bytes)+' bytes · SHA-256 '+esc(file.sha256)+'</small></details></figcaption></figure>';
+  });
+  return '<section aria-label="Saved comparison figures"><h4>Saved comparison figures</h4>'+
+    '<p>These figures are retained with this evaluation. The tables below provide the complete quantities, support and original observation decisions.</p>'+panels.join('')+'</section>';
+}
+
 function comparisonTables(result){
   const phases=[],changes=[],months=[],unpaired=[];
   for(const effect of result.effects||[]){
@@ -432,7 +459,7 @@ export class ImplementationOutcomeController {
     const columns=preferred.filter(x=>allColumns.includes(x));if(!columns.length)columns.push(...allColumns.slice(0,12));
     return '<section aria-label="Saved outcome evaluation"><h3>'+esc(r.selection?.title||r.id)+'</h3><p>Saved revision '+esc(r.selection?.revision)+' · evaluation '+esc(r.id)+'</p><div class="iw-actions">'+(html?'<a href="'+esc(html.url)+'" target="_blank" rel="noopener">Open retained report</a>':'')+links+'</div>'+
       table(['Summary','Value'],summaryRows,'The original summary is retained in the complete evaluation JSON.')+
-      comparisonTables(r)+this.reportPanel()+
+      outcomeFiguresPanel(r)+comparisonTables(r)+this.reportPanel()+
       '<details><summary>Complete grouped comparison and method</summary><pre class="iw-json">'+esc(JSON.stringify({groups:r.groups,summary:r.summary,effects:r.effects},null,2))+'</pre></details>'+
       '<h4>Retained observation decisions</h4><p>'+esc(rows.length)+' original records; '+(rows.length?'showing '+(start+1)+'–'+(start+shown.length):'no rows')+'. Complete CSV and JSON downloads retain every source record and comparison reason.</p>'+
       '<div class="iw-actions">'+button('previous','Previous 200',start===0?'disabled':'')+button('next','Next 200',start+count>=rows.length?'disabled':'')+'</div>'+

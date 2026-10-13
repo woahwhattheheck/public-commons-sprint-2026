@@ -1351,7 +1351,7 @@ class Handler(BaseHTTPRequestHandler):
                 status = 206
             filename = item["filename"].replace("\r", "").replace("\n", "")
             mime = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-            inline = not download and mime in {"application/pdf", "image/png", "image/jpeg", "image/webp", "text/plain", "text/html"}
+            inline = not download and mime in {"application/pdf", "image/png", "image/jpeg", "image/webp", "image/svg+xml", "text/plain", "text/html"}
             self.send_response(status)
             self.send_header("Content-Type", mime)
             self.send_header("Content-Length", str(max(0, end - start + 1)))
