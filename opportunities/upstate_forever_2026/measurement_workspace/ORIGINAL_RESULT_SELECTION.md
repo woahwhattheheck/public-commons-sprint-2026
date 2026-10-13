@@ -133,3 +133,15 @@ Pass this complete brief into every current child, provider and cloud work order
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
 
+
+## Explicit source-owned statistical exclusions
+
+A study may declare `observation_statistical_exclusions` in its generated `study.json`. This is separate from the original result selection: excluded values remain in the original chronology, source CSV exports, saved review, complete study and portable Workspace.
+
+The declaration uses `schema: upstate.original-statistical-exclusions/v1`, the exact `observation_index_sha256`, the complete `original_record_count`, and a nonempty `records` list. Every record has the same six exact fields as an original result selector plus a nonempty `reason`. The importer validates the declaration against the full unchanged original rows before applying the study selector, year/month filters or display filters. A stale hash, wrong CSV row, changed identifier, duplicate exclusion or absent reason rejects import.
+
+`statistical_rows(records, study, include_excluded=True)` returns canonical measurements, including declared exclusions. The default excludes only validated declarations. Opt-in agreeing activity weighting still compares all original cells except ResultIdentifier and its limit URL. An exclusion attached to any original ID in an agreeing measurement excludes that canonical measurement; all group IDs and individual flagged references remain in its provenance. No parameter-wide range clamp, source-value replacement or implied zero is applied.
+
+Native context exposes original result count, canonical measurement count, eligible statistical count and excluded statistical count. The Original chronology keeps every selected result. Means, sample SD and concentration-support bounds use eligible measurements. Selected export includes `statistical-exclusions-selected.json` with exact references and reasons, the eligible statistical CSV, and all unchanged original selected CSVs. The browser and report show the same counts and original excluded values.
+
+The original historical Three and Twenty study retains 1,502 IDs. Its source-owned declaration flags only STORET-1104042240, original pH 724 on 2023-11-29, physical CSV row 158, leaving 1,501 eligible rows. The original source family remains unchanged; the generated native edition carries this explicit interpretation. The 2026 study remains 242 original IDs and 142 agreeing eligible measurements. Previously imported study versions retain their saved source interpretation.

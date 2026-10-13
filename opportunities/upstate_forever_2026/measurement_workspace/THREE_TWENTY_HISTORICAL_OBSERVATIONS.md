@@ -24,7 +24,7 @@ After the initial operation completes, continue the same project and output with
 python source_tools/receive_three_twenty_historical_study.py --application /actual/application --workspace /owned/three-twenty-history/workspace --output /owned/three-twenty-history/receiving --saved-review --year 2023 --parameter 'Escherichia coli'
 ```
 
-Use the current saved-review → prepared Sources → scientific composer → editable Study route and the current operator. For scientific report continuation, use the maintained engine's --scientific-report specification on this same saved operation. Preserve its actual project, study version, review and source identities rather than creating a parallel run.
+Use the current saved-review → prepared Sources → scientific composer → editable Study route and the current operator. In the saved review, choose Prepare report source, then use the Scientific Reports ordered composer and save the editable Study. The engine's --scientific-report option currently invokes the separate SV-833 hydrology course and must not be used for this historical study. Preserve its actual project, study version, review and source identities rather than creating a parallel run.
 
 ## Actual populated report use
 
