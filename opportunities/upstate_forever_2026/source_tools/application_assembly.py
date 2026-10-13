@@ -1011,7 +1011,7 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True, inspec
             externals[name] = dict(original)
     if include_receiver:
         receiver_root = Path(__file__).resolve().parents[1]
-        for name in (SELF_NAME, MODULE_PATH, CATALOG_PATH):
+        for name in (SELF_NAME, MODULE_PATH):
             if name in files:
                 continue
             body = receiver_root.joinpath(*PurePosixPath(name).parts).read_bytes()
@@ -1019,6 +1019,33 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True, inspec
             metadata[name] = {"bytes": len(body), "sha256": sha256(body), "git_blob": None,
                               "mode": "100755" if name == SELF_NAME else "100644",
                               "origins": ["assembly-receiver"]}
+    if CATALOG_PATH not in files:
+        # A receiving tool's later catalogue is not the selected source edition.
+        # Preserve this complete bank's actual members and inspect their native
+        # dependencies through the same component-closure implementation.
+        original_edition = base.get("edition")
+        if not isinstance(original_edition, str) or not original_edition.strip():
+            original_edition = edition
+        selected_catalog = {
+            "schema": "upstate.application-components/v1",
+            "edition": original_edition,
+            "source_reference": (base.get("source_ref") or base.get("operation_id")
+                                 or "sha256:" + layers[0].receipt["payload_sha256"]),
+            "source_payloads": [layer.receipt["payload_sha256"] for layer in layers],
+            "selection_basis": "Original complete source and caller-selected overlays",
+            "required_components": ["retained-source"],
+            "components": {"retained-source": {
+                "title": "Retained complete application source",
+                "paths": sorted([*files, CATALOG_PATH]),
+                "requires": [],
+            }},
+        }
+        body = canonical(selected_catalog)
+        files[CATALOG_PATH] = body.decode("utf-8")
+        metadata[CATALOG_PATH] = {
+            "bytes": len(body), "sha256": sha256(body), "git_blob": None,
+            "mode": "100644", "origins": ["retained-source-selection"],
+        }
     check_layout(files)
     if len(files) > MAX_FILES or sum(item["bytes"] for item in metadata.values()) > MAX_BYTES:
         raise ValueError("Combined source exceeds the receiving limit")
