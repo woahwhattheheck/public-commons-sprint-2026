@@ -29,7 +29,7 @@ TABLE_REVISION = "098183806c0c715e6422d4d0570db91321c0f4e8"
 SOURCES = {
     "ndr_archive": {
         "relative": "NDR.zip",
-        "sha256": "df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4c8af8bea53c6c7d",
+        "sha256": "df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4d4c8af8bea53c6c7d",
         "uri": "https://storage.googleapis.com/download/storage/v1/b/releases.naturalcapitalproject.org/o/invest%2F3.20.0%2Fdata%2FNDR.zip?generation=1781204725169434&alt=media",
     },
     "sdr_archive": {
