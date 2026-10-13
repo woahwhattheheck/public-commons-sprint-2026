@@ -1,0 +1,140 @@
+{
+  "schema": "commons.mooring-operations-source.v1",
+  "checkedAt": "2026-10-12",
+  "operators": [
+    {
+      "key": "mooringops-mattakeesett",
+      "name": "Mattakeesett Moorings & Launch",
+      "timezone": "America/New_York",
+      "geography": "Duxbury Bay, Massachusetts, United States",
+      "sourceUrls": [
+        "https://www.mattakeesettmoorings.com/moorings",
+        "https://www.mattakeesettmoorings.com/contact-us"
+      ],
+      "publishedWork": [
+        "spring preparation and inspection",
+        "spring installation",
+        "component replacement and customer notice",
+        "harbormaster notification",
+        "fall winter-buoy exchange",
+        "summer-gear cleaning and storage"
+      ],
+      "notes": "The source describes annual Duxbury permitting and approval before installation, relocation, vessel or owner changes; use the relevant permit record for the actual job. Its approximate three-year chain/shackle replacement expectation depends on conditions."
+    },
+    {
+      "key": "mooringops-triad",
+      "name": "Triad Boatworks",
+      "timezone": "America/New_York",
+      "geography": "Mattapoisett and Dartmouth, Massachusetts, United States",
+      "sourceUrls": [
+        "https://triadboatworks.com/mooring-division/",
+        "https://triadboatworks.com/about/"
+      ],
+      "publishedWork": [
+        "winter decommissioning",
+        "gear washing and storage",
+        "spring renumbering and commissioning",
+        "hauled inspection",
+        "component repair",
+        "town review handoff"
+      ],
+      "notes": "Hauled measurement, photographs and town reporting are distinct records. The stated three-year inspection cadence is tied to the relevant municipality; each actual mooring keeps its own requirements and operator-selected dates."
+    },
+    {
+      "key": "mooringops-pioneer",
+      "name": "Pioneer Mooring",
+      "timezone": "America/New_York",
+      "geography": "SouthCoast Massachusetts and nearby Rhode Island, United States",
+      "sourceUrls": [
+        "https://pioneermooring.com/mooring/mooring-systems-and-installation/",
+        "https://pioneermooring.com/contact-us/"
+      ],
+      "publishedWork": [
+        "design and installation quote",
+        "permit-coordinate installation",
+        "spring installation and fall removal",
+        "inspection or dive",
+        "gear repair",
+        "gear cleaning and storage"
+      ],
+      "notes": "Existing GPS equipment and positioning are operator capabilities. Treat the software demonstration as organizing their job and asset records around that existing workflow. The public address is a mailing/checks address."
+    },
+    {
+      "key": "mooringops-campbells",
+      "name": "Campbell's Boat Works Inc.",
+      "timezone": "America/New_York",
+      "geography": "Bourne and Falmouth, Massachusetts, United States",
+      "sourceUrls": [
+        "https://www.campbellsboatworks.com/"
+      ],
+      "publishedWork": [
+        "town permit-number check",
+        "buoy preparation and lettering",
+        "spring buoy installation",
+        "inspection scheduling",
+        "fall winter-stick exchange",
+        "gear storage"
+      ],
+      "notes": "Six named rental harbors are places, not a mooring count. Keep each actual town permit and inspection requirement. The older Winter/Spring 2025 store promotions do not define current scheduling."
+    },
+    {
+      "key": "mooringops-lcms",
+      "name": "Lower Cape Marine Services",
+      "timezone": "America/New_York",
+      "geography": "Chatham and nearby Cape Cod waters, Massachusetts, United States",
+      "sourceUrls": [
+        "https://www.capecodmooring.com/",
+        "https://www.capecodmooring.com/contact"
+      ],
+      "publishedWork": [
+        "set or haul mooring",
+        "dive inspection",
+        "hauled inspection",
+        "component repair",
+        "buoy preparation",
+        "winter storage"
+      ],
+      "notes": "LCMS is the same company as Lower Cape Marine Services and capecodmooring.com. The website's combined team-experience wording is not a founding date. Float docks remain a separate asset class when the mooring workflow is demonstrated."
+    },
+    {
+      "key": "mooringops-kennebec",
+      "name": "Kennebec Marine Services",
+      "timezone": "America/New_York",
+      "geography": "New Meadows, Kennebec, Sheepscot and Sasanoa rivers, Maine, United States",
+      "sourceUrls": [
+        "https://kennebecmarine.com/services/",
+        "https://kennebecmarine.com/contact/"
+      ],
+      "publishedWork": [
+        "new mooring installation",
+        "full lift and inspection",
+        "municipal report preparation",
+        "repair time and materials",
+        "spring and fall marker exchange",
+        "mooring relocation"
+      ],
+      "notes": "Municipality reports and completed field work remain distinct. Repair time and materials are explicit entries. The separately stated 300 seasonal clients concerns broader float/ramp service and does not establish a mooring inventory."
+    }
+  ],
+  "townExample": {
+    "jurisdiction": "Brunswick, Maine",
+    "source_urls": [
+      "https://www.brunswickme.gov/308/Mooring-Registrations-Forms-and-Informat",
+      "https://www.brunswickme.gov/DocumentCenter/View/9325",
+      "https://www.brunswickme.gov/DocumentCenter/View/9318"
+    ],
+    "record_sections": [
+      "Property",
+      "Owner",
+      "Vessel"
+    ],
+    "review_path": [
+      "applicant reviews record and required photo",
+      "applicant acknowledgement and save",
+      "harbormaster review",
+      "returned issues and correction where applicable",
+      "approval and emailed payment route"
+    ],
+    "mapping": "Use the actual municipality for each mooring. Link the external municipal record and returned issues to the contractor's job without equating field completion with approval."
+  }
+}

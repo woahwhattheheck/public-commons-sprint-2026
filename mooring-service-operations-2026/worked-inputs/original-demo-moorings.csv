@@ -1,0 +1,4 @@
+﻿Mooring,Reference,Harbor,Notes
+Imported demonstration mooring,DEMO-IMPORT,Demonstration bay,"Original comma, retained"
+Existing mooring alias,DEMO-1,Demonstration bay,Link without rewriting original owner or position
+Archived source row,ARCHIVE,Archive,Keep as ignored original
