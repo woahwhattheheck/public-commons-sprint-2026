@@ -2,6 +2,8 @@ import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView,
 
 import {regionMarkup,regionFeatureButton,createRegionAnalysis} from './spatial_regions.mjs';
 
+import {renderAtlasReview,reconcileAtlasReview,editAtlasReview} from './atlas_review_fields.mjs';
+
 const SVG_NS='http://www.w3.org/2000/svg';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
@@ -41,7 +43,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   let current=null,pendingTarget=null;
 
   function newModel(key){
-    return {key,catalog:null,reference:null,primary:null,comparison:null,mode:'single',view:null,scale:{mode:'auto'},overlays:[],markers:[],title:'',notes:'',previous_review_id:null,tool:'inspect',swipe:50,point:null,frame:null,descriptions:new Map(),pendingSave:null,dirty:false,exportOptions:{review_id:'',paper:'letter',dpi:220},exportOperations:new Map(),exportInFlight:null,exportItems:[],exportTasks:[]};
+    return {key,catalog:null,reference:null,primary:null,comparison:null,mode:'single',view:null,scale:{mode:'auto'},overlays:[],markers:[],title:'',notes:'',atlas_review:null,previous_review_id:null,tool:'inspect',swipe:50,point:null,frame:null,descriptions:new Map(),pendingSave:null,dirty:false,exportOptions:{review_id:'',paper:'letter',dpi:220},exportOperations:new Map(),exportInFlight:null,exportItems:[],exportTasks:[]};
   }
   function alive(c){return !!c&&current===c&&!c.disposed&&getWorkspace()===c.key&&c.root.isConnected;}
   function assertCurrent(c){if(!alive(c))throw new DOMException('The selected workspace changed.','AbortError');}
@@ -100,13 +102,14 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       '<aside class="spatial-side" aria-label="Spatial review settings">'+
         '<section><h2>Vector overlays</h2><p class="note">Visible features are read in full for this viewport. Layer and attribute filters select original data.</p><div data-spatial-overlays></div><div class="spatial-overlay-add">'+field('Original vector source','<select data-spatial-input="add-overlay"><option value="">Choose a vector source</option></select>')+button('overlay-add','Add overlay')+'</div></section>'+
         '<section><h2>Review markers</h2><div data-spatial-markers></div></section>'+
-        '<section><h2>Save this review</h2>'+field('Review title','<input data-spatial-input="title" maxlength="240" placeholder="Review title">')+field('Interpretation and notes','<textarea data-spatial-input="notes" rows="5" placeholder="Record the finding, assumptions, or follow-up work."></textarea>')+button('save','Save review','class="primary"')+'<p class="note" data-spatial-save-status></p><div data-spatial-reviews></div></section>'+
+        '<section><h2>Save this review</h2><div data-spatial-atlas-review></div>'+field('Review title','<input data-spatial-input="title" maxlength="240" placeholder="Review title">')+field('Interpretation and notes','<textarea data-spatial-input="notes" rows="5" placeholder="Record the finding, assumptions, or follow-up work."></textarea>')+button('save','Save review','class="primary"')+'<p class="note" data-spatial-save-status></p><div data-spatial-reviews></div></section>'+
         '<section class="spatial-export-section"><h2>Printable map packs</h2><p class="note">Export a saved revision with its original extent, overlays and markers. Save current view changes before selecting that revision.</p><div data-spatial-export-controls></div><p class="note" data-spatial-export-status role="status" aria-live="polite"></p><div data-spatial-exports></div></section>'+
       '</aside>'+
     '</div>';
   }
 
   function sourceControls(c){
+    renderAtlasReview(c.root,c.model);
     const controls=c.root.querySelector('[data-spatial-source-controls]'),focused=controls.contains(document.activeElement)?document.activeElement.dataset.spatialInput:null;
     const m=c.model,refLayer=layer(c,m.reference),refNative=m.descriptions.get(refLayer?.sha256+':'+selectionKey(m.reference))?.native;
     const band=(name,value)=>{
@@ -251,7 +254,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     stopGroup(c,'drawControl');stopGroup(c,'pointControl');
     Object.assign(c.model,{reference:clone(value.reference),primary:clone(value.primary),
       comparison:clone(value.comparison),mode:value.mode,view:clone(value.view),scale:clone(value.scale),
-      overlays:clone(value.overlays),markers:[],title:value.title,notes:value.notes,
+      overlays:clone(value.overlays),markers:[],title:value.title,notes:value.notes,atlas_review:clone(value.atlas_review||null),
       previous_review_id:null,point:null,pendingSave:null,frame:null,swipe:50});
     c.model.exportOptions.review_id='';
     c.root.querySelector('[data-spatial-input="title"]').value=value.title;
@@ -526,11 +529,11 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
 
   function frameIdentity(m){return JSON.stringify({reference:m.reference,primary:m.primary,comparison:m.comparison,mode:m.mode,view:m.view,scale:m.scale});}
   function reviewPayload(m){
-    return {title:m.title.trim(),reference:clone(m.reference),primary:clone(m.primary),comparison:clone(m.comparison),mode:m.mode,swipe:m.swipe,view:clone(m.view),scale:clone(m.scale),overlays:m.overlays.map(item=>({selection:clone(item.selection),label:item.label||'',visible:item.visible,style:item.style,width:item.width,opacity:item.opacity})),markers:clone(m.markers),notes:m.notes,...(m.previous_review_id?{previous_review_id:m.previous_review_id}:{})};
+    return {title:m.title.trim(),reference:clone(m.reference),primary:clone(m.primary),comparison:clone(m.comparison),mode:m.mode,swipe:m.swipe,view:clone(m.view),scale:clone(m.scale),overlays:m.overlays.map(item=>({selection:clone(item.selection),label:item.label||'',visible:item.visible,style:item.style,width:item.width,opacity:item.opacity})),markers:clone(m.markers),notes:m.notes,...(m.atlas_review?{atlas_review:clone(m.atlas_review)}:{}),...(m.previous_review_id?{previous_review_id:m.previous_review_id}:{})};
   }
   async function save(c){
     if(c.saving)return;
-    const m=c.model,payload=reviewPayload(m);
+    const m=c.model;reconcileAtlasReview(m);const payload=reviewPayload(m);
     if(!payload.title)throw Error('Give the review a title before saving.');
     const filterKey=value=>JSON.stringify(Object.entries(value||{}).sort(([a],[b])=>a.localeCompare(b)));
     for(const article of c.root.querySelectorAll('[data-overlay]')){
@@ -567,11 +570,16 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       assertCurrent(c);if(control.signal.aborted||c.reviewControl!==control)throw new DOMException('A newer review was selected.','AbortError');
       if(value.schema!=='upstate.spatial-reviews/v1'||value.id!==id||!validView(value.view)||(value.swipe!==undefined&&(!finite(value.swipe)||value.swipe<0||value.swipe>100)))throw Error('This retained item is not a valid native spatial review.');
       if(value.project_id!==c.model.catalog.project?.id)throw Error('The saved review belongs to a different scientific project.');
+      if(value.atlas_review){
+        const linked=await request('/api/map-atlas/review',{method:'POST',body:{workspace:c.key,delivery_id:value.atlas_review.origin.delivery_id,review_id:id},signal:control.signal});
+        assertCurrent(c);if(control.signal.aborted||c.reviewControl!==control)throw new DOMException('A newer review was selected.','AbortError');
+        if(linked.workspace_key!==c.key||linked.target?.review_id!==id)throw Error('The saved atlas review changed its original release.');
+      }
       for(const item of [value.reference,value.primary,value.comparison,...(value.overlays||[]).map(row=>row.selection)].filter(Boolean)){
         if(!layer(c,item))throw Error('Restore this review’s complete source workspace before opening it. A referenced original layer is absent.');
       }
       stopGroup(c,'drawControl');stopGroup(c,'pointControl');
-      Object.assign(c.model,{reference:clone(value.reference),primary:clone(value.primary),comparison:clone(value.comparison),mode:value.mode,swipe:value.swipe??50,view:clone(value.view),scale:clone(value.scale),overlays:clone(value.overlays),markers:clone(value.markers),title:value.title,notes:value.notes,previous_review_id:id,point:null,pendingSave:null,dirty:false});
+      Object.assign(c.model,{reference:clone(value.reference),primary:clone(value.primary),comparison:clone(value.comparison),mode:value.mode,swipe:value.swipe??50,view:clone(value.view),scale:clone(value.scale),overlays:clone(value.overlays),markers:clone(value.markers),title:value.title,notes:value.notes,atlas_review:clone(value.atlas_review||null),previous_review_id:id,point:null,pendingSave:null,dirty:false});
       c.model.exportOptions.review_id=id;renderExports(c);
       c.root.querySelector('[data-spatial-input="title"]').value=value.title;
       c.root.querySelector('[data-spatial-input="notes"]').value=value.notes;
@@ -651,6 +659,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   }
   async function change(c,node){
     clearError(c);const name=node.dataset.spatialInput,m=c.model,index=Number(node.dataset.index);
+    if(editAtlasReview(m,node)){dirty(c);return;}
     if(name==='export-review'||name==='export-paper'||name==='export-dpi'){
       if(m.exportInFlight)return;
       m.exportOptions[name==='export-review'?'review_id':name.slice('export-'.length)]=name==='export-dpi'?Number(node.value):node.value;renderExports(c);return;
@@ -689,6 +698,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   }
   function edit(c,node){
     const name=node.dataset.spatialInput,m=c.model;
+    if(editAtlasReview(m,node)){dirty(c);return;}
     if(name==='title'||name==='notes'){m[name]=node.value;dirty(c);}
     if(name==='marker-label'){m.markers[Number(node.dataset.index)].label=node.value;dirty(c);drawAnnotations(c);}
     if(name==='swipe'){
