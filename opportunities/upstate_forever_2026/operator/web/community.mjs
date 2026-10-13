@@ -401,15 +401,16 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       controls:JSON.stringify([...(node?.querySelectorAll('input,select,textarea')||[])].map(control=>[control.name,control.value,control.checked,
         [...(control.files||[])].map(file=>[file.name,file.size,file.lastModified])]))};
   }
-  function sameDialog(before,id){
+  function sameDialog(before,id,{allowBodyRefresh=false}={}){
     const now=dialogIdentity(id);
-    return now.node===before.node&&now.open===before.open&&now.body===before.body&&now.controls===before.controls;
+    return now.node===before.node&&now.open===before.open&&(allowBodyRefresh||now.body===before.body)&&now.controls===before.controls;
   }
   function beginOpening(){
     sync();invalidateOpenings();
+    const host=typeof getOpeningContext==='function'?getOpeningContext():null;
     return {generation:openingGeneration,workspace:workspace(),project:data().project?.id,
       lifecycle:workspaceGeneration,selection:JSON.stringify(local),
-      host:JSON.stringify(typeof getOpeningContext==='function'?getOpeningContext():null),
+      host:JSON.stringify(host),taskDetail:host?.detail_kind==='task'&&typeof host?.detail_id==='string',
       form:dialogIdentity('form-dialog'),detail:dialogIdentity('detail-dialog')};
   }
   function isOpeningCurrent(ticket,{refreshedDetail=false}={}){
@@ -417,7 +418,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       ticket.workspace===workspace()&&ticket.project===data().project?.id&&
       ticket.selection===JSON.stringify(local)&&
       ticket.host===JSON.stringify(typeof getOpeningContext==='function'?getOpeningContext():null)&&
-      sameDialog(ticket.form,'form-dialog')&&(refreshedDetail||sameDialog(ticket.detail,'detail-dialog'));
+      sameDialog(ticket.form,'form-dialog')&&sameDialog(ticket.detail,'detail-dialog',{allowBodyRefresh:refreshedDetail||ticket.taskDetail});
   }
   async function openingRead(ticket,read){
     try{const value=await read();return isOpeningCurrent(ticket)?value:null;}
