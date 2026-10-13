@@ -346,6 +346,7 @@ export function attachScientificReportEditions(host) {
     const action=button.dataset.scientificReportAction;
     if(action==='recover')return recover();
     if(action==='inspect-available'){
+      detailGeneration++;
       const value=panel.querySelector('[data-scientific-report-source]').value;
       return inspectSource(sources.find(item=>key(item)===value));
     }
