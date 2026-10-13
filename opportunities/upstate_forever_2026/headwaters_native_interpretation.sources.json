@@ -19,8 +19,8 @@
       "classification": "SIMULATED DEMONSTRATION INPUTS; ORIGINAL COMPLETED NATIVE OUTPUTS",
       "originator": "TokenJunkieLabs",
       "path": "source/headwaters_native_interpretation_20261013/scientific-report.json",
-      "bytes": 26479,
-      "sha256": "75d38479c4c5899a68137c41a0efe6998b1828c4f3d155825c2443c19c23fd4a",
+      "bytes": 26730,
+      "sha256": "15b071bb953eac86cd3f610cb297fe61c759b423823d8df7f400d83bcdad96ab",
       "metadata": {
         "report_schema": "upstate.observed-report/v1",
         "producer": "headwaters-native-interpretation-20261013-v1",
@@ -77,8 +77,8 @@
         },
         {
           "path": "source/headwaters_native_interpretation_20261013/CHAPTER.md",
-          "bytes": 12253,
-          "sha256": "74357a7185516ed510cacdbca17af472b0248b44eac68862df53f2652d33405e"
+          "bytes": 12504,
+          "sha256": "33663c83563080f7b3dbfbe4d6efaef8f4c4f79017e9af9ced31fcc29ac1301a"
         },
         {
           "path": "source/headwaters_native_interpretation_20261013/RECEIVING.md",
@@ -112,8 +112,8 @@
         },
         {
           "path": "source/headwaters_native_interpretation_20261013/report.html",
-          "bytes": 16806,
-          "sha256": "4c043d64dfc1cc02b81cd7624cb959a768b3e5181c846416856e73c392e42d14"
+          "bytes": 17057,
+          "sha256": "0b83bf5f2713a46637591d82f44034f710c1fe343040d787b347b747756c0a12"
         },
         {
           "path": "source/headwaters_native_interpretation_20261013/retained/numeric/release.json",
@@ -227,8 +227,8 @@
         },
         {
           "path": "source_tools/headwaters_native_report_views.mjs",
-          "bytes": 14166,
-          "sha256": "53d37c19f740b5853ba1e6216371043b118e65ad3ebf9fed00494a925696b859"
+          "bytes": 14417,
+          "sha256": "b0af64c8955bb74f8e883e5872c76173acae1b95ebd0ea5c6460cb96d8f31f04"
         }
       ]
     }
