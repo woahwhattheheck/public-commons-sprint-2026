@@ -24,11 +24,11 @@ function baseURL(value) {
     'REGISTRY_URL', 'Use the configured HTTPS registry API or a local receiver without credentials or query parameters.');
   return url.href.replace(/\/+$/,'');
 }
-function checkpointOf(source) { return copy(source); }
-function fail(source, error) {
+function checkpointOf(source,options={}) { return options.checkpointMode==='borrowed'?source:copy(source); }
+function fail(source, error, options) {
   source.metadata.status = 'interrupted';source.metadata.updatedAt = now();
   source.metadata.interruption = {code:error.code || 'CAPTURE_INTERRUPTED', message:error.message, retryAfter:error.retryAfter || null};
-  error.checkpoint = checkpointOf(source);throw error;
+  error.checkpoint = checkpointOf(source,options);throw error;
 }
 function addRows(source, table, rows, ref, indexes) {
   for (const row of rows) {
@@ -55,7 +55,8 @@ export async function captureRegistry(options = {}) {
   const size = Number(options.pageSize ?? 200);
   need(Number.isInteger(size) && size >= 1 && size <= 200, 'REGISTRY_PAGE_SIZE', 'Use a page size from 1 to 200.');
   const selection = {baseUrl, organizationId, pageSize:String(size), sourceCommit:REGISTRY_SOURCE_COMMIT};
-  const source = options.checkpoint ? copy(options.checkpoint) : {
+  need(options.checkpointMode===undefined||['copy','borrowed'].includes(options.checkpointMode),'CHECKPOINT_MODE','Choose detached copy or awaited native borrowed checkpoint delivery.');
+  const source = options.checkpoint ? (options.checkpointMode==='borrowed'?options.checkpoint:copy(options.checkpoint)) : {
     schema:'stellar-forge.givecredit-source.v1', kind:'registry',
     metadata:{origin:'cfce-registry-api', selection, startedAt:now(), updatedAt:now(), status:'capturing',
       sourceCommit:REGISTRY_SOURCE_COMMIT,
@@ -124,7 +125,7 @@ export async function captureRegistry(options = {}) {
           source.metadata.coverage[table].leadingPageRechecked = page > 0;
         }
         source.metadata.updatedAt = now();
-        if (options.onProgress) await options.onProgress({phase:'registry',table,rows:String(source.tables[table].length),checkpoint:checkpointOf(source)});
+        if (options.onProgress) await options.onProgress({phase:'registry',table,rows:String(source.tables[table].length),checkpoint:checkpointOf(source,options)});
       }
     }
     for (const donation of source.tables.donations) {
@@ -139,7 +140,7 @@ export async function captureRegistry(options = {}) {
     source.tables = normalizeRegistryTables(source.tables);
     source.metadata.status = 'complete';source.metadata.completedAt = now();source.metadata.updatedAt = source.metadata.completedAt;
     source.metadata.captureSummary = Object.fromEntries(TABLES.map(name=>[name,String(source.tables[name].length)]));
-    if (options.onProgress) await options.onProgress({phase:'complete',checkpoint:checkpointOf(source)});
+    if (options.onProgress) await options.onProgress({phase:'complete',checkpoint:checkpointOf(source,options)});
     return source;
-  } catch (error) { return fail(source,error); }
+  } catch (error) { return fail(source,error,options); }
 }
