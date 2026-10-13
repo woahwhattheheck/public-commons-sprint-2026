@@ -128,7 +128,7 @@ export function analyze(state){
  coreState(state);const tables={items:[],bom:[],inventory:[],purchaseOrders:[]},issues=[],sourceIssues=[];
  const push=(...args)=>issues.push(issue(...args));const sources=new Map(state.imports.map(s=>[s.id,s]));
  for(const k of KINDS){const selected=state.activeSources[k];if(!selected){push('SOURCE_REQUIRED','Select an original '+k+' CSV.',[],{kind:k},'Import and map the actual '+k+' source.');continue;}
-  const s=sources.get(selected);need(s&&s.kind===k,'Active import identity or kind changed.');const preview=mappedSource(state,s);need(preview.source.sha256===s.sha256&&preview.source.bytes===s.bytes,'Original CSV bytes changed.');tables[k]=preview.canonicalRows;sourceIssues.push(...preview.issues);}
+  const s=sources.get(selected);need(s&&s.kind===k,'Active import identity or kind changed.');const preview=mappedSource(state,s);need(preview.source.sha256===s.sha256&&preview.source.bytes===s.bytes,'Original CSV bytes changed.');tables[k]=preview.canonicalRows;for(const sourceIssue of preview.issues)sourceIssues.push(sourceIssue);}
  for(const sourceIssue of sourceIssues)issues.push(sourceIssue);if(state.activeSources.items&&tables.items.length===0)push('EMPTY_ITEM_MASTER','The selected item master has no parsed item rows.',[],{sourceId:state.activeSources.items},'Provide a complete item master before evaluating references.');const items=new Map();
  for(const row of tables.items){const v=row.values;for(const f of ['itemId','baseUnit'])if(!v[f])push('REQUIRED_VALUE','Item '+f+' is blank.',[row.ref],{field:f});
   if(v.itemId){const key=itemKey(v.itemId,v.revision),group=items.get(key)||[];group.push(row);items.set(key,group);}}
