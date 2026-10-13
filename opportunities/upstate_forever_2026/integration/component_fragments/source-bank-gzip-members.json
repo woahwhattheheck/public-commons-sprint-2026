@@ -8,6 +8,7 @@
         "source_tools/source_bank.mjs",
         "source_tools/source_bank_cli.mjs",
         "source_tools/archive_codec.mjs",
+        "source_tools/exact_string_transport.mjs",
         "source_tools/xz_source.mjs",
         "source_tools/xz_lzma2.mjs",
         "source_tools/GZIP_SOURCE_MEMBERS.md",

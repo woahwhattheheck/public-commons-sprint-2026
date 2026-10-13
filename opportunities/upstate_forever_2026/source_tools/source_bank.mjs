@@ -1,6 +1,7 @@
 // Copyright TokenJunkieLabs. Data-only archive recovery; decoded source is never executed.
 import { createArchiveCodec } from "./archive_codec.mjs";
 import { createXzSourceDecoder } from "./xz_source.mjs";
+import { createExactStringTransport, createExactSourceEnvelope } from "./exact_string_transport.mjs";
 
 export const DEFAULT_LIMITS = Object.freeze({
   maxInputBytes: 64 * 1024 * 1024,
@@ -391,6 +392,20 @@ export function createSourceBankToolkit(options = {}) {
     if (value?.schema === "upstate.application-source-part/v1") return packets([value]);
     if (Array.isArray(value) && value.length && value.every(part =>
         part?.schema === "upstate.application-source-part/v1")) return packets(value);
+    if (value?.schema === "commons.exact-source-envelope/v1") {
+      if (value.transport?.bytes > limits.maxInputBytes)
+        fail("exact-source compressed transport exceeds maxInputBytes");
+      const restored = createExactSourceEnvelope(codec, createExactStringTransport, {
+        maxSourceBytes: limits.maxOutputBytes,
+        maxTransportBytes: limits.maxOutputBytes
+      }).decode(value);
+      const result = unwrapJson(carrierJson(restored.text), depth + 1);
+      return { ...result, exactStringTransport: {
+        schema: value.schema, codec: value.codec, source: restored.source,
+        nodes: restored.nodes, compressedBytes: restored.compressed_bytes,
+        decodedTransportBytes: restored.decoded_transport_bytes
+      }, payloadSha256: restored.source.sha256 };
+    }
     if (value?.schema === "commons.gzip-source-bank/v1") return gzipEnvelope(value, depth);
     if (value?.schema === "upstate.scientific-context-source-carrier/v1") {
       if (value.encoding !== "gzip+base64" || value.chunks !== undefined ||
