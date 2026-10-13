@@ -354,7 +354,11 @@ class ExperimentOperator:
                         {"summary_sha256": summary_sha256, "report": record})
             result = dict(summary)
             result["files"] = dict(result.get("files", {}), report=record)
-            return result
+        # The complete report takes the same summary lock. Refresh it only
+        # after this writer releases that lock, retaining its original context.
+        from model.study_report import refresh_existing
+        refresh_existing(ws, key)
+        return result
 
     def invoke(self, task):
         ws = self.app.ws(task["workspace"])

@@ -215,3 +215,12 @@ Receiving uses the existing native report operation: compile the composed module
 open the current source-bound delivery, follow an economic link from its PDF or
 HTML, compare its coefficient tables with the exact saved profile CSV, and reopen
 the complete archive. The same ordered report blocks drive each output format.
+
+
+## Linked sources and economic coverage (v7)
+
+The report now preserves typed links for original publisher references, estimate sources, native-model guides and retained working materials. PDF, HTML, Markdown and structured report data use the same link labels and targets. Relative file links remain inside the extracted delivery; preserve its directory structure. Unknown or unsupported URI schemes remain readable text.
+
+The selected economic edition supplies its original reporting-zone identity, modeled and unmodeled responses, available and unavailable alternatives, estimate dates and original common-support coverage. Each coverage percentage uses its own recorded valid-cell denominator, not the whole watershed area. Operating and annualized costs are reported per year in the recorded currency. The formatter reads the completed edition and does not recalculate costs or physical quantities.
+
+The existing scientific workspace archive is prepared before report composition, making its retained link available in every report format. The current-export reference must be an original baseline scenario; future alternatives must be distinct and exclude that baseline. Scenario-analysis release readiness applies the same baseline requirement before opening the delivery form.

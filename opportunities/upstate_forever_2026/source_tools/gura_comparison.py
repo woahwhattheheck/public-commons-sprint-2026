@@ -21,7 +21,7 @@ import subprocess
 import sys
 
 from model.common import (atomic_bytes, atomic_json, describe_file,
-                          digest, file_digest, held, now, read_json, verify_file)
+                          digest, file_digest, held, now, read_json, selected_models, verify_file)
 from model.workspace import Workspace
 
 RECEIVING_SCHEMA = "upstate.gura-original-receiving/v1"
@@ -52,12 +52,15 @@ def _integer(value, label):
     return int(number)
 
 
-def _context(receiving_path):
+def _context(receiving_path, *, workspace=None):
     path = Path(receiving_path).resolve(strict=True)
     receipt = read_json(path)
     if receipt.get("schema") != RECEIVING_SCHEMA:
         raise ValueError("Select the original receive_gura.py receiving.json")
-    ws = Workspace(receipt["workspace"])
+    ws = (workspace if isinstance(workspace, Workspace) else
+          Workspace(workspace if workspace is not None else receipt["workspace"]))
+    if receipt.get("workspace_id") not in (None, ws.project["id"]):
+        raise ValueError("Select the original restored Workspace recorded by Gura receiving")
     if ws.project["title"] != receipt["study"] or "Gura" not in receipt["study"]:
         raise ValueError("Continue the original Gura study in its retained workspace")
     collection = ws._get("sources", receipt["source_collection_id"])
@@ -112,10 +115,10 @@ def _source_label(code, row_sets):
     return (" / ".join(distinct) if distinct else "Native class " + str(code)), labels
 
 
-def _zone_source(ws, collection_id, requested_field=None):
+def _zone_source(ws, collection_id, requested_field=None, source_id="GURA_WATERSHED"):
     import fiona
     from model import rasters
-    path, entry = ws.source_file(collection_id, "GURA_WATERSHED")
+    path, entry = ws.source_file(collection_id, source_id)
     kwargs = {"layer": entry["layer"]} if entry.get("layer") else {}
     with rasters.vector_environment(), fiona.open(rasters.native_vector_path(path), **kwargs) as layer:
         fields = list(layer.schema["properties"])
@@ -142,16 +145,20 @@ def _zone_source(ws, collection_id, requested_field=None):
                          + ", ".join(fields))
     for feature in features:
         feature["feature_id"] = str(feature["properties"][chosen])
-    return {"source_collection_id": collection_id, "source_id": "GURA_WATERSHED",
+    return {"source_collection_id": collection_id, "source_id": source_id,
             "source": entry, "id_field": chosen, "features": features,
             "layer": entry.get("layer")}
 
 
-def catalog(receiving_path, *, zone_id_field=None):
-    path, receipt, ws, collection, grid, profile, baseline = _context(receiving_path)
+def catalog(receiving_path, *, zone_id_field=None, workspace=None):
+    path, receipt, ws, collection, grid, profile, baseline = _context(
+        receiving_path, workspace=workspace)
     table_sources, row_sets, columns = {}, {}, {}
-    for source_id in SOURCE_IDS:
-        source_path, entry = ws.source_file(collection["id"], source_id)
+    active = selected_models(receipt)
+    source_ids = receipt.get("source_ids", {})
+    wanted = ["GURA_" + model.upper() + "_TABLE" for model in active] + ["GURA_BIOPHYSICAL"]
+    for source_id in wanted:
+        source_path, entry = ws.source_file(collection["id"], source_ids.get(source_id, source_id))
         fields, rows = _table(source_path)
         table_sources[source_id] = {"entry": entry, "sha256": file_digest(source_path)}
         row_sets[source_id], columns[source_id] = rows, fields
@@ -195,8 +202,20 @@ def catalog(receiving_path, *, zone_id_field=None):
         classes.append({"code": code, "label": label, "original_labels": labels,
                         "reporting_cells": counts[code], "reporting_area_ha": counts[code] * pixel_area_ha,
                         "original_rows": {key: rows[code] for key, rows in row_sets.items() if code in rows}})
-    source_zones = _zone_source(ws, collection["id"], zone_id_field)
-    original_selection = read_json(Path(receipt["selection_path"]))
+    source_zones = _zone_source(ws, collection["id"], zone_id_field,
+                                source_ids.get("GURA_WATERSHED", "GURA_WATERSHED"))
+    # The original programme travels inside the whole Workspace. Its verified
+    # selection remains readable after the intake directory moves to another host.
+    from model.compute_programme import ComputeProgrammes
+    original_programme = ComputeProgrammes(ws).status(receipt["programme_id"])
+    original_selection = original_programme["selection"]
+    original_reference = [row for row in original_selection["runs"]
+                          if row["key"] == original_selection["baseline_run"]]
+    if (original_selection["grid_id"] != grid["id"] or len(original_reference) != 1
+            or original_reference[0]["profile_id"] != profile["id"]
+            or original_reference[0]["scenario_id"] != baseline["id"]
+            or selected_models(original_reference[0]) != active):
+        raise ValueError("The retained original programme differs from the Gura source selection")
     result = {
         "schema": CATALOG_SCHEMA, "study": receipt["study"], "purpose": PURPOSE,
         "workspace_id": ws.project["id"], "receiving": describe_file(path.parent, path),
@@ -212,12 +231,14 @@ def catalog(receiving_path, *, zone_id_field=None):
                               "valid_landcover_area_ha": valid_cells * pixel_area_ha,
                               "landcover": grid["files"]["NLCD"], "mask": grid["files"]["reporting_mask"]},
     }
+    if active != ["ndr", "sdr"]:
+        result["models"] = active
     result["id"] = digest(result)
     return result
 
 
-def make_plan(receiving_path, *, conversions=None, zone_id_field=None):
-    inventory = catalog(receiving_path, zone_id_field=zone_id_field)
+def make_plan(receiving_path, *, conversions=None, zone_id_field=None, workspace=None):
+    inventory = catalog(receiving_path, zone_id_field=zone_id_field, workspace=workspace)
     classes = {row["code"]: row for row in inventory["classes"]}
     observed = [row for row in inventory["classes"] if row["reporting_cells"] > 0]
     if not observed:
@@ -267,7 +288,7 @@ def make_plan(receiving_path, *, conversions=None, zone_id_field=None):
                 "title": inventory["study"] + " | source-class contrast | " + label,
                 "reason": reason, "kind": "landcover",
                 "source_collection_id": inventory["source_collection_id"],
-                "patches": [{"mask_source_id": "GURA_WATERSHED",
+                "patches": [{"mask_source_id": inventory["watershed_source"]["source_id"],
                              "from_codes": [left], "to_code": right, "reason": reason}],
             },
         }
@@ -295,11 +316,13 @@ def make_plan(receiving_path, *, conversions=None, zone_id_field=None):
             "Cost estimates can be entered for a defined scenario and implementation footprint in the economic desk.",
         ]},
     }
+    if "models" in inventory:
+        plan["models"] = inventory["models"]
     plan["id"] = digest(plan)
     return plan
 
 
-def _check_plan(receiving_path, plan_path):
+def _check_plan(receiving_path, plan_path, *, workspace=None):
     plan_path = Path(plan_path).resolve(strict=True)
     plan = read_json(plan_path)
     if plan.get("schema") != PLAN_SCHEMA:
@@ -308,13 +331,15 @@ def _check_plan(receiving_path, plan_path):
     key = identity.pop("id", None)
     if key != digest(identity):
         raise ValueError("The retained contrast plan changed; create its next explicit source selection")
-    path, receipt, ws, collection, grid, profile, baseline = _context(receiving_path)
+    path, receipt, ws, collection, grid, profile, baseline = _context(
+        receiving_path, workspace=workspace)
     expected = {
         "workspace_id": ws.project["id"], "source_collection_id": collection["id"],
         "grid_id": grid["id"], "profile_id": profile["id"],
         "baseline_scenario_id": baseline["id"], "original_programme_id": receipt["programme_id"],
     }
-    if any(plan.get(name) != value for name, value in expected.items()):
+    if (any(plan.get(name) != value for name, value in expected.items())
+            or selected_models(plan) != selected_models(receipt)):
         raise ValueError("The contrast plan belongs to another original Gura selection")
     if (plan["receiving"]["sha256"] != file_digest(path)
             or plan["receiving"]["bytes"] != path.stat().st_size):
@@ -324,7 +349,18 @@ def _check_plan(receiving_path, plan_path):
     inv_id = inv_identity.pop("id", None)
     if inv_id != digest(inv_identity):
         raise ValueError("The retained class/source inventory changed")
-    fresh = catalog(receiving_path, zone_id_field=inv["watershed_source"]["id_field"])
+    fresh = catalog(receiving_path, zone_id_field=inv["watershed_source"]["id_field"],
+                    workspace=ws)
+    if fresh["receiving"] != inv["receiving"]:
+        if any(fresh["receiving"][name] != inv["receiving"][name]
+               for name in ("bytes", "sha256")):
+            raise ValueError("The restored receiving copy differs from the original receipt")
+        # A restored plan may use its retained original-receiving.json copy.
+        # The source bytes already match; preserve the saved logical filename
+        # when comparing the original inventory identity.
+        fresh["receiving"] = dict(inv["receiving"])
+        fresh.pop("id")
+        fresh["id"] = digest(fresh)
     if fresh["id"] != inv_id:
         raise ValueError("Original class/source input changed after the contrast plan")
     cases = plan.get("cases")
@@ -467,7 +503,7 @@ def _programme_active(status):
 
 
 def _observe_programme(manager, programme_id, notify, record, *, gate_held=False):
-    status = manager.status(programme_id)
+    status = manager.status(programme_id, include_ensemble_candidates=False)
     notice = {"programme_id": programme_id, "state": status["state"],
               "phase": status.get("phase"), "active": status["active"],
               "counts": status["counts"], "observed_at": now(),
@@ -539,7 +575,7 @@ def run_retained_programme(manager, programme_id, directory, *,
                     last_notice = time.monotonic()
                 time.sleep(1)
         while True:
-            status = manager.status(programme_id)
+            status = manager.status(programme_id, include_ensemble_candidates=False)
             if not _programme_active(status) and not _local_child_active(issued, programme_id):
                 break
             if time.monotonic() - last_notice >= 10:
@@ -558,7 +594,8 @@ def run_retained_programme(manager, programme_id, directory, *,
             if str(error) != (
                     "Programme scientific engine source changed; reopen its retained application or create a new programme"):
                 raise
-            replacement = manager.create(record["selection"])
+            replacement = _retained_programme(
+                manager, record["selection"], require_current_sources=True)
             replacement_id = replacement["programme_id"]
             if replacement_id == programme_id:
                 raise
@@ -613,11 +650,11 @@ def run_retained_programme(manager, programme_id, directory, *,
         # An older caller may have won the original programme lock during
         # launch. Observe that exact programme to completion, without issuing
         # another child or replacing either caller's retained process record.
-        status = manager.status(programme_id)
+        status = manager.status(programme_id, include_ensemble_candidates=False)
         while _programme_active(status):
             _observe_programme(manager, programme_id, notify, command_record)
             time.sleep(2)
-            status = manager.status(programme_id)
+            status = manager.status(programme_id, include_ensemble_candidates=False)
         _observe_programme(manager, programme_id, notify, command_record)
         if status["state"] != "complete":
             raise RuntimeError("Original native programme " + programme_id + " is "
@@ -627,26 +664,36 @@ def run_retained_programme(manager, programme_id, directory, *,
         return status
 
 
-def _retained_programme(manager, selection, preferred=None):
+def _retained_programme(manager, selection, preferred=None, *, require_current_sources=False):
     expected = manager.preview(selection)
     normalized = expected["selection"]
     expected_runs = {row["key"]: row["native_selection"] for row in expected["runs"]}
 
     def matches(status):
-        return (status["selection"] == normalized
-                and {row["key"]: row["native_selection"] for row in status["runs"]}
-                == expected_runs)
+        if (status["selection"] != normalized
+                or {row["key"]: row["native_selection"] for row in status["runs"]}
+                != expected_runs):
+            return False
+        if require_current_sources:
+            try:
+                manager._check_execution(manager._load(status["programme_id"]))
+            except ValueError as error:
+                if str(error) != (
+                        "Programme scientific engine source changed; reopen its retained application or create a new programme"):
+                    raise
+                return False
+        return True
 
     if preferred:
-        result = manager.status(preferred)
+        result = manager.status(preferred, include_ensemble_candidates=False)
         if not matches(result):
             raise ValueError("The retained programme differs from the original contrast selection")
         return result
     candidates = []
-    for summary in manager.catalog()["programmes"]:
+    for summary in manager.catalog(include_completed_sources=False)["programmes"]:
         if summary.get("state") == "unavailable":
             continue
-        candidate = manager.status(summary["id"])
+        candidate = manager.status(summary["id"], include_ensemble_candidates=False)
         if matches(candidate):
             candidates.append(candidate)
     if candidates:
@@ -704,28 +751,61 @@ def _saved_result(directory, workspace, key, plan, receipt, programme_id, runs):
         raise ValueError("The completed Gura result belongs to another original native selection")
     report_root = workspace.root / "scenario-decisions" / result["native_report"]["id"]
     report_path = verify_file(report_root, result["native_report"]["files"]["json"])
-    if (Path(result["native_report_path"]).resolve() != report_path.resolve()
-            or Path(result["native_report_directory"]).resolve() != report_root.resolve()):
-        raise ValueError("The completed native report moved from its retained Workspace")
+    original_root = Path(result["workspace"])
+    if not original_root.is_absolute():
+        raise ValueError("The completed Gura result needs its original Workspace location")
+    original_report_root = original_root / "scenario-decisions" / result["native_report"]["id"]
+    report_relative = report_path.relative_to(report_root)
+    if (Path(result["native_report_path"]).resolve()
+            != (original_report_root / report_relative).resolve()
+            or Path(result["native_report_directory"]).resolve() != original_report_root.resolve()):
+        raise ValueError("The completed native report differs from its original Workspace binding")
+    rebound_economics = []
     for item in result["economic_editions"]:
         if item.get("state") != "complete":
+            rebound_economics.append(dict(item))
             continue
         legacy = directory / "economic" / digest(item["zone_id"])
         expected_directories = (legacy, legacy / "editions" / item["report_id"])
-        selected_directory = Path(item["directory"]).resolve()
-        if selected_directory not in {path.resolve() for path in expected_directories}:
+        saved_directory = Path(item["directory"]).resolve()
+        selected_directory = next((candidate for candidate in expected_directories
+            if saved_directory == (original_root / candidate.relative_to(workspace.root)).resolve()), None)
+        if selected_directory is None:
             raise ValueError("The completed economic edition has another original reporting zone")
+        if Path(item["desk"]).resolve() != (saved_directory / "index.html").resolve():
+            raise ValueError("The completed economic desk belongs to another report edition")
         economic = _reopen_economic(selected_directory, item["report_id"])
         if economic.get("physical_source", {}).get("zone", {}).get("id") != item["zone_id"]:
             raise ValueError("The completed economic report retains another original zone")
         archive = verify_file(directory, item["archive"])
         if archive.resolve() != (selected_directory / "decision-package.zip").resolve():
             raise ValueError("The completed economic archive belongs to another report edition")
+        rebound_economics.append({**item, "directory": str(selected_directory),
+                                 "desk": str(selected_directory / "index.html")})
+    if original_root.resolve() != workspace.root.resolve():
+        source_copy = directory / "receiving-results" / (file_digest(path) + ".json")
+        atomic_bytes(source_copy, path.read_bytes(), immutable=True)
+        previous = {"workspace": str(original_root),
+                    "result": describe_file(workspace.root, source_copy)}
+        if result.get("workspace_archive"):
+            previous["workspace_archive"] = result["workspace_archive"]
+        locations = list(result.get("receiving_locations", []))
+        if not locations or locations[-1] != previous:
+            locations.append(previous)
+        result = {**result, "workspace": str(workspace.root),
+                  "native_report_directory": str(report_root),
+                  "native_report_path": str(report_path),
+                  "economic_editions": rebound_economics,
+                  "receiving_locations": locations}
+        result.pop("workspace_archive", None)
     return result
 
 
-def execute(receiving_path, plan_path, *, output=None, build_economics=True, backup=None):
-    path, original_plan, receipt, ws, grid, profile, baseline, plan = _check_plan(receiving_path, plan_path)
+
+def execute(receiving_path, plan_path, *, output=None, build_economics=True, backup=None,
+            workspace=None):
+    path, original_plan, receipt, ws, grid, profile, baseline, plan = _check_plan(
+        receiving_path, plan_path, workspace=workspace)
     from model.compute_programme import ComputeProgrammes
     from model import scenario_decisions
     application_root = Path(__file__).resolve().parent.parent
@@ -770,15 +850,17 @@ def execute(receiving_path, plan_path, *, output=None, build_economics=True, bac
         try:
             state.pop("error", None)
             _progress(directory, state, state="running", phase="scenario selections")
+            active = selected_models(receipt)
+            native_scope = {"models": active} if active != ["ndr", "sdr"] else {}
             roster = [{"key": "original-gura", "title": receipt["study"] + ": original baseline",
-                       "profile_id": profile["id"], "scenario_id": baseline["id"]}]
+                       "profile_id": profile["id"], "scenario_id": baseline["id"], **native_scope}]
             baseline_run = ws.prepare_run({"grid_id": grid["id"], "profile_id": profile["id"],
-                                           "scenario_id": baseline["id"]})
+                                           "scenario_id": baseline["id"], **native_scope})
             state["runs"]["original-gura"] = baseline_run["id"]
             for case in plan["cases"]:
                 scenario = ws.save_scenario(case["scenario"])
                 prepared = ws.prepare_run({"grid_id": grid["id"], "profile_id": profile["id"],
-                                           "scenario_id": scenario["id"]})
+                                           "scenario_id": scenario["id"], **native_scope})
                 if state["scenarios"].get(case["key"], scenario["id"]) != scenario["id"]:
                     raise ValueError("Retained scenario identity differs from the original selected case")
                 if state["runs"].get(case["key"], prepared["id"]) != prepared["id"]:
@@ -787,7 +869,7 @@ def execute(receiving_path, plan_path, *, output=None, build_economics=True, bac
                 state["runs"][case["key"]] = prepared["id"]
                 roster.append({"key": case["key"], "title": case["title"],
                                "profile_id": profile["id"], "scenario_id": scenario["id"],
-                               "reason": case["reason"]})
+                               "reason": case["reason"], **native_scope})
             programme_selection = {
                 "schema": "upstate.compute-programme-selection/v1", "title": plan["title"],
                 "grid_id": grid["id"], "baseline_run": "original-gura", "runs": roster,
@@ -896,6 +978,10 @@ def execute(receiving_path, plan_path, *, output=None, build_economics=True, bac
                 economics = result["economic_editions"]
                 completed_at = result["completed_at"]
                 result_path = directory / "result.json"
+                if read_json(result_path) != result:
+                    # A relocated completed result is current even when this
+                    # invocation does not request another Workspace archive.
+                    atomic_json(result_path, result)
             if backup is not None:
                 backup_path = Path(backup).resolve()
                 if backup_path.is_relative_to(ws.root):
@@ -942,6 +1028,8 @@ def main(argv=None):
     for name in ("catalog", "plan"):
         command = sub.add_parser(name)
         command.add_argument("--receiving", type=Path, required=True)
+        command.add_argument("--workspace", type=Path,
+                             help="Restored original Workspace; retain the receiving JSON unchanged")
         command.add_argument("--output", type=Path, required=True)
         command.add_argument("--zone-id-field")
         if name == "plan":
@@ -949,6 +1037,8 @@ def main(argv=None):
                                  help="An explicit original FROM:TO class pair; repeat for multiple native alternatives")
     command = sub.add_parser("execute")
     command.add_argument("--receiving", type=Path, required=True)
+    command.add_argument("--workspace", type=Path,
+                         help="Restored original Workspace; retain the receiving JSON unchanged")
     command.add_argument("--plan", type=Path, required=True)
     command.add_argument("--output", type=Path)
     command.add_argument("--physical-only", action="store_true",
@@ -957,7 +1047,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "catalog":
-            result = catalog(args.receiving, zone_id_field=args.zone_id_field)
+            result = catalog(args.receiving, zone_id_field=args.zone_id_field,
+                             workspace=args.workspace)
             atomic_json(args.output, result, immutable=True)
         elif args.command == "plan":
             conversions = None
@@ -968,11 +1059,13 @@ def main(argv=None):
                     if len(parts) != 2:
                         raise ValueError("Use original FROM:TO integer class pairs")
                     conversions.append(parts)
-            result = make_plan(args.receiving, conversions=conversions, zone_id_field=args.zone_id_field)
+            result = make_plan(args.receiving, conversions=conversions,
+                               zone_id_field=args.zone_id_field, workspace=args.workspace)
             atomic_json(args.output, result, immutable=True)
         else:
             result = execute(args.receiving, args.plan, output=args.output,
-                             build_economics=not args.physical_only, backup=args.workspace_backup)
+                             build_economics=not args.physical_only, backup=args.workspace_backup,
+                             workspace=args.workspace)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, allow_nan=False), flush=True)
         return 0
     except (ValueError, OSError, KeyError, TypeError, ImportError, RuntimeError) as error:

@@ -2,7 +2,7 @@
 
 Run this once on the composed current application. All source bytes come from
 the retained MRLC and Oconee publisher metadata inputs. The original native queue
-creates, cancels, receives and resumes the source operations. No model is run.
+creates, cancels, receives, reopens and resumes the source operations. No model is run.
 """
 from __future__ import annotations
 
@@ -55,6 +55,7 @@ def main():
     import server
     from model.common import atomic_json, read_json, file_digest
     from project_continuity import ACTIONS, INCREMENTAL_ACTIONS, ProjectContinuity
+    from project_transfer import ACTIONS as TRANSFER_ACTIONS
 
     plan_path = output / "original-receiving-operation.json"
     if plan_path.exists():
@@ -85,7 +86,41 @@ def main():
         accepted = set(server.ACTIONS) | set(registry.accepted_actions)
         if not ACTIONS.issubset(accepted) or not INCREMENTAL_ACTIONS.issubset(accepted):
             raise ValueError("Install both complete continuity and original incremental handover components")
+        entry = registry._extensions.get("project-transfer")
+        if entry is None or set(entry["actions"]) != set(TRANSFER_ACTIONS):
+            raise ValueError("Use the matching complete registered transport descriptor and original provider")
+        if set(TRANSFER_ACTIONS) & set(registry._builtin_actions):
+            raise ValueError("The maintained transport descriptor must be the single action owner")
+        if any(registry._actions.get(action) is not entry for action in TRANSFER_ACTIONS):
+            raise ValueError("Every original transport action must dispatch through the same registered provider")
+        if getattr(operator, "project_transfers", None) is not entry["provider"]:
+            raise ValueError("Continuity and the maintained descriptor must share the original transport provider")
+        if entry["provider"].operator is not operator:
+            raise ValueError("The registered transport provider belongs to another operator")
+        plan.setdefault("operators", {})[name] = {
+            "registration_owner": entry["id"],
+            "descriptor_version": entry["manifest"].get("version"),
+            "actions": sorted(TRANSFER_ACTIONS),
+            "shared_transport_provider": True,
+        }
+        save()
         return operator
+
+    def reopen_operator(name, operator):
+        workspace_keys = sorted(operator.workspaces)
+        operator.close()
+        operators.remove(operator)
+        replacement = open_operator(name)
+        if sorted(replacement.workspaces) != workspace_keys:
+            raise ValueError("Reopening lost a retained original or receiving workspace")
+        plan.setdefault("reopenings", {})[name] = {
+            "workspace_keys": workspace_keys,
+            "registered_transport_owner": "project-transfer",
+            "shared_transport_provider": True,
+        }
+        save()
+        emit("operator_reopened", name=name, workspace_keys=workspace_keys)
+        return replacement
 
     def service(operator):
         return ProjectContinuity(operator, server.Fault, supported_actions=(
@@ -270,6 +305,7 @@ def main():
             archive_receiver, archive_receiver.primary, "workspace.receive",
             {"upload_id": archive_upload["id"], "transfer_id": archive_capture["result"]["transfer_id"]},
             "archive_receive")
+        archive_receiver = reopen_operator("archive-receiver", archive_receiver)
         verify_received(archive_receiver, archive_received["result"],
                         archive_capture["result"]["transfer_id"], "archive",
                         original_complete, original_pending)
@@ -308,6 +344,7 @@ def main():
             incremental_receiver, incremental_receiver.primary, "workspace.receive",
             {"snapshot_id": snapshot_id, "transfer_id": incremental_capture["result"]["transfer_id"]},
             "incremental_receive")
+        incremental_receiver = reopen_operator("incremental-receiver", incremental_receiver)
         verify_received(incremental_receiver, incremental_received["result"],
                         incremental_capture["result"]["transfer_id"], "incremental",
                         original_complete, original_pending)

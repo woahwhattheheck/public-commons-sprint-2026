@@ -1,12 +1,15 @@
 # Conservation portfolios
 
-The portfolio workbench joins the actual parcel inventory, supplied cost
+The portfolio workbench joins original polygon inventories, supplied cost
 estimates, conservation preferences, resource limits, native scenarios and
-delivery in the original scientific Workspace.
+delivery in the original scientific Workspace. Planning units can be original
+parcels, subwatersheds, catchments or another explicitly identified polygon layer.
 
 ## Operating journey
 
-1. Choose a delivery with a completed parcel inventory.
+1. Build a native planning inventory from an actual completed baseline, optional
+   completed alternatives and an original polygon source, or choose an existing
+   delivery with a completed parcel inventory.
 2. Select the actual baseline or completed land-cover alternative and the
    meaning of its objective.
 3. Set pollutant weights, coverage, protection and source-water filters,
@@ -43,7 +46,7 @@ Module: `model.portfolios`.
 | `verify_portfolio(workspace, record)` | Record, source, selection and retained-file inspection for receiving |
 | `invoke(workspace, action, payload)` | Dispatcher |
 
-Actions are `portfolio.preview`, `portfolio.save`,
+Actions are `portfolio.inventory.build`, `portfolio.preview`, `portfolio.save`,
 `portfolio.scenario.prepare`, `portfolio.report.build` and `portfolio.decision.build`.
 The host composes `portfolio.run.prepare` and `portfolio.run.start` from
 `prepare_scenario`, `Workspace.prepare_run` and `Workspace.run`.
@@ -54,9 +57,40 @@ Keep the saved portfolio's `context.grid_id` and default to its
 feature IDs and source references. A changed scientific profile remains
 an explicit selection.
 
-Disk collection names are `portfolios` and `portfolio-reports`; overview
-keys are `portfolios` and `portfolio_reports`. File references are relative
+Disk collection names are `planning-inventories`, `portfolios` and `portfolio-reports`;
+overview keys are `planning_inventories`, `portfolios` and `portfolio_reports`. File references are relative
 to the Workspace root and use the original verified file-ticket mechanism.
+
+## Original polygon intake
+
+Use **Build native inventory** in Conservation portfolios, or
+`Workspace.build_planning_inventory(selection)`. Select an actual completed
+baseline, optional compatible alternatives and a retained original vector
+source. The selection has the following shape:
+
+~~~json
+{
+  "title": "Original subwatersheds",
+  "baseline_run_id": "<completed baseline>",
+  "scenario_run_ids": ["<completed alternative>"],
+  "source_collection_id": "<retained collection>",
+  "source_id": "<original polygon source>",
+  "unit_kind": "subwatershed",
+  "feature_id_field": "<existing original ID field>"
+}
+~~~
+
+`unit_kind` accepts `parcel`, `subwatershed`, `catchment` or
+`planning-unit`. Optional `layer` and `where` choose the original source
+layer and feature filter. Omit `feature_id_field` to retain the source
+driver's original feature identifiers. The operation retains every selected
+feature intersecting the reporting area, including zero-coverage features.
+It processes native rasters in windows and preserves the original grid.
+
+The saved record's `files.csv` and `files.inventory` are relative to the
+Workspace root. `model.planning_inventory.inspect(workspace, id)` verifies
+both files and current source/run lineage. Scientific backups retain and
+verify this collection on restore.
 
 ## Preview and save specification
 
@@ -106,7 +140,8 @@ Omit `costs` when no costs have been supplied. A budget requires a supplied
 cost table. Null resource limits are unrestricted; zero is a zero limit.
 Source-water filters accept `any`, `yes` or `no`. IDs are exact original
 strings. Weights are nonnegative, with at least one positive value, and are
-normalized to sum to one.
+normalized to sum to one. When weights are omitted, available native inventory
+outputs receive equal weight; unavailable pollutants remain unselected.
 
 | Objective | Physical value |
 | --- | --- |
@@ -120,11 +155,23 @@ grid and parameter profile. `basis` is `total` or
 `per-reporting-hectare`. Baseline mass and original signed scenario changes
 remain separately available.
 
-The input is the exact `parcel-priorities.csv` and matching inventory made
-by `model.priorities.parcel_inventory`. Their body identities, original
-feature IDs, source edition and run selections are checked. The CSV coverage
-fraction measures baseline combined-priority valid cells, rather than the
-coverage of every alternative.
+Choose exactly one of `inventory_id` and `delivery_id`. An `inventory_id`
+selects an original polygon inventory created by `model.planning_inventory`;
+its coverage is common-valid native support across every selected run and
+common pollutant within the retained reporting area. The application sums
+its annual-mass-per-pixel outputs once. Original geometry, attributes, source
+body and sidecars, feature IDs, model selections and output hashes are retained.
+
+A `delivery_id` selects the exact `parcel-priorities.csv` and matching
+inventory made by `model.priorities.parcel_inventory`. Its coverage fraction
+measures baseline combined-priority valid cells. The source's own coverage
+definition is retained in the portfolio context.
+
+Unknown protection, source-water and high-quality context remain unknown.
+A restrictive filter excludes an unknown value and records the reason; an
+unrestricted filter preserves it. Independent overlapping polygon summaries
+are not unique regional totals. The combined selected native run supplies
+the evaluated portfolio effect.
 
 Costs join from a retained table using its selected original ID and USD
 columns. Duplicate IDs, malformed amounts, negative values and precision
@@ -144,9 +191,10 @@ benefit-maximizing selections.
 This parcel objective is distinct from the original raster `priority_mean`,
 which remains separately visible.
 
-Default preference profiles are the selected weights, equal weights,
-individual pollutant axes and half/double changes to each positive selected
-weight. Duplicate normalized profiles are removed. `stability: false` keeps
+Default preference profiles use only pollutants actually present in the inventory:
+the selected weights, equal weights, individual available pollutant axes and
+half/double changes to each positive selected weight. A requested positive
+weight for an unavailable pollutant is rejected with the missing metric. Duplicate normalized profiles are removed. `stability: false` keeps
 only the selected profile. Explicit profiles are also supported:
 
 ~~~json
@@ -244,8 +292,12 @@ including watershed routing and land-cover interactions.
 
 `build_report` accepts `portfolio_id`, optional `title`,
 `evaluation_run_id` and `comparison_id`. The evaluated run must use the
-saved portfolio scenario and original grid. Its comparison must include the
-completed portfolio run and original baseline; a changed profile is retained.
+saved portfolio scenario and original grid. Its comparison uses the completed
+portfolio run and a baseline with the original baseline land cover, matching
+the evaluation's parameter profile, native version and selected models.
+When needed, the queued action prepares and executes that matching baseline.
+The original ranking baseline remains separately identified. Set
+`run_missing_baseline: false` to prepare the baseline for an explicit later run.
 
 The plain printable report contains the objective, limits, selection status,
 physical contributions, every selected parcel, preference stability and
@@ -265,8 +317,8 @@ for its full source and result ZIP.
 Supply `portfolio_id` and `evaluation_run_id`. An optional
 `comparison_id` may include additional completed alternatives. Without it,
 the adapter creates the ordinary native comparison of the paired baseline
-and portfolio run. A changed evaluation profile uses that same profile and
-native engine version with the original baseline definition. The boolean
+and portfolio run. A changed evaluation profile or model selection uses that same profile,
+native engine version and selected models with the original baseline definition. The boolean
 `run_missing_baseline` defaults to `true`: this queued action prepares or
 reuses an incomplete matching baseline, executes it through the ordinary
 native runner, and continues into the completed decision export. Existing
@@ -339,6 +391,7 @@ from the application directory, using the retained study and a JSON
 selection file containing its actual IDs:
 
 ~~~bash
+python -B -m model.cli --workspace /absolute/upper-savannah-study planning-inventory-build /absolute/inventory-selection.json
 python -B -m model.cli --workspace /absolute/upper-savannah-study portfolio-preview /absolute/portfolio-selection.json
 python -B -m model.cli --workspace /absolute/upper-savannah-study portfolio-save /absolute/portfolio-selection.json
 python -B -m model.cli --workspace /absolute/upper-savannah-study portfolio-run /absolute/portfolio-treatment.json

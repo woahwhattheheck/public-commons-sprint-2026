@@ -445,6 +445,126 @@ def _layer(source, target, descriptor, captured_at, scope, capture_time_status=N
     return entry, binding, selection_record
 
 
+def _parcel_source_context(source, target, descriptor, entry, binding, report):
+    """Bind a complete FW edition to its unchanged original capture polygons."""
+    if binding["kind"] != "freshwater":
+        return None
+    entry["metadata"]["parcel_criteria"] = {
+        "fields": {"classification": binding["classification_field"]},
+        "class_scope": ["FW"], "where": dict(binding["where"]),
+        "reference": "Original SCDES freshwater-only source edition; other classes use their own retained source",
+        "meaning": "Presence of retained SCDES FW-classified geometry. A complete negative means no matching "
+                   "retained FW feature in this source inventory; ecological freshwater presence outside the "
+                   "publisher's inventory remains unknown.",
+    }
+    declared = descriptor.get("criteria_coverage")
+    if declared is None:
+        return None
+    if (not isinstance(declared, dict) or descriptor.get("huc_selection_mode") != "geometry"
+            or declared.get("method") != "provider_intersects_each_original_domain_polygon"):
+        raise ValueError("Freshwater criterion coverage requires the complete original physical-domain capture")
+    geometry_member = descriptor.get("selection_geometry")
+    record = report.get("selection_geometry")
+    if not geometry_member or not record or record.get("source_path") != geometry_member:
+        raise ValueError("Criterion coverage must be the retained original selection geometry")
+    original = _json(_path(source, geometry_member))
+    original_features = original.get("features")
+    if (original.get("geometryType", "esriGeometryPolygon") != "esriGeometryPolygon"
+            or not isinstance(original_features, list) or not original_features):
+        raise ValueError("Criterion coverage needs the original native polygon feature set")
+    field = declared.get("huc12_field")
+    if not isinstance(field, str) or not field:
+        raise ValueError("Criterion coverage needs the exact original HUC12 field")
+    expected_hucs = _hucs(_json(_path(source, descriptor["huc_ids"])))
+    actual_hucs = set()
+    original_polygons = {}
+    reference = original.get("spatialReference")
+    for index, feature in enumerate(original_features):
+        _native_geometry(feature, "esriGeometryPolygon", index)
+        huc = feature.get("attributes", {}).get(field)
+        if not isinstance(huc, str) or huc not in expected_hucs:
+            raise ValueError("Criterion coverage polygon is outside the exact original HUC selection")
+        actual_hucs.add(huc)
+        current_reference = feature["geometry"].get("spatialReference") or reference
+        _crs_key(current_reference)
+        if reference is not None and not _same_crs(reference, current_reference):
+            raise ValueError("Original criterion coverage polygons use different coordinate references")
+        reference = current_reference
+        polygon = {**feature["geometry"], "spatialReference": current_reference}
+        key = _sha(_bytes([huc, polygon]))
+        original_polygons[key] = original_polygons.get(key, 0) + 1
+    if actual_hucs != expected_hucs:
+        raise ValueError("Criterion coverage omits an original selected HUC12")
+    geometric_queries = [query for query in descriptor["queries"]
+                         if isinstance(query.get("selection"), dict)
+                         and query["selection"].get("method") == "Original polygon intersects"]
+    if (len(geometric_queries) != len(original_features)
+            or {query["selection"].get("huc12") for query in geometric_queries} != expected_hucs):
+        raise ValueError("Criterion coverage needs complete native polygon queries for the retained domain")
+    physical_ids, queried_polygons = set(), {}
+    for query in geometric_queries:
+        selection = query["selection"]
+        geometry = _json(_path(source, selection["geometry"]))
+        key = _sha(_bytes([selection["huc12"], geometry]))
+        queried_polygons[key] = queried_polygons.get(key, 0) + 1
+        request = _json(_path(source, query["request"]))
+        parameters = request.get("parameters", {})
+        if (parameters.get("geometry_file") != selection["geometry"]
+                or parameters.get("geometryType") != "esriGeometryPolygon"
+                or parameters.get("spatialRel") != "esriSpatialRelIntersects"
+                or parameters.get("where") != "H2OCLASS='FW'"):
+            raise ValueError("Criterion coverage query differs from the original FW polygon intersection")
+        count = _json(_path(source, query["count"]))
+        physical_ids.update(_ids(_json(_path(source, query["ids"])),
+                                 "Criterion coverage polygon IDs", expected_count=count.get("count")))
+    if queried_polygons != original_polygons:
+        raise ValueError("Criterion coverage differs from the polygons actually queried")
+    if physical_ids != set(report["object_ids"]):
+        raise ValueError("Criterion source IDs differ from the complete physical-domain query union")
+    uri = declared.get("uri")
+    if not isinstance(uri, str) or not uri.startswith(("https://", "http://")):
+        raise ValueError("Retain the original coverage polygon provider URI")
+    coverage_id = entry["id"] + "-coverage-domain"
+    relative = entry["id"] + "/" + record["path"]
+    retained_path = _path(target, relative)
+    if _file_sha(retained_path) != record["sha256"]:
+        raise ValueError("Retained criterion coverage bytes changed")
+    # The local source reference is resolved to this collection after import.
+    coverage = {
+        "source": {"source_id": coverage_id},
+        "huc12_field": field, "huc12_ids": sorted(expected_hucs),
+        "reference": "Complete original FW count/ID intersection against every retained model-domain polygon",
+    }
+    entry["metadata"]["criteria_coverage"] = coverage
+    binding["criteria_coverage"] = coverage
+    coverage_record = {**coverage, "original_geometry": record,
+                       "method": declared["method"], "parcel_criteria": entry["metadata"]["parcel_criteria"]}
+    coverage_path = target / entry["id"] / "parcel-coverage.json"
+    _write(coverage_path, _bytes(coverage_record))
+    entry["companions"].append({"path": entry["id"] + "/parcel-coverage.json",
+                               "sha256": _file_sha(coverage_path),
+                               "bytes": coverage_path.stat().st_size})
+    # Reuse the retained original body; no polygon rewrite or alternate mask.
+    result = {
+        "id": coverage_id, "title": "Original physical freshwater capture domain",
+        "uri": uri, "vintage": declared.get("vintage") or "Original retained model-domain polygon edition",
+        "kind": "vector", "role": "SOURCE_COVERAGE", "format": "EsriJSON",
+        "path": relative, "sha256": record["sha256"], "bytes": record["bytes"],
+        "companions": [], "metadata": {
+            "source_crs": reference, "huc12_field": field,
+            "huc12_count": len(expected_hucs), "feature_count": len(original_features),
+            "covers_source_id": entry["id"], "coverage_method": declared["method"],
+        },
+    }
+    fields = original.get("fields", [])
+    identifiers = [row["name"] for row in fields if row.get("type") == "esriFieldTypeOID"]
+    if len(identifiers) == 1:
+        values = [feature.get("attributes", {}).get(identifiers[0]) for feature in original_features]
+        if all(type(value) is int for value in values) and len(set(values)) == len(values):
+            result["id_field"] = identifiers[0]
+    return result
+
+
 def assemble(capture_path, output):
     """Create an immutable source edition from complete original response files."""
     capture_path = Path(capture_path).resolve(strict=True)
@@ -489,6 +609,11 @@ def assemble(capture_path, output):
                                             capture_time_status=capture_time_status)
             if entry["id"] in {row["id"] for row in entries} or binding["kind"] in bindings:
                 raise ValueError("Select a single original edition for each water-context kind")
+            coverage_entry = _parcel_source_context(source, stage, descriptor, entry, binding, report)
+            if coverage_entry:
+                if coverage_entry["id"] in {row["id"] for row in entries}:
+                    raise ValueError("Criterion coverage source identity duplicates another imported entry")
+                entries.append(coverage_entry)
             entries.append(entry)
             bindings[binding["kind"]] = binding
             summary.append({"source_id": entry["id"], "kind": binding["kind"],
@@ -664,6 +789,7 @@ def bind_workspace(workspace, edition):
     result["source_collection_id"] = source["id"]
     result["collection_id"] = source["id"]
     result["water_context_overlays"] = {}
+    result["parcel_criteria_sources"] = {}
     for kind, binding in result["bindings"].items():
         entry = entries.get(binding["source_id"])
         if (entry is None or entry.get("role") != binding["role"]
@@ -673,6 +799,23 @@ def bind_workspace(workspace, edition):
                      "id_field": binding["id_field"]}
         if kind == "freshwater":
             reference["where"] = dict(binding["where"])
+            criterion = {"source_collection_id": source["id"], "source_id": entry["id"],
+                         "id_field": binding["id_field"], "where": dict(binding["where"]),
+                         "fields": {"classification": binding["classification_field"]},
+                         "class_scope": ["FW"]}
+            declared = entry.get("metadata", {}).get("parcel_criteria", {})
+            for key in ("reference", "meaning"):
+                if key in declared:
+                    criterion[key] = declared[key]
+            if binding.get("criteria_coverage"):
+                coverage = json.loads(json.dumps(binding["criteria_coverage"]))
+                coverage["source"]["source_collection_id"] = source["id"]
+                coverage_entry = entries.get(coverage["source"]["source_id"])
+                if not coverage_entry or coverage_entry.get("role") != "SOURCE_COVERAGE":
+                    raise ValueError("The imported freshwater coverage source is missing")
+                criterion["coverage"] = coverage
+                binding["criteria_coverage"] = coverage
+            result["parcel_criteria_sources"]["classifications"] = criterion
         binding["source_collection_id"] = source["id"]
         binding["collection_id"] = source["id"]
         binding["native_reference"] = reference

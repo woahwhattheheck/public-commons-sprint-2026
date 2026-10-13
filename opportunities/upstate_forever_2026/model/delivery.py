@@ -21,7 +21,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-5"
+DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-6"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -40,7 +40,10 @@ def _source_records(workspace, selection, grid, baseline):
         records[role] = {"id": role, "source_id": entry["id"], "title": entry["title"],
                          "vintage": entry["vintage"], "uri": entry["uri"],
                          "sha256": entry["body"]["sha256"], "units": entry.get("units"),
-                         "conversion": entry.get("conversion")}
+                         "conversion": entry.get("conversion"),
+                         **{key: entry[key] for key in ("data_status", "legal_edition_status",
+                                                       "catalogue_source_id", "source_labels")
+                            if key in entry}}
     source_choices = dict(selection.get("source_roles", {}))
     overlay_choices = selection.get("overlays", {})
     for name, role in (("high_quality_waters", "HIGH_QUALITY_WATERS"),
@@ -58,7 +61,10 @@ def _source_records(workspace, selection, grid, baseline):
             raise ValueError("LS_FACTOR is supplied by the original SDR terrain calculation; keep external references under a separate source ID")
         records[role] = {"id": role, "source_id": entry["id"], "title": entry["title"],
                          "vintage": entry["vintage"], "uri": entry["uri"],
-                         "sha256": entry["body"]["sha256"], "selection": choice}
+                         "sha256": entry["body"]["sha256"], "selection": choice,
+                         **{key: entry[key] for key in ("data_status", "legal_edition_status",
+                                                       "catalogue_source_id", "source_labels")
+                            if key in entry}}
     if "LS_FACTOR" not in records:
         item = baseline["stages"]["sdr"]["files"].get("ls")
         if not item:
@@ -92,6 +98,20 @@ def _overlay(workspace, choice, grid_crs, reporting, *, label):
             "source": {"uri": entry["uri"], "vintage": entry["vintage"],
                         "sha256": entry["body"]["sha256"], "title": entry["title"]},
             "width": .65, "style": "--" if label == "Designated high-quality waters" else "-"}
+
+def _delivery_audit_scope(selection, grid):
+    """Keep an explicit contract, otherwise follow the original prepared grid."""
+    chosen = selection.get("audit_scope")
+    if chosen is not None:
+        if chosen not in ("regional-30m", "source-native"):
+            raise ValueError("Select regional-30m or source-native delivery audit scope")
+        return chosen
+    a, b, _, d, e, _ = (float(value) for value in grid["grid"]["transform"])
+    regional = (math.isclose(abs(a), 30, rel_tol=0, abs_tol=1e-6)
+                and math.isclose(abs(e), 30, rel_tol=0, abs_tol=1e-6)
+                and abs(b) < 1e-8 and abs(d) < 1e-8
+                and grid["spec"]["upstream_buffer_m"] > 0)
+    return "regional-30m" if regional else "source-native"
 
 def _grid_measurements(grid):
     """Describe the actual retained pixel geometry and physical area."""
@@ -649,14 +669,22 @@ def build(workspace, selection):
                 ))
                 state["files"]["report"] = describe_file(directory, target)
                 atomic_json(state_path, state)
+            original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
+            grid_path = directory / "grid" / "grid.json"
+            _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
+            state["files"]["native_grid_record"] = describe_file(directory, grid_path)
             manifest = {"schema": "upstate-ec-sdc-2026/delivery-v1",
+                "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
+                         "record": state["files"]["native_grid_record"]["path"],
+                         "audit_scope": _delivery_audit_scope(selection, grid)},
                 "model": {"name": "InVEST NDR and SDR", "version": INVEST_VERSION,
                           "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
                           "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
                           "profile_id": profile["id"], "grid_id": grid["id"]},
                 "source_data": records, "rasters": {},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
-                "project_assets": [state["files"]["combined_priority"]["path"],
+                "project_assets": [state["files"]["native_grid_record"]["path"],
+                                   state["files"]["combined_priority"]["path"],
                                    state["files"]["working_archive"]["path"],
                                    state["files"]["display_scales"]["path"]]}
             for name in rasters.MASS_UNITS:
@@ -675,13 +703,14 @@ def build(workspace, selection):
                    ("report", "report_html", "report_markdown", "report_data")}}
             audit_manifest = directory / "delivery.json"
             receiving_water_delivery.extend_assets(manifest, state)
-            atlas_browser.write(directory, state, manifest)
-            atomic_json(state_path, state)
             analysis_delivery.extend_assets(manifest, state)
             for report_name in ("report_html", "report_markdown", "report_data"):
                 report_path = state["files"][report_name]["path"]
                 if report_path not in manifest["project_assets"]:
                     manifest["project_assets"].append(report_path)
+            # The browser snapshots the final captured members, including reports and analyses.
+            atlas_browser.write(directory, state, manifest)
+            atomic_json(state_path, state)
             atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent
             if str(source_root) not in sys.path:

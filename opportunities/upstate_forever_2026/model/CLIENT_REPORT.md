@@ -9,8 +9,8 @@ The delivery retains the original atlas, linked watershed report, receptor geogr
 ## Use the operator
 
 1. Build and save an Economic desk edition from the completed watershed report and its chosen reporting zone.
-2. Open the same watershed report. Under Map release, select the completed economic edition. The choices match the exact native report bytes and ordered baseline and alternative cohort.
-3. Choose Build map release. Complete the source context, map settings and responsible metadata contact in the original atlas builder.
+2. In the completed Economic desk edition, choose **Prepare client report**. This opens the original atlas form with its saved native cohort and economic edition selected. You can also open the same watershed report and select the edition under **Map release**. Both routes preserve the exact native report bytes and ordered baseline and alternative cohort.
+3. From the watershed-report route, choose **Build map release**. Complete the source context, map settings and responsible metadata contact in the atlas builder.
 4. In Review and build, use **Refresh compatible economic editions** to inspect or replace the optional edition without rebuilding the prepared selection. Choose its original watershed report when the draft has no report link, then choose an edition and press **Use selected economic edition**. Submit through the original delivery.build queue.
 5. Open the completed release. Download the PDF, offline HTML, Markdown or structured report, the complete economic decision package, or the complete GIS delivery.
 
@@ -57,7 +57,8 @@ report-data.json keeps the original scientific schema, structured table and link
 - model/delivery.py composes the newer atlas and linked-report builder with ASTRA13's guarded overlay labels, receiving-water map captions and scientific table renderer. It collects and attaches receiving-water data once.
 - model/report_release.py exposes compatible completed editions beside the saved report's original map release selection.
 - operator/web/extensions/scenario_reports.mjs adds the optional completed-edition selector and validated handoff.
-- operator/web/map_atlas.mjs preserves linked cohorts, replaces compatible economic editions within the prepared draft, and downloads the report, complete economic package and offline atlas browser. Structured report downloads prefer report_data while retaining report_model compatibility for older saved deliveries.
+- operator/web/map_atlas.mjs preserves linked cohorts, replaces compatible economic editions within the prepared draft, and opens geographic inspection and paired map comparisons from the saved release. Extract the complete GIS package and open index.html for offline use. Structured report downloads prefer report_data while retaining report_model compatibility for older saved deliveries.
+- operator/web/economic_desk.mjs opens the atlas form directly from a completed edition through the existing report-selection helper, preserving the original ordered cohort and workspace-change guard.
 
 The current composition retains the scientific formatter's original biophysical and profile tables, the atlas and linked-report hooks, selected economic and scenario-analysis bindings, original overlay labels, and package recovery. Renderer and delivery versions identify the composed report edition in each saved release.
 
@@ -69,7 +70,7 @@ Use the existing application's Python environment to compile the four Python mod
 
 Check the actual selected grid dimensions and hectares in report-data.json. Confirm the atlas, saved watershed report, source-water and receiving-water assets, saved spatial views and every economic manifest member are in the final package. Reopen the same selected delivery to exercise existing completed-result reuse. Retain the actual generated output and its original IDs with the current receiving owner.
 
-The authored JavaScript modules were parsed in this session; the exported economic-selection helper was exercised for a matching completed edition, physical-only choice and stale-edition rejection. Native Python compile and report rendering belong to the equipped receiving session using the retained original case.
+The authored JavaScript modules were parsed in this session. The economic-selection helper was exercised for a matching completed edition, physical-only choice and stale-edition rejection. The direct Economic desk action exercised that same helper, preserving native report identity, edition SHA and alternative order, while a workspace change stopped navigation. Atlas checks covered in-place edition replacement, retained contact edits, navigation, unavailable editions and stale selection responses. Native Python compilation and report rendering use the equipped receiving session and retained original case.
 
 ## Original work
 

@@ -236,7 +236,8 @@ export function attachEconomicDesk(host) {
     if(!value)return;
     const editions=value.editions||[],drafts=value.drafts||[];
     let body='<div class="econ-saved-grid"><div><h4>Completed editions</h4>';
-    body+=editions.length?'<ul class="econ-saved-list">'+editions.map(row=>'<li><strong>'+escape(row.title)+'</strong><span>'+escape(row.zone_title)+' · '+row.candidate_count+' scenarios · '+row.costed_count+' costs · '+row.eligible_count+' eligible</span><div>'+button('open-edition','Open desk','data-id="'+escape(row.id)+'"')+button('edit-edition','Reuse inputs','data-id="'+escape(row.id)+'"')+'</div></li>').join('')+'</ul>':'<p class="econ-empty">Completed economic editions appear here.</p>';
+    body+=editions.length?'<ul class="econ-saved-list">'+editions.map(row=>'<li><strong>'+escape(row.title)+'</strong><span>'+escape(row.zone_title)+' · '+row.candidate_count+' scenarios · '+row.costed_count+' costs · '+row.eligible_count+' eligible</span><div>'+button('open-edition','Open desk','data-id="'+escape(row.id)+'"')+button('edit-edition','Reuse inputs','data-id="'+escape(row.id)+'"')+
+      (typeof host.openExtension==='function'?button('client-report','Prepare client report','data-id="'+escape(row.id)+'"'):'')+'</div></li>').join('')+'</ul>':'<p class="econ-empty">Completed economic editions appear here.</p>';
     body+='</div><div><h4>Saved inputs</h4>';
     body+=drafts.length?'<ul class="econ-saved-list">'+drafts.map(row=>'<li><strong>'+escape(row.title)+'</strong><span>'+escape(row.zone_title)+' · '+row.costed_count+' sourced costs</span>'+button('open-draft','Reopen inputs','data-id="'+escape(row.id)+'"')+'</li>').join('')+'</ul>':'<p class="econ-empty">Save the actual source, zone and completed cost inputs for another operator.</p>';
     body+='</div></div>';
@@ -306,10 +307,29 @@ export function attachEconomicDesk(host) {
     node('[data-edition-title]').textContent=value.title;
     const links=node('[data-edition-links]');
     links.innerHTML='<a target="_blank" rel="noopener" href="'+escape(value.open_url)+'">Open full desk in a new tab</a> '+
-      (value._downloads||[]).map(file=>'<a href="'+escape(file.url)+'?download=1">'+escape(file.label)+'</a>').join(' ');
+      (value._downloads||[]).map(file=>'<a href="'+escape(file.url)+'?download=1">'+escape(file.label)+'</a>').join(' ')+
+      (typeof host.openExtension==='function'?' '+button('client-report','Prepare client report','data-id="'+escape(id)+'"'):'');
     node('[data-edition-frame]').src=value.open_url;
     section.scrollIntoView({block:'start',behavior:'smooth'});
     message('Complete economic edition opened with its original modeled outcomes and cost inputs.');remember();
+  }
+  async function prepareClientReport(id) {
+    if(typeof host.openExtension!=='function')throw Error('Open this completed edition with the current map-release operator.');
+    const token=epoch,key=workspace;
+    current();remember();
+    message('Opening the client report with this completed economic edition…');
+    const [edition,module]=await Promise.all([
+      api(url('/api/economic-desk/edition',{edition_id:id})),
+      import('/web/extensions/scenario_reports.mjs')
+    ]);
+    if(!valid(token))return;
+    if(edition.id!==id||!edition.input?.report_id)throw Error('Reopen the completed economic edition to retain its original report.');
+    const release=await api(url('/api/scenario-reports/release',{report_id:edition.input.report_id}));
+    if(!valid(token))return;
+    if(!release.ready)throw Error((release.issues||[]).map(item=>item.message).join(' ')||
+      'Complete the selected native report before preparing its maps and economic report.');
+    const selection=module.economicReleaseSelection(release,id);
+    await host.openExtension('map-atlas','create',{workspace_key:key,selection});
   }
   async function loadSaved(kind,id) {
     const token=epoch;
@@ -343,6 +363,11 @@ export function attachEconomicDesk(host) {
       if(action==='close-edition'){node('[data-edition]').hidden=true;node('[data-edition-frame]').removeAttribute('src');openEditionId=null;return remember();}
       if(action==='open-edition')return await openEdition(target.dataset.id);
       if(action==='edit-edition')return await loadSaved('edition',target.dataset.id);
+      if(action==='client-report'){
+        target.disabled=true;
+        try{return await prepareClientReport(target.dataset.id);}
+        finally{if(target.isConnected)target.disabled=false;}
+      }
       if(action==='open-draft')return await loadSaved('draft',target.dataset.id);
       if(busy)throw Error('The current economic operation is still running; its task remains in the operator queue.');
       if(action==='clear-target'){delete draft.targets[target.dataset.metric];preview=null;node('[data-preview]').hidden=true;renderInputs();remember();message('The selected retained target was cleared. Other criteria are preserved.');return;}
@@ -440,5 +465,5 @@ export function attachEconomicDesk(host) {
     if(typeof host.navigate==='function')host.navigate('economic-desk');
     if(wasMounted&&frame)await loadCatalog({preserve:false});
   }
-  return {mount,update,detach,openReport,openEdition,loadSaved};
+  return {mount,update,detach,openReport,openEdition,loadSaved,prepareClientReport};
 }

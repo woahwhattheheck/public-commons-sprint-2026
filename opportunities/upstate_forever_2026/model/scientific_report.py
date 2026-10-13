@@ -92,7 +92,7 @@ def _percent(value):
 def link(title, target):
     """Retain a readable label and exact safe original/reference target."""
     label, href = str(title), str(target or "")
-    if not href or any(ord(char) < 32 or ord(char) == 127 for char in href):
+    if not href or "\\" in href or any(ord(char) < 32 or ord(char) == 127 for char in href):
         return label
     try:
         parsed = urlsplit(href)
@@ -104,7 +104,8 @@ def link(title, target):
     else:
         decoded = unquote(parsed.path)
         if (parsed.netloc or not decoded or decoded.startswith(("/", "\\"))
-                or "\\" in decoded or any(part == ".." for part in decoded.split("/"))):
+                or "\\" in decoded or any(ord(char) < 32 or ord(char) == 127 for char in decoded)
+                or any(part == ".." for part in decoded.split("/"))):
             return label
     return {"kind": "link", "label": label, "href": href}
 

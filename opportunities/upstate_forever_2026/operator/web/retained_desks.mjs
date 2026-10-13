@@ -2,6 +2,15 @@
 
 const key = state => state?.workspace_key ?? null;
 
+function taskRows(state) {
+  const source = state?.tasks;
+  if (Array.isArray(source)) return source;
+  if (Array.isArray(source?.tasks)) return source.tasks;
+  if (Array.isArray(source?.items)) return source.items;
+  return source && typeof source === 'object' ? Object.values(source)
+    .filter(task => task && typeof task === 'object' && task.action) : [];
+}
+
 function retainFocus(root) {
   const document = root.ownerDocument || globalThis.document;
   const node = document?.activeElement;
@@ -28,13 +37,14 @@ function restoreFocus(root, saved) {
   root.scrollLeft = saved.scrollLeft;
 }
 
-function adapt(host, desk, {view, collections, prefixes, render = false, openActions = []}) {
+function adapt(host, createDesk, {view, collections, prefixes, render = false, openActions = []}) {
   let root = null, workspace = null, rendered = null;
   const stamp = state => JSON.stringify({
     workspace: key(state),
     data: Object.fromEntries(collections.map(name => [name, state?.data?.[name] ?? []])),
-    tasks: (state?.tasks || []).filter(task => prefixes.some(prefix => task.action?.startsWith(prefix)))
-      .map(task => [task.id,task.state,task.ended_at,task.error,task.updated_at,task.progress])
+    tasks: taskRows(state).filter(task => prefixes.some(prefix => task.action?.startsWith(prefix)))
+      .map(task => [task.id,task.action,task.state ?? task.status,task.updated_at,
+        task.progress,task.ended_at,task.error])
   });
 
   function mount(node, state = host.getState()) {
@@ -72,12 +82,28 @@ function adapt(host, desk, {view, collections, prefixes, render = false, openAct
     return desk.dispatch(button);
   }
 
+  const desk = createDesk({
+    ...host,
+    async navigate(next) {
+      const selectedWorkspace = key(host.getState());
+      if (next === view) rendered = null;
+      const result = await host.navigate(next);
+      // Original controllers also navigate within their own desk. Repaint their
+      // local selection when the host keeps the same state object and DOM root.
+      if (next === view && root && workspace === selectedWorkspace &&
+          key(host.getState()) === selectedWorkspace && rendered === null) {
+        await mount(root, host.getState());
+      }
+      return result;
+    }
+  });
+
   return {...desk, mount, update, detach, dispatch};
 }
 
 export async function attachExperimentsDesk(host) {
   const {attachExperiments} = await import('./experiments.mjs');
-  return adapt(host, attachExperiments(host), {
+  return adapt(host, attachExperiments, {
     view:'experiments',
     collections:['experiments','sources','profiles','scenarios','grids','runs'],
     prefixes:['experiment.']
@@ -86,9 +112,9 @@ export async function attachExperimentsDesk(host) {
 
 export async function attachConservationDesk(host) {
   const {attachConservationWithOptimization} = await import('./conservation_optimization_bridge.mjs');
-  return adapt(host, attachConservationWithOptimization(host), {
+  return adapt(host, attachConservationWithOptimization, {
     view:'conservation', render:true,
-    collections:['sources','profiles','scenarios','grids','runs'],
+    collections:['sources','profiles','scenarios','grids','runs','experiments'],
     prefixes:['conservation.','experiment.'],
     openActions:['conservation-open-study','conservation-open-plan',
       'conservation-use-criteria','conservation-new-parcel-study']
@@ -97,7 +123,16 @@ export async function attachConservationDesk(host) {
 
 export async function attachDiagnosticsDesk(host) {
   const {attachExperimentDiagnostics} = await import('./experiment_diagnostics.mjs');
-  return adapt(host, attachExperimentDiagnostics(host), {
+  const catalogue=await host.api('/api/extensions');
+  const desks=new Set((catalogue.extensions??[]).filter(entry=>entry.client?.view).map(entry=>entry.id));
+  const joined={
+    ...host,
+    openInvestigation:typeof host.openExtension==='function'&&desks.has('investigations')?
+      selection=>host.openExtension('investigations','openForDiagnostic',selection):host.openInvestigation,
+    openStudy:typeof host.openExtension==='function'&&desks.has('study-transfer')?
+      roots=>host.openExtension('study-transfer','openForStudies',roots):host.openStudy
+  };
+  return adapt(joined, attachExperimentDiagnostics, {
     view:'experiment-diagnostics', render:true,
     collections:['experiment_diagnostics','sources','profiles','scenarios','grids','runs','observations'],
     prefixes:['diagnostics.']
