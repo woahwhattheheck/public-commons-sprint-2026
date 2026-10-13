@@ -13,6 +13,9 @@ from pathlib import Path
 import tempfile
 
 FILES = [
+    "source_tools/receiving_water_course.py",
+    "source_tools/receiving_water_browser.mjs",
+    "source_tools/RECEIVING_WATER_COURSE.md",
     "model/receiving_water_chemistry.py",
     "operator/web/receiving-water-chemistry.mjs",
     "operator/RECEIVING_WATER_CHEMISTRY.md",
@@ -147,10 +150,14 @@ WATER_RELEASE_PREVIOUS_SHA256 = {
         "550377cff80cf9c3e21242fadbaaaf64c1133051780dd82132af5ceff9d840d2"
     ],
     "operator/install_chemistry.py": [
-        "2e999e65b2eb5fdb772eb266afbfea57f1c9f784ffefa608c2eb4089091bbc39"
+        "2e999e65b2eb5fdb772eb266afbfea57f1c9f784ffefa608c2eb4089091bbc39",
+        "d589f31f53a961b6eb7939ae9fd924d6a59fa96ec275892fc5979c38280326a8"
     ],
     "model/reach_chemistry/io.py": [
         "249150dfa06f9ecbcfa3b38187d23bdc46946e28eaa930fa062b369fa04ccccc"
+    ],
+    "operator/RECEIVING_WATER_CHEMISTRY.md": [
+        "e03a791127af511d2a7e8ba9eac1b495f496509b22a111b7859a4b578fed12dd"
     ]
 }
 

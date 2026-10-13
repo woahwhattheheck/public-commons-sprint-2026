@@ -62,6 +62,38 @@ python -B /PATH/TO/SELECTED/operator/install_chemistry.py \
   --source-bank /PATH/TO/COMPLETE/receiving-water-source-bank.json
 ```
 
+When receiving one ordinary source-bank file, first materialize that exact file and use the full SHA-256 printed in its original handoff. The following bootstrap verifies the complete bank and extracts only its exact maintained installer into a **new owned directory**. It leaves the original bank bytes in place:
+
+```sh
+python -B - /ABS/receiving-water-source-bank.json /ABS/NEW/installer SOURCE_BANK_SHA256 <<'PY'
+import hashlib, json, pathlib, sys
+bank, target, expected = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3]
+raw = bank.read_bytes()
+if hashlib.sha256(raw).hexdigest() != expected:
+    raise SystemExit("Original source-bank SHA-256 differs")
+document = json.loads(raw.decode("utf-8"))
+if document.get("schema") != "commons.source-bank/v1":
+    raise SystemExit("Select the original complete Chemistry source bank")
+rows = [r for r in document["files"] if r["path"] == "operator/install_chemistry.py"]
+if len(rows) != 1:
+    raise SystemExit("Source bank needs one complete original installer")
+row = rows[0]
+body = row["content"].encode("utf-8")
+if len(body) != row["bytes"] or hashlib.sha256(body).hexdigest() != row["sha256"]:
+    raise SystemExit("Installer body differs from its original manifest")
+target.mkdir(parents=True, exist_ok=False)
+with (target / "install_chemistry.py").open("xb") as stream:
+    stream.write(body)
+print(target / "install_chemistry.py")
+PY
+
+python -B /ABS/NEW/installer/install_chemistry.py \
+  --application /ABS/OWNED/COMPLETE_APPLICATION \
+  --source-bank /ABS/receiving-water-source-bank.json
+```
+
+The actual original application and Workspace remain selected by the accepting native owner. The bank preserves all unmodified installed dependencies; it does not initialize a replacement application or Workspace. The current receiver accepts the exact earlier engine3 and issued source editions, including the following report/CSV presentation upgrade. An unrelated source edit is still returned for composition.
+
 It checks exact known predecessors, copies complete owned source files, preserves unrelated installed application modules and uses the original extension registry. Independent changes require composition at their actual current source. The selected bank includes original data, complete new engine, full operator desk, reports, this guide and native course; it does not replace the complete scientific application with a small wrapper.
 
 ## Original native operation and rendering
@@ -75,3 +107,7 @@ python -B -m model.reach_chemistry.study_storage --output /ABS/OWNED/NEW/PHYSICS
 Reconcile any already-issued handle before starting. Preserve accepted R01/R02, teaching12, regional12 and other owners' new runs. The complete physics programme covers filling, draining, water-only evaporation, decay, inverse-volume settling, phased multi-reach chemical transport, attribution, derivative comparison and original checkpoint continuation.
 
 The producing peer must run/open/render the exact outgoing edition, **look at the actual rendered screens and screenshots**, and operate its important populated, empty, loading, error and recovery states at desktop and narrow widths. Open the full report and every attachment; operate real source mapping, preview, preparation, run, report, download, editable receiving and independent reopen. Fix actual clipped or unstyled output in the existing clean industrial design. Return the original artifacts and images to the source owners. This is the original whole product receiving course; broad unrelated repository suites are unnecessary.
+
+## Continue the original full application course
+
+The complete invocation and receiving contract is in [`source_tools/RECEIVING_WATER_COURSE.md`](../source_tools/RECEIVING_WATER_COURSE.md). Its `receiving_water_course.py` uses the existing application, selected Workspace and actual Python/Node/Playwright/Chromium. Select either an original one-phase chemical scenario with its flow/reach IDs or the explicitly authored conservative unit-response option. The course retains all twelve source files, operates all four seasonal source mappings and original queued calculations, opens complete reports and downloads, receives each editable package, saves a later recipient notes edition and cold-opens a complete portable Workspace. Preserve its original output/scratch directories and course journal across interruption. The accepting owner must view the produced screenshots and use the outgoing reports; source completion and captured images alone do not establish rendered acceptance.
