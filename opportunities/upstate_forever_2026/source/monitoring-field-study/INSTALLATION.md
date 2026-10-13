@@ -148,3 +148,11 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
 
+
+## Continue a retained field selection into an editable assignment
+
+The complete original ten-file Field assignments component (PR4349/4406/4451, source8b97244c) is included in this same guarded installation. Its separate registered **Field assignments** view previews the retained source/selection, saves an editable native Implementation plan, retains all explicit unassigned areas and selected rounds, and reopens the original report and portable project. Use `source/monitoring_field_assignment/RECEIVING.md` and the included original native/browser receiving commands. Original selection JSON, assignment engine and source semantics are unchanged; observation points are not silently converted into campaign stations.
+
+The existing registered application must include its original Implementation core (`model/implementation.py`, `model/implementation_schema.py`, `model/portable_implementation.py`); this installer checks and preserves those shared modules. Start the original operator normally on the independently installed application copy so its new descriptor loads. Preserve an already admitted operation and current scientific Workspace.
+
+The retained field-support source manifest now contains the producer's exact corrected descriptors: three formerly omitted nested manifests are included in every entry, raising each companion list from223 to226. The old collection371fca0c remains a historical edition and is not relabelled or rewritten. Import the corrected complete original scientific package through the original source importer to create its own native collection identity. Existing scientific selection/support/frontier/plan IDs and body hashes are unchanged. The earlier delivered eight-file source/manifest identity remains historical provenance; the corrected source-manifest SHA is cfa0cb8bb0a0d7c7054eed8e37f479947d951aba6f4dfc3a3f64e08e3ce2dc88.
