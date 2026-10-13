@@ -422,6 +422,21 @@ class Eco13Operator:
             record_id = _id(payload.get("record_id", payload.get("id")))
             if operation == "record":
                 return self._view(workspace_key, record_id)
+            if operation == "economic-sources":
+                from eco13_economics import CatalogueChanged, catalog as economic_sources
+                scope, record = _read_record(ws, record_id)
+                comparison = self._json(scope, record["files"]["comparisons"])
+                try:
+                    value = economic_sources(
+                        ws, record, comparison,
+                        offset=_integer(payload.get("offset"), 0),
+                        limit=_integer(payload.get("limit"), 25, minimum=1, maximum=100),
+                        listing_sha256=payload.get("listing_sha256") or None,
+                    )
+                except CatalogueChanged as error:
+                    self._fail("ECO13_SOURCE_COLLECTION_CHANGED", error, 409)
+                value["workspace_key"] = workspace_key
+                return value
             if operation == "rows":
                 scope, record = _read_record(ws, record_id)
                 comparison = self._json(scope, record["files"]["comparisons"])
