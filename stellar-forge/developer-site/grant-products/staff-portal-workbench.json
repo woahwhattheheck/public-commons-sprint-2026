@@ -1,0 +1,87 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "staff-portal-workbench",
+  "heading": "## Staff Portal Workbench: private complete source, accountable staff operations and independent customer receiving",
+  "sources": [
+    {
+      "id": "staff-portal-maintained-contract-1",
+      "label": "Maintained Applications/product distribution composition",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/specification.mjs",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 29002,
+          "sha256": "c1bc927b90c033aa0789642cac6b53a27a93df3968b672341de60825d1ea7a6f",
+          "git_blob": "c6d3ca93a5afc233c2b642dbf56c9cf566f4b7d0"
+        }
+      ]
+    },
+    {
+      "id": "staff-portal-maintained-contract-2",
+      "label": "Exact source selection and complete declared support",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/source-selection.mjs",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 14936,
+          "sha256": "2f572fadba76be2332b33a5e575aac656707bfee36a4983619f004547be9d8aa",
+          "git_blob": "7ee2721f6787fa0f59cd44b1d4e9e9d6d0e5012c"
+        }
+      ]
+    },
+    {
+      "id": "staff-portal-maintained-contract-3",
+      "label": "Installed product package identity",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/product-package.mjs",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 3764,
+          "sha256": "e1f33fd1940b62c7ede90288ff2ad36da529a197b06e059e8b3b6e27fba1e76d",
+          "git_blob": "2c668933f214f201137ac6d3c6b7410525955c9b"
+        }
+      ]
+    },
+    {
+      "id": "staff-portal-maintained-contract-4",
+      "label": "Original grant workspace and Installation contribution",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/grant-workspace.json",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 6388,
+          "sha256": "e092b7ae2c716b84b66b489d718e84899258aa19713956bc232301f9785703f4",
+          "git_blob": "db44f2451fa5c6efcb017cf713aaed9ce1e76691"
+        }
+      ]
+    },
+    {
+      "id": "staff-portal-maintained-contract-5",
+      "label": "Maintained Merchant provider registration",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-provider-tools.json",
+      "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+      "editions": [
+        {
+          "commit": "71a4365be2511e60e839bbbbcd8c98eccd0a58b4",
+          "bytes": 737,
+          "sha256": "64b29c1293acb077c3f318a0dee1b6dd17985d61de07755e49996d7d2673995c",
+          "git_blob": "ef9552d29cd899b60e5f9317bb0f8398cb8dd0da"
+        }
+      ]
+    }
+  ]
+}
