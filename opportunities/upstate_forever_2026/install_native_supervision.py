@@ -1,0 +1,396 @@
+"""Install native supervision into a current cumulative Upper Savannah source copy."""
+from __future__ import annotations
+import argparse
+import ast
+import datetime as dt
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import tempfile
+
+MARKER = "ES-SUPERVISION-20261012"
+MEMBERS = ("model/native_worker.py", "operator/native_jobs.py", "operator/programme_jobs.py",
+           "operator/web/jobs.mjs", "operator/web/jobs.css", "operator/NATIVE_JOBS.md",
+           "install_native_supervision.py")
+PREVIOUS = {
+    "model/native_worker.py": [
+        "9f9db4a2a90e05a2ac10adc330234c6e0d15d9a1ff68421c95994c5060e162bd",
+        "9f9db4a2a90e05a2ac10adc330234c6e0d15d9a1ff68421c95994c5060e162bd"
+    ],
+    "operator/native_jobs.py": [
+        "0354dede58377c16365d57e14b30c05cb708397d5a5ff54aff1088a5ffe302e2",
+        "1cb382f7dead82d235ad990f8f367e101012468b62bcf9aa6d8e96e5655cb4ef",
+        "8f6540415880ff5d32a332b3705470be0c934b94918e9a6375180725ac6fc124",
+        "f8f0b481ce4230f1695e0e441ddc9d69c46be629f37139444b76371031a2200e"
+    ],
+    "operator/web/jobs.mjs": [
+        "6ca348832532240d0419b803be15058cea53f879cb6d71320fc34609d5ce1e55",
+        "860c7187d6e9ac5a7c8fb8ecb109a70a32d96a613209ab7bf8ccb57b16470a8b",
+        "2d319c934b3433e30dcaca07179396ca9c10315b953ff847aa5904ede92bae24"
+    ],
+    "operator/web/jobs.css": [
+        "3ae4db4b034aa76dedc90082f8f8d8d8419da20e93de3bac2594480d0e314654",
+        "3ae4db4b034aa76dedc90082f8f8d8d8419da20e93de3bac2594480d0e314654"
+    ],
+    "install_native_supervision.py": [
+        "28c2f3865c877cad45a5d33fe1c20f95a7b63780b18a188df49d1f3a1bf4582b",
+        "1384be68704372c5a68e85defeb16fe9d15e393c7b6cca3bf2a24426b85281a8",
+        "c28f73394b3f90573ac670d95d45eeca18d14552e5775589f6256a5a89900a0f",
+        "fcbb50e445dfac018fbc01d054f8b6c9afc3714a848fd01f413640959a4020f1",
+        "9d78b60a83066f4ba6b03120011453477123aefeb4420d958a0b2be4c1aa326c"
+    ],
+    "operator/NATIVE_JOBS.md": [
+        "2b34253190fa9986b69f6576795a264b8a6830f1e8ce15187db8adcfe5f2c10b",
+        "bf738bea875b58b15a14fac187b652d20d174c8db1c60e4b942ec2d139ab7a4f",
+        "8f52ff27c0fb047a72b911c9ba0d8915fcca4afe2c79e7322c5b962a87fc07ad",
+        "035b9877c26d78bd388dccb579f37db4f6661c5e0d3a12889b57a9ad26c35976",
+        "6b0d383098e8e49fb25def068ec4d86b40ffc565389e48cc4a504bbf1ceca9fe"
+    ]
+}
+# Exact reviewed r6 source; preserve authored predecessors during current-main integration.
+PREVIOUS["operator/native_jobs.py"].append("c302f586cc963486fa426a0ad2b092dfc25506fd41f5f18aefa619e118731414")
+PREVIOUS["operator/web/jobs.mjs"].append("623428c34687a8a6ae3585ba3edcb39ca2f2f128a7228edbea0cd74c69463798")
+PREVIOUS["install_native_supervision.py"].append("f7f8eeb14775db385193054cc40de8288e4133fa8bcd451fc1a6f70f9db33ce8")
+PREVIOUS["operator/NATIVE_JOBS.md"].append("76ee80b7b1944ba2d46d5b285d295d0b91e66ec9f5bb1a03d0d94114b6d8bf51")
+
+# D406 revision2 is an accepted predecessor of route-registry integration.
+PREVIOUS["install_native_supervision.py"].append("81f28bb3ac6c0cd8d0328432a6e68e63c48cf90741501fedffcf8ca708d84e75")
+
+# First complete current-main bank, retained for a safe repeated upgrade.
+PREVIOUS["install_native_supervision.py"].append("ed7828c98bf5a77565dbef47cbf0a2dddd9b71dc77997630b84a1bf60c8ba18d")
+PREVIOUS["operator/NATIVE_JOBS.md"].append("ca2629a57c11c600bd19697d68d82eaafe1795640d1d08a45c9bdcf21a6ffd2c")
+
+DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
+                      '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def replace_one(text, before, after, label):
+    if text.count(before) != 1:
+        raise ValueError(label + " needs the current source join; found " + str(text.count(before)) + " anchors")
+    return text.replace(before, after, 1)
+
+
+def native_dispatch(text, *, retention=False):
+    """Compose either the original run or the exact ECO-RUN12 retained wrapper."""
+    retained = ('        if action == "run.start":\n'
+                '            from ecsa_runs.upstate import invoke_original_run\n'
+                '            return invoke_original_run(self, task, ws, required(value, "run_id"))\n')
+    original = ('        if action == "run.start":\n'
+                '            return ws.run(required(value, "run_id"))\n')
+    if retained in text:
+        return replace_one(text, retained,
+            '        if action == "run.start":\n'
+            '            return self.native_jobs.execute_retained(task, ws)\n',
+            "retained native run composition")
+    if original in text:
+        call = "execute_retained" if retention else "execute"
+        return replace_one(text, original,
+            '        if action == "run.start":\n'
+            '            return self.native_jobs.' + call + '(task, ws)\n',
+            "native run dispatch")
+    if text.count("return self.native_jobs.execute(task, ws)") == 1:
+        return (replace_one(text, "return self.native_jobs.execute(task, ws)",
+                            "return self.native_jobs.execute_retained(task, ws)",
+                            "retention around existing supervision") if retention else text)
+    if text.count("return self.native_jobs.execute_retained(task, ws)") == 1:
+        return text
+    raise ValueError("The current native run dispatch needs its retained/supervised source join")
+
+
+def programme_server_patch(text):
+    previous_cursor = 'expected_run=one("run_id", "")))'
+    current_cursor = ('expected_run=one("run_id", ""), '
+                      'expected_execution=one("execution_id", "")))')
+    if previous_cursor in text:
+        text = replace_one(text, previous_cursor, current_cursor,
+                           "same-run process log continuation")
+    substitutions = (
+        ('if task["action"] == "run.start" and task["state"] != "queued":',
+         'if self.native_jobs.supports(task) and task["state"] != "queued":'),
+        ('if task["action"] == "run.start":\n            task["_native_job"] = self.native_jobs.snapshot(task)',
+         'if self.native_jobs.supports(task):\n            try:\n                task["_native_job"] = self.native_jobs.snapshot(task)\n            except NativeJobError as error:\n                if error.code != "PROGRAMME_PREPARING":\n                    raise'),
+        ('stream=one("stream", "native"), offset=one("offset", "0")))',
+         'stream=one("stream", "native"), offset=one("offset", "0"),\n'
+         '                        expected_run=one("run_id", ""), expected_execution=one("execution_id", "")))'))
+    for before, after in substitutions:
+        if before in text:
+            text = replace_one(text, before, after, "programme native operator registration")
+        elif after not in text:
+            raise ValueError("The current operator needs its programme supervision registration")
+    ast.parse(text)
+    return text
+
+
+def programme_patch(text):
+    original = '            result = manager.resume(key, only_runs=payload.get("only_runs"))\n'
+    joined = ('            # ' + MARKER + ' programme execution\n'
+              '            result = self.operator.native_jobs.execute_programme(\n'
+              '                task, manager, key, only_runs=payload.get("only_runs"))\n')
+    if joined not in text:
+        text = replace_one(text, original, joined, "original programme resume dispatch")
+    pair = '            result = manager.create_pair_completion(key, expected_preview_id=payload.get("expected_preview_id"))\n'
+    pinned = ('            result = self.operator.native_jobs.create_pair_completion(\n'
+              '                task, manager, key, expected_preview_id=payload.get("expected_preview_id"))\n')
+    if pair in text:
+        text = replace_one(text, pair, pinned, "original paired task preview binding")
+    elif "compute.programme.pair-completion" in text and pinned not in text:
+        raise ValueError("The current paired completion creation needs its original task preview join")
+    ast.parse(text)
+    return text
+
+
+def builtin_route_patch(text):
+    """Register the native route in the existing extension collision check."""
+    keywords = [node for node in ast.walk(ast.parse(text))
+                if isinstance(node, ast.keyword) and node.arg == "builtin_routes"]
+    if len(keywords) != 1:
+        raise ValueError("The current extension registry needs its native route join")
+    node = keywords[0].value
+    routes = ast.literal_eval(node)
+    if not isinstance(routes, (tuple, list)):
+        raise ValueError("The original built-in routes must remain a literal sequence")
+    route = ("GET", "/api/native-job")
+    count = routes.count(route)
+    if count == 1:
+        return text
+    if count:
+        raise ValueError("The native built-in route is registered more than once")
+    updated = [*routes, route]
+    replacement = repr(tuple(updated) if isinstance(routes, tuple) else updated)
+    segment = ast.get_source_segment(text, node)
+    if not segment:
+        raise ValueError("The original built-in route registry has no source span")
+    return replace_one(text, segment, replacement, "native built-in route registration")
+
+
+def server_patch(text, *, retention=False):
+    text = builtin_route_patch(text)
+    if "# " + MARKER in text:
+        required = ("self.native_jobs = NativeJobs(self)",
+                    '"/api/native-job"', "jobs.mjs", "NativeJobCancelled")
+        if any(token not in text for token in required):
+            raise ValueError("A partial native supervision registration needs its current source join")
+        previous = '            final_state = "cancelled" if isinstance(error, NativeJobCancelled) else "failed"\n'
+        if previous in text:
+            text = replace_one(text, previous, DETACH_DISPOSITION, "native graceful detach")
+        elif DETACH_DISPOSITION not in text:
+            raise ValueError("The current native task disposition needs its graceful-detach join")
+        if "from native_jobs import NativeJobs, NativeJobError, NativeJobCancelled\n" in text:
+            text = replace_one(text,
+                "from native_jobs import NativeJobs, NativeJobError, NativeJobCancelled\n",
+                "from native_jobs import NativeJobs, NativeJobError, NativeJobCancelled, NativeJobDetached\n",
+                "native detach import")
+        if "NativeJobDetached" not in text.split("def summary_error", 1)[0]:
+            raise ValueError("The current native supervisor import needs its detach type")
+        text = native_dispatch(text, retention=retention)
+        return programme_server_patch(text)
+    import_anchor = "from model import portable\n"
+    operator_path = "sys.path.insert(0, str(Path(__file__).resolve().parent))\n"
+    if import_anchor + operator_path in text:
+        import_anchor += operator_path
+        path_setup = ""
+    else:
+        path_setup = operator_path
+    text = replace_one(text, import_anchor,
+        import_anchor + path_setup + "# " + MARKER +
+        "\nfrom native_jobs import NativeJobs, NativeJobError, NativeJobCancelled, NativeJobDetached\n", "native import")
+    text = replace_one(text, "def summary_error(error):\n",
+        "def summary_error(error):\n    if isinstance(error, NativeJobError):\n        return {\"code\": error.code, \"message\": str(error)}, error.status\n", "native error classification")
+    text = replace_one(text, "        self.closing = False\n",
+        "        self.closing = False\n        self.native_jobs = NativeJobs(self)\n", "native supervisor")
+    text = replace_one(text,
+        "    def cancel(self, key):\n        with self.lock:\n            task = self.task(key)\n",
+        "    def cancel(self, key):\n        with self.lock:\n            task = self.task(key)\n"
+        "            if task[\"action\"] == \"run.start\" and task[\"state\"] != \"queued\":\n"
+        "                return self.native_jobs.request_stop(task)\n", "native stop")
+    text = replace_one(text,
+        '            task.update(state="failed", error=detail, ended_at=now())\n'
+        '            attempt.update(state="failed", error=detail, ended_at=task["ended_at"])\n',
+        DETACH_DISPOSITION +
+        '            task.update(state=final_state, error=detail, ended_at=now())\n'
+        '            attempt.update(state=final_state, error=detail, ended_at=task["ended_at"])\n', "native task disposition")
+    text = native_dispatch(text, retention=retention)
+    text = replace_one(text,
+        '    def task_view(self, key):\n        task = self.task(key)\n',
+        '    def task_view(self, key):\n        task = self.task(key)\n'
+        '        if task["action"] == "run.start":\n            task["_native_job"] = self.native_jobs.snapshot(task)\n', "native task view")
+    text = replace_one(text,
+        '                if url.path == "/api/task":\n',
+        '                if url.path == "/api/native-job":\n'
+        '                    return self.send_json(200, self.app.native_jobs.view(one("id"), workspace,\n'
+        '                        stream=one("stream", "native"), offset=one("offset", "0")))\n'
+        '                if url.path == "/api/task":\n', "native console route")
+    # Current shared host unions the original asset set with registered assets.
+    # Modify only that original literal, retaining the current registry expression.
+    asset_sets = []
+    for node in ast.walk(ast.parse(text)):
+        if (not isinstance(node, ast.Compare) or not isinstance(node.left, ast.Name)
+                or node.left.id != "selected" or len(node.ops) != 1
+                or not isinstance(node.ops[0], ast.NotIn) or len(node.comparators) != 1):
+            continue
+        candidate = node.comparators[0]
+        while isinstance(candidate, ast.BinOp) and isinstance(candidate.op, ast.BitOr):
+            candidate = candidate.left
+        if isinstance(candidate, ast.Set):
+            names = ast.literal_eval(candidate)
+            if {"app.mjs", "index.html"} <= names:
+                asset_sets.append((candidate, names))
+    if len(asset_sets) != 1:
+        raise ValueError("The current static asset registry needs a joined native console registration")
+    node, names = asset_sets[0]
+    segment = ast.get_source_segment(text, node)
+    registered = "{" + ", ".join(repr(name) for name in sorted(names | {"jobs.mjs", "jobs.css"})) + "}"
+    text = replace_one(text, segment, registered, "native console asset registry")
+    return programme_server_patch(text)
+
+
+def browser_patch(text):
+    if "// " + MARKER in text:
+        if "nativeJobs.taskActions(row)" not in text or "nativeJobs.dispatch(button)" not in text:
+            raise ValueError("A partial native console registration needs its current source join")
+        return text
+    text = "// " + MARKER + "\nimport {attachNativeJobs} from './jobs.mjs';\n" + text
+    text = replace_one(text, "function toast(message){",
+        "const nativeJobs=attachNativeJobs({api,endpoint,detail,refresh,getWorkspace:()=>workspace,"
+        "getDetailContext:()=>detailContext,openItem,toast,getState:()=>state});\nfunction toast(message){", "native console attachment")
+    text = replace_one(text, "customerReviews.taskActions(row)+",
+        "nativeJobs.taskActions(row)+customerReviews.taskActions(row)+", "native task console")
+    text = replace_one(text, "  }else if(kind==='comparisons'){\n",
+        "    content+=nativeJobs.runActions(row);\n  }else if(kind==='comparisons'){\n", "native run console")
+    text = replace_one(text, " const action=button.dataset.action,id=button.dataset.id;\n",
+        " const action=button.dataset.action,id=button.dataset.id;\n"
+        " if(action?.startsWith('native-job-'))return nativeJobs.dispatch(button);\n", "native browser dispatch")
+    text = replace_one(text,
+        "async function selectWorkspace(id){\n",
+        "async function selectWorkspace(id){\n nativeJobs.detach();\n", "native workspace change")
+    return text
+
+
+def portable_patch(text):
+    """Retain current installers and the original root retention package."""
+    for variable, additions in (
+            ("APPLICATION_FILES", ("install_native_supervision.py", "install_extensions.py")),
+            ("APPLICATION_DIRECTORIES", ("ecsa_runs",))):
+        tree = ast.parse(text)
+        entries = [node for node in tree.body if isinstance(node, ast.Assign)
+                   and any(isinstance(target, ast.Name) and target.id == variable
+                           for target in node.targets)]
+        if len(entries) != 1:
+            raise ValueError("The current portable application inventory needs its " + variable + " join")
+        node = entries[0].value
+        names = ast.literal_eval(node)
+        if not isinstance(names, (list, tuple)) or not all(isinstance(name, str) for name in names):
+            raise ValueError("The current portable inventory must retain its exact names")
+        updated = list(names)
+        for name in additions:
+            if name not in updated:
+                updated.append(name)
+        if list(names) == updated:
+            continue
+        segment = ast.get_source_segment(text, node)
+        if not segment:
+            raise ValueError("The original portable inventory has no source segment")
+        replacement = repr(tuple(updated) if isinstance(names, tuple) else updated)
+        text = replace_one(text, segment, replacement, "portable application closure")
+    ast.parse(text)
+    return text
+
+
+def atomic_write(path, body, mode=0o644):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".native-install-", delete=False) as out:
+            pending = Path(out.name)
+            os.fchmod(out.fileno(), mode)
+            out.write(body)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(pending, path)
+        pending = None
+        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    finally:
+        if pending:
+            pending.unlink(missing_ok=True)
+
+
+def install(application, increment, *, retention=False):
+    application, increment = Path(application).resolve(strict=True), Path(increment).resolve(strict=True)
+    originals = {name: (application / name).read_bytes()
+                 for name in ("operator/server.py", "operator/web/app.mjs", "model/portable.py")}
+    changed = {
+        "operator/server.py": server_patch(originals["operator/server.py"].decode("utf-8"), retention=retention).encode("utf-8"),
+        "operator/web/app.mjs": browser_patch(originals["operator/web/app.mjs"].decode("utf-8")).encode("utf-8"),
+        "model/portable.py": portable_patch(originals["model/portable.py"].decode("utf-8")).encode("utf-8")}
+    programme_path = application / "operator/programmes.py"
+    if programme_path.exists():
+        originals["operator/programmes.py"] = programme_path.read_bytes()
+        changed["operator/programmes.py"] = programme_patch(
+            originals["operator/programmes.py"].decode("utf-8")).encode("utf-8")
+    for name in MEMBERS:
+        body = (increment / name).read_bytes()
+        if name.endswith(".py"):
+            ast.parse(body.decode("utf-8"))
+        destination = application / name
+        if destination.exists():
+            current = destination.read_bytes()
+            if current != body and sha(current) not in PREVIOUS.get(name, []):
+                raise ValueError("An authored native supervision member already exists; compose its source: " + name)
+            originals[name] = current
+        changed[name] = body
+    edition = sha(json.dumps({name: sha(body) for name, body in sorted(changed.items())},
+                                      sort_keys=True).encode())
+    backup = application / ".native-supervision-preimages" / edition
+    backup.mkdir(parents=True, exist_ok=True)
+    for name, body in originals.items():
+        if not (backup / name).exists():
+            atomic_write(backup / name, body)
+    for name, body in originals.items():
+        if (application / name).read_bytes() != body:
+            raise ValueError("Concurrent source changed before native supervision installation: " + name)
+    # Install additive modules first, then the narrow current-source registration.
+    ordered = [*MEMBERS, "operator/server.py", "operator/web/app.mjs", "model/portable.py"]
+    if "operator/programmes.py" in changed:
+        ordered.append("operator/programmes.py")
+    for name in ordered:
+        destination = application / name
+        if name in originals:
+            if not destination.exists() or destination.read_bytes() != originals[name]:
+                raise ValueError("Concurrent source changed during native supervision installation: " + name)
+        elif destination.exists():
+            raise ValueError("Concurrent source appeared during native supervision installation: " + name)
+        mode = destination.stat().st_mode & 0o777 if destination.exists() else 0o644
+        if not destination.exists() or destination.read_bytes() != changed[name]:
+            atomic_write(destination, changed[name], mode)
+    receipt = {"schema": "upstate.native-supervision-install/v1", "operation_id": MARKER,
+               "installed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+               "edition": edition,
+               "preimages": {name: sha(body) for name, body in originals.items()},
+               "files": {name: {"bytes": len(body), "sha256": sha(body)} for name, body in changed.items()}}
+    if not (backup / "installation.json").exists():
+        atomic_write(backup / "installation.json", (json.dumps(receipt, indent=2) + "\n").encode())
+    return receipt
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--application", required=True)
+    parser.add_argument("--increment", default=str(Path(__file__).resolve().parent))
+    parser.add_argument("--retention", action="store_true",
+                        help="Compose the installed original ecsa_runs retention around native supervision")
+    args = parser.parse_args(argv)
+    print(json.dumps(install(args.application, args.increment, retention=args.retention), indent=2))
+
+
+if __name__ == "__main__":
+    main()
