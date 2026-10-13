@@ -7,6 +7,7 @@ import {
 } from '../../stellar/scf-starforge-20261009/sf101-merchant-receiver/api-application/workspace/configuration.mjs';
 import {verifyFile} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/resource-library/files.mjs';
 import {documentProvider,documentError,defaultDocumentSettings} from './contracts.mjs';
+import {documentCorrectionDraft,composeDocumentCorrection} from './corrections.mjs';
 import {openDocumentAssemblyWorkspace} from './assembly-workspace.mjs';
 import {
   composeDocumentSources,readDocumentComposition,
@@ -225,6 +226,10 @@ export async function openDocumentCompositionWorkspace({workspace,sourceRoot,pro
       }),native,exports:await exportsFor(composition.directory,signal),assemblies:await assembliesFor(composition,signal),
       active:active.has(id)?operationView(active.get(id)):null};
   }
+  async function correctionDraft({id,sourceSha256,documentIds,newId,name,mode,reason,signal}={}){
+    const original=await source(id,hash(sourceSha256),signal);
+    return documentCorrectionDraft({source:original,documentIds,id:newId,name,mode,reason});
+  }
   function operation({operationId}={}){
     need(typeof operationId==='string'&&operations.has(operationId),'DOCUMENT_COMPOSITION_OPERATION_NOT_FOUND',
       'Refresh the saved composition to continue its original records.',404);
@@ -244,14 +249,17 @@ export async function openDocumentCompositionWorkspace({workspace,sourceRoot,pro
     const templates=Object.fromEntries(Object.entries(input.templates).map(([id,value])=>
       [id,uploadedFile(value,MiB)]));
     const plan=composeDocumentSources({request:input.request,dataset,templates});
+    return receivePlan(plan,input.id,signal,onProgress);
+  }
+  async function receivePlan(plan,id,signal,onProgress){
     const raw=encoded(plan),sha256=digest(raw);
     signal.throwIfAborted();
     const temporary=join(sourceRoot,'.composition-source-'+randomUUID()+'.json');
     try{
       await writeExact(temporary,raw);
-      const saved=await receiveDocumentComposition({source:temporary,directory:directoryFor(input.id),
+      const saved=await receiveDocumentComposition({source:temporary,directory:directoryFor(id),
         expectedSha256:sha256,signal});
-      need(saved.id===input.id,'DOCUMENT_COMPOSITION_ID_CHANGED');
+      need(saved.id===id,'DOCUMENT_COMPOSITION_ID_CHANGED');
       await onProgress({stage:'DOCUMENT_SOURCES_PREPARED',id:saved.id,...saved.counts});
       return sourceSummary(saved);
     }finally{await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
@@ -268,6 +276,12 @@ export async function openDocumentCompositionWorkspace({workspace,sourceRoot,pro
   }
   async function execute(kind,input,signal,onProgress){
     if(kind==='stage')return receiveUploaded(input,signal,onProgress);
+    if(kind==='correct'){
+      need(plain(input.draft)&&input.draft.id===input.id,'DOCUMENT_CORRECTION_DRAFT_REQUIRED');
+      const original=await source(identifier(input.draft.parent?.id),hash(input.draft.parent?.sourceSha256),signal);
+      const plan=composeDocumentCorrection({source:original,draft:input.draft});
+      return receivePlan(plan,input.id,signal,onProgress);
+    }
     if(kind==='restore'){
       need((input.sourceFile!==undefined)!==(input.source!==undefined),
         'DOCUMENT_COMPOSITION_RESTORE_SOURCE_REQUIRED');
@@ -384,11 +398,11 @@ export async function openDocumentCompositionWorkspace({workspace,sourceRoot,pro
   }
   function start(kind,input={}){
     need(!closing,'DOCUMENT_COMPOSITION_WORKSPACE_CLOSING','The customer workspace is closing.',409);
-    need(['stage','restore','prepare','run','receive','export','assembly-stage','assembly-prepare',
+    need(['stage','correct','restore','prepare','run','receive','export','assembly-stage','assembly-prepare',
       'assembly-run','assembly-receive','assembly-export'].includes(kind)&&plain(input),
       'DOCUMENT_COMPOSITION_ACTION_INVALID');
     const id=identifier(input.id);
-    if(kind!=='stage')hash(input.sourceSha256);
+    if(kind!=='stage'&&kind!=='correct')hash(input.sourceSha256);
     if(kind==='run'||kind==='assembly-run')hash(input.planSha256);
     if(kind.startsWith('assembly-'))identifier(input.assemblyId);
     if(kind.startsWith('assembly-')&&kind!=='assembly-stage')hash(input.assemblySha256);
@@ -537,5 +551,5 @@ export async function openDocumentCompositionWorkspace({workspace,sourceRoot,pro
     closePromise=Promise.allSettled([...pending.map(entry=>entry.promise),bundles.close()]).then(()=>undefined);
     return closePromise;
   }
-  return Object.freeze({workspace,sourceRoot,bundles,status,list,get,assembly,operation,start,cancel,download,close});
+  return Object.freeze({workspace,sourceRoot,bundles,status,list,get,assembly,correctionDraft,operation,start,cancel,download,close});
 }
