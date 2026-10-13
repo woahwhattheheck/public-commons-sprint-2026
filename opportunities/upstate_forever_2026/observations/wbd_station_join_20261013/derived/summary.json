@@ -1,13 +1,13 @@
 {
   "schema": "upstate.current-wbd-observation-join/v1",
-  "input_point_count": 184,
-  "unique_input_geometries": 183,
-  "captured_geometry_count": 183,
-  "completed_point_count": 184,
+  "input_point_count": 197,
+  "unique_input_geometries": 196,
+  "captured_geometry_count": 196,
+  "completed_point_count": 197,
   "pending_point_ids": [],
   "retained_domain_count": 217,
-  "matched_feature_count": 184,
-  "unique_current_match_count": 184,
+  "matched_feature_count": 197,
+  "unique_current_match_count": 197,
   "no_current_match_points": [],
   "multiple_current_match_points": [],
   "listed_huc_differences": [],
@@ -18,7 +18,14 @@
     "usgs_gauge:USGS-02197000",
     "usgs_gauge:USGS-02197020",
     "usgs_gauge:USGS-021973269",
-    "usgs_gauge:USGS-02197500"
+    "usgs_gauge:USGS-02197500",
+    "usgs_gauge:USGS-02196690:nldi_indexed",
+    "usgs_gauge:USGS-02196835:nldi_indexed",
+    "usgs_gauge:USGS-021968385:nldi_indexed",
+    "usgs_gauge:USGS-02197000:nldi_indexed",
+    "usgs_gauge:USGS-02197020:nldi_indexed",
+    "usgs_gauge:USGS-021973269:nldi_indexed",
+    "usgs_gauge:USGS-02197500:nldi_indexed"
   ],
   "outfall_coordinate_comparisons": [
     {
