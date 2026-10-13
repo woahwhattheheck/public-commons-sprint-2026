@@ -274,7 +274,7 @@ def teaching_markdown(case):
         results = course["results"] or {}
         progress = course["progress"]
         text += ("\n## Retained parameter course\n\nEnsemble: " + course["ensemble_id"]
-                 + "\n\nNative members complete: " + str(progress["complete"]) + " / "
+                 + "\n\nNative runs complete: " + str(progress["complete"]) + " / "
                  + str(progress["total"]) + ". Course state: " + str(results.get("state", "prepared"))
                  + ".\n\nThe paired-ensemble products use baseline minus alternative: positive means "
                    "reduction. Read their original per-metric common support, profile members and "
