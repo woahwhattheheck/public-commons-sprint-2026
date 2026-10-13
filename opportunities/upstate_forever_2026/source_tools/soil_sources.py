@@ -71,7 +71,10 @@ def _retry_at(record):
     if not value:
         return None
     if value.isdecimal():
-        origin = dt.datetime.fromisoformat(record["observed_at"])
+        origin_text = record.get("observed_at") or record.get("recovery_observed_at")
+        if not origin_text:
+            raise ValueError("Record the actual recovery time before continuing this retained Retry-After")
+        origin = dt.datetime.fromisoformat(origin_text)
         return origin + dt.timedelta(seconds=int(value))
     try:
         parsed = email.utils.parsedate_to_datetime(value)
@@ -127,6 +130,13 @@ class Sda:
                     raise ValueError("Original SDA HTTP " + str(prior["status"]) + " response is retained")
             if not self.resume:
                 raise ValueError("Continue the retained incomplete source request with --resume")
+            if (prior.get("headers", {}).get("Retry-After", "").isdecimal()
+                    and not prior.get("observed_at") and not prior.get("recovery_observed_at")):
+                # A killed receiver can retain HTTP headers before it records
+                # completion. Observe recovery once, retaining the full original
+                # backoff interval without inventing a provider receipt time.
+                prior["recovery_observed_at"] = now()
+                atomic_json(directory / prior["receipt_file"], prior)
             deadline = _retry_at(prior)
             if deadline and dt.datetime.now(dt.timezone.utc) < deadline:
                 raise ValueError("Original SDA Retry-After remains active until " + deadline.isoformat())
