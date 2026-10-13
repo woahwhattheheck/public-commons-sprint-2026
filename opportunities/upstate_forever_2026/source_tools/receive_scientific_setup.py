@@ -17,7 +17,7 @@ import sys
 
 from model.common import atomic_json, digest, file_digest, now, read_json, verify_file
 from model.workspace import Workspace
-from model import portable, reviews, setup_review
+from model import portable, reviews, setup_review, setup_configuration
 
 
 def _head(ws, review_id):
@@ -41,6 +41,22 @@ def _same_selection(ws, original):
     profile = ws._get("profiles", selection["profile_id"])
     if profile != original["specification"]["method"]["profile"]:
         raise ValueError("Reopened parameter profile differs from the selected original")
+    configuration = current["specification"]["method"].get("configuration")
+    if configuration:
+        actual = setup_configuration.profile_configuration(
+            ws, profile, current["specification"]["method"]["selected_models"])
+        if actual != configuration:
+            raise ValueError("Reopened configuration changed its original parameters, table cells or meanings")
+        primary, entry = ws.source_file(current["source_collection_id"], current["setup"]["source_id"])
+        companion = next((item for item in entry.get("companions", [])
+                          if (item.get("view_path") or item["filename"]) == "selected-parameters.csv"), None)
+        if companion is None:
+            raise ValueError("The configuration package lacks the selected parameter download")
+        parameter_path = primary.parent / "selected-parameters.csv"
+        if (parameter_path.stat().st_size != companion["bytes"]
+                or file_digest(parameter_path) != companion["sha256"]
+                or parameter_path.read_text(encoding="utf-8") != setup_configuration.parameter_csv(configuration)):
+            raise ValueError("The reopened parameter download differs from its captured scientific choices")
     scenarios = [ws._get("scenarios", key) for key in
                  [selection["baseline_scenario_id"], *selection["alternative_scenario_ids"]]]
     if scenarios != [original["specification"]["baseline"], *original["specification"]["alternatives"]]:
@@ -57,6 +73,10 @@ def _same_selection(ws, original):
         observation = ws._get("observations", row["id"])
         if observation["original"] != row["original"] or observation["metadata"] != row["metadata"]:
             raise ValueError("Reopened observations differ from their original record")
+        if "support_rows" in row:
+            actual_observation = setup_configuration.observation_configuration(observation)
+            if any(actual_observation.get(key) != row.get(key) for key in actual_observation):
+                raise ValueError("Reopened measurement support changed its original rows or interpretation")
     return {"grid_id": grid["id"], "profile_id": profile["id"],
             "baseline_scenario_id": scenarios[0]["id"],
             "alternative_scenario_ids": [row["id"] for row in scenarios[1:]],
@@ -64,6 +84,14 @@ def _same_selection(ws, original):
             "observation_ids": selection["observation_ids"],
             "setup_id": current["setup_id"], "review_id": current["review_id"],
             "source_collection_id": current["source_collection_id"],
+            "configuration": ({"profile_id": configuration["profile_id"],
+                               "coefficient_rows": len(configuration["table"]["rows"]),
+                               "original_columns": configuration["table"]["columns"],
+                               "source_sha256": configuration["table"]["sha256"],
+                               "native_parameters": len(configuration["parameters"]),
+                               "measurement_rows": sum(len(row.get("support_rows", []))
+                                                       for row in current["specification"]["observations"])}
+                              if configuration else None),
             "specification_sha256": current["setup"]["specification_sha256"],
             "latest_response_id": _head(ws, current["review_id"])}
 
