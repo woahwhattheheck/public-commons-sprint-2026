@@ -1,0 +1,13 @@
+{
+  "kind": "original-experiment-software-intake",
+  "native_invest_executed": false,
+  "original_parent_jobs": 8,
+  "native_result_selections": 24,
+  "matched_metric_rows": 80,
+  "portable_files": 197,
+  "original_sender_unchanged": true,
+  "original_job_keys_retained": true,
+  "hidden_native_files_retained": 24,
+  "duplicate_execution_prevented": true,
+  "elapsed_seconds": 0.75
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scientific-report-receiving",
+  "extend_components": {
+    "scientific-report-editions": {
+      "paths": [
+        "source/observed-report-20261013/RECEIVING.md",
+        "source/observed-report-20261013/receive_operator.py",
+        "source/observed-report-20261013/receive_browser.mjs",
+        "source/observed-report-20261013/receive_course.py",
+        "source/observed-report-20261013/RECEIVING_COURSE.md",
+        "source/observed-report-20261013/regional-report-course.example.json"
+      ]
+    }
+  },
+  "required_components": []
+}

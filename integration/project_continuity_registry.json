@@ -1,0 +1,40 @@
+{
+  "schema": "upstate.guarded-source-integration/v1",
+  "operation_id": "UPSTATE-INTEGRATED-DELIVERY-ECD1-20261012",
+  "edition": "upper-savannah-project-continuity-registry-20261013",
+  "base_source": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8N4P7NPQ",
+  "source_paths": [
+    "operator/project_continuity_registry.py",
+    "operator/extensions/project-continuity.json",
+    "operator/PROJECT_CONTINUITY_REGISTRY.md"
+  ],
+  "edits": [
+    {
+      "path": "operator/web/project_transfer.mjs",
+      "before": "  const available=task=>current()?.data?.project_transfer_actions?.includes(task.action)??task.handler_available!==false;",
+      "after": "  const available=task=>current()?.data?.project_continuity?.actions?.includes(task.action)??task.handler_available!==false;",
+      "purpose": "Read the full initialized handler set from the shared extension state."
+    },
+    {
+      "path": "operator/web/project_transfer.mjs",
+      "before": "    const transfers=state.data.project_transfers??[];",
+      "after": "    const transfers=state.data.project_continuity?.transfers??[];",
+      "purpose": "Read retained transfer history from the registry's one state key."
+    }
+  ],
+  "postimages": {
+    "operator/web/project_transfer.mjs": {
+      "base_bytes": 10689,
+      "base_sha256": "ab6108e244f51c1833364968c943a3775720974a67f6a9c4e9cd1a207a029c46",
+      "bytes": 10704,
+      "sha256": "d26c6ca9d536cdae76f768e0ea65f740318b8d85bd0b2e44d51911c0edbe36cd"
+    }
+  },
+  "host_contract": {
+    "registry_sha256": "ae573df9f2ad99307f34b8638ffe430b215670caecf6ad8bd669859918acfe5e",
+    "host_sha256": "f3e288e2e7d5137fb617f814b841d8a62a605ae6c2ee62b8d6fe46c9dac6b0bf",
+    "installer_sha256": "4eccf03de1a2445c6d91fd4df4ef43fdd12e01124f5420746ba4760e6947f261",
+    "state_key": "project_continuity",
+    "update_call": "mount(active_container, accepted_state)"
+  }
+}

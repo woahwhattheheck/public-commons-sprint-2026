@@ -1,0 +1,204 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "fieldwork-scientific-receiving",
+  "extend_components": {
+    "implementation": {
+      "paths": [
+        "IMPLEMENTATION_SOURCE_IMPORT.md",
+        "build_implementation_offline.py",
+        "docs/BRIEFING_FOLLOWUP.md",
+        "docs/IMPLEMENTATION_DISPATCH_REPORT.md",
+        "docs/IMPLEMENTATION_EVIDENCE_INTEGRATION.md",
+        "docs/IMPLEMENTATION_FIELD_CAPTURE.md",
+        "docs/IMPLEMENTATION_LAB_DISPATCH.md",
+        "docs/IMPLEMENTATION_LAB_METHOD_DEFINITIONS.md",
+        "docs/IMPLEMENTATION_LAB_RESULTS.md",
+        "docs/IMPLEMENTATION_METHOD_CONTEXT.md",
+        "docs/IMPLEMENTATION_NATIVE_RECEIVING.md",
+        "docs/IMPLEMENTATION_OBSERVATIONS.md",
+        "docs/IMPLEMENTATION_PLAN_REPORT_SOURCE.md",
+        "docs/IMPLEMENTATION_PORTABLE_RECEIVING.md",
+        "docs/IMPLEMENTATION_RESULTS_REVIEW.md",
+        "docs/IMPLEMENTATION_SOURCE_REPORTS.md",
+        "docs/OBSERVED_REPORT_RENDERING.md",
+        "docs/SCIENTIFIC_REPORT_BRIEFING.md",
+        "docs/implementation-native-guide.md",
+        "docs/implementation-operator-guide.md",
+        "install_implementation.py",
+        "integration/implementation_qc.json",
+        "model/IMPLEMENTATION_OUTCOMES_METHOD.md",
+        "model/IMPLEMENTATION_QC.md",
+        "model/briefing_implementation.py",
+        "model/client_briefing.py",
+        "model/implementation.py",
+        "model/implementation_cli.py",
+        "model/implementation_dispatch_report.py",
+        "model/implementation_economics.py",
+        "model/implementation_evidence.py",
+        "model/implementation_lab_dispatch.py",
+        "model/implementation_lab_results.py",
+        "model/implementation_observation_quality.py",
+        "model/implementation_observations.py",
+        "model/implementation_outcome_context.py",
+        "model/implementation_outcomes.py",
+        "model/implementation_qc.py",
+        "model/implementation_qc_actions.py",
+        "model/implementation_report_source.py",
+        "model/implementation_reporting.py",
+        "model/implementation_schema.py",
+        "model/implementation_sources.py",
+        "model/portable_implementation.py",
+        "model/scientific_briefing.py",
+        "model/scientific_report.py",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/LABORATORY_CYCLE.md",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/README.md",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/coverage.json",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/lab-request.json",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/mapping.json",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/plan.json",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+        "operator/extensions/implementation-outcomes.json",
+        "operator/extensions/implementation-qc.json",
+        "operator/extensions/implementation-report-source.json",
+        "operator/extensions/implementation.json",
+        "operator/implementation_operator.py",
+        "operator/implementation_outcomes.py",
+        "operator/implementation_qc.py",
+        "operator/implementation_report_source.py",
+        "operator/web/implementation.css",
+        "operator/web/implementation.mjs",
+        "operator/web/implementation_briefing.mjs",
+        "operator/web/implementation_catalog.json",
+        "operator/web/implementation_core.mjs",
+        "operator/web/implementation_dispatch.mjs",
+        "operator/web/implementation_evidence.mjs",
+        "operator/web/implementation_evidence_ui.mjs",
+        "operator/web/implementation_forms.mjs",
+        "operator/web/implementation_lab.mjs",
+        "operator/web/implementation_outcomes.mjs",
+        "operator/web/implementation_qc.mjs",
+        "operator/web/implementation_results.mjs",
+        "operator/web/implementation_source_reports.mjs",
+        "operator/web/implementation_workbench.html",
+        "source/implementation/20261013/greenwood-review-plan.json",
+        "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
+        "source/keowee-native-receiving-20261013/source-interval-journey.json",
+        "source_tools/build_wqp_field_intake.mjs",
+        "source_tools/prepare_scientific_briefing.py",
+        "source_tools/receive_briefing_followup.py",
+        "source_tools/receive_implementation.py",
+        "source_tools/receive_implementation_outcome_context.py",
+        "source_tools/receive_wqp_field_results.py",
+        "source_tools/receive_wqp_laboratory_cycle.py"
+      ],
+      "requires": [
+        "scientific-report-editions"
+      ]
+    },
+    "monitoring": {
+      "paths": [
+        "docs/MONITORING_EXPORT_STREAMING.md",
+        "docs/MONITORING_FIELDWORK_RETURN.md",
+        "model/MONITORING.md",
+        "model/MONITORING_FIELDWORK.md",
+        "model/MONITORING_OBSERVED_CONTEXT.md",
+        "model/MONITORING_STUDY_TRANSFER.md",
+        "model/monitoring_actions.py",
+        "model/monitoring_campaign.py",
+        "model/monitoring_cli.py",
+        "model/monitoring_common.py",
+        "model/monitoring_design.py",
+        "model/monitoring_field_return.py",
+        "model/monitoring_implementation.py",
+        "model/monitoring_network.py",
+        "model/monitoring_observed_context.py",
+        "model/monitoring_packet.py",
+        "model/monitoring_sources.py",
+        "model/monitoring_study_transfer.py",
+        "model/monitoring_workspace.py",
+        "model/requirements-monitoring.txt",
+        "operator/MONITORING_API.md",
+        "operator/extensions/monitoring.json",
+        "operator/monitoring.py",
+        "operator/monitoring_native.py",
+        "operator/monitoring_receiving.py",
+        "operator/static/monitoring.js",
+        "operator/web/monitoring-component.mjs",
+        "operator/web/monitoring-observed.mjs",
+        "operator/web/monitoring-study-transfer.mjs",
+        "operator/web/monitoring.css",
+        "operator/web/monitoring.mjs",
+        "operator/web/monitoring_field_return.mjs",
+        "operator/web/monitoring_fieldwork.mjs",
+        "source_tools/receive_monitoring_fieldwork.py",
+        "source_tools/return_monitoring_fieldwork.py"
+      ],
+      "requires": [
+        "implementation",
+        "study-transfer"
+      ],
+      "import_roots": [
+        "source_tools"
+      ]
+    },
+    "parameter-studies": {
+      "paths": [
+        "source_tools/receive_parameter_studies.py",
+        "docs/PARAMETER_STUDY_NATIVE_RECEIVING.md"
+      ],
+      "requires": [
+        "project-transfer"
+      ]
+    },
+    "project-transfer": {
+      "paths": [
+        "model/portable_implementation.py",
+        "model/portable_parameter_studies.py",
+        "model/PARAMETER_STUDY_RECEIVING.md"
+      ]
+    },
+    "watershed-context": {
+      "paths": [
+        "model/watershed_briefing.py",
+        "docs/UTILITY_SOURCE_BRIEFING.md",
+        "model/client_briefing.py"
+      ]
+    },
+    "utility-source-receiving": {
+      "paths": [
+        "model/watershed_briefing.py",
+        "docs/UTILITY_SOURCE_BRIEFING.md"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "docs/SCIENTIFIC_REPORT_BRIEFING.md",
+        "model/client_briefing.py",
+        "model/scientific_briefing.py",
+        "source_tools/prepare_scientific_briefing.py"
+      ]
+    }
+  },
+  "source_reference": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "source_commit": "fdb5ecbc8e8d4fcb3824971a47b62ba9fb24039d",
+    "complete_application_closure": "312b68ddda446a59fd581ccdc4dd08203d5ebd4e",
+    "native_campaign_receiving": "eab342a70b92d65a5f7d94439a54e28df67b739c",
+    "streaming_campaign_packet": "0a8c98157554f5e684629ba1b31454666f08cd3d",
+    "briefing_followup": "bef8f145e9430a8181926c735a45c2ba7f3672c0",
+    "parameter_native_receiving": "707c8de0d38f684781c4256a17101c94e414e8ad",
+    "field_return": "1c008cb2785175dfd654ec60b9874b758fcb557a",
+    "streaming_monitoring_export": "4a1f317a98218baca9df009fd3454dd69af91a48",
+    "utility_source_briefing": "45287114e35e80af5df222484bb60713cddc816e",
+    "scientific_report_briefing": "3ed9093dcf110015719170e5133aa4dcbabd81b7",
+    "whole_plan_report_source": "146c1c61114d484d46d6c334a906d401961fe0c7",
+    "wqp_receiving_closure": {
+      "source_commit": "418453a5bad356c2d039b5b30c4a839244dc626f",
+      "native_course": "Original88-result field receiving → saved Outcomes → laboratory reconciliation → evidence handover → full report/archive/reopen",
+      "evidence_merge": "7a4728fdf79d7a51080ef87334742e4e02ed0a95",
+      "outcome_receiving_merge": "7378d095d455f53871f61779f77e9c67955a59be"
+    }
+  }
+}
