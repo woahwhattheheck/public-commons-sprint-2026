@@ -330,7 +330,7 @@ export function attachProgrammes(context) {
       '<section class="programme-output"><header class="section-header"><div><h3>Result catalogue</h3><p>Open the original quantities, units, geographic coverage and result files retained for these runs.</p></div>' +
       actionButton('open-report', 'Open saved catalogue', record.id, report || files.length ? '' : 'disabled') + '</header>' +
       (files.length ? fileList(files) : '<p class="note">Build the catalogue after a run finishes. Completed cases can be reported while other cases remain in the programme.</p>') + '</section>' +
-      ensembleCandidatesHTML(record) +
+      interactionProgrammeHTML(record) + ensembleCandidatesHTML(record) +
       '<details class="technical" data-programme-details="' + escapeHTML('selection:' + record.id) + '"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(record.selection, null, 2)) + '</pre></details></section>';
   }
@@ -342,6 +342,7 @@ export function attachProgrammes(context) {
     host.innerHTML = '<div class="programme-workbench"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Run programmes</h1><p>Run saved native cases, inspect progress, pause between calculations and continue the same work after reopening.</p></div>' +
       '<div class="page-actions">' + actionButton('create', 'Create programme') + actionButton('import', 'Import selections') +
       (catalogue?.experiments_available ? actionButton('experiment', 'Use saved experiment') : '') +
+      (catalogue?.interactions_available ? actionButton('interaction', 'Use conservation study') : '') +
       '<button type="button" data-view="runs">Native model runs</button></div></header><div class="notice error" data-programme-error role="alert"' +
       (latestError ? '' : ' hidden') + '>' + escapeHTML(latestError) + '</div>' + catalogueHTML() + programmeHTML() +
       '<p class="programme-method">Parameter designs and interpretation use the selected experiment and scientific profile. ' + methodLink + '.</p></div>';
@@ -451,7 +452,7 @@ export function attachProgrammes(context) {
         escapeHTML(value(row) ?? '—') + '</td>').join('') + '</tr>')) : '<p>No completed quantities are present in this saved catalogue.</p>') +
       '<p class="note">Whole-run totals retain each run’s actual valid area. Common-area changes are alternative minus baseline: negative values mean lower export under the alternative. Paired effect maps show baseline minus alternative, so positive map values mean lower export. The decision-report workflow provides the full catchment and sensitivity interpretation.</p>' +
       (asArray(report.notes).length ? '<ul>' + report.notes.map(note => '<li>' + escapeHTML(note) + '</li>').join('') + '</ul>' : '') +
-      fileList(asArray(report._downloads)) + '<details class="technical"><summary>Complete catalogue</summary><pre class="json-view">' +
+      interactionReportHTML(report.interactions) + fileList(asArray(report._downloads)) + '<details class="technical"><summary>Complete catalogue</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(report, null, 2)) + '</pre></details>';
   }
   async function showReport(id) {
@@ -693,6 +694,168 @@ export function attachProgrammes(context) {
       });
   }
 
+
+  function interactionProgrammeHTML(programme) {
+    if (!catalogue?.interactions_available) return '';
+    const busy = Boolean(activeTask(programme.id)) || Boolean(programme.active);
+    const studyProgramme = String(programme.selection?.source_reference || programme.source_reference || '').startsWith('upstate.native-interactions:');
+    const studies = asArray((programme.latest_report || programme.report)?.interactions?.studies);
+    return '<section class="programme-output"><header class="section-header"><div><h3>Conservation attribution</h3>' +
+      '<p>Connect the complete combination study to these original native runs. Attribution uses the common valid area across every retained combination.</p></div></header>' +
+      '<div class="programme-controls">' + actionButton('attach-interaction', 'Attach completed attribution', programme.id, busy ? 'disabled' : '') +
+      (studyProgramme ? actionButton('sync-interaction', 'Reconcile study attribution', programme.id, busy ? 'disabled' : '') : '') + '</div>' +
+      (studies.length ? '<p>' + studies.length + ' retained study ' + (studies.length === 1 ? 'is' : 'are') +
+        ' included in the saved result catalogue.</p>' : '<p class="note">A programme created from a conservation study automatically reconciles its attribution when all native runs finish. Attach an existing result to another programme with the same original baseline.</p>') +
+      '</section>';
+  }
+
+  function interactionReportHTML(interactions) {
+    const studies = asArray(interactions?.studies);
+    if (!studies.length) return '';
+    const cells = (row, fields) => '<tr>' + fields.map(field => '<td>' + escapeHTML(printable(
+      typeof field === 'function' ? field(row) : row[field])) + '</td>').join('') + '</tr>';
+    const scope = row => row.zone_id ?? row.scope_id ?? 'Whole study';
+    const renderRows = (rows, headers, fields) => {
+      const visible = rows.slice(0, 300);
+      return table(headers, visible.map(row => cells(row, fields))) +
+        (rows.length > visible.length ? '<p class="note">Showing the first 300 of ' + rows.length +
+          ' rows. The complete retained result and CSV downloads contain every row.</p>' : '');
+    };
+    return '<section class="programme-output"><h2>Conservation combination attribution</h2>' +
+      '<p class="note">Benefits below are baseline export minus combination export: positive values mean lower export. Each study uses its retained common support across all combinations and quantities. These values are separate from the programme’s alternative-minus-baseline columns.</p>' +
+      studies.map(study => {
+        const summaries = asArray(study.summaries), actions = asArray(study.action_attribution),
+          pairs = asArray(study.pair_interactions);
+        return '<section><h3>' + escapeHTML(study.title || 'Conservation study') +
+          '</h3><p class="mono">Plan ' + escapeHTML(study.plan_id || study.interaction_plan_id || '—') +
+          '<br>Result ' + escapeHTML(study.result_id || '—') + '</p>' +
+          renderRows(summaries,
+            ['Area', 'Quantity', 'Units', 'Common cells', 'Common area (ha)', 'Baseline export', 'Combined export',
+             'Combined benefit', 'Sum of action contributions', 'Allocation residual', 'Combined nonadditivity', 'Higher-order remainder', 'Support'],
+            [scope, 'metric', 'units', 'common_valid_cells', 'common_area_ha', 'baseline_annual_export',
+             'combined_annual_export', 'combined_benefit', 'sum_allocated_benefit', 'allocation_efficiency_residual',
+             'combined_nonadditivity', 'higher_order_remainder', 'support_status']) +
+          '<details><summary>Action contributions (' + actions.length + ')</summary>' +
+          renderRows(actions, ['Area', 'Quantity', 'Action', 'Units', 'Standalone benefit', 'Allocated benefit', 'Method', 'Permutation sampling SE'],
+            [scope, 'metric', row => row.action_title || row.action_id, 'units', 'standalone_benefit',
+             'shapley_benefit', 'allocation_method', 'permutation_sampling_standard_error']) +
+          '<p class="note">Permutation sampling standard error measures variation across sampled action orders. It does not quantify model or source uncertainty.</p></details>' +
+          (pairs.length ? '<details><summary>Pair interactions (' + pairs.length + ')</summary>' +
+            renderRows(pairs, ['Area', 'Quantity', 'Action A', 'Action B', 'Units', 'Pair benefit', 'Sum of standalone benefits', 'Pair nonadditivity'],
+              [scope, 'metric', 'action_a', 'action_b', 'units', 'pair_benefit', 'sum_standalone_benefit', 'pair_nonadditivity']) +
+            '<p class="note">Pair nonadditivity is pair benefit minus the sum of the two standalone benefits, on this study’s common area.</p></details>' : '') +
+          '<details class="technical"><summary>Retained support, provenance and complete attribution</summary><pre class="json-view">' +
+          escapeHTML(JSON.stringify(study, null, 2)) + '</pre></details></section>';
+      }).join('') + '</section>';
+  }
+
+  async function fromInteraction(planId) {
+    const requestedWorkspace = workspaceKey();
+    const available = await api(query('catalog'));
+    if (workspaceKey() !== requestedWorkspace) return;
+    const plans = asArray(available.interaction_plans).filter(row => row.state !== 'unavailable');
+    if (!plans.length) {
+      detail('Prepare a conservation study', '<p>Save a combination study in this workspace to retain its ordered actions, scientific inputs and complete coalition design. The programme will continue those same native cases.</p>',
+        {kind: 'programme-interaction'});
+      return;
+    }
+    if (planId && !plans.some(row => row.id === planId)) throw new Error('The selected conservation study is absent from this workspace.');
+    let form, root, requestGeneration = 0, reviewed = null;
+    const current = () => requestedWorkspace === workspaceKey() && root?.isConnected &&
+      document.querySelector('#operation-form') === form;
+    const chosen = () => form.elements.namedItem('programme_interaction').value;
+    const preview = async () => {
+      const request = ++requestGeneration, key = chosen();
+      const target = root.querySelector('[data-interaction-programme-preview]');
+      reviewed = null; target.textContent = 'Reviewing the retained study and original native selections…';
+      try {
+        const result = await api('/api/programmes/interaction-preview', {method: 'POST',
+          body: {workspace: requestedWorkspace, plan_id: key}});
+        if (!current() || request !== requestGeneration || key !== chosen()) return;
+        target.innerHTML = interactionPreviewHTML(result);
+        reviewed = key;
+        return result;
+      } catch (error) {
+        if (current() && request === requestGeneration) target.textContent = error.message || String(error);
+        throw error;
+      }
+    };
+    openForm('Use conservation study', 'Create a native run programme from the complete saved combination design.',
+      '<div class="programme-form" data-interaction-programme-form><label>Saved study<select name="programme_interaction" required>' +
+      plans.map(row => option(row, planId || plans[0].id)).join('') + '</select></label>' +
+      '<div data-interaction-programme-preview role="status" aria-live="polite"></div></div>',
+      'Save complete programme', async () => {
+        if (!current()) throw new Error('Reopen this study in its original workspace.');
+        const key = chosen();
+        if (reviewed !== key) await preview();
+        if (!current() || key !== chosen() || reviewed !== key) throw new Error('The selected study changed. Review the current study again.');
+        return submitAction('compute.programme.interaction', {plan_id: key});
+      }, () => {
+        form = document.querySelector('#operation-form'); root = form.querySelector('[data-interaction-programme-form]');
+        form.elements.namedItem('programme_interaction').addEventListener('change', () => { preview().catch(() => {}); });
+        preview().catch(() => {});
+      });
+  }
+
+  async function attachInteraction(programmeId) {
+    const requestedWorkspace = workspaceKey();
+    const available = await api(query('catalog'));
+    if (workspaceKey() !== requestedWorkspace) return;
+    const results = asArray(available.interaction_results).filter(row => row.state === 'complete');
+    if (!results.length) {
+      detail('Complete a combination study', '<p>Run the saved study and build its attribution result. Its original native results, common-area summary, contributions and files can then be attached to this programme.</p>',
+        {kind: 'programme-interaction-attachment', id: programmeId});
+      return;
+    }
+    let form, root;
+    const current = () => requestedWorkspace === workspaceKey() && root?.isConnected &&
+      document.querySelector('#operation-form') === form;
+    const selection = () => results.find(row => row.id === form.elements.namedItem('programme_interaction_result').value);
+    const show = () => {
+      const row = selection();
+      root.querySelector('[data-interaction-result-summary]').innerHTML = '<p>Study <span class="mono">' +
+        escapeHTML(row?.plan_id || '—') + '</span></p><p>Result <span class="mono">' + escapeHTML(row?.id || '—') +
+        '</span></p><p class="note">Attachment verifies the original baseline identity, retained coalition selections and every result artifact. It retains prior editions of the link and rebuilds the programme catalogue.</p>';
+    };
+    openForm('Attach completed conservation attribution', 'Select a retained result with the programme’s original native baseline.',
+      '<div class="programme-form" data-interaction-result-form><label>Completed study result<select name="programme_interaction_result" required>' +
+      results.map(row => option({...row, title: (row.title || 'Study') + ' · ' + short(row.id)}, results[0].id)).join('') +
+      '</select></label><div data-interaction-result-summary role="status"></div></div>',
+      'Attach and rebuild catalogue', async () => {
+        if (!current()) throw new Error('Reopen attribution in its original workspace.');
+        const row = selection();
+        if (!row) throw new Error('Choose a completed conservation study result.');
+        return submitAction('compute.programme.attach-interaction', {programme_id: programmeId, result_id: row.id});
+      }, () => {
+        form = document.querySelector('#operation-form'); root = form.querySelector('[data-interaction-result-form]');
+        form.elements.namedItem('programme_interaction_result').addEventListener('change', show); show();
+      });
+  }
+
+  function interactionPreviewHTML(result) {
+    const cases = asArray(result.cases), shown = cases.slice(0, 100);
+    const counts = result.counts || {};
+    return '<div class="notice"><strong>' + escapeHTML(counts.cases ?? cases.length) + ' retained combination cases</strong>' +
+      '<p>' + escapeHTML(counts.prepared ?? 0) + ' prepared · ' + escapeHTML(counts.complete ?? 0) +
+      ' complete. Estimator: ' + escapeHTML(labelState(result.estimator)) + '.</p></div>' +
+      '<p>Original baseline <span class="mono">' + escapeHTML(result.baseline_run_id) + '</span><br>Grid <span class="mono">' +
+      escapeHTML(result.grid_id) + '</span> · Profile <span class="mono">' + escapeHTML(result.profile_id) +
+      '</span> · ' + escapeHTML(modelsLabel(result.models)) + '</p>' +
+      '<details open><summary>Ordered conservation actions (' + asArray(result.actions).length + ')</summary>' +
+      table(['Action', 'Retained scenario', 'Ordered patch indexes'], asArray(result.actions).map(row => '<tr><td>' +
+        escapeHTML(row.title || row.id) + '</td><td class="mono">' + escapeHTML(row.scenario_id) + '</td><td>' +
+        escapeHTML(asArray(row.patch_indexes).join(', ')) + '</td></tr>')) + '</details>' +
+      table(['Combination', 'Actions', 'Original native run', 'State'], shown.map(row => '<tr><td>' +
+        escapeHTML(row.key) + '</td><td>' + escapeHTML(asArray(row.action_ids).join(', ') || 'Baseline') +
+        '</td><td class="mono">' + escapeHTML(row.run_id || 'Prepared when programme is saved') + '</td><td>' +
+        escapeHTML(labelState(row.state)) + '</td></tr>')) +
+      (cases.length > shown.length ? '<p>Showing the first 100 cases. The saved programme includes all ' + cases.length + ' cases.</p>' : '') +
+      '<p class="note">Saving prepares the original coalition selections and binds them to the shared native programme. Reopening or continuing uses those same identities and completed stages.</p>' +
+      (result.interpretation ? '<details><summary>Study interpretation</summary><pre class="json-view">' +
+        escapeHTML(typeof result.interpretation === 'string' ? result.interpretation : JSON.stringify(result.interpretation, null, 2)) +
+        '</pre></details>' : '');
+  }
+
   async function fromExperiment(experimentId) {
     const requestedWorkspace = workspaceKey();
     const available = await api(query('catalog'));
@@ -783,6 +946,9 @@ export function attachProgrammes(context) {
     if (action === 'create') return createForm();
     if (action === 'import') return importForm();
     if (action === 'experiment') return fromExperiment();
+    if (action === 'interaction') return fromInteraction();
+    if (action === 'attach-interaction') return attachInteraction(value);
+    if (action === 'sync-interaction') return sendAction('compute.programme.sync-interaction', {programme_id: value});
     if (action === 'clone') return createForm(record);
     if (action === 'paired-results') return context.navigate?.('paired-ensemble');
     if (action === 'ensemble') return buildProgrammeEnsemble(value);
@@ -816,9 +982,10 @@ export function attachProgrammes(context) {
     if (button.dataset.action === 'programme-open') return open(button.dataset.id);
     if (button.dataset.action === 'programme-create') return createForm();
     if (button.dataset.action === 'programme-import') return importForm();
+    if (button.dataset.action === 'programme-interaction') return fromInteraction(button.dataset.id);
   }
   function taskActions(task) {
-    const row = task.programme || (task.action === 'compute.programme.save' ? task.result : null);
+    const row = task.programme || (['compute.programme.save', 'compute.programme.experiment', 'compute.programme.interaction'].includes(task.action) ? task.result : null);
     const id = row?.id || task.payload?.programme_id;
     if (!task.action?.startsWith('compute.programme.') || !id) return '';
     return '<div class="notice"><strong>' + escapeHTML(row?.title || 'Saved run programme') + '</strong><p>' +
@@ -835,5 +1002,5 @@ export function attachProgrammes(context) {
     const result = task.result || {}, counts = result.counts || {};
     return 'Programme ' + labelState(result.state) + ': ' + (counts.complete || 0) + ' / ' + (counts.total || 0) + ' runs completed.';
   }
-  return {mount, detach, open, dispatch, taskActions, completionMessage, refresh: refreshRecord, create: createForm, fromExperiment, importSelections: importForm};
+  return {mount, detach, open, dispatch, taskActions, completionMessage, refresh: refreshRecord, create: createForm, fromExperiment, fromInteraction, importSelections: importForm};
 }
