@@ -1,0 +1,2503 @@
+{
+  "schema": "upstate.scientific-figure-spec/v1",
+  "edition": "20261013-original153",
+  "selection_id": "061bcd7ad5d40ced49cb5ab787a6a23864ec3312889a11dc2b7c1d2fee2c29fe",
+  "figures": [
+    {
+      "id": "trace-cadmium",
+      "title": "Cadmium — selected original samples",
+      "caption": "Unfiltered water; mg/L. Filled circles are reported values. Open circles mark original lower quantification limits for blank-valued results. Sampling dates are distinct original activities; no connecting trend is estimated. 17 original results.",
+      "panels": [
+        {
+          "kind": "cartesian",
+          "title": "Cadmium",
+          "x": {
+            "label": "Original sample date (2023)",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              19358,
+              19723
+            ],
+            "ticks": [
+              {
+                "value": 19358,
+                "label": "Jan"
+              },
+              {
+                "value": 19417,
+                "label": "Mar"
+              },
+              {
+                "value": 19478,
+                "label": "May"
+              },
+              {
+                "value": 19539,
+                "label": "Jul"
+              },
+              {
+                "value": 19601,
+                "label": "Sep"
+              },
+              {
+                "value": 19662,
+                "label": "Nov"
+              }
+            ]
+          },
+          "y": {
+            "label": "Result or lower quantification limit",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              0.00011499999999999999
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 0.000028749999999999997,
+                "label": "0.00002875"
+              },
+              {
+                "value": 0.000057499999999999995,
+                "label": "0.0000575"
+              },
+              {
+                "value": 0.00008625,
+                "label": "0.00008625"
+              },
+              {
+                "value": 0.00011499999999999999,
+                "label": "0.000115"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": []
+            },
+            {
+              "label": "Below limit (open)",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 19390,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:116",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AE96380",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19394,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:33",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AE96417",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19422,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:45",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AE98073",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19437,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:165",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AE99153",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19486,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:84",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF01621",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19494,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:103",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF02071",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19513,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:36",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF03226",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19520,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:161",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF03778",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19570,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:139",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF06354",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19571,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:12",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF06480",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19606,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:11",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF08089",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19614,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:122",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF08544",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19667,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:10",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF11063",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19668,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:21",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF11183",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19696,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:125",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF12373",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19697,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:199",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF12519",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19705,
+                  "y": 0.0001,
+                  "censored": true,
+                  "record_id": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3:14",
+                  "station_id": "21SC60WQ_WQX-SV-245",
+                  "activity_id": "21SC60WQ_WQX-AF12945",
+                  "original_value": "",
+                  "original_limit": "0.00010",
+                  "condition": "Present Below Quantification Limit"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-chromium",
+      "title": "Chromium — selected original samples",
+      "caption": "Unfiltered water; mg/L. Filled circles are reported values. Open circles mark original lower quantification limits for blank-valued results. Sampling dates are distinct original activities; no connecting trend is estimated. 17 original results.",
+      "panels": [
+        {
+          "kind": "cartesian",
+          "title": "Chromium",
+          "x": {
+            "label": "Original sample date (2023)",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              19358,
+              19723
+            ],
+            "ticks": [
+              {
+                "value": 19358,
+                "label": "Jan"
+              },
+              {
+                "value": 19417,
+                "label": "Mar"
+              },
+              {
+                "value": 19478,
+                "label": "May"
+              },
+              {
+                "value": 19539,
+                "label": "Jul"
+              },
+              {
+                "value": 19601,
+                "label": "Sep"
+              },
+              {
+                "value": 19662,
+                "label": "Nov"
+              }
+            ]
+          },
+          "y": {
+            "label": "Result or lower quantification limit",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              0.00575
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 0.0014375,
+                "label": "0.001437"
+              },
+              {
+                "value": 0.002875,
+                "label": "0.002875"
+              },
+              {
+                "value": 0.0043125,
+                "label": "0.004313"
+              },
+              {
+                "value": 0.00575,
+                "label": "0.00575"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": []
+            },
+            {
+              "label": "Below limit (open)",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 19390,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:60",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AE96380",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19394,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:168",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AE96417",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19422,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:57",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AE98073",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19437,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:126",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AE99153",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19486,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:101",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF01621",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19494,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:83",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF02071",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19513,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:49",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF03226",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19520,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:215",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF03778",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19570,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:39",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF06354",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19571,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:52",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF06480",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19606,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:38",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF08089",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19614,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:190",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF08544",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19667,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:108",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF11063",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19668,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:16",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF11183",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19696,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:156",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF12373",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19697,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:55",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF12519",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19705,
+                  "y": 0.005,
+                  "censored": true,
+                  "record_id": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3:5",
+                  "station_id": "21SC60WQ_WQX-SV-245",
+                  "activity_id": "21SC60WQ_WQX-AF12945",
+                  "original_value": "",
+                  "original_limit": "0.0050",
+                  "condition": "Present Below Quantification Limit"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-copper",
+      "title": "Copper — selected original samples",
+      "caption": "Unfiltered water; mg/L. Filled circles are reported values. Open circles mark original lower quantification limits for blank-valued results. Sampling dates are distinct original activities; no connecting trend is estimated. 17 original results.",
+      "panels": [
+        {
+          "kind": "cartesian",
+          "title": "Copper",
+          "x": {
+            "label": "Original sample date (2023)",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              19358,
+              19723
+            ],
+            "ticks": [
+              {
+                "value": 19358,
+                "label": "Jan"
+              },
+              {
+                "value": 19417,
+                "label": "Mar"
+              },
+              {
+                "value": 19478,
+                "label": "May"
+              },
+              {
+                "value": 19539,
+                "label": "Jul"
+              },
+              {
+                "value": 19601,
+                "label": "Sep"
+              },
+              {
+                "value": 19662,
+                "label": "Nov"
+              }
+            ]
+          },
+          "y": {
+            "label": "Result or lower quantification limit",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              0.0115
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 0.002875,
+                "label": "0.002875"
+              },
+              {
+                "value": 0.00575,
+                "label": "0.00575"
+              },
+              {
+                "value": 0.008625,
+                "label": "0.008625"
+              },
+              {
+                "value": 0.0115,
+                "label": "0.0115"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": []
+            },
+            {
+              "label": "Below limit (open)",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 19390,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:52",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AE96380",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19394,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:49",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AE96417",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19422,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:48",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AE98073",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19437,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:180",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AE99153",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19486,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:159",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF01621",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19494,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:73",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF02071",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19513,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:53",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF03226",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19520,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:51",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF03778",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19570,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:88",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF06354",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19571,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:163",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF06480",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19606,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:15",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF08089",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19614,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:153",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF08544",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19667,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:35",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF11063",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19668,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:64",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF11183",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19696,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:154",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF12373",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19697,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:133",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF12519",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19705,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3:23",
+                  "station_id": "21SC60WQ_WQX-SV-245",
+                  "activity_id": "21SC60WQ_WQX-AF12945",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-iron",
+      "title": "Iron — selected original samples",
+      "caption": "Unfiltered water; mg/L. Filled circles are reported values. Open circles mark original lower quantification limits for blank-valued results. Sampling dates are distinct original activities; no connecting trend is estimated. 17 original results.",
+      "panels": [
+        {
+          "kind": "cartesian",
+          "title": "Iron",
+          "x": {
+            "label": "Original sample date (2023)",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              19358,
+              19723
+            ],
+            "ticks": [
+              {
+                "value": 19358,
+                "label": "Jan"
+              },
+              {
+                "value": 19417,
+                "label": "Mar"
+              },
+              {
+                "value": 19478,
+                "label": "May"
+              },
+              {
+                "value": 19539,
+                "label": "Jul"
+              },
+              {
+                "value": 19601,
+                "label": "Sep"
+              },
+              {
+                "value": 19662,
+                "label": "Nov"
+              }
+            ]
+          },
+          "y": {
+            "label": "Result or lower quantification limit",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              12.649999999999999
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 3.1624999999999996,
+                "label": "3.162"
+              },
+              {
+                "value": 6.324999999999999,
+                "label": "6.325"
+              },
+              {
+                "value": 9.487499999999999,
+                "label": "9.487"
+              },
+              {
+                "value": 12.649999999999999,
+                "label": "12.65"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 19390,
+                  "y": 2.7,
+                  "censored": false,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:146",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AE96380",
+                  "original_value": "2.7",
+                  "original_limit": "0.02",
+                  "condition": ""
+                },
+                {
+                  "x": 19394,
+                  "y": 2.1,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:173",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AE96417",
+                  "original_value": "2.1",
+                  "original_limit": "0.02",
+                  "condition": ""
+                },
+                {
+                  "x": 19422,
+                  "y": 0.76,
+                  "censored": false,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:32",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AE98073",
+                  "original_value": "0.76",
+                  "original_limit": "0.02",
+                  "condition": ""
+                },
+                {
+                  "x": 19437,
+                  "y": 2.5,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:58",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AE99153",
+                  "original_value": "2.5",
+                  "original_limit": "0.02",
+                  "condition": ""
+                },
+                {
+                  "x": 19486,
+                  "y": 1,
+                  "censored": false,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:141",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF01621",
+                  "original_value": "1",
+                  "original_limit": "0.02",
+                  "condition": ""
+                },
+                {
+                  "x": 19494,
+                  "y": 11,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:161",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF02071",
+                  "original_value": "11",
+                  "original_limit": "0.02",
+                  "condition": ""
+                },
+                {
+                  "x": 19513,
+                  "y": 0.13,
+                  "censored": false,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:5",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF03226",
+                  "original_value": "0.13",
+                  "original_limit": "0.02",
+                  "condition": ""
+                },
+                {
+                  "x": 19520,
+                  "y": 8,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:17",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF03778",
+                  "original_value": "8",
+                  "original_limit": "0.02",
+                  "condition": ""
+                },
+                {
+                  "x": 19570,
+                  "y": 1.3,
+                  "censored": false,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:61",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF06354",
+                  "original_value": "1.3",
+                  "original_limit": "0.020",
+                  "condition": ""
+                },
+                {
+                  "x": 19571,
+                  "y": 2.3,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:68",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF06480",
+                  "original_value": "2.3",
+                  "original_limit": "0.020",
+                  "condition": ""
+                },
+                {
+                  "x": 19606,
+                  "y": 0.06,
+                  "censored": false,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:29",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF08089",
+                  "original_value": "0.060",
+                  "original_limit": "0.020",
+                  "condition": ""
+                },
+                {
+                  "x": 19614,
+                  "y": 4.5,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:114",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF08544",
+                  "original_value": "4.5",
+                  "original_limit": "0.020",
+                  "condition": ""
+                },
+                {
+                  "x": 19667,
+                  "y": 0.58,
+                  "censored": false,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:28",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF11063",
+                  "original_value": "0.58",
+                  "original_limit": "0.020",
+                  "condition": ""
+                },
+                {
+                  "x": 19668,
+                  "y": 1.2,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:66",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF11183",
+                  "original_value": "1.2",
+                  "original_limit": "0.020",
+                  "condition": ""
+                },
+                {
+                  "x": 19696,
+                  "y": 1.1,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:28",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF12373",
+                  "original_value": "1.1",
+                  "original_limit": "0.020",
+                  "condition": ""
+                },
+                {
+                  "x": 19697,
+                  "y": 0.16,
+                  "censored": false,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:72",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF12519",
+                  "original_value": "0.16",
+                  "original_limit": "0.020",
+                  "condition": ""
+                },
+                {
+                  "x": 19705,
+                  "y": 2.1,
+                  "censored": false,
+                  "record_id": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3:17",
+                  "station_id": "21SC60WQ_WQX-SV-245",
+                  "activity_id": "21SC60WQ_WQX-AF12945",
+                  "original_value": "2.1",
+                  "original_limit": "0.020",
+                  "condition": ""
+                }
+              ]
+            },
+            {
+              "label": "Below limit (open)",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-lead",
+      "title": "Lead — selected original samples",
+      "caption": "Unfiltered water; mg/L. Filled circles are reported values. Open circles mark original lower quantification limits for blank-valued results. Sampling dates are distinct original activities; no connecting trend is estimated. 17 original results.",
+      "panels": [
+        {
+          "kind": "cartesian",
+          "title": "Lead",
+          "x": {
+            "label": "Original sample date (2023)",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              19358,
+              19723
+            ],
+            "ticks": [
+              {
+                "value": 19358,
+                "label": "Jan"
+              },
+              {
+                "value": 19417,
+                "label": "Mar"
+              },
+              {
+                "value": 19478,
+                "label": "May"
+              },
+              {
+                "value": 19539,
+                "label": "Jul"
+              },
+              {
+                "value": 19601,
+                "label": "Sep"
+              },
+              {
+                "value": 19662,
+                "label": "Nov"
+              }
+            ]
+          },
+          "y": {
+            "label": "Result or lower quantification limit",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              0.00851
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 0.0021275,
+                "label": "0.002128"
+              },
+              {
+                "value": 0.004255,
+                "label": "0.004255"
+              },
+              {
+                "value": 0.0063825,
+                "label": "0.006383"
+              },
+              {
+                "value": 0.00851,
+                "label": "0.00851"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 19494,
+                  "y": 0.0074,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:89",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF02071",
+                  "original_value": "0.0074",
+                  "original_limit": "0.002",
+                  "condition": ""
+                },
+                {
+                  "x": 19520,
+                  "y": 0.0044,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:128",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF03778",
+                  "original_value": "0.0044",
+                  "original_limit": "0.002",
+                  "condition": ""
+                }
+              ]
+            },
+            {
+              "label": "Below limit (open)",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 19390,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:150",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AE96380",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19394,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:54",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AE96417",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19422,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:87",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AE98073",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19437,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:77",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AE99153",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19486,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:59",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF01621",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19513,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:70",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF03226",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19570,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:109",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF06354",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19571,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:63",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF06480",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19606,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:86",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF08089",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19614,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:71",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF08544",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19667,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:152",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF11063",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19668,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:18",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF11183",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19696,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:20",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF12373",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19697,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:164",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF12519",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19705,
+                  "y": 0.002,
+                  "censored": true,
+                  "record_id": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3:12",
+                  "station_id": "21SC60WQ_WQX-SV-245",
+                  "activity_id": "21SC60WQ_WQX-AF12945",
+                  "original_value": "",
+                  "original_limit": "0.0020",
+                  "condition": "Present Below Quantification Limit"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-manganese",
+      "title": "Manganese — selected original samples",
+      "caption": "Unfiltered water; mg/L. Filled circles are reported values. Open circles mark original lower quantification limits for blank-valued results. Sampling dates are distinct original activities; no connecting trend is estimated. 17 original results.",
+      "panels": [
+        {
+          "kind": "cartesian",
+          "title": "Manganese",
+          "x": {
+            "label": "Original sample date (2023)",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              19358,
+              19723
+            ],
+            "ticks": [
+              {
+                "value": 19358,
+                "label": "Jan"
+              },
+              {
+                "value": 19417,
+                "label": "Mar"
+              },
+              {
+                "value": 19478,
+                "label": "May"
+              },
+              {
+                "value": 19539,
+                "label": "Jul"
+              },
+              {
+                "value": 19601,
+                "label": "Sep"
+              },
+              {
+                "value": 19662,
+                "label": "Nov"
+              }
+            ]
+          },
+          "y": {
+            "label": "Result or lower quantification limit",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              0.3565
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 0.089125,
+                "label": "0.08912"
+              },
+              {
+                "value": 0.17825,
+                "label": "0.1782"
+              },
+              {
+                "value": 0.267375,
+                "label": "0.2674"
+              },
+              {
+                "value": 0.3565,
+                "label": "0.3565"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 19390,
+                  "y": 0.14,
+                  "censored": false,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:167",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AE96380",
+                  "original_value": "0.14",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19394,
+                  "y": 0.1,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:57",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AE96417",
+                  "original_value": "0.1",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19422,
+                  "y": 0.11,
+                  "censored": false,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:107",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AE98073",
+                  "original_value": "0.11",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19437,
+                  "y": 0.19,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:151",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AE99153",
+                  "original_value": "0.19",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19486,
+                  "y": 0.1,
+                  "censored": false,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:170",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF01621",
+                  "original_value": "0.1",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19494,
+                  "y": 0.2,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:140",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF02071",
+                  "original_value": "0.2",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19513,
+                  "y": 0.014,
+                  "censored": false,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:182",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF03226",
+                  "original_value": "0.014",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19520,
+                  "y": 0.31,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:31",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF03778",
+                  "original_value": "0.31",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19570,
+                  "y": 0.076,
+                  "censored": false,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:102",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF06354",
+                  "original_value": "0.076",
+                  "original_limit": "0.010",
+                  "condition": ""
+                },
+                {
+                  "x": 19571,
+                  "y": 0.088,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:181",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF06480",
+                  "original_value": "0.088",
+                  "original_limit": "0.010",
+                  "condition": ""
+                },
+                {
+                  "x": 19614,
+                  "y": 0.26,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:216",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF08544",
+                  "original_value": "0.26",
+                  "original_limit": "0.010",
+                  "condition": ""
+                },
+                {
+                  "x": 19667,
+                  "y": 0.066,
+                  "censored": false,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:155",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF11063",
+                  "original_value": "0.066",
+                  "original_limit": "0.010",
+                  "condition": ""
+                },
+                {
+                  "x": 19668,
+                  "y": 0.096,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:58",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF11183",
+                  "original_value": "0.096",
+                  "original_limit": "0.010",
+                  "condition": ""
+                },
+                {
+                  "x": 19696,
+                  "y": 0.21,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:198",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF12373",
+                  "original_value": "0.21",
+                  "original_limit": "0.010",
+                  "condition": ""
+                },
+                {
+                  "x": 19697,
+                  "y": 0.028,
+                  "censored": false,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:28",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF12519",
+                  "original_value": "0.028",
+                  "original_limit": "0.010",
+                  "condition": ""
+                },
+                {
+                  "x": 19705,
+                  "y": 0.24,
+                  "censored": false,
+                  "record_id": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3:8",
+                  "station_id": "21SC60WQ_WQX-SV-245",
+                  "activity_id": "21SC60WQ_WQX-AF12945",
+                  "original_value": "0.24",
+                  "original_limit": "0.010",
+                  "condition": ""
+                }
+              ]
+            },
+            {
+              "label": "Below limit (open)",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 19606,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:215",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF08089",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-mercury",
+      "title": "Mercury — selected original samples",
+      "caption": "Unfiltered water; mg/L. Filled circles are reported values. Open circles mark original lower quantification limits for blank-valued results. Sampling dates are distinct original activities; no connecting trend is estimated. 17 original results.",
+      "panels": [
+        {
+          "kind": "cartesian",
+          "title": "Mercury",
+          "x": {
+            "label": "Original sample date (2023)",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              19358,
+              19723
+            ],
+            "ticks": [
+              {
+                "value": 19358,
+                "label": "Jan"
+              },
+              {
+                "value": 19417,
+                "label": "Mar"
+              },
+              {
+                "value": 19478,
+                "label": "May"
+              },
+              {
+                "value": 19539,
+                "label": "Jul"
+              },
+              {
+                "value": 19601,
+                "label": "Sep"
+              },
+              {
+                "value": 19662,
+                "label": "Nov"
+              }
+            ]
+          },
+          "y": {
+            "label": "Result or lower quantification limit",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              0.00022999999999999998
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 0.000057499999999999995,
+                "label": "0.0000575"
+              },
+              {
+                "value": 0.00011499999999999999,
+                "label": "0.000115"
+              },
+              {
+                "value": 0.0001725,
+                "label": "0.0001725"
+              },
+              {
+                "value": 0.00022999999999999998,
+                "label": "0.00023"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": []
+            },
+            {
+              "label": "Below limit (open)",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 19390,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:174",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AE96380",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19394,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:98",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AE96417",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19422,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:211",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AE98073",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19437,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:81",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AE99153",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19486,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:132",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF01621",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19494,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:131",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF02071",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19513,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:85",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF03226",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19520,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:90",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF03778",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19570,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:128",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF06354",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19571,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:101",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF06480",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19606,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:3",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF08089",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19614,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:155",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF08544",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19667,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:82",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF11063",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19668,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:129",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF11183",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19696,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:169",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF12373",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19697,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:185",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF12519",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19705,
+                  "y": 0.0002,
+                  "censored": true,
+                  "record_id": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3:25",
+                  "station_id": "21SC60WQ_WQX-SV-245",
+                  "activity_id": "21SC60WQ_WQX-AF12945",
+                  "original_value": "",
+                  "original_limit": "0.00020",
+                  "condition": "Present Below Quantification Limit"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-nickel",
+      "title": "Nickel — selected original samples",
+      "caption": "Unfiltered water; mg/L. Filled circles are reported values. Open circles mark original lower quantification limits for blank-valued results. Sampling dates are distinct original activities; no connecting trend is estimated. 17 original results.",
+      "panels": [
+        {
+          "kind": "cartesian",
+          "title": "Nickel",
+          "x": {
+            "label": "Original sample date (2023)",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              19358,
+              19723
+            ],
+            "ticks": [
+              {
+                "value": 19358,
+                "label": "Jan"
+              },
+              {
+                "value": 19417,
+                "label": "Mar"
+              },
+              {
+                "value": 19478,
+                "label": "May"
+              },
+              {
+                "value": 19539,
+                "label": "Jul"
+              },
+              {
+                "value": 19601,
+                "label": "Sep"
+              },
+              {
+                "value": 19662,
+                "label": "Nov"
+              }
+            ]
+          },
+          "y": {
+            "label": "Result or lower quantification limit",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              0.023
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 0.00575,
+                "label": "0.00575"
+              },
+              {
+                "value": 0.0115,
+                "label": "0.0115"
+              },
+              {
+                "value": 0.01725,
+                "label": "0.01725"
+              },
+              {
+                "value": 0.023,
+                "label": "0.023"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": []
+            },
+            {
+              "label": "Below limit (open)",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 19390,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:37",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AE96380",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19394,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:139",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AE96417",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19422,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:160",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AE98073",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19437,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:14",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AE99153",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19486,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:62",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF01621",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19494,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:37",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF02071",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19513,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:187",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF03226",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19520,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:95",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF03778",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19570,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:136",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF06354",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19571,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:176",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF06480",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19606,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:68",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF08089",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19614,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:163",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF08544",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19667,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:16",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF11063",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19668,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:9",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF11183",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19696,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:104",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF12373",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19697,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:67",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF12519",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19705,
+                  "y": 0.02,
+                  "censored": true,
+                  "record_id": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3:11",
+                  "station_id": "21SC60WQ_WQX-SV-245",
+                  "activity_id": "21SC60WQ_WQX-AF12945",
+                  "original_value": "",
+                  "original_limit": "0.020",
+                  "condition": "Present Below Quantification Limit"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trace-zinc",
+      "title": "Zinc — selected original samples",
+      "caption": "Unfiltered water; mg/L. Filled circles are reported values. Open circles mark original lower quantification limits for blank-valued results. Sampling dates are distinct original activities; no connecting trend is estimated. 17 original results.",
+      "panels": [
+        {
+          "kind": "cartesian",
+          "title": "Zinc",
+          "x": {
+            "label": "Original sample date (2023)",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              19358,
+              19723
+            ],
+            "ticks": [
+              {
+                "value": 19358,
+                "label": "Jan"
+              },
+              {
+                "value": 19417,
+                "label": "Mar"
+              },
+              {
+                "value": 19478,
+                "label": "May"
+              },
+              {
+                "value": 19539,
+                "label": "Jul"
+              },
+              {
+                "value": 19601,
+                "label": "Sep"
+              },
+              {
+                "value": 19662,
+                "label": "Nov"
+              }
+            ]
+          },
+          "y": {
+            "label": "Result or lower quantification limit",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              0.01955
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0"
+              },
+              {
+                "value": 0.0048875,
+                "label": "0.004888"
+              },
+              {
+                "value": 0.009775,
+                "label": "0.009775"
+              },
+              {
+                "value": 0.014662500000000002,
+                "label": "0.01466"
+              },
+              {
+                "value": 0.01955,
+                "label": "0.01955"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 19494,
+                  "y": 0.017,
+                  "censored": false,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:38",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF02071",
+                  "original_value": "0.017",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19520,
+                  "y": 0.013,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:56",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF03778",
+                  "original_value": "0.013",
+                  "original_limit": "0.01",
+                  "condition": ""
+                },
+                {
+                  "x": 19696,
+                  "y": 0.011,
+                  "censored": false,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:86",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF12373",
+                  "original_value": "0.011",
+                  "original_limit": "0.010",
+                  "condition": ""
+                }
+              ]
+            },
+            {
+              "label": "Below limit (open)",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 19390,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:95",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AE96380",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19394,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:117",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AE96417",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19422,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:184",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AE98073",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19437,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:121",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AE99153",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19486,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:33",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF01621",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19513,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:58",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF03226",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19570,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:97",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF06354",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19571,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:50",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF06480",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19606,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:54",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF08089",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19614,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b:60",
+                  "station_id": "21SC60WQ_WQX-SV-268",
+                  "activity_id": "21SC60WQ_WQX-AF08544",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19667,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4:113",
+                  "station_id": "21SC60WQ_WQX-SV-375",
+                  "activity_id": "21SC60WQ_WQX-AF11063",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19668,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541:28",
+                  "station_id": "21SC60WQ_WQX-SV-376",
+                  "activity_id": "21SC60WQ_WQX-AF11183",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19697,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4:180",
+                  "station_id": "21SC60WQ_WQX-SV-374",
+                  "activity_id": "21SC60WQ_WQX-AF12519",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                },
+                {
+                  "x": 19705,
+                  "y": 0.01,
+                  "censored": true,
+                  "record_id": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3:7",
+                  "station_id": "21SC60WQ_WQX-SV-245",
+                  "activity_id": "21SC60WQ_WQX-AF12945",
+                  "original_value": "",
+                  "original_limit": "0.010",
+                  "condition": "Present Below Quantification Limit"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

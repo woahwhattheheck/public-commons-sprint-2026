@@ -24,6 +24,7 @@ export function attachScientificReportEditions(host) {
   let sources=[],editions=[],selected=[],title='',contact={name:'',organization:'',email:''};
   let preview=null,opened=null,busy=false,error='',pending=null,storageIssue='';
   let briefingPreview=null,briefingOpened=null;
+  let capturedReports=[],captureIssues=[],capturePreview=null,captureGeneration=0;
   const briefingFrames=new Map();
   const valid=(ws,turn)=>workspace===ws&&host.getWorkspace()===ws&&generation===turn;
   const request=(path,values={})=>host.api(host.endpoint(path,values));
@@ -40,7 +41,7 @@ export function attachScientificReportEditions(host) {
         contact={name:String(saved.contact?.name??''),organization:String(saved.contact?.organization??''),email:String(saved.contact?.email??'')};
         const retained=saved.pending;
         if(retained&&typeof retained.id==='string'&&retained.id&&
-            ['source-reports.render','source-reports.export','source-reports.briefing'].includes(retained.action)&&
+            ['source-reports.render','source-reports.export','source-reports.briefing','source-reports.adopt'].includes(retained.action)&&
             retained.body&&typeof retained.body==='object'&&!Array.isArray(retained.body)&&
             retained.key===JSON.stringify([workspace,retained.action,retained.body])){
           pending=retained;
@@ -107,11 +108,40 @@ export function attachScientificReportEditions(host) {
           row.source_count+' studies · '+row.section_count+' sections · '+row.figure_count+' figures</td><td>'+
           '<button type="button" data-scientific-report-action="open" data-id="'+esc(row.id)+'">Open saved report</button></td></tr>').join('')+
         '</tbody></table></div>':'<p class="note">Prepared editions appear here and stay with the Workspace backup.</p>')+
-      '';
+      capturedReportsHTML(locked);
     panel.querySelector('[data-scientific-report-detail]').hidden=!opened;
     panel.querySelector('[data-scientific-report-files]').hidden=!opened;
     if(opened)renderDetail();
     renderBriefingDocument();
+  }
+  function capturedReportsHTML(locked){
+    if(!capturedReports.length&&!captureIssues.length)return '';
+    return '<h3>Completed reports retained with this project</h3>'+
+      '<p>Reports prepared by the original command-line workflow keep their PDF, HTML, data and sources here. Add a completed report to the saved editions to review, compare or transfer it.</p>'+
+      (capturedReports.length?'<div class="table-scroll"><table><thead><tr><th>Completed report</th><th>Original contents</th><th></th></tr></thead><tbody>'+
+        capturedReports.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small class="mono">'+esc(row.operation_id)+'</small></td><td>'+
+          esc(row.source_count)+' studies · '+esc(row.section_count)+' sections · '+esc(row.figure_count)+' figures'+
+          '<small>'+esc(row.file_count)+' files · '+esc(size(row.bytes))+'</small></td><td>'+
+          '<button type="button" data-scientific-report-action="capture-preview" data-id="'+esc(row.capture_id)+'"'+(locked?' disabled':'')+'>Review completed report</button></td></tr>').join('')+
+        '</tbody></table></div>':'')+
+      (captureIssues.length?'<details><summary>Completed reports needing attention ('+captureIssues.length+')</summary><ul>'+
+        captureIssues.map(row=>'<li><code>'+esc(row.capture_id)+'</code> — '+esc(row.message)+'</li>').join('')+'</ul></details>':'')+
+      (capturePreview?'<section class="scientific-report-preview"><h4>'+esc(capturePreview.title)+'</h4>'+
+        '<p>The original '+esc(capturePreview.file_count)+' files and ordered sources have been verified. Adding this report preserves its exact PDF, HTML, data and original rendering identity.</p><ol>'+
+        capturePreview.sources.map(row=>'<li>'+esc(row.title)+'<small>'+esc(row.vintage)+' · '+esc(row.source_id)+'</small></li>').join('')+
+        '</ol><div class="inline-actions"><button type="button" data-scientific-report-action="capture-adopt"'+(locked?' disabled':'')+'>Add original saved edition</button>'+
+        '<button type="button" data-scientific-report-action="capture-close">Close completed report</button></div></section>':'');
+  }
+  async function previewCapture(id){
+    const chosen=capturedReports.find(row=>row.capture_id===id);
+    if(!chosen)throw Error('Refresh and choose an original completed report retained in this project.');
+    const ws=workspace,turn=generation,ticket=++captureGeneration;
+    const result=await request('/api/source-reports/scientific-capture',{capture_id:id});
+    if(!active||!valid(ws,turn)||ticket!==captureGeneration)return;
+    if(result.workspace_key!==ws||result.capture_id!==id||result.edition_id!==chosen.edition_id||
+        result.capture_sha256!==chosen.capture_sha256||result.state!=='complete')
+      throw Error('The completed report changed. Refresh and review its exact retained capture.');
+    capturePreview=result;error='';render();
   }
   function previewHTML(){
     if(!preview)return '<p class="note">Preview the current selection before preparing the report.</p>';
@@ -125,7 +155,13 @@ export function attachScientificReportEditions(host) {
     const result=await request('/api/source-reports/scientific-catalog');
     if(!valid(ws,turn))return;
     if(result.workspace_key!==ws)throw Error('The scientific report catalogue belongs to another Workspace.');
-    sources=result.sources||[];editions=result.editions||[];error='';render();
+    sources=result.sources||[];editions=result.editions||[];
+    capturedReports=result.captured_reports||[];captureIssues=result.capture_issues||[];
+    if(capturePreview&&!capturedReports.some(row=>row.capture_id===capturePreview.capture_id&&
+        row.capture_sha256===capturePreview.capture_sha256&&row.edition_id===capturePreview.edition_id)){
+      captureGeneration++;capturePreview=null;
+    }
+    error='';render();
   }
   async function preparePreview(){
     const ws=workspace,turn=generation,version=revision,selection=payload();
@@ -136,14 +172,21 @@ export function attachScientificReportEditions(host) {
       throw Error('The preview returned a different ordered study selection.');
     preview=result;error='';render();
   }
-  async function open(id){
+  async function open(id,{isCurrent}={}){
     const ws=workspace,turn=generation,ticket=++detailGeneration;
-    const result=await request('/api/source-reports/scientific-edition',{id});
-    if(!valid(ws,turn)||ticket!==detailGeneration)return;
-    if(result.workspace_key!==ws||result.edition?.id!==id)throw Error('The saved report differs from the chosen edition.');
+    const current=()=>active&&valid(ws,turn)&&ticket===detailGeneration&&
+      (typeof isCurrent!=='function'||isCurrent());
+    if(!current())return;
+    let result;
+    try{result=await request('/api/source-reports/scientific-edition',{id});}
+    catch(reason){if(!current())return;throw reason;}
+    if(!current())return;
+    if(result.workspace_key!==ws||result.edition?.id!==id||result.edition.state!=='complete')
+      throw Error('The saved report differs from the chosen complete edition.');
     if(opened?.edition.id!==id){briefingPreview=null;briefingOpened=null;}
     opened=result;error='';render();
     panel.querySelector('[data-scientific-report-detail]').scrollIntoView({block:'start'});
+    return result;
   }
   function renderDetail(){
     const target=panel.querySelector('[data-scientific-report-detail]'),row=opened.edition;
@@ -252,9 +295,16 @@ export function attachScientificReportEditions(host) {
   async function dispatch(button){
     const action=button.dataset.scientificReportAction;
     if(action==='recover')return recover();
-    if(['add','up','down','remove','preview','render','revise','export','briefing-preview','briefing-prepare'].includes(action)&&(busy||pending))
+    if(['add','up','down','remove','preview','render','revise','export','briefing-preview','briefing-prepare','capture-preview','capture-adopt'].includes(action)&&(busy||pending))
       throw Error('Recover the original report request before changing its selection or starting another.');
     if(action==='refresh'){await refresh();if(opened)await open(opened.edition.id);return;}
+    if(action==='capture-preview')return previewCapture(button.dataset.id);
+    if(action==='capture-close'){captureGeneration++;capturePreview=null;render();return;}
+    if(action==='capture-adopt'){
+      if(!capturePreview)throw Error('Review the completed report and its original source identity first.');
+      return submit('source-reports.adopt',{capture_id:capturePreview.capture_id,
+        capture_sha256:capturePreview.capture_sha256,edition_id:capturePreview.edition_id});
+    }
     if(action==='add'){
       const value=panel.querySelector('[data-scientific-report-source]').value;
       const row=sources.find(item=>key(item)===value);
@@ -308,10 +358,20 @@ export function attachScientificReportEditions(host) {
     }
     if(action==='backup')return host.openBackup();
   }
-  async function mount(container){
+  async function mount(container,{loadCatalog=true}={}){
     const ws=host.getWorkspace();
     if(workspace!==ws){reset();workspace=ws;restoreDraft();}
-    active=true;ensure(container);render();await refresh();
+    active=true;ensure(container);render();
+    if(loadCatalog)await refresh();
+  }
+  async function openForStudy(value){
+    if(!value||value.workspace_key!==host.getWorkspace()||value.workspace_key!==workspace)
+      throw Error('Open the saved scientific report in its receiving Workspace.');
+    if(typeof value.id!=='string'||!/^[0-9a-f]{64}$/.test(value.id))
+      throw Error('Choose an exact saved scientific report edition.');
+    if(!active||!panel)throw Error('Open Sources before reopening the saved report.');
+    if(typeof value.isCurrent==='function'&&!value.isCurrent())return;
+    return open(value.id,{isCurrent:value.isCurrent});
   }
   async function openForSources(value){
     if(!value||value.workspace_key!==host.getWorkspace()||value.workspace_key!==workspace)
@@ -341,13 +401,14 @@ export function attachScientificReportEditions(host) {
     panel.querySelector('[data-scientific-report-action="preview"]').focus?.();
     return {workspace_key:ws,sources:selected.map(choice)};
   }
-  function detach(){active=false;detailGeneration++;if(panel)panel.hidden=true;}
+  function detach(){active=false;detailGeneration++;captureGeneration++;if(panel)panel.hidden=true;}
   function reset(){
     generation++;revision++;detailGeneration++;if(panel)panel.remove();
     briefingFrames.clear();
     panel=null;workspace=null;sources=[];editions=[];selected=[];title='';
+    capturedReports=[];captureIssues=[];capturePreview=null;captureGeneration++;
     contact={name:'',organization:'',email:''};
     preview=null;opened=null;briefingPreview=null;briefingOpened=null;busy=false;pending=null;error='';storageIssue='';active=false;
   }
-  return {mount,detach,reset,refresh,openForSources};
+  return {mount,detach,reset,refresh,openForSources,openForStudy};
 }

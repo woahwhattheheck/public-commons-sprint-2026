@@ -19,6 +19,12 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "model/economic_comparison.py",
+    "model/economic_comparison_render.py",
+    "operator/economic_comparison.py",
+    "operator/extensions/economic-comparison.json",
+    "operator/web/economic_comparison.mjs",
+    "integration/component_fragments/economic-comparison.json",
     "operator/web/economic_request_store.mjs",
     "model/implementation_cost_review.py",
     "operator/implementation_cost_review.py",
@@ -128,6 +134,7 @@ FILES = (
 OFFLINE_FILE = "operator/web/implementation_workbench.html"
 OFFLINE_BUILDER = "build_implementation_offline.py"
 OPTIONAL_FILES = (
+    "operator/ECONOMIC_COMPARISON.md",
     "docs/IMPLEMENTATION_COST_REVIEW.md",
     "docs/IMPLEMENTATION_COST_REVIEW_SOURCE.md",
     "source_tools/receive_observed_scientific_review.py",

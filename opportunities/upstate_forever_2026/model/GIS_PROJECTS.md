@@ -113,7 +113,7 @@ received-minus-exported difference and its contributing cell count. Positive
 and negative changes remain separate so opposite signs cannot cancel.
 
 The selected region is explicitly a display bin. Its readout gives the native
-half-open row/column range, actual coordinate corners, support counts and physical
+zero-based inclusive row/column range, actual coordinate corners, support counts and physical
 range/count. It does not label that region as a single native raster cell.
 The geographic footprint uses all six original affine coefficients, including
 rotation and shear, the actual CRS, and the smaller final bins at the raster
@@ -421,6 +421,14 @@ adoption. Open the actual **REVIEW.html** and its downloads; extract the complet
 report ZIP and follow its relative files after reopening. Inspect the corresponding
 original GIS view, retained atlas legends and editable project entry points.
 Operate the original queued tasks and task recovery in the same application.
+
+This applies to every outgoing attachment. Open and use the extracted HTML,
+relevant report/PDF pages, maps, images, archives and editable projects in their
+normal recipient-facing viewers. Merely listing files, capturing screenshots or
+reading their metadata is insufficient. If a handoff includes audiovisual media,
+use natural high-quality generative narration where appropriate and actually
+play, watch and listen to the final exported media. Preserve the complete current
+marked owner instruction in application AGENTS.md through further delegation.
 
 Look for unreadable tables, clipped controls, overflow, misleading labels,
 unstyled screens and broken relative files. Fix visible defects in the maintained

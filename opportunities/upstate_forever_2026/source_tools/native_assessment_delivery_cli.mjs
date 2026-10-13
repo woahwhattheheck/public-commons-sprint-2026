@@ -117,7 +117,7 @@ async function main() {
     measured.microbialFiles=await sourceEdition(application,NATIVE_SOURCE_DIRECTORY,"microbial-assessment-sources.json");
     measured.microbialOriginalFiles={};
     for (const row of MICROBIAL_ORIGINAL_FILES)
-      measured.microbialOriginalFiles[row.path]=await sourceText(application,row.path);
+      measured.microbialOriginalFiles[row.path]=await sourceText(application,row.application_path || row.path);
   }
   const result = composeNativeAssessmentDelivery({
     nativeFiles, stationSourceFiles, originalAssessmentFiles, annualSourceFiles, assessmentInputs,...measured,

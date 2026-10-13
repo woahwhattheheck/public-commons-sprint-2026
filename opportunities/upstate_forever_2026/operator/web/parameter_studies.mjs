@@ -306,7 +306,9 @@ export function attachParameterStudies(host) {
       (!isBusy && Number(progress.completed) > 0 ? button('summarize', 'Refresh completed results', 'data-id="' + escapeHTML(id) + '"') : '') +
       button('revise', 'Use as new draft', 'data-id="' + escapeHTML(id) + '"') +
       button('calibration', 'Use completed cases in calibration', 'data-id="' + escapeHTML(id) + '"') +
-      (item.comparison_id ? '<button type="button" data-action="item" data-kind="comparisons" data-id="' + escapeHTML(item.comparison_id) + '">Open difference maps</button>' : '');
+      (item.artifacts?.results ? button('source-prepare', 'Prepare scientific source', 'data-id="' + escapeHTML(id) + '"') : '') +
+      (item.scientific_source ? button('source-open', 'Open prepared source in composer', 'data-id="' + escapeHTML(id) + '" data-source-id="' + escapeHTML(item.scientific_source.id) + '"') : '') +
+      (item.comparison_id ? '<button type="button" data-action="item" data-kind="comparisons" data-id="' + escapeHTML(item.comparison_id) + '">Open difference maps</button><button type="button" data-action="spatial-item" data-kind="comparisons" data-id="' + escapeHTML(item.comparison_id) + '">View difference maps</button>' : '');
   }
 
   function caseSummary(item) {
@@ -398,7 +400,7 @@ export function attachParameterStudies(host) {
       (row.native_version_labels ? '<small>' + Object.entries(row.native_version_labels).map(([model, value]) =>
         escapeHTML(model.toUpperCase() + ': ' + value)).join('<br>') + '</small>' : '') + '</td><td class="mono">' +
       (Object.entries(row.overrides || {}).map(([name, value]) => escapeHTML(name) + ' = ' + format(value)).join('<br>') || 'Baseline values') +
-      '</td><td class="actions-cell">' + button('case-console', 'Native case console', 'data-id="' + escapeHTML(selected) + '" data-run-id="' + escapeHTML(row.run_id) + '"') +
+      '</td><td class="actions-cell">' + (study.artifacts?.results && row.state === 'complete' ? button('source-prepare', 'Report this case', 'data-id="' + escapeHTML(selected) + '" data-case-id="' + escapeHTML(row.id) + '"') : '') + button('case-console', 'Native case console', 'data-id="' + escapeHTML(selected) + '" data-run-id="' + escapeHTML(row.run_id) + '"') +
       '<button type="button" data-action="item" data-kind="runs" data-id="' + escapeHTML(row.run_id) +
       '">Open native run</button><button type="button" data-action="run-log" data-id="' + escapeHTML(row.run_id) +
       '">Log</button><button type="button" data-action="item" data-kind="profiles" data-id="' + escapeHTML(row.profile_id) + '">Profile</button></td></tr>');
@@ -720,11 +722,127 @@ export function attachParameterStudies(host) {
     });
   }
 
+
+  async function openScientificSource(id, sourceId = '') {
+    const opening = formRequest(), originalWorkspace = opening.workspace;
+    const value = await host.api(requested('/api/parameter-studies/scientific-source',
+      sourceId ? {source_id: sourceId} : {id}));
+    if (!opening.current()) return;
+    const prepared = value?.scientific_report_selection;
+    if (value?.experiment_id !== id || prepared?.workspace_key !== originalWorkspace ||
+        !prepared?.sources?.length) throw new Error('Prepare the saved Parameter result source before opening its report composer.');
+    await host.refreshState();
+    if (!opening.current()) return;
+    if (workspace() !== originalWorkspace) throw new Error('Reopen the report in its original Workspace.');
+    if (typeof host.openScientificReport !== 'function') throw new Error('Open this application edition with its SourceReports composer.');
+    return host.openScientificReport(prepared);
+  }
+
+  async function openReportSource(id, initialCase = '') {
+    const opening = formRequest(), originalWorkspace = opening.workspace;
+    const packet = await host.api(requested('/api/parameter-studies/source-catalog', {id}));
+    if (!opening.current()) return;
+    if (packet.experiment_id !== id) throw new Error('The report catalog belongs to another saved study.');
+    let editor = null, casePage = 0, query = '';
+    const caseIds = new Set(packet.cases.map(row => row.id));
+    if (initialCase && !caseIds.has(initialCase)) throw new Error('Refresh completed results before selecting this case in a report.');
+    const chosen = new Set(initialCase ? [initialCase] : []);
+    const checkbox = (name, value, title) => '<label><input type="checkbox" name="' + name +
+      '" value="' + escapeHTML(value) + '" checked> ' + escapeHTML(title) + '</label>';
+    const body = '<div class="parameter-study-source">' +
+      field('parameter_source_title', 'Scientific report title', 'Parameter study: ' + packet.title, 'required') +
+      '<p>Choose the original cases, areas and pollutants to present. The source package retains the complete original study exports, including requested maps and native aggregation context.</p>' +
+      '<p><strong>' + format(packet.completed_cases) + ' of ' + format(packet.total_cases) +
+      '</strong> original cases have saved results. Selected values remain case minus baseline on paired valid cells.</p>' +
+      '<fieldset><legend>Parameter cases</legend><label>Selection<select name="parameter_source_case_mode">' +
+      option('all', 'All completed cases in this result', !initialCase) +
+      option('selected', 'Choose original cases', Boolean(initialCase)) + '</select></label>' +
+      '<label>Find original cases<input type="search" name="parameter_source_case_query" placeholder="Case, run, profile or parameter"></label>' +
+      '<div data-parameter-source-case-table></div><div class="page-actions">' +
+      '<button type="button" data-parameter-source-control="previous">Previous cases</button>' +
+      '<button type="button" data-parameter-source-control="next">Next cases</button>' +
+      '<button type="button" data-parameter-source-control="matching">Select matching cases</button>' +
+      '<button type="button" data-parameter-source-control="clear">Clear selected cases</button></div></fieldset>' +
+      '<fieldset><legend>Reporting areas</legend>' + packet.areas.map(row =>
+        checkbox('parameter_source_area', row.id, row.name)).join('') + '</fieldset>' +
+      '<fieldset><legend>Pollutants</legend>' + packet.pollutants.map(value =>
+        checkbox('parameter_source_pollutant', value, label(value))).join('') + '</fieldset>' +
+      '<p class="note">Original full-study ranges are included when all completed cases are selected. Choosing fewer cases preserves each original row and omits the full-cohort range from the selected presentation.</p>' +
+      '<p class="note">Spatial links open the retained full comparison extent. Choosing an area here does not clip its original GIS raster.</p>' +
+      '<details class="technical"><summary>Original result edition</summary><code>' +
+      escapeHTML(packet.artifact_sha256) + '</code></details></div>';
+    function matching() {
+      const needle = query.trim().toLowerCase();
+      return packet.cases.filter(row => !needle || [row.id, row.label, row.run_id, row.profile_id,
+        JSON.stringify(row.overrides || {})].join(' ').toLowerCase().includes(needle));
+    }
+    function mode() { return editor.anchor.querySelector('[name="parameter_source_case_mode"]').value; }
+    function paintCases() {
+      const rows = matching(), all = mode() === 'all';
+      casePage = Math.min(casePage, Math.max(0, Math.ceil(rows.length / 50) - 1));
+      const visible = rows.slice(casePage * 50, casePage * 50 + 50);
+      editor.anchor.querySelector('[data-parameter-source-case-table]').innerHTML =
+        '<p>' + format(all ? packet.cases.length : chosen.size) + ' selected · ' + format(rows.length) +
+        ' matching cases' + (rows.length ? ' · page ' + format(casePage + 1) + ' / ' + format(Math.ceil(rows.length / 50)) : '') + '</p>' +
+        (visible.length ? gridTable(['Use', 'Original case', 'Native profile and run', 'Parameters'], visible.map(row =>
+          '<tr><td><input type="checkbox" data-parameter-source-case="' + escapeHTML(row.id) + '"' +
+          ((all || chosen.has(row.id)) ? ' checked' : '') + (all ? ' disabled' : '') +
+          ' aria-label="Use ' + escapeHTML(row.label) + '"></td><td><strong>' + escapeHTML(row.label) +
+          '</strong><small class="mono">' + escapeHTML(row.id) + '</small></td><td class="mono">' +
+          escapeHTML(row.profile_id) + '<small>' + escapeHTML(row.run_id) + '</small></td><td>' +
+          escapeHTML(pretty(row.overrides || {})) + '</td></tr>')) : '<p>No original cases match.</p>');
+      editor.anchor.querySelector('[data-parameter-source-control="previous"]').disabled = casePage === 0;
+      editor.anchor.querySelector('[data-parameter-source-control="next"]').disabled = (casePage + 1) * 50 >= rows.length;
+    }
+    host.openForm('Prepare Parameter scientific source', 'Select the saved original result for reports and source delivery.',
+      body, 'Prepare scientific source', async () => {
+        editor.ensure();
+        const areas = [...editor.anchor.querySelectorAll('[name="parameter_source_area"]:checked')].map(node => node.value);
+        const pollutants = [...editor.anchor.querySelectorAll('[name="parameter_source_pollutant"]:checked')].map(node => node.value);
+        const cases = mode() === 'all' ? null : packet.cases.filter(row => chosen.has(row.id)).map(row => row.id);
+        if (!areas.length || !pollutants.length || (cases && !cases.length)) throw new Error('Choose at least one original case, reporting area and pollutant.');
+        await host.submitAction('parameter-study.source.prepare', {
+          experiment_id: id, expected_artifact_sha256: packet.artifact_sha256,
+          title: editor.anchor.querySelector('[name="parameter_source_title"]').value.trim(),
+          case_ids: cases, area_ids: areas, pollutants
+        });
+      }, () => {
+        editor = formSession('.parameter-study-source', originalWorkspace);
+        editor.listen(editor.anchor, 'change', event => {
+          if (event.target.name === 'parameter_source_case_mode') paintCases();
+          const key = event.target.dataset.parameterSourceCase;
+          if (key && caseIds.has(key)) {
+            event.target.checked ? chosen.add(key) : chosen.delete(key); paintCases();
+          }
+        });
+        editor.listen(editor.anchor, 'input', event => {
+          if (event.target.name === 'parameter_source_case_query') {
+            query = event.target.value; casePage = 0; paintCases();
+          }
+        });
+        editor.listen(editor.anchor, 'click', event => {
+          const control = event.target.closest('[data-parameter-source-control]')?.dataset.parameterSourceControl;
+          if (!control) return;
+          event.preventDefault();
+          if (control === 'previous') casePage = Math.max(0, casePage - 1);
+          if (control === 'next') casePage++;
+          if (control === 'matching' || control === 'clear') {
+            editor.anchor.querySelector('[name="parameter_source_case_mode"]').value = 'selected';
+            if (control === 'clear') chosen.clear(); else matching().forEach(row => chosen.add(row.id));
+          }
+          paintCases();
+        });
+        paintCases();
+      });
+  }
+
   async function dispatch(node) {
     const action = node.dataset.action.slice('parameter-study-'.length), id = node.dataset.id;
     if (node.dataset.workspace && node.dataset.workspace !== workspace()) {
       throw new Error('Open this task in its original Workspace before opening its parameter study.');
     }
+    if (action === 'source-prepare') return openReportSource(id, node.dataset.caseId || '');
+    if (action === 'source-open') return openScientificSource(id, node.dataset.sourceId || '');
     if (action === 'case-console') return caseConsole.open(id, node.dataset.runId);
     if (action === 'new' || action === 'revise') return newStudy(action === 'revise' ? id : null, node.dataset.baselineId);
     if (action === 'open') {
@@ -800,6 +918,14 @@ export function attachParameterStudies(host) {
   }
 
   function taskActions(task) {
+    if (task.action === 'parameter-study.source.prepare' && task.result?.experiment_id && task.workspace) {
+      const result = task.result, attrs = 'data-id="' + escapeHTML(result.experiment_id) +
+        '" data-workspace="' + escapeHTML(task.workspace) + '"';
+      return '<div class="page-actions">' + button('open', 'Open original parameter study', attrs) +
+        (result.source ? button('source-open', 'Compose selected scientific report',
+          attrs + ' data-source-id="' + escapeHTML(result.id) + '"') : '') +
+        '</div>' + host.fileList(result.downloads || []);
+    }
     return task.action?.startsWith('parameter-study.') && task.result?.id && task.workspace ?
       (task.result.state === 'partial' ? '<div class="notice">Completed-case results are available. Resume the study to recover the remaining cases.</div>' : '') +
       '<div class="page-actions">' + button('open', 'Open parameter study', 'data-id="' + escapeHTML(task.result.id) + '" data-workspace="' + escapeHTML(task.workspace) + '"') + '</div>' : '';

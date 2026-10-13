@@ -103,6 +103,10 @@ BUNDLED_REPORT_MANIFESTS = (
     "point_source_history.sources.json",
     "point_source_load_volume.sources.json",
     "point_source_scientific.sources.json",
+    "nc_assessment_history.sources.json",
+    "eighteenmile_trace_metals.sources.json",
+    "source/north-carolina-assessment-2022/sources.json",
+    "source/georgia-assessment-2024/publisher-savannah-20261013/sources.json",
 )
 
 
@@ -155,6 +159,27 @@ def manifest_reports(value):
         "kind": row["kind"], "role": row.get("role"),
         "vintage": row["vintage"], "documents": names,
     } for row, names in unique_report_entries(value["entries"])]
+
+
+def manifest_documents(value):
+    """Describe typed original documents without pretending they are HTML previews."""
+    return [{
+        "source_id": row["id"], "title": row["title"],
+        "kind": row["kind"], "role": row.get("role"),
+        "vintage": row["vintage"], "path": member_name(row["path"]),
+        "scientific_report": row.get("role") == "OBSERVED_CONTEXT"
+                             and row.get("kind") == "document",
+    } for row in value["entries"]
+      if row.get("kind") == "document" or row.get("role") == "OBSERVED_CONTEXT"]
+
+
+def retained_scientific_sources(collection):
+    """Keep exact original collection/source choices for the normal report composer."""
+    return [{
+        "source_collection_id": collection["id"], "source_id": entry["id"],
+        "title": entry["title"], "vintage": entry["vintage"],
+    } for entry in collection.get("entries", [])
+      if entry.get("role") == "OBSERVED_CONTEXT" and entry.get("kind") == "document"]
 
 
 def manifest_readiness(path, value):
@@ -258,9 +283,10 @@ class SourceReports:
                         continue
                     summary = self.operator._manifest_summary(value)
                     report_rows = manifest_reports(value)
+                    document_rows = manifest_documents(value)
                     regional = any(row.get("role") == "SOURCE_WATER_CONTEXT"
                                    for row in value["entries"])
-                    if not report_rows and not regional:
+                    if not report_rows and not document_rows and not regional:
                         continue
                     sha = hashlib.sha256(raw).hexdigest()
                     ready = manifest_readiness(path, value)
@@ -291,6 +317,7 @@ class SourceReports:
                         "manifest_sha256": sha, "manifest_name": path.name,
                         "title": summary["title"], "origin": origin,
                         "entry_count": len(value["entries"]), "reports": report_rows,
+                        "documents": document_rows,
                         "source_ids": [row["id"] for row in value["entries"]],
                         "regional_context": regional,
                         "vintages": list(dict.fromkeys(str(row["vintage"]) for row in value["entries"])),
@@ -366,6 +393,8 @@ class SourceReports:
                 **original,
                 "retained_collections": [{"id": row["id"], "title": row.get("title", row["id"])}
                                          for row in retained],
+                "retained_scientific_sources": [source for row in retained
+                                                for source in retained_scientific_sources(row)],
                 "retained_reports": [
                     {"collection_id": row["collection_id"], "entry_key": row["entry_key"],
                      "title": row["title"], "source_id": row["source_id"]}

@@ -75,6 +75,34 @@ The source bank is `implementation/report-context/<source SHA>/`. The immutable 
 For the existing DD6B receiving course, use the actual plan/report IDs produced by `receive_monitoring_fieldwork.py`. For the existing original Eighteenmile case, use its actual retained WQP plan report. Keep each project's original identity and active scientific source edition. The new whole-plan source complements the separate original observations, Outcomes and QC sources, which can be selected alongside it in their intended reading order.
 
 
+## Reopen an existing registration after receiving
+
+A registered source and every distinct original report selection are native
+Workspace records under `implementation/report-context/<source SHA>/handoffs/`.
+They survive full Workspace backup/restore independently of browser storage.
+
+Open the saved plan, choose **Handover → Load retained selections**, and select
+**Open retained selection** on the intended original report/revision/date and
+operation. The inventory verifies the retained report, source files and exact
+handoff before presenting it. It includes every committed selection for this plan,
+including registrations from earlier revisions. No newest-selection guess,
+source re-import, report regeneration or editable-plan replacement occurs.
+
+The opened panel shows the original saved report and its native downloads.
+Use **Open scientific report** for its complete ordered publisher selection, or
+**Prepare client report** when that operation retained a Report desk selection.
+A source-only registration remains explicitly labeled and offers its original
+source addition. **Refresh retained selections** discovers registrations made
+in another browser. An interrupted registration without a committed handoff is
+not presented as complete; return to its retained task. A verification failure
+is shown and leaves the original data and browser draft intact.
+
+The read-only API is `GET /api/implementation/report-sources?plan_id=<saved ID>`.
+An optional original `report_id` filters the native inventory. Entries contain
+the exact source key and operation ID accepted by the existing detail endpoint;
+detail responses include a presentation summary derived from the verified
+original report, not a newly prepared source identity.
+
 ## Inspect this exact outgoing workflow
 
 Use the existing populated native receiving operation. Open this exact installed
@@ -82,7 +110,9 @@ edition and view its actual screen or screenshots at screenshare width and
 390 px. Review a saved report while a later editable plan draft is present;
 capture the current Report desk selection; register and reopen the full ordered
 selection in a populated scientific publisher; operate both report handoffs,
-original downloads, export and reopening. Inspect loading, source-only, empty and
+original downloads, export and reopening. Restore the same Workspace, use a fresh
+browser with no earlier local storage, load its retained selections and reopen an
+earlier report without changing the later editable plan. Inspect loading, source-only, empty and
 error states. Preserve readable industrial tables, clear hierarchy, restrained
 controls and consistent spacing. Correct visible defects before calling the
 product client-ready. Source/API checks and an empty-Workspace screen do not

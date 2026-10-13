@@ -105,28 +105,38 @@ export function attachSourceReports(host) {
     const words=String(query).trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
     const visible=editions.filter(row=>{
       const text=[row.title,row.manifest_name,row.origin,...row.source_ids,...row.vintages,
-        ...row.reports.flatMap(report=>[report.title,report.source_id,report.role])].join(' ').toLocaleLowerCase();
+        ...row.reports.flatMap(report=>[report.title,report.source_id,report.role]),
+        ...(row.documents||[]).flatMap(document=>[document.title,document.source_id,document.role,document.path])].join(' ').toLocaleLowerCase();
       return words.every(word=>text.includes(word));
     });
     panel.querySelector('[data-source-report-editions]').innerHTML=
       '<section class="source-report-editions" aria-label="Available source editions"><h3>Available source editions</h3>'+
-      '<p>Preview original source metadata, then import the chosen edition into this Workspace. Existing reports appear below after the import completes.</p>'+
+      '<p>Preview original source metadata, then import the chosen edition into this Workspace. Retained HTML previews appear below. Original scientific documents can be added to the ordered report after import.</p>'+
       (visible.length?'<div class="table-scroll"><table><thead><tr><th>Source edition</th><th>Original contents</th><th>Workspace status</th><th></th></tr></thead><tbody>'+
       visible.map(row=>{
         const retained=row.retained_collections||[],linked=row.retained_reports||[];
+        const previewIDs=new Set(row.reports.map(report=>report.source_id));
+        const documents=(row.documents||[]).filter(document=>!previewIDs.has(document.source_id));
+        const scientific=row.retained_scientific_sources||[];
         const status=retained.length?'Retained in this Workspace':row.ready?'Ready to preview':'Source files need attention';
         const actions=linked.length?linked.map(report=>'<button type="button" data-source-report-action="open" data-report-key="'+
           esc(rowKey(report))+'">Open '+esc(report.title)+'</button>').join(''):
           retained.length?'<button type="button" data-source-report-action="retained-edition" data-collection-id="'+esc(retained[0].id)+'">Inspect retained edition</button>':'';
+        const scientificActions=retained.filter(collection=>scientific.some(source=>source.source_collection_id===collection.id))
+          .map(collection=>'<button type="button" data-source-report-action="edition-scientific" data-collection-id="'+
+            esc(collection.id)+'" data-manifest-sha="'+esc(row.manifest_sha256)+'">Add source studies to report</button>').join('');
         return '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.vintages.join(' · '))+'</small><small>'+
           esc(row.origin)+' · '+esc(row.manifest_name)+'</small></td><td>'+row.entry_count.toLocaleString()+
           ' original sources · '+row.member_count.toLocaleString()+' files'+
           (row.reports.length?'<ul>'+row.reports.map(report=>'<li>'+esc(report.title)+'<small>'+esc(report.vintage)+
             ' · '+esc(labels[report.role]||report.role||report.kind)+'</small></li>').join('')+'</ul>':'')+
+          (documents.length?'<ul>'+documents.map(document=>'<li>'+esc(document.title)+'<small>'+esc(document.vintage)+
+            ' · '+esc(document.scientific_report?'Scientific report source':document.role||document.kind)+
+            '</small><small>'+esc(document.source_id)+'</small></li>').join('')+'</ul>':'')+
           (row.regional_context?'<small>Regional watershed source context</small>':'')+'</td><td>'+esc(status)+
           (row.problems.length?'<details><summary>'+row.problems.length+' source file issue'+(row.problems.length===1?'':'s')+
             '</summary><ul>'+row.problems.map(item=>'<li><span class="mono">'+esc(item.member)+'</span>: '+esc(item.reason)+'</li>').join('')+'</ul></details>':'')+
-          '</td><td><div class="inline-actions">'+actions+
+          '</td><td><div class="inline-actions">'+actions+scientificActions+
           (row.ready?'<button type="button" data-source-report-action="preview-edition" data-registered-id="'+esc(row.registered_id)+'">'+
             (retained.length?'Review import metadata':'Preview and import')+'</button>':'')+'</div></td></tr>';
       }).join('')+'</tbody></table></div>':'<p class="note">'+(editions.length?'No available edition matches this search.':
@@ -265,6 +275,15 @@ export function attachSourceReports(host) {
       return host.openSourceImport({mode:'registered',registeredId:row.registered_id,
         registeredManifest:{id:row.registered_id,title:row.title,entries:row.entry_count}});
     }
+    if(action==='edition-scientific'){
+      const workspace=currentWorkspace,ticket=generation,collectionId=button.dataset.collectionId;
+      const row=editions.find(item=>item.manifest_sha256===button.dataset.manifestSha&&
+        (item.retained_collections||[]).some(collection=>collection.id===collectionId));
+      const sources=(row?.retained_scientific_sources||[]).filter(source=>source.source_collection_id===collectionId);
+      if(!row||!sources.length||!valid(workspace,ticket))
+        throw Error('Refresh and choose an original retained scientific source edition.');
+      return scientific.openForSources({workspace_key:workspace,sources,title:row.title,selection_mode:'append'});
+    }
     if(action==='retained-edition')return host.openItem('sources',button.dataset.collectionId);
     if(action==='import')return host.openSourceImport({mode:'archive',manifestMember:'sources.json'});
     if(action==='regional')return host.navigate('watershed-context');
@@ -295,5 +314,22 @@ export function attachSourceReports(host) {
     if(!active||!panel||currentWorkspace!==host.getWorkspace())await mount(content);
     return scientific.openForSources(value);
   }
-  return {mount,detach,reset,focus,openForSources};
+  async function openForStudy(value,content){
+    if(!value||value.workspace_key!==host.getWorkspace())
+      throw Error('Open the saved scientific report in its receiving Workspace.');
+    const navigationCurrent=()=>typeof value.isCurrent!=='function'||value.isCurrent();
+    if(!navigationCurrent())return;
+    const workspace=host.getWorkspace();
+    if(currentWorkspace!==workspace){reset();currentWorkspace=workspace;}
+    const ticket=generation;
+    active=true;ensurePanel(content);renderRegional();renderCatalog();
+    const current=()=>active&&valid(workspace,ticket)&&navigationCurrent();
+    try{
+      // A known edition opens independently of source discovery or a catalogue outage.
+      await scientific.mount(panel.querySelector('[data-scientific-reports]'),{loadCatalog:false});
+      if(!current())return;
+      return await scientific.openForStudy({...value,isCurrent:current});
+    }catch(error){if(!current())return;throw error;}
+  }
+  return {mount,detach,reset,focus,openForSources,openForStudy};
 }

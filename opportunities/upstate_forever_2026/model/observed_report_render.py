@@ -269,10 +269,11 @@ def archive_report(workspace, directory, result, archive_path, receive_path=None
         if not receive_path.exists():
             portable.restore(archive_path, receive_path)
         else:
-            # A process may stop after native restore's final rename and before
-            # the receiving receipt. Reconcile that original directory in place.
-            for name, item in manifest["members"].items():
-                verify_file(receive_path, {**item, "path": name})
+            # Native registration can add delivery roles/navigation before its
+            # atomic publication. Reuse that completed original receiving result
+            # instead of comparing legitimate receiver edits to pre-restore bytes.
+            portable.resume_restore(archive_path, receive_path,
+                                    expected_archive_sha256=archive_identity["sha256"])
         received = Workspace(receive_path / "workspace")
         if received.project != workspace.project:
             raise ValueError("Independent reopening changed the original project identity")

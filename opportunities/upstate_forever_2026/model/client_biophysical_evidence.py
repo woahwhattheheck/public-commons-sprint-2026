@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import csv
+import hashlib
 import io
 from pathlib import Path
 
@@ -337,9 +338,12 @@ def collect(workspace, directory, state, binding):
                                 "rows": _range_rows(record, match)}
                                for match in selected["matched_profiles"]]})
     for name, path in sorted(_implementation().items()):
+        original = path.read_bytes()
+        if hashlib.sha256(original).hexdigest() != binding["implementation"][name]:
+            raise ValueError("Selected coefficient report implementation changed during retention: " + name)
         add("coefficient_implementation_" + name,
             _retain_bytes(directory, PREFIX + "/implementation/" + name + ".py",
-                          path.read_bytes(), title="Report source / " + name))
+                          original, title="Report source / " + name))
     csv_path = PREFIX + "/selected-coefficient-evidence.csv"
     add("coefficient_evidence_csv",
         _retain_bytes(directory, csv_path, _csv_text(binding, records, ranges).encode("utf-8"),

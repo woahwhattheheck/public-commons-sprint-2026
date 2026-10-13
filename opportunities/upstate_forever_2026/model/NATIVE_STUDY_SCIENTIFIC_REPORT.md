@@ -78,11 +78,39 @@ This requires a prepared source and forwards the server-bound original collectio
 
 Nitrogen and phosphorus retain kg/year. Sediment retains metric tonnes/year, normalized to the original paired report's t/year spelling. Each constituent and unit stays separate. The source adds no economic weighting or cross-pollutant physical total and does not change the original model units.
 
-The report retains both common-support and full-valid totals. A difference between full-valid totals cannot replace the exact paired contrast when coverage differs. Percent change uses the common-valid baseline; a zero baseline leaves the percent undefined.
+The report shows the original quantities in separate tables so the geographic basis stays visible:
 
-Figures and case ranges are separated by scenario, constituent, unit and exact common-valid mask SHA256. Equal cell counts alone do not establish common geography. A figure page contains at most sixteen selected cases. Case numbers are presentation positions; each point retains its original profile/member/scenario/run identity and JSON pointer.
+| Visible result | Original meaning |
+| --- | --- |
+| Common-support baseline and alternative masses | Annual mass summed over cells valid in both selected runs. |
+| Signed annual change | The original alternative-minus-baseline change on those common cells. For parameter sensitivity, the alternative is the varied-profile baseline and the reference is the first selected profile's baseline. |
+| Percent change | The producer's stored percent relative to the common-support baseline mass. A zero common baseline leaves this percent undefined, including when both common masses are zero. |
+| Own-valid baseline and alternative totals | Each run's original integrated mass sum over its own finite, non-NoData cells inside the retained reporting mask. These two totals can cover different cells. |
+| Common, own-valid and only-valid cell counts | The original membership counts for the paired support; the two only-valid counts show the cells excluded from that paired contrast. |
 
-The minimum and maximum describe the completed named parameter set on one exact support mask. They are descriptive case ranges. Failed, pending and other-support cases remain explicit. No bootstrap, fit, uncertainty estimator or native solve is performed by this source adapter.
+Use the common-support table for the physical change. Use the own-valid totals to understand each original run's available result. Subtracting the latter can combine a physical change with a change in valid geographic coverage.
+
+The original report prints the stored values; the scientific source does not recalculate annual mass, change or percent. Native nitrogen and phosphorus export densities are integrated by the model workflow using the actual pixel hectares once before these mass artifacts are created. No additional pixel-area conversion belongs in the report.
+
+### Interpret missing values and geographic coverage
+
+The coverage table exposes both identities: **baseline valid = common + baseline only**, and **alternative valid = common + alternative only**. “Baseline only” means valid in the baseline but unavailable in the alternative; “alternative only” is the converse. These cells are excluded from the paired change. Neither count includes cells unavailable in both runs or cells outside the reporting polygon. The table therefore does not express a percentage of the whole catchment.
+
+A zero common baseline has a valid annual mass change when common cells exist, but its percent change is undefined. Read the displayed reason beside the stored percent. A legacy row with no common valid cells has no defined paired quantity; its explicit reason stays visible and it contributes no zero effect to a figure or range. The current paired producer records a no-common-cell comparison as an original error, which remains in the report's native messages.
+
+“Pair masks identical” means both only-valid counts are zero for every included pair. The two runs can still share missing cells. Read the reporting geography and original raster inventory before describing the extent covered by the model.
+
+The own-valid totals and paired sums retain their original producers and numerical precision. Minor rounding differences can arise between a stored difference raster and a double-precision paired sum; the scientific report keeps the original quantities rather than forcing a recomputed equality.
+
+Figures and case ranges are separated by scenario, constituent, unit and exact common-valid mask SHA256. Equal cell counts alone do not establish common geography. A figure page contains at most sixteen selected cases.
+
+Every original report row has a stable visible key: `LC0001` denotes the first row in `paired_rows`, and `PS0001` denotes the first row in `parameter_rows`. Each subsequent key uses that original row's one-based index. These keys belong to the retained report edition; they do not restart when figures split into support groups or pages. The same key appears on the figure ticks, figure coordinates and report tables.
+
+Use the visible case index to find the member, scenario, constituent and unit for a plotted key. Parameter sensitivity also identifies its original reference member/profile and varied profile. The complete original member, profile, scenario and native run IDs remain in the source records and coordinate companions.
+
+The minimum and maximum describe the completed named parameter set on one exact support mask. The range table shows its common-cell count and whether the pair masks are identical. It does not pool other masks or physical units. Percent ranges include only members with a defined stored percent, so a valid mass-change member with a zero baseline need not contribute to that percentage range.
+
+These are descriptive case ranges. The included case count is a count of retained physical contrast rows in that group, distinct from the study's native-run completion count. Failed, pending and other-support cases remain explicit. No bootstrap, fit, uncertainty estimator or native solve is performed by this source adapter.
 
 ## Figures and original coordinates
 
@@ -91,7 +119,13 @@ For each retained geographic support group, the source produces two panels:
 - original baseline/reference and alternative/varied annual masses on the same common-valid cells;
 - original paired annual change, with an explicit zero-change line.
 
-Land-cover and baseline-parameter figures remain distinct. The first profile's reference role is preserved in the parameter figure source records. The complete scientific figure specification and coordinate CSV carry every original plotted quantity and source pointer. The maintained shared renderer draws the same specification in PDF; independent monochrome SVGs travel with it.
+Land-cover and baseline-parameter figures remain distinct. Each caption states the original common-cell count, exact support hash and signed direction: negative change means lower modeled export. The parameter caption and case table retain the original reference profile.
+
+Read the detail table immediately after each figure in PDF, HTML or Markdown. It maps every visible row key to the actual member/profile and reference profile, with the original valid, common and only-valid cell counts. The common-mass table, coverage table and own-valid totals use the same keys, making the displayed value traceable without opening a separate CSV.
+
+The complete scientific figure specification and coordinate CSV carry every original plotted quantity and source pointer. The maintained shared renderer draws the same specification in PDF; independent monochrome SVGs travel with it. The standalone SVG's keys refer to the same original case index and accompanying report tables.
+
+For a brief operator explanation: “This key names the saved model case. These two values use the same valid cells, and their signed change is printed here. The next table shows which cells were excluded. The full totals remain available on each run's own support. This profile reference and source record explain the assumptions.”
 
 If an older retained report has zero common valid cells or lacks an exact common-support hash, its row remains in the original numeric report and is explicitly listed as omitted from the grouped figure. No geographic mask or zero-valued physical result is inferred.
 
@@ -105,7 +139,7 @@ The scientific source includes:
 - exact saved design and native run snapshots, native comparison records, prepared grid metadata and every selected profile/scenario record;
 - original biophysical CSV bodies and all their retained companions;
 - complete source collection/entry identities, original scenario-mask source bindings, alignment statistics and original/aligned raster descriptors;
-- scientific report recipe, all original figure coordinates, full vector specification and standalone SVGs.
+- scientific report recipe, the stable case-key index and per-figure detail tables, all original figure coordinates, full vector specification and standalone SVGs.
 
 Native-input-inventory.json marks which original source bytes are included. The complete numeric and graphical report can be reopened from its scientific source archive. Original model DEM, land cover, climate, R/K, scenario geometry, physical output rasters and native logs stay under their exact paths and hashes in the full Workspace archive. Use that existing complete-project transfer to inspect or rerun the hydrologic model.
 
@@ -199,3 +233,26 @@ The selected archive name binds the actual scientific edition, source operation 
 A repeated selected export uses the original producer's completed archive recovery. Existing receiving directories are reused only after their members and project match that same original archive. Each isolated reopen gets a new attempt directory with its actual process result. An exception retains the native driver's phase and the original receiver's child logs, so the same owner can repair that concrete stage and continue the same case.
 
 The teaching selection remains explicitly simulated. This receiving course preserves the original physical constituent units, annual time basis, sign conventions and exact support masks. Its modeled results are independent of the separate Upper Savannah regional observation/calibration and Gura commissioning operations.
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+<!-- bryce-rendered-product-inspection:end -->

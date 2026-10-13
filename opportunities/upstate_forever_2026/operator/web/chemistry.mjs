@@ -88,25 +88,42 @@ function observationView(row){
 }
 export function attachChemistry(host){
  const {getState,api,endpoint,submitAction,showTask,toast,fileList}=host;
- let root=null,generation=0,editorGeneration=0,runGeneration=0,reportGeneration=0,sourceGeneration=0,selectedCase='',editorCase='',selectedRun='',catalog={cases:[],runs:[]},page=0;
+ let root=null,lifetime=0,generation=0,editorGeneration=0,runGeneration=0,reportGeneration=0,sourceGeneration=0,selectedCase='',editorCase='',selectedRun='',catalog={cases:[],runs:[]},page=0;
  const workspace=()=>{const s=getState();return s.workspace_key??s.workspace??s.workspaceKey??s.data?.workspace_key;};
  const liveWorkspace=()=>host.getWorkspace();
  const read=(kind,payload={})=>api(endpoint(`/api/chemistry/${kind}`,payload));
- async function perform(action,payload){
-  const name=`chemistry.${action}`,key=workspace();
+ // Native cached desks retain drafts. Activation tokens invalidate pending reads.
+ const captureContext=()=>({root,key:workspace(),lifetime,activation:host.getChemistryContext?.()});
+ const currentContext=c=>!!root&&root===c.root&&lifetime===c.lifetime&&workspace()===c.key&&liveWorkspace()===c.key&&host.getChemistryContext?.()===c.activation;
+ function requireContext(c){if(!currentContext(c)){const error=Error('Reopen Chemistry in the selected workspace.');error.chemistryStale=true;throw error;}}
+ function recordIdentity(value,key,id,field='id'){
+  if(value?.workspace_key!==key||(id!==undefined&&value[field]!==id))throw Error('The Chemistry response differs from the selected original workspace or record.');
+ }
+ async function original(kind,payload,c,id,field='id'){
+  requireContext(c);let value;
+  try{value=await read(kind,payload);}catch(error){requireContext(c);throw error;}
+  requireContext(c);recordIdentity(value,c.key,id,field);return value;
+ }
+ async function perform(action,payload,context=captureContext()){
+  requireContext(context);
+  const name=`chemistry.${action}`,key=context.key;
+  payload=JSON.parse(JSON.stringify(payload));
   if(!key)throw new Error('Open the original workspace before submitting a calculation.');
   const signature=JSON.stringify({action:name,payload}),storageKey='upstate-chemistry-requests:'+key;
   let retained={};try{retained=JSON.parse(sessionStorage.getItem(storageKey)||'{}')}catch{}
   const operationId=retained[signature]||crypto.randomUUID();retained[signature]=operationId;
   sessionStorage.setItem(storageKey,JSON.stringify(retained));
   const task=await api('/api/actions',{method:'POST',body:{workspace:key,action:name,payload,operation_id:operationId}});
-  delete retained[signature];sessionStorage.setItem(storageKey,JSON.stringify(retained));
-  await showTask(task.id);return task;
+  if(!task?.id||(task.workspace&&task.workspace!==key))throw Error('The queued Chemistry task does not match the original workspace.');
+  let latest={};try{latest=JSON.parse(sessionStorage.getItem(storageKey)||'{}')}catch{}
+  if(latest[signature]===operationId){delete latest[signature];sessionStorage.setItem(storageKey,JSON.stringify(latest));}
+  if(currentContext(context))await showTask(task.id);return task;
  };
- function report(error){if(root){let n=root.querySelector('[data-chemistry-status]');if(!n){n=document.createElement('p');n.dataset.chemistryStatus='';root.append(n);const retry=document.createElement('button');retry.type='button';retry.dataset.action='chemistry-refresh';retry.textContent='Retry opening chemistry';root.append(retry)}n.textContent=error.message||String(error);n.setAttribute('role','alert')}else toast(error.message||String(error));}
+ function report(error){if(error?.chemistryStale)return;if(root){let n=root.querySelector('[data-chemistry-status]');if(!n){n=document.createElement('p');n.dataset.chemistryStatus='';root.append(n);const retry=document.createElement('button');retry.type='button';retry.dataset.action='chemistry-refresh';retry.textContent='Retry opening chemistry';root.append(retry)}n.textContent=error.message||String(error);n.setAttribute('role','alert')}else toast(error.message||String(error));}
  async function reload(){
   sourceGeneration++;reportGeneration++;runGeneration++;editorGeneration++;
-  const current=++generation;const result=await read('catalog');if(current!==generation||!root)return;
+  const current=++generation,key=workspace();const result=await read('catalog');if(current!==generation||!root||workspace()!==key)return;
+  recordIdentity(result,key);
   catalog=result;if(selectedCase&&!catalog.cases.some(c=>c.id===selectedCase))selectedCase='';
   render();
  }
@@ -135,9 +152,10 @@ export function attachChemistry(host){
  async function openSource(id,compose=false,selectionMode='replace'){
   if(!['replace','append'].includes(selectionMode))throw Error('Choose how this prepared source opens in Scientific Reports.');
   if(compose&&selectionMode==='replace'&&reportSourceSelection.SCIENTIFIC_REPORT_SOURCE_SELECTION!=='replace-v1')throw Error('Receive the current Scientific Reports composer before opening this report alone. Add to current report is still available.');
-  const current=++sourceGeneration,selectedWorkspace=liveWorkspace();reportGeneration++;runGeneration++;
+  const context=captureContext();requireContext(context);
+  const current=++sourceGeneration,selectedWorkspace=context.key;reportGeneration++;runGeneration++;
   if(selectedWorkspace!==workspace())throw Error('Reopen Chemistry in the original workspace.');
-  const value=await read('report-source',{source_record_id:id});
+  const value=await original('report-source',{source_record_id:id},context,id);
   if(!root||current!==sourceGeneration||liveWorkspace()!==selectedWorkspace||workspace()!==selectedWorkspace)return;
   const selected=value.scientific_report_selection,choice=value.source_selection;
   if(value.workspace_key!==selectedWorkspace||value.id!==id||!choice
@@ -158,9 +176,10 @@ export function attachChemistry(host){
  }
  async function openReport(id){
   sourceGeneration++;
-  const current=++reportGeneration,selectedWorkspace=liveWorkspace();runGeneration++;
+  const context=captureContext();requireContext(context);
+  const current=++reportGeneration,selectedWorkspace=context.key;runGeneration++;
   if(selectedWorkspace!==workspace())throw Error('Reopen Chemistry in the original workspace.');
-  const value=await read('report',{report_id:id});
+  const value=await original('report',{report_id:id},context,id);
   if(!root||current!==reportGeneration||workspace()!==selectedWorkspace||liveWorkspace()!==selectedWorkspace)return;
   if(value.workspace_key!==selectedWorkspace||value.id!==id)throw Error('The saved report response belongs to another workspace or report.');
   const target=root.querySelector('[data-chemistry-result]');target.hidden=false;
@@ -176,13 +195,14 @@ export function attachChemistry(host){
  }
  async function editor(project=null,caseId=null){
   sourceGeneration++;reportGeneration++;runGeneration++;
+  const context=captureContext();requireContext(context);
   const current=++editorGeneration;
-  let original=null;if(!caseId)selectedCase='';if(caseId){original=await read('case',{case_id:caseId});if(current!==editorGeneration||!root)return;project=original.project;selectedCase=caseId;}
+  let saved=null;if(!caseId)selectedCase='';if(caseId){saved=await original('case',{case_id:caseId},context,caseId);if(current!==editorGeneration||!root)return;project=saved.project;selectedCase=caseId;}
   if(!root||current!==editorGeneration)return;editorCase=caseId||'';const area=root.querySelector('[data-chemistry-editor]');area.hidden=false;
   area.innerHTML=`<h2>Scenario & analysis</h2><p>Concentrations are mg of the declared conserved basis per litre. Loads are kg of that basis per day; reach volumes are m³ and flow rates are m³/day.</p>
   <label>Project JSON<input data-project-file type="file" accept=".json,application/json"></label>
   <section data-physical></section><details><summary>Complete project JSON and provenance</summary><label>Complete chemical project<textarea data-project rows="16" spellcheck="false">${esc(project?pretty(project):'')}</textarea></label></details>
-  <label>Reason for this scenario or edit<input data-reason value="${esc(original?.reason||'')}"></label>
+  <label>Reason for this scenario or edit<input data-reason value="${esc(saved?.reason||'')}"></label>
   <div class="chemistry-actions">${button('save','Save immutable scenario edition')}</div>
   <h3>Run request</h3><label>Analysis<select data-mode>${['simulate','attribute','sensitivity','calibrate','monitoring','uncertainty'].map(m=>`<option>${m}</option>`).join('')}</select></label>
   <label>Complete analysis request<textarea data-request rows="12" spellcheck="false">${esc(pretty({mode:'simulate',sample_days:[0,...(project?.phases||[]).map(p=>p.until_day)]}))}</textarea></label>
@@ -210,20 +230,48 @@ export function attachChemistry(host){
    }catch(error){report(error)}
   });
   area.querySelector('[data-project]').addEventListener('change',physical);
-  area.querySelector('[data-project-file]').addEventListener('change',async e=>{try{const file=e.target.files[0];if(file){const p=JSON.parse(await file.text());area.querySelector('[data-project]').value=pretty(p);physical();}}catch(e){report(e)}});
+  let projectRead=0,observationRead=0;
+  const sameEditor=c=>currentContext(c)&&current===editorGeneration&&area.isConnected&&root.querySelector('[data-chemistry-editor]')===area;
+  area.querySelector('[data-project-file]').addEventListener('change',async event=>{
+   const file=event.target.files[0],request=++projectRead,context=captureContext();
+   const before=area.querySelector('[data-project]').value;
+   if(!file)return;
+   try{
+    const text=await file.text();
+    if(request!==projectRead||!sameEditor(context))return;
+    if(area.querySelector('[data-project]').value!==before)throw Error('The project changed while the file was opening. Choose the file again to replace this draft.');
+    const project=JSON.parse(text);
+    area.querySelector('[data-project]').value=pretty(project);physical();
+   }catch(error){if(request===projectRead&&sameEditor(context))report(error);}
+  });
   area.querySelector('[data-mode]').addEventListener('change',e=>{try{let request=parse(area.querySelector('[data-request]'),'Analysis request');request.mode=e.target.value;area.querySelector('[data-request]').value=pretty(request);}catch(e){report(e)}});
-  area.querySelector('[data-observation-file]').addEventListener('change',async e=>{try{const f=e.target.files[0];if(!f)return;let q=parse(area.querySelector('[data-request]'),'Analysis request');const text=await f.text();if(!root||current!==editorGeneration||!area.isConnected)return;const imported=csvObservations(text,area.querySelector('[data-observation-reference]').value,parse(area.querySelector('[data-project]'),'Chemical project'));q.observations=imported;area.querySelector('[data-request]').value=pretty(q);observations();area.querySelector('[data-observation-review]').parentElement.open=true;}catch(e){report(e)}});
+  area.querySelector('[data-observation-file]').addEventListener('change',async event=>{
+   const file=event.target.files[0],request=++observationRead,context=captureContext();
+   const beforeRequest=area.querySelector('[data-request]').value,beforeProject=area.querySelector('[data-project]').value;
+   const reference=area.querySelector('[data-observation-reference]').value;
+   if(!file)return;
+   try{
+    const text=await file.text();
+    if(request!==observationRead||!sameEditor(context))return;
+    if(area.querySelector('[data-request]').value!==beforeRequest||area.querySelector('[data-project]').value!==beforeProject||area.querySelector('[data-observation-reference]').value!==reference)throw Error('The analysis, project or source reference changed while observations were opening. Choose the observation file again for this draft.');
+    const value=JSON.parse(beforeRequest),project=JSON.parse(beforeProject);
+    value.observations=csvObservations(text,reference,project);
+    area.querySelector('[data-request]').value=pretty(value);observations();area.querySelector('[data-observation-review]').parentElement.open=true;
+   }catch(error){if(request===observationRead&&sameEditor(context))report(error);}
+  });
  }
  async function openRun(id,field='final',offset=0){
   sourceGeneration++;reportGeneration++;
+  const context=captureContext();requireContext(context);
   const current=++runGeneration;
-  selectedRun=id;page=offset;const run=await read('run',{run_id:id});if(!root||current!==runGeneration)return;
+  selectedRun=id;page=offset;const run=await original('run',{run_id:id},context,id);if(!root||current!==runGeneration)return;
   const target=root.querySelector('[data-chemistry-result]');target.hidden=false;
   target.innerHTML=`<h2>${esc(run.mode)} / ${esc(run.state)}</h2><p class="chemistry-mono">${esc(id)}</p>${run.error?`<p role="alert">${esc(run.error.message)}</p>`:''}<pre>${esc(pretty(run.progress||{}))}</pre><div class="chemistry-actions">${run.state==='complete'?'':button('resume','Resume same analysis',id)}${run.state==='running'?button('cancel','Cancel after current integration step',id):''}${run.calibrated_case_id?button('case-open','Open calibrated scenario',run.calibrated_case_id):''}${run.state==='complete'?button('report-prepare','Prepare scientific report',id):''}</div>${fileList(run._downloads||[])}
   <label>Result collection<select data-result-field>${['final','samples','budgets','reactions','observations','scores','interval_scores','parameters','rows','selected','summaries','sources'].map(f=>`<option ${f===field?'selected':''}>${f}</option>`).join('')}</select></label><div data-result-table></div><div class="chemistry-actions">${button('previous','Previous page')}${button('next','Next page')}</div>`;
   target.querySelector('[data-result-field]').addEventListener('change',e=>openRun(id,e.target.value,0).catch(report));
   if(run.state==='complete'){
-   const result=await read('page',{run_id:id,field,offset,limit:100});if(selectedRun!==id||!root||current!==runGeneration)return;
+   const result=await original('page',{run_id:id,field,offset,limit:100},context,id,'run_id');if(selectedRun!==id||!root||current!==runGeneration)return;
+   if(result.field!==field||result.offset!==offset)throw Error('The result page differs from the selected collection or position.');
    const columns=[...new Set(result.rows.flatMap(row=>Object.keys(row)))];
    target.querySelector('[data-result-table]').innerHTML=(field==='observations'?'<h3>Measurement operators and original limits</h3>'+table(result.rows.map(observationView),['id','measurement','operator','basis','reach','day','role','qualifier','reference_or_limits','prediction','interval_contains_prediction','error_scale'])+'<h3>Complete retained result fields</h3>':'')+`<p>${result.total?result.offset+1:0}–${result.offset+result.rows.length} of ${result.total} records</p>${table(result.rows,columns)}`;
    target.querySelector('[data-action="chemistry-next"]').disabled=result.next_offset===null;
@@ -231,7 +279,10 @@ export function attachChemistry(host){
   }
  }
  async function dispatch(element){
+  const context=captureContext();
   try{
+   requireContext(context);
+   if(element.dataset.workspace&&element.dataset.workspace!==context.key)throw Error('This Chemistry action belongs to another workspace.');
    const action=element.dataset.action.slice(10),id=element.dataset.id;
    if(action==='refresh')return await reload();
    if(action==='new')return await editor();
@@ -243,21 +294,35 @@ export function attachChemistry(host){
    if(action==='report-prepare')return await perform('report.prepare',{run_id:id});
    if(action==='from-source'||action==='receive'){const v=root.querySelector('[data-source]').value;if(!v)throw new Error('Choose an original retained source.');return await perform(action==='from-source'?'case.from-source':'receive',JSON.parse(v));}
    if(action==='save'){
-    const area=root.querySelector('[data-chemistry-editor]');const project=parse(area.querySelector('[data-project]'),'Chemical project');
-    let refs=[];if(editorCase){const current=await read('case',{case_id:editorCase});refs=current.source_refs;}
-    return await perform('case.save',{project,reason:area.querySelector('[data-reason]').value,source_refs:refs,...(editorCase?{parent_id:editorCase}:{})});
+    const area=root.querySelector('[data-chemistry-editor]'),parent=editorCase,revision=editorGeneration;
+    const projectText=area.querySelector('[data-project]').value,reason=area.querySelector('[data-reason]').value;
+    const project=parse(area.querySelector('[data-project]'),'Chemical project');
+    let refs=[];if(parent){const saved=await original('case',{case_id:parent},context,parent);refs=saved.source_refs;}
+    requireContext(context);
+    if(editorGeneration!==revision||editorCase!==parent||root.querySelector('[data-chemistry-editor]')!==area||area.querySelector('[data-project]').value!==projectText||area.querySelector('[data-reason]').value!==reason)throw Error('The scenario changed while its original parent was opening. Save the current draft again.');
+    return await perform('case.save',{project,reason,source_refs:refs,...(parent?{parent_id:parent}:{})},context);
    }
-   if(action==='execute'){if(!editorCase)throw new Error('Save and open the scenario before calculating.');const request=parse(root.querySelector('[data-request]'),'Analysis request');const saved=await read('case',{case_id:editorCase});const draft=parse(root.querySelector('[data-project]'),'Chemical project');if(JSON.stringify(saved.project)!==JSON.stringify(draft))throw new Error('Save the edited scenario before calculating.');return await perform('run',{case_id:editorCase,request});}
-   if(action==='resume'){const run=await read('run',{run_id:id});return await perform('run',{case_id:run.case_id,request:run.selection.request});}
-   if(action==='cancel'){await api('/api/chemistry/cancel',{method:'POST',body:{workspace:workspace(),run_id:id}});return await openRun(id);}
+   if(action==='execute'){
+    const parent=editorCase,revision=editorGeneration,area=root.querySelector('[data-chemistry-editor]');
+    if(!parent)throw Error('Save and open the scenario before calculating.');
+    const requestText=area.querySelector('[data-request]').value,projectText=area.querySelector('[data-project]').value;
+    const request=parse(area.querySelector('[data-request]'),'Analysis request'),draft=parse(area.querySelector('[data-project]'),'Chemical project');
+    const saved=await original('case',{case_id:parent},context,parent);
+    if(editorGeneration!==revision||editorCase!==parent||root.querySelector('[data-chemistry-editor]')!==area||area.querySelector('[data-request]').value!==requestText||area.querySelector('[data-project]').value!==projectText)throw Error('The scenario or request changed before submission. Run the current selection again.');
+    if(JSON.stringify(saved.project)!==JSON.stringify(draft))throw Error('Save the edited scenario before calculating.');
+    return await perform('run',{case_id:parent,request},context);
+   }
+   if(action==='resume'){const run=await original('run',{run_id:id},context,id);return await perform('run',{case_id:run.case_id,request:run.selection.request},context);}
+   if(action==='cancel'){await api('/api/chemistry/cancel',{method:'POST',body:{workspace:context.key,run_id:id}});if(currentContext(context))return await openRun(id);return;}
    if(action==='export'){if(!selectedCase)throw new Error('Choose a saved scenario.');return await perform('export',{case_id:selectedCase,run_ids:catalog.runs.filter(r=>r.case_id===selectedCase&&r.state==='complete').map(r=>r.id)});}
    if(action==='previous'||action==='next'){const field=root.querySelector('[data-result-field]').value;return await openRun(selectedRun,field,Math.max(0,page+(action==='next'?100:-100)));}
-  }catch(error){report(error)}
+  }catch(error){if(currentContext(context))report(error)}
  }
  async function update(){
   if(!root)return;
-  const current=++generation,result=await read('catalog');
-  if(current!==generation||!root)return;
+  const current=++generation,key=workspace(),result=await read('catalog');
+  if(current!==generation||!root||workspace()!==key)return;
+  recordIdentity(result,key);
   catalog=result;
   const selection=root.querySelector('[data-case]');
   if(selection){
@@ -277,7 +342,7 @@ export function attachChemistry(host){
   const runs=root.querySelector('[data-chemistry-runs]');
   if(runs)runs.innerHTML=catalog.runs.map(r=>`<div class="chemistry-run">${button('run-open',`${r.mode} · ${r.state} · ${r.id.slice(0,10)}`,r.id)}<span>${esc(r.title)}</span></div>`).join('')||'<p>No analysis yet.</p>';
  }
- return {update,mount(element){if(root===element)return;root=element;root.innerHTML='<p role="status">Opening retained chemical scenarios…</p>';return reload().catch(report)},detach(){generation++;editorGeneration++;runGeneration++;reportGeneration++;sourceGeneration++;root=null},dispatch,
+ return {update,mount(element){if(root===element)return;lifetime++;root=element;root.innerHTML='<p role="status">Opening retained chemical scenarios…</p>';return reload().catch(report)},detach(){lifetime++;generation++;editorGeneration++;runGeneration++;reportGeneration++;sourceGeneration++;root=null},dispatch,
  taskActions(task){
   const r=task.result||{},key=workspace();if(task.state!=='complete'||!task.action?.startsWith('chemistry.')||(task.workspace&&task.workspace!==key))return '';
   const isSource=['chemistry.report.source.prepare','chemistry.report.source.get'].includes(task.action);
