@@ -161,6 +161,9 @@ class AnalysisExports:
                 or set(manifest["outputs"]) != {_FORMATS[k] for k in spec["formats"]}
                 or manifest.get("csv", {}).get("spreadsheetSafe") is not spec["spreadsheet_safe"]):
             raise StateError("ANALYSIS_EXPORT_BINDING_CHANGED")
+        if isinstance(review["request"].get("expected_views"), dict):
+            if binding.get("viewSelection") != review["request"]["expected_views"]:
+                raise StateError("ANALYSIS_EXPORT_BINDING_CHANGED")
         if (spec["max_rows"] is not None and manifest["rowCount"] > spec["max_rows"]
                 or spec["max_output_bytes"] is not None
                 and sum(v["bytes"] for v in manifest["outputs"].values()) > spec["max_output_bytes"]):
@@ -192,9 +195,14 @@ class AnalysisExports:
             self._progress(job_id, {"started_at": _now()})
             if signal.is_set():
                 raise StateError("DATASET_SQL_QUERY_CANCELLED")
+            expected_views = review["result"]["views"]
+            if isinstance(review["request"].get("expected_views"), dict):
+                expected_views = review["request"]["expected_views"]
+                if expected_views.get("bindings") != review["result"]["views"]:
+                    raise StateError("ANALYSIS_EXPORT_BINDING_CHANGED")
             self.database.export_query(review["request"]["sql"],
                 self.parse_parameters(review["request"]["parameters_text"]),
-                destination=self.directory / job_id, expected_views=review["result"]["views"],
+                destination=self.directory / job_id, expected_views=expected_views,
                 formats=spec["formats"], timeout=spec["timeout"], cancel=signal.is_set,
                 max_rows=spec["max_rows"], max_output_bytes=spec["max_output_bytes"],
                 spreadsheet_safe=spec["spreadsheet_safe"], progress=lambda value: self._progress(job_id, value))

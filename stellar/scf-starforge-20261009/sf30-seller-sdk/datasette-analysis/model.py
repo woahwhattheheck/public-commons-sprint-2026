@@ -328,8 +328,36 @@ class DatasetteAnalysis:
             "Numeric source tokens and disclosed capacity totals remain exact text; counts are integers. "
             "Source capacity, commissioning and generation years retain their historical meaning. "
             "Retrieval time describes the observation window, not present-day plant telemetry.")
+        publication_note = "Complete source edition, exact disclosed capacity and retained source-year context."
+        workbook_notes = ("Exact source values and capacity totals remain text. Original nulls display as NULL; "
+                          "empty strings stay empty. Counts are integers. Complete source files travel with the workspace.")
+        if edition.get("product_profile") == "original-csv-strings-v1":
+            introduction = (source["publisher"] + ". " + license_text + ". " + source["url"] + "\n"
+                "Complete original CSV: " + str(edition["row_count"]) + " rows. "
+                "Original columns: " + ", ".join(source.get("source_columns", [])) + ". "
+                "Every original field remains its published string. Blank fields remain blank, "
+                "and published zero values remain present. Original source keys, row and line "
+                "numbers, full publisher metadata and source file accompany the workspace. ")
+            if source.get("publisherEdition") is not None:
+                introduction += "Publisher edition: " + str(source["publisherEdition"]) + ". "
+            if source.get("captured_at"):
+                introduction += "Local original-file import: " + source["captured_at"] + ". "
+            amount_fields = [name for name in source.get("source_columns", [])
+                             if name in {"amount_gbp", "charity_amount_gbp"}]
+            if amount_fields:
+                introduction += "Published " + ", ".join(amount_fields) + " values retain GBP. "
+                if {"period", "display"}.issubset(source.get("source_columns", [])):
+                    introduction += "Original billing period and display wording stay with each price tier. "
+            publication_note = ("Complete original CSV and publisher metadata; original field strings, "
+                                "source keys and native source review retained.")
+            workbook_notes = ("Every original CSV field remains text, including blank fields and "
+                              "published zero amounts. Profile counts are integers. Original field "
+                              "names, source keys, row/line records and complete publisher metadata "
+                              "travel with the source file in the workspace.")
         introduction = plan.get("introduction", introduction)
         require(isinstance(introduction, str), "DATASETTE_REPORT_INTRODUCTION_INVALID")
+        publication_note = plan.get("publication_note", publication_note)
+        workbook_notes = plan.get("workbook_note", workbook_notes)
         definition = self.analysis.reports.save(report_name, {
             "id": self.identifier(edition["edition_id"] + ":REPORT_DEFINITION"),
             "expected_revision": 0, "title": (edition["title"] + " — Analysis")[:200],
@@ -339,7 +367,10 @@ class DatasetteAnalysis:
                           "parameters_text": None} for recipe, query in zip(recipes, queries)]})
         pinned = self.analysis.reports.definition(report_name, revision=definition["revision"])
         if "expected_views" not in edition:
-            edition["expected_views"] = self.analysis.database.view_bindings()
+            edition["expected_views"] = {"scope": "selected", "bindings": [
+                {"name": item["name"], "version_id": item["version_id"],
+                 "revision": item["view_revision"]}
+                for item in sorted(edition["collections"].values(), key=lambda value: value["name"])]}
             self._save()
         report = self._job(edition["edition_id"] + ":REPORT", "report", {
             "name": report_name, "revision": definition["revision"],
@@ -348,7 +379,7 @@ class DatasetteAnalysis:
         publication = self.analysis.reports.publish(report["id"], {
             "id": self.identifier(edition["edition_id"] + ":REPORT_PUBLICATION"),
             "result_sha256": report["result"]["result_sha256"], "expected_revision": 0,
-            "note": plan.get("publication_note", "Complete source edition, exact disclosed capacity and retained source-year context.")})
+            "note": publication_note})
         section0 = self.analysis.workbooks.source({"kind": "report", "id": publication["id"], "section": 0})
         publication_sha = section0["sha256"]
         edition["report"] = {**publication, "sha256": publication_sha, "job_id": report["id"]}
@@ -369,8 +400,7 @@ class DatasetteAnalysis:
         workbook_definition = self.analysis.workbooks.save(workbook_name, {
             "id": self.identifier(edition["edition_id"] + ":WORKBOOK_DEFINITION"),
             "expected_revision": 0, "title": edition["title"],
-            "notes": plan.get("workbook_note", "Exact source values and capacity totals remain text. Original nulls display as NULL; "
-                     "empty strings stay empty. Counts are integers. Complete source files travel with the workspace."),
+            "notes": workbook_notes,
             "sheets": sheets})
         workbook = self._job(edition["edition_id"] + ":WORKBOOK", "workbook", {
             "name": workbook_name, "revision": workbook_definition["revision"],
@@ -418,6 +448,8 @@ class DatasetteAnalysis:
                     raw_edition = _source.read_retained(handover)
                 elif selected["record"]["delivery"]["kind"] == "native-edition":
                     raw_edition = _source.read_native_edition(handover, node=self.analysis.node)
+                elif selected["record"]["delivery"]["kind"] == "csv-source":
+                    raw_edition = _source.read_csv_source(handover, node=self.analysis.node)
                 else:
                     raw_edition = self._finalized(selected, resume=resume)
                 identity = raw_edition["id"]
@@ -427,8 +459,11 @@ class DatasetteAnalysis:
                     self.record["current_edition"] = identity
                     self._emit("COMPLETE", edition_id=identity, reused=True)
                     return current
-                require(raw_edition["rows"], "DATASETTE_EMPTY_SELECTION",
-                        "The source selection contains no rows. Choose the intended complete selection.")
+                empty_csv = (not raw_edition["rows"]
+                             and raw_edition["source"].get("source_mode") == "original-csv"
+                             and bool(raw_edition["source"].get("source_columns")))
+                require(raw_edition["rows"] or empty_csv, "DATASETTE_EMPTY_SELECTION",
+                        "The source selection contains no rows or retained original CSV header.")
                 raw_edition["source"]["edition_id"] = identity
                 reviewed_keys = raw_edition.get("review", {}).get("keys")
                 if isinstance(reviewed_keys, dict):
@@ -441,6 +476,9 @@ class DatasetteAnalysis:
                                "created_at": _now(), "name": prefix + "_" + identity[:12],
                                "row_count": len(raw_edition["rows"]), "source": raw_edition["source"],
                                "review": plan["review"], "source_review": raw_edition["review"],
+                               "product_profile": ("original-csv-strings-v1"
+                                   if raw_edition["source"].get("source_mode") == "original-csv"
+                                   else "datasette-exact-v1"),
                                "summary": plan.get("summary") or plan["review"].get("summary") or
                                           {"rows": len(raw_edition["rows"])},
                                "status": "PREPARING", "collections": {}, "files": []}
@@ -453,7 +491,10 @@ class DatasetteAnalysis:
                     self.directory / identity / "source-document",
                     collections=plan["collections"], edition=raw_edition)
                 for key, collection in plan["collections"].items():
-                    if not collection["rows"]:
+                    # A complete header-only CSV is a real zero-row source table.
+                    # The maintained response projection imports its declared
+                    # columns and original bytes through the ordinary native path.
+                    if not collection["rows"] and not (empty_csv and key == "plants"):
                         continue
                     current["collections"][key] = self._prepare_collection(
                         current, key, collection, document,
@@ -539,12 +580,14 @@ class DatasetteAnalysis:
                     "rows": page.get("rows") or page.get("changes") or [],
                     "page": page, "native": job["result"]}
 
-    def export(self, *, destination=None, export_id=None, resume=False):
-        """Snapshot current customer work; a retained export ID replays its archive."""
+    def export(self, *, destination=None, export_id=None, edition_id=None, resume=False):
+        """Snapshot an exact edition and current work; an export ID replays it."""
         with self._mutex:
             self.record = self._read()
             require(any(edition["status"] == "COMPLETE" for edition in self.record["editions"]),
                     "DATASETTE_COMPLETED_EDITION_REQUIRED")
+            require(edition_id is None or isinstance(edition_id, str) and _EDITION.fullmatch(edition_id),
+                    "DATASETTE_EXPORT_EDITION_INVALID")
             if export_id is None:
                 if resume:
                     pending = [item for item in self.record["exports"]
@@ -558,9 +601,14 @@ class DatasetteAnalysis:
                     "DATASETTE_EXPORT_ID_INVALID")
             existing = next((item for item in self.record["exports"]
                              if item["id"] == export_id), None)
+            if existing is not None and edition_id is not None:
+                require(existing.get("edition_id") == edition_id,
+                        "DATASETTE_EXPORT_EDITION_CHANGED")
+            selected = self._selected(self.record, edition_id or (existing or {}).get("edition_id"))
+            require(selected["status"] == "COMPLETE", "DATASETTE_COMPLETED_EDITION_REQUIRED")
             if existing is None:
                 existing = {"id": export_id, "status": "PREPARING", "files": [],
-                            "created_at": _now(), "edition_id": self.record["current_edition"],
+                            "created_at": _now(), "edition_id": selected["edition_id"],
                             "workspace_id": self.analysis.identity}
                 self.record["exports"].append(existing)
                 self.record["status"] = "COMPLETE"
@@ -574,6 +622,10 @@ class DatasetteAnalysis:
                     # workbooks and customer edits. Replaying that same ID uses
                     # the original native archive operation and exact snapshot.
                     existing["status"] = "PREPARING"
+                    # Select the retained request edition before the native
+                    # archive snapshots the operation record. The model mutex
+                    # and original operator serialize source preparation here.
+                    self.record["current_edition"] = existing["edition_id"]
                     self._save()
                     job = self._job("WORKSPACE_EXPORT:" + export_id, "workspace-export",
                                     {"include_previous_backups": False}, resume=resume)
@@ -644,6 +696,10 @@ class DatasetteAnalysis:
 
     @contextmanager
     def open_download(self, name, *, edition_id=None, export_id=None):
+        if isinstance(name, str) and name.startswith("bdnb-"):
+            with _sibling("bdnb_adapter").open_bdnb_download(self, name) as selected:
+                yield selected
+            return
         if isinstance(name, str) and name.startswith("nld-"):
             with _sibling("nld_adapter").open_nld_download(self, name) as selected:
                 yield selected
@@ -687,6 +743,11 @@ class DatasetteAnalysis:
     def dispatch(self, action, body=None):
         body = {} if body is None else body
         require(isinstance(body, dict), "DATASETTE_REQUEST_OBJECT_REQUIRED")
+        if action in {"bdnb.schema", "bdnb.status", "bdnb.get", "bdnb.rows"}:
+            return _sibling("bdnb_adapter").DatasetteBdnb(self).dispatch(action, body)
+        if isinstance(action, str) and action.startswith("bdnb."):
+            with self._mutex:
+                return _sibling("bdnb_adapter").DatasetteBdnb(self).dispatch(action, body)
         if action in {"nld.status", "nld.rows"}:
             return _sibling("nld_adapter").DatasetteNld(self).dispatch(action, body)
         if isinstance(action, str) and action.startswith("nld."):
@@ -705,7 +766,7 @@ class DatasetteAnalysis:
                                 resume=body.get("resume", False))
         if action == "export":
             return self.export(destination=body.get("destination"), export_id=body.get("export_id"),
-                               resume=body.get("resume", False))
+                               edition_id=body.get("edition_id"), resume=body.get("resume", False))
         raise _source.SourceError("DATASETTE_ACTION_UNKNOWN", action)
 
     def close(self):

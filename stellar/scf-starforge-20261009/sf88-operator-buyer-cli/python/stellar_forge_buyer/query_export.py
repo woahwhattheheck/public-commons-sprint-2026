@@ -236,6 +236,8 @@ def export_query(database, sql, parameters=(), *, destination, formats=("jsonl",
                         progress({"rows": count, "outputBytes": sum(lengths.values()) + sqlite_bytes, "complete": False})
             binding = {"database": str(database.path), "sql": sql, "parameters": encoded_parameters,
                        "views": rows.views, "readTables": list(rows.read_tables), "sourceVersions": rows.source_versions()}
+            if isinstance(expected_views, dict):
+                binding["viewSelection"] = expected_views
             binding_sha = digest(_json(binding).encode("utf-8"))
             if output_db is not None:
                 output_db.execute("CREATE TABLE export_metadata(record TEXT NOT NULL)")

@@ -4,6 +4,8 @@ import { APPLICATION_PROVIDER_SCHEMA, observeApplicationStartup } from '../appli
 import { need } from '../storage.mjs';
 import { datasetteAnalysisApplication, prepareDatasetteAnalysisApplication,
   datasetteAnalysisResource, datasetteAnalysisStartup } from '../application-datasette-analysis.mjs';
+import { datasetteWorkflowApplication, prepareDatasetteWorkflowApplication,
+  datasetteWorkflowResource, datasetteWorkflowStartup } from '../application-datasette-workflow.mjs';
 import { parseDatasetteAnalysisCommand, resolveDatasetteAnalysisCommand } from '../../../sf30-seller-sdk/datasette-analysis/cli.mjs';
 
 export default {
@@ -11,9 +13,14 @@ export default {
   id: 'datasette-analysis',
   order: 111,
   appendPort: false,
-  catalog({ common }) { return [datasetteAnalysisApplication(common)]; },
-  prepare(type, settings, context) { return prepareDatasetteAnalysisApplication(settings, context); },
-  resourceKey(type, settings) { return datasetteAnalysisResource(settings); },
+  catalog({ common }) { return [datasetteAnalysisApplication(common), datasetteWorkflowApplication(common)]; },
+  prepare(type, settings, context) {
+    return type.id === 'datasette-workflow' ? prepareDatasetteWorkflowApplication(settings, context) :
+      prepareDatasetteAnalysisApplication(settings, context);
+  },
+  resourceKey(type, settings) {
+    return type.id === 'datasette-workflow' ? datasetteWorkflowResource(settings) : datasetteAnalysisResource(settings);
+  },
   matchRequest(request) { return !request.pythonCommand && request.command === 'datasette-analysis'; },
   async prepareChild(request, directory, originalArgs, environment) {
     const { selection } = parseDatasetteAnalysisCommand(request.args);
@@ -25,8 +32,12 @@ export default {
   },
   createObserver(request, directory, context) {
     return observeApplicationStartup(request, directory, text => {
-      if (!text.startsWith('{') || !text.includes('"stellar-forge.datasette-operator.v1"')) return null;
-      return () => datasetteAnalysisStartup(request, text, context);
+      if (!text.startsWith('{')) return null;
+      if (text.includes('"stellar-forge.source-workflow.v1"'))
+        return () => datasetteWorkflowStartup(request, text, context);
+      if (text.includes('"stellar-forge.datasette-operator.v1"'))
+        return () => datasetteAnalysisStartup(request, text, context);
+      return null;
     });
   },
 };

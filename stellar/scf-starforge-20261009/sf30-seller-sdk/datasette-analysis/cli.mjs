@@ -9,20 +9,37 @@ import { inspectPythonInstallation } from '../../distribution/python-runtime/wor
 import { absolute, canonical, digest, json, need, plain, regular } from '../../distribution/runtime-workspace/storage.mjs';
 
 export const DATASETTE_ANALYSIS_SOURCE = 'stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/';
+export const BDNB_PRODUCT_SOURCE = 'products/ntico/bdnb-territory/';
+export const SUPPLIER_REPORT_SOURCE = 'products/conapi/supplier-report/';
 const SCHEMA = 'stellar-forge.datasette-analysis-python-selection.v1';
 const HASH = /^[a-f0-9]{64}$/;
 const CORE = ['cli.mjs', 'cli.py', 'model.py', 'source.py', 'recipes.py',
-  'operator_server.py', 'operator_client.py', 'operator_client.pyi',
-  'operator.html', 'operator.css', 'operator.mjs', 'edition_bridge.mjs', 'receiving.py',
+  'operator_server.py', 'operator_client.py', 'operator.html', 'operator.css', 'operator.mjs',
+  'workflow_engine.py', 'workflow_cli.py', 'workflow_server.py', 'workflow_analysis.py',
+  'workflow_app.html', 'workflow_app.mjs', 'workflow_app.css', 'WORKFLOW.md', 'WORKFLOW_ANALYSIS.md',
+  'operator_client.pyi', 'edition_bridge.mjs', 'receiving.py',
   'nld_contract.py', 'nld_task.py', 'nld_worker.py', 'nld_adapter.py',
-  'nld_cli.py', 'nld_receiving.py', 'nld_operator.mjs', 'NLD.md', 'NLD_SOURCE_CONTRACT.json'];
+  'nld_cli.py', 'nld_receiving.py', 'nld_operator.mjs', 'NLD.md', 'NLD_SOURCE_CONTRACT.json',
+  'bdnb_source.py', 'bdnb_adapter.py', 'bdnb_dictionary.json', 'bdnb_contract.json', 'BDNB_SOURCE.md',
+  'bdnb_products.py', 'bdnb_workflow.py', 'bdnb_receiving.py', 'bdnb_operator.mjs',
+  'provider_workflows.py', 'provider_workflows.mjs', 'provider_workflows.css', 'PROVIDER_WORKFLOWS.md',
+  'provider_inputs.py', 'provider_inputs.mjs',
+  'partner-workflows/preparation.mjs', 'partner-workflows/profiles.mjs',
+  'partner-workflows/prepare_cli.mjs', 'partner-workflows/README.md',
+  'partner-workflows/SOURCE_CONTRACTS.md',
+  'partner-workflows/shopify_payments.mjs', 'partner-workflows/shopify_payments_cli.mjs',
+  'partner-workflows/SHOPIFY_PAYMENTS.md',
+  'partner-workflows/odoo_target.mjs', 'partner-workflows/odoo_target_cli.mjs',
+  'partner-workflows/ODOO_TARGET.md',
+  'partner-workflows/xero_contacts.mjs', 'partner-workflows/xero_contacts_cli.mjs',
+  'partner-workflows/XERO_CONTACTS.md'];
 const OPTIONS = new Map([
   ['--runtime-workspace', 'root'], ['--runtime-directory', 'runtimeDirectory'],
   ['--runtime-id', 'runtimeId'], ['--installation-id', 'installationId'],
   ['--expected-binding-sha256', 'expectedBindingSha256'],
 ]);
 const COMMANDS = new Set(['serve', 'status', 'prepare', 'rows', 'compare', 'export',
-  'call', 'request', 'download', 'receive', 'nld', 'nld-receive']);
+  'call', 'request', 'download', 'receive', 'workflow', 'nld', 'nld-receive', 'bdnb-receive']);
 const fingerprint = value => digest(json(canonical(value)));
 
 export function parseDatasetteAnalysisCommand(args) {
@@ -86,9 +103,31 @@ export async function inspectDatasetteAnalysisInstallation(root, {
     'DATASETTE_ANALYSIS_SOURCE_CHANGED');
   const files = new Map(manifest.files.map(file => [file.path, file]));
   need(files.size === manifest.files.length, 'DATASETTE_ANALYSIS_SOURCE_CHANGED');
+  const required = new Set(CORE.map(name => DATASETTE_ANALYSIS_SOURCE + name));
+  for (const name of ['README.md', 'WORKFLOW.md', 'RECEIVING.md', 'cli.mjs', 'receiving.py', 'workflow.template.json'])
+    required.add(BDNB_PRODUCT_SOURCE + name);
+  // The selected source manifest carries the complete workflow and its native
+  // Kestra flows, publisher source and receiving guides in the same binding.
+  for (const path of files.keys()) {
+    if (typeof path !== 'string' || !path.startsWith(DATASETTE_ANALYSIS_SOURCE)) continue;
+    const name = path.slice(DATASETTE_ANALYSIS_SOURCE.length);
+    if (!/^(?:workflow_[^/]+|WORKFLOW[^/]*\.(?:md|json)|provider_(?:workflows|inputs)\.[^/]+|PROVIDER_WORKFLOWS\.md|partner-workflows\/.+|kestra\/.+)$/.test(name)) continue;
+    need(!name.includes('\\') && name.split('/').every(part => part && part !== '.' && part !== '..'),
+      'DATASETTE_ANALYSIS_SOURCE_CHANGED');
+    required.add(path);
+  }
+  // Supplier modules, editable browser, rules and source examples travel in
+  // the original selected product. Bind every selected component member.
+  for (const path of files.keys()) {
+    if (typeof path !== 'string' || !path.startsWith(SUPPLIER_REPORT_SOURCE) && !path.startsWith(BDNB_PRODUCT_SOURCE)) continue;
+    const name = path.slice(path.startsWith(BDNB_PRODUCT_SOURCE) ? BDNB_PRODUCT_SOURCE.length : SUPPLIER_REPORT_SOURCE.length);
+    need(!name.includes('\\') && name.split('/').every(part => part && part !== '.' && part !== '..'),
+      'DATASETTE_ANALYSIS_SOURCE_CHANGED');
+    required.add(path);
+  }
   const sourceFiles = [];
-  for (const name of CORE) {
-    const path = DATASETTE_ANALYSIS_SOURCE + name, member = files.get(path);
+  for (const path of [...required].sort()) {
+    const member = files.get(path);
     need(plain(member) && HASH.test(member.sha256 ?? '') && Number.isSafeInteger(member.bytes) &&
       member.bytes > 0 && member.bytes <= 4 * 1024 * 1024,
       'DATASETTE_ANALYSIS_SOURCE_REQUIRED', 'Install the complete Datasette Analysis source: ' + path);
@@ -110,16 +149,19 @@ export async function resolveDatasetteAnalysisCommand(args, { leaseFd } = {}) {
   if (selection.expectedBindingSha256 !== undefined)
     need(selected.fingerprint === selection.expectedBindingSha256,
       'DATASETTE_ANALYSIS_INSTALLATION_CHANGED', 'Review the current original Python environment and source.');
-  const commandArgs = [...originalArgs];
-  if (commandArgs[0] !== 'receive') {
+  const workflow = originalArgs[0] === 'workflow';
+  const commandArgs = workflow ? originalArgs.slice(1) : [...originalArgs];
+  if (!workflow && commandArgs[0] !== 'receive') {
     const checkout = datasetteAnalysisOption(commandArgs, '--checkout');
     need(checkout === undefined || checkout === selected.binding.sourceRoot,
       'DATASETTE_ANALYSIS_CHECKOUT_CHANGED', 'Use the source carried by the selected original installation.');
     if (checkout === undefined) commandArgs.push('--checkout', selected.binding.sourceRoot);
   }
-  const entryName = commandArgs[0] === 'nld' ? 'nld_cli.py'
-    : commandArgs[0] === 'nld-receive' ? 'nld_receiving.py' : 'cli.py';
-  if (entryName !== 'cli.py') commandArgs.shift();
+  const entryName = workflow ? 'workflow_cli.py'
+    : commandArgs[0] === 'nld' ? 'nld_cli.py'
+    : commandArgs[0] === 'nld-receive' ? 'nld_receiving.py'
+    : commandArgs[0] === 'bdnb-receive' ? 'bdnb_receiving.py' : 'cli.py';
+  if (!workflow && entryName !== 'cli.py') commandArgs.shift();
   const entry = join(selected.binding.sourceRoot, DATASETTE_ANALYSIS_SOURCE, entryName);
   return { executable: selected.installation.python, args: ['-I', entry, ...commandArgs],
     cwd: selected.binding.directory, binding: selected.selection, fingerprint: selected.fingerprint };
@@ -133,6 +175,8 @@ function usage() {
     '  --workspace /private/analysis --operation-id OPERATION_ID --port 0\n\n' +
     'Commands after -- are the original cli.py commands: serve, status, prepare,\n' +
     'rows, compare, export, call, request, download and receive.\n' +
+    'Use workflow followed by its native arguments to open the request, report,\n' +
+    'delivery and receiving operator; workflow --help lists those commands.\n' +
     'nld forwards to the complete original-workspace NLD CLI; nld-receive runs its\n' +
     'retained whole-workspace receiving programme with explicit original IDs.\n' +
     'Use the same workspace and operation ID when reopening existing work.\n' +
