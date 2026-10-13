@@ -286,7 +286,7 @@ export function attachProgrammes(context) {
     if (!selected) return '<section class="section"><h2>Original calculations, continued together</h2><p>A programme may contain a single baseline or an expanded list of prepared cases. The existing native engine validates every input and executes each saved selection. Completed model stages remain available when another case needs attention.</p></section>';
     if (!record) return '<section class="section" role="status"><h2>Opening saved programme…</h2></section>';
     const counts = record.counts || {}, rows = asArray(record.runs), task = activeTask(record.id);
-    const nativeActive = Boolean(task) || Boolean(record.active) || rows.some(row => row.state === 'running');
+    const nativeActive = Boolean(task) || Boolean(record.active) || rows.some(row => row.active || row.state === 'running');
     const complete = Number(counts.complete || 0), total = Number(counts.total ?? rows.length);
     const canPause = nativeActive && !record.pause_requested;
     const runRows = rows.map(row => {

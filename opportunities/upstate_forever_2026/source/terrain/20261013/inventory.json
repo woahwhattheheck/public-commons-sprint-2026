@@ -1,0 +1,855 @@
+{
+  "schema": "upstate.terrain-source-inventory/v1",
+  "operation": "ECSA-UPPER-SAVANNAH-TERRAIN-20261013",
+  "title": "Original USGS 3DEP one arc-second tile inventory for the buffered Upper Savannah model domain",
+  "source_root": "opportunities/upstate_forever_2026",
+  "source_plan": {
+    "schema": "upstate.annual-nlcd-wcs-plan/v1",
+    "bytes": 5062,
+    "sha256": "41296472d82dfb53e65b9fa86045cf5facba33d567977269f69437d53f9eefa9",
+    "domain_feature_count": 217,
+    "buffer_m": 1000,
+    "original_decoded_domain_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+    "domain_source_url": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6"
+  },
+  "discovery": {
+    "input_bounds": [
+      1114884.4671420595,
+      1238657.614564179,
+      1308131.2716092442,
+      1428180.0626974022
+    ],
+    "input_crs": "EPSG:5070",
+    "output_crs": "EPSG:4269",
+    "corners": [
+      {
+        "projected": [
+          1114884.4671420595,
+          1238657.614564179
+        ],
+        "geographic": [
+          -83.8743318014598,
+          33.57448289818143
+        ]
+      },
+      {
+        "projected": [
+          1308131.2716092442,
+          1238657.614564179
+        ],
+        "geographic": [
+          -81.80143266029245,
+          33.335571299652926
+        ]
+      },
+      {
+        "projected": [
+          1308131.2716092442,
+          1428180.0626974022
+        ],
+        "geographic": [
+          -81.48972373077227,
+          35.01177870504387
+        ]
+      },
+      {
+        "projected": [
+          1114884.4671420595,
+          1428180.0626974022
+        ],
+        "geographic": [
+          -83.60701456832756,
+          35.25542325044666
+        ]
+      }
+    ],
+    "envelope": [
+      -83.8743318014598,
+      33.335571299652926,
+      -81.48972373077227,
+      35.25542325044666
+    ],
+    "conservative_discovery_bounds": [
+      -83.89,
+      33.32,
+      -81.47,
+      35.27
+    ],
+    "tiles": [
+      {
+        "tile": "n34w084",
+        "nominal_bounds": [
+          -84,
+          33,
+          -83,
+          34
+        ]
+      },
+      {
+        "tile": "n34w083",
+        "nominal_bounds": [
+          -83,
+          33,
+          -82,
+          34
+        ]
+      },
+      {
+        "tile": "n34w082",
+        "nominal_bounds": [
+          -82,
+          33,
+          -81,
+          34
+        ]
+      },
+      {
+        "tile": "n35w084",
+        "nominal_bounds": [
+          -84,
+          34,
+          -83,
+          35
+        ]
+      },
+      {
+        "tile": "n35w083",
+        "nominal_bounds": [
+          -83,
+          34,
+          -82,
+          35
+        ]
+      },
+      {
+        "tile": "n35w082",
+        "nominal_bounds": [
+          -82,
+          34,
+          -81,
+          35
+        ]
+      },
+      {
+        "tile": "n36w084",
+        "nominal_bounds": [
+          -84,
+          35,
+          -83,
+          36
+        ]
+      },
+      {
+        "tile": "n36w083",
+        "nominal_bounds": [
+          -83,
+          35,
+          -82,
+          36
+        ]
+      },
+      {
+        "tile": "n36w082",
+        "nominal_bounds": [
+          -82,
+          35,
+          -81,
+          36
+        ]
+      }
+    ],
+    "constants": {
+      "a": 6378137,
+      "rf": 298.257222101,
+      "n": 0.60290276906576,
+      "C": 1.3491820315609702,
+      "rho0": 9928937.004248783,
+      "e2": 0.006694380022900787
+    },
+    "maximum_roundtrip_error_m": 5.122274160385132e-9,
+    "extent_method": "Exact extrema on a positive-east/north-of-origin Albers rectangle: longitude increases with x and y; latitude decreases with x and increases with y. Rounded outward with at least 0.01 degree padding for coarse source-tile discovery only."
+  },
+  "collection_url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/",
+  "projection_references": [
+    "https://gdal.org/en/stable/proj_list/guid7.html",
+    "https://proj.org/en/stable/operations/projections/aea.html",
+    "https://eesc.usgs.gov/MBR/bbs/geographic_information/BBS_grid_metadata.html"
+  ],
+  "captured_on": "2026-10-13",
+  "transport": "Original public HTTPS index and XML bodies downloaded by the verified connected Notion integration; every body is ASCII and preserves the publisher's declared XML encoding and original line endings.",
+  "retained_members": [
+    {
+      "path": "source/terrain/20261013/original/n34w084/index.html",
+      "bytes": 7710,
+      "sha256": "5fe053405a85437739a153bb798d24ff3817298471ff44fa61957b9ad85f5db9",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w084/USGS_1_n34w084.xml",
+      "bytes": 12345,
+      "sha256": "13f569268dc3ec1069a46c9d5843dfc564ad4ceceeda04d0dfe11e9d3acfcef0",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w083/index.html",
+      "bytes": 7710,
+      "sha256": "64380ac32ee2feff91a4265cc97dfa098806a93c6d99f2ae2aa18a2542c463d9",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w083/USGS_1_n34w083.xml",
+      "bytes": 12343,
+      "sha256": "9142dbd446d7fa7c0848e76e810ee9612c44a7a97ce0b6487605b74b6d2448d7",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w082/index.html",
+      "bytes": 7710,
+      "sha256": "938a5e26dadb40d2755dc0f8d18050d896f72f7780b65de39813c1c5e3bc724d",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w082/USGS_1_n34w082.xml",
+      "bytes": 13296,
+      "sha256": "7785fcdef1ca5a21c5466e7dddc1c0939e2f1ab06c2fdca5ab255b0a20e67ac8",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w084/index.html",
+      "bytes": 7824,
+      "sha256": "83e02510663be9a56a65d040b95135811b3b9d45a0769d0906b9f48065ef5abb",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w084/USGS_1_n35w084.xml",
+      "bytes": 12345,
+      "sha256": "ed1e16c3f0b3c359b082c0c265ad4f114f179ef2fe6505816ae292e1b859fb6e",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w083/index.html",
+      "bytes": 7824,
+      "sha256": "04f47df4477c19ed5f0b30eb01ece47c9f33fc0a2418e19bda529051c2044381",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w083/USGS_1_n35w083.xml",
+      "bytes": 12345,
+      "sha256": "87a851ec711fb95a01ae389a4324e0260b974ad11c77a4c5649fa9875e50c670",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w082/index.html",
+      "bytes": 7710,
+      "sha256": "71838d4713b661a30849e65d208b61e5c70e1e4fb7dcbe8cfef7f201acaf6900",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w082/USGS_1_n35w082.xml",
+      "bytes": 11668,
+      "sha256": "2d58a12342b9da57a2c8a06f9acb72b5af3c797c93d66b4c8b276ea033a2568f",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w084/index.html",
+      "bytes": 7710,
+      "sha256": "23f9000c1e041702012da8a810d032b93a172a84c63bd8bc01e4a4610036f0f3",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w084/USGS_1_n36w084.xml",
+      "bytes": 13297,
+      "sha256": "f4f30de9b0f2bc46a0fc27abbb122aea11e09b672bcfbf83ddd0e2630dfb1199",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w083/index.html",
+      "bytes": 7710,
+      "sha256": "bcb90fa5d75f3cc25782dd56e4ab025bf558dacb6d0ac4e78a994bb5d3696375",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w083/USGS_1_n36w083.xml",
+      "bytes": 14512,
+      "sha256": "5e6c4ce9751145c613e27ab70dc068efd5c945d64513aa2a3e472fb8f8f3b817",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w082/index.html",
+      "bytes": 7710,
+      "sha256": "e5a1e8a22e65f0ed4fcb023f1de3bc52ee83935ce123c478931ee184eb7c3b69",
+      "mode": "100644"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w082/USGS_1_n36w082.xml",
+      "bytes": 11667,
+      "sha256": "4635a2ec86c5e5b3d119d0a00adc96b60a49bbc4e38fcec0aebb07b40e48843d",
+      "mode": "100644"
+    }
+  ],
+  "listed_total_bytes": {
+    "tiff": 519255250,
+    "xml": 113818,
+    "gpkg": 3084288
+  },
+  "tiles": [
+    {
+      "tile": "n34w084",
+      "nominal_bounds": [
+        -84,
+        33,
+        -83,
+        34
+      ],
+      "metadata_sha256": "13f569268dc3ec1069a46c9d5843dfc564ad4ceceeda04d0dfe11e9d3acfcef0",
+      "metadata_bytes": 12345,
+      "title": "USGS 1 Arc Second n34w084 20230215",
+      "publication_date": "20230215",
+      "source_period": {
+        "begin": "20110101",
+        "end": "20200614"
+      },
+      "horizontal_datum": "North American Datum of 1983",
+      "vertical_datum": "North American Vertical Datum of 1988",
+      "vertical_units": "meters",
+      "geographic_bounds": [
+        -84.00166666698242,
+        32.99833333301778,
+        -82.99833333361579,
+        34.00166666638444
+      ],
+      "raster_columns": 3612,
+      "raster_rows": 3612,
+      "geo_resolution": [
+        "-0.000277777777787003",
+        "0.0002777777777869951"
+      ],
+      "index": {
+        "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w084/",
+        "bytes": 7710,
+        "sha256": "5fe053405a85437739a153bb798d24ff3817298471ff44fa61957b9ad85f5db9",
+        "path": "original/n34w084/index.html"
+      },
+      "assets": [
+        {
+          "name": "USGS_1_n34w084.gpkg",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 385024,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w084/USGS_1_n34w084.gpkg"
+        },
+        {
+          "name": "USGS_1_n34w084.tif",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 57712914,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w084/USGS_1_n34w084.tif"
+        },
+        {
+          "name": "USGS_1_n34w084.xml",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 12345,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w084/USGS_1_n34w084.xml"
+        }
+      ],
+      "metadata_path": "original/n34w084/USGS_1_n34w084.xml"
+    },
+    {
+      "tile": "n34w083",
+      "nominal_bounds": [
+        -83,
+        33,
+        -82,
+        34
+      ],
+      "metadata_sha256": "9142dbd446d7fa7c0848e76e810ee9612c44a7a97ce0b6487605b74b6d2448d7",
+      "metadata_bytes": 12343,
+      "title": "USGS 1 Arc Second n34w083 20230215",
+      "publication_date": "20230215",
+      "source_period": {
+        "begin": "20160228",
+        "end": "20220112"
+      },
+      "horizontal_datum": "North American Datum of 1983",
+      "vertical_datum": "North American Vertical Datum of 1988",
+      "vertical_units": "meters",
+      "geographic_bounds": [
+        -83.00166666718229,
+        32.99833333301778,
+        -81.9983333329163,
+        34.00166666638444
+      ],
+      "raster_columns": 3612,
+      "raster_rows": 3612,
+      "geo_resolution": [
+        "-0.000277777777787003",
+        "0.000277777778035988"
+      ],
+      "index": {
+        "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w083/",
+        "bytes": 7710,
+        "sha256": "64380ac32ee2feff91a4265cc97dfa098806a93c6d99f2ae2aa18a2542c463d9",
+        "path": "original/n34w083/index.html"
+      },
+      "assets": [
+        {
+          "name": "USGS_1_n34w083.gpkg",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 446464,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w083/USGS_1_n34w083.gpkg"
+        },
+        {
+          "name": "USGS_1_n34w083.tif",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 57942365,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w083/USGS_1_n34w083.tif"
+        },
+        {
+          "name": "USGS_1_n34w083.xml",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 12343,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w083/USGS_1_n34w083.xml"
+        }
+      ],
+      "metadata_path": "original/n34w083/USGS_1_n34w083.xml"
+    },
+    {
+      "tile": "n34w082",
+      "nominal_bounds": [
+        -82,
+        33,
+        -81,
+        34
+      ],
+      "metadata_sha256": "7785fcdef1ca5a21c5466e7dddc1c0939e2f1ab06c2fdca5ab255b0a20e67ac8",
+      "metadata_bytes": 13296,
+      "title": "USGS 1 Arc Second n34w082 20220725",
+      "publication_date": "20220725",
+      "source_period": {
+        "begin": "20181127",
+        "end": "20190424"
+      },
+      "horizontal_datum": "North American Datum of 1983",
+      "vertical_datum": "North American Vertical Datum of 1988",
+      "vertical_units": "meters",
+      "geographic_bounds": [
+        -82.00166666648283,
+        32.99833333301778,
+        -80.99833333311618,
+        34.00166666638444
+      ],
+      "raster_columns": 3612,
+      "raster_rows": 3612,
+      "geo_resolution": [
+        "-0.000277777777787003",
+        "0.000277777777787003"
+      ],
+      "index": {
+        "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w082/",
+        "bytes": 7710,
+        "sha256": "938a5e26dadb40d2755dc0f8d18050d896f72f7780b65de39813c1c5e3bc724d",
+        "path": "original/n34w082/index.html"
+      },
+      "assets": [
+        {
+          "name": "USGS_1_n34w082.gpkg",
+          "listed_modified": "25-Jul-2022 23:42",
+          "listed_bytes": 368640,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w082/USGS_1_n34w082.gpkg"
+        },
+        {
+          "name": "USGS_1_n34w082.tif",
+          "listed_modified": "25-Jul-2022 23:42",
+          "listed_bytes": 57976835,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w082/USGS_1_n34w082.tif"
+        },
+        {
+          "name": "USGS_1_n34w082.xml",
+          "listed_modified": "25-Jul-2022 23:42",
+          "listed_bytes": 13296,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n34w082/USGS_1_n34w082.xml"
+        }
+      ],
+      "metadata_path": "original/n34w082/USGS_1_n34w082.xml"
+    },
+    {
+      "tile": "n35w084",
+      "nominal_bounds": [
+        -84,
+        34,
+        -83,
+        35
+      ],
+      "metadata_sha256": "ed1e16c3f0b3c359b082c0c265ad4f114f179ef2fe6505816ae292e1b859fb6e",
+      "metadata_bytes": 12345,
+      "title": "USGS 1 Arc Second n35w084 20230215",
+      "publication_date": "20230215",
+      "source_period": {
+        "begin": "20170211",
+        "end": "20220112"
+      },
+      "horizontal_datum": "North American Datum of 1983",
+      "vertical_datum": "North American Vertical Datum of 1988",
+      "vertical_units": "meters",
+      "geographic_bounds": [
+        -84.00166666698242,
+        33.998333332817936,
+        -82.99833333361579,
+        35.0016666670839
+      ],
+      "raster_columns": 3612,
+      "raster_rows": 3612,
+      "geo_resolution": [
+        "-0.0002777777780359821",
+        "0.0002777777777869951"
+      ],
+      "index": {
+        "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w084/",
+        "bytes": 7824,
+        "sha256": "83e02510663be9a56a65d040b95135811b3b9d45a0769d0906b9f48065ef5abb",
+        "path": "original/n35w084/index.html"
+      },
+      "assets": [
+        {
+          "name": "USGS_1_n35w084.gpkg",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 450560,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w084/USGS_1_n35w084.gpkg"
+        },
+        {
+          "name": "USGS_1_n35w084.tif",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 57517424,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w084/USGS_1_n35w084.tif"
+        },
+        {
+          "name": "USGS_1_n35w084.xml",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 12345,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w084/USGS_1_n35w084.xml"
+        }
+      ],
+      "metadata_path": "original/n35w084/USGS_1_n35w084.xml"
+    },
+    {
+      "tile": "n35w083",
+      "nominal_bounds": [
+        -83,
+        34,
+        -82,
+        35
+      ],
+      "metadata_sha256": "87a851ec711fb95a01ae389a4324e0260b974ad11c77a4c5649fa9875e50c670",
+      "metadata_bytes": 12345,
+      "title": "USGS 1 Arc Second n35w083 20230215",
+      "publication_date": "20230215",
+      "source_period": {
+        "begin": "19550101",
+        "end": "20220112"
+      },
+      "horizontal_datum": "North American Datum of 1983",
+      "vertical_datum": "North American Vertical Datum of 1988",
+      "vertical_units": "meters",
+      "geographic_bounds": [
+        -83.00166666718229,
+        33.998333332817936,
+        -81.9983333329163,
+        35.00166666708389
+      ],
+      "raster_columns": 3612,
+      "raster_rows": 3612,
+      "geo_resolution": [
+        "-0.0002777777780359782",
+        "0.000277777778035988"
+      ],
+      "index": {
+        "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w083/",
+        "bytes": 7824,
+        "sha256": "04f47df4477c19ed5f0b30eb01ece47c9f33fc0a2418e19bda529051c2044381",
+        "path": "original/n35w083/index.html"
+      },
+      "assets": [
+        {
+          "name": "USGS_1_n35w083.gpkg",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 262144,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w083/USGS_1_n35w083.gpkg"
+        },
+        {
+          "name": "USGS_1_n35w083.tif",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 56413962,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w083/USGS_1_n35w083.tif"
+        },
+        {
+          "name": "USGS_1_n35w083.xml",
+          "listed_modified": "15-Feb-2023 17:53",
+          "listed_bytes": 12345,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w083/USGS_1_n35w083.xml"
+        }
+      ],
+      "metadata_path": "original/n35w083/USGS_1_n35w083.xml"
+    },
+    {
+      "tile": "n35w082",
+      "nominal_bounds": [
+        -82,
+        34,
+        -81,
+        35
+      ],
+      "metadata_sha256": "2d58a12342b9da57a2c8a06f9acb72b5af3c797c93d66b4c8b276ea033a2568f",
+      "metadata_bytes": 11668,
+      "title": "USGS 1 Arc Second n35w082 20260417",
+      "publication_date": "20260417",
+      "source_period": {
+        "begin": "20200101",
+        "end": "20250219"
+      },
+      "horizontal_datum": "North American Datum of 1983",
+      "vertical_datum": "North American Vertical Datum of 1988",
+      "vertical_units": "meters",
+      "geographic_bounds": [
+        -82.00166666648283,
+        33.998333332817936,
+        -80.99833333311618,
+        35.00166666708389
+      ],
+      "raster_columns": 3612,
+      "raster_rows": 3612,
+      "geo_resolution": [
+        "-0.0002777777780359782",
+        "0.000277777777787003"
+      ],
+      "index": {
+        "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w082/",
+        "bytes": 7710,
+        "sha256": "71838d4713b661a30849e65d208b61e5c70e1e4fb7dcbe8cfef7f201acaf6900",
+        "path": "original/n35w082/index.html"
+      },
+      "assets": [
+        {
+          "name": "USGS_1_n35w082.gpkg",
+          "listed_modified": "17-Apr-2026 18:35",
+          "listed_bytes": 409600,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w082/USGS_1_n35w082.gpkg"
+        },
+        {
+          "name": "USGS_1_n35w082.tif",
+          "listed_modified": "17-Apr-2026 18:35",
+          "listed_bytes": 58566573,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w082/USGS_1_n35w082.tif"
+        },
+        {
+          "name": "USGS_1_n35w082.xml",
+          "listed_modified": "17-Apr-2026 18:35",
+          "listed_bytes": 11668,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n35w082/USGS_1_n35w082.xml"
+        }
+      ],
+      "metadata_path": "original/n35w082/USGS_1_n35w082.xml"
+    },
+    {
+      "tile": "n36w084",
+      "nominal_bounds": [
+        -84,
+        35,
+        -83,
+        36
+      ],
+      "metadata_sha256": "f4f30de9b0f2bc46a0fc27abbb122aea11e09b672bcfbf83ddd0e2630dfb1199",
+      "metadata_bytes": 13297,
+      "title": "USGS 1 Arc Second n36w084 20220725",
+      "publication_date": "20220725",
+      "source_period": {
+        "begin": "20181127",
+        "end": "20190424"
+      },
+      "horizontal_datum": "North American Datum of 1983",
+      "vertical_datum": "North American Vertical Datum of 1988",
+      "vertical_units": "meters",
+      "geographic_bounds": [
+        -84.00166666698242,
+        34.99833333351738,
+        -82.99833333361579,
+        36.00166666688409
+      ],
+      "raster_columns": 3612,
+      "raster_rows": 3612,
+      "geo_resolution": [
+        "-0.0002777777777870187",
+        "0.0002777777777869951"
+      ],
+      "index": {
+        "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w084/",
+        "bytes": 7710,
+        "sha256": "23f9000c1e041702012da8a810d032b93a172a84c63bd8bc01e4a4610036f0f3",
+        "path": "original/n36w084/index.html"
+      },
+      "assets": [
+        {
+          "name": "USGS_1_n36w084.gpkg",
+          "listed_modified": "25-Jul-2022 23:42",
+          "listed_bytes": 249856,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w084/USGS_1_n36w084.gpkg"
+        },
+        {
+          "name": "USGS_1_n36w084.tif",
+          "listed_modified": "25-Jul-2022 23:42",
+          "listed_bytes": 58007875,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w084/USGS_1_n36w084.tif"
+        },
+        {
+          "name": "USGS_1_n36w084.xml",
+          "listed_modified": "25-Jul-2022 23:42",
+          "listed_bytes": 13297,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w084/USGS_1_n36w084.xml"
+        }
+      ],
+      "metadata_path": "original/n36w084/USGS_1_n36w084.xml"
+    },
+    {
+      "tile": "n36w083",
+      "nominal_bounds": [
+        -83,
+        35,
+        -82,
+        36
+      ],
+      "metadata_sha256": "5e6c4ce9751145c613e27ab70dc068efd5c945d64513aa2a3e472fb8f8f3b817",
+      "metadata_bytes": 14512,
+      "title": "USGS 1 Arc Second n36w083 20220512",
+      "publication_date": "20220512",
+      "source_period": {
+        "begin": "20170211",
+        "end": "20170411"
+      },
+      "horizontal_datum": "North American Datum of 1983",
+      "vertical_datum": "North American Vertical Datum of 1988",
+      "vertical_units": "meters",
+      "geographic_bounds": [
+        -83.00166666718229,
+        34.99833333351737,
+        -81.99833333291632,
+        36.001666666884084
+      ],
+      "raster_columns": 3612,
+      "raster_rows": 3612,
+      "geo_resolution": [
+        "-0.0002777777777870187",
+        "0.0002777777780359841"
+      ],
+      "index": {
+        "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w083/",
+        "bytes": 7710,
+        "sha256": "bcb90fa5d75f3cc25782dd56e4ab025bf558dacb6d0ac4e78a994bb5d3696375",
+        "path": "original/n36w083/index.html"
+      },
+      "assets": [
+        {
+          "name": "USGS_1_n36w083.gpkg",
+          "listed_modified": "17-May-2022 20:32",
+          "listed_bytes": 221184,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w083/USGS_1_n36w083.gpkg"
+        },
+        {
+          "name": "USGS_1_n36w083.tif",
+          "listed_modified": "13-May-2022 17:22",
+          "listed_bytes": 57595140,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w083/USGS_1_n36w083.tif"
+        },
+        {
+          "name": "USGS_1_n36w083.xml",
+          "listed_modified": "13-May-2022 17:22",
+          "listed_bytes": 14512,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w083/USGS_1_n36w083.xml"
+        }
+      ],
+      "metadata_path": "original/n36w083/USGS_1_n36w083.xml"
+    },
+    {
+      "tile": "n36w082",
+      "nominal_bounds": [
+        -82,
+        35,
+        -81,
+        36
+      ],
+      "metadata_sha256": "4635a2ec86c5e5b3d119d0a00adc96b60a49bbc4e38fcec0aebb07b40e48843d",
+      "metadata_bytes": 11667,
+      "title": "USGS 1 Arc Second n36w082 20260417",
+      "publication_date": "20260417",
+      "source_period": {
+        "begin": "20030101",
+        "end": "20250219"
+      },
+      "horizontal_datum": "North American Datum of 1983",
+      "vertical_datum": "North American Vertical Datum of 1988",
+      "vertical_units": "meters",
+      "geographic_bounds": [
+        -82.00166666648283,
+        34.99833333351737,
+        -80.99833333311618,
+        36.0016666668841
+      ],
+      "raster_columns": 3612,
+      "raster_rows": 3612,
+      "geo_resolution": [
+        "-0.00027777777778702266",
+        "0.000277777777787003"
+      ],
+      "index": {
+        "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w082/",
+        "bytes": 7710,
+        "sha256": "e5a1e8a22e65f0ed4fcb023f1de3bc52ee83935ce123c478931ee184eb7c3b69",
+        "path": "original/n36w082/index.html"
+      },
+      "assets": [
+        {
+          "name": "USGS_1_n36w082.gpkg",
+          "listed_modified": "17-Apr-2026 18:35",
+          "listed_bytes": 290816,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w082/USGS_1_n36w082.gpkg"
+        },
+        {
+          "name": "USGS_1_n36w082.tif",
+          "listed_modified": "17-Apr-2026 18:35",
+          "listed_bytes": 57522162,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w082/USGS_1_n36w082.tif"
+        },
+        {
+          "name": "USGS_1_n36w082.xml",
+          "listed_modified": "17-Apr-2026 18:35",
+          "listed_bytes": 11667,
+          "url": "https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/1/TIFF/current/n36w082/USGS_1_n36w082.xml"
+        }
+      ],
+      "metadata_path": "original/n36w082/USGS_1_n36w082.xml"
+    }
+  ],
+  "receiving": {
+    "module": "source_tools.terrain_cli",
+    "discover_arguments": [
+      "--store",
+      "ACTUAL_TERRAIN_STORE",
+      "discover",
+      "--bounds",
+      "-83.89",
+      "33.32",
+      "-81.47",
+      "35.27",
+      "--title",
+      "Upper Savannah retained 3DEP source edition"
+    ],
+    "acquire_arguments": [
+      "--store",
+      "ACTUAL_TERRAIN_STORE",
+      "acquire",
+      "ACTUAL_TERRAIN_STORE/RETURNED_RELATIVE_CATALOG_PATH",
+      "--workers",
+      "2"
+    ],
+    "source_assets": "Original nine TIFFs, original XMLs, GeoPackage companions and provider capture receipts",
+    "grid": "Original selected NLCD numeric grid reused through plan-workspace; source discovery extent is not a model grid",
+    "selection_note": "All nine degree tiles cover the conservative envelope of the original buffered projected domain rectangle. Native domain geometry remains the final model mask."
+  },
+  "edition": "20261013.2"
+}

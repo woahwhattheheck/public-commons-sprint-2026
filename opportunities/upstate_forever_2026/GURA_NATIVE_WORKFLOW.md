@@ -6,10 +6,13 @@ runs NDR and SDR through InVEST 3.20.0, compares separately selected land-cover
 substitutions, creates the watershed report and economic editing desk, saves
 the whole Workspace, and can start the operator against those results.
 
-The original Gura grid uses 300 m cells: 9 ha per square pixel. Its separate
-upstream context selection is 300 m. Native rates are converted using the
-actual pixel area. Regional Upper Savannah studies retain their own source
-grids, source collections and programme selections.
+The workflow reads the native cell size from the selected original land-cover
+raster. Gura source editions remain separate: a 300 m square cell covers 9 ha,
+while a 15 m square cell covers 0.0225 ha. The upstream context distance is a
+separate scientific selection. New intake retains the existing 300 m context
+default; reopening a prepared case retains that case's original grid and
+context distance. Native rates use the actual pixel area. Regional Upper
+Savannah studies retain their own source grids, collections and programmes.
 
 ## Application and runtime
 
@@ -17,10 +20,10 @@ Use the complete maintained application at
 `opportunities/upstate_forever_2026/` in
 `woahwhattheheck/public-commons-sprint-2026`. This release adds
 `source_tools/gura_workflow.py`, `source_tools/gura_comparison.py` and this guide.
-Keep the installed current `receive_gura.py`, programme coordinator, source
-retention, native execution and portable Workspace modules. Earlier seven-file
-carriers included the older 21,851-byte receiver; the current receiver's
-22,545-byte successor reuses already extracted original ZIP members.
+Install the matched current `receive_gura.py` and workflow together, preserving
+the current programme coordinator, source retention, native execution and
+portable Workspace modules. The receiver reads the selected raster's native
+cell size and reuses already extracted original ZIP members.
 
 Use the existing compatible GIS/native interpreter. The application
 `environment.yml` defines Python 3.12, InVEST 3.20.0 and the required GIS
@@ -80,6 +83,29 @@ original files without another archive download or external archive location.
 The workflow prepares the original source collection, grid, coefficient
 profile and baseline. It counts land-cover cells inside the original Gura
 watershed and saves their areas using the actual affine determinant.
+
+To assert the selected source edition explicitly, add
+`--expected-resolution-m 15` for a 15 m source, or
+`--expected-resolution-m 300` for a 300 m source. This checks the original
+raster; it does not request resampling. Omitting the option reads the original
+cell size. The same optional expectation is available on `receive_gura.py`.
+
+Use `--upstream-buffer-m DISTANCE` to select the upstream context for a new
+case. For example, `--expected-resolution-m 15 --upstream-buffer-m 300`
+retains 15 m cells and a separate 300 m buffer. A new intake without a buffer
+option uses the existing 300 m context default.
+
+On resume or `serve`, omitted grid options retain the saved selections.
+The same applies when an interrupted intake already saved
+`programme-selection.json`, and after restoring the Workspace archive.
+An explicit option must match that prepared case; to select another buffer
+or source edition, use a separate Workspace and source directory. The original
+source objects, grid, programme and completed runs remain bound to their
+original selections.
+
+The `original_inputs_prepared` event and `receiving.json` contain the inspected
+`native_grid`: resolution, original affine transform and CRS, source cell area,
+selected grid cell area, and the independently selected upstream buffer.
 
 The default comparison pairs the dominant observed original class with every
 other observed class in both directions. Each pair is a separate scenario.

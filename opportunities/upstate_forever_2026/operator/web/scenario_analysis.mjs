@@ -2,6 +2,8 @@
  * Scenario analysis in the original scientific workbench.
  * Native analysis records remain the source of all quantities and scores.
  */
+import {createAnalysisDelivery} from './scenario_analysis_delivery.mjs';
+
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rows=value=>Array.isArray(value)?value:[];
 const short=value=>String(value??'').slice(0,12);
@@ -51,7 +53,7 @@ const canonicalSelection=value=>{
 const tabs=[
   ['physical','Physical changes'],['priority','Planning priorities'],
   ['sensitivity','Weight sensitivity'],['pairs','Compare alternatives'],
-  ['coverage','Coverage and choices'],['source-areas','Source areas'],['files','Download results']
+  ['coverage','Coverage and choices'],['source-areas','Source areas'],['delivery','GIS delivery'],['files','Download results']
 ];
 const amount=(value,places=4)=>typeof value==='number'&&Number.isFinite(value)?value.toLocaleString(undefined,{maximumFractionDigits:places}):'—';
 const percent=value=>typeof value==='number'&&Number.isFinite(value)?amount(value*100,2)+'%':'—';
@@ -275,8 +277,9 @@ export function scenarioSourceAreaEnvelope(record){
       scope:'Retained source definitions; each new analysis intersects them with its selected baseline reporting area.'}};
 }
 
-export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAction,fileList,toast,openItem}){
+export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAction,fileList,toast,openItem,openDelivery,openReceivingPlan}){
   const cache=new Map(),inflight=new Map();
+  const delivery=createAnalysisDelivery({getState,api,endpoint,openDelivery,openReceivingPlan,openItem,onChange:()=>redraw()});
   let container=null,controller=null,workspaceKey='',error='',generation=0;
   let local={selected:'',region:'reporting_area',run:'',weight:'',tab:'physical'};
   const current=()=>getState();
@@ -458,6 +461,7 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
       const uri=typeof area.source.uri==='string'&&/^https?:\/\//i.test(area.source.uri)?area.source.uri:null;
       const actions=button('area-results','View physical results','data-area="'+esc(area.id)+'"')+
         (editionId?button('source-edition','Open source edition','data-id="'+esc(editionId)+'"'+(editionPresent?'':' disabled title="The original source edition is absent from this workspace"')):'')+
+        (metadata.source_plan_id&&typeof openReceivingPlan==='function'?button('open-source-plan','Open prepared plan','data-id="'+esc(metadata.source_plan_id)+'"'):'')+
         (uri?'<a href="'+esc(uri)+'" target="_blank" rel="noopener noreferrer">Open original source</a>':'');
       const provenance=metadata.source_plan_id||rows(metadata.receptor_ids).length?
         '<dl class="analysis-source-facts">'+definition('Prepared source plan ID',metadata.source_plan_id)+
@@ -506,10 +510,10 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
   }
   function detail(record){
     keepFilters(record);
-    const body={physical,priority,sensitivity,pairs,coverage,'source-areas':sourceAreas,files}[local.tab](record);
+    const body={physical,priority,sensitivity,pairs,coverage,'source-areas':sourceAreas,delivery:row=>delivery.render(row),files}[local.tab](record);
     return section(record.title||record.selection?.title||'Selected scenario analysis','Baseline: '+runName(record,record.baseline_run_id)+'. Compared native outputs: '+analyzedOutputs(record).map(pollutantName).join(', ')+'.',
       '<div class="analysis-tabs" role="tablist" aria-label="Scenario analysis results">'+tabs.map(([id,title])=>'<button type="button" role="tab" tabindex="'+(local.tab===id?'0':'-1')+'" aria-selected="'+(local.tab===id)+'" data-action="analysis-tab" data-tab="'+id+'">'+esc(title)+'</button>').join('')+'</div>'+
-      (['files','source-areas'].includes(local.tab)?'':filters(record))+'<div class="analysis-results" role="tabpanel" aria-label="'+esc(tabs.find(t=>t[0]===local.tab)?.[1])+'">'+body+'</div>');
+      (['files','source-areas','delivery'].includes(local.tab)?'':filters(record))+'<div class="analysis-results" role="tabpanel" aria-label="'+esc(tabs.find(t=>t[0]===local.tab)?.[1])+'">'+body+'</div>');
   }
   function render(){
     sync();
@@ -521,10 +525,12 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
   function redraw(){
     if(!container)return;
     container.innerHTML=render();persist();
+    if(local.tab==='delivery'&&selected())delivery.ensure(selected());
   }
   function mount(node){
     controller?.abort();container=node;controller=new AbortController();const g=++generation;
     node.addEventListener('change',event=>{
+      if(event.target.matches?.('[data-analysis-delivery-plan]')){delivery.selectPlan(selected(),event.target.value);return;}
       const name=event.target.dataset.analysisFilter;
       if(name&&['region','run','weight'].includes(name)){local[name]=event.target.value;redraw();}
     },{signal:controller.signal});
@@ -823,6 +829,13 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
   }
   async function dispatch(node){
     const action=node.dataset.action?.replace(/^analysis-/,'');
+    if(action?.startsWith('delivery-'))return delivery.dispatch(node,selected());
+    if(action==='open-source-plan'){
+      const id=node.dataset.id;
+      if(!scenarioSourceAreas(selected()).some(area=>area.metadata.source_plan_id===id))throw Error('Choose a source plan retained by this saved analysis.');
+      if(typeof openReceivingPlan!=='function')throw Error('Receive the original prepared-plan navigation callback.');
+      return openReceivingPlan(id);
+    }
     if(action==='new')return newAnalysis();
     if(action==='open'){
       local.selected=node.dataset.id;error='';redraw();

@@ -15,3 +15,5 @@ Point inspection reads the original cell and adds `category.value`, `category.la
 The maintained browser renders category swatches and names in the legend and shows the description beside the inspected original code. Nearest-neighbour display cells remain a preview; scientific pixels, masks and quantitative outputs remain in the retained source rasters.
 
 Saved-review PDF, SVG and PNG maps use the same discrete swatches. The PDF retains the complete original class key and table identities; a compact map key includes up to twelve class names per panel. Export source identity already includes the full renderer and spatial source hashes, so corrected prints receive a fresh content identity.
+
+Original source IDs may be arbitrary, such as `GURA_NLCD`. For a completed native grid, the catalogue follows its retained `spec.input_sources.NLCD` binding to identify that original source as land cover. This supplies class names in the raw-source view while preserving the original source ID and source body. It does not infer class semantics from identifier spelling or apply land-cover names to binary masks.

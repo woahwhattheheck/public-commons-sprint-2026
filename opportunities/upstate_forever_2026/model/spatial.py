@@ -168,6 +168,7 @@ class SpatialReview:
             if signature == self._catalog_signature:
                 return self._catalog_layers
             ws, layers = self.workspace, {}
+            landcover_sources = set()
 
             def add(group, owner, role, item, *, kind=None, title=None, scope=None, source=None, **metadata):
                 if not isinstance(item, dict) or not {"bytes", "sha256"} <= item.keys():
@@ -204,6 +205,9 @@ class SpatialReview:
                 if state.get("state") != "complete":
                     continue
                 grid = ws.get_grid(state["id"])
+                source_id = grid["spec"].get("input_sources", {}).get("NLCD")
+                if source_id:
+                    landcover_sources.add((grid["spec"]["source_collection_id"], source_id))
                 for role, item in grid["files"].items():
                     add("grid", grid["id"], role, item, scope=path.parent,
                         kind="vector" if role in {"model_domain", "reporting_area"} else None,
@@ -250,6 +254,14 @@ class SpatialReview:
                         title=role.replace("_", " ") + " / delivery " + delivery["id"][:12],
                         baseline_run_id=delivery.get("selection", {}).get("baseline_run_id"))
             receiving_water_spatial.add_layers(ws, add)
+            # Source IDs are arbitrary. A completed native grid supplies the
+            # original source-to-land-cover binding without guessing from names.
+            for record in layers.values():
+                public = record["public"]
+                source_key = (public.get("source_collection_id"), public.get("source_id"))
+                if public["group"] == "source" and source_key in landcover_sources:
+                    public["input_role"] = "NLCD"
+                    public["categorical"] = True
             # Atomic source manifests can be added during a native run. Never cache
             # a mixed catalogue signature; the next request rebuilds it if needed.
             observed = self._manifest_signature()
@@ -524,7 +536,7 @@ class SpatialReview:
     def _source_categories(self, record):
         """Read class descriptions from retained tables in this source edition."""
         public = record["public"]
-        role = str(public.get("role") or "").strip().lower()
+        role = str(public.get("input_role") or public.get("role") or "").strip().lower()
         # A binary contribution mask can carry the same run/profile identity as
         # land cover. Biophysical class names belong only to land-cover roles.
         if (not public.get("categorical")

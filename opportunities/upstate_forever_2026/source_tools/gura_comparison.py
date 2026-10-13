@@ -558,7 +558,8 @@ def run_retained_programme(manager, programme_id, directory, *,
             if str(error) != (
                     "Programme scientific engine source changed; reopen its retained application or create a new programme"):
                 raise
-            replacement = manager.create(record["selection"])
+            replacement = _retained_programme(
+                manager, record["selection"], require_current_sources=True)
             replacement_id = replacement["programme_id"]
             if replacement_id == programme_id:
                 raise
@@ -627,15 +628,25 @@ def run_retained_programme(manager, programme_id, directory, *,
         return status
 
 
-def _retained_programme(manager, selection, preferred=None):
+def _retained_programme(manager, selection, preferred=None, *, require_current_sources=False):
     expected = manager.preview(selection)
     normalized = expected["selection"]
     expected_runs = {row["key"]: row["native_selection"] for row in expected["runs"]}
 
     def matches(status):
-        return (status["selection"] == normalized
-                and {row["key"]: row["native_selection"] for row in status["runs"]}
-                == expected_runs)
+        if (status["selection"] != normalized
+                or {row["key"]: row["native_selection"] for row in status["runs"]}
+                != expected_runs):
+            return False
+        if require_current_sources:
+            try:
+                manager._check_execution(manager._load(status["programme_id"]))
+            except ValueError as error:
+                if str(error) != (
+                        "Programme scientific engine source changed; reopen its retained application or create a new programme"):
+                    raise
+                return False
+        return True
 
     if preferred:
         result = manager.status(preferred, include_ensemble_candidates=False)

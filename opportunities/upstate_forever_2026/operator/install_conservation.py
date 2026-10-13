@@ -16,6 +16,8 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "operator/CONSERVATION_CATALOG_BROWSER.md",
+    "integration/conservation_catalog_browser_composition.json",
     "model/conservation_catalog.py",
     "operator/conservation_catalog.py",
     "operator/extensions/conservation-catalog.json",
@@ -103,6 +105,8 @@ PREVIOUS_SOURCES = {
         "d39ab0132a9c32639883943994ece1c7819ae23b73d13c5957af6211d904c277": 22899
     },
     "operator/install_conservation.py": {
+        "5662e0ee4c342dbd8ec50a8d3cdf74b7af10841680b46559f6eb6ad2f40ab8eb": 38139,
+        "fac4eb6c7c8b7b27d1a2cbbc13fbee8d2e2ad682d1ba5fcda0126b7676255ae1": 32051,
         "d8e9824780d84641a9ee47d180158adc18e340dff1912945fc75bce78237893f": 31581,
         "30492615ba6f862f7f676183ee293eb0252a59a159830e9976875aa2ab450bda": 20002,
         "76e556f53783d6379a53a775651415541306d9b23ba80d4eec1ff2dfb22a3644": 30753,
@@ -113,6 +117,7 @@ PREVIOUS_SOURCES = {
         "172c2cac2e9933bc5088993e55218597776010e1c6d5c31307e7c24d6c05849a": 21551
     },
     "operator/conservation_regional_receiving.py": {
+        "103055f8e60711f20a3043f60e7bbc1ca55628985d4cc5308091aef527904352": 56502,
         "fc6bb0b216927c04c4cf1f665c237e397f997260de6f6457a192d987eb5d0276": 43910,
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7": 26367,
         "6db8fe4ab19613472c9e671669c66d4381d1f982b011d7bd6ce314cd0e069b5c": 20028,
@@ -209,7 +214,85 @@ def python_method_return(text, class_name, method_name, decorator):
     return text[:first] + f"return {decorator}({expression})" + text[last:]
 
 
-def patch_server(text):
+
+# The complete application registers Conservation through retained_desks. Older
+# bare applications still use the original direct adapter below.
+REGISTERED_REPAIR = json.loads(r'''{"server_removals":["from conservation import Conservation, ACTIONS as CONSERVATION_ACTIONS, READS as CONSERVATION_READS\n","ACTIONS.update(CONSERVATION_ACTIONS)\n","        self.conservation = Conservation(self, Fault)\n","        if action in CONSERVATION_ACTIONS:\n            return self.conservation.invoke(task)\n","                conservation_reads = {\"/api/conservation/\" + name: name for name in CONSERVATION_READS}\n                if url.path in conservation_reads:\n                    return self.send_json(200, self.app.conservation.read(workspace,\n                        conservation_reads[url.path], {name: one(name) for name in (\"study_id\", \"plan_id\")}))\n"],"app_patterns":[["(?m)^import \\{attachConservation(?:WithOptimization)?\\} from '[^'\\n]+';\\n",""],["(?ms)^const conservation=attachConservation(?:WithOptimization)?\\(.*?\\);\\n",""],["(?ms)^  if\\(view==='conservation'\\)\\{\\n.*?conservation\\.mount\\(\\$\\('#content'\\),state\\);return;\\n  \\}\\n",""],["(?m)^[ \\t]*conservation\\.detach\\(\\);\\n",""],["(?m)^[ \\t]*if\\(typeof conservation!=='undefined'\\)conservation\\.detach\\(\\);\\n",""],["if\\(typeof conservation!=='undefined'\\)conservation\\.detach\\(\\);",""],["(?ms)^ if\\(button\\.dataset\\.action\\?\\.startsWith\\('conservation-'\\).*?return conservation\\.dispatch\\(button\\);\\n \\}\\n",""],["\\+conservation\\.taskActions\\(row\\)",""]],"registered_block":"  // Registered desks retain sole ownership of their controller and actions.\n  if(extensions.hasView(view)){\n    community.detach();customerReviews.detach();spatialWorkspace.suspend();\n    if(typeof programmes!=='undefined')programmes.detach();\n    if(typeof experiments!=='undefined')experiments.detach();\n    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();\n    if(typeof receivingWaters!=='undefined')receivingWaters.detach();\n    if(typeof rehearsal!=='undefined')rehearsal.detach();\n    if(typeof journey!=='undefined'){journey.detach();journey.updateRail(view);}\n    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();\n    extensions.render(view,$('#content'),state);return;\n  }"}''')
+
+
+def registered_conservation(application):
+    descriptor = application / "operator" / "extensions" / "conservation.json"
+    if not descriptor.is_file():
+        return False
+    value = json.loads(descriptor.read_text(encoding="utf-8"))
+    backend = value.get("backend", {})
+    factory = backend.get("factory", {})
+    expected = {
+        "conservation.prepare", "conservation.build", "conservation.plan.save",
+        "conservation.export", "conservation.scenario.create",
+        "conservation.criteria.prepare", "conservation.experiment.prepare",
+    }
+    if (value.get("schema") != "upstate.operator-extension/v1"
+            or value.get("id") != "conservation"
+            or backend.get("module") != "conservation"
+            or factory.get("name", factory.get("handler")) != "Conservation"
+            or not expected.issubset(set(backend.get("actions", [])))
+            or value.get("client", {}).get("view", {}).get("id") != "conservation"):
+        raise ValueError("Preserve and compose the existing Conservation registration before installation")
+    for asset in value.get("assets", []):
+        if not isinstance(asset, str) or Path(asset).name != asset:
+            raise ValueError("The Conservation descriptor must name original web assets")
+        if not (application / "operator" / "web" / asset).is_file():
+            raise ValueError("Receive the complete registered Conservation desk asset: " + asset)
+    for name in ("operator/extension_registry.py", "operator/web/extension_host.mjs"):
+        if not (application / name).is_file():
+            raise ValueError("Receive the existing registered operator host: " + name)
+    return True
+
+
+def patch_registered_server(text):
+    for fragment in REGISTERED_REPAIR["server_removals"]:
+        if text.count(fragment) > 1:
+            raise ValueError("The current server has duplicated direct Conservation wiring")
+        text = text.replace(fragment, "")
+    # Preserve every other owner's nested task decorator.
+    text = re.sub(r"(?m)^(\s*return )self\.conservation\.decorate_task\((.*)\)$",
+                  lambda match: match.group(1) + match.group(2), text)
+    if re.search(r"self\.conservation|CONSERVATION_ACTIONS|CONSERVATION_READS", text):
+        raise ValueError("Compose the remaining direct Conservation server wiring before installation")
+    if "self.extensions" not in text:
+        raise ValueError("The registered Conservation desk requires its original extension host")
+    ast.parse(text)
+    return text
+
+
+def catalog_action_labels(text):
+    for action, label in [["conservation.catalog.prepare","Prepare candidate search"],["conservation.catalog.select","Retain candidate selection"],["conservation.catalog.plan.save","Save retained candidate plan"],["conservation.catalog.export","Export complete candidate rows"]]:
+        if repr(action) + ":" not in text:
+            text = once(text, "const actionLabels={",
+                        "const actionLabels={" + repr(action) + ":" + repr(label) + ",",
+                        "Candidate catalog action label")
+    return text
+
+
+def patch_registered_app(text):
+    text = catalog_action_labels(text)
+    for pattern, replacement in REGISTERED_REPAIR["app_patterns"]:
+        text = re.sub(pattern, lambda match: replacement, text)
+    branch = REGISTERED_REPAIR["registered_block"]
+    if branch not in text:
+        pattern = r"(?m)^  if\(extensions\.render\(view,\$\('#content'\),state\)\)\{[^\n]+\}\s*$"
+        text, count = re.subn(pattern, lambda match: branch, text)
+        if count != 1:
+            raise ValueError("Expected the current registered desk render branch")
+    if re.search(r"\bconservation\.(render|mount|detach|dispatch|taskActions)|const conservation=|import \{attachConservation", text):
+        raise ValueError("Compose the remaining direct Conservation browser wiring before installation")
+    return text
+
+
+def patch_server(text, registered=False):
+    if registered:
+        return patch_registered_server(text)
     text = once(text, "from model import portable\n",
                 "from model import portable\n"
                 "sys.path.insert(0, str(Path(__file__).resolve().parent))\n"
@@ -299,7 +382,10 @@ def conservation_lifecycle(text):
     return text[:position] + addition + text[position:]
 
 
-def patch_app(text):
+def patch_app(text, registered=False):
+    text = catalog_action_labels(text)
+    if registered:
+        return patch_registered_app(text)
     text = text.replace("for(const node of $('[data-view]'))",
                         "for(const node of $$('[data-view]'))")
     text = text.replace("parameter('sdr','l_max','Maximum slope length','Metres.','min=\"0\"')", "parameter('sdr','l_max','Maximum L factor','Dimensionless maximum for the LS slope-length factor.','min=\"0\"')")
@@ -402,7 +488,9 @@ def patch_app(text):
 
 
 
-def patch_index(text):
+def patch_index(text, registered=False):
+    if registered:
+        return text
     if re.search(r'\bdata-view=["\']conservation["\']', text):
         return text
     pattern = r'(?m)^([ \t]*)<button\b[^\n>]*\bdata-view=(["\'])comparisons\2[^\n>]*>[^\n]*?</button>'
@@ -493,6 +581,7 @@ def install(application, source):
     if not (application / "model" / "workspace.py").is_file():
         raise ValueError("Select the existing Upper Savannah application directory")
     packet = read_packet(source)
+    registered = registered_conservation(application)
     for dependency in ("model/portfolios.py", "model/experiments.py", "model/common.py"):
         if not (application / dependency).is_file():
             raise ValueError("The current cumulative application needs its maintained dependency: " + dependency)
@@ -528,7 +617,7 @@ def install(application, source):
             if path.is_symlink():
                 raise ValueError("Shared operator source is a symlink: " + name)
             current = path.read_bytes()
-            incoming = patch(current.decode("utf-8")).encode("utf-8")
+            incoming = patch(current.decode("utf-8"), registered=registered).encode("utf-8")
             if incoming != current:
                 updates[name], original[name] = incoming, current
         receipt_dir = bank / marker
@@ -538,6 +627,7 @@ def install(application, source):
             "schema": "upstate.conservation-install/v1",
             "operation_id": packet["operation_id"], "source_sha256": marker,
             "application": str(application), "files": {}, "state": "prepared",
+            "conservation_owner": "registered" if registered else "direct",
         }
         for name, content in updates.items():
             before = original[name]
