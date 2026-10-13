@@ -1,0 +1,90 @@
+{
+  "schema": "tjlabs.formward-commissioning-configuration/v1",
+  "pack_id": "formward-local-workbench",
+  "edition_id": "formward-local-workbench-edition",
+  "customer": {
+    "name": "",
+    "domain": ""
+  },
+  "title": "Formward commissioning",
+  "cases": [
+    {
+      "id": "form-1",
+      "source": {
+        "url": "",
+        "summary": "Prepare the owned form, deploy its source, and retain the actual submission and receiving results.",
+        "budget": "",
+        "observed_at": ""
+      },
+      "plan": {
+        "title": "Form commissioning",
+        "preserved": "Keep the existing website, CMS, editable source and its owner’s account.",
+        "route": "Owned website form → configured Formward submission inbox → confirmed notification recipient.",
+        "steps": [
+          "Record the actual website, form fields and recipient. Keep the current editable source and rollback copy.",
+          "Select or create the form in the owner’s Formward account. Configure its allowed website origins and actual notification recipient.",
+          "Confirm the notification recipient in the provider dashboard when required. Record the account’s consent and privacy settings.",
+          "Enter the actual endpoint, website origin, success path, recipient and field definitions in this workbench.",
+          "Save the complete working kit and deploy the generated form or fragment within the existing website.",
+          "Operate the rendered form on the actual website, receive its complete endpoint response and submission identifier, and inspect the destination mailbox.",
+          "Retain the actual receiving observations, full editable source, complete working record and rollback instructions for the owner."
+        ],
+        "demonstration": "Use the owner’s authorized sample values for a real submission. The local preview is inert. Record the actual response and mailbox result separately.",
+        "scope": "The website and provider account remain owned by their operator. This workbench prepares source and retains commissioning work; it does not provision the account or change its notification settings.",
+        "qualification": "Choose the actual delivery scope and website integration before deployment.",
+        "privacy_map": "Record the real purpose, fields, recipient, retention, consent requirements and privacy notice for this form.",
+        "contract_urls": [
+          "https://formward.eu/docs",
+          "https://formward.eu/docs/ingest",
+          "https://formward.eu/docs/fields",
+          "https://formward.eu/docs/responses",
+          "https://formward.eu/docs/ajax"
+        ]
+      },
+      "settings": {
+        "language": "en",
+        "endpoint": "",
+        "site_origin": "",
+        "success_path": "",
+        "subject": "",
+        "recipient": "",
+        "title": "Contact",
+        "introduction": "",
+        "success_text": "Your message was received.",
+        "failure_text": "Your message could not be sent. Your entries have been kept.",
+        "uncertain_text": "Your message may have been received. Please check with the recipient before sending it again.",
+        "privacy_text": "",
+        "privacy_url": "",
+        "button_label": "Send message",
+        "require_consent": false,
+        "consent_text": "",
+        "fields": [
+          {
+            "name": "name",
+            "label": "Name",
+            "type": "text",
+            "required": false,
+            "value": "",
+            "options": []
+          },
+          {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "required": true,
+            "value": "",
+            "options": []
+          },
+          {
+            "name": "message",
+            "label": "Message",
+            "type": "textarea",
+            "required": true,
+            "value": "",
+            "options": []
+          }
+        ]
+      }
+    }
+  ]
+}
