@@ -28,7 +28,7 @@ ID = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,79}$")
 KINDS = {"text","number","integer","date","boolean","choice","table"}
 DISPLAY_QUESTION_FIELDS = ("id","label","kind","unit","disclosure","original_question_text","original_row_label","section","original_question_heading","original_french_text")
 SOURCE = Path(__file__).resolve().parent
-EXTENSION_MODULES = ("respondent_operations","reporting_workbench","workbook_calculation","workbook_intake","questionnaire_locale")
+EXTENSION_MODULES = ("respondent_operations","reporting_workbench","workbook_calculation","workbook_intake","questionnaire_locale","workbook_exchange")
 
 
 class OperationError(ValueError):
