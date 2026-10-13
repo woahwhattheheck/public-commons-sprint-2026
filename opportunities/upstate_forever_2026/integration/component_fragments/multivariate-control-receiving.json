@@ -13,7 +13,13 @@
         "source_tools/simulated_headwaters_receiving.py",
         "source_tools/demo_deadline.py",
         "CURRENT_OWNER_DIRECTION.md",
-        "integration/component_fragments/multivariate-control-receiving.json"
+        "integration/component_fragments/multivariate-control-receiving.json",
+        "source_tools/geographic_review_browser.mjs",
+        "source_tools/geographic_browser_course.mjs",
+        "source_tools/geographic_allocation_browser.mjs",
+        "source_tools/geographic_programme_browser.mjs",
+        "operator/delivery_preparation_receiving.mjs",
+        "operator/web/delivery_preparation_storage.mjs"
       ]
     },
     "study-transfer": {
@@ -27,7 +33,33 @@
         "source_tools/simulated_headwaters_receiving.py",
         "source_tools/demo_deadline.py",
         "CURRENT_OWNER_DIRECTION.md",
-        "integration/component_fragments/multivariate-control-receiving.json"
+        "integration/component_fragments/multivariate-control-receiving.json",
+        "source_tools/geographic_review_browser.mjs",
+        "source_tools/geographic_browser_course.mjs",
+        "source_tools/geographic_allocation_browser.mjs",
+        "source_tools/geographic_programme_browser.mjs",
+        "operator/delivery_preparation_receiving.mjs",
+        "operator/web/delivery_preparation_storage.mjs"
+      ]
+    },
+    "multivariate-control-outcomes": {
+      "paths": [
+        "source_tools/multivariate_control_receiving.py",
+        "source_tools/multivariate_control_browser.mjs",
+        "source_tools/MULTIVARIATE_CONTROL_RECEIVING.md",
+        "source_tools/receive_geographic_headwaters.py",
+        "source_tools/receive_geographic_handover_browser.mjs",
+        "source_tools/geographic_headwaters_reopen.py",
+        "source_tools/simulated_headwaters_receiving.py",
+        "source_tools/demo_deadline.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "integration/component_fragments/multivariate-control-receiving.json",
+        "source_tools/geographic_review_browser.mjs",
+        "source_tools/geographic_browser_course.mjs",
+        "source_tools/geographic_allocation_browser.mjs",
+        "source_tools/geographic_programme_browser.mjs",
+        "operator/delivery_preparation_receiving.mjs",
+        "operator/web/delivery_preparation_storage.mjs"
       ]
     }
   },
