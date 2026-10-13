@@ -4,6 +4,12 @@ This source reader turns one complete retained supplier collection into usable s
 
 The immediate collection is CharityEngine's eighteen original public API/import/service files. Its existing migration implementation consumes the source output in its original company case. The example catalogue contains only public supplier URLs, filenames and observed byte counts. Company terms, contacts, account credentials and private implementation source do not belong in this public example.
 
+## Exact publication and interrupted receiving
+
+Each output is published exclusively after its complete bytes have been flushed and synced. The reader then syncs the destination directory after removing its temporary filename. The same directory sync runs when an existing or concurrent output has exactly the expected bytes. A different existing body is preserved and rejected.
+
+A directory-sync error leaves the exact published file in place and returns an error. Continue the same original operation: exact replay verifies that body and finishes the directory sync before reporting success. Use a filesystem and host that support directory descriptors and fsync for this durability guarantee; unsupported directory sync is reported, not silently counted as a durable publication.
+
 ## Receive the retained originals
 
 Use the full existing SOURCE_CATALOGUE.json from the company's original source packet. Its files[] records include filename, bytes, source_url and the exact stable_reference already returned by Notion. Resolve those exact references with the normal notion_get_file_download_urls tool (up to25 per call). Save its complete current tool result as downloads.json in the receiving worker's private directory. It returns files[] records containing reference, url and expiry_time, plus unresolved[].
