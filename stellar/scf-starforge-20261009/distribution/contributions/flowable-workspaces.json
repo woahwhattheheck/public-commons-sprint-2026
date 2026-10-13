@@ -20,7 +20,10 @@
     "./seller/flowable/dmn-native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/dmn-native.mjs",
     "./seller/flowable/dmn-native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/dmn-native-journey.mjs",
     "./seller/flowable/cmmn-native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/cmmn-native.mjs",
-    "./seller/flowable/cmmn-native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/cmmn-native-journey.mjs"
+    "./seller/flowable/cmmn-native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/cmmn-native-journey.mjs",
+    "./seller/flowable/workspace/programmes": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-core.mjs",
+    "./seller/flowable/workspace/case-programme": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/case-programme.mjs",
+    "./seller/flowable/workspace/programme-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/native-programme-receiving.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -58,7 +61,9 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/inputs/vendor-exception.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/onboarding-investigation-v1.cmmn",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/onboarding-investigation-v2.cmmn",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/inputs/onboarding-investigation.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/cases/inputs/onboarding-investigation.json",
+    "products/flowable-merchant/PROGRAMMES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/case-commissioning.programme.json"
   ],
   "browserAssets": [
     {

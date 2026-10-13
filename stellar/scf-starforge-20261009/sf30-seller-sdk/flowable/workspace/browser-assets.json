@@ -29,6 +29,13 @@
         "actions.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/programme-browser.mjs",
+      [
+        "programme-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }
