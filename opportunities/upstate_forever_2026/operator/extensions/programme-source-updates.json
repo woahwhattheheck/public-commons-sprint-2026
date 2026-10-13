@@ -1,0 +1,69 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "programme-source-updates",
+  "title": "Programme source updates",
+  "version": "1.0.0",
+  "order": 67,
+  "assets": [
+    "programme_source_updates.mjs"
+  ],
+  "requires_actions": [
+    "compute.programme.save"
+  ],
+  "backend": {
+    "module": "programme_source_updates",
+    "actions": [
+      "compute.programme.source-update"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/programme-source-updates/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/programme-source-updates/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  }
+}

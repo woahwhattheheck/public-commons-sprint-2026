@@ -1,0 +1,1386 @@
+{
+  "schema": "upstate.observed-report/v1",
+  "edition": "upstate.utility-microbial-seasonal-comparison/v1",
+  "title": "Repeated-station E. coli — sampling-calendar and depth-aware comparisons, 2021–2025",
+  "sections": [
+    [
+      "What changes when the same sampled months are compared?",
+      [
+        "This chapter compares original routine E. coli observations at the same station and analytical method. It describes sampled concentrations, not annual loads, compliance status, model validation or an intervention effect.",
+        {
+          "kind": "table",
+          "columns": [
+            "Original support",
+            "Retained count"
+          ],
+          "rows": [
+            [
+              "Original result rows",
+              730
+            ],
+            [
+              "Routine rows",
+              729
+            ],
+            [
+              "Field replicate retained separately",
+              1
+            ],
+            [
+              "Exact measurement-support groups",
+              49
+            ],
+            [
+              "Within-group year comparisons",
+              115
+            ],
+            [
+              "Original routine rows occurring in comparisons",
+              476
+            ],
+            [
+              "Publisher/calendar pairs with identical month sets",
+              17
+            ],
+            [
+              "Depth-aware measurement pairs with identical month sets",
+              13
+            ],
+            [
+              "Direction reversals under common-month weighting",
+              4
+            ]
+          ]
+        },
+        "Four sampled-year comparisons reverse direction after restriction to shared calendar months and equal month weighting. This identifies sensitivity to observed sampling support; it does not establish which estimate represents an annual population.",
+        "The original calendar grouping has 17 identical-month pairs. Exact measurement support also retains recorded depth, fraction, medium, value type, QA and collection method, producing 13 identical-month pairs. A blank depth is not assigned the 0.3 m depth recorded on other samples."
+      ]
+    ],
+    [
+      "Four actual direction reversals",
+      [
+        "These four comparisons use APHA 9223-B and original MPN/100mL units. Within each comparison, all exact measurement-support fields match; sampling depth is unreported on the included rows. Source records with a declared depth remain separate.",
+        {
+          "kind": "table",
+          "columns": [
+            "Station · years",
+            "Method / original unit",
+            "Records / sample days (earlier → later)",
+            "All sampled-day change",
+            "Common-month change · months"
+          ],
+          "rows": [
+            [
+              "SV-344 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 10/10",
+              "-1.70833333 · lower",
+              "87.52 · higher; 01, 02, 04, 05, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-344 · 2024 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "8/8 → 11/11",
+              "-108.736364 · lower",
+              "63.3571429 · higher; 01, 04, 05, 06, 09, 10, 11"
+            ],
+            [
+              "SV-833 · 2021 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "9/9 → 7/7",
+              "(−∞, -190.571429) · lower",
+              "558.3125 · higher; 01, 04, 05, 11"
+            ],
+            [
+              "SV-833 · 2024 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "7/7 → 11/11",
+              "(165.471429, +∞) · higher",
+              "-159.475 · lower; 01, 04, 05, 06, 10, 11"
+            ]
+          ],
+          "caption": "Changes are later minus earlier. Parentheses denote open bounds; ∞ denotes an unbounded endpoint. Full-precision endpoints, all cohort fields and every original row locator remain in the JSON/CSV companions."
+        },
+        {
+          "kind": "table",
+          "columns": [
+            "Station · years",
+            "Shared months",
+            "Earlier common support",
+            "Later common support"
+          ],
+          "rows": [
+            [
+              "SV-344 · 2021 → 2023",
+              "01, 02, 04, 05, 07, 08, 09, 10, 11, 12",
+              "10 rows / 10 days",
+              "10 rows / 10 days"
+            ],
+            [
+              "SV-344 · 2024 → 2025",
+              "01, 04, 05, 06, 09, 10, 11",
+              "7 rows / 7 days",
+              "7 rows / 7 days"
+            ],
+            [
+              "SV-833 · 2021 → 2024",
+              "01, 04, 05, 11",
+              "4 rows / 4 days",
+              "5 rows / 5 days"
+            ],
+            [
+              "SV-833 · 2024 → 2025",
+              "01, 04, 05, 06, 10, 11",
+              "7 rows / 7 days",
+              "6 rows / 6 days"
+            ]
+          ]
+        },
+        "The all-date SV-833 bounds remain unbounded where an original concentration exceeds its quantitation limit. The bound itself supports the displayed direction; no upper-limit value was substituted for that sample."
+      ]
+    ],
+    [
+      "All 17 original equal-calendar cases",
+      [
+        "This table reproduces calendar support using exact station, analytical-method context and identifier, routine activity type and original effective unit. It does not pool concentrations across depth or other measurement-support groups.",
+        {
+          "kind": "table",
+          "columns": [
+            "Station · years",
+            "Method / unit",
+            "Identical calendar months",
+            "Original rows (earlier → later)",
+            "Measurement groups retained"
+          ],
+          "rows": [
+            [
+              "SV-111 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              1
+            ],
+            [
+              "LK_01_8 · 2021 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "04, 05, 06, 07, 08, 09, 10",
+              "7 → 7",
+              1
+            ],
+            [
+              "SV-200 · 2021 → 2022",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              1
+            ],
+            [
+              "SV-200 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              1
+            ],
+            [
+              "SV-200 · 2021 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              2
+            ],
+            [
+              "SV-200 · 2022 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              1
+            ],
+            [
+              "SV-200 · 2022 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              2
+            ],
+            [
+              "SV-200 · 2023 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              2
+            ],
+            [
+              "LK_01_7 · 2021 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "04, 05, 06, 07, 08, 09, 10",
+              "7 → 7",
+              1
+            ],
+            [
+              "SV-199 · 2021 → 2022",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              1
+            ],
+            [
+              "SV-199 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              1
+            ],
+            [
+              "SV-199 · 2022 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              1
+            ],
+            [
+              "LK_01_11 · 2021 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "04, 05, 06, 07, 08, 09, 10",
+              "7 → 7",
+              1
+            ],
+            [
+              "LK_01_11 · 2021 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "04, 05, 06, 07, 08, 09, 10",
+              "7 → 7",
+              1
+            ],
+            [
+              "LK_01_11 · 2024 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "04, 05, 06, 07, 08, 09, 10",
+              "7 → 7",
+              1
+            ],
+            [
+              "SV-363 · 2021 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12",
+              "12 → 12",
+              2
+            ],
+            [
+              "SV-363 · 2022 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11",
+              "11 → 11",
+              1
+            ]
+          ]
+        },
+        "Matching a month name does not match sample dates, times, flow, weather or depth. The retained row locators allow those original distinctions to be reviewed before a more specific comparison is selected."
+      ]
+    ],
+    [
+      "Complete depth-aware year comparisons",
+      [
+        "All 115 available within-support comparisons are retained, including overlapping year pairs and intervals that span zero. They are descriptive comparisons, not independent replications or a set of significance tests.",
+        {
+          "kind": "table",
+          "columns": [
+            "Station · years",
+            "Method / original unit",
+            "Records / sample days (earlier → later)",
+            "All sampled-day change",
+            "Common-month change · months"
+          ],
+          "rows": [
+            [
+              "LK_01_10 · 2021 → 2022",
+              "APHA 9221-F / MPN/100mL",
+              "6/6 → 5/5",
+              "(-19.8, 16.2) · overlaps_zero",
+              "(-19.75, 15.25) · overlaps_zero; 06, 07, 09, 10"
+            ],
+            [
+              "LK_01_10 · 2021 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "6/6 → 5/5",
+              "(-19.2, 12.8) · overlaps_zero",
+              "(-19.2, 12.8) · overlaps_zero; 04, 05, 06, 09, 10"
+            ],
+            [
+              "LK_01_10 · 2021 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "6/6 → 5/5",
+              "(-14.58, 13.42) · overlaps_zero",
+              "(-13.475, 16.525) · overlaps_zero; 04, 05, 07, 09"
+            ],
+            [
+              "LK_01_10 · 2021 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "6/6 → 3/3",
+              "(-20, 20) · overlaps_zero",
+              "(-20, 20) · overlaps_zero; 04, 06"
+            ],
+            [
+              "LK_01_10 · 2022 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 5/5",
+              "(-15.4, 12.6) · overlaps_zero",
+              "(-13, 13.6666667) · overlaps_zero; 06, 09, 10"
+            ],
+            [
+              "LK_01_10 · 2022 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 5/5",
+              "(-10.78, 13.22) · overlaps_zero",
+              "(-18.6333333, 8.03333333) · overlaps_zero; 07, 08, 09"
+            ],
+            [
+              "LK_01_10 · 2022 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 3/3",
+              "(-16.2, 19.8) · overlaps_zero",
+              "(-10.5, 19.5) · overlaps_zero; 06, 08"
+            ],
+            [
+              "LK_01_10 · 2023 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 5/5",
+              "(-7.38, 12.62) · overlaps_zero",
+              "(-5.3, 14.7) · overlaps_zero; 04, 05, 09"
+            ],
+            [
+              "LK_01_10 · 2023 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 3/3",
+              "(-12.8, 19.2) · overlaps_zero",
+              "(-11, 19) · overlaps_zero; 04, 06"
+            ],
+            [
+              "LK_01_10 · 2024 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 3/3",
+              "(-13.42, 14.58) · overlaps_zero",
+              "(-10.5, 19.5) · overlaps_zero; 04, 08"
+            ],
+            [
+              "LK_01_11 · 2021 → 2022",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 5/5",
+              "(-18.58, 6.56285714) · overlaps_zero",
+              "(-18.58, 5.42) · overlaps_zero; 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_11 · 2021 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 5/5",
+              "(-18.58, -1.43714286] · lower",
+              "(-18.58, -2.58] · lower; 04, 05, 08, 09, 10"
+            ],
+            [
+              "LK_01_11 · 2021 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 7/7",
+              "(-18.9714286, 9.6) · overlaps_zero",
+              "(-18.9714286, 9.6) · overlaps_zero; 04, 05, 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_11 · 2021 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 7/7",
+              "(-17.1142857, 2.88571429) · overlaps_zero",
+              "(-17.1142857, 2.88571429) · overlaps_zero; 04, 05, 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_11 · 2022 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 5/5",
+              "(-8, 0.000000000000000222044605] · overlaps_zero",
+              "(-6.13333333, 0.533333333] · overlaps_zero; 08, 09, 10"
+            ],
+            [
+              "LK_01_11 · 2022 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 7/7",
+              "(-8.39142857, 11.0371429) · overlaps_zero",
+              "(-8.18, 11.82) · overlaps_zero; 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_11 · 2022 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 7/7",
+              "(-6.53428571, 4.32285714) · overlaps_zero",
+              "(-6.2, 5.8) · overlaps_zero; 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_11 · 2023 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 7/7",
+              "[-0.391428571, 11.0371429) · overlaps_zero",
+              "[-1.02, 10.98) · overlaps_zero; 04, 05, 08, 09, 10"
+            ],
+            [
+              "LK_01_11 · 2023 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 7/7",
+              "[1.46571429, 4.32285714) · higher",
+              "0.2 · higher; 04, 05, 08, 09, 10"
+            ],
+            [
+              "LK_01_11 · 2024 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 7/7",
+              "(-9.57142857, 4.71428571) · overlaps_zero",
+              "(-9.57142857, 4.71428571) · overlaps_zero; 04, 05, 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_67 · 2021 → 2022",
+              "APHA 9221-F / MPN/100mL",
+              "6/6 → 1/1",
+              "(-20, -5.66666667) · lower",
+              "[-20, -19) · lower; 06"
+            ],
+            [
+              "LK_01_68 · 2021 → 2022",
+              "APHA 9221-F / MPN/100mL",
+              "6/6 → 1/1",
+              "(-15.9, -5.9] · lower",
+              "-15.9 · lower; 06"
+            ],
+            [
+              "LK_01_7 · 2021 → 2022",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 5/5",
+              "(-22.4571429, 10.6857143) · overlaps_zero",
+              "(-23.6, 8.4) · overlaps_zero; 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_7 · 2021 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 5/5",
+              "(-22.3371429, 7.00571429) · overlaps_zero",
+              "(-23.48, 4.72) · overlaps_zero; 04, 05, 06, 09, 10"
+            ],
+            [
+              "LK_01_7 · 2021 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 7/7",
+              "(-21.6857143, 4.02857143) · overlaps_zero",
+              "(-21.6857143, 4.02857143) · overlaps_zero; 04, 05, 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_7 · 2021 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 3/3",
+              "(-21.4904762, 8.98571429) · overlaps_zero",
+              "(-18.6333333, 14.7) · overlaps_zero; 04, 06, 08"
+            ],
+            [
+              "LK_01_7 · 2022 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 5/5",
+              "(-15.88, 12.32) · overlaps_zero",
+              "(-19.1333333, 14.2) · overlaps_zero; 06, 09, 10"
+            ],
+            [
+              "LK_01_7 · 2022 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 7/7",
+              "(-15.2285714, 9.34285714) · overlaps_zero",
+              "(-15.38, 8.62) · overlaps_zero; 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_7 · 2022 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 3/3",
+              "(-15.0333333, 14.3) · overlaps_zero",
+              "(-8.95, 11.05) · overlaps_zero; 06, 08"
+            ],
+            [
+              "LK_01_7 · 2023 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 7/7",
+              "(-11.5485714, 9.22285714) · overlaps_zero",
+              "(-11.7, 8.5) · overlaps_zero; 04, 05, 06, 09, 10"
+            ],
+            [
+              "LK_01_7 · 2023 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 3/3",
+              "(-11.3533333, 14.18) · overlaps_zero",
+              "(-10.5, 20) · overlaps_zero; 04, 06"
+            ],
+            [
+              "LK_01_7 · 2024 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 3/3",
+              "(-8.37619048, 13.5285714) · overlaps_zero",
+              "(-13, 13.6666667) · overlaps_zero; 04, 06, 08"
+            ],
+            [
+              "LK_01_8 · 2021 → 2022",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 5/5",
+              "(-19.8, 13.3428571) · overlaps_zero",
+              "(-19.8, 12.2) · overlaps_zero; 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_8 · 2021 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 5/5",
+              "(-19.8, 9.54285714) · overlaps_zero",
+              "(-19.8, 8.4) · overlaps_zero; 04, 05, 06, 09, 10"
+            ],
+            [
+              "LK_01_8 · 2021 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 7/7",
+              "(-19, 3.85714286) · overlaps_zero",
+              "(-19, 3.85714286) · overlaps_zero; 04, 05, 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_8 · 2021 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 3/3",
+              "(-19.6666667, 10.8095238) · overlaps_zero",
+              "(-19.6666667, 13.6666667) · overlaps_zero; 04, 06, 08"
+            ],
+            [
+              "LK_01_8 · 2022 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 5/5",
+              "(-16, 12.2) · overlaps_zero",
+              "(-13.3333333, 13.3333333) · overlaps_zero; 06, 09, 10"
+            ],
+            [
+              "LK_01_8 · 2022 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 7/7",
+              "(-15.2, 6.51428571) · overlaps_zero",
+              "(-15.4, 8.6) · overlaps_zero; 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_8 · 2022 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 3/3",
+              "(-15.8666667, 13.4666667) · overlaps_zero",
+              "(-20, 20) · overlaps_zero; 06, 08"
+            ],
+            [
+              "LK_01_8 · 2023 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 7/7",
+              "(-11.4, 6.51428571) · overlaps_zero",
+              "(-11.6, 8.6) · overlaps_zero; 04, 05, 06, 09, 10"
+            ],
+            [
+              "LK_01_8 · 2023 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 3/3",
+              "(-12.0666667, 13.4666667) · overlaps_zero",
+              "(-10, 10.5) · overlaps_zero; 04, 06"
+            ],
+            [
+              "LK_01_8 · 2024 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 3/3",
+              "(-6.38095238, 12.6666667) · overlaps_zero",
+              "(-7, 13) · overlaps_zero; 04, 06, 08"
+            ],
+            [
+              "LK_01_9 · 2021 → 2022",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 5/5",
+              "(-19.6, 16.4) · overlaps_zero",
+              "(-19.6, 16.4) · overlaps_zero; 06, 07, 08, 09, 10"
+            ],
+            [
+              "LK_01_9 · 2021 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 5/5",
+              "(-19, 9) · overlaps_zero",
+              "(-19, 9) · overlaps_zero; 04, 05, 06, 09, 10"
+            ],
+            [
+              "LK_01_9 · 2021 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 5/5",
+              "(-18.18, 5.82) · overlaps_zero",
+              "(-18.18, 5.82) · overlaps_zero; 04, 05, 07, 08, 09"
+            ],
+            [
+              "LK_01_9 · 2021 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "7/7 → 2/2",
+              "(-19.5, 10.5) · overlaps_zero",
+              "(-19.5, 10.5) · overlaps_zero; 04, 06"
+            ],
+            [
+              "LK_01_9 · 2022 → 2023",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 5/5",
+              "(-15.4, 8.6) · overlaps_zero",
+              "(-19, 14.3333333) · overlaps_zero; 06, 09, 10"
+            ],
+            [
+              "LK_01_9 · 2022 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 5/5",
+              "(-14.58, 5.42) · overlaps_zero",
+              "(-13, 7) · overlaps_zero; 07, 08, 09"
+            ],
+            [
+              "LK_01_9 · 2022 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 2/2",
+              "(-15.9, 10.1) · overlaps_zero",
+              "(-20, 20) · overlaps_zero; 06"
+            ],
+            [
+              "LK_01_9 · 2023 → 2024",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 5/5",
+              "(-7.18, 4.82) · overlaps_zero",
+              "(-4.63333333, 2.03333333] · overlaps_zero; 04, 05, 09"
+            ],
+            [
+              "LK_01_9 · 2023 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 2/2",
+              "(-8.5, 9.5) · overlaps_zero",
+              "[-1.5, 8.5) · overlaps_zero; 04, 06"
+            ],
+            [
+              "LK_01_9 · 2024 → 2025",
+              "APHA 9221-F / MPN/100mL",
+              "5/5 → 2/2",
+              "(-5.32, 8.68) · overlaps_zero",
+              "-2 · lower; 04"
+            ],
+            [
+              "SV-111 · 2021 → 2022",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 4/4",
+              "-112.808333 · lower",
+              "-340.875 · lower; 01, 02, 03, 04"
+            ],
+            [
+              "SV-111 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 12/12",
+              "-1.05833333 · lower",
+              "-1.05833333 · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-111 · 2021 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 8/8",
+              "-6.65833333 · lower",
+              "-75.0625 · lower; 01, 04, 05, 06, 07, 09, 11, 12"
+            ],
+            [
+              "SV-111 · 2021 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 9/9",
+              "(535.316667, +∞) · higher",
+              "(498.122222, +∞) · higher; 02, 03, 04, 05, 06, 08, 09, 10, 11"
+            ],
+            [
+              "SV-111 · 2022 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "4/4 → 12/12",
+              "111.75 · higher",
+              "8.175 · higher; 01, 02, 03, 04"
+            ],
+            [
+              "SV-111 · 2022 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "4/4 → 8/8",
+              "106.15 · higher",
+              "373.25 · higher; 01, 04"
+            ],
+            [
+              "SV-111 · 2022 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "4/4 → 9/9",
+              "(648.125, +∞) · higher",
+              "670.933333 · higher; 02, 03, 04"
+            ],
+            [
+              "SV-111 · 2023 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 8/8",
+              "-5.6 · lower",
+              "-132.25 · lower; 01, 04, 05, 06, 07, 09, 11, 12"
+            ],
+            [
+              "SV-111 · 2023 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 9/9",
+              "(536.375, +∞) · higher",
+              "(771.1, +∞) · higher; 02, 03, 04, 05, 06, 08, 09, 10, 11"
+            ],
+            [
+              "SV-111 · 2024 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "8/8 → 9/9",
+              "(541.975, +∞) · higher",
+              "(1382.78, +∞) · higher; 04, 05, 06, 09, 11"
+            ],
+            [
+              "SV-199 · 2021 → 2022",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 12/12",
+              "4.925 · higher",
+              "4.925 · higher; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-199 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 12/12",
+              "-19.175 · lower",
+              "-19.175 · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-199 · 2021 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 8/8",
+              "77.2875 · higher",
+              "63.875 · higher; 01, 04, 05, 06, 07, 08, 10, 12"
+            ],
+            [
+              "SV-199 · 2021 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "47.4295455 · higher",
+              "44.5454545 · higher; 01, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-199 · 2022 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 12/12",
+              "-24.1 · lower",
+              "-24.1 · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-199 · 2022 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 8/8",
+              "72.3625 · higher",
+              "53.9 · higher; 01, 04, 05, 06, 07, 08, 10, 12"
+            ],
+            [
+              "SV-199 · 2022 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "42.5045455 · higher",
+              "38.5 · higher; 01, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-199 · 2023 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 8/8",
+              "96.4625 · higher",
+              "91.9875 · higher; 01, 04, 05, 06, 07, 08, 10, 12"
+            ],
+            [
+              "SV-199 · 2023 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "66.6045455 · higher",
+              "65.5454545 · higher; 01, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-199 · 2024 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "8/8 → 11/11",
+              "-29.8579545 · lower",
+              "-7.5375 · lower; 01, 04, 05, 06, 07, 08, 10, 12"
+            ],
+            [
+              "SV-200 · 2021 → 2022",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 12/12",
+              "[-15.7166667, -15.6333333) · lower",
+              "[-15.7166667, -15.6333333) · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-200 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 12/12",
+              "-24.3 · lower",
+              "-24.3 · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-200 · 2021 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 10/10",
+              "[-32.1283333, -31.9283333) · lower",
+              "[-41.29, -41.09) · lower; 01, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-200 · 2021 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "[-35.0856061, -34.994697) · lower",
+              "[-39.2, -39.1090909) · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-200 · 2022 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 12/12",
+              "(-8.66666667, -8.58333333] · lower",
+              "(-8.66666667, -8.58333333] · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-200 · 2022 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 10/10",
+              "(-16.495, -16.2116667) · lower",
+              "(-21.86, -21.56) · lower; 01, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-200 · 2022 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "(-19.4522727, -19.2780303) · lower",
+              "(-20.4454545, -20.2636364) · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-200 · 2023 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 10/10",
+              "[-7.82833333, -7.62833333) · lower",
+              "[-6.13, -5.93) · lower; 01, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-200 · 2023 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "[-10.7856061, -10.694697) · lower",
+              "[-8.39090909, -8.3) · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-200 · 2024 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "10/10 → 11/11",
+              "(-3.15727273, -2.86636364) · lower",
+              "(-7.51111111, -7.17777778) · lower; 01, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-344 · 2021 → 2022",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 4/4",
+              "217.016667 · higher",
+              "329.8 · higher; 01, 02, 03, 04"
+            ],
+            [
+              "SV-344 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 10/10",
+              "-1.70833333 · lower",
+              "87.52 · higher; 01, 02, 04, 05, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-344 · 2021 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 8/8",
+              "43.1416667 · higher",
+              "3.15 · higher; 01, 04, 05, 06, 09, 10, 11, 12"
+            ],
+            [
+              "SV-344 · 2021 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "-65.594697 · lower",
+              "-69.1818182 · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-344 · 2022 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "4/4 → 10/10",
+              "-218.725 · lower",
+              "-430.733333 · lower; 01, 02, 04"
+            ],
+            [
+              "SV-344 · 2022 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "4/4 → 8/8",
+              "-173.875 · lower",
+              "-583.5 · lower; 01, 04"
+            ],
+            [
+              "SV-344 · 2022 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "4/4 → 11/11",
+              "-282.611364 · lower",
+              "-336.45 · lower; 01, 02, 03, 04"
+            ],
+            [
+              "SV-344 · 2023 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "10/10 → 8/8",
+              "44.85 · higher",
+              "25.5285714 · higher; 01, 04, 05, 09, 10, 11, 12"
+            ],
+            [
+              "SV-344 · 2023 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "10/10 → 11/11",
+              "-63.8863636 · lower",
+              "-49.8666667 · lower; 01, 02, 04, 05, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-344 · 2024 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "8/8 → 11/11",
+              "-108.736364 · lower",
+              "63.3571429 · higher; 01, 04, 05, 06, 09, 10, 11"
+            ],
+            [
+              "SV-363 · 2021 → 2022",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "(-1.71287879, -0.659848485) · lower",
+              "(-1.83636364, -0.745454545) · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-363 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "(-1.53106061, -0.478030303) · lower",
+              "(-1.27272727, -0.181818182) · lower; 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-363 · 2021 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 10/10",
+              "(-0.748333333, 0.268333333) · overlaps_zero",
+              "(0.19, 1.19) · higher; 01, 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-363 · 2021 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "(-0.931060606, 0.0310606061) · overlaps_zero",
+              "(-1.05454545, -0.0545454545) · lower; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-363 · 2022 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "11/11 → 11/11",
+              "(-0.454545455, 0.818181818) · overlaps_zero",
+              "(-0.19, 1.11) · overlaps_zero; 02, 03, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-363 · 2022 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "11/11 → 10/10",
+              "(0.328181818, 1.56454545) · higher",
+              "(0.444444444, 1.66666667) · higher; 01, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-363 · 2022 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "11/11 → 11/11",
+              "(0.145454545, 1.32727273) · higher",
+              "(0.145454545, 1.32727273) · higher; 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-363 · 2023 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "11/11 → 10/10",
+              "(0.146363636, 1.38272727) · higher",
+              "(-1.01111111, 0.322222222) · overlaps_zero; 04, 05, 06, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-363 · 2023 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "11/11 → 11/11",
+              "(-0.0363636364, 1.14545455) · overlaps_zero",
+              "(0.06, 1.16) · higher; 02, 03, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-363 · 2024 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "10/10 → 11/11",
+              "(-0.782727273, 0.362727273) · overlaps_zero",
+              "(-1.77777778, -0.555555556) · lower; 01, 04, 05, 06, 07, 08, 09, 10, 11"
+            ],
+            [
+              "SV-735 · 2021 → 2022",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 7/7",
+              "(−∞, 9.10952381) · overlaps_zero",
+              "435.357143 · higher; 01, 02, 03, 04, 10, 11, 12"
+            ],
+            [
+              "SV-735 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 4/4",
+              "(−∞, -537.408333) · lower",
+              "-158.9 · lower; 01, 03, 04, 05"
+            ],
+            [
+              "SV-735 · 2022 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "7/7 → 4/4",
+              "-546.517857 · lower",
+              "-141.066667 · lower; 01, 03, 04"
+            ],
+            [
+              "SV-833 · 2021 → 2022",
+              "APHA 9223-B / MPN/100mL",
+              "9/9 → 12/12",
+              "(−∞, +∞) · overlaps_zero",
+              "(−∞, +∞) · overlaps_zero; 01, 02, 04, 05, 07, 08, 09, 11, 12"
+            ],
+            [
+              "SV-833 · 2021 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "9/9 → 10/10",
+              "(−∞, -433.82) · lower",
+              "(−∞, -529.6625) · lower; 01, 04, 05, 07, 08, 09, 11, 12"
+            ],
+            [
+              "SV-833 · 2021 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "9/9 → 7/7",
+              "(−∞, -190.571429) · lower",
+              "558.3125 · higher; 01, 04, 05, 11"
+            ],
+            [
+              "SV-833 · 2021 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "9/9 → 11/11",
+              "(−∞, +∞) · overlaps_zero",
+              "(−∞, +∞) · overlaps_zero; 01, 02, 04, 05, 07, 08, 11, 12"
+            ],
+            [
+              "SV-833 · 2022 → 2023",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 10/10",
+              "(−∞, -479.386667) · lower",
+              "(−∞, -505.7) · lower; 01, 03, 04, 05, 07, 08, 09, 10, 11, 12"
+            ],
+            [
+              "SV-833 · 2022 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 7/7",
+              "(−∞, -236.138095) · lower",
+              "(−∞, -458.075) · lower; 01, 04, 05, 06, 10, 11"
+            ],
+            [
+              "SV-833 · 2022 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "12/12 → 11/11",
+              "(−∞, +∞) · overlaps_zero",
+              "(−∞, +∞) · overlaps_zero; 01, 02, 03, 04, 05, 06, 07, 08, 10, 11, 12"
+            ],
+            [
+              "SV-833 · 2023 → 2024",
+              "APHA 9223-B / MPN/100mL",
+              "10/10 → 7/7",
+              "243.248571 · higher",
+              "304.43 · higher; 01, 04, 05, 10, 11"
+            ],
+            [
+              "SV-833 · 2023 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "10/10 → 11/11",
+              "(408.72, +∞) · higher",
+              "(519.833333, +∞) · higher; 01, 03, 04, 05, 07, 08, 10, 11, 12"
+            ],
+            [
+              "SV-833 · 2024 → 2025",
+              "APHA 9223-B / MPN/100mL",
+              "7/7 → 11/11",
+              "(165.471429, +∞) · higher",
+              "-159.475 · lower; 01, 04, 05, 06, 10, 11"
+            ]
+          ],
+          "caption": "Changes are later minus earlier. Parentheses denote open bounds; ∞ denotes an unbounded endpoint. Full-precision endpoints, all cohort fields and every original row locator remain in the JSON/CSV companions."
+        }
+      ]
+    ],
+    [
+      "Original measurement groups and quality context",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Analytical method / unit",
+            "Original QA and value type",
+            "Available years"
+          ],
+          "rows": [
+            [
+              "21GAEPD_WQX-LK_01_10",
+              "APHA 9221-F / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (6 rows; 6 days); 2022 (5 rows; 5 days); 2023 (5 rows; 5 days); 2024 (5 rows; 5 days); 2025 (3 rows; 3 days)"
+            ],
+            [
+              "21GAEPD_WQX-LK_01_11",
+              "APHA 9221-F / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (7 rows; 7 days); 2022 (5 rows; 5 days); 2023 (5 rows; 5 days); 2024 (7 rows; 7 days); 2025 (7 rows; 7 days)"
+            ],
+            [
+              "21GAEPD_WQX-LK_01_67",
+              "APHA 9221-F / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (6 rows; 6 days); 2022 (1 rows; 1 days)"
+            ],
+            [
+              "21GAEPD_WQX-LK_01_68",
+              "APHA 9221-F / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (6 rows; 6 days); 2022 (1 rows; 1 days)"
+            ],
+            [
+              "21GAEPD_WQX-LK_01_7",
+              "APHA 9221-F / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (7 rows; 7 days); 2022 (5 rows; 5 days); 2023 (5 rows; 5 days); 2024 (7 rows; 7 days); 2025 (3 rows; 3 days)"
+            ],
+            [
+              "21GAEPD_WQX-LK_01_8",
+              "APHA 9221-F / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (7 rows; 7 days); 2022 (5 rows; 5 days); 2023 (5 rows; 5 days); 2024 (7 rows; 7 days); 2025 (3 rows; 3 days)"
+            ],
+            [
+              "21GAEPD_WQX-LK_01_9",
+              "APHA 9221-F / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (7 rows; 7 days); 2022 (5 rows; 5 days); 2023 (5 rows; 5 days); 2024 (5 rows; 5 days); 2025 (2 rows; 2 days)"
+            ],
+            [
+              "21SC60WQ_WQX-SV-111",
+              "APHA 9223-B / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (12 rows; 12 days); 2022 (4 rows; 4 days); 2023 (12 rows; 12 days); 2024 (8 rows; 8 days); 2025 (9 rows; 9 days)"
+            ],
+            [
+              "21SC60WQ_WQX-SV-199",
+              "APHA 9223-B / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (12 rows; 12 days); 2022 (12 rows; 12 days); 2023 (12 rows; 12 days); 2024 (8 rows; 8 days); 2025 (11 rows; 11 days)"
+            ],
+            [
+              "21SC60WQ_WQX-SV-200",
+              "APHA 9223-B / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (12 rows; 12 days); 2022 (12 rows; 12 days); 2023 (12 rows; 12 days); 2024 (10 rows; 10 days); 2025 (11 rows; 11 days)"
+            ],
+            [
+              "21SC60WQ_WQX-SV-344",
+              "APHA 9223-B / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (12 rows; 12 days); 2022 (4 rows; 4 days); 2023 (10 rows; 10 days); 2024 (8 rows; 8 days); 2025 (11 rows; 11 days)"
+            ],
+            [
+              "21SC60WQ_WQX-SV-363",
+              "APHA 9223-B / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (12 rows; 12 days); 2022 (11 rows; 11 days); 2023 (11 rows; 11 days); 2024 (10 rows; 10 days); 2025 (11 rows; 11 days)"
+            ],
+            [
+              "21SC60WQ_WQX-SV-735",
+              "APHA 9223-B / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (12 rows; 12 days); 2022 (7 rows; 7 days); 2023 (4 rows; 4 days)"
+            ],
+            [
+              "21SC60WQ_WQX-SV-833",
+              "APHA 9223-B / MPN/100mL",
+              "Final / Actual / no qualifier code supplied",
+              "2021 (9 rows; 9 days); 2022 (12 rows; 12 days); 2023 (10 rows; 10 days); 2024 (7 rows; 7 days); 2025 (11 rows; 11 days)"
+            ]
+          ]
+        },
+        "71 original rows carry an Information Only comment; 17 of those original rows occur in the repeated-year measurement groups. They remain included and flagged. This is an explicit all-routine source comparison, not a laboratory acceptance decision.",
+        "The one Quality Control Sample-Field Replicate remains in the original CSV and retained record index, outside routine means. Not Reported and ambiguous/missing limits never become zero, half a limit or a numeric measurement.",
+        "All 49 support definitions, daily means, month means, original comments and row identities are available in the numeric companion."
+      ]
+    ],
+    [
+      "Calculation and decision use",
+      [
+        "For one exact support group, all original routine activities on a publisher date receive equal weight in its daily interval mean. Daily means receive equal weight in the all-sampled-day comparison. For common-month comparison, daily means first receive equal weight within each month, then only month numbers observed in both years receive equal weight across years.",
+        "The comparison is later minus earlier. For intervals, the lower difference is the later lower endpoint minus the earlier upper endpoint; the upper difference is the later upper endpoint minus the earlier lower endpoint. An endpoint remains open when a contributing endpoint is open. The source's nonnegative concentration floor is explicitly zero.",
+        "A below-reporting or below-quantitation result is retained as [0, original limit). A result above its upper quantitation limit is retained as (original limit, +∞). A reported number with no censor condition is a point. Unknown combinations remain unresolved; a full-support mean is unavailable if any contributing interval is unresolved.",
+        "Shared-month weighting answers a narrower sampled-calendar question. It cannot supply unmeasured months, adjust for hydrology, remove reporting bias or estimate uncertainty. Neither full-date nor common-month mean is labeled an annual time-weighted concentration or a native nutrient/sediment export.",
+        "For Monitoring, use the original calendar and winter scenario to identify where more comparable seasonal observations are needed. These results alone do not assign a new station, choose an intervention, establish a trend or alter programme costs."
+      ]
+    ],
+    [
+      "Original source files and reproducible arithmetic",
+      [
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Complete numerical result, support groups and original row index",
+              "path": "seasonal-comparison.json"
+            },
+            {
+              "title": "All 115 comparison rows",
+              "path": "seasonal-comparison.csv"
+            },
+            {
+              "title": "Original 730-result table with source file and row provenance",
+              "path": "results-with-provenance.csv"
+            },
+            {
+              "title": "Original source requests and response identities",
+              "path": "source-inputs.json"
+            },
+            {
+              "title": "Complete repeatable producer",
+              "path": "seasonal_comparison.mjs"
+            },
+            {
+              "title": "Method and same-project report continuation",
+              "path": "SEASONAL_COMPARISON.md"
+            }
+          ]
+        },
+        "The six original agency CSV responses are retained as companions. The producer checks each selected original row against its unchanged response fields before calculation. Original dates, clock text, time zones, units, methods and source identifiers remain unchanged."
+      ]
+    ]
+  ],
+  "inputs": [
+    {
+      "path": "raw/arjws-results-2021-2025-original.csv",
+      "bytes": 68038,
+      "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
+    },
+    {
+      "path": "raw/prwd-results-2021-original.csv",
+      "bytes": 65619,
+      "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
+    },
+    {
+      "path": "raw/prwd-results-2022-original.csv",
+      "bytes": 39899,
+      "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
+    },
+    {
+      "path": "raw/prwd-results-2023-original.csv",
+      "bytes": 44379,
+      "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
+    },
+    {
+      "path": "raw/prwd-results-2024-original.csv",
+      "bytes": 53715,
+      "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
+    },
+    {
+      "path": "raw/prwd-results-2025-original.csv",
+      "bytes": 73283,
+      "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
+    },
+    {
+      "path": "results-with-provenance.csv",
+      "bytes": 368696,
+      "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+    },
+    {
+      "path": "SEASONAL_COMPARISON.md",
+      "bytes": 8814,
+      "sha256": "6c30b3c97e3d02d11f8ab0e2721ba35e6f5019867024e97ab3bc8bc66945ed35"
+    },
+    {
+      "path": "seasonal_comparison.mjs",
+      "bytes": 31209,
+      "sha256": "3039686000c9db255cb8439322178d8a559360f0f466f2396252acaf4cfb26b7"
+    },
+    {
+      "path": "seasonal-comparison.csv",
+      "bytes": 37852,
+      "sha256": "79d17e0acbb349bfec3bbb8f1ce2f82de2dba4ccd30ced42e61ed4f8031cf716"
+    },
+    {
+      "path": "seasonal-comparison.json",
+      "bytes": 2026235,
+      "sha256": "06130ac03981bb49c1c0d9c484610bd75be33acc6514b14e042bab2d5b2b0c6e"
+    },
+    {
+      "path": "source-inputs.json",
+      "bytes": 8181,
+      "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
+    }
+  ],
+  "source_links": [
+    "seasonal-comparison.json",
+    "seasonal-comparison.csv",
+    "results-with-provenance.csv",
+    "source-inputs.json",
+    "SEASONAL_COMPARISON.md"
+  ],
+  "comparison_selection": {
+    "original_csv_sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8",
+    "activity_type": "Sample-Routine",
+    "period": {
+      "start": "2021-01-01",
+      "end": "2025-12-31"
+    },
+    "date_basis": "Unchanged publisher sample date; original clock and timezone retained, not converted.",
+    "physical_lower_bound": 0,
+    "quantity": "Original sampled E. coli concentration",
+    "support_fields": [
+      "MonitoringLocationIdentifier",
+      "CharacteristicName",
+      "ResultAnalyticalMethod/MethodIdentifierContext",
+      "ResultAnalyticalMethod/MethodIdentifier",
+      "ResultSampleFractionText",
+      "ResultValueTypeName",
+      "ResultWeightBasisText",
+      "ResultTimeBasisText",
+      "ResultTemperatureBasisText",
+      "ResultParticleSizeBasisText",
+      "StatisticalBaseCode",
+      "ActivityMediaName",
+      "ActivityMediaSubdivisionName",
+      "SampleCollectionMethod/MethodIdentifier",
+      "SampleCollectionMethod/MethodIdentifierContext",
+      "ResultStatusIdentifier",
+      "MeasureQualifierCode",
+      "ActivityDepthHeightMeasure/MeasureValue",
+      "ActivityDepthHeightMeasure/MeasureUnitCode",
+      "ActivityDepthAltitudeReferencePointText",
+      "ActivityTopDepthHeightMeasure/MeasureValue",
+      "ActivityTopDepthHeightMeasure/MeasureUnitCode",
+      "ActivityBottomDepthHeightMeasure/MeasureValue",
+      "ActivityBottomDepthHeightMeasure/MeasureUnitCode",
+      "ResultDepthHeightMeasure/MeasureValue",
+      "ResultDepthHeightMeasure/MeasureUnitCode",
+      "ResultDepthAltitudeReferencePointText"
+    ],
+    "calendar_fields": [
+      "MonitoringLocationIdentifier",
+      "ResultAnalyticalMethod/MethodIdentifierContext",
+      "ResultAnalyticalMethod/MethodIdentifier",
+      "ActivityTypeCode"
+    ],
+    "original_unit_policy": "Exact result unit, or exact limit unit for a censored row; spelling variants are separate.",
+    "qa_policy": "Original result-status and qualifier labels remain separate. Information Only comments are counted and preserved, not silently excluded.",
+    "weighting": "Equal original activities within a date; equal sampled dates within a month; equal common calendar months across each pair of years.",
+    "contrast": "Later sampled period minus earlier sampled period; no intervention/control or annual population trend inferred."
+  },
+  "comparison_summary": {
+    "original_records": 730,
+    "routine_records": 729,
+    "nonroutine_records": 1,
+    "measurement_support_groups": 49,
+    "comparison_count": 115,
+    "comparison_record_count": 476,
+    "calendar_comparison_count": 115,
+    "calendar_identical_month_pairs": 17,
+    "measurement_identical_month_pairs": 13,
+    "reversals": 4,
+    "information_only_records": 71,
+    "information_only_comparison_records": 17
+  }
+}

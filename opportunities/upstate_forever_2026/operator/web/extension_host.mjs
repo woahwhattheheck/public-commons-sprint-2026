@@ -112,6 +112,7 @@ export function createExtensionHost(host) {
     const capabilities = {
       ...host,
       getState: () => host.getState(),
+      openScientificReport: host.openScientificReport,
       getWorkspace: host.getWorkspace || (() => workspaceKey(host.getState())),
       refresh, refreshState: host.refreshState || refresh,
       getExtension: id => entries.get(id)?.controller || null,
