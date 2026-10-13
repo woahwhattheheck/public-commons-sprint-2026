@@ -10,7 +10,9 @@ from pathlib import Path
 from model.common import atomic_bytes, atomic_json, describe_file, digest, held, identifier, now, read_json
 from source_tools.watershed_source_entry import capture_source_entry, retain_source_entry
 from model import watershed_context as context_model
-from model.watershed_brief import BRIEF_FORMAT, write_selection_brief
+from model.watershed_brief import (
+    BRIEF_FORMAT, selection_with_contributing_context, write_selection_brief,
+)
 
 ACTIONS = frozenset({"watershed.context.analyze", "watershed.context.export",
                      "watershed.context.receive"})
@@ -479,6 +481,10 @@ class WatershedContextActions:
         if set(selected) - indexed.keys():
             raise ValueError("The export contains a watershed outside this saved regional report.")
         report_sha = record["files"]["watershed-context.json"]["sha256"]
+        selection = selection_with_contributing_context(
+            report, selected, report_sha,
+            Path(__file__).resolve().parents[1] / "outputs" / "watershed-connectivity-20261013",
+        )
         identity = {
             "report_id": record["id"], "report_sha256": report_sha, "huc12s": selected,
             "csv_format": CSV_FORMAT, "csv_columns": list(context_model.HUC_COLUMNS),
@@ -486,6 +492,11 @@ class WatershedContextActions:
         }
         if record.get("source_edition_fingerprint"):
             identity["source_edition_fingerprint"] = record["source_edition_fingerprint"]
+        if selection.get("contributing_context") is not None:
+            identity["contributing_context_sha256"] = _hash(json.dumps(
+                selection["contributing_context"], sort_keys=True, separators=(",", ":"),
+                ensure_ascii=False, allow_nan=False,
+            ).encode("utf-8"))
         key = _hash(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8"))
         target = ws.root / "watershed-context-exports" / key
         with held(ws.root / ".workspace.lock"):
@@ -495,7 +506,7 @@ class WatershedContextActions:
             target.mkdir(parents=True, exist_ok=True)
             rows = [indexed[huc] for huc in selected]
             selection = {
-                **context_model.selected_watershed_export(report, selected),
+                **selection,
                 "export_id": key, **identity,
                 "source_fingerprint": record["source_fingerprint"],
                 "source_inputs": record["source_inputs"],
@@ -515,6 +526,8 @@ class WatershedContextActions:
                     for name in ("selected-watersheds.json", "selected-watersheds.csv")
                 },
             }
+            if selection.get("contributing_context") is not None:
+                result["contributing_summary"] = selection["contributing_context"]["summary"]
             result["files"].update(brief_files)
             atomic_json(path, result)
         return result
