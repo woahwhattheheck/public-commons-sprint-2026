@@ -1,4 +1,5 @@
 import {createPublishedReviewReports} from "./published_review_reports.mjs";
+import {createPublishedMicrobialSelection} from "./published_microbial_selection.mjs";
 
 const PARAMETERS = {
   total_phosphorus: "Total phosphorus", total_nitrogen: "Total nitrogen",
@@ -57,6 +58,13 @@ export function createPublishedStudiesDesk(host) {
   const reviewReports = createPublishedReviewReports(host, {
     context: () => ({workspace, review:copy(savedReview), changed:reviewChanged(), busy, view:viewGeneration, edit:editGeneration}),
     queue: (action, payload) => queue(action, payload),
+  });
+
+  const microbialSelection = createPublishedMicrobialSelection(host, {
+    context: () => ({workspace, busy, view:viewGeneration, edit:editGeneration}),
+    api: (path, body) => api(path, body),
+    queue: (action, payload) => queue(action, payload),
+    changed: () => edited(),
   });
 
   let geographicInput = null, geographicPreview = null, geographicChoice = "";
@@ -196,6 +204,7 @@ export function createPublishedStudiesDesk(host) {
   }
   function renderReview() {
     if (!node) return;
+    microbialSelection.update();
     const control = find("[data-ps-review]");
     const reviews = arr(catalog?.reviews);
     control.innerHTML = '<option value="">Choose a saved review</option>' + reviews.map(item =>
@@ -320,6 +329,7 @@ export function createPublishedStudiesDesk(host) {
       '<label class="ps-check"><input type="checkbox" name="include_installed_context" checked>Include installed study reports and analyses</label>' +
       '<p class="ps-help">Accepts the original study JSON, its complete Canvas Markdown, a complete study ZIP, or a directory of published tables. Paths start inside the selected source folder.</p>' +
       '<button type="submit">Import study</button></form></details></section>' +
+      '<section data-ps-microbial-selection aria-label="Selected microbial activities"></section>' +
       '<section class="ps-reviews" data-ps-geographic hidden aria-label="Geographic station selection"></section>' +
       '<section class="ps-study-control"><label>Retained study<select data-ps-study aria-label="Retained study"></select></label>' +
       '<div class="ps-actions"><button type="button" data-ps-action="report" disabled>Export selected report</button>' +
@@ -728,6 +738,12 @@ export function createPublishedStudiesDesk(host) {
       pending.delete(task.id); operationIds.delete(entry.key);
       if (!node || workspace !== entry.workspace || host.getWorkspace() !== entry.workspace) continue;
       relevant = true;
+      microbialSelection.completed(task, entry);
+      if (taskCanSelect(entry) && entry.action === "published-study.microbial-selection.prepare") {
+        selection = emptySelection(); tab = "observed"; savedReview = null; reviewChoice = "";
+        reviewTitle = task.result?.record?.title || "Selected microbial activities"; reviewNotes = "";
+        interpretationMatches = true;
+      }
       if (reviewReports.completed(task, entry)) continue;
       if (taskCanSelect(entry) && !["published-study.export","published-study.report","published-study.review.export","published-study.review.prepare-source"].includes(entry.action)) preferred = task.result;
     }
@@ -877,6 +893,7 @@ export function createPublishedStudiesDesk(host) {
     geographicChoice = draft?.geographicChoice || ""; geographicPrevious = copy(draft?.geographicPrevious || null); geographicLoading = false;
     ++editGeneration;
     frame(); renderGeographic();
+    microbialSelection.mount(find("[data-ps-microbial-selection]"));
     node.addEventListener("click",click,{signal:events.signal});
     node.addEventListener("submit",submit,{signal:events.signal});
     node.addEventListener("input",event => {
@@ -897,7 +914,7 @@ export function createPublishedStudiesDesk(host) {
     renderReview(); update(state); refreshCatalog();
   }
   function detach() {
-    remember(); reviewReports.detach();
+    remember(); reviewReports.detach(); microbialSelection.detach();
     events?.abort(); for (const controller of requests) controller.abort(); requests.clear();
     ++request; ++catalogRequest; ++viewGeneration; ++reviewRequest; ++geographicRequest; catalogPreference = null;
     if (node) node.classList.remove("published-studies-desk");
