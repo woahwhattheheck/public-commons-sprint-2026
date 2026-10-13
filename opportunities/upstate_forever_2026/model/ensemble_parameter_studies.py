@@ -192,20 +192,32 @@ def get(workspace, operation_id):
     state = read_json(directory / "operation.json")
     if (state.get("schema") != SCHEMA or state.get("id") != key
             or state.get("workspace_id") != workspace.project["id"]
-            or digest(state["identity"]) != key):
+            or digest(state["identity"]) != key
+            or state.get("selection") != state["identity"]["selection"]
+            or state.get("ensemble_id") != state["identity"]["selection"]["ensemble_id"]):
         raise ValueError("The saved continuation belongs to another original ensemble selection")
     verify_file(workspace.root, state["identity"]["ensemble_plan"])
-    rows = []
+    designs = {row["key"]: row for row in state["identity"]["designs"]}
+    rows, seen = [], set()
     for row in state.get("studies", []):
+        design = designs.get(row.get("key"))
+        if design is None or row["key"] in seen:
+            raise ValueError("The saved continuation repeats or substitutes an original scenario group")
+        seen.add(row["key"])
         current = studies.inspect(workspace, row["experiment_id"])
-        origin = current["selection"].get("retained_source", {}).get("identity", {})
-        if (origin.get("ensemble_id") != state["ensemble_id"]
-                or origin.get("scenario_id") != row["scenario_id"]
-                or origin.get("base_profile_id") != row["base_profile_id"]):
+        selection = current["selection"]
+        if (selection.get("retained_source") != design["provenance"]
+                or any(selection.get(name) != value for name, value in design["selection"].items())
+                or {case["id"]: case["run_id"] for case in current["cases"]} != design["case_runs"]
+                or any(row.get(name) != design[name] for name in ("scenario_id", "base_profile_id"))):
             raise ValueError("The retained study changed its original ensemble lineage")
         source = reports.get(workspace, row["source_operation_id"]) if row.get("source_operation_id") else None
+        if source is not None and source["experiment_id"] != current["id"]:
+            raise ValueError("The saved report source belongs to another original parameter study")
         rows.append({**row, "state": current["state"], "progress": current["progress"],
                      "source": source})
+    if state.get("state") == "complete" and seen != set(designs):
+        raise ValueError("The completed continuation omits an original scenario study")
     return {**state, "studies": rows}
 
 
@@ -278,7 +290,10 @@ def continue_studies(workspace, value):
         except BaseException as error:
             state.update(state="partial", error={"type": type(error).__name__, "message": str(error)},
                          updated_at=now())
-            atomic_json(path, state)
+            try:
+                atomic_json(path, state)
+            except OSError:
+                pass
             raise
 
 
