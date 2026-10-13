@@ -1,0 +1,206 @@
+{
+  "schema": "upstate.geographic-study-integration-delivery/v1",
+  "operation": "ECO-S1-GEOGRAPHIC-EDITABLE-STUDY-RECEIVING-20261013",
+  "source_file": "geographic-study-receiving.source.json",
+  "source_identity": {
+    "bytes": 446013,
+    "sha256": "2c52e6b7cd237657aec5c3e61e714fe04d9b0de8a8cd357c761872a08b2fdf1f",
+    "git_blob": "91acd80934fdf619bf2e88553593dd0ea7763e29"
+  },
+  "source_files": 19,
+  "source_bytes": 410097,
+  "source_references": [
+    {
+      "pull_request": 4342,
+      "merge_commit": "82ae30acd0e950a6d015790d4dd6fd30dff0d0ec",
+      "head": "d5e6558d29e85871e0f1c389f1e6264497424386",
+      "scope": "All ten current receiving files, including Programme-compatible workbench and complete fragment."
+    },
+    {
+      "pull_request": 4363,
+      "merge_commit": "6085377dcb4a9b85227dece07e3da1eda70a1178",
+      "scope": "All six current producer and maintained robust-installer files."
+    }
+  ],
+  "files": [
+    {
+      "path": "integration/component_fragments/geographic-study-receiving.json",
+      "encoding": "utf-8",
+      "bytes": 1592,
+      "sha256": "1a38300d371143a6f3b8c89e9c61c21027635760f52697edf5a1761e8e0dd43f",
+      "git_blob": "73d61ccab1a16219846a21e5c38d0b99d0344e34"
+    },
+    {
+      "path": "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+      "encoding": "utf-8",
+      "bytes": 22997,
+      "sha256": "1a25a38627f594709eff77d4b6c8d35931ec5fb2770345d9e826bff913f1147e",
+      "git_blob": "90f1019c088df542601b4032ca256302a807cef2"
+    },
+    {
+      "path": "model/geographic_study_receiving.py",
+      "encoding": "utf-8",
+      "bytes": 4877,
+      "sha256": "4c58cbeac169fd527e0fed6cb4cb71b4513c00b3ba5632e034e773be8cfb572b",
+      "git_blob": "2fcce6c08463ac1bf9b6d66be7d960c5002df576"
+    },
+    {
+      "path": "model/study_receiving.py",
+      "encoding": "utf-8",
+      "bytes": 11178,
+      "sha256": "cce173589d6e34e985ff782af905e2839c66d66639e210636a94bcf55e13a021",
+      "git_blob": "8fec71d86a5d1f174a6f3767c61cf254edb36225",
+      "base_sha256": "85da248277b31f8b98234365668cee93d1856c83a8f0dde9276d066a74cb5ecb"
+    },
+    {
+      "path": "operator/extensions/study-transfer.json",
+      "encoding": "utf-8",
+      "bytes": 3650,
+      "sha256": "0a9089f9ccbdacf24f468aa2686574f43d52e663384e8311b570c93c3db13576",
+      "git_blob": "5d9126a93cbc2e34907b9879604be93402a7cdbb",
+      "base_sha256": "c52f1dd1d14c769e46c253e9e7177ebedbb106d297c5437bb5750033b0f5777c"
+    },
+    {
+      "path": "operator/geographic_receiving.py",
+      "encoding": "utf-8",
+      "bytes": 829,
+      "sha256": "3ee8cf77b4bd55d05c43f9932b3a32990d2ba232a7336207e9392c52fef73312",
+      "git_blob": "df4d170ef26d9491f4153b1c2e195468381072ed"
+    },
+    {
+      "path": "operator/study_receiving.py",
+      "encoding": "utf-8",
+      "bytes": 2992,
+      "sha256": "5bf5f07658a1151e6d3301ad9e2497bf9932c6f9b0e224d28c44b5b71a772f18",
+      "git_blob": "c3a16bcd049ccc81117254d2a77a0bed8cab42f8",
+      "base_sha256": "84bccc03bede448a4469238f64b1acd764790c06679ba499af87a2600c40346c"
+    },
+    {
+      "path": "operator/web/geographic_received_studies.mjs",
+      "encoding": "utf-8",
+      "bytes": 6224,
+      "sha256": "3d7fb49bab13b74cc32845fbbe214ac39d8adb87525729b92cab4f83135fa071",
+      "git_blob": "5248114606c0491e55a387f2aa0a2172450716c1"
+    },
+    {
+      "path": "operator/web/geographic_workbench.mjs",
+      "encoding": "utf-8",
+      "bytes": 35932,
+      "sha256": "04ad03c94741ff2db4a18aaec9f04e01fbe9cbdf4895d166074fa8b6e28b27a7",
+      "git_blob": "f2acc263ff707ac684d192d40c9f96a7de2d5e99",
+      "base_sha256": "929bfe1c8b46c83b585b652ed4bec1f36d51d6ac9ee6f0b6b793da6fb59d8a63"
+    },
+    {
+      "path": "operator/web/received_studies.mjs",
+      "encoding": "utf-8",
+      "bytes": 21566,
+      "sha256": "b023581ce44671f72c61e557cacc1e0eae73ddba4cc30cec62b5df4a027d112d",
+      "git_blob": "8012a69ce5a17af2bee6f17ab125a02f9951cbcc",
+      "base_sha256": "0d21b234ce6c464446458c47cbe640f82fc1d17cfcbee93d1942e7068cf09769"
+    },
+    {
+      "path": "integration/component_fragments/geographic-study-transfer.json",
+      "encoding": "utf-8",
+      "bytes": 1235,
+      "sha256": "d56d488ad353d6254ef8d3a1261b666da68385bc25f328e157a9f83991f20506",
+      "git_blob": "257414eb424b87b0c9dd41499042b1b6ec965434"
+    },
+    {
+      "path": "model/GEOGRAPHIC_STUDY_TRANSFER.md",
+      "encoding": "utf-8",
+      "bytes": 16621,
+      "sha256": "52501bb2e1e2d3f4e9d051828491abe82992792a76881d5710e6b0661e56b9f9",
+      "git_blob": "46e7daf37b1203cdb50d352d276d11d62f18138e"
+    },
+    {
+      "path": "model/geographic_study_transfer.py",
+      "encoding": "utf-8",
+      "bytes": 45918,
+      "sha256": "842d0ea7c63599f8ab819046c285ead054a4f99866031721e825f1e665b36f31",
+      "git_blob": "4ff21fa60b45ed18c26ecc414194ebc52f71f05a"
+    },
+    {
+      "path": "model/scientific_report_study_transfer.py",
+      "encoding": "utf-8",
+      "bytes": 16160,
+      "sha256": "7a59392b8cde06c6596181845b9295aa163a603dda1fe08b1a9f112e915beb08",
+      "git_blob": "fa6975d9a7acb9d5471aac83fd9a28b5c1ed293f",
+      "base_sha256": "d960e2bd403419bc7748047ba40cef25c996abff683072935f73f77aa9e5327f"
+    },
+    {
+      "path": "model/study_transfer.py",
+      "encoding": "utf-8",
+      "bytes": 67118,
+      "sha256": "ab8486b9636447234512bd6f5cb22e1d8af4731f6534acd0a477476b4a065a6d",
+      "git_blob": "e996eb836104e7f9b45b24b14f694b644214f660",
+      "base_sha256": "7d3159fc0fd641ee5261f7f06ff5be3a1a3433ee0a0759f127fa9a05c4963279"
+    },
+    {
+      "path": "source_tools/geographic_headwaters_handover.py",
+      "encoding": "utf-8",
+      "bytes": 36663,
+      "sha256": "cc87c46cee9bb571f306f5752679666cccb6c0571b1e88ae101acdb2b0b158a9",
+      "git_blob": "957d9b9242cf0310d419b55f996869902346ed77"
+    },
+    {
+      "path": "source_tools/simulated_headwaters_handover.py",
+      "encoding": "utf-8",
+      "bytes": 28593,
+      "sha256": "cd76d0643de9e98f97ed12f0078b67c343840b8929c771783912fa87713b6ea0",
+      "git_blob": "78919d239ea7b6e788deb79ea07e3bb2e25e1940"
+    },
+    {
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "encoding": "utf-8",
+      "bytes": 4999,
+      "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
+      "git_blob": "8cd1c1f3d371a2fb75471813844e31f489aa8272"
+    },
+    {
+      "path": "source/install_robust_workbench.py",
+      "encoding": "utf-8",
+      "bytes": 80953,
+      "sha256": "921fa6ea67db79db320b04753369afe93534385408b115e96fc19ab07900dddd",
+      "git_blob": "20e2b795da2d540a592b0d9b0eb854b2a84fecaf",
+      "base_sha256": "9ae2975c2d8036f9a42b4d831efa80752d04611cce2d8c585b782f9ebc5d644b"
+    }
+  ],
+  "installation": {
+    "family_component": "geographic-study-receiving",
+    "guide": "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+    "contract": "Apply guarded authored source to a complete current application at its closed installation boundary; export and validate the complete selected family including imported modules, source declarations and native data; compose against the actual retained receiver, then invoke the maintained cumulative installer into a new directory. This overlay is the complete authored feature and its two direct handover helpers, not a substitute for the complete selected application family.",
+    "preserve": "Original project, saved scientific edition, ordered sources, source/CAS bytes and unfinished/complete native case records. Existing tasks continue in their original application until their owner closes the installation boundary.",
+    "required_entrypoints": [
+      "source_tools/application_assembly.py",
+      "source_tools/component_fragments.py",
+      "source_tools/install_cumulative_application.py"
+    ],
+    "full_owner_direction": "CURRENT_OWNER_DIRECTION.md",
+    "publisher": "Existing WAT RegionalNativeInstaller V2 owner, coordinated in original Ecosystem Sales operation.",
+    "robust_installer_join": {
+      "source": "source/install_robust_workbench.py",
+      "retained_git_blob": "20e2b795da2d540a592b0d9b0eb854b2a84fecaf",
+      "required_additions": [
+        "integration/component_fragments/geographic-study-receiving.json",
+        "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+        "model/geographic_study_receiving.py",
+        "operator/geographic_receiving.py",
+        "operator/web/geographic_received_studies.mjs",
+        "source_tools/geographic_headwaters_handover.py",
+        "source_tools/simulated_headwaters_handover.py"
+      ],
+      "contract": "The retained producer installer predates the receiving component. Its current V2 owner composes the complete receiving entries and preserves all current paths before using that direct installer; alternatively use the complete selected-family route in the included receiving guide. Shared Study model/provider, descriptor and both existing browser bodies are complete postimages in this bank and require their published predecessor guards."
+    }
+  },
+  "followup": {
+    "owner": "ES26",
+    "scope": "Current-operation paired report signature versus retained archive identity",
+    "current_producer": "4ff21fa60b45ed18c26ecc414194ebc52f71f05a",
+    "contract": "Retain this exact merged source as history; replace the producer only with its separately published reviewed successor for the affected paired-report case."
+  },
+  "owner_direction": {
+    "path": "CURRENT_OWNER_DIRECTION.md",
+    "git_blob": "8cd1c1f3d371a2fb75471813844e31f489aa8272"
+  },
+  "application_prefix": "opportunities/upstate_forever_2026"
+}
