@@ -91,6 +91,30 @@ export function deleteDraft(id, revision) {
 export function readDraftRecords(){
   return transaction('readonly',(store,done)=>{const request=store.getAll();request.onsuccess=()=>done(request.result);});
 }
+// Project one original readonly snapshot synchronously, releasing each full
+// cursor value before advancing. The mapper must not retain unrelated records
+// or await; IDB remains active through the immediately scheduled next request.
+export function projectDraftRecords(mapper,{ids=null}={}){
+  if(typeof mapper!=='function'||ids!==null&&(!Array.isArray(ids)||ids.some(id=>typeof id!=='string')))
+    throw new TypeError('Use a synchronous saved-record projection and exact selected IDs.');
+  const selected=ids===null?null:new Set(ids);
+  return transaction('readonly',(store,done,fail)=>{
+    const values=[];
+    const request=store.openCursor();
+    request.onsuccess=()=>{
+      const cursor=request.result;
+      if(!cursor){done(values);return;}
+      try{
+        if(selected===null||selected.has(cursor.key)){
+          const value=mapper(cursor.value);
+          if(value&&typeof value.then==='function')throw new TypeError('Saved-record projection cannot await inside its original transaction.');
+          if(value!==undefined)values.push(value);
+        }
+        cursor.continue();
+      }catch(error){fail(error);}
+    };
+  });
+}
 function sameSavedValue(a,b,seen=new Map(),reverse=new Map()){
   if(!a||!b||typeof a!=='object'||typeof b!=='object')return Object.is(a,b);
   if(seen.has(a)||reverse.has(b))return seen.get(a)===b&&reverse.get(b)===a;
