@@ -34,7 +34,9 @@
         "model/profiles.py",
         "model/geographic_scenario_contrasts.py",
         "model/GEOGRAPHIC_PHYSICAL_CONTRASTS.md",
-        "model/geographic_utility_groups.py"
+        "model/geographic_utility_groups.py",
+        "model/geographic_siting_contrasts.py",
+        "model/GEOGRAPHIC_SITING_CONTRASTS.md"
       ],
       "requires": [
         "receiving-water-report",
