@@ -16,6 +16,7 @@ from model.common import (atomic_json, describe_file, digest, file_digest, held,
 from model.client_source_files import (ROLES, TABLE_FIELDS, TARGET_UNITS, checked_selection,
                                        inspect_file, need, options, project_table,
                                        select_band, text)
+from model.model_selection import required_table_fields
 
 ACTIONS = {"client-source.inspect", "client-source.commit"}
 SCHEMA = "upstate.client-source-operation/v1"
@@ -117,6 +118,8 @@ class ClientSourceIntake:
                                   "inspection_id", "error")})
             return {"workspace_key": workspace_key, "project_id": ws.project["id"],
                     "operations": rows, "roles": ROLES, "table_fields": TABLE_FIELDS,
+                    "required_table_fields": {model: required_table_fields([model])
+                                              for model in ("ndr", "sdr")},
                     "target_units": TARGET_UNITS}
         need(operation == "result", "Choose a source intake result.")
         value = self._load(ws, identifier(payload["id"]))
