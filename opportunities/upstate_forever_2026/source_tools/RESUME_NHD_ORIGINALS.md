@@ -39,6 +39,29 @@ Resolve those stable references through the authorized file-download tool and ke
 
 Alternatively, provide a local JSON mapping from each recorded filename to its downloaded path or freshly resolved HTTPS URL through `--downloads`. The receiver checks the original byte count, available content hash, native-ID equality, complete native fields, EPSG:3857, Z/M flags and coordinate dimensions. It records its own verified content hash for subsequent resumes. Diagnostic XY-only samples stay outside the native Z/M page set.
 
+## Use the completed original217 bounds delivery
+
+The completed source holder's five original files are retained together at
+[source/water_context/20261013/domain217_query_bounds/](../source/water_context/20261013/domain217_query_bounds/). Its published metadata is a descriptor of the CSV, so it uses a different schema from the maintained Decimal inventory. The receiver now accepts either complete representation directly.
+
+Select the committed metadata and its exact hash in the existing invocation:
+
+```sh
+NHD_HUC_BOUNDS="$APPLICATION/source/water_context/20261013/domain217_query_bounds/domain217-native3857-bounds.json"
+NHD_HUC_BOUNDS_SHA256=94e54e27eef2802a92a0a35e3f576db3e86f6659338aaf513ac700ecd6565ba3
+
+```
+
+Pass these values to the same `--huc-bounds` and `--huc-bounds-sha256` options below. Keep the five source files together. The metadata selects the original 108,588-byte CSV, SHA256 `24fc2be0a18f0024410de1f727667ef6a2e68d012c4e4d7ace0971b0f5363179`, and its original manifest declares the metadata, reproduction method and guide companions.
+
+The receiver also accepts the complete decoded five-member source-bank JSON, 120,529 bytes, SHA256 `338ebb7f6d7fb7d74a0e3064367206487c57b638a28268bed4af0692cc7641cc`, through the same options. Its `commons.source-map/1` envelope carries all original UTF-8 bodies. Supply the decoded JSON rather than its transport gzip or Base64.
+
+Both forms verify all member hashes, the original compressed/decoded polygon identities, complete 217-HUC/OID relationships, every envelope coordinate, ring/vertex counts and native CRS. The source holder's Python producer used ordinary `json.loads` and CSV serialization; its numeric text is compared to that exact historical float representation of the original polygon extrema. This comparison does not replace query precision. The receiver's existing original-archive verification supplies unchanged Decimal extrema to every actual query.
+
+Under the selected input hash, the operation retains the received metadata/bank, original CSV, source manifest, reproduction code and guide, plus the exact Decimal query inventory. All enter the native source edition as companions. A materialized archive's basename does not change this derived query identity. Resume the same operation with the same selected bounds input and source bank. Existing broad candidate IDs, native geometry bodies and query caches remain reusable.
+
+This input join uses the source holder's completed native result. The optional producer command in the next section remains available when no completed bounds family has been received.
+
 ## Complete the original-HUC source import
 
 Use the established operation paths and GIS interpreter. In the example below, `NHD_BANK` is the decoded revision 10 bank, `NHD_DOMAIN_ARCHIVE` is the original domain ZIP, and the capture, download, edition and Workspace variables name their existing operation directories.
@@ -46,14 +69,16 @@ Use the established operation paths and GIS interpreter. In the example below, `
 ```sh
 cd "$APPLICATION"
 
-"$GIS_PYTHON" -m source_tools.original_huc12_bounds \
-  --archive "$NHD_DOMAIN_ARCHIVE" \
-  --output "$NHD_CAPTURE_ROOT/bounds217"
-
-NHD_HUC_BOUNDS="$NHD_CAPTURE_ROOT/bounds217/original-217-huc12-native-bounds.json"
-NHD_HUC_BOUNDS_SHA256=$("$GIS_PYTHON" -c \
-  'import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())' \
-  "$NHD_HUC_BOUNDS")
+if [ -z "${NHD_HUC_BOUNDS:-}" ]; then
+  "$GIS_PYTHON" -m source_tools.original_huc12_bounds \
+    --archive "$NHD_DOMAIN_ARCHIVE" \
+    --output "$NHD_CAPTURE_ROOT/bounds217"
+  
+  NHD_HUC_BOUNDS="$NHD_CAPTURE_ROOT/bounds217/original-217-huc12-native-bounds.json"
+  NHD_HUC_BOUNDS_SHA256=$("$GIS_PYTHON" -c \
+    'import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())' \
+    "$NHD_HUC_BOUNDS")
+fi
 
 "$GIS_PYTHON" -m source_tools.resume_nhd_originals \
   --bank "$NHD_BANK" \
