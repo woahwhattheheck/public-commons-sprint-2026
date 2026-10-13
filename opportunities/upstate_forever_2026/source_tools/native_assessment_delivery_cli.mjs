@@ -18,6 +18,9 @@ and annual-reference sources from APP. Writes a complete scientific report,
 interactive report, source manifest and portable ZIP into a new directory.
 Add --microbial to include the complete original measured E. coli source edition,
 its observation explorer and all four additional typed sources.
+Add BOTH --national-inventory ORIGINAL_INVENTORY.json and --national-source-root DIR
+from the maintained usgs_annual inventory operation to retain original national
+archives, sampling/flow periods and estimator errors beside unchanged regional targets.
 Optional --workspace imports the completed source manifest through model.cli.
 `;
 
@@ -27,7 +30,7 @@ function argumentsFor(argv) {
     const key = argv[i];
     if (key === "--help" || key === "-h") return {help:true};
     if (key === "--microbial") { if (options[key]) throw Error("Supply --microbial once"); options[key]=true; continue; }
-    if (!["--application", "--output", "--workspace", "--python"].includes(key))
+    if (!["--application", "--output", "--workspace", "--python", "--national-inventory", "--national-source-root"].includes(key))
       throw Error("Unknown option: " + key);
     if (key in options || !argv[i + 1] || argv[i + 1].startsWith("--"))
       throw Error("Supply one value for " + key);
@@ -37,6 +40,8 @@ function argumentsFor(argv) {
     throw Error("Supply --application and --output");
   if (options["--python"] && !options["--workspace"])
     throw Error("--python requires --workspace");
+  if(Boolean(options["--national-inventory"])!==Boolean(options["--national-source-root"]))
+    throw Error("Supply both --national-inventory and --national-source-root");
   return options;
 }
 async function sourceText(application, relative) {
@@ -119,8 +124,25 @@ async function main() {
     for (const row of MICROBIAL_ORIGINAL_FILES)
       measured.microbialOriginalFiles[row.path]=await sourceText(application,row.application_path || row.path);
   }
+  const national={};
+  if(options["--national-inventory"]){
+    national.nationalInventory=await readFile(resolve(options["--national-inventory"]),"utf8");
+    const inventory=JSON.parse(national.nationalInventory);
+    if(inventory.schema!=="upstate.usgs-annual2012-inventory/v1"||!inventory.source?.files)
+      throw Error("Use the complete maintained USGS annual inventory");
+    const root=await realpath(resolve(options["--national-source-root"]));
+    const names=new Set(Object.keys(inventory.source.files));
+    for(const entry of Object.values(inventory.source.files))if(entry.http_receipt)names.add(entry.http_receipt.path);
+    national.nationalOriginalFiles={};
+    for(const name of names){
+      nativeDeliveryPath(name);
+      const path=await realpath(join(root,...name.split("/")));
+      if(!path.startsWith(root+sep))throw Error("Original national source is outside its retained root");
+      national.nationalOriginalFiles[name]=await readFile(path);
+    }
+  }
   const result = composeNativeAssessmentDelivery({
-    nativeFiles, stationSourceFiles, originalAssessmentFiles, annualSourceFiles, assessmentInputs,...measured,
+    nativeFiles, stationSourceFiles, originalAssessmentFiles, annualSourceFiles, assessmentInputs,...measured,...national,
   });
   const output = await writeReport(options["--output"], result.files);
   const receipt = {directory:output, source_manifest:join(output,"sources.json"),
