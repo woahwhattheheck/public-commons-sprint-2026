@@ -182,6 +182,11 @@ def patch_view_lifecycle(source):
         "  if(typeof experimentDiagnostics!=='undefined'&&view!=='experiment-diagnostics')experimentDiagnostics.detach();\n"
     )
     source = add(source, entry, cleanup, "shared desk cleanup at render entry")
+    receiving_cleanup = (
+        "  if(typeof receivingWaters!=='undefined'&&view!=='receiving-waters')receivingWaters.detach();\n"
+    )
+    source = add(source, entry + cleanup, receiving_cleanup,
+                 "receiving-water desk cleanup before early returns")
     previous = (
         "  if(extensions.render(view,$('#content'),state)){"
         "community.detach();customerReviews.detach();spatialWorkspace.suspend();"
@@ -204,9 +209,13 @@ def patch_view_lifecycle(source):
         raise ValueError("Compose the current authored extension view dispatch")
     # Include the line boundary: Conservation has its own four-space loop.
     navigation = (
-        "\n  for(const node of $('[data-view]'))"
+        "\n  for(const node of $$('[data-view]'))"
         "node.setAttribute('aria-current',node.dataset.view===view?'page':'false');\n"
     )
+    legacy_navigation = navigation.replace("$$(", "$(")
+    if navigation not in source:
+        source = replace(source, legacy_navigation, navigation,
+                         "global navigation collection")
     return add(source, navigation, dispatch,
                "registered dispatch before built-in early-return desks")
 
