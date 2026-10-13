@@ -78,7 +78,7 @@ export function createPublishedStudiesDesk(host) {
       '<label class="ps-wide">Source file or study directory<input name="relative_path" placeholder="studies/eighteenmile-2023.json" required></label>' +
       '<label>Original report file<input name="report_path" placeholder="Optional PDF in the same folder"></label>' +
       '<label>Table 7 image<input name="image_path" placeholder="Optional PNG in the same folder"></label></div>' +
-      '<label class="ps-check"><input type="checkbox" name="include_installed_context" checked>Include installed Eighteenmile reports and analyses</label>' +
+      '<label class="ps-check"><input type="checkbox" name="include_installed_context" checked>Include installed study reports and analyses</label>' +
       '<p class="ps-help">Accepts the original study JSON, its complete Canvas Markdown, a complete study ZIP, or a directory of published tables. Paths start inside the selected source folder.</p>' +
       '<button type="submit">Import study</button></form></details></section>' +
       '<section class="ps-study-control"><label>Retained study<select data-ps-study aria-label="Retained study"></select></label>' +
@@ -115,7 +115,10 @@ export function createPublishedStudiesDesk(host) {
     find("[data-ps-builtins]").innerHTML = arr(catalog?.builtin_studies).map(study =>
       '<div class="ps-builtin"><div><strong>' + esc(study.title) + '</strong><p class="ps-help">' +
       esc(study.publication) + " · " + esc(study.counts.stations) + " stations · " +
-      esc(study.counts.seasonal_summary_rows) + " seasonal summaries</p></div>" +
+      (study.counts.original_result_rows != null
+        ? esc(study.counts.original_result_rows) + " original result rows · " +
+          esc(study.counts.original_activity_count) + " activities"
+        : esc(study.counts.seasonal_summary_rows) + " seasonal summaries") + "</p></div>" +
       '<button type="button" data-ps-builtin="' + esc(study.id) + '">Import installed study</button></div>'
     ).join("");
     for (const button of node.querySelectorAll('[data-ps-action="report"],[data-ps-action="export"]')) button.disabled = !selected || busy;
@@ -249,7 +252,7 @@ export function createPublishedStudiesDesk(host) {
       if (microcystinReport) output += '<p>' + link(microcystinReport.preview_url || microcystinReport.download?.url, "Table 8 candidate cohort and original microcystin reconciliation") +
         ' · Retains 73 selected records, 12 excluded campaign records, original reporting limits and the source selection inference.</p>';
       output += table("Observed series and report rows", series, [
-        ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_fraction","Fraction"],["method_authority","Method authority"],["method_id","Method"],["result_value_type","Result type"],["sample_support","Sample support"],["record_count","Original rows"],
+        ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_fraction","Fraction"],["method_authority","Method authority"],["method_id","Method"],["method_specification_name","Method specification"],["result_value_type","Result type"],["sample_support","Sample support"],["record_count","Original rows"],
         ["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
         ["published_n","Printed n"],["observed_mean","Quantified mean"],["observed_sd","Quantified sample SD"],
         ["published_mean","Printed mean"],["published_sd","Printed SD"],["reported_depths","Original depth"]
@@ -286,7 +289,7 @@ export function createPublishedStudiesDesk(host) {
         ["site_id","Station"],["date","Date"],["local_time","Local time"],["source_timezone","Source zone"],
         ["project_id","Source project"],["activity_type","Activity type"],["parameter_original","Original parameter"],["sample_fraction","Fraction"],["method_id","Method"],["result_value_type","Result type"],["value","Value"],["unit","Unit"],
         ["detection_condition","Detection"],["detection_limit","Limit"],["detection_limit_unit","Limit unit"],
-        ["depth","Depth"],["depth_unit","Depth unit"],["activity_id","Activity identifier"],
+        ["depth","Depth"],["depth_unit","Depth unit"],["activity_id","Activity identifier"],["original_result_identifier","Original result identifier"],
         ["result_comment","Original result comment"],["activity_comment","Original activity comment"],["laboratory_comment","Original laboratory comment"]
       ]);
       const cohort = context.cohort_reconciliation;
@@ -317,7 +320,7 @@ export function createPublishedStudiesDesk(host) {
         ["project_id","Project"],["activity_type","Activity type"],["parameter_original","Original characteristic"],["sample_fraction","Fraction"],
         ["value","Value"],["unit","Unit"],["detection_condition","Detection"],["detection_limit","Limit"],
         ["detection_limit_unit","Limit unit"],["detection_limit_type","Limit type"],["censor_direction","Censor direction"],["depth","Depth"],["depth_unit","Depth unit"],
-        ["method_authority","Method authority"],["method_id","Method"],["result_value_type","Result type"],["cohort_selection","Cohort selection"],["activity_id","Activity identifier"],
+        ["method_authority","Method authority"],["method_id","Method"],["method_specification_name","Method specification"],["result_value_type","Result type"],["cohort_selection","Cohort selection"],["activity_id","Activity identifier"],["original_result_identifier","Original result identifier"],
         ["result_comment","Original result comment"],["activity_comment","Original activity comment"],["laboratory_comment","Original laboratory comment"]
       ]);
       const empty = arr(dated.summary?.empty_source_stations).filter(id => selection.site_ids.includes(id));
@@ -466,6 +469,15 @@ export function createPublishedStudiesDesk(host) {
       '<p>' + esc(row.source_file) + " · CSV row " + esc(row.source_csv_row) + " · " + sourcePage(row) +
       '</p><dl class="ps-raw-cells">' + Object.entries(row.raw_cells || {}).map(([key,value]) =>
         "<dt>" + esc(key) + "</dt><dd>" + esc(value === "" ? "(blank)" : value) + "</dd>").join("") + "</dl>";
+    for (const [role, reference] of Object.entries(row.metadata_source_records || {})) {
+      const source = arr(complete?.source_artifacts).find(item => item.path === reference.source_file);
+      const title = role === "activity" ? "Original activity metadata" : "Original reporting-limit metadata";
+      target.innerHTML += "<h3>" + esc(title) + "</h3><p>" +
+        link(source?.download?.url, reference.source_file + " · CSV row " + reference.source_csv_row) +
+        "</p><p>Joined by " + esc(reference.join_key) + " = " + esc(reference.join_value) + "</p>" +
+        '<dl class="ps-raw-cells">' + Object.entries(reference.raw_cells || {}).map(([key, value]) =>
+          "<dt>" + esc(key) + "</dt><dd>" + esc(value === "" ? "(blank)" : value) + "</dd>").join("") + "</dl>";
+    }
     target.hidden = false; target.scrollIntoView({block:"nearest",behavior:"smooth"});
   }
   function filters() {
