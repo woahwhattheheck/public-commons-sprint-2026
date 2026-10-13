@@ -171,6 +171,19 @@ def local_resource(owner, value):
     if url.scheme or url.netloc or not url.path:
         return None
     value = unquote(url.path)
+    # The retained refresh handler replaces this route token at response time
+    # and serves these assets beside the original template. Both standalone
+    # and namespaced editions retain that same relationship.
+    refresh_templates = {
+        "operator/web/source-refresh.html",
+        "operator/web/source-refresh-legacy/source-refresh.html",
+    }
+    marker = "__SOURCE_REFRESH_BASE__/"
+    if owner in refresh_templates and value.startswith(marker):
+        asset = value[len(marker):]
+        if asset not in {"source-refresh.css", "source-refresh.mjs", "source-refresh-nav.css"}:
+            raise ValueError("Unknown retained source-refresh template resource")
+        value = asset
     if value.startswith("/web/"):
         target = "operator/web/" + value[len("/web/"):]
     elif value.startswith("/"):
