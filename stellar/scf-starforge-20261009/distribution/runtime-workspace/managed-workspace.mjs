@@ -11,7 +11,8 @@ import { activate, rollback, doctor } from '../../sf46-release/product.mjs';
 import { inspectMerchantRuntime, adoptMerchantRuntime, inspectInstalledRuntime } from '../../sf46-release/runtime-package.mjs';
 import { HOME_SCHEMA, MANIFEST, releaseId, validateId, verifyRelease, atomicFile, withHomeLock } from '../../sf46-release/release-core.mjs';
 import { absolute, privateDirectory, optionalPrivateEntries, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
-  plain, need, digest, json, canonical, now, workerAlive, processIdentity, operationLease, runtimeWorkspaceError } from './storage.mjs';
+  plain, need, digest, json, canonical, now, workerAlive, processIdentity, operationLease, runtimeWorkspaceError,
+  receivedManagedHome, requireCurrentOperation } from './storage.mjs';
 
 export const managedOperationFields = Object.freeze({
   'managed-adopt': ['homeId', 'reviewId'],
@@ -38,6 +39,8 @@ export async function initializeManagedWorkspace(root) {
   }
 }
 async function homeRecord(root, homeId) {
+  need(!await receivedManagedHome(root, homeId), 'MANAGED_HOST_REVIEW_REQUIRED',
+    'This imported managed-home path is historical. Open a current private managed home and use the original adoption/activation workflow.', 409);
   const record = await readJSON(pathFor(root, 'managed-homes', homeId));
   need(record.id === homeId && absolute(record.directory), 'MANAGED_HOME_RECORD_INVALID');
   return record;
@@ -115,6 +118,7 @@ export async function managedHome(root, homeId) {
   const record = await readJSON(pathFor(root, 'managed-homes', homeId), true);
   if (!record) return null;
   need(record.id === homeId && absolute(record.directory), 'MANAGED_HOME_RECORD_INVALID');
+  if (await receivedManagedHome(root, homeId)) return { ...record, phase: 'HOST_REVIEW_REQUIRED', receivedHistory: true, releases: [], active: null };
   try { return await homeView(record); }
   catch (error) { return { ...record, phase: 'UNAVAILABLE', error: asError(error), releases: [], active: null }; }
 }
@@ -122,6 +126,7 @@ export async function managedState(root, { homeId = null } = {}) {
   const names = (await optionalPrivateEntries(join(root, 'managed-homes'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name)).sort();
   const homes = await Promise.all(names.map(async name => {
     const record = await readJSON(join(root, 'managed-homes', name));
+    if (await receivedManagedHome(root, record.id)) return { ...record, phase: 'HOST_REVIEW_REQUIRED', receivedHistory: true, releases: [], active: null };
     try { return await homeView(record); }
     catch (error) { return { ...record, phase: 'UNAVAILABLE', error: asError(error), releases: [], active: null }; }
   }));
@@ -348,6 +353,7 @@ export async function executeManagedOperation({ root, request, operationDirector
   return result;
 }
 export async function stopManagedCommand(root, id) {
+  await requireCurrentOperation(root, id);
   const directory = operationPath(root, id), request = await readJSON(join(directory, 'request.json'));
   need(request.operation === 'managed-run', 'MANAGED_COMMAND_REQUIRED');
   const state = await readJSON(join(directory, 'state.json'));
@@ -380,6 +386,7 @@ export async function stopManagedCommand(root, id) {
   return { operationId: id, phase: state.phase, stopRequested: true };
 }
 export async function recoverManagedOperation(root, id) {
+  await requireCurrentOperation(root, id);
   const directory = operationPath(root, id), lease = await operationLease(join(directory, 'worker.lock'));
   try {
     const request = await readJSON(join(directory, 'request.json'));

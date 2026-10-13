@@ -4,7 +4,8 @@ import { readdir, lstat, access } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, operationId,
-  recordId, operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now, runtimeWorkspaceError } from './storage.mjs';
+  recordId, operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now, runtimeWorkspaceError,
+  requireCurrentOperation } from './storage.mjs';
 import { managedResult } from './managed-result.mjs';
 import { applicationEnvironment } from './application-environment.mjs';
 export { applicationEnvironment };
@@ -213,6 +214,7 @@ export async function readApplicationTerminal(root, { operationId: id, applicati
     managedOutcome, output, inputs: receipts.slice(0, 40) };
 }
 export async function sendApplicationTerminal(root, { operationId: id, applicationId, inputId, text } = {}) {
+  await requireCurrentOperation(root, id);
   const { directory, request } = await terminalRequest(root, id);
   need(request.applicationId === recordId(applicationId), 'APPLICATION_OPERATION_CHANGED');
   operationId(inputId);

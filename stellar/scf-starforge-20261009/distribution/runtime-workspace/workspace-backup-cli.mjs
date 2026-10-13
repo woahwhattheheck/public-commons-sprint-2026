@@ -14,10 +14,10 @@ export const workspaceBackupCommands = {
   'workspace-backup-create': [...common, '--request-id', '--review-id', '--review-sha256'],
   'workspace-backup-inspect': [...common, '--archive', '--upload-id', '--sha256'],
   'workspace-backup-upload': [...common, '--request-id', '--archive', '--sha256'],
-  'workspace-backup-restore': [...common, '--request-id', '--archive-id', '--manifest-sha256', '--directory'],
+  'workspace-backup-restore': [...common, '--request-id', '--archive-id', '--manifest-sha256', '--directory', '--mode'],
   'workspace-backup-continue': [...common, '--operation-id'],
   'workspace-backup-download': [...common, '--archive-id', '--output'],
-  'workspace-backup-bindings': [...common, '--receiving-id'],
+  'workspace-backup-bindings': [...common, '--receiving-id', '--host-bindings'],
   'workspace-backup-open': [...common, '--receiving-id', '--review-id', '--review-sha256'],
 };
 export const workspaceBackupHelp = [
@@ -27,13 +27,24 @@ export const workspaceBackupHelp = [
   '  runtime-workspace workspace-backup-inspect --workspace CONTROL_DIRECTORY --archive ARCHIVE --sha256 SHA [--storage DIRECTORY]',
   '  runtime-workspace workspace-backup-upload --workspace CONTROL_DIRECTORY --request-id UUID --archive ARCHIVE --sha256 SHA [--storage DIRECTORY]',
   '  runtime-workspace workspace-backup-inspect --workspace CONTROL_DIRECTORY --upload-id UUID --sha256 SHA [--storage DIRECTORY]',
-  '  runtime-workspace workspace-backup-restore --workspace CONTROL_DIRECTORY --request-id UUID --archive-id ID --manifest-sha256 SHA --directory ORIGINAL_DIRECTORY [--storage DIRECTORY]',
+  '  runtime-workspace workspace-backup-restore --workspace CONTROL_DIRECTORY --request-id UUID --archive-id ID --manifest-sha256 SHA --directory DIRECTORY [--mode new-host] [--storage DIRECTORY]',
   '  runtime-workspace workspace-backup-continue --workspace DIRECTORY --operation-id UUID [--storage DIRECTORY]',
   '  runtime-workspace workspace-backup-download --workspace DIRECTORY --archive-id ID --output NEW_ARCHIVE [--storage DIRECTORY]',
-  '  runtime-workspace workspace-backup-bindings --workspace CONTROL_DIRECTORY --receiving-id ID [--storage DIRECTORY]',
+  '  runtime-workspace workspace-backup-bindings --workspace CONTROL_DIRECTORY --receiving-id ID [--host-bindings EXACT_JSON_FILE] [--storage DIRECTORY]',
   '  runtime-workspace workspace-backup-open --workspace CONTROL_DIRECTORY --receiving-id ID --review-id ID --review-sha256 SHA [--storage DIRECTORY]',
 ].join('\n');
 
+async function hostBindingsFile(path) {
+  const file = await open(resolve(path), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const before = await file.stat();
+    need(before.isFile() && before.size > 0 && before.size <= 512 * 1024, 'WORKSPACE_BACKUP_HOST_BINDINGS_FILE');
+    const bytes = await file.readFile(), after = await file.stat();
+    need(before.size === bytes.length && before.size === after.size && before.mtimeMs === after.mtimeMs &&
+      before.ctimeMs === after.ctimeMs, 'WORKSPACE_BACKUP_HOST_BINDINGS_CHANGED');
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  } finally { await file.close(); }
+}
 function required(options, name) {
   const value = options[name];
   need(typeof value === 'string' && value.length, 'WORKSPACE_BACKUP_ARGUMENT_REQUIRED', 'Supply ' + name + '.');
@@ -117,6 +128,7 @@ export async function runWorkspaceBackupCommand(model, command, options) {
   if (command === 'workspace-backup-restore') return model.workspaceBackupRestore({
     ...base, requestId: required(options, '--request-id'), archiveId: required(options, '--archive-id'),
     manifestSha256: required(options, '--manifest-sha256'), directory: resolve(required(options, '--directory')),
+    ...(options['--mode'] ? { mode: options['--mode'] } : {}),
   });
   if (command === 'workspace-backup-continue') return model.workspaceBackupContinue({
     ...base, operationId: required(options, '--operation-id'),
@@ -126,6 +138,7 @@ export async function runWorkspaceBackupCommand(model, command, options) {
   }, required(options, '--output'));
   if (command === 'workspace-backup-bindings') return model.workspaceBackupBindings({
     ...base, receivingId: required(options, '--receiving-id'),
+    ...(options['--host-bindings'] ? { hostBindings: await hostBindingsFile(options['--host-bindings']) } : {}),
   });
   if (command === 'workspace-backup-open') return model.workspaceBackupOpen({
     ...base, receivingId: required(options, '--receiving-id'), reviewId: required(options, '--review-id'),
