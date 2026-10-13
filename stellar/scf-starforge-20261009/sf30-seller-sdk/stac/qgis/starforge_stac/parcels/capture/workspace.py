@@ -38,7 +38,8 @@ def atomic(path, body, *, immutable=True):
         return
     fd, name = tempfile.mkstemp(prefix="." + path.name + "-", suffix=".partial", dir=path.parent)
     try:
-        os.fchmod(fd, 0o600)
+        if hasattr(os, "fchmod"): os.fchmod(fd, 0o600)
+        else: os.chmod(name, 0o600)
         with os.fdopen(fd, "wb") as stream:
             stream.write(body)
             stream.flush()
