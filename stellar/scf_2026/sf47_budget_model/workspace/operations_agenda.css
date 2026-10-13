@@ -1,0 +1,92 @@
+.delivery-agenda{font-size:14px;color:#202020;min-width:0}
+.delivery-agenda *{box-sizing:border-box}
+.delivery-agenda h2,.delivery-agenda h3{margin:0 0 10px;font-weight:650;color:inherit}
+.delivery-agenda p{line-height:1.5;margin:8px 0 14px}
+.delivery-agenda button,.delivery-agenda input,.delivery-agenda select{font:inherit;color:inherit}
+.delivery-agenda button{border:1px solid #aaa;border-radius:3px;background:#fff;padding:7px 10px;cursor:pointer;line-height:1.3}
+.delivery-agenda button:hover:not(:disabled){background:#eee;border-color:#555}
+.delivery-agenda button:disabled{opacity:.55;cursor:default}
+.delivery-agenda button:focus-visible,.delivery-agenda input:focus-visible,.delivery-agenda select:focus-visible{outline:2px solid #333;outline-offset:2px}
+.delivery-agenda button[aria-pressed=true],.delivery-agenda button[aria-current=true]{border-color:#333;background:#e8e8e8;font-weight:650}
+.delivery-agenda-heading,.delivery-agenda-actions,.delivery-agenda-case-actions,.delivery-agenda-filter-actions,.delivery-agenda-pagination,.delivery-agenda-month-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.delivery-agenda-heading{justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.delivery-agenda-heading>div{flex:1;min-width:240px}
+.delivery-agenda-layout{display:grid;grid-template-columns:minmax(230px,280px) minmax(0,1fr);gap:20px;align-items:start}
+.delivery-agenda-chooser{border:1px solid #bbb;background:#fafafa;padding:16px;border-radius:3px}
+.delivery-agenda label{display:flex;flex-direction:column;gap:5px;line-height:1.4}
+.delivery-agenda input:not([type=checkbox]),.delivery-agenda select{width:100%;min-width:0;border:1px solid #aaa;border-radius:2px;padding:7px;background:#fff}
+.delivery-agenda-cases{display:grid;gap:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:12px 0;max-height:500px;overflow:auto}
+.delivery-agenda-case{display:flex!important;flex-direction:row!important;gap:9px!important;align-items:flex-start;padding:10px 3px;border-bottom:1px solid #ddd;cursor:pointer}
+.delivery-agenda-case:last-child{border-bottom:0}
+.delivery-agenda-case input{margin:4px 0 0;flex:none}
+.delivery-agenda-case span{min-width:0}
+.delivery-agenda small{display:block;color:#555;margin-top:4px;font-size:12px;overflow-wrap:anywhere}
+.delivery-agenda-case-actions{margin-top:10px}
+.delivery-agenda-case-actions button{font-size:12px;padding:5px 7px}
+.delivery-agenda-open{border-top:1px solid #ccc;margin-top:12px;padding-top:12px}
+.delivery-agenda-open>button{width:100%;background:#eee;border-color:#666;font-weight:650}
+.delivery-agenda-main{min-width:0}
+.delivery-agenda-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.delivery-agenda-summary>div{border:1px solid #ccc;padding:12px;min-width:0;background:#fafafa}
+.delivery-agenda-summary span{display:block;color:#555;font-size:12px}
+.delivery-agenda-summary strong{display:block;font-size:23px;margin-top:5px}
+.delivery-agenda-shown{padding:10px 0;border-bottom:1px solid #ccc;font-size:13px}
+.delivery-agenda-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.delivery-agenda-check{flex-direction:row!important;align-items:center}
+.delivery-agenda-filters{padding:8px 0 16px}
+.delivery-agenda-filter-actions{font-size:12px}
+.delivery-agenda-filter-actions button{padding:6px 8px;font-size:12px}
+.delivery-agenda-table{overflow:auto;border:1px solid #ccc;border-radius:2px}
+.delivery-agenda table{border-collapse:collapse;width:100%;font-size:13px}
+.delivery-agenda th,.delivery-agenda td{text-align:left;vertical-align:top;padding:10px;border-bottom:1px solid #ddd;overflow-wrap:anywhere}
+.delivery-agenda th{background:#eee;color:#333;font-weight:650}
+.delivery-agenda tr:last-child td{border-bottom:0}
+.delivery-agenda td:first-child{min-width:120px}
+.delivery-agenda td .delivery-agenda-link{border:0;text-align:left;padding:0;text-decoration:underline;background:transparent}
+.delivery-agenda-pagination{justify-content:flex-end;margin:12px 0}
+.delivery-agenda-pagination>span{margin-right:auto;color:#555;font-size:12px}
+.delivery-agenda-detail,.delivery-agenda-export,.delivery-agenda-empty{border:1px solid #bbb;padding:16px;margin:18px 0;border-radius:3px}
+.delivery-agenda-detail{background:#fafafa}
+.delivery-agenda-detail dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.delivery-agenda-detail dt{font-size:12px;color:#555}
+.delivery-agenda-detail dd{margin:3px 0 0;overflow-wrap:anywhere}
+.delivery-agenda-note{white-space:pre-wrap}
+.delivery-agenda details{border-top:1px solid #ccc;margin-top:16px;padding-top:12px}
+.delivery-agenda summary{font-weight:650;cursor:pointer;margin-bottom:12px}
+.delivery-agenda li{margin:8px 0;line-height:1.45}
+.delivery-agenda-month-actions{margin:6px 0 12px}
+.delivery-agenda-month-actions h3{font-size:16px;margin:0;flex:1}
+.delivery-agenda-month-scroll{overflow-x:auto;border:1px solid #aaa;border-radius:2px}
+.delivery-agenda-weekdays,.delivery-agenda-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:630px}
+.delivery-agenda-weekdays{background:#eee;font-size:12px;font-weight:650;text-align:center}
+.delivery-agenda-weekdays span{padding:8px}
+.delivery-agenda-day{min-height:112px;padding:6px;border-top:1px solid #ccc;border-right:1px solid #ddd;min-width:0}
+.delivery-agenda-day:nth-child(7n){border-right:0}
+.delivery-agenda-day time{display:block;font-weight:650;font-size:12px;margin-bottom:6px}
+.delivery-agenda-day .delivery-agenda-event{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-size:11px;padding:4px;margin:4px 0;background:#f3f3f3;border-color:#ccc}
+.delivery-agenda-day .delivery-agenda-link{font-size:11px;padding:3px}
+.delivery-agenda-outside{background:#fafafa;color:#777}
+.delivery-agenda-reviewed{box-shadow:inset 0 0 0 2px #555}
+.delivery-agenda-error{border:1px solid #555;border-left:4px solid #333;padding:10px;background:#f3f3f3;font-weight:600}
+.delivery-agenda-notice{font-size:13px;color:#444;min-height:1em}
+@media(max-width:1050px){
+.delivery-agenda-layout{grid-template-columns:1fr}
+.delivery-agenda-cases{grid-template-columns:repeat(2,minmax(0,1fr));max-height:280px}
+.delivery-agenda-case{padding-right:12px}
+.delivery-agenda-open{display:flex;gap:12px;align-items:flex-end}
+.delivery-agenda-open label{flex:1}.delivery-agenda-open>button{width:auto}
+}
+@media(max-width:620px){
+.delivery-agenda-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+.delivery-agenda-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.delivery-agenda-cases{grid-template-columns:1fr;max-height:310px}
+.delivery-agenda-open{display:block}.delivery-agenda-open>button{width:100%}
+.delivery-agenda-detail dl{grid-template-columns:1fr}
+.delivery-agenda-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.delivery-agenda-table table,.delivery-agenda-table tbody,.delivery-agenda-table tr,.delivery-agenda-table td{display:block;width:100%}
+.delivery-agenda-table tr{padding:8px;border-bottom:1px solid #bbb}
+.delivery-agenda-table td{border:0;padding:5px;min-width:0!important}
+.delivery-agenda-table td[data-label]:before{content:attr(data-label);display:block;font-size:11px;color:#555;margin-bottom:3px}
+.delivery-agenda-heading>div{min-width:0}
+.delivery-agenda-pagination>span{width:100%;margin:0}
+}

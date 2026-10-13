@@ -336,3 +336,8 @@ JS += "\ndocument.getElementById('publication-link').href='/publication#'+capabi
 
 HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="event-programmes-link" href="/event-programmes">Event programmes</a>', 1)
 JS += "\ndocument.getElementById('event-programmes-link').href='/event-programmes#'+capability;\n"
+
+
+# Complete report editorial returns use the same original Analysis capability.
+HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="report-reviews-link" href="/report-reviews">Editorial reviews</a>', 1)
+JS += "\ndocument.getElementById('report-reviews-link').href='/report-reviews#'+capability;\n"

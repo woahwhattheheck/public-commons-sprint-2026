@@ -13,6 +13,7 @@ import json
 
 from model import Problem, canonical, digest
 import operations_domain as domain
+import operations_dispatch as dispatch
 from workshare_intake import load_workshares
 
 SCHEMA = "stellar-forge.sf47-workshare-installation.v1"
@@ -91,6 +92,7 @@ def normalize_binding(context, raw):
 def read_source(operations, context, selection, reader=None):
     selected = source_selection(context, selection)
     read = reader or (lambda ident: operations.source(context["program"]["id"], ident)[1])
+    original_bytes = {}
     def original(ident):
         if ident is None:
             return None
@@ -98,19 +100,25 @@ def read_source(operations, context, selection, reader=None):
         metadata = context["sources"][ident]
         if not isinstance(raw, bytes) or len(raw) != metadata["bytes"] or hashlib.sha256(raw).hexdigest() != metadata["sha256"]:
             fail("The complete original Workshare file differs from its retained attachment.")
+        original_bytes[ident] = raw
         value = json.loads(raw.decode("utf-8"))
         if not isinstance(value, dict):
             fail("Use the complete original Workshare JSON object.")
         return value
     try:
         commissioning, packet = original(selected["sourceId"]), original(selected["packetSourceId"])
-        workshares = load_workshares(commissioning, packet, require_proposed_usd=False)
+        workshares = load_workshares(commissioning, packet, require_proposed_usd=False,
+                                     receiving_packet_bytes=original_bytes.get(selected["packetSourceId"]))
         for workshare in workshares:
             commercial = workshare["plan"]["commercial"]
             original_id(commercial.get("currency"), "commercial currency")
             original_id(commercial.get("price_status"), "commercial price status")
-        originals = {row["case_id"]: row for row in commissioning["cases"]}
-        packets = {} if packet is None else {row["prepared_case"]["id"]: row for row in packet["packets"]}
+        if commissioning.get("schema") == "stellar-forge.canadabuys-workshare-source.v1":
+            originals = {row["caseId"]: row["originalCase"] for row in workshares}
+            packets = {row["caseId"]: packet for row in workshares}
+        else:
+            originals = {row["case_id"]: row for row in commissioning["cases"]}
+            packets = {} if packet is None else {row["prepared_case"]["id"]: row for row in packet["packets"]}
         return {"selection": selected, "commissioning": commissioning, "packet": packet,
                 "workshares": workshares, "originals": originals, "packets": packets}
     except Problem:
@@ -231,7 +239,11 @@ def terms_text(plan):
     for milestone in commercial["milestones"]:
         lines.append(str(milestone["label"]) + ": " + str(commercial["currency"]) + " " +
                      str(milestone["amount"]) + " — " + str(milestone.get("trigger", "")))
-    lines.append("Complete commercial terms, phase assignments, rights, dependencies and changes are retained in the attached original Workshare.")
+    if plan.get("version") == "stellar-forge.canadabuys-native-workshare-plan.v1":
+        lines.append("Complete native Workshare editions and the explicit phase/party/working-day mapping "
+                     "remain in the original attachments. Recorded native status does not establish agreement or payment.")
+    else:
+        lines.append("Complete commercial terms, phase assignments, rights, dependencies and changes are retained in the attached original Workshare.")
     return "\n".join(lines)
 
 
@@ -318,6 +330,7 @@ def seed(operations, context, body):
         document["source"]["authority"] = str(plan.get("rights", ""))
     if not document["source"]["changePolicy"] or (old_original and document["source"]["changePolicy"] == old_original["workshare"]["plan"].get("change_process", "")):
         document["source"]["changePolicy"] = str(plan.get("change_process", ""))
+    dispatch.reconcile_checks(document)
     document = installations.normalized(context, document)
     verify_document(operations, context, document)
     return {"schema": SCHEMA, "source": installations._source(context), "installationId": ident,

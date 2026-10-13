@@ -54,7 +54,7 @@ To use an already retained complete source checkout, add:
 
     --checkout /absolute/complete/merchant-checkout
 
-The two browser selections are part of the first immutable customer input. They are not changed when continuing that input. From16:00 UTC13October2026, Bryce's local Codex in-app browser is reserved until his explicit release. This course uses only the separately authorized isolated cloud browser.
+The two browser selections are part of the first immutable customer input. They are not changed when continuing that input. Bryce explicitly released the local in-app browser reservation at16:29:39 UTC13October2026: [original owner release](https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791908979290839). Authorized local browser work may resume while preserving his tabs and saved state. This existing course keeps its explicitly selected isolated browser; the release does not change its retained input, operation ownership or other owner instructions.
 
 ## Complete original course
 

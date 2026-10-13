@@ -13,14 +13,52 @@ import zipfile
 
 from model import Problem, canonical, digest, now, text, short_id, csv_bytes, MAX_BUNDLE
 import operations_domain as domain
+import operations_workbook as workbooks
+import operations_supplier_statements as supplier_statements
 import forecast as forecasts
 import portfolio as portfolios
+import portfolio_installations as portfolio_installations
 import operations_support as support
 import operations_buyer as buyer
+import operations_settlement as settlement_sources
 import operations_completion as completion
+import operations_completion_corrections as completion_corrections
+import operations_calendar as calendar_model
+import operations_agenda as agenda_model
+import operations_use_calendar as use_calendar
 import operations_cohort as cohort
 import operations_installations as installations
+import operations_installation_effort as installation_effort
+import operations_installation_returns as installation_returns
+import operations_company_returns as company_returns
+import operations_dispatch as dispatch
+import operations_statements as statements
+import operations_statement_profiles as statement_profiles
+import operations_performance as performance
+import operations_ledger_intake as ledger_intake
+import operations_payables as payables
+import operations_task_outcomes as task_outcomes
+import operations_funding as funding
+import award_terms
+import issuer_receiving
+import operations_cash_accounts as cash_accounts
+import operations_account_reconciliation as account_reconciliation
+import operations_workflows as operating_workflows
 import operations_implementation as implementation
+import operations_engagements as engagements
+import engagement_working
+import operations_risks as risks
+import operations_risk_comparison as risk_comparison
+import engagement_handover
+import operations_amendments as amendments
+import operations_amendment_calendar as amendment_calendar
+import operations_work_intake as work_intake
+import operations_commercial_receivables as commercial_receivables
+import operations_commercial_changes as commercial_changes
+import operations_expenses as expenses
+import operations_expense_billing as expense_billing
+import operations_work_billing as work_billing
+import operations_dcat_sources as dcat_sources
 
 SCHEMA = "stellar-forge.sf47-operations.v1"
 MAX_SOURCE = 8 * 1024 * 1024
@@ -38,17 +76,17 @@ STATES = {
 }
 
 
-def decoded(raw):
+def decoded(raw, *, maximum=MAX_SOURCE):
     if not isinstance(raw, str):
         domain.fail("Attachment content must be base64 text.")
-    if len(raw) > (MAX_SOURCE + 2) * 4 // 3 + 16:
-        domain.fail("An original source attachment may be at most 8 MiB.", status=413)
+    if len(raw) > (maximum + 2) * 4 // 3 + 16:
+        domain.fail("The original source attachment exceeds its selected native byte bound.", status=413)
     try:
         value = base64.b64decode(raw, validate=True)
     except Exception as exc:
         raise Problem("The original source encoding is invalid.", 422, "INVALID_SOURCE") from exc
-    if not value or len(value) > MAX_SOURCE:
-        domain.fail("Attach a nonempty original source up to 8 MiB.", status=413)
+    if not value or len(value) > maximum:
+        domain.fail("Attach a nonempty original source within its selected native byte bound.", status=413)
     return value
 
 
@@ -96,10 +134,17 @@ class Operations:
             """)
             completion.install(workspace.db)
             installations.install(workspace.db)
+            amendments.install(workspace.db)
+            work_intake.install(workspace.db)
+            expenses.install(workspace.db)
             row = workspace.db.execute("SELECT value FROM ops_metadata WHERE key='schema'").fetchone()
             if row and row[0] != SCHEMA:
                 domain.fail("This workspace uses a newer operations schema.", "OPERATIONS_SCHEMA", 409)
             workspace.db.execute("INSERT OR IGNORE INTO ops_metadata VALUES('schema',?)", (SCHEMA,))
+            self.commercial = commercial_receivables.CommercialReceivables(self)
+            self.commercial_changes = commercial_changes.CommercialChanges(self.commercial)
+            self.expense_billing = expense_billing.ExpenseBilling(self)
+            self.work_billing = work_billing.WorkBilling(self)
 
     @property
     def db(self):
@@ -109,9 +154,13 @@ class Operations:
         row = self.db.execute("SELECT id,plan_id,plan_revision,version,state,name,mode,calendar_start,plan_json,created_at,updated_at,origin_json FROM ops_programs WHERE id=?", (program_id,)).fetchone()
         if not row:
             domain.fail("Delivery operations case not found.", "OPERATIONS_NOT_FOUND", 404)
-        return ({"id": row[0], "planId": row[1], "planRevision": row[2], "version": row[3], "state": row[4],
-                 "name": row[5], "mode": row[6], "calendarStart": row[7], "createdAt": row[9],
-                 "updatedAt": row[10], "origin": json.loads(row[11])}, json.loads(row[8]))
+        program = {"id": row[0], "planId": row[1], "planRevision": row[2], "version": row[3], "state": row[4],
+                   "name": row[5], "mode": row[6], "calendarStart": row[7], "createdAt": row[9],
+                   "updatedAt": row[10], "origin": json.loads(row[11])}
+        applied_version = amendments.last_applied_version(self, program_id)
+        if applied_version:
+            program["lastPlanAmendmentVersion"] = applied_version
+        return program, json.loads(row[8])
 
     def _context(self, program_id):
         program, plan = self._program(program_id)
@@ -122,9 +171,15 @@ class Operations:
             "SELECT metadata_json FROM ops_sources WHERE program_id=? ORDER BY id", (program_id,)))}
         result = {"program": program, "plan": plan, "records": records, "sources": sources,
                   "completionPlans": completion.load_plans(self, program_id)}
-        refs = installations.latest_refs(installations.load(self, program_id))
+        expense_records = expenses.load(self, program_id)
+        if expenses.has_records(expense_records):
+            result["expenseRecords"] = expense_records
+        refs = installations.latest_refs(installations.load_heads(self, program_id))
         if refs:
             result["installationRefs"] = refs
+        intake_refs = work_intake.refs(work_intake.load(self, program_id))
+        if intake_refs:
+            result["workIntakeRefs"] = intake_refs
         return result
 
     @staticmethod
@@ -137,21 +192,35 @@ class Operations:
             result["completionPlans"] = context["completionPlans"]
         if context.get("installationRefs"):
             result["installationRefs"] = context["installationRefs"]
+        if context.get("workIntakeRefs"):
+            result["workIntakeRefs"] = context["workIntakeRefs"]
+        if expenses.has_records(expenses.retained(context)):
+            result["expenseRecords"] = context["expenseRecords"]
         return result
 
     def _read(self, program_id):
         context = self._context(program_id)
         result = {**context, "sources": list(context["sources"].values()),
                   "report": domain.report(**context)}
+        result["awardTerms"] = [award_terms.summary(row) for row in award_terms.heads(award_terms.records(self, program_id))]
+        result["statementSetups"] = [statement_profiles.summary(row) for row in statement_profiles.records(self, program_id)]
         result["completion"] = completion.dashboard(context)
+        result["expenseAttribution"] = expenses.dashboard(context)
+        result["amendments"] = [amendments.summary(row, context, digest(self._business(context)))
+                                 for row in amendments.heads(amendments.load(self, program_id))]
         cohort_history = self._cohort_history(program_id)
-        result["installations"] = installations.latest_summaries(installations.load(self, program_id))
+        result["installations"] = installations.latest_summaries(installations.load_heads(self, program_id))
+        result["workIntakes"] = [work_intake.summary(row) for row in work_intake.heads(work_intake.load(self, program_id))]
         result["reviews"] = [{**{key: row[key] for key in ("id", "version", "createdAt", "actor", "note", "businessSha256")},
                               "purpose": row.get("purpose"),
+                              **(supplier_statements.summary(row) if row.get("purpose") == supplier_statements.PURPOSE else {}),
                               **({"completionTranche": row["completion"]["clock"]["tranche"],
                                   "receiptId": row["completion"]["receipt"]["id"]} if row.get("purpose") == "TRANCHE_COMPLETION" else {}),
+                              **(completion_corrections.summary(row) if row.get("purpose") == completion_corrections.PURPOSE else {}),
                               **(cohort.summary(row, context, cohort_history) if row.get("purpose") == "COHORT_EVALUATION" else {}),
-                              **(implementation.summary(row, context) if row.get("purpose") == implementation.PURPOSE else {})}
+                              **(implementation.summary(row, context) if row.get("purpose") == implementation.PURPOSE else {}),
+                              **(engagements.summary(row) if row.get("purpose") == engagements.PURPOSE else {}),
+                              **(engagements.receiving_summary(row) if row.get("purpose") == engagements.RECEIVING_PURPOSE else {})}
             for row in (json.loads(raw[0]) for raw in self.db.execute(
                 "SELECT body_json FROM ops_reviews WHERE program_id=? ORDER BY rowid DESC", (program_id,)))]
         latest = self.db.execute("SELECT current_revision FROM plans WHERE id=?", (result["program"]["planId"],)).fetchone()
@@ -221,26 +290,62 @@ class Operations:
         self.db.execute("INSERT INTO ops_records VALUES(?,?,?,?,?) ON CONFLICT(program_id,kind,id) DO UPDATE SET state=excluded.state,body_json=excluded.body_json",
                         (program_id, kind, row["id"], row["state"], canonical(row)))
 
-    def _source_add(self, program_id, data):
-        content = decoded(data.get("contentBase64"))
+    def _source_add(self, program_id, data, *, _maximum=MAX_SOURCE, _dcat=False):
+        if ((_dcat and _maximum != dcat_sources.MAX_SOURCE) or
+                not _dcat and _maximum not in (MAX_SOURCE, buyer.MAX_CUSTOMER_USE_HANDOFF)):
+            domain.fail("Use the supported original source bound.", status=413)
+        content = decoded(data.get("contentBase64"), maximum=_maximum)
+        if not _dcat and _maximum > MAX_SOURCE:
+            if json.loads(content).get("schema") != buyer.CUSTOMER_USE_SCHEMA:
+                domain.fail("The larger source bound is reserved for the native customer-use return.", status=413)
         name = text(data.get("filename"), "Original source filename", 240, True)
         if "/" in name or "\\" in name or name in (".", "..") or any(ord(char) < 32 for char in name):
             domain.fail("Use a plain original filename.")
         media = text(data.get("mediaType", "application/octet-stream"), "Source media type", 200, True)
         if not re.fullmatch(r"[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+", media):
             domain.fail("Use a plain MIME media type.")
-        total, count = self.db.execute("SELECT COALESCE(SUM(length(content)),0),COUNT(*) FROM ops_sources WHERE program_id=?", (program_id,)).fetchone()
-        if total + len(content) > MAX_SOURCES_TOTAL or count >= 200:
-            domain.fail("The case source bundle exceeds its 24 MiB / 200-file bound.", status=413)
+        retained = [{**json.loads(metadata), "bytes": size} for metadata, size in self.db.execute(
+            "SELECT metadata_json,length(content) FROM ops_sources WHERE program_id=?", (program_id,))]
+        transport = None
+        if _dcat:
+            if not name.lower().endswith(".ckanw"):
+                domain.fail("Select the complete original .ckanw source filename.")
+            expected = domain.sha(data.get("expectedSha256"), "Selected complete DCAT workspace SHA256", False)
+            if hashlib.sha256(content).hexdigest() != expected:
+                domain.fail("The selected DCAT workspace bytes differ.", "DCAT_SOURCE_CHANGED", 409)
+            transport = dcat_sources.inspect(content)
         row = {"id": generated("source"), "filename": name, "mediaType": media,
                "kind": domain.enum(data.get("kind", "other"), ("invoice", "work", "grant", "payment", "deployment", "purchase", "other"), "Source kind"),
                "sourceUrl": domain.url(data.get("sourceUrl", ""), "Original source URL"),
                "observedAt": domain.timestamp(data.get("observedAt") or now(), "Source observation"),
                "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest(), "createdAt": now()}
+        if transport is not None:
+            row["dcatWorkspace"] = transport
+        dcat_sources.source_budget(retained + [row])
         self.db.execute("INSERT INTO ops_sources VALUES(?,?,?,?)", (program_id, row["id"], canonical(row), content))
         return row
 
-    def command(self, program_id, body):
+    def preview_settlement(self, program_id, body):
+        with self._snapshot():
+            return settlement_sources.preview(self._context(identifier(program_id, "operation")), body)
+
+    def preview_settlement_correction(self, program_id, body):
+        with self._snapshot():
+            return settlement_sources.correction_preview(self, self._context(identifier(program_id, "operation")), body)
+
+    def settlements(self, program_id):
+        with self._snapshot():
+            return settlement_sources.listing(self._context(identifier(program_id, "operation")))
+
+    def settlement(self, program_id, review_id):
+        with self._snapshot():
+            return settlement_sources.read(self, self._context(identifier(program_id, "operation")), review_id)
+
+    def export_settlement(self, program_id, review_id):
+        with self._snapshot():
+            return settlement_sources.export_review(self, self._context(identifier(program_id, "operation")), review_id)
+
+    def command(self, program_id, body, *, _within_transaction=False):
         program_id = identifier(program_id, "operation")
         if not isinstance(body, dict) or not isinstance(body.get("data", {}), dict):
             domain.fail("Use an operations command object.")
@@ -263,6 +368,51 @@ class Operations:
             if command == "source.add":
                 after = self._source_add(program_id, data)
                 kind, record_id = "source", after["id"]
+            elif command == dcat_sources.ACTION:
+                after = self._source_add(program_id, data, _maximum=dcat_sources.MAX_SOURCE, _dcat=True)
+                kind, record_id = "source", after["id"]
+            elif command == statement_profiles.ACTION:
+                result = statement_profiles.save(self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {"statementSetup": result["statementSetup"]}
+            elif command == "funding.save":
+                result = funding.save(self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {"funding": result["funding"]}
+            elif command == issuer_receiving.ACTION:
+                if not _within_transaction:
+                    domain.fail("Use the complete original message receiving action.")
+                result = issuer_receiving.bind(self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {"correspondence": result["correspondence"]}
+            elif command in award_terms.ACTIONS:
+                if command == "award-terms.plan-bind" and not _within_transaction:
+                    domain.fail("Use the complete reviewed terms-to-plan commissioning action.")
+                result = (award_terms.save if command == "award-terms.save" else award_terms.bind)(
+                    self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                source_change = result.get("sourceChange")
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId", "sourceChange")}
+            elif command == risks.ACTION:
+                result = risks.save(self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {"reviewSha256": result["reviewSha256"], "riskRegister": result["riskRegister"]}
+            elif command == "task-outcomes.save":
+                result = task_outcomes.save(self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {"taskOutcomes": result["taskOutcomes"]}
+            elif command == "statement.receive":
+                context["statementSetups"] = [statement_profiles.summary(row) for row in statement_profiles.records(self, program_id)]
+                context["cashCorrections"] = cash_accounts.statement_successors(self, context)
+                result = statements.receive(self, context, data, actor, next_version)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                source_change = result.get("sourceChange")
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId", "sourceChange")}
+                if result["unchanged"]:
+                    return {"id": program_id, "version": expected, "action": command, "kind": kind,
+                            "recordId": record_id, **extra_receipt}
             elif command == "support.receive":
                 result = support.receive(self, context, data, actor, next_version)
                 source_change = result["sourceChange"]
@@ -282,6 +432,47 @@ class Operations:
                 if result["unchanged"]:
                     return {"id": program_id, "version": expected, "action": command, "kind": kind,
                             "recordId": record_id, **extra_receipt}
+            elif command == supplier_statements.ACTION:
+                result = supplier_statements.save(self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {"supplierStatement": result["supplierStatement"]}
+            elif command in workbooks.ACTIONS:
+                if command == "workbook.record-application" and not _within_transaction:
+                    domain.fail("Use the complete reviewed workbook application.")
+                result = workbooks.save(self, context, command, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                source_change = result.get("sourceChange")
+                extra_receipt = {"workbook": result["workbook"]}
+            elif command in work_intake.ACTIONS:
+                result = work_intake.command(self, context, command, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                source_change = result.get("sourceChange")
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId", "sourceChange")}
+                if result["unchanged"]:
+                    return {"id": program_id, "version": expected, "action": command, "kind": kind,
+                            "recordId": record_id, **extra_receipt}
+            elif command in ("settlement.receive", "settlement.correct"):
+                handler = settlement_sources.receive if command == "settlement.receive" else settlement_sources.correct
+                result = handler(self, context, data, actor, next_version, body.get("requestId"), note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                source_change = result.get("sourceChange")
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId", "sourceChange")}
+                if result["unchanged"]:
+                    return {"id": program_id, "version": expected, "action": command, "kind": kind,
+                            "recordId": record_id, **extra_receipt}
+            elif command in expenses.ACTIONS:
+                result = (expenses.receive(self, context, data, actor, next_version)
+                          if command == "expense.receive"
+                          else expenses.attribution_command(self, context, command, data, actor, next_version, note))
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                source_change = result.get("sourceChange")
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId", "sourceChange")}
+                if result["unchanged"]:
+                    return {"id": program_id, "version": expected, "action": command, "kind": kind,
+                            "recordId": record_id, **extra_receipt}
             elif command == "implementation.prepare":
                 result = implementation.prepare(self, context, data, actor, next_version)
                 before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
@@ -293,7 +484,7 @@ class Operations:
                 extra_receipt = {key: value for key, value in result.items()
                                  if key not in ("before", "after", "kind", "recordId")}
             elif command.startswith("completion."):
-                if command == "completion.submit" and self.db.execute("SELECT COUNT(*) FROM ops_records WHERE program_id=?", (program_id,)).fetchone()[0] >= MAX_RECORDS:
+                if command == "completion.submit" and expenses.record_count(self, program_id) >= MAX_RECORDS:
                     domain.fail("This operations case has reached its retained-record bound.", status=413)
                 result = completion.command(self, context, command, data, actor, next_version)
                 before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
@@ -302,8 +493,28 @@ class Operations:
                 if result["unchanged"]:
                     return {"id": program_id, "version": expected, "action": command, "kind": kind,
                             "recordId": record_id, **extra_receipt}
+            elif command in ("installation.return", "installation.return-stage"):
+                method = installation_returns.record if command == "installation.return" else installation_returns.stage
+                result = method(self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                source_change = result.get("sourceChange")
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId", "sourceChange")}
             elif command == "installation.save":
                 result = installations.save(self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId")}
+            elif command in amendments.ACTIONS:
+                result = amendments.command(self, context, command, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId")}
+            elif command in ("engagement.prepare", "engagement.receiving"):
+                if not note:
+                    domain.fail("Record the review note for this contributor engagement edition.")
+                result = (engagements.prepare if command == "engagement.prepare" else engagement_handover.receive)(
+                    self, context, data, actor, next_version, note)
                 before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
                 extra_receipt = {key: value for key, value in result.items()
                                  if key not in ("before", "after", "kind", "recordId")}
@@ -324,6 +535,7 @@ class Operations:
                 if not isinstance(data.get("inputs"), dict):
                     domain.fail("Use a portfolio input object.", "INVALID_PORTFOLIO")
                 saved_forecast = self._portfolio_forecast(program_id, data.get("inputs", {}).get("forecastId"))
+                context = portfolio_installations.capture(self, context, data["inputs"])
                 candidate = portfolios.preview(context, saved_forecast, data.get("inputs"))
                 if candidate["previewSha256"] != domain.sha(data.get("expectedPreviewSha256"), "Reviewed portfolio", False):
                     domain.fail("The portfolio inputs or source differ from the reviewed preview.", "PORTFOLIO_PREVIEW_CONFLICT", 409)
@@ -377,7 +589,7 @@ class Operations:
                              "awards": "save", "deployments": "save", "purchases": "record", "outcomes": "save"}
                     if verb != valid[kind] and not (kind == "purchases" and verb == "observe" and before):
                         domain.fail("This record uses another lifecycle action.")
-                    if not before and self.db.execute("SELECT COUNT(*) FROM ops_records WHERE program_id=?", (program_id,)).fetchone()[0] >= MAX_RECORDS:
+                    if not before and expenses.record_count(self, program_id) >= MAX_RECORDS:
                         domain.fail("This operations case has reached its retained-record bound.", status=413)
                     if kind == "purchases" and before and (verb != "observe" or not note):
                         domain.fail("Use purchase.observe with a reason to retain a later source observation.")
@@ -405,10 +617,358 @@ class Operations:
             self.db.execute("UPDATE ops_programs SET version=?,updated_at=? WHERE id=?", (next_version, now(), program_id))
             self._event(program_id, next_version, {**body, "actor": actor, "note": note}, command, before, after, kind, record_id,
                         source_change=source_change)
+            if command == supplier_statements.ACTION or command in workbooks.ACTIONS or command in amendments.ACTIONS or command in award_terms.ACTIONS or command in ("funding.save", risks.ACTION, statement_profiles.ACTION):
+                # Reject atomically if these complete decisions would make the
+                # original case impossible to hand over through its native limit.
+                self.export(program_id)
             return {"id": program_id, "version": next_version, "action": command, "kind": kind, "recordId": record_id,
                     **extra_receipt, **({"businessSha256": after["businessSha256"]} if command == "review" else {})}
+        if _within_transaction:
+            if not self.db.in_transaction:
+                raise RuntimeError("Bulk operations require the original active workspace transaction.")
+            return action()
         return self.workspace._transaction(body.get("requestId"), payload, action)
 
+
+    def operating_workflows(self, program_id, expected_version, allowed_sections=None):
+        with self._snapshot():
+            return operating_workflows.read_index(
+                self, identifier(program_id, "operation"), expected_version, allowed_sections)
+
+    def funding_catalog(self, program_id):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return {"catalog": funding.catalog(context),
+                    "history": [funding.summary(row) for row in reversed(funding.records(self, program_id))]}
+
+    def seed_funding(self, program_id, body):
+        with self._snapshot():
+            return funding.seed(self, self._context(identifier(program_id, "operation")), body)
+
+    def preview_funding(self, program_id, body):
+        with self._snapshot():
+            return funding.preview(self, self._context(identifier(program_id, "operation")), body)
+
+    def funding(self, program_id, revision=None):
+        with self._snapshot():
+            return funding.get(self, self._context(identifier(program_id, "operation")), revision)
+
+    def funding_request(self, program_id, request_id):
+        with self._snapshot():
+            return funding.request(self, identifier(program_id, "operation"), request_id)
+
+    def export_funding(self, program_id, revision, expected_version, expected_report_sha256):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            funding.expected_version(context, {"expectedVersion": expected_version})
+            return funding.export_bundle(self, context, revision, expected_report_sha256)
+
+
+    def inspect_issuer_correspondence(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._context(identifier(program_id, "operation"))
+            issuer_receiving.fields(body, ("expectedVersion", "input"))
+            if domain.integer(body.get("expectedVersion"), "Reviewed case version", 1, 10000000) != context["program"]["version"]:
+                domain.fail("The case changed. Review its current source.", "OPERATIONS_CONFLICT", 409)
+            return issuer_receiving.inspect(body.get("input"))
+
+    def receive_issuer_correspondence(self, program_id, body):
+        return issuer_receiving.receive(self, identifier(program_id, "operation"), body)
+
+    def issuer_correspondence(self, program_id, source_id):
+        with self.workspace.mutex:
+            self._program(identifier(program_id, "operation"))
+            return issuer_receiving.get(self, program_id, identifier(source_id, "source"))
+
+    def seed_award_terms(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._context(identifier(program_id, "operation"))
+            award_terms.obj(body, ("expectedVersion",), "issuer-terms seed")
+            if domain.integer(body.get("expectedVersion"), "Reviewed case version", 1, 10000000) != context["program"]["version"]:
+                domain.fail("The case changed. Reopen its current source.", "OPERATIONS_CONFLICT", 409)
+            value = award_terms.seed(context)
+            plan = value.pop("plan")
+            return {"inputs": value, "plan": plan}
+
+    def list_award_terms(self, program_id):
+        with self.workspace.mutex:
+            context = self._context(identifier(program_id, "operation"))
+            rows = award_terms.records(self, program_id)
+            return {"terms": [award_terms.summary(row) for row in award_terms.heads(rows)],
+                    "commissioning": [award_terms.binding_summary(row) for row in award_terms.bindings(self, program_id)],
+                    "plan": context["plan"], "program": context["program"],
+                    "sources": list(context["sources"].values()),
+                    "correspondence": [issuer_receiving.summary(row) for row in issuer_receiving.records(self, program_id)]}
+
+    def award_terms(self, program_id, terms_id, revision=None):
+        with self.workspace.mutex:
+            self._program(identifier(program_id, "operation"))
+            chosen = award_terms.get(self, program_id, terms_id, revision)
+            rows = [row for row in award_terms.records(self, program_id) if row["edition"]["id"] == terms_id]
+            joined = [row for row in award_terms.bindings(self, program_id) if row["edition"]["terms"]["id"] == terms_id]
+            return {**chosen, "history": [award_terms.summary(row) for row in reversed(rows)],
+                    "commissioning": joined}
+
+    def preview_award_terms(self, program_id, body):
+        with self.workspace.mutex:
+            return award_terms.preview(self, self._context(identifier(program_id, "operation")), body)
+
+    def seed_award_terms_plan(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._context(identifier(program_id, "operation"))
+            award_terms.obj(body, ("expectedVersion", "termsId", "termsRevision"), "terms-to-plan seed")
+            if domain.integer(body.get("expectedVersion"), "Reviewed case version", 1, 10000000) != context["program"]["version"]:
+                domain.fail("The case changed. Reopen its current source.", "OPERATIONS_CONFLICT", 409)
+            return {"inputs": award_terms.commission_seed(self, context, body.get("termsId"), body.get("termsRevision")),
+                    "nativePlan": self.workspace._read(context["program"]["planId"])}
+
+    def preview_award_terms_plan(self, program_id, body):
+        with self.workspace.mutex:
+            return award_terms.commission_preview(self, self._context(identifier(program_id, "operation")), body)
+
+    def commission_award_terms(self, program_id, body):
+        return award_terms.commission(self, identifier(program_id, "operation"), body)
+
+    def export_award_terms(self, program_id, terms_id, revision, expected_version):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            if domain.integer(expected_version, "Reviewed case version", 1, 10000000) != context["program"]["version"]:
+                domain.fail("The case changed. Review its current whole handover.", "OPERATIONS_CONFLICT", 409)
+            return self.export(program_id, award_terms_id=terms_id, award_terms_revision=revision)
+
+    def seed_task_outcomes(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._context(identifier(program_id, "operation"))
+            task_outcomes.obj(body, ("expectedVersion",), "Customer task seed")
+            if domain.integer(body.get("expectedVersion"), "Reviewed case version", 1, 10000000) != context["program"]["version"]:
+                task_outcomes.fail("The case changed. Reopen its current selection.", "OPERATIONS_CONFLICT", 409)
+            return task_outcomes.seed(context)
+
+    def list_task_outcomes(self, program_id):
+        with self.workspace.mutex:
+            self._program(identifier(program_id, "operation"))
+            return [task_outcomes.summary(row) for row in task_outcomes.heads(task_outcomes.records(self, program_id))]
+
+    def task_outcomes(self, program_id, study_id, revision=None):
+        with self.workspace.mutex:
+            context = self._context(identifier(program_id, "operation"))
+            return {**task_outcomes.get(self, program_id, study_id, revision),
+                    "case": {"id": program_id, "version": context["program"]["version"], "state": context["program"]["state"]}}
+
+    def preview_task_outcomes(self, program_id, body):
+        with self.workspace.mutex:
+            return task_outcomes.preview(self, self._context(identifier(program_id, "operation")), body)
+
+    def export_task_outcomes(self, program_id, study_id, revision, expected_version):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            if domain.integer(expected_version, "Reviewed export case version", 1, 10000000) != context["program"]["version"]:
+                task_outcomes.fail("The case changed. Review its current version before exporting the complete case.", "OPERATIONS_CONFLICT", 409)
+            return self.export(program_id, task_outcome_id=study_id, task_outcome_revision=revision)
+
+
+    def list_supplier_statements(self, program_id):
+        with self._snapshot():
+            return supplier_statements.listing(self, self._context(identifier(program_id, "operation")))
+    
+    def seed_supplier_statement(self, program_id, body):
+        with self._snapshot():
+            return supplier_statements.seed_document(self, self._context(identifier(program_id, "operation")), body)
+    
+    def inspect_supplier_statement_source(self, program_id, body):
+        with self._snapshot():
+            return supplier_statements.inspect_source(self, self._context(identifier(program_id, "operation")), body)
+    
+    def preview_supplier_statement(self, program_id, body):
+        with self._snapshot():
+            return supplier_statements.preview(self, self._context(identifier(program_id, "operation")), body)
+    
+    def supplier_statement(self, program_id, review_id):
+        with self._snapshot():
+            return supplier_statements.show(self, self._context(identifier(program_id, "operation")), review_id)
+    
+    def supplier_statement_request(self, program_id, body):
+        with self._snapshot():
+            return supplier_statements.request(self, self._context(identifier(program_id, "operation")), body, SCHEMA)
+    
+    def export_supplier_statement(self, program_id, review_id):
+        with self._snapshot():
+            return supplier_statements.export(self, identifier(program_id, "operation"), review_id)
+
+    def list_workbooks(self, program_id):
+        with self.workspace.mutex:
+            self._program(program_id)
+            return [workbooks.summary(row) for row in workbooks.saved(self, program_id)]
+
+    def work_book(self, program_id, book_id):
+        with self.workspace.mutex:
+            self._program(program_id)
+            return workbooks.selected(self, program_id, book_id)
+
+    def preview_workbook(self, program_id, body):
+        with self._snapshot():
+            context = self._context(program_id)
+            if context["program"]["version"] != body.get("expectedVersion"):
+                domain.fail("Reopen the current case before comparing the workbook.", "OPERATIONS_CONFLICT", 409)
+            return workbooks.preview(self, context, body)
+
+    def inspect_workbook_return(self, program_id, body):
+        with self._snapshot():
+            self._program(program_id)
+            return workbooks.inspect_return(self, program_id, body)
+
+    def apply_workbook(self, program_id, body):
+        return workbooks.apply(self, identifier(program_id, "operation"), body)
+
+
+    def list_work_intakes(self, program_id):
+        with self.workspace.mutex:
+            self._program(identifier(program_id, "operation"))
+            return [work_intake.summary(row) for row in work_intake.heads(work_intake.load(self, program_id))]
+
+    def work_intake(self, program_id, intake_id, revision=None):
+        with self.workspace.mutex:
+            return work_intake.get(self, self._context(identifier(program_id, "operation")), intake_id, revision)
+
+    def preview_work_intake(self, program_id, body):
+        with self.workspace.mutex:
+            work_intake.keys(body, ("expectedVersion", "intakeId", "revision", "document"), "Intake preview")
+            context = self._context(identifier(program_id, "operation"))
+            expected = domain.integer(body.get("expectedVersion"), "Reviewed case version", 1, 10000000)
+            if context["program"]["version"] != expected:
+                domain.fail("The case changed. Refresh it and preview the retained intake again.", "OPERATIONS_CONFLICT", 409)
+            return work_intake.preview_selected(self, context, {key: value for key, value in body.items() if key != "expectedVersion"})
+
+    def _engagement_context(self, program_id, body, fields):
+        engagements.obj(body, {"expectedVersion", *fields}, "Contributor engagement request")
+        return self._portfolio_context(program_id, body.get("expectedVersion"))
+
+    def _risk_context(self, program_id, body, fields):
+        risks.obj(body, {"expectedVersion", *fields}, "Risk register request")
+        context = self._context(identifier(program_id, "operation"))
+        if domain.integer(body.get("expectedVersion"), "Reviewed case version", 1, 10000000) != context["program"]["version"]:
+            domain.fail("The case changed. Reopen its current source before reviewing risks.", "OPERATIONS_CONFLICT", 409)
+        return context
+
+    def list_risks(self, program_id):
+        with self._snapshot():
+            return risks.listing(self, self._context(identifier(program_id, "operation")))
+
+    def seed_risks(self, program_id, body):
+        with self._snapshot():
+            return risks.seed(self, self._risk_context(program_id, body, ("reviewId",)), body.get("reviewId"))
+
+    def preview_risks(self, program_id, body):
+        with self._snapshot():
+            return risks.preview(self, self._risk_context(program_id, body, ("document",)), body.get("document"))
+
+    def risk_register(self, program_id, review_id):
+        with self._snapshot():
+            return risks.show(self, self._context(identifier(program_id, "operation")), identifier(review_id, "review"))
+
+    def risk_history(self, program_id, risk_id):
+        with self._snapshot():
+            return risks.history(self, self._context(identifier(program_id, "operation")), identifier(risk_id))
+
+    def risk_request(self, program_id, body):
+        """Reconcile one exact original command without admitting another write."""
+        risks.obj(body, {"command"}, "Risk request lookup")
+        command = risks.obj(body.get("command"), {"expectedVersion", "actor", "action", "data", "note", "requestId"},
+                            "Original retained risk command")
+        if command.get("action") != risks.ACTION:
+            risks.fail("Select the original retained risk-register.save command.")
+        domain.integer(command.get("expectedVersion"), "Original case version", 1, 10000000)
+        actor = text(command.get("actor"), "Original recording operator", 300, True)
+        text(command.get("note"), "Original review note", 12000, True)
+        risks.obj(command.get("data"), {"document", "expectedPreviewSha256"}, "Original risk save data")
+        request_id = short_id(command.get("requestId"), "Original request ID")
+        with self._snapshot():
+            self._program(identifier(program_id, "operation"))
+            fingerprint = digest({"domain": SCHEMA, "programId": program_id, "body": command})
+            row = self.db.execute("SELECT fingerprint,result_json FROM requests WHERE request_id=?", (request_id,)).fetchone()
+            if row is None:
+                return {"found": False, "requestId": request_id}
+            if row[0] != fingerprint:
+                raise Problem("This request ID already belongs to a different action.", 409, "REQUEST_CONFLICT")
+            result = json.loads(row[1])
+            event_row = self.db.execute("SELECT body_json FROM ops_events WHERE program_id=? AND version=?",
+                                        (program_id, result.get("version"))).fetchone()
+            if event_row is None:
+                risks.fail("The accepted risk request has no matching case event.", "RISK_REQUEST_CHANGED", 409)
+            event = json.loads(event_row[0])
+            review = risks.raw_review(self, program_id, result.get("recordId"))
+            if (result.get("id") != program_id or result.get("action") != risks.ACTION or result.get("kind") != "review"
+                    or result.get("reviewSha256") != review["sha256"] or result.get("riskRegister") != risks.summary(review)
+                    or event.get("action") != risks.ACTION or event.get("requestId") != request_id
+                    or event.get("recordId") != review["id"] or event.get("after") != risks.summary(review)
+                    or event.get("actor") != actor or event.get("version") != command["expectedVersion"] + 1
+                    or digest({k: v for k, v in event.items() if k != "sha256"}) != event.get("sha256")):
+                risks.fail("The accepted original risk request differs from its case history.", "RISK_REQUEST_CHANGED", 409)
+            return {"found": True, "requestId": request_id, "fingerprint": row[0], "result": result}
+
+    def compare_risks(self, program_id, selection):
+        with self._snapshot():
+            return risk_comparison.compare(self, self._context(identifier(program_id, "operation")), selection)
+
+    def export_risk_comparison(self, program_id, selection, expected_comparison_sha256, *,
+                               kind="export.zip", expected_version=None):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            value = risk_comparison.compare(self, context, selection)["comparison"]
+            risk_comparison.require_digest(value, expected_comparison_sha256)
+            if kind == "export.zip":
+                if domain.integer(expected_version, "Reviewed case version", 1, 10000000) != context["program"]["version"]:
+                    raise Problem("Reopen the current case before exporting its complete comparison.", 409, "OPERATIONS_CONFLICT")
+                return self.export(program_id, risk_comparison_selection=selection)
+            if expected_version is not None:
+                raise Problem("The case version condition is only available for the complete ZIP.", 422, "INVALID_RISK_COMPARISON")
+            return risk_comparison.export_file(value, kind)
+
+    def export_risks(self, program_id, review_id):
+        return self.export(identifier(program_id, "operation"), risk_register_id=identifier(review_id, "review"))
+
+    def engagement_request(self, program_id, body):
+        with self._snapshot():
+            return engagement_working.lookup(self, identifier(program_id, "operation"), body)
+
+    def seed_engagement(self, program_id, body):
+        with self._snapshot():
+            context = self._engagement_context(program_id, body, ("reviewId",))
+            return engagements.seed(self, context, body.get("reviewId"))
+
+    def preview_engagement(self, program_id, body):
+        with self._snapshot():
+            context = self._engagement_context(program_id, body, ("document",))
+            candidate = engagements.preview(context, body.get("document"))
+            engagements.previous_review(self, context, candidate["document"])
+            return candidate
+
+    def list_engagements(self, program_id):
+        with self._snapshot():
+            self._program(identifier(program_id, "operation"))
+            return engagements.list_editions(self, program_id)
+
+    def engagement(self, program_id, review_id):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return engagements.show(self, context, identifier(review_id, "review"))
+
+    def preview_engagement_forecast(self, program_id, body):
+        with self._snapshot():
+            context = self._engagement_context(program_id, body, ("selection",))
+            if not isinstance(body.get("selection"), dict):
+                engagements.fail("Use the complete contributor forecast selection.")
+            return engagement_handover.preview_forecast(self, context, body["selection"])
+
+    def preview_engagement_portfolio(self, program_id, body):
+        with self._snapshot():
+            context = self._engagement_context(program_id, body, ("selection",))
+            if not isinstance(body.get("selection"), dict):
+                engagements.fail("Use the complete contributor allocation selection.")
+            return engagement_handover.preview_portfolio(self, context, body["selection"])
+
+    def export_engagement(self, program_id, review_id):
+        return self.export(identifier(program_id, "operation"), engagement_id=identifier(review_id, "review"))
 
     def _cohort_history(self, program_id):
         events = [json.loads(row[0]) for row in self.db.execute(
@@ -485,9 +1045,115 @@ class Operations:
         return {"filename": material["name"] if material else "original-" + sha256,
                 "sha256": sha256, "bytes": len(originals[sha256]), "sourceId": metadata["id"]}, originals[sha256]
 
+    def amendments(self, program_id):
+        with self._snapshot():
+            return amendments.view(self, self._context(program_id))
+
+    def amendment(self, program_id, amendment_id, revision=None):
+        with self._snapshot():
+            context = self._context(program_id)
+            row = amendments.selected(self, program_id, amendment_id, revision)
+            latest = amendments.selected(self, program_id, amendment_id)
+            return {"amendment": row, "calendarImpact": amendment_calendar.review(row["preview"], row),
+                    "current": amendments.summary(latest, context, digest(self._business(context))),
+                    "history": [amendments.summary(value) for value in amendments.load(self, program_id)
+                                if value["id"] == row["id"]]}
+
+    def preview_amendment(self, program_id, body):
+        if not isinstance(body, dict) or set(body) != {"expectedVersion", "inputs"}:
+            domain.fail("Select the original case version and complete amendment inputs.", "INVALID_AMENDMENT")
+        expected = domain.integer(body.get("expectedVersion"), "Reviewed case version", 1, 10000000)
+        with self._snapshot():
+            context = self._context(program_id)
+            if context["program"]["version"] != expected:
+                domain.fail("The case changed. Compare the selected plan against its current records.",
+                            "AMENDMENT_SOURCE_CONFLICT", 409)
+            preview = amendments.preview(self, context, body["inputs"])
+            return {**preview, "calendarImpact": amendment_calendar.review(preview)}
+
+    def export_amendment_calendar(self, program_id, body):
+        if not isinstance(body, dict):
+            amendments.fail("Select the exact amendment calendar to export.", "INVALID_AMENDMENT_CALENDAR")
+        with self._snapshot():
+            context = self._context(program_id)
+            edition = None
+            if "amendmentId" in body:
+                if set(body) != {"amendmentId", "revision", "expectedAmendmentSha256", "expectedImpactSha256"}:
+                    amendments.fail("Select the original saved amendment edition and calendar.", "INVALID_AMENDMENT_CALENDAR")
+                revision = domain.integer(body["revision"], "Selected amendment edition", 1, amendments.MAX_EDITIONS)
+                edition = amendments.selected(self, program_id, body["amendmentId"], revision)
+                expected = domain.sha(body["expectedAmendmentSha256"], "Selected amendment edition", False)
+                if edition["sha256"] != expected:
+                    amendments.fail("The selected saved amendment differs from this export.", "AMENDMENT_CONFLICT", 409)
+                preview = edition["preview"]
+            else:
+                if set(body) != {"expectedVersion", "inputs", "expectedPreviewSha256", "expectedImpactSha256"}:
+                    amendments.fail("Select the complete original draft comparison.", "INVALID_AMENDMENT_CALENDAR")
+                expected = domain.integer(body["expectedVersion"], "Reviewed case version", 1, 10000000)
+                if context["program"]["version"] != expected:
+                    amendments.fail("The case changed. Reopen its amendment calendar before exporting.",
+                                    "AMENDMENT_SOURCE_CONFLICT", 409)
+                preview = amendments.preview(self, context, body["inputs"])
+                if preview["previewSha256"] != domain.sha(body["expectedPreviewSha256"], "Original amendment preview", False):
+                    amendments.fail("The amendment preview changed. Reopen its calendar comparison.",
+                                    "AMENDMENT_PREVIEW_CONFLICT", 409)
+            report = amendment_calendar.review(preview, edition)
+            if report["impactSha256"] != domain.sha(body["expectedImpactSha256"], "Original calendar impact", False):
+                amendments.fail("The calendar differs from the reviewed selection. Refresh that comparison.",
+                                "AMENDMENT_CALENDAR_CONFLICT", 409)
+            return amendment_calendar.export_bytes(report, preview, self.export(program_id), edition)
+
     def completion_calendar(self, program_id, as_of=None):
         with self.workspace.mutex:
             return completion.dashboard(self._context(identifier(program_id, "operation")), as_of)
+
+    def delivery_agenda(self, case_ids, as_of=None, expected_versions=None):
+        return agenda_model.read(self, case_ids, as_of, expected_versions)
+
+    def export_delivery_agenda(self, case_ids, as_of=None, format="ics", expected_versions=None):
+        with self._snapshot():
+            report = self.delivery_agenda(case_ids, as_of, expected_versions)
+            return agenda_model.export_bytes(report, format)
+
+    def delivery_calendar(self, program_id, as_of=None, expected_version=None):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            if expected_version is not None:
+                expected = domain.integer(expected_version, "Selected calendar case version", 1, 10000000)
+                if context["program"]["version"] != expected:
+                    domain.fail("The grant case changed. Refresh the delivery calendar.", "OPERATIONS_CONFLICT", 409)
+            return calendar_model.calendar(context, as_of)
+
+    def export_delivery_calendar(self, program_id, as_of=None, format="ics", expected_version=None):
+        with self._snapshot():
+            report = self.delivery_calendar(program_id, as_of, expected_version)
+            return calendar_model.export_bytes(report, format)
+
+    def customer_use_calendar(self, program_id, body):
+        with self._snapshot():
+            context = self._completion_context(program_id, body, ("installationRefs", "asOfDate"))
+            selected = use_calendar.selected_rows(self, context, body.get("installationRefs"))
+            return use_calendar.calendar(context, selected, body.get("asOfDate"))
+
+    def expand_customer_use_calendar(self, program_id, body):
+        with self._snapshot():
+            context = self._completion_context(program_id, body, ("document", "pattern"))
+            document = installations.normalized(context, body.get("document"))
+            result = use_calendar.expand(context, document, body.get("pattern"))
+            result["document"] = installations.normalized(context, result["document"])
+            result["source"] = installations._source(context)
+            return result
+
+    def seed_customer_use_cohort(self, program_id, body):
+        with self._snapshot():
+            context = self._completion_context(program_id, body, ("installationRefs", "groupId", "asOfAt"))
+            selected = use_calendar.selected_rows(self, context, body.get("installationRefs"))
+            return use_calendar.seed_cohort(context, selected, body.get("groupId"), body.get("asOfAt"))
+
+    def export_customer_use_calendar(self, program_id, body, format="json"):
+        with self._snapshot():
+            value = self.customer_use_calendar(program_id, body)
+            return use_calendar.export_bytes(value, format)
 
     def _completion_context(self, program_id, body, keys):
         completion.object_value(body, ("expectedVersion", *keys), "completion operation")
@@ -501,23 +1167,109 @@ class Operations:
         with self.workspace.mutex:
             return completion.seed(self._completion_context(program_id, body, ("tranche",)), body.get("tranche"))
 
+    def completion_installations(self, program_id, body):
+        from operations_completion_installations import catalog
+        with self._snapshot():
+            context = self._completion_context(program_id, body, ("tranche",))
+            return catalog(self, context, body.get("tranche"))
+
+    def preview_completion_installations(self, program_id, body):
+        from operations_completion_installations import transfer
+        with self._snapshot():
+            context = self._completion_context(program_id, body, ("inputs", "asOfDate"))
+            return transfer(self, context, body)
+
+    def _completion_correction_review(self, program_id, review_id):
+        selected = self.review(program_id, review_id)
+        if selected.get("purpose") != completion_corrections.PURPOSE:
+            domain.fail("Select the original correction review.", "COMPLETION_CORRECTIONS", 409)
+        latest = completion_corrections.head(completion_corrections.reviews(self, program_id),
+                                              selected["corrections"]["inputs"]["roundId"])
+        if not latest or latest["id"] != selected["id"]:
+            domain.fail("This correction round has a newer edition. Review the complete latest findings before re-preparation.",
+                        "COMPLETION_CORRECTIONS_HEAD_CHANGED", 409)
+        return selected
+
+    def seed_completion_corrections(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._completion_context(program_id, body, ("outcomeId", "reviewId"))
+            return completion_corrections.seed(self, context, body.get("outcomeId"), body.get("reviewId"))
+
+    def preview_completion_corrections(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._completion_context(program_id, body, ("inputs", "asOfDate"))
+            return completion_corrections.preview(self, context, body.get("inputs"), body.get("asOfDate"))
+
+    def export_completion_corrections(self, program_id, review_id):
+        with self.workspace.mutex:
+            return completion_corrections.export(self.review(program_id, review_id),
+                lambda source_id: self.source(program_id, source_id))
+
     def preview_completion(self, program_id, body):
         with self.workspace.mutex:
-            context = self._completion_context(program_id, body, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds"))
+            context = self._completion_context(program_id, body, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds", "correctionReviewId"))
             reviews = self._cohort_reviews(program_id, body["cohortReviewIds"]) if "cohortReviewIds" in body else None
             evidence = self._implementation_reviews(program_id, body["implementationReviewIds"]) if "implementationReviewIds" in body else None
             return completion.preview(context, {key: value for key, value in body.items() if key != "expectedVersion"},
-                                      reviews, self._cohort_history(program_id) if reviews is not None else None, evidence)
+                                      reviews, self._cohort_history(program_id) if reviews is not None else None, evidence,
+                                      correction_review=self._completion_correction_review(program_id, body["correctionReviewId"]) if "correctionReviewId" in body else None)
 
     def export_completion(self, program_id, review_id):
         with self.workspace.mutex:
             review = self.review(program_id, review_id)
             return completion.review_files(review, lambda source_id: self.source(program_id, source_id))
 
+    def expense_request(self, program_id, body):
+        program_id = identifier(program_id, "operation")
+        if not isinstance(body, dict) or body.get("action") not in expenses.ACTIONS or not isinstance(body.get("data"), dict):
+            domain.fail("Select the complete original expense request.", "EXPENSE_REQUEST_INVALID")
+        request_id = short_id(body.get("requestId"), "Original request ID")
+        fingerprint = digest({"domain": SCHEMA, "programId": program_id, "body": body})
+        with self.workspace.mutex:
+            program, _ = self._program(program_id)
+            row = self.db.execute("SELECT fingerprint,result_json FROM requests WHERE request_id=?", (request_id,)).fetchone()
+            if row:
+                if row[0] != fingerprint:
+                    domain.fail("This original request ID belongs to different selected inputs.", "REQUEST_CONFLICT", 409)
+                return {"status": "COMMITTED", "requestId": request_id, "caseId": program_id,
+                        "receipt": json.loads(row[1]), "currentVersion": program["version"]}
+            return {"status": "NOT_RECORDED", "requestId": request_id, "caseId": program_id,
+                    "currentVersion": program["version"]}
+
+    def preview_expense(self, program_id, body):
+        with self.workspace.mutex:
+            return expenses.preview(self._context(identifier(program_id, "operation")), body)
+
+    def expense_attribution(self, program_id):
+        with self.workspace.mutex:
+            return expenses.dashboard(self._context(identifier(program_id, "operation")))
+
+    def expense_file(self, program_id, filename):
+        if filename not in expenses.EXPORT_NAMES:
+            domain.fail("Choose an original expense attribution export.", "NOT_FOUND", 404)
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            files = expenses.export_files(context)
+            if filename not in files:
+                domain.fail("Receive the original issued expense source before exporting its attribution.", "EXPENSE_SOURCE_REQUIRED", 409)
+            return files[filename]
+
     def preview_buyer(self, program_id, body):
         with self.workspace.mutex:
             context = deepcopy(self._context(identifier(program_id, "operation")))
-        return buyer.preview(context, body)
+            return buyer.preview(context, body, operations=self)
+
+    def inspect_statement(self, program_id, body):
+        with self._snapshot():
+            context = deepcopy(self._completion_context(program_id, body, ("inputs",)))
+        return statements.inspect(context, body.get("inputs"))
+
+    def preview_statement(self, program_id, body):
+        with self._snapshot():
+            context = deepcopy(self._completion_context(program_id, body, ("inputs",)))
+            context["cashCorrections"] = cash_accounts.statement_successors(self, context)
+            context["statementSetups"] = [statement_profiles.summary(row) for row in statement_profiles.records(self, program_id)]
+            return statements.preview(context, body.get("inputs"))
 
     def preview_support(self, program_id, body):
         with self.workspace.mutex:
@@ -576,18 +1328,25 @@ class Operations:
         return context
 
     def seed_portfolio(self, program_id, body):
-        if not isinstance(body, dict) or set(body) - {"expectedVersion", "forecastId"}:
+        if not isinstance(body, dict) or set(body) - {"expectedVersion", "forecastId", "installationSelections", "inputs"}:
             domain.fail("Use the declared portfolio seed object.", "INVALID_PORTFOLIO")
-        with self.workspace.mutex:
+        if "inputs" in body and not isinstance(body["inputs"], dict):
+            domain.fail("Retain the existing Portfolio draft as a complete input object.", "INVALID_PORTFOLIO")
+        with self._snapshot():
             context = self._portfolio_context(program_id, body.get("expectedVersion"))
-            return portfolios.seed(context, self._portfolio_forecast(program_id, body.get("forecastId")))
+            saved = self._portfolio_forecast(program_id, body.get("forecastId"))
+            context = portfolio_installations.capture(self, context, body.get("inputs"),
+                body.get("installationSelections"), inventory=True, allow_old=True)
+            return portfolios.seed(context, saved, body.get("installationSelections"), body.get("inputs"),
+                                   include_inventory=True)
 
     def preview_portfolio(self, program_id, body):
         if not isinstance(body, dict) or set(body) - {"expectedVersion", "inputs"} or not isinstance(body.get("inputs"), dict):
             domain.fail("Use the declared portfolio preview object.", "INVALID_PORTFOLIO")
-        with self.workspace.mutex:
+        with self._snapshot():
             context = self._portfolio_context(program_id, body.get("expectedVersion"))
             saved = self._portfolio_forecast(program_id, body["inputs"].get("forecastId"))
+            context = portfolio_installations.capture(self, context, body["inputs"])
             return portfolios.preview(context, saved, body["inputs"])
 
     def list_portfolios(self, program_id):
@@ -607,9 +1366,16 @@ class Operations:
             if digest({key: item for key, item in value.items() if key != "sha256"}) != value.get("sha256"):
                 domain.fail("The saved portfolio differs from its retained identity.", "PORTFOLIO_CHANGED", 409)
             current = forecasts.source_identity(context)
+            installation_current = {}
+            if portfolio_installations.has_plans_field(value["inputs"]):
+                heads = {row["id"]: row for row in installations.load_heads(self, program_id)}
+                installation_current["installationSourceChanged"] = any(
+                    selected["installationId"] not in heads
+                    or portfolio_installations.row_ref(heads[selected["installationId"]]) != selected
+                    for selected in portfolio_installations.raw_references(value["inputs"]))
             return {**value, "current": {"programId": program_id, "version": current["version"],
                     "sourceChanged": current["factsSha256"] != value["source"]["factsSha256"],
-                    "retainedOriginalProgramId": value["source"]["programId"]}}
+                    "retainedOriginalProgramId": value["source"]["programId"], **installation_current}}
 
     def export_portfolio(self, program_id, portfolio_id):
         value = self.portfolio(program_id, portfolio_id)
@@ -619,11 +1385,15 @@ class Operations:
     def select_portfolio(self, program_id, body):
         if not isinstance(body, dict) or set(body) - {"expectedVersion", "portfolioId", "alternativeId"}:
             domain.fail("Use the declared portfolio selection object.", "INVALID_PORTFOLIO")
-        with self.workspace.mutex:
+        with self._snapshot():
             context = self._portfolio_context(program_id, body.get("expectedVersion"))
             value = self.portfolio(program_id, body.get("portfolioId"))
             value.pop("current")
-            return portfolios.select(context, value, short_id(body.get("alternativeId"), "Alternative ID"))
+            alternative_id = short_id(body.get("alternativeId"), "Alternative ID")
+            selected = next((row for row in value["inputs"]["alternatives"] if row["id"] == alternative_id), {})
+            fields = portfolios.allocation_fields(selected, value["inputs"])
+            context = portfolio_installations.capture(self, context, fields)
+            return portfolios.select(context, value, alternative_id)
 
     def installation_workflows(self, program_id, body):
         from operations_installation_workflows import inventory
@@ -633,6 +1403,18 @@ class Operations:
 
     def seed_workflow_installation(self, program_id, body):
         from operations_installation_workflows import seed
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return seed(self, context, body)
+
+    def installation_commercial(self, program_id, body):
+        from operations_commercial_installations import inventory
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return inventory(self, context, body)
+
+    def seed_commercial_installation(self, program_id, body):
+        from operations_commercial_installations import seed
         with self._snapshot():
             context = self._context(identifier(program_id, "operation"))
             return seed(self, context, body)
@@ -649,6 +1431,28 @@ class Operations:
             context = self._context(identifier(program_id, "operation"))
             return seed(self, context, body)
 
+    def seed_installation_commissioning(self, program_id, body):
+        from operations_commissioning import seed
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return seed(self, context, body)
+
+    def review_installation_commissioning(self, program_id, body):
+        from operations_commissioning import review
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return review(self, context, body)
+
+    def seed_installation_effort(self, program_id, body):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return installation_effort.seed(self, context, body)
+
+    def select_installation_effort(self, program_id, body):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return installation_effort.selection(self, context, body)
+
     def seed_installation(self, program_id, body):
         installations.object_value(body, ("expectedVersion",), "installation seed")
         with self._snapshot():
@@ -661,10 +1465,148 @@ class Operations:
             context = self._context(identifier(program_id, "operation"))
             return installations.preview(self, context, body)
 
+    def inspect_company_return(self, program_id, body):
+        with self._snapshot():
+            return company_returns.inspect_package(self, self._context(identifier(program_id, "operation")), body)
+
+    def linked_company_return(self, program_id, body):
+        with self._snapshot():
+            return company_returns.linked_package(self, self._context(identifier(program_id, "operation")), body)
+
+    def installation_returns(self, program_id):
+        with self._snapshot():
+            return installation_returns.list_reviews(self, self._context(program_id))
+
+    def seed_installation_return(self, program_id, body):
+        with self._snapshot():
+            return installation_returns.seed(self, self._context(program_id), body)
+
+    def preview_installation_return(self, program_id, body):
+        with self._snapshot():
+            return installation_returns.preview(self, self._context(program_id), body)
+
+    def seed_installation_return_review(self, program_id, body):
+        with self._snapshot():
+            return installation_returns.review_seed(self, self._context(program_id), body)
+
+    def preview_installation_return_review(self, program_id, body):
+        with self._snapshot():
+            return installation_returns.review_preview(self, self._context(program_id), body)
+
+    def export_installation_return(self, program_id, review_id):
+        return self.export(program_id, installation_return_review_id=review_id)
+
+    def ledger_intake(self, program_id):
+        return ledger_intake.describe(self, identifier(program_id, "operation"))
+
+    def inspect_ledger_intake(self, program_id, body):
+        with self._snapshot():
+            self._program(identifier(program_id, "operation"))
+            if not isinstance(body, dict) or set(body) != {"file"}:
+                domain.fail("Select one original source file for inspection.", "INVALID_LEDGER_INTAKE")
+            return ledger_intake.inspect(body["file"])
+
+    def preview_ledger_intake(self, program_id, body):
+        return ledger_intake.preview(self, identifier(program_id, "operation"), body)
+
+    def apply_ledger_intake(self, program_id, body):
+        return ledger_intake.apply(self, program_id, body)
+
+    def ledger_intake_original(self, program_id, source_id):
+        return ledger_intake.original(self, identifier(program_id, "operation"), identifier(source_id, "source"))
+
+    def account_reconciliation(self, program_id, selection=None, expected_version=None):
+        body = {"selection": selection or {}}
+        if expected_version is not None:
+            body["expectedVersion"] = expected_version
+        return account_reconciliation.account(self, identifier(program_id, "operation"), body)
+
+    def account_reconciliation_preview(self, program_id, body):
+        return account_reconciliation.preview(self, identifier(program_id, "operation"), body)
+
+    def account_reconciliation_apply(self, program_id, body):
+        return account_reconciliation.apply(self, identifier(program_id, "operation"), body)
+
+    def account_reconciliation_statement_inputs(self, program_id, source_id):
+        return account_reconciliation.statement_inputs(self, identifier(program_id, "operation"),
+                                                        identifier(source_id, "source"))
+
+    def export_account_reconciliation(self, program_id, selection, expected_version, expected_report_sha256):
+        with self._snapshot():
+            report = self.account_reconciliation(program_id, selection,
+                domain.integer(expected_version, "Reviewed reconciliation case version", 1, 10000000))
+            if domain.sha(expected_report_sha256, "Reviewed reconciliation account", False) != report["reportSha256"]:
+                domain.fail("Reopen the original reconciliation edition before exporting its complete handover.",
+                            "RECONCILIATION_SOURCE_CHANGED", 409)
+            return account_reconciliation.export_bundle(report, self.export(program_id))
+
+    def cash_account(self, program_id, selection=None, expected_version=None):
+        body = {"selection": selection or {}}
+        if expected_version is not None:
+            body["expectedVersion"] = expected_version
+        return cash_accounts.account(self, identifier(program_id, "operation"), body)
+
+    def cash_correction_preview(self, program_id, body):
+        return cash_accounts.preview(self, identifier(program_id, "operation"), body)
+
+    def cash_correction_apply(self, program_id, body):
+        return cash_accounts.apply(self, identifier(program_id, "operation"), body)
+
+    def export_cash_account(self, program_id, selection, expected_version, expected_report_sha256):
+        with self._snapshot():
+            report = self.cash_account(program_id, selection,
+                domain.integer(expected_version, "Reviewed cash account case version", 1, 10000000))
+            if domain.sha(expected_report_sha256, "Reviewed cash account", False) != report["reportSha256"]:
+                domain.fail("Reopen the original cash account before exporting its complete handover.",
+                            "CASH_ACCOUNT_SOURCE_CHANGED", 409)
+            return cash_accounts.export_bundle(report, self.export(program_id))
+
+    def supplier_account(self, program_id, contributor_id=None, start_date=None, end_date=None, expected_version=None):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            if expected_version is not None and domain.integer(expected_version, "Reviewed case version", 1, 10000000) != context["program"]["version"]:
+                domain.fail("Refresh the original case before reading this supplier account.", "VERSION_CONFLICT", 409)
+            return payables.build(context, contributor_id, start_date, end_date)
+
+    def export_supplier_account(self, program_id, contributor_id, start_date, end_date, expected_version, expected_report_sha256):
+        with self._snapshot():
+            report = self.supplier_account(program_id, contributor_id, start_date, end_date,
+                domain.integer(expected_version, "Reviewed case version", 1, 10000000))
+            if domain.sha(expected_report_sha256, "Reviewed supplier account", False) != report["reportSha256"]:
+                domain.fail("Reopen the supplier and dates before exporting the complete account.",
+                            "SUPPLIER_ACCOUNT_SOURCE_CHANGED", 409)
+            return payables.export_bundle(report, self.export(program_id))
+
+    def performance(self, program_id, start_date=None, end_date=None, expected_version=None):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            if expected_version is not None and domain.integer(expected_version, "Reviewed case version", 1, 10000000) != context["program"]["version"]:
+                domain.fail("The case changed. Refresh the report to read its current version.", "VERSION_CONFLICT", 409)
+            return performance.build(context, start_date, end_date)
+
+    def export_performance(self, program_id, start_date, end_date, expected_version, expected_report_sha256):
+        with self._snapshot():
+            report = self.performance(program_id, start_date, end_date,
+                domain.integer(expected_version, "Reviewed case version", 1, 10000000))
+            if domain.sha(expected_report_sha256, "Reviewed performance report", False) != report["reportSha256"]:
+                domain.fail("Refresh the selected period before exporting its complete handover.", "PERFORMANCE_SOURCE_CHANGED", 409)
+            return performance.export_bundle(report, self.export(program_id))
+
+    def delivery_queue(self, program_id, as_of=None):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return dispatch.build(context, installations.load_heads(self, program_id), as_of)
+
+    def export_delivery_queue(self, program_id, as_of=None):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            queue = dispatch.build(context, installations.load_heads(self, program_id), as_of)
+            return dispatch.export_bundle(queue, self.export(program_id))
+
     def list_installations(self, program_id):
         with self._snapshot():
             self._program(identifier(program_id, "operation"))
-            return installations.latest_summaries(installations.load(self, program_id))
+            return installations.latest_summaries(installations.load_heads(self, program_id))
 
     def installation(self, program_id, installation_id, revision=None):
         with self._snapshot():
@@ -707,6 +1649,8 @@ class Operations:
             metadata, raw = json.loads(row[0]), bytes(row[1])
             if len(raw) != metadata["bytes"] or hashlib.sha256(raw).hexdigest() != metadata["sha256"]:
                 domain.fail("The retained original source differs from its stored identity.", "SOURCE_CHANGED", 409)
+            if "dcatWorkspace" in metadata:
+                dcat_sources.validate_source(metadata, raw)
             return metadata, raw
 
     @contextmanager
@@ -722,22 +1666,42 @@ class Operations:
                 if own:
                     self.db.execute("ROLLBACK")
 
-    def export(self, program_id, installation_id=None, installation_revision=None):
+    def export(self, program_id, installation_id=None, installation_revision=None, installation_return_review_id=None, engagement_id=None, task_outcome_id=None, task_outcome_revision=None, award_terms_id=None, award_terms_revision=None, risk_register_id=None, risk_comparison_selection=None):
         with self._snapshot():
             context = self._context(program_id)
             program = context["program"]
+            bundle_limit = dcat_sources.source_budget(context["sources"].values())
             reviews = [json.loads(row[0]) for row in self.db.execute("SELECT body_json FROM ops_reviews WHERE program_id=? ORDER BY rowid", (program_id,))]
             events = [json.loads(row[0]) for row in self.db.execute("SELECT body_json FROM ops_events WHERE program_id=? ORDER BY version", (program_id,))]
+            dcat_sources.validate_events(context["sources"].values(), events)
             original = self.workspace.export(program["planId"])
             saved_forecasts = [json.loads(row[0]) for row in self.db.execute(
                 "SELECT body_json FROM ops_forecasts WHERE program_id=? ORDER BY rowid", (program_id,))]
             saved_portfolios = [json.loads(row[0]) for row in self.db.execute(
                 "SELECT body_json FROM ops_portfolios WHERE program_id=? ORDER BY rowid", (program_id,))]
             saved_installations = installations.load(self, program_id)
+            saved_amendments = amendments.load(self, program_id)
+            saved_work_intakes = work_intake.load(self, program_id)
             document = {"schema": SCHEMA, "exportedAt": now(), **context, "sources": list(context["sources"].values()),
                         "reviews": reviews, "events": events, "forecasts": saved_forecasts, "portfolios": saved_portfolios}
             if saved_installations:
                 document["installations"] = saved_installations
+            if saved_amendments:
+                document["amendments"] = saved_amendments
+            if saved_work_intakes:
+                document["workIntakes"] = saved_work_intakes
+            commercial_rows = self.commercial.export_rows(program_id)
+            if commercial_rows["prepared"]:
+                document["commercialReceivables"] = commercial_rows
+            change_rows = self.commercial_changes.export_rows(program_id)
+            if change_rows["items"]:
+                document["commercialChanges"] = change_rows
+            expense_billing_rows = self.expense_billing.export_rows(program_id)
+            if expense_billing_rows["items"]:
+                document["expenseBilling"] = expense_billing_rows
+            work_billing_rows = self.work_billing.export_rows(program_id)
+            if work_billing_rows["items"] or work_billing_rows["authorities"]:
+                document["workBilling"] = work_billing_rows
             report = domain.report(**context)
             files = {"planning.zip": original,
                      "operations.json": (canonical(document) + "\n").encode(),
@@ -751,18 +1715,40 @@ class Operations:
                          "Open through the existing workspace's operations import. This bundle preserves the original planner history, selected immutable plan, recorded source attachments, operations events, close reviews complete saved operating forecasts and delivery allocation portfolios.\n"
                          "Conditional planning amounts are separate from recorded cash. Testnet purchases are product operations. A work review or case close does not create an award, payment, customer agreement or external tranche acceptance.\n"
                          "Private access keys are not included.\n").encode()}
+            files.update(amendments.export_files(saved_amendments))
+            settlement_view = settlement_sources.observations(context)
+            if settlement_view:
+                files["merchant-settlements.json"] = (canonical(settlement_view) + "\n").encode()
+                files["merchant-settlements.csv"] = csv_bytes(settlement_sources.CSV_FIELDS, settlement_sources.csv_rows(context))
+            files.update(expenses.export_files(context))
+            node_view = buyer.node_observations(context)
+            if node_view:
+                files["node-accounting-observations.json"] = (canonical(node_view) + "\n").encode()
+                files["node-accounting-observations.csv"] = csv_bytes(buyer.NODE_CSV_FIELDS, buyer.node_csv_rows(context))
             for metadata in context["sources"].values():
                 _, raw = self.source(program_id, metadata["id"])
                 files["sources/" + metadata["id"]] = raw
+            if installation_return_review_id is not None:
+                files.update(installation_returns.selected_files(context, reviews, installation_return_review_id))
             if installation_id is not None or installation_revision is not None:
                 files.update(installations.selected_files(context, saved_installations, installation_id, installation_revision, files))
-        if sum(len(raw) for raw in files.values()) > MAX_BUNDLE:
-            domain.fail("The complete operations bundle exceeds 32 MiB.", status=413)
+            if risk_register_id is not None:
+                files.update(risks.selected_files(context, reviews, risk_register_id))
+            if risk_comparison_selection is not None:
+                files.update(risk_comparison.selected_files(context, reviews, risk_comparison_selection))
+            if engagement_id is not None:
+                files.update(engagements.selected_files(context, reviews, engagement_id))
+            if task_outcome_id is not None or task_outcome_revision is not None:
+                files.update(task_outcomes.selected_files(self, program_id, task_outcome_id, task_outcome_revision))
+            if award_terms_id is not None or award_terms_revision is not None:
+                files.update(award_terms.selected_files(self, program_id, award_terms_id, award_terms_revision))
+        if sum(len(raw) for raw in files.values()) > bundle_limit:
+            domain.fail("The complete operations bundle exceeds its selected ordinary/DCAT capacity.", status=413)
         manifest = {"schema": SCHEMA + ".bundle", "files": [{"path": name, "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest()} for name, raw in sorted(files.items())]}
         files["MANIFEST.json"] = (canonical(manifest) + "\n").encode()
-        if sum(len(raw) for raw in files.values()) > MAX_BUNDLE:
-            domain.fail("The complete operations bundle including its manifest exceeds 32 MiB.", status=413)
+        if sum(len(raw) for raw in files.values()) > bundle_limit:
+            domain.fail("The complete operations bundle including its manifest exceeds its selected ordinary/DCAT capacity.", status=413)
         output = io.BytesIO()
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
             for name, raw in sorted(files.items()):
@@ -771,20 +1757,34 @@ class Operations:
                 info.compress_type = zipfile.ZIP_DEFLATED
                 archive.writestr(info, raw)
         raw = output.getvalue()
-        if len(raw) > MAX_BUNDLE:
-            domain.fail("The compressed complete operations bundle exceeds 32 MiB.", status=413)
+        if len(raw) > bundle_limit:
+            domain.fail("The compressed complete operations bundle exceeds its selected ordinary/DCAT capacity.", status=413)
         return raw
 
     @staticmethod
     def _unpack(raw):
-        if not isinstance(raw, bytes) or len(raw) > MAX_BUNDLE:
-            domain.fail("Use a complete operations ZIP up to 32 MiB.", status=413)
+        if not isinstance(raw, bytes) or len(raw) > dcat_sources.MAX_BUNDLE:
+            domain.fail("Use a complete operations ZIP within its selected source capacity.", status=413)
         try:
             with zipfile.ZipFile(io.BytesIO(raw)) as archive:
                 infos = archive.infolist()
                 names = [row.filename for row in infos]
-                if len(names) != len(set(names)) or len(names) > 220 or sum(row.file_size for row in infos) > MAX_BUNDLE:
+                expanded = sum(row.file_size for row in infos)
+                if len(names) != len(set(names)) or len(names) > 220 or expanded > dcat_sources.MAX_BUNDLE:
                     domain.fail("The operations bundle has duplicate, excessive or oversized entries.")
+                if (archive.getinfo("MANIFEST.json").file_size > 1024 * 1024
+                        or archive.getinfo("operations.json").file_size > MAX_BUNDLE):
+                    domain.fail("The original operations metadata exceeds its bound.", status=413)
+                document = json.loads(archive.read("operations.json"))
+                if not isinstance(document, dict) or document.get("schema") != SCHEMA:
+                    domain.fail("Select the complete original Operations document.")
+                bundle_limit = dcat_sources.source_budget(document.get("sources", []))
+                if len(raw) > bundle_limit or expanded > bundle_limit:
+                    domain.fail("The complete case exceeds its selected ordinary/DCAT bound.", status=413)
+                dcat_names = {"sources/" + row["id"] for row in document["sources"] if "dcatWorkspace" in row}
+                if any(row.file_size > (dcat_sources.MAX_SOURCE if row.filename in dcat_names else MAX_BUNDLE)
+                       for row in infos):
+                    domain.fail("An original case member exceeds its selected bound.", status=413)
                 manifest = json.loads(archive.read("MANIFEST.json"))
                 if manifest.get("schema") != SCHEMA + ".bundle":
                     domain.fail("Select a complete SF47 operations export.")
@@ -811,9 +1811,35 @@ class Operations:
         # Original completion plans and source records retain their native validation below.
         if "completion-calendar.json" in files:
             expected.add("completion-calendar.json")
+        if expenses.has_records(document.get("expenseRecords") or expenses.empty()):
+            expected.update(expenses.EXPORT_NAMES)
+        node_names = {"node-accounting-observations.json", "node-accounting-observations.csv"}
+        if node_names.intersection(files) or any(isinstance(row.get("buyerHandoff"), dict)
+                and row["buyerHandoff"].get("sourceSchema") == buyer.NODE_SCHEMA for row in document["sources"]):
+            expected.update(node_names)
+        if settlement_sources.DERIVED_FILES.intersection(files) or any("settlementHandoff" in row for row in document["sources"]):
+            expected.update(settlement_sources.DERIVED_FILES)
         selected_names = {"installation-selection.json", "installation.html"}
         if selected_names.intersection(files):
             expected.update(selected_names)
+            if "installation-effort.json" in files:
+                expected.add("installation-effort.json")
+        if task_outcomes.SELECTION_FILES.intersection(files):
+            expected.update(task_outcomes.SELECTION_FILES)
+        if award_terms.SELECTION_FILES.intersection(files):
+            expected.update(award_terms.SELECTION_FILES)
+        if risks.SELECTION_FILES.intersection(files):
+            expected.update(risks.SELECTION_FILES)
+        if risk_comparison.SELECTION_FILES.intersection(files):
+            expected.update(risk_comparison.SELECTION_FILES)
+        engagement_names = {"engagement-selection.json", "engagement.html"}
+        if engagement_names.intersection(files):
+            expected.update(engagement_names)
+        return_names = {"installation-return-selection.json", "installation-return.html"}
+        if return_names.intersection(files):
+            expected.update(return_names)
+        if document.get("amendments") or {"amendment-history.json", "amendment-changes.csv"}.intersection(files):
+            expected.update({"amendment-history.json", "amendment-changes.csv"})
         if set(files) != expected or len(source_ids) != len(document["sources"]):
             domain.fail("The operations source set is not exact.")
         for item in document["sources"]:
@@ -828,9 +1854,23 @@ class Operations:
             if not re.fullmatch(r"[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+", item.get("mediaType", "")):
                 domain.fail("Use a plain source media type.")
             content = files["sources/" + item["id"]]
-            if len(content) != item["bytes"] or hashlib.sha256(content).hexdigest() != item["sha256"] or len(content) > MAX_SOURCE:
+            association = item.get("buyerHandoff", {})
+            maximum = buyer.MAX_CUSTOMER_USE_HANDOFF if (isinstance(association, dict)
+                and association.get("sourceSchema") == buyer.CUSTOMER_USE_SCHEMA) else MAX_SOURCE
+            if "dcatWorkspace" in item:
+                maximum = dcat_sources.MAX_SOURCE
+                if association:
+                    domain.fail("A DCAT workspace cannot impersonate a customer-use source.")
+                dcat_sources.validate_source(item, content)
+            if len(content) != item["bytes"] or hashlib.sha256(content).hexdigest() != item["sha256"] or len(content) > maximum:
                 domain.fail("An original attachment differs from its source record.")
+        dcat_sources.source_budget(document["sources"])
+        dcat_sources.validate_events(document["sources"], document.get("events", []))
         installations.selection_from_files(document, files)
+        task_outcomes.selection_from_files(document, files)
+        award_terms.selection_from_files(document, files)
+        installation_returns.selection_from_files(document, files)
+        engagements.validate_selection(document, files)
         return document, files
 
     def import_bundle(self, raw, name, request_id, actor):
@@ -848,7 +1888,21 @@ class Operations:
                 if existing[0] != digest(original_payload):
                     raise Problem("This request identity already describes a different operation.", 409, "REQUEST_CONFLICT")
                 return json.loads(existing[1])
-        document, files = self._unpack(raw)
+        if dcat_sources.native_bundle(raw):
+            # A native case is not a report wrapper. Its own complete importer
+            # validates the selected capacity, every source and original history.
+            native_raw = raw
+            supplier_selection = funding_report = reconciliation_account = None
+            cash_account = supplier_account = performance_report = delivery_queue = None
+        else:
+            native_raw, supplier_selection = supplier_statements.unwrap_bundle(raw)
+            native_raw, funding_report = funding.unwrap_bundle(native_raw)
+            native_raw, reconciliation_account = account_reconciliation.unwrap_bundle(native_raw)
+            native_raw, cash_account = cash_accounts.unwrap_bundle(native_raw)
+            native_raw, supplier_account = payables.unwrap_bundle(native_raw)
+            native_raw, performance_report = performance.unwrap_bundle(native_raw)
+            native_raw, delivery_queue = dispatch.unwrap_bundle(native_raw)
+        document, files = self._unpack(native_raw)
         source_program, plan = document["program"], document["plan"]
         if not isinstance(source_program, dict) or not isinstance(plan, dict):
             domain.fail("The retained operations program and plan must be objects.")
@@ -865,8 +1919,7 @@ class Operations:
         if sum(len(values) for values in document["records"].values()) > MAX_RECORDS:
             domain.fail("The operations bundle has too many records.")
         sources = {row["id"]: row for row in document["sources"]}
-        if sum(row["bytes"] for row in sources.values()) > MAX_SOURCES_TOTAL:
-            domain.fail("The original attachment total exceeds its supported bound.", status=413)
+        dcat_sources.source_budget(sources.values())
         context = {"program": source_program, "plan": plan, "records": document["records"], "sources": sources,
                    "restoring": True, "completionPlans": document.get("completionPlans", [])}
         for kind, values in document["records"].items():
@@ -908,21 +1961,92 @@ class Operations:
                 domain.fail("The complete original review snapshot and report are required.")
             if digest(review["snapshot"]) != review["businessSha256"]:
                 domain.fail("A frozen review differs from its retained business snapshot.")
+        cash_accounts.validate_import(context, events, files)
+        statements.validate_import(context, events, files)
+        statement_profiles.validate_import(context, events, files)
+        has_settlements = settlement_sources.validate_import(context, events, reviews, files)
+        if bool(has_settlements) != settlement_sources.DERIVED_FILES.issubset(files):
+            domain.fail("The complete merchant source report set is missing or unbound.", "SETTLEMENT_IMPORT_SOURCE")
+        if has_settlements:
+            if (files["merchant-settlements.json"] != (canonical(settlement_sources.observations(context)) + "\n").encode()
+                    or files["merchant-settlements.csv"] != csv_bytes(settlement_sources.CSV_FIELDS, settlement_sources.csv_rows(context))
+                    or json.loads(files["summary.json"]).get("merchantSettlements") != settlement_sources.report(context)):
+                domain.fail("A merchant source report differs from its original source and cash associations.", "SETTLEMENT_IMPORT_SOURCE")
+        account_reconciliation.validate_import(context, events, files)
+        has_node = buyer.validate_node_import(context, events, reviews, files)
+        node_names = {"node-accounting-observations.json", "node-accounting-observations.csv"}
+        node_view = buyer.node_observations(context)
+        if bool(node_view) != node_names.issubset(files):
+            domain.fail("The complete Node source report set is missing or unbound.", "BUYER_NODE_RECEIVING_SOURCE")
+        if node_view:
+            if (files["node-accounting-observations.json"] != (canonical(node_view) + "\n").encode()
+                    or files["node-accounting-observations.csv"] != csv_bytes(buyer.NODE_CSV_FIELDS, buyer.node_csv_rows(context))
+                    or json.loads(files["summary.json"]).get("delivery", {}).get("nodeAccounting") != buyer.node_report(context)):
+                domain.fail("A Node operating report differs from its original source associations.", "BUYER_NODE_RECEIVING_SOURCE")
+        saved_amendments = amendments.validate_import(self, context, document.get("amendments", []), events, files["planning.zip"],
+                                                       work_intakes=document.get("workIntakes", []))
+        amendments.validate_files(saved_amendments, files)
+        def selected_plan_at(version):
+            return amendments.plan_at(saved_amendments, plan, version)
+        expense_records = expenses.validate_import(context, document.get("expenseRecords"), events, reviews, files,
+                                                    plan_for_version=selected_plan_at)
+        if expenses.has_records(expense_records):
+            context["expenseRecords"] = expense_records
         cohort.validate_import(reviews, events)
-        completion.validate_import(context, document.get("completionPlans", []), reviews, events, source_program["version"])
+        completion.validate_import(context, document.get("completionPlans", []), reviews, events, source_program["version"],
+                                   plan_history=saved_amendments)
         saved_installations = document.get("installations", [])
-        installations.validate_import(context, saved_installations, events, source_program["version"], files)
+        installations.validate_import(context, saved_installations, events, source_program["version"], files,
+                                      plan_for_version=selected_plan_at)
+        from operations_completion_installations import validate_import as validate_completion_installations
+        validate_completion_installations(document.get("completionPlans", []), reviews, events, saved_installations)
+        buyer.validate_customer_use_import(context, events, reviews, files, saved_installations)
+        task_outcomes.validate_import(context, events, files, saved_installations, plan_for_version=selected_plan_at)
+        issuer_receiving.validate_import(context, events, files)
+        award_terms.validate_import(context, events, files, plan_for_version=selected_plan_at, saved_amendments=saved_amendments)
+        selected_award_terms = award_terms.selection_from_files(document, files)
+        selected_task_outcomes = task_outcomes.selection_from_files(document, files)
+        expense_billing_rows = expense_billing.validate_import(document.get("expenseBilling"), context, events, files)
+        work_billing_rows = work_billing.validate_import(document.get("workBilling"), context, events, files)
+        commercial_rows = document.get("commercialReceivables")
+        if commercial_rows is not None:
+            commercial_rows = commercial_receivables.validate_import(
+                commercial_rows, reader=lambda ident: files["sources/" + ident])
+        change_rows = document.get("commercialChanges")
+        if change_rows is not None:
+            change_rows = commercial_changes.validate_import(change_rows)
+            if commercial_rows is None:
+                domain.fail("Milestone changes require their original billing source.", "COMMERCIAL_CHANGE_SOURCE", 422)
+        dispatch.validate_received(delivery_queue, document)
+        performance.validate_received(performance_report, document)
+        payables.validate_received(supplier_account, document)
+        cash_accounts.validate_received(cash_account, document)
+        account_reconciliation.validate_received(reconciliation_account, document, files)
         implementation.validate_import(context, reviews, events, saved_installations, files)
+        installation_returns.validate_import(context, reviews, events, saved_installations, files,
+                                              plan_for_version=selected_plan_at)
+        selected_installation_return = installation_returns.selection_from_files(document, files)
         refs = installations.latest_refs(saved_installations)
         if document.get("installationRefs", []) != refs:
             domain.fail("The selected installation heads differ from their complete retained editions.")
+        saved_work_intakes = work_intake.validate_import(context, document.get("workIntakes", []), events, files,
+                                                        plan_for_version=selected_plan_at)
+        funding.validate_import(context, events, files, saved_work_intakes, plan_for_version=selected_plan_at)
+        selected_funding = funding.validate_received(funding_report, document, files)
+        workbooks.validate_import(context, reviews, events, files, selected_plan_at, saved_work_intakes)
+        supplier_statements.validate_import(context, reviews, events, files, selected_plan_at, saved_work_intakes)
+        supplier_statements.validate_received(supplier_selection, document, files)
+        intake_refs = work_intake.refs(saved_work_intakes)
+        if document.get("workIntakeRefs", []) != intake_refs:
+            domain.fail("The current work/invoice intake selections differ from their complete saved editions.", "INTAKE_RECEIVING")
         selected_installation = installations.selection_from_files(document, files)
         saved_forecasts = document.get("forecasts", [])
         if not isinstance(saved_forecasts, list) or len(saved_forecasts) > forecasts.MAX_FORECASTS:
             domain.fail("The complete retained forecast set is invalid.", "INVALID_FORECAST")
         forecast_ids = set()
         for value in saved_forecasts:
-            forecasts.validate_saved(value, plan)
+            original_version = domain.integer(value.get("version"), "Forecast save version", 2, source_program["version"])
+            forecasts.validate_saved(value, selected_plan_at(original_version - 1))
             fid = identifier(value["id"], "forecast")
             if fid in forecast_ids:
                 domain.fail("The operations bundle repeats a saved forecast.", "INVALID_FORECAST")
@@ -940,7 +2064,9 @@ class Operations:
             domain.fail("The retained portfolio set is invalid.", "INVALID_PORTFOLIO")
         portfolio_ids, original_forecasts = set(), {row["id"]: row for row in saved_forecasts}
         for value in saved_portfolios:
-            portfolios.validate_saved(value, plan)
+            original_version = domain.integer(value.get("version"), "Portfolio save version", 2, source_program["version"])
+            portfolios.validate_saved(value, selected_plan_at(original_version - 1))
+            portfolio_installations.validate_import(value, context, saved_installations, files)
             ident = identifier(value["id"], "portfolio")
             if ident in portfolio_ids:
                 domain.fail("The operations bundle repeats a saved portfolio.", "INVALID_PORTFOLIO")
@@ -955,6 +2081,10 @@ class Operations:
                 domain.fail("The portfolio does not join its original forecast and save event.", "PORTFOLIO_SOURCE_CONFLICT", 409)
         if {row.get("recordId") for row in events if row.get("action") == "portfolio.save"} != portfolio_ids:
             domain.fail("The complete operations history is missing a saved portfolio.", "INVALID_PORTFOLIO")
+        selected_risks = risks.validate_import(context, reviews, events, files, selected_plan_at)
+        selected_risk_comparison = risk_comparison.validate_import(context, reviews, files)
+        selected_engagement = engagements.validate_import(
+            context, reviews, events, saved_forecasts, saved_portfolios, files)
         payload = {"domain": SCHEMA, "action": "import", "sha256": hashlib.sha256(raw).hexdigest(),
                    "name": name, "actor": actor}
         request_id = short_id(request_id, "Request ID")
@@ -989,6 +2119,16 @@ class Operations:
             pid, stamp = generated("operation"), now()
             origin = {"programId": source_program["id"], "planId": source_program["planId"],
                       "archiveSha256": hashlib.sha256(raw).hexdigest(), "importedAt": stamp, "importedBy": actor}
+            if any(review.get("purpose") == supplier_statements.PURPOSE for review in reviews) or source_program.get("origin", {}).get("supplierStatementPrograms"):
+                origin["supplierStatementPrograms"] = supplier_statements.retained_program_ancestry(source_program)
+            if performance_report:
+                origin["performance"] = performance.received_selection(performance_report)
+            if supplier_account:
+                origin["supplierAccount"] = payables.received_selection(supplier_account)
+            if cash_account:
+                origin["cashAccount"] = cash_accounts.received_selection(cash_account)
+            if reconciliation_account:
+                origin["accountReconciliation"] = account_reconciliation.received_selection(reconciliation_account)
             self.db.execute("INSERT INTO ops_programs VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                 (pid, imported["id"], plan["revision"], source_program["version"], source_program["state"],
                  name, source_program["mode"], source_program.get("calendarStart"), canonical(pinned),
@@ -1003,17 +2143,42 @@ class Operations:
                 self.db.execute("INSERT INTO ops_events VALUES(?,?,?)", (pid, event["version"], canonical(event)))
             for review in document["reviews"]:
                 self.db.execute("INSERT INTO ops_reviews VALUES(?,?,?)", (pid, review["id"], canonical(review)))
+            expenses.save_import(self, pid, expense_records)
             for value in document.get("completionPlans", []):
                 completion.save_row(self, pid, value)
+            amendments.import_rows(self, pid, saved_amendments)
             for value in saved_installations:
                 self.db.execute("INSERT INTO ops_installations VALUES(?,?,?,?)",
                                 (pid, value["id"], value["revision"], canonical(value)))
+            for value in saved_work_intakes:
+                work_intake.save_row(self, pid, value)
+            if commercial_rows is not None:
+                self.commercial.restore_rows(pid, commercial_rows)
+            if change_rows is not None:
+                self.commercial_changes.restore_rows(pid, change_rows)
+            self.expense_billing.restore_rows(pid, expense_billing_rows)
+            self.work_billing.restore_rows(pid, work_billing_rows)
             for value in saved_forecasts:
                 self.db.execute("INSERT INTO ops_forecasts VALUES(?,?,?)", (pid, value["id"], canonical(value)))
             for value in saved_portfolios:
                 self.db.execute("INSERT INTO ops_portfolios VALUES(?,?,?)", (pid, value["id"], canonical(value)))
             return {"id": pid, "version": source_program["version"], "action": "import", "planId": imported["id"], "mode": source_program["mode"],
-                    **({"selectedInstallation": selected_installation} if selected_installation else {})}
+                    **({"selectedSupplierStatement": {"id": supplier_selection["review"]["id"],
+                        "sha256": supplier_selection["review"]["sha256"],
+                        "statementId": supplier_selection["review"]["supplierStatement"]["document"]["statementId"]}} if supplier_selection else {}),
+                    **({"selectedInstallation": selected_installation} if selected_installation else {}),
+                    **({"selectedTaskOutcomes": selected_task_outcomes} if selected_task_outcomes else {}),
+                    **({"selectedFunding": selected_funding} if selected_funding else {}),
+                    **({"selectedAwardTerms": selected_award_terms} if selected_award_terms else {}),
+                    **({"selectedRisks": selected_risks} if selected_risks else {}),
+                    **({"selectedRiskComparison": selected_risk_comparison} if selected_risk_comparison else {}),
+                    **({"selectedEngagement": selected_engagement} if selected_engagement else {}),
+                    **({"selectedInstallationReturn": selected_installation_return} if selected_installation_return else {}),
+                    **({"deliveryQueue": {"asOfDate": delivery_queue["asOfDate"], "sha256": delivery_queue["sha256"]}} if delivery_queue else {}),
+                    **({"performance": performance.received_selection(performance_report)} if performance_report else {}),
+                    **({"supplierAccount": payables.received_selection(supplier_account)} if supplier_account else {}),
+                    **({"cashAccount": cash_accounts.received_selection(cash_account)} if cash_account else {}),
+                    **({"accountReconciliation": account_reconciliation.received_selection(reconciliation_account)} if reconciliation_account else {})}
         with self.workspace.mutex:
             # Reuse the original receipt table before the original plan import.
             # A rejected reuse or invalid request cannot create an extra plan.

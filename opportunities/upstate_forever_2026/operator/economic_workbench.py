@@ -300,6 +300,27 @@ class EconomicWorkbench:
             raise ValueError("The saved report differs from its original economic selection.")
         if record["input"]["report_sha256"] != report["physical_source"]["source"]["sha256"]:
             raise ValueError("The saved decision names another native source report.")
+        if report.get("selection", {}).get("lifecycle") is not None:
+            from model import lifecycle_economics
+            if not isinstance(report.get("lifecycle"), dict) or report["lifecycle"].get("schema") != lifecycle_economics.REPORT_SCHEMA:
+                raise ValueError("The retained lifecycle result is missing its original calculation schema.")
+            lifecycle_names = {"lifecycle-cashflows.csv", "lifecycle-benefits.csv",
+                               "lifecycle-comparison.csv", "application/lifecycle_economics.py"}
+            if not lifecycle_names <= set(by_path):
+                raise ValueError("The lifecycle edition is missing its complete schedule, benefits or calculator source.")
+            for name in lifecycle_names:
+                _checked(root, by_path[name])
+            if (_sha(root / "application" / "lifecycle_economics.py")
+                    != record["implementation"].get("lifecycle_economics_sha256")):
+                raise ValueError("The lifecycle source differs from the edition's implementation identity.")
+            # Retained editions belong to their archived calculator version.
+            # A later correction creates a new edition; it cannot invalidate
+            # unchanged historical results during reopen or Workspace restore.
+            if (_sha(Path(lifecycle_economics.__file__))
+                    == record["implementation"]["lifecycle_economics_sha256"]
+                    and report["lifecycle"] != lifecycle_economics.analyze(
+                        report, report["selection"]["lifecycle"])):
+                raise ValueError("The retained lifecycle result differs from its original selection and physical report.")
         if full:
             for descriptor in record["files"].values():
                 _checked(root, descriptor)
@@ -352,6 +373,12 @@ class EconomicWorkbench:
         raise ValueError("Choose a registered economic desk operation.")
 
     def invoke(self, task):
+        from model.common import held
+        workspace = self.operator.ws(task["workspace"])
+        with held(workspace.root / ".workspace.lock"):
+            return self._invoke_locked(task)
+
+    def _invoke_locked(self, task):
         if task["action"] not in ACTIONS:
             raise ValueError("Choose a supported economic desk action.")
         workspace_key = task["workspace"]
@@ -374,6 +401,7 @@ class EconomicWorkbench:
             "decision_analysis_sha256": _sha(Path(decision.__file__)),
             "decision_desk_sha256": _sha(Path(decision.__file__).with_name("decision_desk.html")),
             "economic_workbench_sha256": _sha(Path(__file__)),
+            "lifecycle_economics_sha256": _sha(Path(decision.__file__).with_name("lifecycle_economics.py")),
         }
         key = hashlib.sha256(_canonical({"input": retained, "implementation": implementation})).hexdigest()
         destination = _within(workspace.root, EDITION_KIND, key)
@@ -389,7 +417,8 @@ class EconomicWorkbench:
             previous = decision.read_json(destination / "report.json")
             if (previous.get("id") != report["id"] or previous.get("selection") != retained["selection"]
                     or _sha(destination / "application" / "decision_analysis.py") != implementation["decision_analysis_sha256"]
-                    or _sha(destination / "application" / "decision_desk.html") != implementation["decision_desk_sha256"]):
+                    or _sha(destination / "application" / "decision_desk.html") != implementation["decision_desk_sha256"]
+                    or _sha(destination / "application" / "lifecycle_economics.py") != implementation["lifecycle_economics_sha256"]):
                 raise ValueError("This retained output differs from the original queued edition.")
             report = previous
         names = {
@@ -398,6 +427,10 @@ class EconomicWorkbench:
             "alternatives": "alternatives.csv", "costs": "costs.csv",
             "sensitivity": "sensitivity.csv", "original_native_report": "source-inputs/scenario-report.json",
         }
+        if report.get("lifecycle") is not None:
+            names.update(lifecycle_cashflows="lifecycle-cashflows.csv",
+                         lifecycle_benefits="lifecycle-benefits.csv",
+                         lifecycle_comparison="lifecycle-comparison.csv")
         record = {
             "schema": EDITION_SCHEMA, "id": key, "created_at": report["created_at"],
             "title": report["title"], "producer_report_id": retained["report_id"],
@@ -440,4 +473,6 @@ class EconomicWorkbench:
             value = decision.read_json(_within(workspace.root, DRAFT_KIND, row["id"] + ".json"))
             if hashlib.sha256(_canonical(value["input"])).hexdigest() != row["id"]:
                 raise ValueError("A saved economic input differs from its retained identity.")
+            if value["input"].get("selection", {}).get("lifecycle") is not None:
+                self._input(workspace, value["input"])
         return {"editions": len(editions), "drafts": len(drafts)}

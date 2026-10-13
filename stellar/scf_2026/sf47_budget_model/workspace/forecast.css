@@ -49,3 +49,46 @@
 [data-forecast-status][role=alert]{border:1px solid #555;padding:.7rem;background:#f4f4f4}
 @media(max-width:800px){.forecast-fields{grid-template-columns:1fr}.forecast-wide{grid-column:auto}.forecast-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.forecast-stats>div:nth-child(2){border-right:0}.forecast-stats>div:nth-child(-n+2){border-bottom:1px solid #ddd}.operating-forecast dl{grid-template-columns:1fr}.forecast-table{max-width:calc(100vw - 4rem)}}
 @media(max-width:460px){.forecast-heading,.forecast-actions{flex-direction:column;align-items:stretch}.forecast-saved-label select{font-size:.85rem}.forecast-stats{grid-template-columns:1fr}.forecast-stats>div{border-right:0;border-bottom:1px solid #ddd}.forecast-stats>div:last-child{border-bottom:0}.operating-forecast fieldset{padding:.7rem}}
+
+/* Native quote and valuation controls share the original forecast form. */
+.operating-forecast [hidden]{display:none!important}
+.forecast-currency-entry{grid-column:1/-1;border-top:1px solid var(--forecast-line);border-bottom:1px solid var(--forecast-line);padding:1rem 0;margin:.2rem 0}
+.forecast-currency-mode{max-width:32rem;margin-bottom:1rem}
+.forecast-currency-price,.forecast-currency-cost{min-width:0}
+.forecast-currency-entry h5{margin-top:.6rem}
+.forecast-currency-explanation{font-size:.86rem;color:var(--forecast-muted)}
+.forecast-fx-rate{background:#fafafa}
+.forecast-fx-rate legend{font-variant-numeric:tabular-nums}
+.forecast-fx-direction{padding:.65rem .8rem;border-left:3px solid #737373;background:#f0f0f0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.forecast-fx-direction strong{font-weight:600}
+.forecast-currency-credits{margin:1rem 0;padding:1rem;border:1px solid var(--forecast-line);background:#fafafa}
+.forecast-currency-credits h5{margin-top:0}
+.forecast-currency-credit{display:grid;grid-template-columns:minmax(12rem,1fr) minmax(8rem,.7fr) minmax(14rem,1.4fr);gap:.8rem;align-items:start;border-top:1px solid var(--forecast-line);padding:.85rem 0}
+.forecast-currency-credit>p{margin:0}
+.forecast-currency-credit label{display:flex;flex-direction:column;gap:.35rem;font-size:.88rem;font-weight:500}
+.forecast-currency-credit small{overflow-wrap:anywhere}
+.forecast-currency-coverage{border:1px solid var(--forecast-line);padding:1rem;margin:1.2rem 0;background:#fafafa}
+.forecast-currency-coverage h5{margin-top:0}
+.forecast-coverage-state{display:inline-block;font-weight:600;padding:.35rem .55rem;border:1px solid #888;margin:0 0 .5rem}
+.forecast-currency-coverage p:last-child{margin-bottom:0}
+.forecast-valuation-warning{border-left:3px solid #555;background:#f4f4f4;padding:.7rem .85rem;font-size:.87rem}
+.forecast-unvalued{color:#343434!important;font-weight:600!important}
+.forecast-currency-project{border:1px solid var(--forecast-line)!important;padding:1rem!important;margin:1rem 0!important}
+.forecast-currency-project>summary{overflow-wrap:anywhere}
+.forecast-currency-project .forecast-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.forecast-currency-original{font-variant-numeric:tabular-nums;font-weight:600}
+.forecast-currency-value{font-variant-numeric:tabular-nums}
+.forecast-currency-reference{overflow-wrap:anywhere}
+.forecast-currency-credits textarea{min-height:4.5rem}
+@media(max-width:800px){
+ .forecast-currency-credit{grid-template-columns:1fr 1fr}
+ .forecast-currency-credit>p,.forecast-currency-credit>div:first-child{grid-column:1/-1}
+ .forecast-currency-project .forecast-stats{grid-template-columns:1fr}
+ .forecast-currency-project .forecast-stats>div{border-right:0;border-bottom:1px solid #ddd}
+ .forecast-currency-project .forecast-stats>div:last-child{border-bottom:0}
+}
+@media(max-width:460px){
+ .forecast-currency-credit{grid-template-columns:1fr}
+ .forecast-currency-credits,.forecast-currency-coverage,.forecast-currency-project{padding:.7rem!important}
+ .forecast-currency-entry{padding:.8rem 0}
+}

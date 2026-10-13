@@ -1,0 +1,122 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "procurement-agency",
+  "title": "Procurement agency commissioning",
+  "task": {
+    "name": "Commission original procurement sources into isolated client review and handover",
+    "purpose": "Give an agency operator a complete source-to-client workflow: retain original procurement editions and documents, assign meaningful changes to the right client reviewer, maintain the agreed tracker, and deliver an editable handover that the receiving operator can reopen and continue.",
+    "request": "Receive the complete original commercial Workshare and its matching Case packet. Select the agency-controlled installation, actual operator and separate client portfolio directories. Record each client's selected procurement families, original publisher URLs, accountable review owner and tracker mapping. For a fixed cohort, save an explicit record-family selection for each original OCID; wider discovery uses a separately selected and fully specified publisher window. Import all selected original release/record packages with their exact bytes, acquisition metadata and publisher-provided editions. Retain individual releases, compiledRelease and versionedRelease as distinct source representations. Acquire each selected document URL in each new named window, preserving exact bodies, acquisition outcomes and source-entry/document associations. Compare the exact prior and current selected editions and documents; assign material changes to the client reviewer and preserve revisioned decisions, owner, next action, note and shortlist. Keep each client store's review context independent. Produce the agreed one-row-per-client-and-OCID tracker, complete source/review reports and all selected original documents. Operate the following publication windows in the original Workshare, resuming interrupted source or document work through its retained capture/checkpoint. Receive the complete editable workspace and source handoff in a separate client workspace, inspect retained history and conflicts, edit a review, close and reopen the same state, and re-export the receiving edition. Deliver the complete operator configuration, mappings, original sources, implementation, reports and customer continuation. Retain the original Workshare's client count, source capacity, selected histories, following windows, sessions, correction cycle, effort and commercial terms.",
+    "completeOutput": "One complete commissioned agency programme and its selected client handovers: original publisher packages and acquisition metadata; exact retained release/record identities and documents; saved source selections and publication-window checkpoints; material-change reviews with ownership and history; the agreed tracker and full reports; complete portable client workspaces/source handoffs; actual independent receiving/reopen results; source/runtime identities, editable configuration and operating guide.",
+    "repeatTrigger": "A newly selected publication window, actual publisher edition, changed linked document, client review correction or supported source-adapter change creates a named continuation linked to the retained selection and prior history. An interrupted capture or handoff continues its original operation and checkpoint.",
+    "pricedUnit": "One complete selected client procurement review/handover edition, with the original source population, documents, change review, tracker and editable receiving specified in the merchant task. Preserve the actual task unit price, unit count and spending authority from the original Installation payment selection. The professional agency commissioning fee, milestones and delivery phases remain in the separate original Workshare."
+  },
+  "source": {
+    "reference": "Bind the complete original commercial packet and selected agency/client configuration to the actual publisher URLs, OCIDs, source/package hashes and source-window IDs. Retain the exact original input files and existing native workspace/receiving exports with their declared acquisition and source identities.",
+    "mode": "Immutable original OCDS release/record package intake, the maintained Find a Tender capture/resume adapter, and explicit retained external-original adoption. SourceOperations saves selections, windows, acquisition checkpoints, document observations and review assignments alongside the same native workspace. Other publishers compose through their maintained adapter or explicit original-file intake.",
+    "population": "The selected Workshare defines the agency environment, isolated client portfolios, distinct OCID cohort, original package/document capacity and actual following windows. For a five-client pilot, account for up to five separate stores, 200 unique original package bodies and 20 distinct selected OCIDs across the whole agreed programme, with source/document bytes tracked separately against its selected capacity. Reused OCIDs retain independent client decisions; unchanged original body hashes count once in the programme's retained-source meter.",
+    "meaning": "Preserve original OCID casing, release and record IDs, source pointers, tags, dates, extension fields and explicit null/absence. Keep publisher-provided releases, compiledRelease and versionedRelease distinct; compare exact selected representations and record a representation change explicitly. Monetary values retain original amount, currency, stage and dates without cross-currency summation. An expression-of-interest deadline, tender-period deadline and enquiry deadline keep their separate meaning, original offset and source pointer. Preserve conflicting full-notice and summary dates in the tracker context. Document association binds client/workspace, OCID, entry/source ID, JSON pointer and document ID; exact byte hashes deduplicate content while each retrieval remains an observation. A current fetch of an old notice's document URL records the fetched body and acquisition time.",
+    "changePolicy": "Save explicit source selections and fresh named publication windows. Retain every original edition, source/document acquisition result and earlier review. Source pages and document work resume their own saved checkpoints. Review material changes against the exact selected prior/current entries and document observations, with revision checks before assigning or applying client decisions. Retain removed metadata and prior assets in history. Changed scope, selected sources or delivery capacity follows the original Workshare change process; an amended client handover is a new attributable edition."
+  },
+  "receiving": {
+    "application": "The maintained OCDS browser, Source windows desk, CLI, typed client, merchant/MCP integration and agency operator workflow from the selected installed source. Use the original managed Applications entrypoint and the customer's recorded runtime/workspace bindings.",
+    "acceptanceRule": "All agreed source families and publication windows are retained in full with source identities and readable acquisition outcomes. Each selected client has an isolated review context, saved owner/next action and complete original history. Every selected change/document outcome has a recorded disposition or assigned next action. The agreed tracker preserves its exact schema, source-specific deadline meanings and one row per client portfolio plus OCID. Complete JSON/CSV/HTML reports, original documents, workspace package and source handoff are available. The designated receiver imports the scoped handover, reviews any conflicts, edits a retained review, closes and reopens the same workspace, and re-exports it with history intact. Save those actual operator results against the original Installation's phase checks.",
+    "changeAndWithdraw": "The agency owner changes selected clients, source scope and review ownership through the existing configuration and revisioned source/review controls. Customer review edits remain local during receiving; report imported conflicts with their original context. Preserve earlier handover and publication-window identities when producing a correction or withdrawal edition. Additional portfolios, sources, histories, capacity, publication windows or integrations use the original commercial Workshare change process.",
+    "recovery": "Resume original source captures by their retained capture ID and document work by its saved window/checkpoint. Inspect the original operation and receiving record before repeating an uncertain response. A replay uses the same source/package/handoff identity and preserves client edits; changed input requires a named successor. Reopen the original workspace and full source handoff from their portable exports with original bodies and attribution intact.",
+    "maintenance": "Retain the accountable agency owner, each client reviewer, implementation owner and receiving operator in the original case. Deliver editable configuration, tracker mapping, source/runtime versions, upstream licences, complete original source/document acquisition context and the operating guide. Use the customer's selected existing environment and source authority. Maintain the agreed operator sessions, correction cycle and following-window ownership in the original Workshare."
+  },
+  "steps": [
+    {
+      "title": "Receive the complete commercial source and client mapping",
+      "result": "Receive the original Case/Workshare packet, all six or otherwise authored delivery phases, source-backed effort and payment milestones. Bind the actual agency environment, portfolio IDs, review owners, original source families and agreed tracker contract."
+    },
+    {
+      "title": "Install and reopen isolated client workspaces",
+      "result": "Use the existing managed OCDS application and retained agency configuration. Create or select separate private client stores, reopen the exact configuration and verify the actual operator can reach source, review, export and handoff controls."
+    },
+    {
+      "title": "Capture the complete original source and document baseline",
+      "result": "Retain exact original packages, source-provided release/compiled/history representations and all selected source associations. Save explicit source selections and acquire original linked documents with their exact hashes, metadata and actionable outcomes."
+    },
+    {
+      "title": "Assign and operate material-change review",
+      "result": "Compare exact selected editions and document observations. Retain source-specific deadline, value and extension meaning; record client-specific disposition, owner, next action, note and shortlist with revision checks. Preserve previous decisions and histories."
+    },
+    {
+      "title": "Integrate the agreed tracker and first full handover",
+      "result": "Produce one complete row per client portfolio and selected OCID using the agreed tracker schema, then export full reports, original bodies/documents and the editable client workspace/source handoff. Bind the outputs to the original source/review revisions."
+    },
+    {
+      "title": "Operate the following publisher windows",
+      "result": "Run the actual following windows selected in the original Workshare, observing linked URLs again and comparing the current original editions. Resume source/document interruptions from their saved checkpoints, retain all outcomes, and advance assigned client reviews and tracker editions."
+    },
+    {
+      "title": "Receive, reopen and continue the client handover",
+      "result": "Import the complete selected workspace/source handoff into the designated independent recipient workspace. Inspect retained history and conflicts, edit an owned review, reopen the saved state and re-export the continuing edition. Complete original operator sessions and agreed consolidated corrections."
+    },
+    {
+      "title": "Save the original Installation and complete customer continuation",
+      "result": "Use the fresh native Workshare-derived seed, actual current case/plan/source versions and selected source attachments. Preview and save the complete Installation with actual merchant/payment/host selections. Retain original checks and enter observations from completed operation. Export the entire Operations case, receive it independently and reopen the same Installation ID and revision."
+    }
+  ],
+  "inputs": [
+    "The complete original commercial Case packet and matching Workshare source/plan, including all original phases, dependencies, source-backed effort, capacity, payment milestones, operator sessions and correction terms.",
+    "The selected agency-controlled environment and installed source/runtime version; actual merchant/customer deployment IDs and named operator/receiving host.",
+    "An explicit client portfolio map, separate workspace directories, saved publisher/OCID selections, assigned review owners and the complete agreed tracker schema.",
+    "All selected original release/record package bodies with exact bytes and hashes, original URLs and acquisition metadata; retain externally acquired receipts and their exposed timestamp/status values.",
+    "All selected original documents and complete acquisition context, including entry/source/pointer/document associations, observed outcomes and original publisher licence or document conditions.",
+    "The prior/current exact selected editions, revisioned review/disposition records, source-specific deadline/value context, shortlist and complete client reports.",
+    "The following original publication windows and resumed capture/document checkpoints agreed in the Workshare, with full programme source/body/document capacity meters.",
+    "The complete editable client workspace and source handoff, runtime source and upstream licences, operator configuration/mappings, actual receiving/reopen results and retained customer continuation.",
+    "The original Operations case and plan IDs, actual current versions/source hashes, merchant payment task unit/count/authority and source-backed receiving acceptance observations."
+  ],
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/README.md",
+      "blob": "2790ce75fad7ac7f63d3b2d9ed21739dff9aac8a"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/SOURCE-WINDOWS.md",
+      "blob": "5f0ccf2603592b322c0cf291b3a66d7851b41b82"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/workspace.mjs",
+      "blob": "dce8d776f9b3db194dd55bb50bfe4f8007ac2983"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/domain.mjs",
+      "blob": "90a6177c58cb23eab88ba7689f7e91433fafe875"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/capture.mjs",
+      "blob": "3c69d6f5ec43219bfd854a91530a78d0f98d5d74"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/source-window.mjs",
+      "blob": "1dde925e8e0c1ef017afcb4cf7b609699461942d"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/client.mjs",
+      "blob": "8fb212e194bc08805cb79489fd82d36db68101f7"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/cli.mjs",
+      "blob": "12d173a36ebc46384c02796fdad8d319e1ce0bf8"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/server.mjs",
+      "blob": "192d9931b946d80b089caec5b65cc16e05d5357c"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/reports.mjs",
+      "blob": "62099bb2eb2f2ad6eebb5de845d7fffa1b757685"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/merchant.mjs",
+      "blob": "2b6a5c7e77675108a36c7121e3d3047ff5b9a11b"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/application-provider.mjs",
+      "blob": "8fb5abd6fd9e6d22d063bd824e94c49fdcee6f38"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "multivariate-control-study-transfer",
+  "required_components": [
+    "study-transfer"
+  ],
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/multivariate_control.py",
+        "model/multivariate_control_design.py",
+        "model/multivariate_control_report.py",
+        "model/multivariate_control_study_transfer.py",
+        "model/multivariate_control_cli.py",
+        "model/geographic_study_transfer.py",
+        "model/scenario_footprint.py",
+        "model/experiments.py",
+        "source_tools/precipitation_matching.py",
+        "source/MULTIVARIATE_CONTROLS.md",
+        "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+        "CURRENT_OWNER_DIRECTION.md"
+      ]
+    }
+  }
+}

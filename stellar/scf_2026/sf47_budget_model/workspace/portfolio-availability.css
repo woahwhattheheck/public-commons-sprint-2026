@@ -1,0 +1,31 @@
+.portfolio-availability{color:#24282d;background:#fff;border:1px solid #c9cdd2;padding:1rem;margin:1rem 0;min-width:0;line-height:1.5}
+.portfolio-availability h4,.portfolio-availability h5{margin:.25rem 0 .75rem;line-height:1.25}
+.availability-heading{display:flex;gap:1rem;justify-content:space-between;align-items:flex-start}
+.availability-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.8rem;align-items:end;margin:1rem 0}
+.portfolio-availability label{display:flex;flex-direction:column;gap:.3rem;color:#24282d;font-size:.95rem}
+.portfolio-availability input:not([type=checkbox]),.portfolio-availability select,.portfolio-availability textarea{box-sizing:border-box;width:100%;min-width:0;max-width:100%;border:1px solid #9299a1;border-radius:3px;background:#fff;color:#20252b;font:inherit;padding:.55rem}
+.portfolio-availability button{border:1px solid #8d949c;background:#f4f5f6;color:#20252b;border-radius:3px;padding:.55rem .8rem;font:inherit;cursor:pointer;line-height:1.3}
+.portfolio-availability button:hover:not(:disabled){background:#e5e8eb;border-color:#4e555e}
+.portfolio-availability button:disabled{opacity:.6;cursor:default}
+.portfolio-availability :focus-visible{outline:2px solid #323b46;outline-offset:2px}
+.availability-wide{grid-column:1/-1;width:100%;box-sizing:border-box}
+.availability-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin:.8rem 0}
+.availability-block{border-top:1px solid #bfc4ca;padding-top:1rem;margin-top:1.25rem}
+.availability-note,.availability-empty{padding:.8rem;border-left:3px solid #6c747d;background:#f4f5f6}
+.availability-summary{display:flex;flex-wrap:wrap;gap:1rem;font-variant-numeric:tabular-nums;margin:.8rem 0}
+.availability-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.availability-day-heading{text-align:center;font-size:.85rem;font-weight:600;padding:.4rem 0}
+.portfolio-availability .availability-day{display:flex;flex-direction:column;align-items:flex-start;gap:.3rem;text-align:left;min-height:100px;min-width:0;padding:.55rem;background:#fff;overflow-wrap:anywhere}
+.availability-day span{font-variant-numeric:tabular-nums}
+.availability-day small{font-size:.75rem;color:#4e555e}
+.portfolio-availability .availability-closed{background:#edf0f2;border-style:dashed}
+.availability-weekdays{display:flex;flex-wrap:wrap;gap:.6rem 1rem;border:1px solid #c9cdd2;padding:.7rem;margin:.8rem 0}
+.availability-weekdays label,.portfolio-availability .availability-check{display:flex;flex-direction:row;gap:.4rem;align-items:center}
+.availability-weekly{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.7rem}
+.availability-table{width:100%;overflow-x:auto;border:1px solid #c9cdd2;margin:.8rem 0}
+.availability-table table{width:100%;border-collapse:collapse;text-align:left;font-variant-numeric:tabular-nums}
+.availability-table th,.availability-table td{padding:.55rem .65rem;border-bottom:1px solid #d7dade;vertical-align:top;overflow-wrap:anywhere}
+.availability-table th{background:#f1f3f5;font-weight:600;white-space:nowrap}
+.availability-table td select{min-width:160px}
+.portfolio-availability [role=alert]{color:#25282d;border-left:3px solid #444b53;padding:.7rem;background:#edf0f2;font-weight:600}
+@media(max-width:700px){.portfolio-availability{padding:.7rem}.availability-fields{grid-template-columns:1fr}.availability-calendar{gap:2px}.portfolio-availability .availability-day{padding:.35rem .2rem;min-height:100px;font-size:.8rem}.availability-day small{font-size:.65rem}.availability-day-heading{font-size:.75rem}.availability-actions button{flex:1 1 150px}.availability-heading{display:block}.availability-weekly{grid-template-columns:repeat(2,minmax(0,1fr))}}

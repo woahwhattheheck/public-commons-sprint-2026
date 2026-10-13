@@ -413,7 +413,9 @@ class Course:
         with zipfile.ZipFile(pending,"x",zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
             for path in sorted(self.root.rglob("*")):
                 relative=path.relative_to(self.root)
-                if relative.parts[0] in {"archives","temporary"} or relative == Path("operation.lock"):
+                if relative.parts[0] == "temporary" or relative == Path("operation.lock"):
+                    continue
+                if relative.parts[0] == "archives" and path.suffix in {".zip", ".pending"}:
                     continue
                 if path.is_symlink():
                     link=os.readlink(path)

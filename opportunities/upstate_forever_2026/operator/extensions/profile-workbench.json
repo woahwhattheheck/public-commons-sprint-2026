@@ -2,13 +2,15 @@
   "schema": "upstate.operator-extension/v1",
   "id": "profile-workbench",
   "title": "Profile workbench",
-  "version": "4",
+  "version": "5",
   "order": 25,
   "assets": [
     "profile_workbench.mjs",
     "profile_workbench.css",
     "profile_customer_review.mjs",
-    "biophysical_evidence.mjs"
+    "biophysical_evidence.mjs",
+    "biophysical_authoring_core.mjs",
+    "biophysical_authoring.mjs"
   ],
   "backend": {
     "module": "profile_workbench",
@@ -27,7 +29,9 @@
       "profile.biophysical.evidence.save",
       "profile.biophysical.ranges.prepare",
       "profile.biophysical.experiment.prepare",
-      "profile.biophysical.evidence.populate"
+      "profile.biophysical.evidence.populate",
+      "profile.biophysical.authoring.save",
+      "profile.biophysical.authoring.register"
     ],
     "invoke": {
       "handler": "invoke",
@@ -229,6 +233,45 @@
         ],
         "path": "/api/profile-workbench/biophysical/ranges-inspect",
         "operation": "biophysical-ranges-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/biophysical/authoring-list",
+        "operation": "biophysical-authoring-list",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/biophysical/authoring-inspect",
+        "operation": "biophysical-authoring-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/biophysical/authoring-export",
+        "operation": "biophysical-authoring-export",
         "handler": "read",
         "args": [
           "workspace_key",
