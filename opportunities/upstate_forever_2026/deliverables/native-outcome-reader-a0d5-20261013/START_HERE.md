@@ -6,7 +6,7 @@ These are the original **simulated headwaters teaching-case** results: 1,296 hec
 
 ## 1. Open and use the reader
 
-Extract the complete ZIP to one folder and open `index.html` in a current browser. The packaged file is the unchanged 236,652-byte lossless wrapper, SHA256 `9d6badb3d612d8a058c6855d1d8ce50112fa27dbfc9aaeacb9a749f01196b6c3`. It verifies and opens its full original inner reader. No model run, installation, account or network connection is required for the retained results.
+Extract the complete ZIP to one folder and open `index.html` in a current browser. The packaged file is the 237,056-byte presentation-edition-4 lossless wrapper, SHA256 `7ba6ed17ff2eac261be022fd5b6f31d56e9cd7f7c1c5a74da4ea33d09c0e3c14`. It verifies and opens its full original inner reader. No model run, installation, account or network connection is required for the retained results.
 
 Under **Choose the question**, use **Read**, **Parameter member**, **Land-cover scenario** and **Quantity**:
 
@@ -16,13 +16,15 @@ Under **Choose the question**, use **Read**, **Parameter member**, **Land-cover 
 - **Retained descriptive ranges** shows the original twelve support groups. Its member selector is disabled because these are already-produced ranges, not a newly calculated subset.
 - **All-alternative common support** and **Recorded operation timings** remain empty in this particular packet. The required joint Decisions reports and operation-stage timing receipt are absent from its source. Continue to use the separate retained scientific interpretation for its own source-backed discussion.
 
+The main land-cover and parameter comparison shows scenario/quantity, baseline or reference, alternative or varied profile, annual change, change percentage and units together. Shared masks, native IDs and the full original values stay in each original record and download. Closing Inspect restores keyboard focus without moving the table to its far-right edge.
+
 Use **Inspect original** beside a row to read the complete original JSON record, then **Download this record**. **Download displayed original rows** preserves the current selections and original values; **Show all selections** clears the filters. The expandable reading notes explain support, percentages, original profiles and source identity.
 
 The footer offers **Download complete reading data**, **Download complete original consumer packet**, and **Print current view**. The complete-packet download decompresses and checks its exact byte count and SHA256 before saving. Browser support for DecompressionStream and WebCrypto is required for the compressed viewer/download; if the browser reports a specific unsupported feature, the complete unchanged JSON and reading data are also included as ordinary files in this ZIP.
 
 ## 2. Read the quantities with their actual support
 
-Nitrogen and phosphorus are annual kilograms; sediment is annual metric tonnes. The displayed table formats values to at most twelve significant digits. Original JSON retains the producer's full numeric values.
+Nitrogen and phosphorus are annual kilograms; sediment is annual metric tonnes. The comparison table uses two decimal places, with up to four significant digits for nonzero magnitudes below 0.01. Hover a number to see its original full value. Original JSON retains the producer's full numeric values.
 
 A negative land-cover change means lower predicted export for the selected alternative on the retained shared-cell mask. It is not an intake concentration. Independent whole-raster totals and pairwise shared-cell differences answer different questions: use the producer's stored comparison rather than subtracting unrelated totals.
 
@@ -38,7 +40,7 @@ The exact support-mask SHA identifies the compared cells. Equal cell counts do n
 
 Its twelve original source members retain their complete bodies and identities. The reader is bound to the original Study preview rather than an invented receiving receipt. `native-outcome-reading.json` contains the full reading data used by the existing view, and `native-outcome-bindings.json` records the exact JSON pointers.
 
-The original seven files are preserved unchanged:
+All seven current source files are included in full; the presentation successor changes the HTML/runtime/guide while the numerical adapter, builder, bindings, packet and reading data retain their original content:
 
 1. `native-outcome-data.mjs`
 2. `native-outcome-html.mjs`
@@ -72,7 +74,7 @@ A rebuilt unwrapped HTML is a separate delivery form from this package's retaine
 
 This package follows `CURRENT_OWNER_DIRECTION.md` **2026-10-13.4** and the owner's renewed finishing instruction of 13 October. Continue useful Eco production through the current original operations; the earlier 14:00 UTC checkpoint does not terminate this renewed product work.
 
-`NATIVE_OUTCOME_READING.md` is retained as an original historical source. Its early paragraphs describe an earlier unread packet, the earlier 1,781,251-byte source identity, and direction .3. Its later “Populated original edition” section records the actual received packet. For this packaged edition, use the exact 1,066,937-byte identity above, this guide, the supplied current direction and the manifest. Keeping the original historical file unchanged preserves the source history.
+`NATIVE_OUTCOME_READING.md` is the original source owner's complete current guide, including its original-packet recovery command and presentation-successor notes. This package adopts that exact edition-4 source from F0C8R4V2BEH. The preceding unchanged reader package remains in Git history at 00cf8e40bd29128938d2212e11e316bcb4b819b1.
 
 The existing Call Desk is https://chatgpt.com/space/page_49deb16b215c81919c4e479f0ba180b7 . Its original populated reader block is `8c8966f5-0df7-48fa-a713-2354136a8bd9`. The same thread and original producing/receiving peers retain the delivery; this source ZIP provides a usable file transfer for that operation.
 
