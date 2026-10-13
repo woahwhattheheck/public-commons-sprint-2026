@@ -35,14 +35,23 @@ function stats(values){
  return{count:n,totalMillis:String(sum),minimumMillis:a[0],medianMillis:Number(twice)/2,p90Millis:a[Math.ceil(n*.9)-1],maximumMillis:a[n-1],
   meanMillis:String(sum/BigInt(n))+'.'+String((sum%BigInt(n))*1000n/BigInt(n)).padStart(3,'0')};
 }
-function timing(row,asOf,{allowReason=true}={}){
+function timing(row,asOf,{kind='task'}={}){
  const start=historyTimestamp(row.startTime,'startTime'),end=row.endTime==null?null:historyTimestamp(row.endTime,'endTime');
  need(end===null||end>=start,'endTime precedes startTime');
- if(start>asOf)return{state:'not-started-at-as-of',start,end,durationMillis:null};
- const ended=end!==null&&end<=asOf,reason=allowReason&&row.deleteReason!=null?String(row.deleteReason):null;
- const terminated=ended&&reason!==null&&reason!==''&&reason!=='completed';
- return{state:ended?(terminated?'terminated-by-as-of':'completed-by-as-of'):'open-at-as-of',start,end,
-  durationMillis:ended?end-start:null,ageMillis:ended?null:asOf-start,deleteReason:reason};
+ const sourceState=kind==='process'?(row.state??null):null,reason=kind==='activity'?null:(row.deleteReason==null?null:String(row.deleteReason));
+ if(start>asOf)return{state:'not-started-at-as-of',start,end,durationMillis:null,sourceState,classificationBasis:'start timestamp after as-of'};
+ const ended=end!==null&&end<=asOf;let state='open-at-as-of',classificationBasis='end timestamp absent or after as-of';
+ if(ended){
+  if(kind==='activity'){state='ended-completion-unknown';classificationBasis='native activity REST response omits completion/cancellation state and deletion reason';}
+  else if(kind==='process'&&sourceState!=null&&sourceState!==''){
+   state=sourceState==='completed'?'completed-by-as-of':sourceState==='cancelled'?'terminated-by-as-of':'ended-completion-unknown';
+   classificationBasis='original native process state';
+  }else{
+   state=reason!==null&&reason!==''&&reason!=='completed'?'terminated-by-as-of':'completed-by-as-of';
+   classificationBasis=kind==='process'?'inferred from deletion reason because native process state is absent':'native task deletion reason';
+  }
+ }
+ return{state,start,end,durationMillis:ended?end-start:null,ageMillis:ended?null:asOf-start,deleteReason:reason,sourceState,classificationBasis};
 }
 export function analyseFlowableHistory({inventory,record,selection}){
  need(inventory?.schema==='stellar-forge.flowable-native-portfolio.v1','Supply the original process portfolio inventory');
@@ -65,10 +74,10 @@ export function analyseFlowableHistory({inventory,record,selection}){
  for(const row of rows.historicProcesses){
   if(!selectedIds.has(row.processDefinitionId))continue;
   try{
-   const t=timing(row,asOf);
+   const t=timing(row,asOf,{kind:'process'});
    if(t.start<from||t.start>=to)continue;
    const item={id:row.id,processDefinitionId:row.processDefinitionId,tenantId:row.tenantId??null,startTime:row.startTime,endTime:row.endTime??null,
-    state:t.state,durationMillis:t.durationMillis,ageMillis:t.ageMillis,deleteReason:t.deleteReason};
+    state:t.state,sourceState:t.sourceState,classificationBasis:t.classificationBasis,durationMillis:t.durationMillis,ageMillis:t.ageMillis,deleteReason:t.deleteReason};
    if(row.durationInMillis!=null&&t.end!==null&&(!Number.isSafeInteger(row.durationInMillis)||row.durationInMillis!==t.end-t.start))issue('historicProcesses',row,'Native duration differs from elapsed timestamp duration; metrics use original start/end timestamps.');
    processes.push(item);cohort.set(row.id,item);
   }catch(error){issue('historicProcesses',row,error.message);}
@@ -79,14 +88,14 @@ export function analyseFlowableHistory({inventory,record,selection}){
    const parent=cohort.get(row.processInstanceId);
    if(!parent){if(name==='historicTasks')outsideCohortTasks++;else outsideCohortActivities++;continue;}
    try{
-    const t=timing(row,asOf,{allowReason:name==='historicTasks'});if(t.state==='not-started-at-as-of')continue;
+    const t=timing(row,asOf,{kind:name==='historicTasks'?'task':'activity'});if(t.state==='not-started-at-as-of')continue;
     text(row[keyField],keyField);
     if(t.start<historyTimestamp(parent.startTime))issue(name,row,'Child starts before the retained parent start.');
     if(row.processDefinitionId!==parent.processDefinitionId)issue(name,row,'Child definition differs from captured parent definition; retain this edition separately (for example after migration).');
     if(row.durationInMillis!=null&&t.end!==null&&(!Number.isSafeInteger(row.durationInMillis)||row.durationInMillis!==t.end-t.start))issue(name,row,'Native duration differs from elapsed timestamp duration; metrics use original timestamps.');
     const item={id:row.id,processInstanceId:row.processInstanceId,processDefinitionId:row.processDefinitionId??null,
      key:row[keyField],name:row.name??row.activityName??row[keyField],activityType:row.activityType??null,
-     startTime:row.startTime,endTime:row.endTime??null,state:t.state,durationMillis:t.durationMillis,ageMillis:t.ageMillis,deleteReason:t.deleteReason};
+     startTime:row.startTime,endTime:row.endTime??null,state:t.state,classificationBasis:t.classificationBasis,durationMillis:t.durationMillis,ageMillis:t.ageMillis,deleteReason:t.deleteReason};
     if(name==='historicTasks'){
      item.claimTime=row.claimTime??null;item.claimDelayMillis=null;
      if(row.claimTime!=null){const claim=historyTimestamp(row.claimTime,'claimTime');
@@ -99,12 +108,13 @@ export function analyseFlowableHistory({inventory,record,selection}){
  }
  selectedChildren('historicTasks',tasks,'taskDefinitionKey');selectedChildren('historicActivities',activities,'activityId');
  need(processes.length+tasks.length+activities.length<=100000,'The selected cohort exceeds 100,000 report rows; narrow the start-cohort window or definitions');
- function groups(items,keyFn){
+ function groups(items,keyFn,{activity=false}={}){
   const grouped=new Map();for(const row of items){const key=keyFn(row),id=canonical(key);if(!grouped.has(id))grouped.set(id,{...key,rows:[]});grouped.get(id).rows.push(row);}
   return [...grouped.values()].map(({rows,...key})=>{
    const counts=new Map();for(const row of rows){const id=row.processInstanceId??row.id;counts.set(id,(counts.get(id)??0)+1);}
-   return{...key,observed:rows.length,completed:rows.filter(r=>r.state==='completed-by-as-of').length,terminated:rows.filter(r=>r.state==='terminated-by-as-of').length,
-    open:rows.filter(r=>r.state==='open-at-as-of').length,completedDuration:stats(rows.filter(r=>r.state==='completed-by-as-of').map(r=>r.durationMillis)),
+   return{...key,observed:rows.length,completed:activity?null:rows.filter(r=>r.state==='completed-by-as-of').length,terminated:activity?null:rows.filter(r=>r.state==='terminated-by-as-of').length,
+    endedCompletionUnknown:rows.filter(r=>r.state==='ended-completion-unknown').length,endedDuration:stats(rows.filter(r=>r.state==='ended-completion-unknown').map(r=>r.durationMillis)),
+    open:rows.filter(r=>r.state==='open-at-as-of').length,completedDuration:activity?null:stats(rows.filter(r=>r.state==='completed-by-as-of').map(r=>r.durationMillis)),
     openAge:stats(rows.filter(r=>r.state==='open-at-as-of').map(r=>r.ageMillis)),
     claimDelay:stats(rows.filter(r=>Number.isSafeInteger(r.claimDelayMillis)).map(r=>r.claimDelayMillis)),
     distinctProcesses:counts.size,processesWithRepeatedOccurrences:[...counts.values()].filter(n=>n>1).length,
@@ -117,13 +127,14 @@ export function analyseFlowableHistory({inventory,record,selection}){
    collections:Object.fromEntries(requiredCollections.map(name=>[name,{total:inventory.collections[name].total,retained:rows[name].length,complete:true,pages:inventory.collections[name].pages?.length??0,
     exchanges:copy(inventory.collections[name].exchanges??[])}]))},
   method:{cohort:'process startTime in [from,to), grouped by the captured parent processDefinitionId',asOf:'Ends and claims after asOf are treated as future; open age is asOf minus startTime.',
-   durations:'Elapsed UTC milliseconds, including nights/weekends. Completed and terminated durations are separate. Task durations overlap and are not additive process time.',
-   statistics:'Median and nearest-rank p90 over completed observations; meanMillis is exact decimal truncated to 3 places.',
+   durations:'Elapsed UTC milliseconds, including nights/weekends. Completed process/task durations exclude terminated and unknown-ended rows. Activities report ended durations because the native REST response omits completion/cancellation state. Task durations overlap and are not additive process time.',
+   classification:'Ended process rows use native completed/cancelled state. Missing state uses explicitly labeled deletion-reason inference; unrecognized state remains unknown. Native task deletion reasons classify task endings. Activity endings never imply successful completion or termination.',
+   statistics:'Median and nearest-rank p90 over completed process/task observations and separately over ended activities with unknown completion. MeanMillis is exact decimal truncated to 3 places.',
    repetition:'Repeated occurrences of an activity or task key within a process; this does not by itself identify an avoidable loop.',
    coverage:'The engine collections were paged fully, not transactionally. History retention, permissions, history configuration, deletion and migration can limit this captured population.'},
   definitions:definitionIds.map(id=>copy(definitions.get(id))),processGroups:groups(processes,r=>({processDefinitionId:r.processDefinitionId})),
   taskGroups:groups(tasks,r=>({processDefinitionId:r.processDefinitionId,key:r.key})),
-  activityGroups:groups(activities,r=>({processDefinitionId:r.processDefinitionId,key:r.key,activityType:r.activityType})),
+  activityGroups:groups(activities,r=>({processDefinitionId:r.processDefinitionId,key:r.key,activityType:r.activityType}),{activity:true}),
   processes:processes.sort((a,b)=>a.id.localeCompare(b.id)),tasks:tasks.sort((a,b)=>a.id.localeCompare(b.id)),activities:activities.sort((a,b)=>a.id.localeCompare(b.id)),
   coverage:{selectedProcesses:processes.length,selectedTasks:tasks.length,selectedActivities:activities.length,outsideCohortTasks,outsideCohortActivities,issues}};
  return report;

@@ -37,10 +37,11 @@ export function installFlowableHistory({api,historyAPI,write,busy,button,node,ke
    const delivery=await write('exportWorkspace',{label:r.title+' complete native source'});await reload();await openRecord(delivery.kind,delivery.id);
   }));
   resultBox.append(toolbar);
-  const groups=(title,rows)=>{resultBox.append(node('h3',title),table(['Definition / activity','Observed','Completed','Open','Terminated','Median completed','p90 completed','Oldest open','Repeated processes'],
-   rows.map(g=>[(g.key?g.key+' · ':'')+g.processDefinitionId,g.observed,g.completed,g.open,g.terminated,hours(g.completedDuration.medianMillis),hours(g.completedDuration.p90Millis),hours(g.openAge.maximumMillis),g.processesWithRepeatedOccurrences])));};
-  groups('Process durations and open age',r.processGroups);groups('Task observations',r.taskGroups);groups('Activity occurrences',r.activityGroups);
-  resultBox.append(node('h3','Coverage'),node('p',r.selection.retentionNote),node('p',r.method.coverage),node('p',r.method.durations),node('p',r.method.repetition),
+  const groups=(title,rows)=>{resultBox.append(node('h3',title),table(['Definition / activity','Observed','Completed','Open','Terminated','Unknown ended','Median completed','p90 completed','Oldest open','Repeated processes'],
+   rows.map(g=>[(g.key?g.key+' · ':'')+g.processDefinitionId,g.observed,g.completed,g.open,g.terminated,g.endedCompletionUnknown,hours(g.completedDuration.medianMillis),hours(g.completedDuration.p90Millis),hours(g.openAge.maximumMillis),g.processesWithRepeatedOccurrences])));};
+  groups('Process durations and open age',r.processGroups);groups('Task observations',r.taskGroups);resultBox.append(node('h3','Activity occurrences — ended, completion unknown'),table(['Activity / definition','Observed','Ended','Open','Median ended','p90 ended','Oldest open','Repeated processes'],
+   r.activityGroups.map(g=>[g.key+' · '+g.processDefinitionId,g.observed,g.endedCompletionUnknown,g.open,hours(g.endedDuration.medianMillis),hours(g.endedDuration.p90Millis),hours(g.openAge.maximumMillis),g.processesWithRepeatedOccurrences])));
+  resultBox.append(node('h3','Coverage'),node('p',r.selection.retentionNote),node('p',r.method.coverage),node('p',r.method.durations),node('p',r.method.classification),node('p',r.method.repetition),
    table(['Collection','Original ID','Source-quality observation'],r.coverage.issues.map(i=>[i.collection,i.id,i.message])));
  }
  form.addEventListener('submit',e=>{e.preventDefault();busy('Analyse saved process history',async()=>{

@@ -6,9 +6,9 @@ The existing Flowable workspace now analyses one explicitly selected, saved proc
 
 The population is processes whose original `startTime` falls in **[from, to)** and whose captured `processDefinitionId` is selected. Require **from < to <= asOf <= capture.startedAt**. Every date is shown in UTC. Timestamps retain the native millisecond precision; impossible calendar dates and unsupported timestamp shapes are rejected or recorded as source-quality observations.
 
-An original end at or before asOf contributes a completed duration unless it has a non-completion deletion reason. Terminated rows are reported separately. A missing end or an end after asOf contributes an open age of asOf minus start. An ended process is not automatically a successful business outcome. Open ages and termination durations do not enter completed-duration statistics.
+For processes ended at or before asOf, the original native state controls classification: completed enters completed-duration statistics, cancelled is reported as terminated. An unrecognized native state remains unknown-ended. If native state is absent, deletion-reason inference is explicitly labeled in the row. Tasks use their native deletion reason. Activities are reported as ended with completion unknown: the pinned native REST response omits cancellation state and deletion reason, so ended activity durations are separately named and never labeled completed or terminated. A missing end or an end after asOf contributes an open age of asOf minus start. An ended process is not automatically a successful business outcome. Open ages and termination durations do not enter completed-duration statistics.
 
-Median and nearest-rank p90 use the completed sample only. Mean is calculated with an exact integer sum and truncated to three decimal milliseconds. All elapsed metrics include weekends and nights. Parallel task durations overlap; summing them does not produce end-to-end process duration. Claim delay uses the retained claim timestamp and does not reconstruct assignment history.
+Median and nearest-rank p90 use completed process/task samples; activity statistics use the separately named ended sample with unknown completion. Mean is calculated with an exact integer sum and truncated to three decimal milliseconds. All elapsed metrics include weekends and nights. Parallel task durations overlap; summing them does not produce end-to-end process duration. Claim delay uses the retained claim timestamp and does not reconstruct assignment history.
 
 Repeated occurrences count each task/activity key within a process. They can represent intentional repetition, parallel activity, compensation or rework; the report does not infer a cause. A child tied to a different definition edition remains in its own task/activity group, with an explicit source-quality observation. Parent definition is the captured history value and may reflect migration.
 
@@ -65,7 +65,7 @@ Local SDK exports are `./seller/flowable/workspace/history-analysis`, `history-r
 
 ## Original contracts
 
-`history-source-contract.json` pins the three original Flowable 8 history response classes and the maintained portfolio reader. Native task rows retain taskDefinitionKey, processInstanceId, processDefinitionId, claimTime, startTime, endTime and deletion reason. Activities retain activityId/activityType and their exact original IDs. Original source exports remain authoritative for fields beyond the selected report.
+`history-source-contract.json` pins the three original Flowable 8 history response classes and the maintained portfolio reader. Native task rows retain taskDefinitionKey, processInstanceId, processDefinitionId, claimTime, startTime, endTime and deletion reason. Activities retain activityId/activityType and their exact original IDs, but expose no completion/cancellation reason. Process rows retain native state, and the report preserves that source field and its classification basis. Original source exports remain authoritative for fields beyond the selected report.
 
 ## Exact-version opening course
 
