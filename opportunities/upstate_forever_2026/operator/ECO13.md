@@ -125,7 +125,7 @@ The rows route accepts scenario_id, metric, case_id and q. A page contains at mo
 | eco13.experiment.receive | experiment_id, title, project_id, setup_id, currency; optional scenario_costs and page_size |
 | eco13.report.save | record_id; optional title, scenario_costs, objectives, budget_cents, clear_budget and reset_report_options |
 | eco13.comparison.export | record_id |
-| eco13.archive.receive | upload_id |
+| eco13.archive.receive | upload_id; optional title |
 
 Submit through POST /api/actions with workspace, action, payload and the original operation_id. Retain that operation identity across a lost HTTP response so the original operator returns the same queued task. The provider also recovers a completed receiving directory or ZIP written before the original task result was persisted.
 
