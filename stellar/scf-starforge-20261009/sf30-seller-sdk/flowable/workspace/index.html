@@ -15,6 +15,7 @@
 <button type="button" data-page="decisions">Decisions</button>
 <button type="button" data-page="cases">Cases</button>
 <button type="button" data-page="events">Event intake</button>
+<button type="button" data-page="history-analysis">History analysis</button>
 <button type="button" data-page="programmes">Commissioning</button>
 <button type="button" data-page="handover">Handover</button>
 <button type="button" data-page="engines">Engines</button>
@@ -176,6 +177,20 @@
 <p>Upload the complete exported archive, inspect its manifest, then adopt its original history.</p><button type="submit">Inspect archive</button></form></div>
 <div class="panel"><h2>Exported handovers</h2><div id="delivery-records"></div></div>
 <div class="panel"><h2>Received handovers</h2><div id="receiving-records"></div></div></section>
+<section data-panel="history-analysis" hidden><h1>Workflow history analysis</h1><p class="lede">Review a selected process start cohort using its original saved engine capture. Completed durations, open-work ages and repeated occurrences stay separate.</p>
+<p id="history-status" role="status"></p>
+<form id="history-form" class="panel"><h2>Choose the original population</h2><div class="form-grid">
+<label class="full">Report title<input name="title" maxlength="300" required></label>
+<label class="full">Exact definition editions<select id="history-definitions" multiple size="6" required aria-describedby="history-definition-help"></select></label>
+<p id="history-definition-help" class="full">Use Ctrl/Cmd to select several editions. The definition ID stored in process history determines each process group.</p>
+<label>Process start from, inclusive (UTC)<input name="from" placeholder="2026-10-01T00:00:00Z" required></label>
+<label>Process start to, exclusive (UTC)<input name="to" placeholder="2026-10-08T00:00:00Z" required></label>
+<label>Observe endings and ages as of (UTC)<input name="asOf" placeholder="2026-10-12T00:00:00Z" required></label>
+<label class="full">History retention and coverage<textarea name="retentionNote" maxlength="6000" rows="4" required placeholder="Record the selected history configuration, retention period, visibility and any known deleted or missing data."></textarea></label></div>
+<button type="submit">Analyse saved history</button></form>
+<div class="panel"><h2>Open a report</h2><div class="toolbar"><button type="button" id="history-example">Open authored reference</button><label>Reopen complete source bundle<input id="history-reopen" type="file" accept=".json,.history.json"></label></div>
+<p>The authored reference demonstrates elapsed-time calculations and source-quality observations. Reopening a bundle recalculates its report from the retained original inventory.</p></div>
+<div id="history-result" class="panel"><p>Select a saved process capture or open the authored reference.</p></div></section>
 <section data-panel="engines" hidden><h1>Engine connections</h1><p class="lede">Save the original process, CMMN and DMN REST services as named connections. Credential values come from the local process environment.</p>
 <div class="panel" id="connections-table"></div>
 <form id="connection-form" class="panel"><h2 id="connection-form-title">Add engine</h2>

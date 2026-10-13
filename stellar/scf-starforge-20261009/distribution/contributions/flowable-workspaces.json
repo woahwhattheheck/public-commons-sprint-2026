@@ -5,12 +5,14 @@
   "commands": {
     "flowable-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/cli.mjs",
     "flowable-process-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-process-programme.mjs",
-    "flowable-decision-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-decision-programme.mjs"
+    "flowable-decision-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-decision-programme.mjs",
+    "flowable-history-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-cli.mjs"
   },
   "commandDescriptions": {
     "flowable-workspace": "Open, operate, receive and export native Flowable process, case and decision workspaces.",
     "flowable-process-programme": "Compile a complete original-source BPMN commissioning programme for the existing Flowable operator.",
-    "flowable-decision-programme": "Compile complete original DMN sources and typed cases into the existing Flowable operator programme."
+    "flowable-decision-programme": "Compile complete original DMN sources and typed cases into the existing Flowable operator programme.",
+    "flowable-history-analysis": "Analyse an exact saved process-history cohort and receive its complete source into an independent workspace."
   },
   "exports": {
     "./seller/flowable/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
@@ -32,7 +34,10 @@
     "./seller/flowable/workspace/decision-programme": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/decision-programme.mjs",
     "./seller/flowable/workspace/decision-programme-review": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/decision-programme-review.mjs",
     "./seller/flowable/workspace/event-case": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/event-case.mjs",
-    "./seller/flowable/workspace/event-intake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/event-intake.mjs"
+    "./seller/flowable/workspace/event-intake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/event-intake.mjs",
+    "./seller/flowable/workspace/history-analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-analysis.mjs",
+    "./seller/flowable/workspace/history-report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-report.mjs",
+    "./seller/flowable/workspace/history-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-delivery.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -92,7 +97,10 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/metadata-change-v2.cmmn",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/cloudevents-1.0.2.schema.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/CLOUDEVENTS_LICENSE",
-    "products/flowable-merchant/EVENT_INTAKE.md"
+    "products/flowable-merchant/EVENT_INTAKE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/history/authored-reference.json",
+    "products/flowable-merchant/HISTORY_ANALYSIS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-source-contract.json"
   ],
   "browserAssets": [
     {
