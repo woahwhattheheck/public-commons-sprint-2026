@@ -1,3 +1,4 @@
+import {attachScientificSynthesis} from './scientific_synthesis.mjs';
 import {attachScientificSourceReader} from './scientific_source_reader.mjs';
 /** Prepare ordered scientific reports through the original retained task queue. */
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -28,6 +29,7 @@ export function attachScientificReportEditions(host) {
   let capturedReports=[],captureIssues=[],capturePreview=null,captureGeneration=0;
   const briefingFrames=new Map(),reportFrames=new Map();
   let sourceIntent=0,catalogGeneration=0,catalogRead=null;
+  const synthesis=attachScientificSynthesis({...host,getReportSources:()=>selected.map(choice),compose:value=>openForSources(value)});
   const sourceReader=attachScientificSourceReader({...host,compose:value=>openForSources(value),
     returnToSelection:()=>panel?.querySelector('[data-scientific-report-main]')?.scrollIntoView({block:'start'})});
   const valid=(ws,turn)=>workspace===ws&&host.getWorkspace()===ws&&generation===turn;
@@ -79,6 +81,7 @@ export function attachScientificReportEditions(host) {
     if(panel.parentNode!==container)container.append(panel);
     panel.hidden=false;
     sourceReader.mount(panel);
+    synthesis.mount(panel);
   }
   function sourceActions(row,reportId=''){
     const native=row.native_study,available=typeof host.openGISStudy==='function'&&host.hasView?.('gis-projects');
@@ -495,10 +498,10 @@ export function attachScientificReportEditions(host) {
     panel.querySelector('[data-scientific-report-action="preview"]').focus?.();
     return {workspace_key:ws,sources:selected.map(choice)};
   }
-  function detach(){active=false;sourceIntent++;catalogGeneration++;catalogRead=null;detailGeneration++;captureGeneration++;sourceReader.detach();if(panel)panel.hidden=true;}
+  function detach(){active=false;sourceIntent++;catalogGeneration++;catalogRead=null;detailGeneration++;captureGeneration++;sourceReader.detach();synthesis.detach();if(panel)panel.hidden=true;}
   function reset(){
     generation++;revision++;detailGeneration++;if(panel)panel.remove();
-    briefingFrames.clear();reportFrames.clear();sourceReader.reset();sourceIntent++;catalogGeneration++;catalogRead=null;
+    briefingFrames.clear();reportFrames.clear();sourceReader.reset();synthesis.reset();sourceIntent++;catalogGeneration++;catalogRead=null;
     panel=null;workspace=null;sources=[];editions=[];selected=[];title='';
     capturedReports=[];captureIssues=[];capturePreview=null;captureGeneration++;
     contact={name:'',organization:'',email:''};

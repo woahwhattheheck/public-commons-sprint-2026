@@ -21,6 +21,7 @@ import zipfile
 from model.common import atomic_json, digest, file_digest, read_json
 from source_report_editions import ScientificReportEditions
 from source_archive_ingress import IncludedSourceArchives
+from scientific_synthesis import ScientificSynthesis
 
 
 def member_name(value):
@@ -240,6 +241,7 @@ class SourceReports:
     def __init__(self, operator, fault, source_roots=()):
         self.operator, self.Fault = operator, fault
         self.scientific = ScientificReportEditions(operator, fault)
+        self.synthesis = ScientificSynthesis(operator, fault, self)
         self._archive_lock = threading.RLock()
         self._source_roots = tuple(source_roots)
         self.included_archives = IncludedSourceArchives(
@@ -612,6 +614,8 @@ class SourceReports:
                 "download": self.operator._ticket(workspace, destination, record, "Report and complete original source edition")}
 
     def read(self, workspace, operation, payload):
+        if operation.startswith("synthesis-"):
+            return self.synthesis.read(workspace, operation, payload)
         if operation in {"scientific-source", "scientific-source-preview"}:
             from scientific_source_reader import ScientificSourceReader
             reader = ScientificSourceReader(self.operator, self.Fault)
@@ -630,15 +634,19 @@ class SourceReports:
         raise self.Fault("SOURCE_REPORT_OPERATION", "Choose an original source report operation.", 404)
 
     def invoke(self, task):
+        if task["action"] == "source-reports.synthesis-save":
+            return self.synthesis.invoke(task)
         return self.scientific.invoke(task)
 
     def state(self, workspace):
         return self.scientific.state(workspace)
 
     def verify_workspace(self, workspace):
-        return self.scientific.verify_workspace(workspace)
+        return {**self.scientific.verify_workspace(workspace), **self.synthesis.verify_workspace(workspace)}
 
     def decorate_task(self, task):
+        if task["action"] == "source-reports.synthesis-save":
+            return self.synthesis.decorate_task(task)
         return self.scientific.decorate_task(task)
 
     def scientific_source_preview_file(self, workspace, ticket_id):
