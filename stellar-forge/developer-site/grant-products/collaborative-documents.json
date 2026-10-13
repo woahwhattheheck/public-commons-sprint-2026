@@ -1,0 +1,175 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "collaborative-documents",
+  "heading": "## Collaborative Document Workbench: native shared editing and independent customer receiving",
+  "sources": [
+    {
+      "id": "collaborative-documents-source",
+      "label": "Complete original 50-file Collaborative Document Workbench source",
+      "repository": "woahwhattheheck/commons",
+      "kind": "tree",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae"
+    },
+    {
+      "id": "collaborative-documents-original-server",
+      "label": "Original native collaborative application and complete HTTP/lifetime contract",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/server.mjs",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 20099,
+          "sha256": "a98184b2bec35271a93bd6cbee2e940922fad2210cc3854a8247718f4034a429",
+          "git_blob": "7634466dbc1900c42fb919d8076dc4972c056c4f"
+        }
+      ]
+    },
+    {
+      "id": "collaborative-documents-operator",
+      "label": "Complete original operator workflow and customer receiving guide",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/OPERATOR.md",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 22922,
+          "sha256": "e3407566f2d2e4fbc97d0f3950ea6b470e2af6a49cbaa38cd9feecb10a1b4054",
+          "git_blob": "72d9359ef758c17c3bf1dbcfb21eab2b3fcd1ccb"
+        }
+      ]
+    },
+    {
+      "id": "collaborative-documents-core",
+      "label": "Original tenant/grant, source/migration, deployment and restore actions",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/core/workspace.mjs",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 23265,
+          "sha256": "5fd16c969c7d386b9d8372734f5ee0d453a75d3e65d7333ceb01a6b038843f6d",
+          "git_blob": "77033d23ee6e51fd964b8c618b44d44948ab290d"
+        }
+      ]
+    },
+    {
+      "id": "collaborative-documents-authorization",
+      "label": "Original host actor, tenant/document grant and ephemeral-session authority",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/core/auth.mjs",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 6687,
+          "sha256": "c18013814f6d3f3f75faedd45f01e146cd55a40546a4b8970721c736e49bba3d",
+          "git_blob": "6f53d4d601255c1dc6b5ea364aea59f6317950c9"
+        }
+      ]
+    },
+    {
+      "id": "collaborative-documents-runtime",
+      "label": "Original Hocuspocus/Yjs native synchronization and durable binary ownership",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/native/runtime.mjs",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 19922,
+          "sha256": "54cfdaf71025c0af4298f37106861980c4a040dbe0310dc1e947a81b491adfdf",
+          "git_blob": "ee5fbbfdcb05a083c4d4b9ce82821a5d62cb2e1e"
+        }
+      ]
+    },
+    {
+      "id": "collaborative-documents-editor",
+      "label": "Original two-client editor, full binary/vector storage and offline epoch handling",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/web/editor.mjs",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 24687,
+          "sha256": "ae1cff83cfd7c546e152e73660146733bdebcfc56f7d0cf817bb719e84d5c6ff",
+          "git_blob": "de8ac9a498cb314681df951b7414f45d9d83d3d2"
+        }
+      ]
+    },
+    {
+      "id": "collaborative-documents-receiving",
+      "label": "Complete original browser and independent project receiving programme",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/receiving/receive.mjs",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 58450,
+          "sha256": "1b0aa1e785d5bd8b2bb6bd466013545fc8041e9d063e0affaff2e979c8bb1a4f",
+          "git_blob": "3b1b0206c5af3728f39ba43e80782aff69063870"
+        }
+      ]
+    },
+    {
+      "id": "collaborative-documents-runtime-preparation",
+      "label": "Original locked runtime preparation and complete portable receiving",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/runtime/manage.py",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 38079,
+          "sha256": "60418d6e47c25ef3152cf352f58a8ec1a8a1304113f4e098d19d21b6b5654d8b",
+          "git_blob": "d4499c4560d23f2eb6a6c379f3b98aa8b78235f5"
+        }
+      ]
+    },
+    {
+      "id": "collaborative-documents-installer",
+      "label": "Original returned-application installation/build and host-specific runtime-ready",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/scripts/install.mjs",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 5645,
+          "sha256": "982463ecebac0b6c8e8a43349b27075069b558861af79ece4678c794f4dfadcc",
+          "git_blob": "0d49b189a7c392d395f52d27e176e6a6d8abbd39"
+        }
+      ]
+    },
+    {
+      "id": "collaborative-documents-lockfile",
+      "label": "Complete original exact package dependency lock",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/tiptap_hocuspocus_workshare_20261012/package-lock.json",
+      "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+      "editions": [
+        {
+          "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+          "bytes": 50357,
+          "sha256": "72621f79b14ef8f2bcccb1b02e29ad43784c8aec8d6c50561ca0bf3e330f845e",
+          "git_blob": "166988af51c4a7f2ae7133b210da19481e6857b4"
+        }
+      ]
+    }
+  ]
+}

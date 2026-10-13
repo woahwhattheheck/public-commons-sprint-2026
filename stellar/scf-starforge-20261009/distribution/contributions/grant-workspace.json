@@ -4,5 +4,26 @@
   "description": "grant workspace original Applications",
   "applicationProviders": {
     "grant-workspace": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/grant-workspace.mjs"
-  }
+  },
+  "components": [
+    "stellar/scf_2026/sf47_budget_model"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook/reader.py",
+    "stellar-forge/developer-site/dist/source-table-workspace.mjs",
+    "stellar-forge/developer-site/dist/source-delimited.mjs",
+    "stellar-forge/developer-site/dist/source-table-corrections.mjs",
+    "stellar-forge/developer-site/dist/source-document-tables.mjs",
+    "stellar-forge/developer-site/dist/source-table-intake.mjs",
+    "stellar-forge/developer-site/dist/onboarding.mjs",
+    "stellar-forge/developer-site/dist/offer.mjs",
+    "stellar-forge/developer-site/dist/grant-plan-core.mjs",
+    "stellar-forge/developer-site/dist/grant-plan-source.mjs"
+  ],
+  "browserAssets": [
+    {
+      "server": "stellar/scf_2026/sf47_budget_model/workspace/operations_http.py",
+      "manifest": "stellar/scf_2026/sf47_budget_model/workspace/portfolio-browser-assets.json"
+    }
+  ]
 }
