@@ -6,7 +6,7 @@ from pathlib import Path
 from ..model import require, descriptor, HASH, REQUEST
 
 SCHEMA = "starforge.qgis-parcel-workspace.v1"
-MODULES = ("__init__.py", "intake.py", "state.py", "workspace.py", "portfolio.py", "projection.py", "review.py", "operator.py", "formats.py", "capture/__init__.py", "capture/providers.py", "capture/workspace.py", "capture/__main__.py", "capture/OPERATIONS.md")
+MODULES = ("__init__.py", "intake.py", "state.py", "workspace.py", "portfolio.py", "projection.py", "review.py", "operator.py", "formats.py", "capture/__init__.py", "capture/providers.py", "capture/workspace.py", "capture/__main__.py", "capture/OPERATIONS.md", "capture_operator.py")
 
 def empty_state():
     return {"schema": SCHEMA, "activeEditionId": None, "editions": [], "entities": [],

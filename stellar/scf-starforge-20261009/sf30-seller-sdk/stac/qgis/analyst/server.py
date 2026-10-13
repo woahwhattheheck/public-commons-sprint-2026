@@ -44,7 +44,7 @@ SECURITY = {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
             "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; "
                 "connect-src 'self'; img-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; "
                 "base-uri 'none'; form-action 'self'"}
-EXTERNAL_ACTIONS = frozenset(("source.inspect", "source.import", "project.export", "project.receive", "field.command"))
+EXTERNAL_ACTIONS = frozenset(("source.inspect", "source.import", "project.export", "project.receive", "field.command", "parcel.capture"))
 
 
 def external_input(original):
