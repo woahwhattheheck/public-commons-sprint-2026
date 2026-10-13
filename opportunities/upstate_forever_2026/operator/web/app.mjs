@@ -109,11 +109,11 @@ async function refresh({force=false}={}){
   const requestedWorkspace=workspace;
   try{
     let data;
-    try{data=await api('/api/state'+(requestedWorkspace?'?workspace='+encodeURIComponent(requestedWorkspace):''));}
+    try{data=await api('/api/state?compact=1'+(requestedWorkspace?'&workspace='+encodeURIComponent(requestedWorkspace):''));}
     catch(error){
       if(workspace!==requestedWorkspace)return;
       if(error.status!==404||!requestedWorkspace)throw error;
-      data=await api('/api/state');
+      data=await api('/api/state?compact=1');
     }
     if(workspace!==requestedWorkspace)return;
     state=data;workspace=data.workspace_key;sessionStorage.setItem('upstate-selected-workspace',workspace);
