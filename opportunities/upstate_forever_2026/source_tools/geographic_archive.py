@@ -337,7 +337,7 @@ def _archive_selection(requested, handover):
 
 
 def binding(workspace, prepared, scientific, delivery, review, response_id, *,
-            archive_selection=None, handover=None, utility_context=None, reference_basis=None, programme=None):
+            archive_selection=None, handover=None, utility_context=None, reference_basis=None, programme=None, geographic_gis=None):
     """Bind full-course completion, or an explicitly separate reference edition."""
     members = {}
     cache = {}
@@ -557,6 +557,29 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
         for item in programme["report"]["files"]:
             descriptor("", item)
 
+    if geographic_gis is not None:
+        from model.geographic_gis_handover import verify as verify_reference_gis, DIRECTORY as GIS_DIRECTORY
+        from model.native_run_history import ROOT as HISTORY_ROOT
+        verify_reference_gis(workspace, geographic_gis)
+        _require(geographic_gis["identity"]["geographic_binding"]["geographic_id"] == prepared["id"]
+                 and geographic_gis["reference_run_ids"] == [prepared["baseline_run_id"], *prepared["alternative_run_ids"]]
+                 and geographic_gis["identity"]["delivery"]["path"] == "deliveries/" + delivery_id + "/delivery-state.json",
+                 "Retain the GIS edition of the selected original geographic delivery")
+        record(GIS_DIRECTORY + "/" + identifier(geographic_gis["id"]) + "/record.json", geographic_gis)
+        for relative in (GIS_DIRECTORY + "/" + geographic_gis["id"],
+                         "gis-exports/" + identifier(geographic_gis["export"]["id"]),
+                         HISTORY_ROOT + "/" + identifier(geographic_gis["history_id"])):
+            directory = root / relative
+            _require(not directory.is_symlink() and directory.resolve(strict=True).is_relative_to(root),
+                     "Keep original GIS and execution history within this Workspace")
+            for path in sorted(directory.rglob("*")):
+                _require(not path.is_symlink(), "Original GIS history contains a symbolic link")
+                if path.is_file() and not path.name.endswith(".lock"):
+                    item = describe_file(root, path)
+                    add(item["path"], item)
+        for source in (geographic_gis["context_source"], geographic_gis["history_source"]):
+            collection(source["source_collection_id"])
+
     archive_delivery = None
     if handover is not None:
         handover_id = identifier(handover["id"])
@@ -573,6 +596,7 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
                  and handover_record.get("delivery_id") == delivery_id
                  and handover_record.get("reference_basis") == reference_basis
                  and handover_record.get("geographic_programme") == programme
+                 and handover_record.get("geographic_gis") == geographic_gis
                  and handover_record.get("review", {}).get("review_id") == review["id"]
                  and handover_record.get("review", {}).get("latest_response_id") == response_id
                  and digest(handover_record) == handover["identity"]["content_sha256"]
@@ -627,6 +651,8 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
     if programme is not None:
         value.update(geographic_programme_id=programme["programme_id"],
                      geographic_programme_sha256=programme_identity)
+    if geographic_gis is not None:
+        value.update(geographic_gis_id=geographic_gis["id"], geographic_gis_sha256=digest(geographic_gis))
     if reference is not None:
         value.update(schema="upstate.geographic-reference-handover-binding/v1",
                      completion_scope="reference", reference_basis=reference["basis"],
@@ -638,7 +664,7 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
 
 
 def retain_binding(workspace, output, prepared, scientific, delivery, review, response_id, *,
-                   archive_selection=None, handover=None, utility_context=None, reference_basis=None, programme=None):
+                   archive_selection=None, handover=None, utility_context=None, reference_basis=None, programme=None, geographic_gis=None):
     """Retain the pre-backup selection before the archive's publication window.
 
     Its immutable generation survives a lost outer receiving checkpoint.
@@ -660,6 +686,8 @@ def retain_binding(workspace, output, prepared, scientific, delivery, review, re
     if programme is not None:
         scope.update(geographic_programme_id=programme["programme_id"],
                      geographic_programme_sha256=digest(programme))
+    if geographic_gis is not None:
+        scope.update(geographic_gis_id=geographic_gis["id"], geographic_gis_sha256=digest(geographic_gis))
     path = Path(output) / "archive-bindings" / (digest(scope) + ".json")
     if path.exists():
         selected = read_json(path)
@@ -671,7 +699,7 @@ def retain_binding(workspace, output, prepared, scientific, delivery, review, re
         return selected
     selected = binding(workspace, prepared, scientific, delivery, review, response_id,
                        archive_selection=archive_selection, handover=handover,
-                       utility_context=utility_context, reference_basis=reference_basis, programme=programme)
+                       utility_context=utility_context, reference_basis=reference_basis, programme=programme, geographic_gis=geographic_gis)
     atomic_json(path, selected, immutable=True)
     return selected
 

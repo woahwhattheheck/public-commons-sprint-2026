@@ -30,7 +30,10 @@
         "docs/GEOGRAPHIC_SOURCE_INTERPRETATION_RECEIVING.md",
         "model/geographic_programme.py",
         "source_tools/adopt_geographic_headwaters_programme.py",
-        "source_tools/GEOGRAPHIC_PROGRAMME.md"
+        "source_tools/GEOGRAPHIC_PROGRAMME.md",
+        "model/geographic_gis_handover.py",
+        "source_tools/GEOGRAPHIC_REFERENCE_GIS.md",
+        "integration/component_fragments/geographic-reference-gis.json"
       ],
       "requires": [
         "core",
@@ -39,7 +42,9 @@
         "geographic-receiving-context",
         "ensembles",
         "study-transfer",
-        "programme-activity"
+        "programme-activity",
+        "gis-native-study",
+        "native-run-history"
       ]
     }
   },

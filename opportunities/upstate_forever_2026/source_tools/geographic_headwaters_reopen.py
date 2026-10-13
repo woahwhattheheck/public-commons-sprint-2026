@@ -72,7 +72,7 @@ def _scientific_identity(scientific):
 def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id,
                 output, *, receiving_lock_fd, receiving_lock_path,
                 review_response_id=None, receiving_context=None, scenario_context=None,
-                reference_basis=None, programme=None):
+                reference_basis=None, programme=None, geographic_gis=None):
     """Retain and run one complete read-only cold-reopen invocation."""
     support = _support()
     root = Path(restored["directory"]).resolve(strict=True)
@@ -114,6 +114,7 @@ def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id
             "scenario_context": scenario_context,
             "reference_basis": reference_basis,
             "geographic_programme": programme,
+            "geographic_gis": geographic_gis,
             "receiving_lock": lock_identity,
         }
         support._write(request_path, request)
@@ -149,7 +150,8 @@ def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id
                 or result.get("application") != str(application)
                 or result.get("workspace") != str(workspace)
                 or result.get("reference_basis") != reference_basis
-                or result.get("geographic_programme") != programme):
+                or result.get("geographic_programme") != programme
+                or result.get("geographic_gis") != geographic_gis):
             raise ValueError("Cold receiving returned a different source, project or invocation")
         for name, identity in snapshots.items():
             if support._identity(support._member(application, name).lstat()) != identity:
@@ -346,6 +348,23 @@ def _inspect(request, lock_fd):
                 or programme.get("existing_delivery_id") != delivery_id):
             raise ValueError("The archived Programme adoption selects another original delivery")
         programme_verification = verify_programme(ws, programme)
+    geographic_gis = request.get("geographic_gis")
+    gis_verification = None
+    if geographic_gis is not None:
+        from model.geographic_gis_handover import verify as verify_reference_gis
+        item = (request.get("archive_delivery") or {}).get("files", {}).get("geographic_gis")
+        expected = request["members"].get("delivery/geographic-gis.json")
+        if (not item or item.get("path") != "delivery/geographic-gis.json"
+                or expected is None or any(item.get(key) != expected[key] for key in ("bytes", "sha256"))):
+            raise ValueError("Retain the exact original geographic GIS edition inside the archive")
+        path = support._member(ws.root.parent, item["path"])
+        before = support._check_file(path, expected)
+        if (support._read(path) != geographic_gis or support._identity(path.lstat()) != before
+                or geographic_gis["identity"]["geographic_binding"]["geographic_id"] != prepared["id"]
+                or geographic_gis["reference_run_ids"] != [prepared["baseline_run_id"], *prepared["alternative_run_ids"]]
+                or geographic_gis["identity"]["delivery"]["path"] != "deliveries/" + delivery_id + "/delivery-state.json"):
+            raise ValueError("The archived GIS handover selects another original geographic delivery")
+        gis_verification = verify_reference_gis(ws, geographic_gis, receive=True)
     from model import reviews
     review_id = request["review_id"]
     files.json("reviews/" + review_id + ".json")
@@ -371,6 +390,8 @@ def _inspect(request, lock_fd):
         "scenario_context": interpretation,
         "geographic_programme": programme,
         "programme_verification": programme_verification,
+        "geographic_gis": geographic_gis,
+        "gis_verification": gis_verification,
         "review_response_id": request.get("review_response_id"),
         "review_response_ids": [row["id"] for row in response_prefix],
         "archive_sha256": request["archive_sha256"], "receiving_lock": lock,
