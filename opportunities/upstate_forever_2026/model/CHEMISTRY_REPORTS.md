@@ -138,7 +138,7 @@ receiving includes all new runtime leaves and this guide.
 
 ## Composite observations in the same scientific report
 
-The native 0.2 observation operator can retain a composite measurement in place
+The native compound observation operator can retain a composite measurement in place
 of a single species. For example, a declared total-nitrogen reference may carry
 `measurement: "total_nitrogen"`, `basis: "N"`, and the original positive weights
 for `ammonium_n` and `nitrate_n` in its `components` list. Such a row omits
@@ -174,3 +174,12 @@ carried unused extra metadata. This presentation is
 selection. Earlier saved reports and their exact original artifacts remain
 readable. The original numerical calculation is not repeated to render this
 edition.
+
+## Explicit observation intervals
+
+Native 0.3.0 also retains original lower and upper concentration limits with explicit
+open or closed endpoints. These rows keep their weighted observation operator and
+source reference. Interval support and standardized distance remain separate from
+point RMSE; the scientific report shows original limits, endpoint membership and
+retained predictions. See [OBSERVATIONS.md](reach_chemistry/OBSERVATIONS.md) and
+[the operator guide](../operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md).
