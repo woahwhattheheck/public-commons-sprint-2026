@@ -90,10 +90,12 @@ OWNED = frozenset({
     "source_tools/PARCEL_CRITERIA_GEOMETRY.md",
     "source_tools/PARCEL_CRITERIA_INTERVALS.md",
     "source_tools/SOIL_FLOODPLAIN_SOURCES.md",
+    "source_tools/SOURCE_ACQUISITION_CONTINUATION.md",
     "source_tools/keowee_interval_receiving.mjs",
     "source_tools/parcel_criteria.py",
     "source_tools/soil_floodplain_sources.py",
     "source_tools/source_response_reuse.py",
+    "source_tools/soil_sources.py",
 })
 SCHEMA = "upstate.conservation-addon/v1"
 KNOWN_PRIOR = {
@@ -339,7 +341,8 @@ KNOWN_PRIOR = {
         "37fabd65df3e0f19f486055cfb1ed435bd7919fb63de3389784fa88ebcfb064f"
     ],
     "source_tools/soil_sources.py": [
-        "082a1ed13145e0532fba7350534e71a22d1efbf68ed30c100b274baa94de8b2a"
+        "082a1ed13145e0532fba7350534e71a22d1efbf68ed30c100b274baa94de8b2a",
+        "9fac4ad782b733fcca8a4e013b27437e2df9cf360313f97336e3568932558d48"
     ],
     "model/conservation_catalog.py": [
         "91700433cc6e0cca672894bacc215c32e71ea83de4a3ab06305601aabbe20c4f"
@@ -928,6 +931,7 @@ def read_packet(path):
         "source_tools/parcel_criteria.py",
         "source_tools/soil_floodplain_sources.py",
         "source_tools/source_response_reuse.py",
+        "source_tools/soil_sources.py",
     }
     if needed - set(files):
         raise ValueError("The complete backend, CLI and operator source must travel together")
@@ -1011,9 +1015,15 @@ def install(application, source):
             if path.is_symlink():
                 raise ValueError("Shared operator source is a symlink: " + name)
             current = path.read_bytes()
-            incoming = patch(current.decode("utf-8"), registered=registered).encode("utf-8")
+            # Shared compatibility joins must compose the incoming owned source,
+            # including the current acquisition client's recovery behavior.
+            candidate = updates.get(name, current)
+            incoming = patch(candidate.decode("utf-8"), registered=registered).encode("utf-8")
             if incoming != current:
                 updates[name], original[name] = incoming, current
+            elif name in updates:
+                del updates[name]
+                del original[name]
         for name, content in updates.items():
             if name.endswith(".py"):
                 compile(content.decode("utf-8"), str(application / name), "exec")
