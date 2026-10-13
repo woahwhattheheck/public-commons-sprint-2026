@@ -1,0 +1,48 @@
+{
+  "schema": "stellar-forge.curriculum-migration-adoption.v1",
+  "id": "curriculum-migration-workbench",
+  "original": {
+    "repository": "woahwhattheheck/commons",
+    "commit": "0a79b94fb3fe14008d37e71838822e41dee174cb",
+    "prefix": "tools/curriculum-migration-workbench/",
+    "selectedFiles": 20,
+    "sourceSha256": "0d327292684c56e52b45913e9acb5bb2efc6d7feb2a19f4ece489706fb432579",
+    "selection": "app/source-selection.json",
+    "license": "app/LICENSE.OAK",
+    "mode": "BYTE_IDENTICAL"
+  },
+  "models": {
+    "api": "app/model.mjs",
+    "curriculum": "app/curriculum-migration.mjs",
+    "coverage": "app/curriculum-coverage.mjs",
+    "generatedApiSdk": "app/generate-sdk.mjs",
+    "portableFormat": "curriculum-workspace-export.v1"
+  },
+  "baseline": {
+    "workspaceId": "oak-public-contracts-20261013",
+    "cases": 25,
+    "history": 51,
+    "scope": "25 published response examples linked to their API operations; retained published REST and source-contract inventory.",
+    "genuineBulkInput": "PENDING_INPUT",
+    "note": "The managed receiving course identifies its added published-example operations as an authored receiving exercise. They are not customer staging responses or genuine BULK commissioning."
+  },
+  "managed": {
+    "command": "curriculum-migration-workbench",
+    "applicationKind": "curriculum-migration-workbench",
+    "clientExport": "./curriculum-migration-workbench/client",
+    "merchantProvider": "curriculum-migration-workspaces",
+    "merchantConfiguration": "curriculumMigration",
+    "physicalIdentity": "creation.json physical store UUID and canonical directory; each received copy has a separate branch ID.",
+    "persistence": "Full immutable source/input/snapshot/first-result objects with a compact atomic head and the maintained Runtime lifetime operation lease.",
+    "browser": "Composed managed loader and UI adapter; all 20 original app source bodies remain unchanged. Downloaded standalone HTML is the exact original offline application."
+  },
+  "receiving": {
+    "originalOperation": "curriculum-migration-complete-receiving-20261013",
+    "lock": "complete-receiving.lock",
+    "directory": "managed-integration",
+    "entry": "../../tools/curriculum-migration-workbench/run-managed-receiving.py",
+    "guide": "../../tools/curriculum-migration-workbench/MANAGED_RECEIVING.md",
+    "selection": "../../tools/curriculum-migration-workbench/managed-source-selection.json",
+    "scope": "Existing original operation, selected complete original workspace, Runtime Applications, managed SDK and agent, independent branches, actual browser controls and downloads, and cold receiving. No native completion is implied by source publication."
+  }
+}
