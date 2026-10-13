@@ -209,14 +209,17 @@ def build(workspace, selection):
     if any(not isinstance(contact.get(k), str) or not contact[k].strip()
            for k in ("name", "organization", "email")):
         raise ValueError("Retain the actual responsible contact for GIS metadata")
+    from .model_selection import require_complete_delivery
     baseline = workspace.inspect_run(selection["baseline_run_id"])
     if baseline["state"] != "complete":
         raise ValueError("Complete the selected baseline native run")
+    require_complete_delivery(baseline)
     scenario_ids = selection.get("scenario_run_ids", [])
     if not scenario_ids:
         raise ValueError("Select completed explicit future land-cover scenarios for the future-service maps")
     alternatives = [workspace.inspect_run(i) for i in scenario_ids]
     for run in alternatives:
+        require_complete_delivery(run)
         if run["state"] != "complete" or run["selection"]["grid_id"] != baseline["selection"]["grid_id"]:
             raise ValueError("Delivery scenarios must be complete on the same retained grid")
         if run["selection"]["profile_id"] != baseline["selection"]["profile_id"]:
@@ -225,7 +228,8 @@ def build(workspace, selection):
             raise ValueError("Future map alternatives must contain explicit source-bound land-cover changes")
     grid = workspace.get_grid(baseline["selection"]["grid_id"])
     profile = workspace._get("profiles", baseline["selection"]["profile_id"])
-    key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION})
+    key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION,
+                  "map_renderer": cartography.MAP_RENDERER_VERSION})
     directory = workspace.root / "deliveries" / key
     directory.mkdir(parents=True, exist_ok=True)
     state_path = directory / "delivery-state.json"
@@ -350,9 +354,32 @@ def build(workspace, selection):
                 atomic_json(directory / "priorities" / "inventory.json", inventory)
                 state["files"]["parcel_inventory"] = describe_file(directory, directory / "priorities" / "inventory.json")
                 atomic_json(state_path, state)
+            if "map_scales" not in state:
+                map_percentile = settings.get("display_percentile", 98)
+                baseline_scales = {name: cartography.shared_display_scale(
+                    [path], percentile=map_percentile, units=rasters.MASS_UNITS[name])
+                    for name, path in mass_paths.items()}
+                alternative_scales = {}
+                for name in rasters.MASS_UNITS:
+                    paths = [verify_file(comparison_root, alternative["artifacts"][name])
+                             for alternative in comparison["alternatives"]]
+                    alternative_scales[name] = cartography.shared_display_scale(
+                        paths, signed=True, percentile=map_percentile, units=rasters.MASS_UNITS[name])
+                state["map_scales"] = {
+                    "renderer": cartography.MAP_RENDERER_VERSION,
+                    "baseline": baseline_scales, "alternatives": alternative_scales}
+                scale_path = directory / "maps" / "display-scales.json"
+                atomic_json(scale_path, state["map_scales"])
+                state["files"]["display_scales"] = describe_file(directory, scale_path)
+                atomic_json(state_path, state)
             def panel(name):
-                return {"path": mass_paths[name], "label": cartography.LABELS[name], "units": rasters.MASS_UNITS[name]}
-            score_panel = {"path": priority, "label": "Weighted relative export priority", "units": "dimensionless (0–1)"}
+                return {"path": mass_paths[name], "label": cartography.LABELS[name],
+                        "units": rasters.MASS_UNITS[name], "scale": state["map_scales"]["baseline"][name]}
+            score_panel = {"path": priority, "label": "Weighted relative export priority",
+                "units": "dimensionless (0–1)", "scale": {
+                    "minimum": 0.0, "maximum": 1.0, "signed": False,
+                    "units": "dimensionless (0–1)",
+                    "label": "Fixed 0–1 range for the recorded weighted export priority."}}
             all_specs = {
                 "current_nutrient_export": ([panel("nitrogen_export"), panel("phosphorus_export")], []),
                 "current_sediment_export": ([panel("sediment_export")], []),
@@ -378,7 +405,8 @@ def build(workspace, selection):
                 for name, item in alternative["artifacts"].items():
                     selected_panels[name] = {"path": verify_file(comparison_root, item),
                                             "label": cartography.LABELS[name] + " change",
-                                            "units": rasters.MASS_UNITS[name], "signed": True}
+                                            "units": rasters.MASS_UNITS[name], "signed": True,
+                                            "scale": state["map_scales"]["alternatives"][name]}
                 for family, names in (("future_sediment_loss", ["sediment_export"]),
                                        ("future_nutrient_runoff", ["nitrogen_export", "phosphorus_export"])):
                     map_key = family + "-" + alternative["run_id"]
@@ -523,7 +551,8 @@ def build(workspace, selection):
                 "source_data": records, "rasters": {},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
                 "project_assets": [state["files"]["combined_priority"]["path"],
-                                   state["files"]["working_archive"]["path"]]}
+                                   state["files"]["working_archive"]["path"],
+                                   state["files"]["display_scales"]["path"]]}
             for name in rasters.MASS_UNITS:
                 manifest["rasters"][name] = {"path": state["files"][name]["path"],
                     "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
