@@ -48,6 +48,7 @@ export async function compileProcessProgramme(configurationPath,outputPath){
  const programme=buildFlowableProcessProgramme({catalogText:catalog.text,members,inputs,operation:config.operation,roles:config.roles,
   familyKeys:config.familyKeys,migrateKeys:config.migrateKeys,delegationKey:config.delegationKey,tenantId:config.tenantId});
  const raw=Buffer.from(JSON.stringify(programme,null,2)+'\n'),temporary=join(dirname(outputPath),'.'+basename(outputPath)+'.'+randomUUID()+'.pending');
+ need(raw.length<=16*1024*1024,'The complete programme exceeds the original 16 MiB source limit; select a smaller complete commissioning scope.');
  const h=await open(temporary,constants.O_CREAT|constants.O_EXCL|constants.O_WRONLY|constants.O_NOFOLLOW,0o600);
  try{
   try{await h.writeFile(raw);await h.sync();}finally{await h.close();}
