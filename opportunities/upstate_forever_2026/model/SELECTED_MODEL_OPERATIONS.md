@@ -221,7 +221,7 @@ The completed run's **Original completed models** table shows the original run, 
 
 The saved native result includes actual prepared grid companions and the original source editions identified by reused inputs. Its original request retains both selected source run IDs. Existing task retry, cancellation before start, native-result reopening, and complete Workspace backup continue through their maintained routes.
 
-mpact workspace state and completed native stages
+### Compact workspace state and completed native stages
 
 The live workspace state carries each run's native completion times and retained file counts in `stage_summary`. Opening a run returns its complete `stages` records. The completed-model form accepts both shapes and ranks candidate sources by the target scenario, grid and profile, then their original completion time.
 
@@ -229,7 +229,7 @@ Only a stage with its original completion timestamp and retained files enters th
 
 The full-delivery picker reads the same completed stages and requires retained nitrogen, phosphorus and sediment exports from a complete combined selection. NDR-only and SDR-only runs keep their independent selections and reporting outputs.
 
-### Co### Continue a failed input match
+### Continue a failed input match
 
 Read the error on the original task. The comparison identifies the exact input or parameter that differs. Reopen the prepared run and select source stages matching its actual grid, scenario changes, original biophysical table, and selected native parameters. Retain the original failed task and source runs alongside the new explicit selection.
 
@@ -250,3 +250,11 @@ Receive the full current application, the current selected-model layer, and the 
 The application ships the complete `ecsa_runs` runtime beside `model` and `operator`. The original operator's `run.start` branch enters `invoke_original_run` inside its existing task. The same task request contains any selected original NDR/SDR run IDs; the retained result stays bound to its original task and attempt.
 
 The completed native tree records all actual run files and original directories. Its receiving path recreates nested and empty directories as well as the original file bodies. File-only native trees from earlier editions keep their existing representation. Current directory-aware trees use the same native tree schema with an additional explicit `directories` member. Existing-file repair checks every selected file and required directory before installing missing files, preserving an existing different file as a visible conflict in that original receive.
+
+### Retaining repeated source and model files
+
+The original operator freezes the selected input files before it executes a native run and retains the completed run before it records task success. The existing source, grid, native-stage and reporting-file descriptors supply each known file's exact byte length and SHA-256.
+
+When that body is already retained, the store reads and checks the actual selected file and the retained body, then reuses the immutable body directly. It allocates no full temporary copy for that known duplicate. A new file follows the existing streaming capture path and is published only after its original length, digest and stable file identity agree. This reduces temporary disk demand when a programme reuses the same source grids or adopts completed native stages.
+
+The task, attempt, original run and saved native-tree identities remain the same. Complete source files, native files and directories remain available through the original receiving operation. Files without an existing descriptor still use complete streaming capture, so the full native run tree remains retained alongside the described outputs.

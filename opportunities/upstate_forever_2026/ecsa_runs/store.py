@@ -238,26 +238,80 @@ class RunStore:
         from .artifacts import restore_artifacts
         return restore_artifacts(self, self.read(row["result_sha"]), job_id)
 
-    def put_file(self, path: str | Path) -> tuple[str, int]:
-        """Stream a potentially multi-gigabyte raster into immutable storage."""
+    def put_file(self, path: str | Path, *, expected: dict | None = None) -> tuple[str, int]:
+        """Stream a complete file; reuse a matching known blob without staging it.
+
+        expected is the original file descriptor's sha256 and byte length. Both
+        the selected source and any existing immutable body are checked. A new
+        body still uses one complete capture pass before atomic publication.
+        """
+        selected = None
+        if expected is not None:
+            if not isinstance(expected, dict):
+                raise TypeError('Expected file metadata must be an original descriptor')
+            sha = check_sha(expected.get('sha256'))
+            size = expected.get('bytes')
+            if type(size) is not int or size < 0:
+                raise ValueError('Expected file byte length must be nonnegative')
+            selected = (sha, size)
         path = Path(path)
-        before = path.stat()
-        tmp = self.root / 'blobs' / ('.incoming-' + uuid.uuid4().hex)
-        h, size = hashlib.sha256(), 0
-        try:
-            with path.open('rb') as src, tmp.open('xb') as dst:
-                while chunk := src.read(1024 * 1024):
-                    dst.write(chunk); h.update(chunk); size += len(chunk)
-                dst.flush(); os.fsync(dst.fileno())
-            after = path.stat()
-            if (before.st_size,before.st_mtime_ns,before.st_ino) != (after.st_size,after.st_mtime_ns,after.st_ino):
-                raise RuntimeError(f'File changed during capture: {path}')
-            sha = h.hexdigest()
-            target = self.blob_path(sha)
-            if target.exists(): self.verify_blob(sha)
-            else: os.replace(tmp, target)
+
+        # A file already frozen in this store needs no second capture.
+        if path.parent.resolve() == (self.root / 'blobs').resolve() and len(path.name) == 64:
+            sha = check_sha(path.name)
+            size = self.verify_blob(sha)
+            if selected is not None and (sha, size) != selected:
+                raise ValueError(f'Original file metadata differs: {path}')
             return sha, size
-        finally: tmp.unlink(missing_ok=True)
+
+        def identity(value):
+            return (value.st_dev, value.st_ino, value.st_size,
+                    value.st_mtime_ns, value.st_ctime_ns)
+
+        before = identity(path.stat())
+        if selected is not None and before[2] != selected[1]:
+            raise ValueError(f'Original file length differs: {path}')
+
+        def capture(output=None):
+            h, size = hashlib.sha256(), 0
+            with path.open('rb') as source:
+                if identity(os.fstat(source.fileno())) != before:
+                    raise RuntimeError(f'File changed before capture: {path}')
+                while chunk := source.read(1024 * 1024):
+                    if output is not None:
+                        output.write(chunk)
+                    h.update(chunk)
+                    size += len(chunk)
+                if identity(os.fstat(source.fileno())) != before:
+                    raise RuntimeError(f'File changed during capture: {path}')
+            if identity(path.stat()) != before:
+                raise RuntimeError(f'File changed during capture: {path}')
+            result = h.hexdigest(), size
+            if selected is not None and result != selected:
+                raise ValueError(f'Original file bytes differ: {path}')
+            return result
+
+        if selected is not None and self.blob_path(selected[0]).exists():
+            sha, size = capture()
+            if self.verify_blob(sha) != size:
+                raise ValueError(f'Retained file length differs: {sha}')
+            return sha, size
+
+        tmp = self.root / 'blobs' / ('.incoming-' + uuid.uuid4().hex)
+        try:
+            with tmp.open('xb') as output:
+                sha, size = capture(output)
+                output.flush()
+                os.fsync(output.fileno())
+            target = self.blob_path(sha)
+            if target.exists():
+                if self.verify_blob(sha) != size:
+                    raise ValueError(f'Retained file length differs: {sha}')
+            else:
+                os.replace(tmp, target)
+            return sha, size
+        finally:
+            tmp.unlink(missing_ok=True)
 
     def verify_blob(self, sha: str) -> int:
         h, size = hashlib.sha256(), 0
