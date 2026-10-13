@@ -51,6 +51,7 @@ from .analysis_publication import AnalysisPublications
 from . import publication_http, analysis_publication_cli
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
+from .query_stream import reviewed_view_selection
 from .storage import digest, dump, parse, private_directory, read
 
 _SCHEMA = "stellar-forge.customer-analysis.v1"
@@ -371,9 +372,9 @@ class AnalysisWorkspace:
             spec.update(self.responses.prepare(kind, request))
         elif kind == "query":
             spec.update(_query(request))
-            if not isinstance(request.get("expected_views"), list):
+            if not isinstance(request.get("expected_views"), (list, dict)):
                 raise StateError("ANALYSIS_REVIEWED_VIEWS_REQUIRED")
-            spec["expected_views"] = request["expected_views"]
+            spec["expected_views"] = reviewed_view_selection(request["expected_views"])
         elif kind == "query-export":
             spec.update(self.exports.prepare(request))
         elif kind == "workbook":
@@ -538,6 +539,8 @@ class AnalysisWorkspace:
                 result = {"columns": list(result.columns), "rows": [[_cell(v) for v in row] for row in result.rows],
                           "truncated": result.truncated, "views": list(result.views), "read_tables": list(result.read_tables),
                           "source_versions": sources}
+                if isinstance(spec["expected_views"], dict):
+                    result["view_selection"] = spec["expected_views"]
                 result["result_sha256"] = digest(_json(result).encode())
             elif kind == "compare":
                 # Difference rows and the COMPLETE job become visible together.

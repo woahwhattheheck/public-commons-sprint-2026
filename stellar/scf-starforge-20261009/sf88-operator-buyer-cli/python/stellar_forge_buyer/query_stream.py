@@ -4,6 +4,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from copy import deepcopy
 import math
+import re
 import sqlite3
 import time
 
@@ -14,6 +15,54 @@ _READ_ACTIONS = frozenset((sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ,
                           sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_RECURSIVE))
 _FILE_FUNCTIONS = frozenset(("load_extension", "writefile", "readfile"))
 _VALUE_LIMIT = 16 * 1024 * 1024
+
+
+def reviewed_view_selection(value):
+    """Retain either the complete catalogue or an explicit immutable selection."""
+    if isinstance(value, list):
+        return deepcopy(value)
+    if (not isinstance(value, dict) or set(value) != {"scope", "bindings"}
+            or value.get("scope") != "selected"
+            or not isinstance(value.get("bindings"), list)
+            or not 1 <= len(value["bindings"]) <= 4096):
+        raise StateError("DATASET_SQL_REVIEWED_VIEWS_INVALID")
+    names = set()
+    for binding in value["bindings"]:
+        if (not isinstance(binding, dict)
+                or set(binding) != {"name", "version_id", "revision"}
+                or not isinstance(binding["name"], str)
+                or not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_]{0,63}", binding["name"])
+                or not isinstance(binding["version_id"], str)
+                or not re.fullmatch(r"[a-f0-9]{64}", binding["version_id"])
+                or type(binding["revision"]) is not int or binding["revision"] < 1
+                or binding["name"].lower() in names):
+            raise StateError("DATASET_SQL_REVIEWED_VIEWS_INVALID")
+        names.add(binding["name"].lower())
+    return deepcopy(value)
+
+
+def resolve_view_selection(database, connection, expected_views):
+    """Check the exact source bindings inside the query's own transaction.
+
+    Selected mode allows unrelated views to be added while restricting SQL
+    reads to the selected views and their immutable original physical tables.
+    The ordinary list form continues to pin the entire catalogue.
+    """
+    observed = database._views(connection)
+    if expected_views is None:
+        return observed, None
+    selected = reviewed_view_selection(expected_views)
+    if isinstance(selected, list):
+        if observed != selected:
+            raise StateError("DATASET_SQL_VIEWS_CHANGED")
+        return observed, None
+    current = {item["name"].lower(): item for item in observed}
+    bindings = selected["bindings"]
+    if any(current.get(item["name"].lower()) != item for item in bindings):
+        raise StateError("DATASET_SQL_VIEWS_CHANGED")
+    allowed = {item["name"].lower() for item in bindings}
+    allowed.update("sf_dataset_rows_" + item["version_id"] for item in bindings)
+    return bindings, frozenset(allowed)
 
 
 def row_bytes(values):
@@ -28,10 +77,11 @@ class QueryStream:
     sets complete=True; an early break, cancellation or timeout never does.
     """
 
-    def __init__(self, database, connection, *, views, timeout, cancel):
+    def __init__(self, database, connection, *, views, timeout, cancel, allowed_reads=None):
         self._database = database
         self._connection = connection
         self._views = deepcopy(views)
+        self._allowed_reads = allowed_reads
         self._deadline = time.monotonic() + timeout
         self._cancel = cancel
         self._reason = None
@@ -76,6 +126,9 @@ class QueryStream:
                 and (second or first or "").lower() in _FILE_FUNCTIONS):
             return sqlite3.SQLITE_DENY
         if self._track_reads and action == sqlite3.SQLITE_READ and first:
+            if self._allowed_reads is not None and first.lower() not in self._allowed_reads:
+                self._reason = "DATASET_SQL_SOURCE_OUTSIDE_SELECTION"
+                return sqlite3.SQLITE_DENY
             self._tables.add(first)
         return sqlite3.SQLITE_OK
 
@@ -136,10 +189,9 @@ def open_query(database, connection, sql, parameters=(), *, timeout=300,
             or not math.isfinite(timeout) or not 0 < timeout <= 86400
             or cancel is not None and not callable(cancel)):
         raise StateError("DATASET_SQL_QUERY_OPTIONS_INVALID")
-    views = database._views(connection)
-    if expected_views is not None and (not isinstance(expected_views, list) or views != expected_views):
-        raise StateError("DATASET_SQL_VIEWS_CHANGED")
-    stream = QueryStream(database, connection, views=views, timeout=timeout, cancel=cancel)
+    views, allowed_reads = resolve_view_selection(database, connection, expected_views)
+    stream = QueryStream(database, connection, views=views, timeout=timeout,
+                         cancel=cancel, allowed_reads=allowed_reads)
     previous_length = connection.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, _VALUE_LIMIT)
     connection.set_authorizer(stream._authorize)
     connection.set_progress_handler(lambda: int(stream._interrupted()), 1000)

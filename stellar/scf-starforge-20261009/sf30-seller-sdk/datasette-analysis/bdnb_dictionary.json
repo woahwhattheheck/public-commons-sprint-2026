@@ -1,0 +1,438 @@
+{
+  "schema": "stellar-forge.bdnb-dictionary.v1",
+  "id": "bdnb-v0.7.11-core-20261013",
+  "title": "BDNB original building/address/identity field dictionary",
+  "tables": [
+    {
+      "name": "batiment_groupe",
+      "primary_key": [
+        "batiment_groupe_id"
+      ],
+      "description": "Publisher building group grain; preserve group identity before address joins.",
+      "geometry": {
+        "field": "geom_groupe",
+        "type": "MultiPolygon",
+        "crs": "EPSG:2154",
+        "fictive_flag": "contient_fictive_geom_groupe"
+      },
+      "fields": [
+        {
+          "name": "batiment_groupe_id",
+          "type": "text",
+          "nullable": false,
+          "description": "Publisher group identifier",
+          "max_length": 22
+        },
+        {
+          "name": "parcelle_unifiee_id",
+          "type": "text",
+          "nullable": true,
+          "description": "Unified parcel identifier",
+          "max_length": 22
+        },
+        {
+          "name": "code_departement_insee",
+          "type": "text",
+          "nullable": true,
+          "description": "Original INSEE department code",
+          "max_length": 2
+        },
+        {
+          "name": "s_geom_groupe",
+          "type": "integer",
+          "nullable": true,
+          "description": "Surface of the group geometry",
+          "bits": 32,
+          "unit": "m²"
+        },
+        {
+          "name": "code_iris",
+          "type": "text",
+          "nullable": true,
+          "description": "INSEE IRIS code",
+          "max_length": 9
+        },
+        {
+          "name": "code_commune_insee",
+          "type": "text",
+          "nullable": true,
+          "description": "INSEE commune code",
+          "max_length": 5
+        },
+        {
+          "name": "libelle_commune_insee",
+          "type": "text",
+          "nullable": true,
+          "description": "INSEE commune label"
+        },
+        {
+          "name": "code_epci_insee",
+          "type": "text",
+          "nullable": true,
+          "description": "EPCI code"
+        },
+        {
+          "name": "contient_fictive_geom_groupe",
+          "type": "boolean",
+          "nullable": true,
+          "description": "True identifies a group containing generated geometry"
+        },
+        {
+          "name": "geom_groupe",
+          "type": "geometry",
+          "nullable": true,
+          "description": "Original Lambert-93 group multipolygon"
+        }
+      ],
+      "source": {
+        "url": "https://www.bdnb.io/schema/latest/bdnb_v07/tables/batiment_groupe.html",
+        "retrieved_at": "2026-10-13",
+        "publisher_structure": "v0.7.11",
+        "publisher_current_edition_at_retrieval": "2026-02.a"
+      }
+    },
+    {
+      "name": "adresse",
+      "primary_key": [
+        "cle_interop_adr"
+      ],
+      "description": "Publisher address grain, distinct from building groups.",
+      "geometry": {
+        "field": "geom_adresse",
+        "type": "Point",
+        "crs": "EPSG:2154"
+      },
+      "fields": [
+        {
+          "name": "cle_interop_adr",
+          "type": "text",
+          "nullable": false,
+          "description": "Address interoperability key"
+        },
+        {
+          "name": "code_departement_insee",
+          "type": "text",
+          "nullable": true,
+          "description": "Original INSEE department code",
+          "max_length": 2
+        },
+        {
+          "name": "numero",
+          "type": "integer",
+          "nullable": true,
+          "description": "Street number",
+          "bits": 32
+        },
+        {
+          "name": "rep",
+          "type": "text",
+          "nullable": true,
+          "description": "Street-number suffix"
+        },
+        {
+          "name": "type_voie",
+          "type": "text",
+          "nullable": true,
+          "description": "Street type"
+        },
+        {
+          "name": "nom_voie",
+          "type": "text",
+          "nullable": true,
+          "description": "Street name"
+        },
+        {
+          "name": "libelle_adresse",
+          "type": "text",
+          "nullable": true,
+          "description": "Address label"
+        },
+        {
+          "name": "code_postal",
+          "type": "text",
+          "nullable": true,
+          "description": "Postal code",
+          "max_length": 5
+        },
+        {
+          "name": "code_commune_insee",
+          "type": "text",
+          "nullable": true,
+          "description": "INSEE commune code",
+          "max_length": 5
+        },
+        {
+          "name": "libelle_commune",
+          "type": "text",
+          "nullable": true,
+          "description": "Commune label"
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "nullable": true,
+          "description": "Original address source"
+        },
+        {
+          "name": "geom_adresse",
+          "type": "geometry",
+          "nullable": true,
+          "description": "Original Lambert-93 address point"
+        }
+      ],
+      "source": {
+        "url": "https://www.bdnb.io/schema/latest/bdnb_v07/tables/adresse.html",
+        "retrieved_at": "2026-10-13",
+        "publisher_structure": "v0.7.11",
+        "publisher_current_edition_at_retrieval": "2026-02.a"
+      }
+    },
+    {
+      "name": "rel_batiment_groupe_adresse",
+      "primary_key": [
+        "batiment_groupe_id",
+        "cle_interop_adr"
+      ],
+      "description": "Complete many-to-many group/address associations; address denominators remain intact.",
+      "geometry": {
+        "field": "geom_bat_adresse",
+        "type": null,
+        "crs": "EPSG:2154"
+      },
+      "fields": [
+        {
+          "name": "batiment_groupe_id",
+          "type": "text",
+          "nullable": false,
+          "description": "Publisher group identifier",
+          "max_length": 22
+        },
+        {
+          "name": "cle_interop_adr",
+          "type": "text",
+          "nullable": false,
+          "description": "Address interoperability key"
+        },
+        {
+          "name": "code_departement_insee",
+          "type": "text",
+          "nullable": true,
+          "description": "Original INSEE department code",
+          "max_length": 2
+        },
+        {
+          "name": "poids_s_tot",
+          "type": "decimal",
+          "nullable": true,
+          "description": "Group served total surface divided by all served total surface served by this address",
+          "precision": 7,
+          "scale": 3,
+          "denominator": "address",
+          "unit": "ratio"
+        },
+        {
+          "name": "poids_s_res",
+          "type": "decimal",
+          "nullable": true,
+          "description": "Group served residential surface divided by all served residential surface served by this address",
+          "precision": 7,
+          "scale": 3,
+          "denominator": "address",
+          "unit": "ratio"
+        },
+        {
+          "name": "poids_s_pro",
+          "type": "decimal",
+          "nullable": true,
+          "description": "Group served professional surface divided by all served professional surface served by this address",
+          "precision": 7,
+          "scale": 3,
+          "denominator": "address",
+          "unit": "ratio"
+        },
+        {
+          "name": "poids_nb_loc_tot",
+          "type": "decimal",
+          "nullable": true,
+          "description": "Group served total premises divided by all served total premises served by this address",
+          "precision": 7,
+          "scale": 3,
+          "denominator": "address",
+          "unit": "ratio"
+        },
+        {
+          "name": "poids_nb_loc_res",
+          "type": "decimal",
+          "nullable": true,
+          "description": "Group served residential premises divided by all served residential premises served by this address",
+          "precision": 7,
+          "scale": 3,
+          "denominator": "address",
+          "unit": "ratio"
+        },
+        {
+          "name": "poids_nb_loc_pro",
+          "type": "decimal",
+          "nullable": true,
+          "description": "Group served professional premises divided by all served professional premises served by this address",
+          "precision": 7,
+          "scale": 3,
+          "denominator": "address",
+          "unit": "ratio"
+        },
+        {
+          "name": "origine",
+          "type": "text",
+          "nullable": true,
+          "description": "Original association source"
+        },
+        {
+          "name": "fiabilite",
+          "type": "integer",
+          "nullable": true,
+          "description": "Published association reliability score",
+          "bits": 32,
+          "documented_range": [
+            0,
+            20
+          ]
+        },
+        {
+          "name": "geom_bat_adresse",
+          "type": "geometry",
+          "nullable": true,
+          "description": "Original Lambert-93 association geometry"
+        }
+      ],
+      "source": {
+        "url": "https://www.bdnb.io/schema/latest/bdnb_v07/tables/rel_batiment_groupe_adresse.html",
+        "retrieved_at": "2026-10-13",
+        "publisher_structure": "v0.7.11",
+        "publisher_current_edition_at_retrieval": "2026-02.a"
+      }
+    },
+    {
+      "name": "passage_millesime_batiment_groupe_id",
+      "primary_key": [
+        "transformation_id"
+      ],
+      "description": "Changed identities between stated editions. Unchanged IDs normally have no passage row.",
+      "fields": [
+        {
+          "name": "transformation_id",
+          "type": "text",
+          "nullable": false,
+          "description": "Publisher transformation record identifier",
+          "max_length": 15
+        },
+        {
+          "name": "code_departement_insee",
+          "type": "text",
+          "nullable": true,
+          "description": "Original INSEE department code",
+          "max_length": 2
+        },
+        {
+          "name": "ancien_millesime",
+          "type": "text",
+          "nullable": true,
+          "description": "Original source edition label",
+          "max_length": 10
+        },
+        {
+          "name": "ancien_id",
+          "type": "text",
+          "nullable": true,
+          "description": "Prior group identifier",
+          "max_length": 30
+        },
+        {
+          "name": "nouveau_millesime",
+          "type": "text",
+          "nullable": true,
+          "description": "Original destination edition label",
+          "max_length": 10
+        },
+        {
+          "name": "nouvel_id",
+          "type": "text",
+          "nullable": true,
+          "description": "Successor group identifier",
+          "max_length": 22
+        },
+        {
+          "name": "type_modification",
+          "type": "text",
+          "nullable": true,
+          "description": "Publisher transformation category",
+          "max_length": 38,
+          "documented_values": [
+            "creation",
+            "renommage",
+            "suppression",
+            "fusion",
+            "division",
+            "transformation complexe"
+          ]
+        }
+      ],
+      "source": {
+        "url": "https://www.bdnb.io/schema/latest/bdnb_v07/tables/passage_millesime_batiment_groupe_id.html",
+        "retrieved_at": "2026-10-13",
+        "publisher_structure": "v0.7.11",
+        "publisher_current_edition_at_retrieval": "2026-02.a"
+      }
+    },
+    {
+      "name": "metadonnees_bdnb_version",
+      "primary_key": [],
+      "description": "Original release metadata, retained in published row order.",
+      "fields": [
+        {
+          "name": "millesime",
+          "type": "text",
+          "nullable": true,
+          "description": "Publisher edition label",
+          "max_length": 9
+        },
+        {
+          "name": "version",
+          "type": "text",
+          "nullable": true,
+          "description": "Publisher schema version",
+          "max_length": 7
+        },
+        {
+          "name": "date_publication",
+          "type": "date",
+          "nullable": true,
+          "description": "Publisher publication date"
+        },
+        {
+          "name": "changelog_rapide",
+          "type": "text",
+          "nullable": true,
+          "description": "Original short release description"
+        },
+        {
+          "name": "changelog_detaille",
+          "type": "text",
+          "nullable": true,
+          "description": "Original detailed release description"
+        }
+      ],
+      "source": {
+        "url": "https://www.bdnb.io/schema/latest/bdnb_v07/tables/metadonnees_bdnb_version.html",
+        "retrieved_at": "2026-10-13",
+        "publisher_structure": "v0.7.11",
+        "publisher_current_edition_at_retrieval": "2026-02.a"
+      }
+    }
+  ],
+  "semantics": {
+    "geometry": "Original publisher Lambert-93/EPSG:2154 coordinates; no silent conversion to longitude/latitude. contains_fictive_geom_groupe labels generated geometry. Opaque/invalid geometries stay visible as original source records.",
+    "weights": "poids_s_* and poids_nb_loc_* denominators are address totals across all served groups, not totals across the selected group's addresses. Preserve raw exact values and publisher meaning.",
+    "scope": "Source descriptor coverage and selected territory define observation scope. Missing crosswalk rows do not prove creation/deletion; unchanged identifiers normally do not appear in the passage table.",
+    "operatingContext": "Kestra Ntico case study documents S3 ingestion and Docker/custom logic; deployed namespace, bucket, credentials and plugin/version must be operator supplied."
+  }
+}
