@@ -17,7 +17,9 @@
         "operator/web/climate_management_explorer.mjs",
         "source_tools/receive_climate_management.py",
         "source_tools/CLIMATE_MANAGEMENT_RECEIVING.md",
-        "source_tools/compose.py"
+        "source_tools/compose.py",
+        "source_tools/receive_climate_management_browser.mjs",
+        "source_tools/climate_management_browser_support.py"
       ],
       "requires": [
         "core",
