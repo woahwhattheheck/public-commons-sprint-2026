@@ -221,6 +221,8 @@ def read_bundle(archive, manifest, comparison, network, plans):
             prefixes[key] = _original_prefix(value)
         found = single.read_bundle(archive, {"files": manifest["members"]}, plan, network, None, [],
                                    context_ids=ids, original_prefixes=prefixes)
+        by_id = {row["id"]: row for row in found}
+        found = [by_id[key] for key in ids]
         if {row["binding"]["utility_preparation_id"] for row in found} != set(record["sources"]):
             raise ValueError("A feasible comparison plan omits an original utility source context")
         contexts.extend(found)
