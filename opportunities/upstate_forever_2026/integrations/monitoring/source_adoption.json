@@ -284,8 +284,8 @@
       "source": "operator/web/monitoring-observed.mjs",
       "source_role": "current_application_source",
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 17134,
-      "sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8",
+      "bytes": 24516,
+      "sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e",
       "retained_installed_editions": [
         {
           "bytes": 11144,
@@ -294,17 +294,21 @@
         {
           "bytes": 11335,
           "sha256": "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f"
+        },
+        {
+          "bytes": 17134,
+          "sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
         }
       ],
-      "previous_bytes": 11335,
-      "previous_sha256": "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f"
+      "previous_bytes": 17134,
+      "previous_sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
     },
     {
       "source": "model/MONITORING_OBSERVED_CONTEXT.md",
       "source_role": "current_application_source",
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
-      "bytes": 17232,
-      "sha256": "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858",
+      "bytes": 19011,
+      "sha256": "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363",
       "retained_installed_editions": [
         {
           "bytes": 11799,
@@ -313,10 +317,14 @@
         {
           "bytes": 17030,
           "sha256": "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c"
+        },
+        {
+          "bytes": 17232,
+          "sha256": "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858"
         }
       ],
-      "previous_bytes": 17030,
-      "previous_sha256": "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c"
+      "previous_bytes": 17232,
+      "previous_sha256": "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858"
     },
     {
       "source": "integrations/monitoring/RECEIVING.md",
