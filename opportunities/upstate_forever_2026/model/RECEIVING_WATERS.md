@@ -263,3 +263,42 @@ is returned as that read's snapshot and is not cached. Deleted manifests are
 removed. The cache retains at most 16 workspaces with 1,024 summaries each.
 Explicit plan/analysis inspection and verified downloads retain their original
 behavior.
+
+## Readable original source-plan reports
+
+The Receiving report source presents saved areas, source attributes and geometry
+interpretation directly in the scientific PDF and HTML. Hectares and explicit
+buffer distances use up to three decimal places; a nonzero value below that
+precision uses three significant digits so a small feature is not displayed as
+zero. This formatting changes display cells only. The original plan, feature
+attributes, geometry, analysis and downloadable source members retain their
+complete numeric values and exact identities.
+
+Classification tables use the recorded publisher's facility, waterbody, system,
+intake and protection-distance fields when present. Compiler classifications keep
+their actual designation, previous class, site-specific conditions, source status
+and effective/selected dates. A missing recorded value stays explicit; no new
+classification or regulatory conclusion is inferred. Additional source fields
+remain labelled, and complete dictionaries are included in the linked plan.
+
+Geometry notes identify the original reader and analysis CRS, then list each
+recorded feature operation with its original feature identity, stage and reason.
+The source remains unchanged. Full coordinate-system definitions, implementation
+identities and complete operation records remain available in the saved plan and
+original source archive. Both dictionary and retained JSON-string operation
+records are readable in the same report.
+
+The producer uses immutable report-source edition 3. Preparing from the same
+saved study with this producer creates its own retained display edition; prior
+reports and studies remain inspectable. Use the normal Receiving report action
+or the existing receiving_water_report_cli.py command, then the maintained
+Scientific Reports renderer. Open every resulting PDF page and map, the desktop
+and narrow HTML and its source links, and the complete exported source archive.
+
+Selected Study capture explicitly admits report-source editions 1, 2 and 3.
+Edition 3 retains the complete original map specification and renderer modules;
+completed-analysis captures also require their actual accounting formatter.
+Earlier edition-2 captures keep their original supported module sets. Designation
+end dates retain the original compiler's exclusive-end meaning in displayed
+labels. Complete report capture and cold receiving use the same original
+lineage and source-member checks.
