@@ -63,10 +63,8 @@ def main():
         if len(reports) != 1:
             raise ValueError("Select exactly one retained observed-report source in the manifest")
         entry = reports[0]
-        matching = [collection for collection in workspace.sources()
-                    if any(row["id"] == entry["id"] and row["body"]["sha256"] == entry["sha256"]
-                           for row in collection["entries"])]
-        collection = matching[0] if matching else workspace.import_sources(result["report_manifest"])
+        # The native import verifies all companions and reuses its content-addressed collection.
+        collection = workspace.import_sources(result["report_manifest"])
         result["source_role"] = {"source_collection_id": collection["id"], "source_id": entry["id"]}
         result["workspace"] = str(args.workspace.resolve())
     print(json.dumps(result, indent=2))
