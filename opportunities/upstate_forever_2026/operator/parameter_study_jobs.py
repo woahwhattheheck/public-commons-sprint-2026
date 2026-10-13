@@ -94,7 +94,14 @@ def execute_study(supervisor, task, workspace, key):
             except (NativeJobDetached, NativeJobCancelled):
                 raise
             except NativeJobError as error:
-                if error.code != "NATIVE_PROCESS_EXIT" or process_interrupted(error):
+                if process_interrupted(error):
+                    try:
+                        parameter_studies.record_interruption(workspace, key, error)
+                    except OSError as recording_error:
+                        # Keep the exact process interruption as the primary failure.
+                        raise error from recording_error
+                    raise
+                if error.code != "NATIVE_PROCESS_EXIT":
                     raise
         with native_batch_lease(workspace.root / ".native-model-batch.lock") as fd:
             proxy.custody_fds = (fd,)

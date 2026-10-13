@@ -946,6 +946,37 @@ def native_case_context(workspace, key, run_id):
             "bindings_sha256": digest(matches)}
 
 
+
+def record_interruption(workspace, key, error):
+    """Retain a pre-coordinator worker interruption on its original study."""
+    if not process_interrupted(error):
+        return None
+    key = identifier(key)
+    directory = workspace.root / "experiments" / key
+    failure = deepcopy(error.native_failure)
+    with held(directory / ".experiment.lock", blocking=False):
+        native_case_context(workspace, key, failure["run_id"])
+        state = inspect(workspace, key)
+        matches = [case for case in state["cases"] if case["run_id"] == failure["run_id"]]
+        if not matches:
+            raise ValueError("The interrupted native run is outside this saved study")
+        for case in matches:
+            case["process_interruption"] = deepcopy(failure)
+            if case["state"] != "complete":
+                case["state"] = "failed"
+                case["error"] = deepcopy(failure)
+        history = state.setdefault("interruption_history", [])
+        if not history or history[-1] != failure:
+            history.append(deepcopy(failure))
+        state.update(state="partial", active_case_id=None, active_run_id=None,
+                     error=failure, updated_at=now())
+        state["progress"] = {"total": len(state["cases"]),
+                             "completed": sum(case["state"] == "complete" for case in state["cases"]),
+                             "failed": sum(case["state"] == "failed" for case in state["cases"])}
+        atomic_json(directory / "experiment.json", state)
+        return state
+
+
 def execute(workspace, key, *, progress=None):
     state = _read(workspace, key)
     directory = workspace.root / "experiments" / key
