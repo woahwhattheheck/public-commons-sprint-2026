@@ -159,14 +159,14 @@ def restore_current_aviary_runtime(value):
           "currentResourceObservation":{"selectedInstalledRuntimeOnly":True,"wholeResourceHashesRepeated":False,
              "originalResourceProofReusedForDifferentRuntime":False,"extraFilesInspected":False,
              "runtimeCopiesMade":0,"runtimeDownloadsBeforeBrowser":0},
-          "saveTransport":"official library_create_library_file","archives":restored,"providerInvocations":0,
+          "saveTransport":"maintained LibraryUploadWorkflow / canonical prepare_uploads + finalize_uploads","archives":restored,"providerInvocations":0,
           "sourceInputSha256":sha(source)}
  raw=(json.dumps(receipt,ensure_ascii=False,sort_keys=True,indent=2)+"\n").encode()
  put(history/("observation-"+sha(raw)+".json"),raw)
  emit("ORIGINAL_RUNTIME_READY",selection=descriptor,logical=logical,actual=actual,
       pythonVersion=sys.version,nodeVersion=node_version,playwrightVersion=package["version"],
       browserVersion=browser_version,runtimeDownloadsBeforeBrowser=0,runtimeCopiesMade=0,
-      saveTransport="official library_create_library_file",archiveCount=len(restored),receiptSha256=sha(raw))
+      saveTransport="maintained LibraryUploadWorkflow / canonical prepare_uploads + finalize_uploads",archiveCount=len(restored),receiptSha256=sha(raw))
  return {"selection":selection,"descriptor":descriptor,"observation":receipt}
 
 
