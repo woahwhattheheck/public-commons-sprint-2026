@@ -1,0 +1,135 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "flowable-operations",
+  "heading": "## Process, decision and adaptive-case commissioning with complete customer receiving",
+  "sources": [
+    {
+      "id": "flowable-process-operating",
+      "label": "Complete process deployment, human work and migration operation",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/flowable-merchant/OPERATING.md",
+      "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+      "editions": [
+        {
+          "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+          "git_blob": "af37d0a945a650cdfe037a51a5ab93d6f47df111",
+          "bytes": 11516,
+          "sha256": "da24a5e43c844489def3c7be4c837d0130f7abde1268c3ebd9a60eeab7d99544"
+        }
+      ]
+    },
+    {
+      "id": "flowable-decision-operating",
+      "label": "Native decision deployment, evaluation and execution history",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/flowable-merchant/DECISIONS.md",
+      "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+      "editions": [
+        {
+          "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+          "git_blob": "5ff44c553c007b2c3099c06125e522eca3a81b13",
+          "bytes": 11583,
+          "sha256": "93a9cbdc37ff5206e406d3014e8c521693fdf0da9dce7351a7c8542fdcd1bb33"
+        }
+      ]
+    },
+    {
+      "id": "flowable-case-operating",
+      "label": "Adaptive case deployment, stages, human work and complete history",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/flowable-merchant/CASES.md",
+      "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+      "editions": [
+        {
+          "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+          "git_blob": "7930441a75e696b523c699b8770f70155211b0aa",
+          "bytes": 12668,
+          "sha256": "7099bd580fd3ecab1d1ceafa3a866e821110d52c5d275b8005850703159d9f53"
+        }
+      ]
+    },
+    {
+      "id": "flowable-customer-receiving",
+      "label": "Complete customer workspace inspection, adoption and reopening",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/flowable-merchant/RECEIVING.md",
+      "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+      "editions": [
+        {
+          "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+          "git_blob": "6ab5bc70fc47c0b52e6e9d956a4776a5b4f54ddd",
+          "bytes": 7204,
+          "sha256": "19aec70466ad4e79e4e8999613c72e90e5da342f62316627cf8030572adf9d88"
+        }
+      ]
+    },
+    {
+      "id": "flowable-selected-installation",
+      "label": "Selected product installation and managed Applications operation",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/selections/FLOWABLE_MERCHANT.md",
+      "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+      "editions": [
+        {
+          "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+          "git_blob": "b1dca9e0113ec9aa50e124d839a0c7a851fdcc38",
+          "bytes": 9172,
+          "sha256": "da845e13e0bd3255baf4a4eaff7959495756087cccd3f9b4d407a0de4bd68fff"
+        }
+      ]
+    },
+    {
+      "id": "flowable-native-commissioning",
+      "label": "Original full engine and customer commissioning programme",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/NATIVE_RECEIVING.md",
+      "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+      "editions": [
+        {
+          "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+          "git_blob": "d2733ad86157502b69ea1ff01c518343bc103763",
+          "bytes": 16083,
+          "sha256": "6ccf5a325ab9d6235f51f64eb79b3487f825128f99596e7a04ef075bcfe1d165"
+        }
+      ]
+    },
+    {
+      "id": "flowable-typed-client",
+      "label": "Complete installed typed client contract",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/flowable-merchant/client.d.mts",
+      "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+      "editions": [
+        {
+          "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+          "git_blob": "50a6359291c2529beaff93e6ead7c58bb0c53cbc",
+          "bytes": 26016,
+          "sha256": "1740cfa0963872932eb3b882a266fba06b86f7d81d82fea6f20a254e04ac8036"
+        }
+      ]
+    },
+    {
+      "id": "flowable-installed-receiving",
+      "label": "Original installed SDK, CLI, MCP, browser and customer receiving programme",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/flowable-merchant/native-installed-journey.mjs",
+      "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+      "editions": [
+        {
+          "commit": "cb95ff9198d4b1cdf554eb35eb16cbf3676a3857",
+          "git_blob": "5bbf84e4927974465cda5c6caf227d6d4e27e067",
+          "bytes": 83781,
+          "sha256": "606249d52e2fd6ea1da01b2cb724014f9565dd7d4cb2f1440def6cf237f1e459"
+        }
+      ]
+    }
+  ]
+}
