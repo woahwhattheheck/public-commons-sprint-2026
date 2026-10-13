@@ -87,9 +87,10 @@ MONITORING_ACTIONS = {
     "monitoring.campaign.create", "monitoring.campaign.revise",
     "monitoring.campaign.event", "monitoring.export",
 }
-# Exact retained version 4 and 5 descriptors, before this report-source workflow.
+# Exact retained version 4–6 descriptors, before registered report task controls.
 DESCRIPTOR_PREDECESSORS = {"461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c",
-                           "8cea5b0259c4d8c2656bad8153c20e5b50aadfb162ff223e07656cb2d056777c"}
+                           "8cea5b0259c4d8c2656bad8153c20e5b50aadfb162ff223e07656cb2d056777c",
+                           "7c04dc9f70efad4793888df765afc526b04d0dcea4aabdc71e08308e5eb91813"}
 EXTENSION_TARGET = "operator/extensions/receiving-waters.json"
 TARGETS = (
     "operator/server.py",
@@ -672,6 +673,9 @@ def install(root, *, check=False):
     if ("openScientificReport" not in original_app
             or "sourceReports.openForSources(" not in original_app):
         raise ValueError("Receive the current shared scientific report composer and its source-selection host capability")
+    extension_host = (root / "operator/web/extension_host.mjs").read_text(encoding="utf-8")
+    if "task._extension_task_actions?.extension_id" not in extension_host:
+        raise ValueError("Receive the current shared host with registered backend task-result navigation")
     required = (REQUIRED + EXTENSION_REQUIRED + MONITORING_REQUIRED
                 + MONITORING_REPORT_REQUIRED + RECEIVING_REPORT_REQUIRED)
     for relative in required:
@@ -776,6 +780,7 @@ def install(root, *, check=False):
         if installed is not None and installed != template:
             previous = json.loads(json.dumps(template))
             previous["version"] = "2"
+            previous["client"].pop("task_actions", None)
             previous["assets"] = [name for name in previous["assets"]
                                   if name not in {"receiving_water_spatial.mjs", "receiving_water_monitoring.mjs",
                                                   "receiving_water_report.mjs"}]
