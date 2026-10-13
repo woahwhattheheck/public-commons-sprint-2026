@@ -62,6 +62,41 @@ This mode checks every member's original bytes, hash, path and any declared Git 
 
 The matching `materialize_source_banks.bootstrap.txt` contains this exact receiver and accepts the same arguments. See [SOURCE_BANK_TRANSFER.md](SOURCE_BANK_TRANSFER.md) for protected roots, atomic staging, retry behavior and complete output layout.
 
+## Windows and Linux receiving
+
+All three input routes remain standard-library-only and independent of an installed application. On Windows, run the ordinary Python helper directly with the same current interpreter and original retained carrier:
+
+~~~powershell
+python -B .\source_tools\materialize_source_banks.py `
+  --carrier "C:\owned\input\complete-source.json" `
+  --expect-source-sha256 ORIGINAL_DECODED_BANK_SHA256 `
+  --application "C:\owned\application" `
+  --workspace "C:\owned\workspace" `
+  --output "C:\owned\source-receiving"
+~~~
+
+The matching `.bootstrap.txt` remains the original POSIX-shell transport of this exact Python body; its embedded byte count and SHA-256 are regenerated together. It does not require or import the application's `model.common`, `model.windows_fs`, scientific dependencies or any received source. Native Windows users run the complete `.py` body, without WSL or a replacement interpreter. The existing Windows inline `--manifest` receiver continues to use its same source/parts layout and non-overwriting hard-link publication.
+
+The complete `--carrier` path uses Windows no-reparse file handles and native `FILE_BASIC_INFO.ChangeTime` for both path and opened-file comparisons. It retains the original device, file, size, modification and change-time checks. These standalone primitives match the current received `model/windows_fs.py` semantics (source SHA-256 `5f968b8c7248a8dae36f4a13b1c9edb3c85bca14abc1b1dd5a81c3b4022aae36`); they are included in the helper because receiving precedes application installation.
+
+A complete carrier is prepared in an owned sibling directory, fully read back, then published in one no-replacement directory move. Linux keeps `renameat2(RENAME_NOREPLACE)`. Windows uses same-volume `MoveFileExW` with write-through, without replacement or copy-across-volume flags. An existing destination remains intact, including a destination created by a concurrent receiver. Repeating the same completed command verifies and reuses its original output; it does not install into the protected application or Workspace.
+
+Original Git modes remain exact in `source-bank.json` and `receiving.json`. Linux applies and verifies `0644`/`0755`. Windows keeps the received files writable and verifies their complete content; its filesystem does not represent the POSIX executable bit, so that bit remains declared metadata for later Linux installation. Do not describe Windows permissions as byte-for-byte POSIX mode preservation. File bodies are flushed on both systems. Linux also fsyncs directories; Windows validates ordinary directory handles and uses write-through publication, without claiming an equivalent directory power-loss durability guarantee.
+
+### Whole selection before publication
+
+Every input route rejects duplicate files, case aliases of both files and parent directories, file/directory collisions, Windows device names (including extension and superscript-digit spellings), invalid Windows filename characters, and trailing-dot/space aliases. This portable path rule applies before any bank is installed, including when the sender is Linux. `A/one.py` together with `a/two.py` is an alias, even though their full filenames differ.
+
+The multipart route validates the complete union of all selected banks, their distinct bank names, the receiving record and all existing destinations before writing its first source or bank file. A later-bank collision therefore cannot leave an earlier bank partially published. Existing case-aliased directories, symlinks, junctions and other Windows reparse points are preserved as conflicts. Ordinary existing identical files retain the existing resumable behavior; different files are never overwritten.
+
+### Continue the original Windows receiver
+
+Use the existing Windows7256 / cumulative15227 source-receiving operation and its already-retained complete source packet. Keep current platform8011, later portable identity, operator lifecycle, source-inspection and Measurements postimages. This helper does not select an older bank as the current application and must not replace those advancing source files wholesale.
+
+Receive that original packet into a separate owned source directory, open its retained bank and complete source tree, and repeat the same command to confirm original receiving is reusable. Continue the existing manifest receiver at its next normal source boundary. Report the first actual exception with the helper's exact source identity, original carrier identity and destination; no numerical case, source acquisition, controller or browser operation is restarted for this repair.
+
+Current owner direction is `CURRENT_OWNER_DIRECTION.md` version `2026-10-13.4`. The producing peer still opens/runs and personally looks at the exact outgoing populated UI and all attachments, operates the important desktop/narrow controls and downloads, and cold-reopens the delivered application. Source receiving alone is not that product acceptance.
+
 ## Original Ecosystem Sciences receiving transfer
 
 The 13 October 2026 S1 cloud receiving transfer contains four original banks:
