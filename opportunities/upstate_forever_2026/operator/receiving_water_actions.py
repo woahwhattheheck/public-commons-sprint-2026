@@ -11,7 +11,7 @@ ACTIONS = frozenset({
     "receiving.water.plan", "receiving.water.profile", "receiving.water.analyze",
     "receiving.water.catalog", "receiving.water.monitoring",
 })
-READS = frozenset({"catalog", "plan", "analysis", "designation-catalog", "monitoring"})
+READS = frozenset({"catalog", "plan", "analysis", "designation-catalog", "monitoring", "plan-map"})
 
 
 class ReceivingWaterActions:
@@ -121,6 +121,11 @@ class ReceivingWaterActions:
     def read(self, workspace, operation, value=None):
         ws = self.operator.ws(workspace)
         value = value or {}
+        if operation == "plan-map":
+            from model.receiving_water_plan_map import read as plan_map
+            return {"workspace_key": workspace, **plan_map(
+                ws, value, spatial=self.operator.spatial_reviews[workspace],
+            )}
         if operation == "catalog":
             overview = ws.overview()
             try:
