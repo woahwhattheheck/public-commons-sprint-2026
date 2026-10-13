@@ -182,3 +182,38 @@ Stable contribution identity: **ASTRA-ECO12-2651**, originally merged in PR2651.
 For an NDR-only retained grid and profile, pass `pollutants: ["nitrogen_export", "phosphorus_export"]`. For SDR-only, pass `pollutants: ["sediment_export"]`. A combined study can request all three exports. Each requested artifact is checked against the original completed run, and the retained profile must contain the parameters for every requested native model. Source records preserve the profile's actual available parameter groups, requested pollutant list and original native run identities. Complete historical two-model profiles retain the same source values and analysis identity.
 
 The paired-design service uses `model.ensembles`, `model.ensemble_cli` and `model.ensemble_report`. This raster consumer uses `model.paired_ensemble` throughout, including its CLI and report functions. The current complete application invokes this namespaced consumer for saved native study cohorts. Use `operator/integrate_paired_ensemble.py --apply` when updating an earlier installed application, retaining its existing `ensemble-products` results. The original installer command delegates to that migration when the shared descriptor is present.
+
+
+## Resume a retained analysis after moving or reopening the Workspace
+
+The saved native analysis now retains its accepted execution controls separately
+from its scientific selection. **Resume from retained native pairs** uses those
+controls, including the original tile-array memory budget. Earlier analyses use
+the memory and actual tile edge already recorded in `execution.json`; the
+operator no longer replaces that memory budget with 256 MiB. Its result view
+shows the controls that the resume action will use.
+
+The original tile grid stays in place, so completed tiles continue to be reused.
+Changing the memory budget does not create a different scientific selection.
+If a resumed computation requests a smaller budget than its saved tile grid
+needs, the native kernel keeps its existing explanatory error. Loading the last
+submitted selection exposes the editable controls for a deliberate adjustment.
+
+The same continuation is available without the original selection JSON or
+browser task record:
+
+```sh
+python -B -m model.paired_ensemble.ensemble_cli resume \
+  --workspace "$WORKSPACE" --ensemble-id "$ENSEMBLE_ID"
+```
+
+The CLI also accepts `--ensemble-id` for `preview` and `build`.
+Select either `--ensemble-id` or the existing `--selection` JSON argument.
+Recovery reads the retained native pair IDs and available original runs; it
+does not start another InVEST calculation.
+
+New result ZIPs retain the small execution records when present, together with
+the original quantitative products and reports. Full scientific Workspace
+backups continue to retain native inputs, completed runs and partial analysis
+tiles. Reopening an already completed result preserves its previous execution
+settings when the kernel reuses its finished products.
