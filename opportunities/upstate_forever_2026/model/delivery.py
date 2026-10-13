@@ -197,6 +197,7 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
 def build(workspace, selection):
     selection = dict(selection)
     map_atlas.settings(selection.get("map_settings"))
+    water_links = map_atlas.bind_water_selections(workspace, selection)
     report_link = bind_report(workspace, selection)
     if report_link is not None:
         selection["source_report_sha256"] = report_link["report_sha256"]
@@ -471,7 +472,7 @@ def build(workspace, selection):
                     "overlays": selected_overlays, "subtitle": subtitle})
             map_atlas.write(directory, atlas_pages, workspace=workspace, selection=selection,
                 grid=grid, boundary=boundary, crs=crs, footer=footer,
-                state=state, state_path=state_path)
+                state=state, state_path=state_path, water_links=water_links)
             maps = {family: state["maps"][family]["path"] for family in all_specs if family in MAP_IDS}
             for family, map_keys in future_maps.items():
                 # The first explicit scenario is the principal family map; every additional scenario remains an extra map.

@@ -1171,7 +1171,7 @@ export function mountWaterDesignations({
     const purpose = state.savedRecord.purpose || (state.savedRecord.selection && state.savedRecord.selection.purpose) || refs.purpose.value;
     const overlay = state.savedRecord.delivery_overlay;
     const delivery = { overlays: {} };
-    delivery.overlays[purpose] = { source_collection_id: overlay.source_collection_id, source_id: overlay.source_id, layer: overlay.layer };
+    delivery.overlays[purpose] = JSON.parse(JSON.stringify(overlay));
     const value = JSON.stringify(delivery, null, 2);
     try {
       if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("Clipboard unavailable");
@@ -1433,6 +1433,7 @@ export function createWaterDesignationsExtension(context) {
     mount: function (containerNode, hostState) {
       if (controller) controller.destroy();
       mountedWorkspace = currentWorkspace();
+      const originWorkspace = mountedWorkspace;
       catalogStamp = stamp(hostState);
       controller = mountWaterDesignations({
         container: containerNode,
@@ -1442,13 +1443,33 @@ export function createWaterDesignationsExtension(context) {
           if (typeof context.refreshState === "function") await context.refreshState();
           else if (typeof context.refresh === "function") await context.refresh();
         },
-        onUseInDelivery: typeof context.openDelivery === "function"
-          ? function (overlay, record) {
-              const purpose = record.purpose || (record.selection && record.selection.purpose) || "high_quality_waters";
-              const delivery = { overlays: {} };
-              delivery.overlays[purpose] = {
-                source_collection_id: overlay.source_collection_id, source_id: overlay.source_id, layer: overlay.layer
-              };
+        onUseInDelivery: (typeof context.openExtension === "function" || typeof context.openDelivery === "function")
+          ? async function (overlay, record) {
+              function requireOrigin() {
+                if (currentWorkspace() !== originWorkspace) {
+                  throw new Error("The originating workspace changed before the saved water selection opened.");
+                }
+              }
+              requireOrigin();
+              const delivery = await nativeRequest("/api/water-designations/apply", {
+                method: "POST",
+                body: { workspace: originWorkspace, selection_id: record.id, delivery_selection: {} }
+              });
+              requireOrigin();
+              if (typeof context.openExtension === "function") {
+                const catalogue = await context.api("/api/extensions");
+                requireOrigin();
+                if ((catalogue.extensions || []).some(function (entry) {
+                  return entry.id === "map-atlas" && entry.client && entry.client.view;
+                })) {
+                  return context.openExtension("map-atlas", "create", {
+                    workspace_key: originWorkspace, selection: delivery
+                  });
+                }
+              }
+              if (typeof context.openDelivery !== "function") {
+                throw new Error("Open an installed delivery editor for this saved selection.");
+              }
               return context.openDelivery(delivery);
             } : undefined
       });
