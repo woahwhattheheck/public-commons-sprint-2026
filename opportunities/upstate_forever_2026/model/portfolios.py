@@ -1073,6 +1073,34 @@ def _treatments(value, selected_ids):
     return result
 
 
+def _scenario_id_field(context, entry, candidates, selected_ids, rows):
+    """Use the original inventory's ID contract, including older delivery records."""
+    selected = context["parcel_source_selection"].get("id_field")
+    if selected or context.get("inventory_id") or not context.get("delivery_id"):
+        return selected
+    # Older delivery inventories did not freeze the effective field. Prefer the
+    # original Fiona mapping when it reproduces every selected attribute row;
+    # otherwise resolve the declared field against those same retained records.
+    def matches(field):
+        found = set()
+        for row in rows:
+            feature_id = str(row["properties"].get(field)) if field else row["id"]
+            if feature_id not in selected_ids:
+                continue
+            if (feature_id in found or feature_id not in candidates
+                    or row["properties"] != candidates[feature_id]["original_attributes"]):
+                return False
+            found.add(feature_id)
+        return found == selected_ids
+
+    if matches(None):
+        return None
+    declared = entry.get("id_field")
+    if declared and matches(declared):
+        return declared
+    return None
+
+
 def prepare_scenario(workspace, selection):
     record = get_portfolio(workspace, identifier(selection.get("portfolio_id")), details=True)
     selected_ids = set(record["selection"]["feature_ids"])
@@ -1103,9 +1131,9 @@ def prepare_scenario(workspace, selection):
     reporting_path = verify_file(grid_directory, grid["files"]["reporting_area"])
     boundaries, _ = rasters.vector_geometry(reporting_path, target_crs=grid_crs)
     reporting = rasters.polygon_union(boundaries)
-    id_field = native_selection.get("id_field")
     treatment_by_id = {feature_id: treatment["id"] for treatment in treatments for feature_id in treatment["feature_ids"]}
     original_candidates = {row["feature_id"]: row for row in record["analysis"]["candidates"] if row["selected"]}
+    id_field = _scenario_id_field(context, entry, original_candidates, selected_ids, rows)
     features, found = [], set()
     for row in rows:
         feature_id = str(row["properties"].get(id_field)) if id_field else row["id"]

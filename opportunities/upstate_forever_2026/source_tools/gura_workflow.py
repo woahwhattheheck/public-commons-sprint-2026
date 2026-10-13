@@ -332,9 +332,10 @@ def check_receiving(path, workspace, args=None, *, expected_resolution_m=None, u
     for model in selected_models(receipt):
         role = model + "_archive"
         archived = receipt.get("archives", {}).get(model, {})
-        if archived.get("sha256") != SOURCES[role]["sha256"]:
-            raise ValueError("The receiving record selects another original " + model.upper() + " source edition")
-        archive_id = "GURA_ORIGINAL_" + model.upper() + "_ZIP"
+        # New intake is pinned by original_inputs. An imported archive keeps its
+        # own exact source edition when the original Workspace is reopened.
+        archive_alias = "GURA_ORIGINAL_" + model.upper() + "_ZIP"
+        archive_id = source_ids.get(archive_alias, archive_alias)
         if archive_id in {entry["id"] for entry in collection["entries"]}:
             retained_path, retained_entry = ws.source_file(collection["id"], archive_id)
             retained = describe(retained_path)
@@ -342,6 +343,12 @@ def check_receiving(path, workspace, args=None, *, expected_resolution_m=None, u
                     or retained["bytes"] != archived.get("bytes")
                     or retained["sha256"] != retained_entry["body"]["sha256"]):
                 raise ValueError("The original " + model.upper() + " archive differs from its retained source collection")
+        elif archived.get("sha256") != SOURCES[role]["sha256"]:
+            # The original datastack receiver imports its member inputs and
+            # arguments rather than the ZIP. Its receipt pins the captured
+            # archive; tables and native inputs remain checked by their store.
+            raise ValueError("Retain the original " + model.upper()
+                             + " archive in its source collection to reopen this source edition")
         alias = "GURA_" + model.upper() + "_TABLE"
         table_path, entry = ws.source_file(collection["id"], source_ids.get(alias, alias))
         table = receipt.get("original_tables", {}).get(model, {})
