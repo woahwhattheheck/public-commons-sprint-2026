@@ -128,3 +128,9 @@ node cli.mjs package-receive --source /private/unpacked \
 Received request records keep their original stored result and original workspace identity. The API wraps replayed responses with the current receiving workspace identity plus `originalWorkspaceId`, so the same browser journal can recover them correctly. Native edits after receiving create new immutable editions. Previously accepted request IDs never become replacement business requests.
 
 The standalone commissioning course retains its input, all requests, complete phase artifacts, both actual archives and three selected workspace paths. Read [COMMISSIONING.md](COMMISSIONING.md) before operating it.
+
+## Browser working-copy continuation
+
+The mounted operator now exports and restores `paycashless.browser-working-copy.v1` using its existing workspace-bound journal. All original submitted Files, attempt histories, current editor values and unsubmitted selected-file bytes are included. The restore transaction preserves existing matching requests and archives the previous view. Newly imported requests remain marked for explicit recovery. This local continuation does not change native request IDs, provider operations, dispatch configuration or received-workspace identity.
+
+Keep the complete browser working copy beside the actual native archive; see [BROWSER_WORKING_COPY.md](BROWSER_WORKING_COPY.md). A customer workspace with a new native ID uses its own browser journal. The original producer's working copy cannot be rebound to it.

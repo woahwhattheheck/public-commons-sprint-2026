@@ -1,5 +1,6 @@
 {
   "schema": "paycashless.application-source.v1",
+  "sourceEdition": "browser-working-copy-v1",
   "files": [
     {
       "path": "README.md",
@@ -9,14 +10,14 @@
     },
     {
       "path": "OPERATIONS.md",
-      "bytes": 9776,
-      "sha256": "476cc45799b98ef610714a31b8c6927a567999a762c752b3711f85fc2f9f2974",
+      "bytes": 10618,
+      "sha256": "6955e1de7e384f2e34959fb9a4d393738a4dad45db825f6f69f80442b4589720",
       "mode": 420
     },
     {
       "path": "COMMISSIONING.md",
-      "bytes": 7569,
-      "sha256": "bccf482fb8a43e4a68aaf5d76751817dd472d0532f4e03241b0ee1fdd096f4fe",
+      "bytes": 8768,
+      "sha256": "b97bb978575d6cfb3586eccd090a52384ba70ae5a25f4561c48f85c12e104431",
       "mode": 420
     },
     {
@@ -39,8 +40,8 @@
     },
     {
       "path": "PAYCASHLESS_OPERATOR.md",
-      "bytes": 12290,
-      "sha256": "2d83b5bb65ff5388348776cec561aa0e5ed8fb2cfe428416ca32d90aa5b0a113",
+      "bytes": 13553,
+      "sha256": "49b6965d2e697426e9e930b6f796613ddd06f4a2238669c2c66ef19bd9df893b",
       "mode": 420
     },
     {
@@ -177,14 +178,14 @@
     },
     {
       "path": "lib/runtime.mjs",
-      "bytes": 11338,
-      "sha256": "6b2313defe4628551096de5a06e4f353e18b74a4c0caf994a0c2fb00e12116f5",
+      "bytes": 12308,
+      "sha256": "e46ec75a0954389dbdc8e9c745673785b4d04e83753c1cf51485e5b557b92642",
       "mode": 420
     },
     {
       "path": "lib/receiving.mjs",
-      "bytes": 21940,
-      "sha256": "942d80018c4c8a832b313b708e4f6534917937a21c03f5d9ca22df217f47aea7",
+      "bytes": 21934,
+      "sha256": "b590810959662298066f80487b012e5bf96b7e7f89f8f73efe22b7cb9ba709fa",
       "mode": 420
     },
     {
@@ -201,14 +202,14 @@
     },
     {
       "path": "web/app.mjs",
-      "bytes": 80954,
-      "sha256": "10c835171f4ed454b95c8283d5fba83c507c5451db9ecec9a04234b54cd98ecd",
+      "bytes": 91097,
+      "sha256": "d08d6c4a4bb4ff052e0157b509fc1f2e31f6a81d0c641e1150f5b12c4c43d951",
       "mode": 420
     },
     {
       "path": "web/index.html",
-      "bytes": 22286,
-      "sha256": "1e0ea208ef0373fc497b206698e73eca9419070d62846a460573e8afa521dbd1",
+      "bytes": 23026,
+      "sha256": "c62818b4fd71242b93cdb2a035c0edbd39fea20ad337b9f0d3809a1f3b913fda",
       "mode": 420
     },
     {
@@ -219,8 +220,8 @@
     },
     {
       "path": "web/journal.mjs",
-      "bytes": 8077,
-      "sha256": "d72774a02f0b978c082476f0aa728fb47956906c32c80f303a99d948b320ea8c",
+      "bytes": 25327,
+      "sha256": "09506df22cbe87f6271521348bb8d4750d4471ae93ba28b2e82e496437a36847",
       "mode": 420
     },
     {
@@ -257,6 +258,18 @@
       "path": "sources/provider-source-receipts.json",
       "bytes": 4956,
       "sha256": "ad3f46be50227e90bfae85b453469821acee797eeb1a09422f7dbd9aa69b36da",
+      "mode": 420
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 7844,
+      "sha256": "e728a4f43551cf369548497d8891cfa114f0b9f54354f204e7aab8bfce08ccc8",
+      "mode": 420
+    },
+    {
+      "path": "BROWSER_WORKING_COPY.md",
+      "bytes": 7486,
+      "sha256": "51eac910e0bc3959aeca4fca2decdcc5dbdf6dce32cadae68345d0e6959b6e4e",
       "mode": 420
     }
   ]
