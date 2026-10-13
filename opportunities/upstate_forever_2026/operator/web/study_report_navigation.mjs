@@ -25,7 +25,9 @@ export async function openRetainedStudyRecord(host,value,{workspace_key,current=
   if(!current())return null;
   try{
     return value.kind==='scientific-report-comparisons'
-      ?await host.openDesk('report-changes','openForStudy',{workspace_key,id})
+      ?await (typeof host.openSavedReportComparison==='function'
+        ?host.openSavedReportComparison({workspace_key,id})
+        :host.openDesk('report-changes','openForStudy',{workspace_key,id}))
       :await host[method]({workspace_key,id,...(value.kind==='reviews'?{tab}:{})});
   }catch(error){
     // The original destination reports a current error. A departed source view
@@ -52,6 +54,16 @@ export function receivedReviewHTML(host,value,disabled=false){
         html+='<p>'+esc(source.title||'Original scientific report')+
           (source.external?' · original project '+esc(source.project_id):
             ' '+retainedStudyControl(host,{kind:'scientific-report-editions',id:source.scientific_report_edition_id},{prefix:'received',disabled}))+'</p>';
+      }
+      for(const source of list(row.report_comparisons)){
+        html+='<section aria-label="Reviewed report comparison"><p><strong>'+esc(source.title||'Original report comparison')+'</strong> '+
+          (source.external?'Original project '+esc(source.project_id):
+            retainedStudyControl(host,{kind:'scientific-report-comparisons',id:source.comparison_id},{prefix:'received',disabled}))+'</p>';
+        for(const edition of list(source.edition_links)){
+          html+='<p>'+(edition.side==='left'?'Earlier report: ':'Later report: ')+esc(edition.title)+' '+
+            retainedStudyControl(host,{kind:'scientific-report-editions',id:edition.id},{prefix:'received',disabled})+'</p>';
+        }
+        html+='</section>';
       }
       return html+'</div></article>';
     }).join('')+'</section>';
