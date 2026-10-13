@@ -34,18 +34,19 @@ COLUMN_FIELDS = (
     "activity_id", "sample_id", "site_id", "visit_id", "observation_id",
     "parameter", "original_text", "value", "result_type", "unit", "basis",
     "fraction", "qualifier", "detection_limit", "quantitation_limit",
-    "method", "qa_status", "notes", "collected_at",
+    "method", "method_context", "method_name", "qa_status", "notes", "collected_at",
 )
 CONSTANT_FIELDS = frozenset((
     "activity_id", "sample_id", "site_id", "visit_id", "parameter", "result_type",
-    "unit", "basis", "fraction", "qualifier", "method", "qa_status", "notes",
+    "unit", "basis", "fraction", "qualifier", "method", "method_context", "method_name", "qa_status", "notes",
 ))
 OBSERVATION_FIELDS = (
     "id", "activity_id", "parameter", "original_text", "value", "result_type",
     "unit", "basis", "fraction", "qualifier", "detection_limit",
     "quantitation_limit", "method", "qa_status", "notes",
 )
-OPTIONAL_TEXT = ("basis", "fraction", "qualifier", "method", "qa_status")
+METHOD_DEFINITION_FIELDS = ("method_context", "method_name")
+OPTIONAL_TEXT = ("basis", "fraction", "qualifier", "method", "qa_status", *METHOD_DEFINITION_FIELDS)
 ENCODINGS = ("utf-8-sig", "utf-8", "utf-16", "cp1252", "latin-1")
 NUMBER = re.compile(r"^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$")
 
@@ -313,7 +314,8 @@ def _collection_time(activity, value, mapping, row, issues):
 
 
 def _semantic(observation):
-    return {key: observation.get(key, "" if key in OPTIONAL_TEXT else None) for key in OBSERVATION_FIELDS}
+    return {**{key: observation.get(key, "" if key in OPTIONAL_TEXT else None) for key in OBSERVATION_FIELDS},
+            **{key: observation[key] for key in METHOD_DEFINITION_FIELDS if key in observation}}
 
 
 def _bound_plan(workspace, saved_plan):
@@ -414,6 +416,10 @@ def _build(workspace, saved_plan, csv_path, mapping, *, filename=None):
             issues.append(_issue("observation_id", "The mapped observation ID is not a valid native ID", row=row))
         decision.update(activity_id=activity["id"] if activity else None, observation_id=observation_id,
                         result_type=result_type, parameter=parameter, original_text=original_text, value=value, unit=unit)
+        selected_definition = {key: cells[key] for key in METHOD_DEFINITION_FIELDS
+                               if key in selected["columns"] or key in selected["constants"]}
+        if selected_definition:
+            decision["method_definition"] = {"method": cells["method"], **selected_definition}
         proposed_time = _collection_time(activity, cells["collected_at"], selected, row, issues) if activity else None
         if proposed_time:
             previous = collection_times.get(activity["id"])
@@ -453,7 +459,7 @@ def _build(workspace, saved_plan, csv_path, mapping, *, filename=None):
                     issues.append(_issue("replacement_missing", "The explicitly selected observation does not exist in this saved revision", row=row))
                 else:
                     replacement = {key: item for key, item in old.items()
-                                   if key not in OBSERVATION_FIELDS and key != "lab_source"}
+                                   if key not in (*OBSERVATION_FIELDS, *METHOD_DEFINITION_FIELDS) and key != "lab_source"}
                     replacement.update(observation)
                     observation = replacement
                     decision["status"] = "identical" if _semantic(old) == _semantic(observation) else "replace"

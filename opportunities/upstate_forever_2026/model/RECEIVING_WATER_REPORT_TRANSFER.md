@@ -40,6 +40,12 @@ The URI has the producer's existing form `urn:upstate:receiving-water-report:<pr
 
 A same-project copied source can have a different collection ID. Its source ID, role, title, vintage, URI, typed metadata, recipe body and complete companion names/bytes/hashes must agree with the original captured source. The lineage receipt records the selected collection and the original `capture_source` separately. This permits ordinary source archive reimport without inventing or replacing native record IDs.
 
+## Original and geographic report editions
+
+Original `receiving-water-report-source/1` captures keep their exact original implementation roles: `producer` and `plan_reader`, plus `exporter` and `scientific_formatter` for a completed analysis.
+
+The maintained geographic edition `receiving-water-report-source/2` retains those roles and adds exactly `map_capture`, `map_renderer` and `scientific_figures`. Its `figures/source-map-spec.json`, paged overview SVGs and per-water SVGs are ordinary original recipe companions with exact byte/hash descriptors. They are retained through the same source and dossier inventory; transfer neither draws a new map nor substitutes a later geometry renderer. The recipe edition must match the immutable capture identity. Both editions remain readable after receiving.
+
 ## Source closure and cold receiving
 
 The adapter reads retained CAS objects through the existing closure `read` and `add_file` methods. It does not call `Workspace.source_file`, the report producer's `inspect`, or report binding functions that create source-view hardlinks. This preserves the transfer engine's original file-identity checks on a cold Workspace.

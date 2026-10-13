@@ -17,12 +17,13 @@ from .common import atomic_bytes, atomic_json, describe_file, digest, held, read
 from .implementation import ImplementationStore
 from .implementation_schema import ImplementationError, document_digest, validate_plan
 from .implementation_lab_dispatch import dispatch_files, reconcile_dispatch
+from .implementation_observation_quality import method_context
 from .implementation_observations import (
     _attachment_inventory, _compose_existing, _retain, _same,
 )
 from . import observed_context
 
-EDITION = "laboratory-dispatch-report-20261013-v1"
+EDITION = "laboratory-dispatch-report-20261013-v2-method-definition"
 SCHEMA = "upstate.implementation-lab-dispatch-report/v1"
 IDENTITY_SCHEMA = "upstate.implementation-lab-dispatch-report-identity/v1"
 MAX_VISIBLE_ROWS = 100
@@ -30,7 +31,7 @@ HEX = re.compile(r"^[0-9a-f]{64}$")
 
 REQUEST_FIELDS = (
     "order_id", "activity_id", "sample_id", "parameter", "unit", "basis",
-    "fraction", "method", "status", "observation_ids",
+    "fraction", "method", "method_context", "method_name", "returned_method_definitions", "status", "observation_ids",
     "ambiguous_observation_ids", "result_types", "issues",
 )
 RESULT_FIELDS = (
@@ -38,6 +39,7 @@ RESULT_FIELDS = (
     "activity_id", "sample_id", "site_id", "visit_id", "collected_at",
     "collection_method", "custody_ref", "parameter", "result_type",
     "numeric_value", "original_text", "unit", "basis", "fraction", "method",
+    "method_context", "method_name", "method_source_definition",
     "qualifier", "qa_status", "detection_limit", "quantitation_limit",
     "lab_source_link_id", "original_csv_record", "original_csv_sha256",
     "original_dispatch_id", "original_order_id", "original_observation",
@@ -150,6 +152,7 @@ def _result_records(plan, reconciliation):
             relations.append("unrequested")
         if key in preexisting:
             relations.append("preexisting")
+        declared_method = method_context(observation, activity)
         row = {
             "observation_id": key, "relation": relations,
             "matched_order_ids": matched.get(key, []), "competing_order_ids": competing.get(key, []),
@@ -160,6 +163,9 @@ def _result_records(plan, reconciliation):
             **{field: observation.get(field) for field in (
                 "parameter", "result_type", "original_text", "unit", "basis", "fraction",
                 "method", "qualifier", "qa_status", "detection_limit", "quantitation_limit")},
+            "method_context": declared_method["method_context"],
+            "method_name": declared_method["method_name"],
+            "method_source_definition": declared_method,
             "numeric_value": observation.get("value"),
             "lab_source_link_id": lab.get("source_link_id"), "original_csv_record": lab.get("record"),
             "original_csv_sha256": lab.get("csv_sha256"),
@@ -279,7 +285,7 @@ def _sections(context):
     request_rows = []
     for row in orders[:MAX_VISIBLE_ROWS]:
         requested = "; ".join(key + ": " + _text(row[key]) for key in
-                              ("unit", "basis", "fraction", "method") if row.get(key))
+                              ("unit", "basis", "fraction", "method", "method_context", "method_name") if row.get(key))
         request_rows.append([
             row["sample_id"], row["parameter"] + ("; " + requested if requested else ""),
             row["status"], len(row["observation_ids"]), len(row["ambiguous_observation_ids"]),
@@ -291,7 +297,9 @@ def _sections(context):
         row["result_type"] + "; numeric: " + _text(row["numeric_value"]) +
         "; original: " + _text(row["original_text"]) + "; relationship: " + _text(row["relation"]),
         "; ".join(key + ": " + _text(row[key]) for key in ("unit", "basis", "fraction") if row.get(key)),
-        row["method"],
+        "\n".join(label + ": " + _text(row[key]) for key, label in
+                    (("method", "Method"), ("method_context", "Context"), ("method_name", "Full name"))
+                    if row.get(key)),
         "; ".join(key + ": " + _text(row[key]) for key in ("qualifier", "qa_status") if row.get(key)),
     ] for row in records[:MAX_VISIBLE_ROWS]]
     changed = [row for row in contexts if row["context_changed"]]
@@ -321,7 +329,9 @@ def _sections(context):
         ]],
         ["Explicit requested analyses and their return status", [
             "Each request keeps its original parameter and any specified unit, chemical basis, fraction and "
-            "method. A blank optional request field imposes no restriction. Status follows the native "
+            "method, naming context and full name. Requested context/name compare exact declared source text; "
+            "a missing or different declared definition remains unresolved. A blank optional request field "
+            "imposes no restriction. Status follows the native "
             "reconciliation; competing result IDs remain separate from directly linked IDs. A returned status "
             "describes new or changed saved records, not a recorded shipment or receipt event.",
             _table(["Original sample", "Requested parameter / definition", "Status",
