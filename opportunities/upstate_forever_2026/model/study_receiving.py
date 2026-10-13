@@ -99,6 +99,7 @@ def detail(workspace, key):
     identity = retained["identity"]
     closure = study_transfer._Closure(
         workspace, identity["selection"],
+        geographic_native_studies=identity.get("geographic_native_studies", []),
         report_lineage="scientific_report_sources" in identity,
         implementation_lineage="implementation_report_sources" in identity,
         customer_review_lineage="customer_reviews" in identity,
