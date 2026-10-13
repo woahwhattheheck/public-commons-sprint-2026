@@ -4,7 +4,7 @@ Source: A73C's final seven-file case, merged PR3496 / 32a8937b61b0023ad969f89a90
 
 ## Ready-to-use input
 
-matched-control.json contains the COMPLETE 14,400-cell row-major binary mask, exact changed cell indices, all 635 target/control row/column pairs and per-class rainfall residuals. Role MATCHED_CONTROL_MASK; native source ID SIM_MATCHED_CONTROL_MASK. Convert original classes 81 and 82 to 41 through the ordinary saved scenario patch.
+matched-control.json contains the COMPLETE 14,400-cell row-major binary mask, exact changed cell indices, all 635 target/control row/column pairs and per-class rainfall residuals. This reproduction packet labels its mask MATCHED_CONTROL_MASK; the canonical native companion below labels the identical raster CONTROL_MASK and uses source ID SIM_MATCHED_CONTROL_MASK. Convert original classes 81 and 82 to 41 through the ordinary saved scenario patch.
 
 It selects 236 pasture cells and 399 crop cells, matching the original restoration's 57.15 ha exactly. Every control cell is outside the full RESTORATION_MASK, including its already-forested cells. The exact target cells and candidate cells come from the final retained recipe.
 
@@ -12,15 +12,24 @@ Class 81: target rainfall sum 350880.625005; control 350877.0833189998; mean abs
 Class 82: target rainfall sum 592495.5624979999; control 592486.6457990009; mean absolute paired residual 0.05325792731832108 mm/year.
 Maximum absolute paired rainfall residual is 0.625 mm/year.
 
-## Maintained driver composition
+## Canonical native companion
 
-The original A73C/ECO-DELIVERY13 driver owner retains source_tools/simulated_headwaters.py. Compose this additive source into that SAME driver before its initial input receipt is frozen:
+A73C's complete three-file companion F0C8QFQF2DC supplies generate-control.mjs, control-input.json and source_tools/simulated_headwaters_control.py. All three original source hashes were independently verified. Its integer-micro-mm matching and this independently retained generator select EXACTLY the same 14,400 mask values; no cell differs. Use that existing native companion to preserve the already-prepared original source collection, grid, profile and baseline.
 
-1. Read matched-control.json, verify source_recipe_sha256 equals the actual original recipe file SHA256, verify grid and demo_id, and validate binary mask/count/class-disjointness against original recipe arrays.
-2. Add MATCHED_CONTROL_MASK: mask to the arrays written by write_inputs, units mask, categorical nearest/int16. Keep the original input-recipe.json unmodified. Add matched-control.json and generate-matched-control.mjs as document companions in the SAME sources.json. Include the control document SHA256 in input-receiving.json and the resume check so a different control never silently reuses that receipt.
-3. Use ordinary source helper to give this raster SIM_MATCHED_CONTROL_MASK. Save the second land-cover alternative with the control scenario's exact title/from_codes/to_code/reason and mask_source_id. Use the SAME collection/grid/profile and original baseline.
-4. Replace two-case local enumeration with baseline plus both saved alternatives. Preserve each exact alternative ID in alternative_scenario_ids and alternative_run_ids; give each footprint/native phase and file a distinct scenario-derived name. Actual final footprint counts for BOTH alternatives must be 635 cells/57.15ha for this recipe.
-5. The original comparison, native_process_report, delivery scenario_run_ids, archive required run members and rehearsal selection must include both alternatives in the same order. Keep source/loading/retention figures under the existing owner's interpretation. No additional baseline or independent Workspace is needed.
+Canonical control-input.json: 252,261 bytes, SHA256 6345f7540fd4fbc622b377040170df8be4d1c9e1f70015940a1923ee2d6a4c8c. Original companion receiver: 9,226 bytes, SHA256 d84911c039477c1518bca06ab16ba8b9059f165bc50c142177ac93a93f86a75f. Native raster role CONTROL_MASK, source ID SIM_MATCHED_CONTROL_MASK. The full source is retained at https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QFQF2DC.
+
+The SAME driver imports its original module and calls:
+
+```python
+from source_tools.simulated_headwaters_control import prepare
+control = prepare(ws, receipt, recipe_path, control_path, control_output)
+```
+
+Here ws and receipt are the original demo Workspace and demo-receiving.json; recipe_path points to the unchanged final input-recipe.json, control_path to the canonical companion control-input.json, and control_output to a sibling output directory under the same owned operation. The companion imports its exact-hash mask/source documents as a separate collection, saves the original third scenario on the SAME grid/profile, validates the actual635-cell/57.15ha footprint and returns run_id, scenario_id, source_collection_id, footprint_id and matching_summary. The parent's existing lock/runtime/cutoff still owns any later execution.
+
+Retain those exact IDs beside the original baseline and riparian IDs. The existing native runner, all-alternative comparison, native_process_report, delivery scenario_run_ids, parameter course and archive membership then include this one control in the same saved ordering. Each alternative has its own phase/output filename. Existing baseline/restoration IDs and completed stages stay reusable.
+
+The broader retained matching summary also exposes R_FACTOR/K_FACTOR/elevation mean differences; the same mask's closest geometric stream-axis distance is97.867779m and mean572.804952m. These support the stated spatial-control interpretation, with actual native flow/retention/export still evaluated by the original model.
 
 The merged PR3498 / 694c60e0e78342933fbebe4812d1332780f13add scenario_summary.py already retains final net native changed area and explicitly labeled reporting-area avoided export per net changed model hectare in JSON/CSV/Markdown. Use actual run ownership and shared valid support, not this planning mask as an executed result.
 
