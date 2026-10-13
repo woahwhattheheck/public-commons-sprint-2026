@@ -202,8 +202,6 @@ def receive(args):
                 "operation_id": operation_id, "project_id": workspace.project["id"],
                 "original_admission": original_admission,
                 "geographic_edition_id": adopted_prepared["id"],
-                "requested_native_mode": ("reference" if args.run_reference else "full_course")
-                    if args.adopt_prepared else None,
                 "sources": {name: file_digest(APP/name) for name in (
                     "source_tools/receive_geographic_headwaters.py",
                     "source_tools/geographic_archive.py",
@@ -214,12 +212,16 @@ def receive(args):
                     "source_tools/demo_deadline.py",
                     "model/geographic_receiving_context.py",
                     "source_tools/geographic_scenario_context.py",
-                    "source_tools/geographic_scenario_interpretation.mjs",
+                    "source_tools/geographic_scenario_interpretation.mjs")},
+            }
+            if args.adopt_prepared:
+                adopted_source["requested_native_mode"] = (
+                    "reference" if args.run_reference else "full_course")
+                adopted_source["sources"].update({name: file_digest(APP/name) for name in (
                     "source_tools/headwaters_parameter_course.py",
                     "model/ensembles.py", "model/ensemble_operations.py",
                     "model/native.py", "model/native_arguments.py", "model/stage_cache.py",
-                    "model/model_selection.py", "model/native_versions.py")},
-            }
+                    "model/model_selection.py", "model/native_versions.py")})
             adoption_id = digest(adopted_source)
             atomic_json(output/"handover-adoptions"/(adoption_id+".json"),
                         {"id":adoption_id, **adopted_source}, immutable=True)
