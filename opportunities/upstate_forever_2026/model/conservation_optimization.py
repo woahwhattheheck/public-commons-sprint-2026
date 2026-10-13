@@ -131,6 +131,315 @@ def _available(study, kind, alternative):
     return tuple(axis for axis in PHYSICAL_AXES if axis in result)
 
 
+
+def _criterion(value, study):
+    """Bind an analyst criterion to one original quantity; never invent a source."""
+    if not isinstance(value, dict):
+        raise ValueError("Each criterion must be an object")
+    key = _text(value.get("id"), "Criterion ID")
+    if (not key[0].isalpha() or not all(char.isascii() and (char.isalnum() or char == "_") for char in key)):
+        raise ValueError("Criterion IDs must begin with a letter and contain ASCII letters, digits or underscores")
+    kind = value.get("kind")
+    if kind not in ("source-context", "current-export", "restoration", "avoided-conversion",
+                    "published-method", "source-attribute"):
+        raise ValueError("Choose an original physical, context, published-method or source-attribute criterion")
+    direction = value.get("direction", "maximize")
+    if direction not in ("maximize", "minimize"):
+        raise ValueError("Criterion direction must be maximize or minimize")
+    result = {"id": key, "label": _text(value.get("label"), "Criterion label", key),
+              "kind": kind, "direction": direction}
+    basis = value.get("basis", "total")
+    if basis not in ("total", "per-reporting-hectare"):
+        raise ValueError("Criterion basis must be total or per-reporting-hectare")
+    if kind in ("source-context", "source-attribute") and basis != "total":
+        raise ValueError("Context and original attributes retain their declared source units")
+    result["basis"] = basis
+    if kind == "source-attribute":
+        field = _text(value.get("field"), "Original attribute field")
+        if value.get("scenario_run_id") is not None:
+            raise ValueError("An original attribute does not select a native alternative")
+        result.update(field=field, unit=_text(value.get("unit"), "Original attribute unit"),
+                      reference=_text(value.get("reference"), "Attribute source/method reference"),
+                      source=deepcopy(study["selection"]["bindings"]["sources"]["parcels"]),
+                      scenario_run_id=None)
+        result["available"] = any(_attribute_number(row.get("original_attributes", {}).get(field)) is not None
+                                  for row in study["candidates"])
+        return result
+    axis = _text(value.get("axis"), "Original criterion axis")
+    permitted = (CONTEXT_AXES if kind == "source-context" else
+                 PUBLISHED_AXES if kind == "published-method" else PHYSICAL_AXES)
+    if axis not in permitted:
+        raise ValueError("Criterion axis is not declared by its original quantity kind")
+    alternative = value.get("scenario_run_id")
+    if kind in ("restoration", "avoided-conversion"):
+        alternative = identifier(alternative)
+    elif alternative is not None:
+        raise ValueError("Only a paired native criterion selects an alternative")
+    result.update(axis=axis, scenario_run_id=alternative)
+    result["available"] = axis in _available(study, kind, alternative)
+    result["unit"] = (CONTEXT_UNITS[axis] if kind == "source-context" else
+                      "points" if kind == "published-method" else conservation.POLLUTANTS[axis][2])
+    if basis == "per-reporting-hectare":
+        result["unit"] += "/reporting_ha"
+    if kind == "source-context":
+        role = {"source_water_area_ha": "drinking_water", "unprotected_area_ha": "protected_lands",
+                "high_quality_context": "high_quality_waters"}.get(axis)
+        result["source"] = deepcopy(study["selection"]["bindings"]["sources"].get(role)) if role else {
+            "geometry_inventory": deepcopy(study["files"]["geometries"])}
+    elif kind != "published-method":
+        bindings = study["selection"]["bindings"]["runs"]
+        baseline = study["selection"]["spec"]["baseline_run_id"]
+        result["source"] = {"baseline_run_id": baseline, "baseline": deepcopy(bindings[baseline]),
+                            "alternative_run_id": alternative,
+                            "alternative": deepcopy(bindings.get(alternative)) if alternative else None}
+    return result
+
+
+def _attribute_number(value):
+    # Numeric-looking text and booleans are still their original source types.
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    try:
+        number = float(value)
+    except (OverflowError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _multi_request(value, study, engine):
+    original = value["objective"]
+    criteria = original.get("criteria")
+    if not isinstance(criteria, list) or not criteria:
+        raise ValueError("Select at least one source-bound decision criterion")
+    criteria = [_criterion(item, study) for item in criteria]
+    axes = [item["id"] for item in criteria]
+    if len(axes) != len(set(axes)):
+        raise ValueError("Decision criteria must retain unique IDs")
+    available = [item["id"] for item in criteria if item["available"]]
+    # Reuse the original resource/filter/solver validator without changing its
+    # legacy request representation or reinterpreting its budget arithmetic.
+    base = deepcopy(value)
+    base.pop("scenario_stability", None)
+    base.update(objective={"kind": "source-context", "basis": "total"},
+                weights={"reporting_area_ha": 1}, stability=False)
+    result = _request(base, study, engine)
+    result.update(objective={"kind": "multi-criteria", "basis": "per-criterion",
+                             "scenario_run_id": None, "criteria": criteria},
+                  axes=axes, available_axes=available,
+                  weights=_weights(value.get("weights"), axes, available))
+    for criterion in criteria:
+        if criterion["kind"] == "published-method":
+            single = _request({"study_id": study["id"],
+                               "objective": {"kind": "published-method", "basis": criterion["basis"]},
+                               "stability": False}, study, engine)
+            criterion["published_method"] = single["published_method"]
+    raw_stability = value.get("stability", True)
+    if isinstance(raw_stability, bool):
+        raw_stability = {"enabled": raw_stability}
+    if (not isinstance(raw_stability, dict)
+            or set(raw_stability) - {"enabled", "profiles"}
+            or not isinstance(raw_stability.get("enabled", True), bool)):
+        raise ValueError("Stability must name enabled and optional preference profiles")
+    supplied = raw_stability.get("profiles") or []
+    if not isinstance(supplied, list):
+        raise ValueError("Preference profiles must be a list")
+    profiles, names = [], {"Selected weights"}
+    for item in supplied:
+        if not isinstance(item, dict):
+            raise ValueError("Each preference profile must name its weights")
+        name = _text(item.get("name"), "Preference profile name")
+        if name in names:
+            raise ValueError("Preference profile names must be distinct")
+        names.add(name)
+        profiles.append({"name": name, "weights": _weights(item.get("weights"), axes, available)})
+    enabled = raw_stability.get("enabled", True)
+    if enabled and not profiles:
+        profiles = [{"name": item["label"] + " only",
+                     "weights": _weights({item["id"]: 1}, axes, available)}
+                    for item in criteria if item["available"]]
+    result["stability"] = {"enabled": enabled, "profiles": profiles}
+    setting = value.get("scenario_stability") or {"enabled": False, "cases": []}
+    if (not isinstance(setting, dict) or set(setting) - {"enabled", "cases"}
+            or not isinstance(setting.get("enabled", True), bool)
+            or not isinstance(setting.get("cases", []), list)):
+        raise ValueError("Scenario stability must name enabled and explicit retained cases")
+    cases, case_names = [], {"Selected case"}
+    by_id = {item["id"]: item for item in criteria}
+    for item in setting.get("cases", []):
+        if not isinstance(item, dict):
+            raise ValueError("Each scenario case must name its retained run mapping")
+        name = _text(item.get("name"), "Scenario case name")
+        if name in case_names:
+            raise ValueError("Scenario case names must be distinct")
+        case_names.add(name)
+        supplied_runs = item.get("scenario_run_ids")
+        if not isinstance(supplied_runs, dict) or not supplied_runs:
+            raise ValueError("Each scenario case needs at least one actual alternative override")
+        runs = {}
+        for key, run_id in supplied_runs.items():
+            criterion = by_id.get(key)
+            if not criterion or criterion["kind"] not in ("restoration", "avoided-conversion"):
+                raise ValueError("Only declared paired native criteria may vary a retained case")
+            run_id = identifier(run_id)
+            _available(study, criterion["kind"], run_id)
+            runs[key] = run_id
+        cases.append({"name": name, "scenario_run_ids": runs})
+    result["scenario_stability"] = {"enabled": setting.get("enabled", True), "cases": cases}
+    return result
+
+
+def _multi_axis_values(candidate, request):
+    values, supports, units = {}, {}, {}
+    for criterion_index, criterion in enumerate(request["objective"]["criteria"]):
+        key = criterion["id"]
+        if criterion["kind"] == "source-attribute":
+            raw = candidate.get("original_attributes", {}).get(criterion["field"])
+            number = _attribute_number(raw)
+            values[key], units[key] = number, criterion["unit"]
+            supports[key] = {
+                "availability": "original_source_attribute" if number is not None else "unavailable_attribute",
+                "availability_reason": None if number is not None else
+                    "The retained original field is missing or is not a finite numeric source value",
+                "coverage_fraction": None, "eligible_support": number is not None,
+                "support_basis": "Unmodified numeric attribute of the original planning-unit source",
+                "original_value": deepcopy(raw) if not isinstance(raw, float) or math.isfinite(raw) else None,
+                "nonfinite_source_representation": repr(raw) if isinstance(raw, float) and not math.isfinite(raw) else None,
+                "field": criterion["field"],
+                "reference": criterion["reference"],
+                "unit_qualification": "Analyst-declared source unit; no conversion or connectivity inference",
+            }
+        else:
+            single = dict(request)
+            single["objective"] = {"kind": criterion["kind"], "basis": criterion["basis"],
+                                   "scenario_run_id": criterion["scenario_run_id"]}
+            if criterion["kind"] == "published-method":
+                single["published_method"] = criterion["published_method"]
+            original_values, original_supports, original_units = _axis_values(candidate, single)
+            axis = criterion["axis"]
+            values[key], units[key] = original_values[axis], original_units[axis]
+            supports[key] = deepcopy(original_supports[axis])
+        # Complete immutable bindings live once in the resolved criterion record.
+        # Pointers address this same analysis, including its explicit case index.
+        supports[key]["criterion_id"] = key
+        supports[key]["source_ref"] = request.get("_criterion_source_prefix", "/request/objective/criteria") + "/" + str(criterion_index)
+        supports[key]["criterion"] = {"id": key, "label": criterion["label"], "kind": criterion["kind"],
+                                     "direction": criterion["direction"], "basis": criterion["basis"],
+                                     "axis": criterion.get("axis"), "scenario_run_id": criterion["scenario_run_id"]}
+    return values, supports, units
+
+
+def _multi_case_request(request, case, study):
+    selected = deepcopy(request)
+    for criterion in selected["objective"]["criteria"]:
+        if criterion["id"] not in case["scenario_run_ids"]:
+            continue
+        run_id = case["scenario_run_ids"][criterion["id"]]
+        criterion["scenario_run_id"] = run_id
+        criterion["available"] = criterion["axis"] in _available(study, criterion["kind"], run_id)
+        criterion["source"]["alternative_run_id"] = run_id
+        criterion["source"]["alternative"] = deepcopy(study["selection"]["bindings"]["runs"][run_id])
+    selected["available_axes"] = [item["id"] for item in selected["objective"]["criteria"] if item["available"]]
+    return selected
+
+
+def _decision_rows(study, request, engine):
+    rows, normalization = _rows(study, request, engine)
+    if request["objective"]["kind"] != "multi-criteria":
+        return rows, normalization, []
+    variants = []
+    if request["scenario_stability"]["enabled"]:
+        seen = {tuple(item["scenario_run_id"] for item in request["objective"]["criteria"])}
+        for case in request["scenario_stability"]["cases"]:
+            selected = _multi_case_request(request, case, study)
+            signature = tuple(item["scenario_run_id"] for item in selected["objective"]["criteria"])
+            if signature in seen:
+                continue
+            seen.add(signature)
+            selected["_criterion_source_prefix"] = "/scenario_stability/cases/" + str(len(variants) + 1) + "/criteria"
+            values, _ = _rows(study, selected, engine, retain_original=False)
+            variants.append({"case": case, "request": selected, "rows": values})
+    cohorts = [rows] + [item["rows"] for item in variants]
+    scales = {axis: max((abs(row["objective_values"][axis]) for cohort in cohorts for row in cohort
+                         if row["source_eligible"] and row["axis_support"][axis]["eligible_support"]),
+                        default=0.) for axis in request["axes"]}
+    directions = {item["id"]: item["direction"] for item in request["objective"]["criteria"]}
+    for cohort in cohorts:
+        for row in cohort:
+            row["normalized_metrics"] = {
+                axis: ((-1 if directions[axis] == "minimize" else 1) * row["objective_values"][axis] / scales[axis]
+                       if row["axis_support"][axis]["eligible_support"] and scales[axis] else 0.)
+                for axis in request["axes"]}
+    normalization.update(
+        scales=scales, fixed_across_scenario_cases=True,
+        method="Maximum absolute source-qualified quantity per criterion across the selected case and every explicit comparison case",
+        directions=directions,
+        minimize="Minimized criteria negate their signed source-normalized value; an all-negative objective can legitimately select no land",
+        case_count=len(cohorts))
+    return rows, normalization, variants
+
+
+def _scenario_comparison(rows, request, variants, scored, chosen, optimization, engine, solver_request):
+    """Compare explicit alternative cases without inventing probabilities."""
+    if request["objective"]["kind"] != "multi-criteria":
+        return None
+    cases = [{"name": "Selected case", "request": request, "rows": rows,
+              "scored": scored, "chosen": chosen, "optimization": optimization}]
+    for item in variants:
+        ranked, exclusions = _score(item["rows"], request["weights"])
+        selected, outcome = engine._optimize(ranked, solver_request)
+        cases.append({"name": item["case"]["name"], "request": item["request"], "rows": item["rows"],
+                      "scored": ranked, "chosen": selected, "optimization": outcome, "exclusions": exclusions})
+    counts = {row["feature_id"]: {"eligible_cases": 0, "selected_cases": 0, "ranks": []} for row in rows}
+    results = []
+    for case in cases:
+        ranking = {row["feature_id"]: (index + 1, row["score"]) for index, row in enumerate(case["scored"])}
+        selected_ids = {row["feature_id"] for row in case["chosen"]}
+        candidates = []
+        for row in case["rows"]:
+            rank, score = ranking.get(row["feature_id"], (None, None))
+            item = counts[row["feature_id"]]
+            if rank is not None:
+                item["eligible_cases"] += 1
+                item["ranks"].append(rank)
+            item["selected_cases"] += int(row["feature_id"] in selected_ids)
+            candidates.append({
+                "feature_id": row["feature_id"], "rank": rank, "score": score,
+                "selected": row["feature_id"] in selected_ids,
+                "exclusions": (case.get("exclusions") or {}).get(row["feature_id"], row.get("exclusions", [])),
+                "objective_values": deepcopy(row["objective_values"]),
+                "objective_units": deepcopy(row["objective_units"]),
+                "axis_support": deepcopy(row["axis_support"]),
+                "score_contributions": {axis: request["weights"][axis] * row["normalized_metrics"][axis]
+                                        if row["axis_support"][axis]["eligible_support"] else None
+                                        for axis in request["axes"]},
+            })
+        results.append({
+            "name": case["name"], "scenario_run_ids": {
+                criterion["id"]: criterion["scenario_run_id"] for criterion in case["request"]["objective"]["criteria"]
+                if criterion["kind"] in ("restoration", "avoided-conversion")},
+            "criteria": deepcopy(case["request"]["objective"]["criteria"]),
+            "selected_ids": sorted(selected_ids), "eligible_count": len(case["scored"]),
+            "optimization": case["optimization"], "candidates": candidates,
+        })
+    for row in rows:
+        value = counts[row["feature_id"]]
+        ranks = value.pop("ranks")
+        row["scenario_stability"] = {
+            **value, "case_count": len(results),
+            "minimum_rank": min(ranks, default=None), "maximum_rank": max(ranks, default=None),
+            "selection_fraction": value["selected_cases"] / len(results),
+        }
+        row["score_contributions"] = {
+            axis: request["weights"][axis] * row["normalized_metrics"][axis]
+            if row["axis_support"][axis]["eligible_support"] else None for axis in request["axes"]}
+    return {
+        "enabled": request["scenario_stability"]["enabled"], "cases": results,
+        "interpretation": "Sensitivity to explicitly selected retained native cases under the selected decision weights; not a probability, confidence interval or calibrated scientific uncertainty",
+        "normalization": "One fixed source-qualified scale per criterion across all compared cases",
+        "preference_relation": "Named preference comparisons vary weights in the selected case separately; no joint case probability is assumed",
+    }
+
+
 def _request(value, study, engine):
     if not isinstance(value, dict):
         raise ValueError("Supply a conservation optimization selection")
@@ -140,6 +449,10 @@ def _request(value, study, engine):
     original = value.get("objective") or {}
     if not isinstance(original, dict):
         raise ValueError("Objective must identify its kind and quantity basis")
+    if original.get("kind") == "multi-criteria":
+        return _multi_request(value, study, engine)
+    if value.get("scenario_stability") is not None:
+        raise ValueError("Explicit scenario comparisons require the multi-criteria objective")
     default_kind = {
         "context": "source-context", "current_export": "current-export",
         "scenario_reduction": "restoration", "disturbance_increase": "avoided-conversion",
@@ -363,6 +676,8 @@ def _published_values(candidate, request, reporting):
 
 
 def _axis_values(candidate, request):
+    if request["objective"]["kind"] == "multi-criteria":
+        return _multi_axis_values(candidate, request)
     kind = request["objective"]["kind"]
     reporting = _number(candidate["reporting_area_ha"], "Retained reporting area", minimum=0)
     values, supports, units = {}, {}, {}
@@ -435,7 +750,7 @@ def _axis_values(candidate, request):
     return values, supports, units
 
 
-def _rows(study, request, engine):
+def _rows(study, request, engine, *, retain_original=True):
     original = study["candidates"]
     actual = {item["id"] for item in original}
     if len(actual) != len(original):
@@ -491,7 +806,8 @@ def _rows(study, request, engine):
             "cost_usd": engine._usd(cents), "cost_cents": cents,
             "objective_values": values, "objective_units": units, "axis_support": support,
             "source_exclusions": reasons, "resource_exclusions": budget_reasons,
-            "source_eligible": not reasons, "original_candidate": deepcopy(candidate),
+            "source_eligible": not reasons,
+            **({"original_candidate": deepcopy(candidate)} if retain_original else {}),
         })
     scales = {
         axis: max((abs(row["objective_values"][axis])
@@ -600,6 +916,8 @@ def _independent_quantities(rows, ids, request):
             "known_units": sum(x is not None for x in values),
             "unknown_units": sum(x is None for x in values),
             "unit": (chosen[0]["objective_units"][axis] if chosen else
+                     next(item["unit"] for item in request["objective"]["criteria"] if item["id"] == axis)
+                     if request["objective"]["kind"] == "multi-criteria" else
                      CONTEXT_UNITS[axis] if request["objective"]["kind"] == "source-context" else
                      ("points" if request["objective"]["kind"] == "published-method" else conservation.POLLUTANTS[axis][2]) +
                      ("/reporting_ha" if request["objective"]["basis"] == "per-reporting-hectare" else "")),
@@ -617,7 +935,7 @@ def preview(workspace, selection):
     if study["state"] != "complete":
         raise ValueError("Complete the original conservation study before optimizing its retained units")
     request = _request(selection, study, engine)
-    rows, normalization = _rows(study, request, engine)
+    rows, normalization, case_variants = _decision_rows(study, request, engine)
     solver_request = _solver_request(request, engine)
     scored, exclusions = _score(rows, request["weights"])
     chosen, optimization = engine._optimize(scored, solver_request)
@@ -662,6 +980,8 @@ def preview(workspace, selection):
             "maximum_rank": max(ranks_for_row, default=None),
             "selection_fraction": counts["selected_profiles"] / len(profile_results),
         }
+    scenario_comparison = _scenario_comparison(
+        rows, request, case_variants, scored, chosen, optimization, engine, solver_request)
     geometry = _spatial_summary(workspace, study, sorted(ids), request)
     selected_rows = [row for row in rows if row["selected"]]
     currency_values = {row["currency"] for row in selected_rows if row["currency"] is not None}
@@ -708,6 +1028,7 @@ def preview(workspace, selection):
         },
         "methods": {
             "objective_scope": {
+                "multi-criteria": "Explicit weighted source-bound criteria combining retained native quantities, source context, published points and original source attributes; each criterion retains its own units and case support",
                 "source-context": "Declared geographic context preference",
                 "published-method": "Complete published practice priority points for the independent original parcel units, with the explicitly selected portfolio quantity basis",
                 "current-export": "Baseline modeled export within each original planning-unit reporting footprint",
@@ -727,6 +1048,11 @@ def preview(workspace, selection):
             "normalization": "No arbitrary candidate-count cap; all original selected-source candidates are retained",
         },
     }
+    if scenario_comparison is not None:
+        analysis["scenario_stability"] = scenario_comparison
+        analysis["methods"]["scenario_comparison"] = scenario_comparison["interpretation"]
+        analysis["methods"]["criterion_direction"] = "Maximize retains each signed source value; minimize negates its normalized contribution. Missing values never become credited zeros."
+        analysis["methods"]["attribute_units"] = "Attribute units and references are explicit analyst declarations attached to the unchanged source field; no implicit conversion or connectivity model is applied."
     analysis["id"] = digest(analysis)
     return analysis
 
@@ -740,14 +1066,18 @@ def _csv(analysis):
     ]
     for axis in axes:
         fields += [axis + suffix for suffix in ("_objective", "_unit", "_coverage", "_availability", "_reason")]
+    if analysis["request"]["objective"]["kind"] == "multi-criteria":
+        fields += ["score_contributions", "scenario_stability", "axis_support"]
     fields += ["original_candidate"]
     output = io.StringIO(newline="")
     writer = csv.DictWriter(output, fieldnames=fields)
     writer.writeheader()
     for row in analysis["candidates"]:
         record = {name: row[name] for name in fields if name in row}
-        for key in ("source_identity", "exclusions", "preference_stability", "original_candidate"):
-            record[key] = canonical(row[key]).decode("utf-8")
+        for key in ("source_identity", "exclusions", "preference_stability", "original_candidate",
+                    "score_contributions", "scenario_stability", "axis_support"):
+            if key in record:
+                record[key] = canonical(row[key]).decode("utf-8")
         for axis in axes:
             support = row["axis_support"][axis]
             record.update({
@@ -762,54 +1092,287 @@ def _csv(analysis):
 
 
 def _html(analysis):
+    """Render the retained decision as a readable, self-contained scientific report."""
     esc = lambda value: html.escape(str(value), quote=True)
-    quantity = lambda value: "Unavailable" if value is None else esc(format(value, ".10g")) if isinstance(value, (int, float)) else esc(value)
-    head = """<!doctype html><html lang="en"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Conservation decision analysis</title>
-<style>body{font:15px system-ui,sans-serif;margin:2rem;color:#202124;background:#fff;max-width:100%}h1,h2{font-weight:600}p{max-width:90ch;line-height:1.5}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border:1px solid #ccc;padding:.5rem;text-align:left;vertical-align:top}th{background:#f4f4f4}code,pre{font-family:ui-monospace,monospace;overflow-wrap:anywhere}pre{white-space:pre-wrap}details{margin:.5rem 0}.scroll{overflow:auto}a{color:inherit}caption{text-align:left;font-weight:600;margin:1rem 0}</style>
-<body>"""
-    parts = [head, "<h1>" + esc(analysis["request"]["title"]) + "</h1>",
-             "<p>" + esc(analysis["request"]["purpose"]) + "</p>",
-             "<p>Original study: <code>" + esc(analysis["input"]["study_id"]) + "</code>. "
-             + esc(analysis["input"]["planning_unit_label"]) + ". "
-             + esc(analysis["methods"]["objective_scope"]) + ".</p>",
-             "<p><a href=\"analysis.json\">Complete editable decision data</a> · "
-             "<a href=\"candidates.csv\">Complete candidate table</a></p>",
-             "<h2>Selected land and constraints</h2><pre>"
-             + esc(json.dumps(analysis["selection"], ensure_ascii=False, indent=2)) + "</pre>",
-             "<h2>Objective and solver</h2><pre>"
-             + esc(json.dumps({"request": analysis["request"], "normalization": analysis["normalization"],
-                              "solver": analysis["optimization"]}, ensure_ascii=False, indent=2)) + "</pre>",
-             "<h2>Original candidates</h2><div class=\"scroll\"><table>"
-             "<thead><tr><th>Rank</th><th>Original unit</th><th>Selection</th><th>Score</th>"
-             "<th>Full hectares</th><th>Reporting hectares</th><th>Supplied full-unit cost</th>"
-             "<th>Objective quantities and support</th></tr></thead><tbody>"]
-    for row in analysis["candidates"]:
-        items = []
-        for axis in analysis["request"]["axes"]:
+
+    def text(value):
+        return "Unavailable" if value is None else esc(value)
+
+    def number(value, digits=8):
+        if value is None:
+            return "Unavailable"
+        if isinstance(value, bool):
+            return "Yes" if value else "No"
+        if isinstance(value, (int, float)):
+            return esc(format(value, "." + str(digits) + "g"))
+        return esc(value)
+
+    def percent(value):
+        return "Unavailable" if value is None else number(value * 100, 6) + "%"
+
+    def table(title, headers, rows, *, wide=False):
+        rendered = ['<section><h3>' + esc(title) + '</h3><div class="table-scroll" tabindex="0" role="region" aria-label="'
+                    + esc(title) + '"><table' + (' class="wide"' if wide else '') + '><thead><tr>']
+        rendered += ['<th scope="col">' + esc(value) + '</th>' for value in headers]
+        rendered.append('</tr></thead><tbody>')
+        for row in rows:
+            rendered.append('<tr>' + ''.join('<td>' + value + '</td>' for value in row) + '</tr>')
+        if not rows:
+            rendered.append('<tr><td colspan="' + str(len(headers)) + '">No retained records in this selection.</td></tr>')
+        rendered.append('</tbody></table></div></section>')
+        return ''.join(rendered)
+
+    request = analysis["request"]
+    selection = analysis["selection"]
+    geometry = selection["geometry"]
+    counts = analysis["counts"]
+    constraints = request["constraints"]
+    objective = request["objective"]
+    candidates = analysis["candidates"]
+    by_id = {row["feature_id"]: row for row in candidates}
+    criterion_definitions = {row["id"]: row for row in objective.get("criteria", [])}
+    labels = {axis: criterion_definitions.get(axis, {}).get("label", axis.replace("_", " "))
+              for axis in request["axes"]}
+
+    def unit_names(ids):
+        return '<ul class="compact">' + ''.join(
+            '<li>' + esc(by_id.get(key, {}).get("label") or key) + '</li>' for key in ids
+        ) + '</ul>' if ids else "None"
+
+    parts = ['''<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conservation decision analysis</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fff;color:#202124;font:15px/1.5 system-ui,sans-serif}
+main{max-width:1280px;margin:auto;padding:28px}h1{font-size:1.8rem;line-height:1.2}h2{font-size:1.3rem;margin-top:2rem;padding-top:.5rem;border-top:1px solid #bbb}h3{font-size:1rem;margin:1.2rem 0 .5rem}
+p{max-width:95ch}a{color:#202124;text-underline-offset:2px}code{overflow-wrap:anywhere;font-size:.88em}
+.table-scroll{max-width:100%;overflow:auto;border:1px solid #bfc3c7;border-radius:3px;margin:.5rem 0 1rem}
+.table-scroll:focus{outline:3px solid #444;outline-offset:2px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}table.wide{min-width:980px}
+th,td{padding:.55rem .65rem;border-bottom:1px solid #d7d9dc;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#f1f2f3;font-weight:600}tr:last-child td{border-bottom:0}
+.numeric{white-space:nowrap}.muted{color:#555}.notice{border-left:3px solid #737b83;padding:.5rem 1rem;background:#f6f7f8}
+.compact{margin:0;padding-left:1.2rem}.compact li{margin:.15rem 0}details{margin:1rem 0}summary{cursor:pointer;font-weight:600}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;background:#f5f6f7;padding:1rem}
+nav{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:1rem 0}section{margin-bottom:1.1rem}
+@media(max-width:600px){main{padding:16px}h1{font-size:1.5rem}th,td{padding:.45rem}.table-scroll{margin-right:0}}
+@media print{main{max-width:none;padding:0}body{font-size:9pt}nav{display:none}.table-scroll{overflow:visible;border:0}table.wide{min-width:0}th,td{padding:4px}tr{break-inside:avoid}a{color:inherit}details{break-inside:avoid}}
+</style></head><body><main>''',
+        '<h1>' + esc(request["title"]) + '</h1>',
+        '<p>' + esc(request["purpose"]) + '</p>',
+        '<p><strong>Study:</strong> ' + esc(analysis["input"].get("title") or analysis["input"]["study_id"])
+        + ' · ' + esc(analysis["input"]["planning_unit_label"]) + '</p>',
+        '<p>' + esc(analysis["methods"]["objective_scope"]) + '.</p>',
+        '<nav aria-label="Report files"><a href="analysis.json">Download original analysis JSON</a>'
+        '<a href="candidates.csv">Download all candidates CSV</a></nav>',
+        '<h2>Selected portfolio</h2>']
+    parts.append(table("Decision summary", ["Measure", "Retained result"], [
+        ["Selected original units", number(counts["selected"]) + " of " + number(counts["inventory"])],
+        ["Eligible / excluded", number(counts["eligible"]) + " / " + number(counts["excluded"])],
+        ["Weighted objective", number(selection["objective_score"]) + " (dimensionless)"],
+        ["Whole-unit union", number(geometry["whole_unit_union_area_ha"]) + " ha"],
+        ["Reporting-area union", number(geometry["reporting_union_area_ha"]) + " ha"],
+        ["Supplied full-unit cost", number(selection["supplied_cost_total"]) + " " + esc(selection.get("currency") or "")],
+        ["Known supplied cost subtotal", number(selection["known_supplied_cost_subtotal"]) + " " + esc(selection.get("currency") or "")],
+        ["Units without supplied cost", number(selection["units_without_supplied_cost"])],
+    ]))
+    parts.append('<p><strong>Chosen units:</strong></p>' + unit_names(analysis["selected_ids"]))
+    parts.append(table("Resource constraints", ["Constraint", "Entered limit", "Accounting"], [
+        ["Budget", "Not set" if constraints["budget_usd"] is None else number(constraints["budget_usd"]) + " USD",
+         "Original supplied full-unit costs; no currency conversion"],
+        ["Area", "Not set" if constraints["area_ha"] is None else number(constraints["area_ha"]) + " ha",
+         "Whole source units" if constraints["area_basis"] == "whole_units" else "Reporting footprints"],
+        ["Unit count", "Not set" if constraints["max_count"] is None else number(constraints["max_count"]),
+         "Original planning units"],
+    ]))
+    parts.append('<p class="notice">The optimizer uses additive values for the original units. Overlapping footprints and sums of per-hectare values are not independent basin totals. Saving the portfolio uses the original conservation plan workflow, which recomputes quantities on its selected reporting union.</p>')
+    parts.append(table("Selected geometry accounting", ["Measure", "Hectares"], [
+        ["Summed whole-unit area", number(geometry["summed_whole_unit_area_ha"])],
+        ["Summed reporting area", number(geometry["summed_reporting_area_ha"])],
+        ["Whole-unit overlap", number(geometry["whole_unit_overlap_area_ha"])],
+        ["Reporting overlap", number(geometry["reporting_overlap_area_ha"])],
+    ]))
+
+    parts.append('<h2>Criteria, source quantities and weights</h2>')
+    criteria_rows = []
+    for axis in request["axes"]:
+        criterion = criterion_definitions.get(axis, {})
+        first = next((row for row in candidates if axis in row["objective_units"]), None)
+        unit = first["objective_units"][axis] if first else criterion.get("unit", "")
+        basis = criterion.get("basis", objective.get("basis", "total"))
+        case = criterion.get("scenario_run_id", objective.get("scenario_run_id"))
+        kind = criterion.get("kind", objective["kind"])
+        source_description = criterion.get("reference") or kind.replace("-", " ")
+        if criterion.get("field"):
+            source_description += " · field: " + criterion["field"]
+        if case:
+            source_description += " · alternative: " + case
+        criteria_rows.append([
+            esc(labels[axis]), esc(source_description), esc(unit),
+            "Per reporting hectare" if basis == "per-reporting-hectare" else "Original total / source value",
+            esc(criterion.get("direction", "maximize")),
+            percent(request["weights"].get(axis, 0)),
+            number(analysis["normalization"]["scales"].get(axis)),
+        ])
+    parts.append(table("Criterion definitions", [
+        "Criterion", "Original quantity / source", "Unit", "Basis", "Direction", "Weight", "Fixed scale"
+    ], criteria_rows, wide=True))
+    parts.append('<p>Each supported quantity is divided by its criterion’s maximum absolute scale. A minimize criterion negates that normalized value. The score is the sum of weighted contributions; weights total one. Adverse changes remain signed. A positive weight requires valid source support; unavailable values are not treated as beneficial zeroes.</p>')
+    if analysis["normalization"].get("fixed_across_scenario_cases"):
+        parts.append('<p>The scales are fixed across the selected case and all explicitly compared native cases, and reused across preference profiles. Adding a case can change these scales and therefore defines a new decision analysis.</p>')
+    else:
+        parts.append('<p>The scales are fixed across the selected candidate universe and reused for the preference comparisons.</p>')
+    quantity_rows = []
+    for axis, item in selection["independent_objective_sums"].items():
+        quantity_rows.append([
+            esc(labels.get(axis, axis)), number(item.get("sum")), esc(item.get("unit", "")),
+            number(item.get("known_sum")), number(item.get("known_units")), number(item.get("unknown_units")),
+        ])
+    parts.append(table("Independent selected-unit quantities", [
+        "Criterion", "Sum of known complete unit values", "Unit", "Known subtotal", "Known units", "Unknown units"
+    ], quantity_rows, wide=True))
+    parts.append('<p class="muted">These are arithmetic sums over selected original units. They preserve each criterion’s units; different pollutants, points, hectares and source attributes are never added as a physical total. Density sums and overlapping-unit sums should be interpreted with the original quantities and selected-union plan.</p>')
+    outcome = analysis["optimization"]
+    parts.append('<h2>Solver result</h2>')
+    parts.append(table("Optimization accounting", ["Measure", "Result"], [
+        ["Status", esc(outcome.get("status", "Unavailable"))],
+        ["Algorithm", text(outcome.get("algorithm"))],
+        ["Requested solver", text(outcome.get("requested_solver", request.get("solver")))],
+        ["Objective value", number(outcome.get("objective_score"))],
+        ["Upper bound", number(outcome.get("upper_bound"))],
+        ["Absolute gap", number(outcome.get("absolute_gap"))],
+        ["Relative gap", percent(outcome.get("relative_gap"))],
+        ["Optimality basis", text(outcome.get("optimality_basis"))],
+    ]))
+    optional = outcome.get("optional_solver")
+    if optional:
+        parts.append('<p class="notice"><strong>Optional solver:</strong> '
+                     + esc("; ".join(str(key).replace("_", " ") + ": " + str(value)
+                                     for key, value in optional.items())) + '</p>')
+    if not analysis["selected_ids"]:
+        parts.append('<p class="notice">No positive feasible portfolio was selected under these objectives and constraints. Review the signed criterion contributions, missing support and resource limits before changing the analyst’s selection.</p>')
+    parts.append('<h2>Preference comparisons</h2>')
+    stability = analysis["stability"]
+    parts.append('<p>' + esc(stability["interpretation"]) + '.</p>')
+    preference_rows = []
+    for profile in stability["profiles"]:
+        weights = "; ".join(labels.get(key, key) + ": " + format(value * 100, ".6g") + "%"
+                            for key, value in profile["weights"].items() if value > 0)
+        result = profile["optimization"]
+        preference_rows.append([
+            esc(profile["name"]), esc(weights), number(profile["eligible_count"]),
+            unit_names(profile["selected_ids"]), number(result["objective_score"]),
+            text(result.get("status")), percent(result.get("relative_gap")),
+        ])
+    parts.append(table("Explicit decision preferences", [
+        "Preference", "Positive weights", "Eligible units", "Selected units", "Objective", "Solver status", "Gap"
+    ], preference_rows, wide=True))
+    scenario = analysis.get("scenario_stability")
+    if scenario is not None and not scenario.get("enabled"):
+        scenario = None
+    if scenario is not None:
+        parts.append('<h2>Native case comparisons</h2><p>' + esc(scenario["interpretation"]) + '.</p>')
+        parts.append('<p>' + esc(scenario["preference_relation"]) + '.</p>')
+        parts.append('<p class="notice">Each paired criterion retains its own common valid baseline/alternative support. Differences in coverage or parameter profiles can contribute to a rank change; inspect the original quantities and coverage before attributing it to an intervention alone.</p>')
+        case_rows = []
+        for case in scenario["cases"]:
+            mappings = "; ".join(labels.get(key, key) + ": " + value
+                                 for key, value in case["scenario_run_ids"].items()) or "No paired criterion"
+            result = case["optimization"]
+            case_rows.append([
+                esc(case["name"]), esc(mappings), number(case["eligible_count"]),
+                unit_names(case["selected_ids"]), number(result["objective_score"]),
+                text(result.get("status")), percent(result.get("relative_gap")),
+            ])
+        parts.append(table("Selected weights across retained cases", [
+            "Case", "Original alternative runs", "Eligible units", "Selected units", "Objective", "Solver status", "Gap"
+        ], case_rows, wide=True))
+    stability_rows = []
+    for row in candidates:
+        pref = row["preference_stability"]
+        case = row.get("scenario_stability") if scenario is not None else None
+        pref_range = ("Unavailable" if pref["minimum_rank"] is None else
+                      number(pref["minimum_rank"]) + "–" + number(pref["maximum_rank"]))
+        case_range = ("Not compared" if case is None else "Unavailable" if case["minimum_rank"] is None else
+                      number(case["minimum_rank"]) + "–" + number(case["maximum_rank"]))
+        stability_rows.append([
+            esc(row["label"]), number(pref["selected_profiles"]) + " / " + number(pref["profile_count"]),
+            number(pref["eligible_profiles"]) + " / " + number(pref["profile_count"]), pref_range,
+            "Not compared" if case is None else number(case["selected_cases"]) + " / " + number(case["case_count"]),
+            "Not compared" if case is None else number(case["eligible_cases"]) + " / " + number(case["case_count"]),
+            case_range,
+        ])
+    parts.append(table("Priority stability by original unit", [
+        "Original unit", "Selected preferences", "Eligible preferences", "Preference rank range",
+        "Selected cases", "Eligible cases", "Case rank range"
+    ], stability_rows, wide=True))
+    parts.append('<p class="muted">Counts describe only the explicitly included preferences and cases. Eligibility can change when a positive-weight criterion lacks support. These fractions are neither selection probabilities nor calibrated confidence levels.</p>')
+    parts.append('<h2>Original candidate values and support</h2>')
+    candidate_rows = []
+    for row in candidates:
+        support_items = []
+        for axis in request["axes"]:
             support = row["axis_support"][axis]
-            items.append("<div><strong>" + esc(axis) + "</strong>: "
-                         + quantity(row["objective_values"][axis]) + " " + esc(row["objective_units"][axis])
-                         + "; " + esc(support["availability"])
-                         + ("" if support["coverage_fraction"] is None else "; coverage " + quantity(support["coverage_fraction"]))
-                         + ("" if support["availability_reason"] is None else "; " + esc(support["availability_reason"]))
-                         + ("; native parameter profile changed" if support.get("profile_changed") else "") + "</div>")
+            line = '<strong>' + esc(labels[axis]) + ':</strong> ' + number(row["objective_values"][axis])
+            line += " " + esc(row["objective_units"][axis]) + "; " + esc(support["availability"].replace("_", " "))
+            if support["coverage_fraction"] is not None:
+                line += "; coverage " + percent(support["coverage_fraction"])
+            if support.get("valid_area_ha") is not None:
+                line += "; valid area " + number(support["valid_area_ha"]) + " ha"
+            if support.get("availability_reason"):
+                line += "; " + esc(support["availability_reason"])
+            if support.get("profile_changed"):
+                line += "; native parameter profile changed"
+            if axis in row.get("score_contributions", {}):
+                line += "; score contribution " + number(row["score_contributions"][axis])
+            support_items.append('<li>' + line + '</li>')
         if row["exclusions"]:
-            items.append("<div>" + esc("; ".join(row["exclusions"])) + "</div>")
-        parts.append("<tr><td>" + quantity(row["rank"]) + "</td><td><code>" + esc(row["feature_id"])
-                     + "</code><br>" + esc(row["label"]) + "</td><td>"
-                     + ("Selected" if row["selected"] else "Eligible" if row["eligible"] else "Excluded")
-                     + "</td><td>" + quantity(row["score"]) + "</td><td>"
-                     + quantity(row["whole_unit_area_ha"]) + "</td><td>" + quantity(row["reporting_area_ha"])
-                     + "</td><td>" + quantity(row["supplied_cost"]) + " "
-                     + esc(row["currency"] or "") + "</td><td>" + "".join(items) + "</td></tr>")
-    parts += ["</tbody></table></div><h2>Preference stability</h2><pre>",
-              esc(json.dumps(analysis["stability"], ensure_ascii=False, indent=2)),
-              "</pre><h2>Source and interpretation</h2>"]
+            support_items.append('<li><strong>Exclusions:</strong> ' + esc("; ".join(row["exclusions"])) + '</li>')
+        candidate_rows.append([
+            number(row["rank"]), esc(row["label"]) + '<br><code>' + esc(row["feature_id"]) + '</code>',
+            "Selected" if row["selected"] else "Eligible" if row["eligible"] else "Excluded",
+            number(row["score"]), number(row["whole_unit_area_ha"]), number(row["reporting_area_ha"]),
+            number(row["supplied_cost"]) + " " + esc(row["currency"] or ""),
+            '<ul class="compact">' + ''.join(support_items) + '</ul>',
+        ])
+    parts.append(table("All original candidates", [
+        "Rank", "Original unit", "Selection", "Score", "Full ha", "Reporting ha", "Supplied full-unit cost",
+        "Criterion quantities, support and contributions"
+    ], candidate_rows, wide=True))
+    if scenario is not None:
+        for case in scenario["cases"][1:]:
+            comparison_rows = []
+            for row in case["candidates"]:
+                values = []
+                for axis in request["axes"]:
+                    support = row["axis_support"][axis]
+                    line = esc(labels[axis]) + ": " + number(row["objective_values"][axis])
+                    line += " " + esc(row["objective_units"][axis])
+                    line += "; " + esc(support["availability"].replace("_", " "))
+                    if support["coverage_fraction"] is not None:
+                        line += "; coverage " + percent(support["coverage_fraction"])
+                    if support.get("availability_reason"):
+                        line += "; " + esc(support["availability_reason"])
+                    values.append('<li>' + line + '</li>')
+                comparison_rows.append([
+                    esc(by_id[row["feature_id"]]["label"]), number(row["rank"]),
+                    "Selected" if row["selected"] else "Eligible" if row["rank"] is not None else "Excluded",
+                    number(row["score"]), '<ul class="compact">' + ''.join(values) + '</ul>',
+                    esc("; ".join(row["exclusions"])) or "None",
+                ])
+            parts.append('<details><summary>Candidate quantities — ' + esc(case["name"]) + '</summary>')
+            parts.append(table(case["name"], ["Unit", "Rank", "Selection", "Score", "Original quantities and support", "Exclusions"],
+                               comparison_rows, wide=True))
+            parts.append('</details>')
+    parts.append('<h2>Methods and interpretation</h2>')
+    method_rows = []
     for key, value in analysis["methods"].items():
-        parts.append("<p><strong>" + esc(key.replace("_", " ")) + ".</strong> " + esc(value) + "</p>")
-    parts += ["<details><summary>Original source and native case bindings</summary><pre>",
-              esc(json.dumps(analysis["input"], ensure_ascii=False, indent=2)), "</pre></details></body></html>"]
+        rendered = "; ".join(str(k) + ": " + str(v) for k, v in value.items()) if isinstance(value, dict) else str(value)
+        method_rows.append([esc(key.replace("_", " ").capitalize()), esc(rendered)])
+    parts.append(table("Retained method record", ["Topic", "Method / interpretation"], method_rows))
+    parts.append('<details><summary>Original selection, source and calculation records</summary><p>The original JSON is also available as a separate download.</p><pre>'
+                 + esc(json.dumps({"analysis_id": analysis["id"], "input": analysis["input"],
+                                   "request": request, "normalization": analysis["normalization"],
+                                   "solver": outcome}, ensure_ascii=False, indent=2))
+                 + '</pre></details></main></body></html>')
     return "".join(parts).encode("utf-8")
 
 
