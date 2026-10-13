@@ -61,6 +61,7 @@ class _JSON:
             self.sha.update(body)
             self.read_bytes += len(body)
             remaining -= len(body)
+        self.consumed_sha = self.sha.copy()
         self.decoder = codecs.getincrementaldecoder("utf-8")("strict")
         self.json = json.JSONDecoder(parse_constant=self._invalid_constant)
         self.buffer, self.position, self.offset, self.eof = "", 0, offset, False
@@ -85,6 +86,7 @@ class _JSON:
     def _consume(self, end):
         raw = self.buffer[self.position:end].encode("utf-8")
         self.offset += len(raw)
+        self.consumed_sha.update(raw)
         self.position = end
         return raw
 
@@ -94,6 +96,7 @@ class _JSON:
             while self.position < len(self.buffer) and self.buffer[self.position] in " \t\r\n":
                 self.position += 1
             self.offset += self.position - start
+            self.consumed_sha.update(self.buffer[start:self.position].encode("ascii"))
             if self.position < len(self.buffer) or self.eof:
                 return
             self._fill()
@@ -145,6 +148,7 @@ def _get(db, name):
 
 def _checkpoint(db, reader, cursor, metadata):
     cursor["offset"] = reader.offset
+    cursor["prefix_sha256"] = reader.consumed_sha.hexdigest()
     _set(db, "cursor", cursor)
     _set(db, "result", metadata)
     db.commit()
@@ -175,6 +179,17 @@ def _build(path, source, identity, fingerprint):
             if before != fingerprint:
                 raise ValueError("The original result changed before indexing")
             reader = _JSON(stream, cursor["offset"])
+            if cursor["offset"] and cursor.get("prefix_sha256") != reader.consumed_sha.hexdigest():
+                # Partial spans were derived from another prefix before a source
+                # repair/replacement. Rebuild only this derivative, keeping originals.
+                db.execute("DELETE FROM spans")
+                db.execute("DELETE FROM metadata WHERE name != 'identity'")
+                db.commit()
+                metadata = {}
+                cursor = {"offset": 0, "phase": "start", "allow_end": True,
+                          "seen": [], "ordinals": {"rows": 0, "ranges": 0, "cases": 0}}
+                stream.seek(0)
+                reader = _JSON(stream)
             pending = 0
             while cursor["phase"] != "done":
                 phase = cursor["phase"]
