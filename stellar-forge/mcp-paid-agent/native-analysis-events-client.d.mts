@@ -35,7 +35,7 @@ export interface EventInputReceipt {
 export interface EventRecordIdentity {
  schema: 'stellar-forge.analysis-event-record.v1';
  workspace_id: string;
- kind: 'overview' | 'programme' | 'action' | 'fields' | 'values';
+ kind: 'overview' | 'programme' | 'action' | 'fields' | 'values' | 'mapping';
  record_id: string;
  bytes: number;
  sha256: string;
@@ -46,9 +46,11 @@ export function receiveNativeAnalysisEventInput(options: EventInputOptions): Pro
 export function readNativeAnalysisEventRecord(options: EventConnectionOptions & {record: EventRecordIdentity}):
  Promise<{record: EventRecordIdentity; bytes: Uint8Array; text: string}>;
 
+export interface EventFeedSourceIdentity {id: string; source: string; storeId: string; feedId: string; feedRevision: string;}
 export interface EventPayloadSource {
  schema: 'stellar-forge.event-feed-payload-fields.v1' | 'stellar-forge.event-feed-payload-values.v1';
  workspace_id: string; input_id: string; edition_id: string; events: number;
+ source: EventFeedSourceIdentity; through_sequence: number; pages: number;
  original_files: {ndjson: {bytes: number; sha256: string}; manifest: {bytes: number; sha256: string}};
  receiver: {cli_sha256: string; core_sha256: string};
 }
@@ -59,3 +61,19 @@ export function inspectNativeAnalysisEventFields(options: EventPayloadInspection
  Promise<{record: EventRecordIdentity; bytes: Uint8Array; text: string; value: EventPayloadSource & {field_count: number; fields: Array<Record<string, unknown>>}}>;
 export function inspectNativeAnalysisEventFieldValues(options: EventPayloadInspectionOptions & {pointer: string; offset?: number; limit?: number}):
  Promise<{record: EventRecordIdentity; bytes: Uint8Array; text: string; value: EventPayloadSource & {pointer: string; offset: number; limit: number; total: number; next_offset: number | null; rows: Array<Record<string, unknown>>}}>;
+
+export interface EventMapping {schema?: 'stellar-forge.event-feed-analysis-mapping.v1'; fields: Array<{name: string; pointer: string}>;}
+export interface EventMappingReview {
+ comparison_sha256: string; programme_revision: number; baseline_operation_id: string;
+ reviewer: string; note: string; decisions: Array<{name: string; reason: string}>;
+}
+export interface EventMappingComparison {
+ schema: 'stellar-forge.event-feed-mapping-comparison.v1'; workspace_id: string; programme: string;
+ input_id: string; programme_revision: number; baseline_operation_id: string; comparison_sha256: string;
+ previous: Record<string, unknown>; current: Record<string, unknown>; window: Record<string, unknown>;
+ previous_mapping: EventMapping; mapping: EventMapping; previous_mapping_sha256: string; mapping_sha256: string;
+ field_count: number; fields: Array<Record<string, unknown>>; mapped_fields: Array<Record<string, unknown>>;
+ required_decisions: string[]; receiver: {cli_sha256: string; core_sha256: string};
+}
+export function compareNativeAnalysisEventMappings(options: EventPayloadInspectionOptions & {programme: string; mapping: EventMapping}):
+ Promise<{record: EventRecordIdentity; bytes: Uint8Array; text: string; value: EventMappingComparison}>;

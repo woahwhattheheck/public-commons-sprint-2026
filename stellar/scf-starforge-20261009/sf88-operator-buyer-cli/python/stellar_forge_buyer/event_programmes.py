@@ -209,6 +209,97 @@ class EventProgrammes:
         return {**result, "workspace_id": self.workspace.identity, "input_id": input_id,
                 "receiver": {"cli_sha256": sha(cli_raw), "core_sha256": sha(core_raw)}}
 
+
+    def compare_mapping(self, programme, input_id, mapping):
+        """Read the original accepted source and the exact proposed received pair."""
+        programme, input_id = name(programme), identifier(input_id)
+        need(isinstance(mapping, dict) and isinstance(mapping.get("fields"), list) and
+             len(mapping["fields"]) <= 100 and len(raw(mapping).encode()) <= 1024 * 1024,
+             "FIELD_MAPPING_REQUIRED")
+        with self._lock:
+            need(not self._closed, "CLOSED")
+            future = self._executor.submit(self._compare_mapping, programme, input_id, mapping)
+        return future.result()
+
+    def _compare_mapping(self, programme, input_id, mapping):
+        from .event_feed_analysis import exact_file, regular, sha
+        core = self._core(programme)
+        baseline = core.programme()
+        accepted = baseline["accepted"]
+        need(accepted is not None, "ACCEPTED_MAPPING_REQUIRED")
+        previous_paths = core.source_paths(accepted)
+        previous = {kind: regular(path, LIMITS[kind]) for kind, path in
+                    zip(("ndjson", "manifest"), previous_paths)}
+        current = self._originals(input_id)
+        source_cli = self.source_cli.resolve(strict=True)
+        source_core = source_cli.with_name("analysis-source.mjs")
+        need(source_cli.name == "analysis-source-cli.mjs" and source_core.is_file(),
+             "ORIGINAL_SOURCE_RECEIVER_REQUIRED")
+        cli_raw, core_raw = regular(source_cli), regular(source_core)
+        with tempfile.TemporaryDirectory(prefix="event-mapping-comparison-") as temporary:
+            root = Path(temporary)
+            selected = {"analysis-source-cli.mjs": cli_raw, "analysis-source.mjs": core_raw,
+                        "events.ndjson": current["ndjson"], "manifest.json": current["manifest"],
+                        "previous.ndjson": previous["ndjson"], "previous.json": previous["manifest"],
+                        "mapping.json": raw(mapping).encode(),
+                        "previous-mapping.json": raw(accepted["mapping"]).encode()}
+            for filename, content in selected.items():
+                exact_file(root / filename, content)
+            command = [self.workspace.node, str(root / "analysis-source-cli.mjs"),
+                       "--ndjson", str(root / "events.ndjson"), "--manifest", str(root / "manifest.json"),
+                       "--previous-ndjson", str(root / "previous.ndjson"),
+                       "--previous-manifest", str(root / "previous.json"),
+                       "--mapping", str(root / "mapping.json"),
+                       "--previous-mapping", str(root / "previous-mapping.json"),
+                       "--compare-mapping", "true"]
+            completed = subprocess.run(command, capture_output=True, check=False, timeout=120)
+        need(completed.returncode == 0,
+             completed.stderr.decode("utf-8", "replace")[:8000] or "MAPPING_COMPARISON_FAILED")
+        need(0 < len(completed.stdout) <= 25 * 1024 * 1024, "MAPPING_COMPARISON_TOO_LARGE")
+        result = json.loads(completed.stdout)
+        need(result.get("schema") == "stellar-forge.event-feed-mapping-comparison.v1" and
+             HASH.fullmatch(result.get("comparison_sha256", "")), "MAPPING_COMPARISON_CHANGED")
+        for key, originals in (("previous", previous), ("current", current)):
+            need(result.get(key, {}).get("original_files") ==
+                 {kind: {"bytes": len(value), "sha256": sha(value)} for kind, value in originals.items()},
+                 "MAPPING_COMPARISON_SOURCE_CHANGED")
+        need(result["previous"]["edition_id"] == accepted["edition_id"] and
+             result["previous_mapping"] == accepted["mapping"] and
+             result["previous_mapping_sha256"] == accepted["mapping_sha256"],
+             "ORIGINAL_ACCEPTED_MAPPING_CHANGED")
+        need(core.programme()["revision"] == baseline["revision"], "MAPPING_BASELINE_CHANGED")
+        return {**result, "workspace_id": self.workspace.identity, "programme": programme,
+                "programme_revision": baseline["revision"], "input_id": input_id,
+                "baseline_operation_id": accepted["operation_id"],
+                "receiver": {"cli_sha256": sha(cli_raw), "core_sha256": sha(core_raw)}}
+
+    def _review_mapping(self, programme, request):
+        selection = request["mapping_review"]
+        need(isinstance(selection, dict) and set(selection) ==
+             {"comparison_sha256", "programme_revision", "baseline_operation_id",
+              "reviewer", "note", "decisions"}, "COMPLETE_MAPPING_REVIEW_REQUIRED")
+        comparison = self._compare_mapping(programme, request["input_id"], request["mapping"])
+        for key in ("comparison_sha256", "programme_revision", "baseline_operation_id"):
+            need(selection[key] == comparison[key], "MAPPING_REVIEW_BASIS_CHANGED")
+        for key, maximum in (("reviewer", 240), ("note", 8000)):
+            value = selection[key]
+            need(isinstance(value, str) and value.strip() and len(value.encode()) <= maximum and
+                 not any(ord(char) < 32 and char not in "\n\t\r" for char in value),
+                 "MAPPING_REVIEW_ATTRIBUTION_REQUIRED")
+        decisions = selection["decisions"]
+        need(isinstance(decisions, list) and len(decisions) <= 200, "MAPPING_DECISIONS_REQUIRED")
+        names = []
+        for decision in decisions:
+            need(isinstance(decision, dict) and set(decision) == {"name", "reason"} and
+                 isinstance(decision["name"], str) and isinstance(decision["reason"], str) and
+                 decision["reason"].strip() and len(decision["reason"].encode()) <= 4000,
+                 "MAPPING_DECISION_REASON_REQUIRED")
+            names.append(decision["name"])
+        need(len(names) == len(set(names)) and set(names) == set(comparison["required_decisions"]),
+             "EVERY_MAPPING_CHANGE_REQUIRES_ITS_ORIGINAL_DECISION")
+        return {"schema": "stellar-forge.event-mapping-review.v1", "comparison": comparison,
+                "selection": selection, "reviewed_at": now()}
+
     def overview(self, *, actions_before=None, inputs_before=None, limit=25):
         need(type(limit) is int and 1 <= limit <= 100 and
              all(value is None or type(value) is int and value > 0 for value in (actions_before, inputs_before)), "PAGE_INVALID")
@@ -256,6 +347,10 @@ class EventProgrammes:
             need(isinstance(mapping, dict) and isinstance(mapping.get("fields"), list) and
                  len(mapping["fields"]) <= 100 and len(raw(mapping).encode()) <= 1024 * 1024, "FIELD_MAPPING_REQUIRED")
             request["mapping"] = mapping
+            if "mapping_review" in body:
+                need(isinstance(body["mapping_review"], dict) and
+                     len(raw(body["mapping_review"]).encode()) <= 1024 * 1024, "MAPPING_REVIEW_INVALID")
+                request["mapping_review"] = body["mapping_review"]
         if action in {"apply", "refresh-review"}:
             digest = body.get("review_sha256")
             note = body.get("note")
@@ -312,6 +407,21 @@ class EventProgrammes:
             request = value["request"]
             operation = request["operation_id"]
             if request["action"] == "review":
+                if "mapping_review" in request:
+                    if "mapping_review" not in value:
+                        value["mapping_review"] = self._review_mapping(value["programme"], request)
+                        self._store(value)
+                    evidence = value["mapping_review"]
+                    need(evidence["selection"] == request["mapping_review"], "ORIGINAL_MAPPING_REVIEW_CHANGED")
+                    with self.database._connection(readonly=True) as db:
+                        existing = db.execute("SELECT id FROM sf_analysis_event_operations WHERE id=?",
+                                              (operation,)).fetchone()
+                    saved = core.operation(operation) if existing else None
+                    if not saved or not saved.get("review"):
+                        current = core.programme()
+                        need(current["revision"] == evidence["comparison"]["programme_revision"] and
+                             (current["accepted"] or {}).get("operation_id") ==
+                             evidence["comparison"]["baseline_operation_id"], "MAPPING_BASELINE_CHANGED")
                 originals = self._originals(request["input_id"])
                 # Executable source is chosen by the local launch configuration.
                 # Browser inputs are data only, never an executable source path.
@@ -323,6 +433,14 @@ class EventProgrammes:
                     result = core.review(root / "events.ndjson", root / "manifest.json",
                         mapping=root / "mapping.json", source_cli=self.source_cli,
                         node=self.workspace.node, operation_id=operation, resume=resume)
+                if "mapping_review" in request:
+                    comparison = value["mapping_review"]["comparison"]
+                    need(result["programme_revision"] == comparison["programme_revision"] and
+                         result["edition_id"] == comparison["current"]["edition_id"] and
+                         result["mapping_sha256"] == comparison["mapping_sha256"] and
+                         result["mapping"] == comparison["mapping"] and
+                         result["source"] == comparison["current"]["source"],
+                         "NATIVE_MAPPING_REVIEW_BASIS_CHANGED")
             elif request["action"] == "apply":
                 result = core.apply(operation, request["review_sha256"], note=request["note"],
                                     columns=request["columns"], resume=resume)

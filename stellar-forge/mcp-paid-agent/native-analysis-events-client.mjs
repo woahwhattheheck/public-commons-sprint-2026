@@ -151,3 +151,24 @@ export function inspectNativeAnalysisEventFieldValues(options={}){
  const selected={pointer:options.pointer,offset:options.offset??0,limit:options.limit??25};
  return completeInspection(options,'event-input-values',selected,'stellar-forge.event-feed-payload-values.v1');
 }
+
+/** Receive the complete original cross-edition comparison before attributing a mapping review. */
+export async function compareNativeAnalysisEventMappings(options={}){
+ need(EVENT_ID.test(options.inputId??'')&&EVENT_ID.test(options.expectedWorkspaceId??'')&&
+  EVENT_NAME.test(options.programme??'')&&object(options.mapping),'MAPPING_SELECTION_REQUIRED');
+ const client=await nativeEventConnection(options);
+ const result=await client.call('event-mapping-compare',{programme:options.programme,input_id:options.inputId,
+  mapping:options.mapping},{signal:options.signal});
+ need(result?.workspace_id===options.expectedWorkspaceId&&result.input_id===options.inputId&&
+  result.programme===options.programme&&result.complete_record?.kind==='mapping'&&
+  result.complete_record.record_id===options.inputId&&result.complete_record.workspace_id===options.expectedWorkspaceId,
+  'MAPPING_COMPARISON_CHANGED');
+ const full=await readNativeAnalysisEventRecord({...options,url:undefined,client,record:result.complete_record});
+ const value=JSON.parse(full.text);
+ need(value.schema==='stellar-forge.event-feed-mapping-comparison.v1'&&value.workspace_id===options.expectedWorkspaceId&&
+  value.programme===options.programme&&value.input_id===options.inputId&&value.comparison_sha256===result.comparison_sha256&&
+  value.baseline_operation_id===result.baseline_operation_id&&value.programme_revision===result.programme_revision&&
+  eventCanonical(value.mapping.fields)===eventCanonical(options.mapping.fields)&&
+  Array.isArray(value.fields)&&value.fields.length===value.field_count,'MAPPING_COMPARISON_CHANGED');
+ return {...full,value};
+}

@@ -363,3 +363,69 @@ behavior defects in the same source. Source-only execution is separate from
 this actual native/rendered course. Return the exact source edition, original
 workspace/input/programme IDs, complete downloads and real screens to the
 existing receiving owner; preserve the same original operation and deadline.
+
+## Mapping continuation across original source editions
+
+Open an existing accepted programme, receive the later complete NDJSON and manifest through the same original input receiver, and use **Use accepted field mapping** as the starting point. Keep useful output names unchanged unless the business meaning actually changes. Edit only the intended payload pointers or explicitly add/remove outputs.
+
+The name box selects what to open; it does not change the identity of the currently opened draft. After entering another name, choose **Open programme** before comparing, reviewing, applying or delivering. The previous draft is retained under its own opened programme, and the selected programme’s saved draft is then loaded.
+
+Choose **Compare accepted and proposed mappings**. The original receiver validates both complete source pairs, their page history, every retained earlier event and the non-rewinding checkpoint before it compares fields. It rejects another subscription, store, source URL, feed or feed revision. The comparison preserves both complete mappings and their digests, both source-edition identities, the exact original file sizes/hashes, the accepted native operation and observed programme revision.
+
+### Read all three populations
+
+| Population | What its counts mean |
+| --- | --- |
+| Previous complete window | Every event in the accepted original source edition. |
+| Current complete window | Every event in the newly received cumulative edition, including retained earlier events. |
+| New events only | Only accepted events whose sequence is beyond the preceding complete window. An empty population is reported as zero events. |
+
+The distinction matters when a path disappears from new events: cumulative history still contains the older observations. Counts are actual observed coverage, not an asserted provider schema. JSON null, missing, string, number, boolean, object and array remain distinct. Values still use the unchanged native text projector and adjacent state columns.
+
+The complete pointer table preserves every observed path from either source edition. It identifies new paths, paths absent from newly added events, and JSON kinds not observed previously. Search and explicit pages change only the displayed view. The full download retains every row.
+
+The mapped-output table follows the original output names. Each output is unchanged, added, removed or repointed. A renamed output appears as an explicit removal and addition. The comparison requires a decision for every mapping change, unobserved selected path, absence in newly added events, newly missing values or newly observed JSON kind. A kind observed in the past is not described as new solely because its frequency changed.
+
+### Attribute the actual successor
+
+Enter the recording reviewer, the reason for this successor, and a separate reason for every required output decision. The reviewer is an attributed operator entry under the original authenticated Analysis capability; it is not a separately verified identity.
+
+Choose **Review complete source window**. The original saved action now includes the exact comparison selection and reasons before native dispatch. Its worker recomputes the comparison from retained original bytes, rejects a changed accepted baseline or mapping, and retains the entire verified comparison plus attribution in the same original action record. The normal native review must return the same programme revision, source edition and normalized mapping. A mismatch remains an error rather than an attributed successful review.
+
+The existing **Apply reviewed window** step remains separate. It still uses the native review SHA, customer decision note and explicit workbook-column choices. Mapping comparison does not apply a source, edit a report, change a workbook, start a subscriber or pay for another page. The original native source receiver retains the complete projected source, original NDJSON, original manifest, mapping and exact receiver/projector source as before.
+
+An interrupted review continues with its original action ID, operation ID, input and complete mapping-review selection. If native review already completed, the same original result is reopened. If the accepted baseline changes before native review exists, the old action is not reinterpreted as a new mapping decision.
+
+Existing native callers that omit mapping_review retain their previous review contract. The maintained browser requires the comparison for a programme with an accepted baseline. A programme's first source review continues through its original initial path.
+
+### Download and reopen the unfinished review
+
+**Download complete mapping review** writes a compact UTF-8 JSON with schema stellar-forge.event-mapping-working-review.v1. It includes:
+
+- The full comparison, both complete mappings, all compared path counts and native source/baseline identities.
+- The current entered mapping draft, including unfinished output names or pointers.
+- The reviewer, overall note and every entered decision reason.
+
+The draft can differ from the last completed comparison. It remains an unfinished draft and must be compared again before native review. No accepted comparison is silently rewritten to match the edits.
+
+Use **Inspect and reopen review** in the same original workspace, programme and retained current source pair. The service recomputes the saved comparison from both original source editions, verifies the original comparison hash, accepted operation, programme revision and receiver source hashes, then adopts the retained draft and reasons. It sends no review or apply action. A changed source/baseline/receiver requires an explicit new comparison; preserve the older file for its original context.
+
+This companion file does not duplicate raw event payloads. Use the existing complete workspace delivery to transfer both complete original input pairs, native registered source documents, browser action records, the complete mapping evidence and original report/workbook history. The accepted predecessor's original bytes remain in its native source document, and the current original pair remains in the input receiver and, after review, its registered source document. Open the received workspace through its original receiving procedure before reopening the mapping companion.
+
+### Original file-only comparison
+
+The maintained source CLI can compare explicit original files without a browser or native Analysis write:
+
+    node event-feed/analysis-source-cli.mjs \
+      --ndjson CURRENT.ndjson --manifest CURRENT.manifest.json \
+      --previous-ndjson PREVIOUS.ndjson --previous-manifest PREVIOUS.manifest.json \
+      --mapping PROPOSED.mapping.json --previous-mapping ACCEPTED.mapping.json \
+      --compare-mapping true
+
+It emits the complete stellar-forge.event-feed-mapping-comparison.v1 object. The accepted source/history checks, mapping normalization and SHA rules are the original projector's functions. CLI output has source identities; the private coordinator additionally binds the actual workspace, programme, accepted operation and input ID.
+
+The existing original source limits remain 32 MiB NDJSON, 4 MiB manifest and 100 mapped outputs. Field catalogues retain the original 10,000-path/16 MiB complete-result boundaries. Cross-edition comparison rejects a complete result over 24 MiB; it never truncates its inventory. A portable compact mapping-review file is admitted up to 32 MiB. Keep original files when an explicit capacity error occurs.
+
+### Actual outgoing operation
+
+Use the original received programme and real successive input editions for commissioning. Inspect the actual desktop and narrow rendered screens: accepted mapping, changed pointer, absence in new events, empty newly added population, full table pages, unfinished reasons and original action recovery. Download and reopen the complete mapping review and the existing full workspace delivery. Confirm the original saved reports, workbook choices and earlier source histories remain available. Keep source-reviewed and actually operated/rendered states distinct; this source addition does not claim a native or browser run.
