@@ -86,7 +86,7 @@ def document(value):
         _sha(origin.get("revision_id"), "Original fork revision")
     if not findings:
         raise ValueError("Write at least one source-linked finding")
-    if len(json.dumps(value, ensure_ascii=False).encode("utf-8")) > LIMIT:
+    if len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > LIMIT:
         raise ValueError("An authored document supports up to 8 MiB of UTF-8 text")
     return value
 
