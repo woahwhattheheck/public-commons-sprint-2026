@@ -222,7 +222,8 @@ class PublishedStudyProvider:
                 reports.append({
                     "path": artifact["path"], "url": artifact["preview_url"],
                     "download": artifact["download"], "sha256": artifact["sha256"],
-                    "bytes": artifact["bytes"],
+                    "bytes": artifact["bytes"], "title": artifact.get("title"),
+                    "role": artifact.get("role"), "source_metadata": artifact.get("source_metadata", {}),
                 })
         result["retained_reports"] = reports
         return result

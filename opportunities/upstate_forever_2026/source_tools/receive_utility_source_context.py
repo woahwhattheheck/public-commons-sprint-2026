@@ -74,6 +74,14 @@ def receive(application, output):
         implementation[name] = {"path": path.relative_to(application).as_posix(),
                                 "bytes": len(body), "sha256": _sha(body)}
     context, utilities, brief = modules
+    observed_module = importlib.import_module("model.utility_observed_context")
+    observed_path = Path(observed_module.__file__).resolve(strict=True)
+    if not observed_path.is_relative_to(application):
+        raise ValueError("The observed context belongs to another application")
+    observed_body = observed_path.read_bytes()
+    implementation["model.utility_observed_context"] = {
+        "path": observed_path.relative_to(application).as_posix(),
+        "bytes": len(observed_body), "sha256": _sha(observed_body)}
     report = context.build_watershed_context(
         inputs["context"], classification_coverage=inputs["coverage"], network=inputs["network"])
     choices = utilities.utility_selections(report, profile, profile_identity)
@@ -96,6 +104,9 @@ def receive(application, output):
         selection = brief.selection_with_contributing_context(
             report, choice["huc12s"], regional["watershed-context.json"]["sha256"])
         selection["utility_selection"] = choice
+        observed, observed_bodies = observed_module.load_for_utility(application, choice)
+        if observed is not None:
+            selection["observed_context"] = observed
         selection["supporting_source_references"] = [{
             "source_id": "original_utility_profile", "reference": choice["reference"],
             "sha256": profile_identity["sha256"],
@@ -104,18 +115,23 @@ def receive(application, output):
             "sha256": identities["network"]["sha256"]}]
         folder = destination / choice["key"]
         folder.mkdir()
+        (folder / "original-utility-profile.json").write_bytes(profile_body)
         _write(folder / "selected-watersheds.json", selection)
         (folder / "selected-watersheds.csv").write_bytes(
             context._csv_bytes(selection["hucs"], context.HUC_COLUMNS))
         files = brief.write_selection_brief(folder, selection)
-        for name in ("selected-watersheds.json", "selected-watersheds.csv"):
+        if observed is not None:
+            files.update(observed_module.retain(folder, observed, observed_bodies))
+        for name in ("selected-watersheds.json", "selected-watersheds.csv", "original-utility-profile.json"):
             body = (folder / name).read_bytes()
             files[name] = {"path": name, "bytes": len(body), "sha256": _sha(body)}
+        files["utility-watershed-packet.zip"] = observed_module.write_packet(folder, files)
         utility_results.append({
             "utility_id": choice["utility_id"], "selection_id": choice["key"],
             "directory": folder.relative_to(destination).as_posix(),
             "huc12s": choice["huc12s"], "summary": choice["summary"],
             "programme_designations": choice["programme_designations"], "files": files,
+            "observed_summary": observed["utility"]["summary"] if observed is not None else None,
         })
     record = {
         "schema": "upstate.utility-native-source-receiving/v1",

@@ -5,12 +5,13 @@ from copy import deepcopy
 from threading import RLock
 from model.common import atomic_json, describe_file, held, identifier, now, read_json
 from model import receiving_waters
+from model import receiving_water_monitoring
 
 ACTIONS = frozenset({
     "receiving.water.plan", "receiving.water.profile", "receiving.water.analyze",
-    "receiving.water.catalog",
+    "receiving.water.catalog", "receiving.water.monitoring",
 })
-READS = frozenset({"catalog", "plan", "analysis", "designation-catalog"})
+READS = frozenset({"catalog", "plan", "analysis", "designation-catalog", "monitoring"})
 
 
 class ReceivingWaterActions:
@@ -49,6 +50,13 @@ class ReceivingWaterActions:
         )}
 
     @staticmethod
+    def _monitoring_summary(row):
+        return {name: row.get(name) for name in (
+            "id", "title", "state", "created_at", "plan_id", "analysis_id",
+            "mode", "network_id", "source_collection_id", "summary", "error",
+        )}
+
+    @staticmethod
     def _manifest_identity(path):
         stat = path.stat()
         return (stat.st_dev, stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
@@ -57,6 +65,9 @@ class ReceivingWaterActions:
         ws = self.operator.ws(workspace)
         workspace_key = (str(ws.root), ws.project["id"])
         groups = (
+            ("receiving_water_monitoring", "receiving-water-monitoring", "bridge.json",
+             lambda path: receiving_water_monitoring.inspect(ws, path.parent.name, verify=False),
+             self._monitoring_summary),
             ("receiving_water_catalogs", "receiving-water-catalogs", "operator-catalog.json",
              lambda path: read_json(path), self._catalog_summary),
             ("receiving_water_plans", "receiving-water-plans", "plan.json",
@@ -170,6 +181,11 @@ class ReceivingWaterActions:
             result = receiving_waters.inspect_plan(ws, key, verify=False)
             directory = ws.root / "receiving-water-plans" / key
             filename = "plan.json"
+        elif operation == "monitoring":
+            key = identifier(value.get("monitoring_id"))
+            result = receiving_water_monitoring.inspect(ws, key, verify=False)
+            directory = ws.root / "receiving-water-monitoring" / key
+            filename = "bridge.json"
         elif operation == "analysis":
             key = identifier(value.get("analysis_id"))
             result = receiving_waters.inspect(ws, key, verify=False)
@@ -232,6 +248,9 @@ class ReceivingWaterActions:
                 with held(ws.root / ".workspace.lock"):
                     atomic_json(record_path, result)
                 raise
+        if action == "receiving.water.monitoring":
+            result = receiving_water_monitoring.prepare(ws, value.get("selection", value))
+            return self._monitoring_summary(result)
         if action == "receiving.water.plan":
             result = receiving_waters.prepare(ws, value.get("selection", value))
             return self._plan_summary(result)
@@ -249,7 +268,8 @@ class ReceivingWaterActions:
         if task.get("action") not in ACTIONS or task.get("state") != "complete":
             return task
         result = task["result"]
-        kind = ("analysis" if task["action"] == "receiving.water.analyze"
+        kind = ("monitoring" if task["action"] == "receiving.water.monitoring"
+                else "analysis" if task["action"] == "receiving.water.analyze"
                 else "designation-catalog" if task["action"] == "receiving.water.catalog" else "plan")
         field = "catalog_id" if kind == "designation-catalog" else kind + "_id"
         original = self.read(task["workspace"], kind, {field: result["id"]})
