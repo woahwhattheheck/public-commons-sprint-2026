@@ -21,6 +21,7 @@ import tempfile
 FILES = (
     "model/scientific_report.py",
     "model/implementation_qc.py",
+    "model/implementation_qc_actions.py",
     "operator/implementation_qc.py",
     "operator/extensions/implementation-qc.json",
     "operator/web/implementation_qc.mjs",
