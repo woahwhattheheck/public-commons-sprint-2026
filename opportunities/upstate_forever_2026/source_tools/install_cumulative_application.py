@@ -28,6 +28,13 @@ SHARED = ("operator/server.py", "operator/web/app.mjs",
           "operator/web/index.html", "model/portable.py")
 
 
+def component_inventory(root, *, allow_embedded=False):
+    helper = runpy.run_path(str(Path(__file__).resolve().parents[1]
+                                 / "source_tools/application_components.py"),
+                            run_name="_application_component_closure")
+    return helper["inspect_directory"](root, required=True, allow_embedded=allow_embedded)
+
+
 def sha(body):
     return hashlib.sha256(body).hexdigest()
 
@@ -409,6 +416,7 @@ def same_archive_members(current, proposed):
 
 
 def archive_application(root, destination):
+    component_inventory(root)
     destination = Path(destination).absolute()
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
@@ -446,13 +454,16 @@ def install(source, output, archive):
     if output == source or output.is_relative_to(source) or source.is_relative_to(output):
         raise ValueError("Choose an independent receiving directory")
     original = owned_inventory(source)
+    source_components = component_inventory(source, allow_embedded=True)
     source_identity = identity(original)
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
         marker = json.loads((output / RECORD).read_text("utf-8"))
         if marker.get("source_sha256") != source_identity or marker.get("installed_files") != owned_inventory(output):
             raise ValueError("The existing receiving edition has different source; choose its own output directory")
-        result = {"state": "current", "application": str(output), "source_sha256": source_identity}
+        installed_components = component_inventory(output)
+        result = {"state": "current", "application": str(output), "source_sha256": source_identity,
+                  "component_inventory": installed_components}
         if archive:
             result["archive"] = archive_application(output, archive)
         return result
@@ -474,10 +485,15 @@ def install(source, output, archive):
         inputs = restore_inputs(root)
         phase = "check_application_sources"
         validation = check_sources(root)
+        installed_components = component_inventory(root)
+        validation["component_inventory"] = installed_components
+        if installed_components["catalog_sha256"] != source_components["catalog_sha256"]:
+            raise ValueError("A component installer changed the selected edition catalogue")
         if owned_inventory(source) != original:
             raise ValueError("The retained input source changed during installation")
         record = {"schema": "upstate.cumulative-installation/v1", "operation_id": OPERATION,
                   "source_sha256": source_identity, "steps": steps, "restored_inputs": inputs,
+                  "source_component_inventory": source_components,
                   "validation": validation, "installed_files": owned_inventory(root)}
         write(root / RECORD, json.dumps(record, ensure_ascii=False, indent=2) + "\n")
         phase = "publish_application"
