@@ -546,3 +546,45 @@ def get_dispatch_report(workspace, operation_id):
         raise
     except (ValueError, KeyError, TypeError, OSError) as error:
         raise ImplementationError("Retained laboratory dispatch report: " + str(error)) from error
+
+
+def list_dispatch_reports(workspace, plan_id, dispatch_id):
+    """List verified committed report sources for one original laboratory request."""
+    try:
+        package, unused = dispatch_files(workspace, plan_id, dispatch_id)
+        base = Path(workspace.root).resolve()
+        directory = base / "implementation" / "laboratory-reports"
+        if directory.is_symlink() or not directory.resolve().is_relative_to(base):
+            raise ImplementationError("The laboratory report catalogue left its original workspace")
+        items = []
+        for folder in sorted(directory.iterdir()) if directory.is_dir() else ():
+            if not HEX.fullmatch(folder.name) or not folder.is_dir():
+                continue
+            path = folder / "import.json"
+            if not path.exists():
+                continue  # A prepared source without a committed import is not an edition.
+            original = read_json(path)
+            if (original.get("schema") != SCHEMA or original.get("plan", {}).get("id") != plan_id
+                    or original.get("dispatch_id") != dispatch_id):
+                continue
+            result = get_dispatch_report(workspace, folder.name)
+            if result["dispatch_plan"] != package["plan"]:
+                raise ImplementationError("A saved report changed its original request revision")
+            report = result["report_source"]
+            items.append({
+                "operation_id": result["operation_id"], "edition": result["edition"],
+                "plan": _clone(result["plan"]), "dispatch_plan": _clone(result["dispatch_plan"]),
+                "dispatch_id": dispatch_id, "summary": _clone(result["summary"]),
+                "source_collection_id": report["source_collection_id"],
+                "source_id": report["source_id"],
+                "source_count": len(observed_context.source_choices(report["delivery_selection"])),
+                "files": len(result["files"]),
+            })
+        items.sort(key=lambda item: (item["plan"]["revision"], item["operation_id"]), reverse=True)
+        return {"schema": "upstate.implementation-lab-dispatch-report-catalogue/v1",
+                "project_id": workspace.project["id"], "plan_id": plan_id,
+                "dispatch_id": dispatch_id, "request_revision": package["revision"], "items": items}
+    except ImplementationError:
+        raise
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        raise ImplementationError("Retained laboratory report catalogue: " + str(error)) from error

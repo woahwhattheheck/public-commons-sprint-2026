@@ -109,9 +109,11 @@ The Study archive carries the maintained source-specific Chemistry history: loca
 
 ## Continue an interrupted course
 
-Rerun the identical command with the **same configuration and output directory**. The journal pins the selection SHA256 and records each original `operation_id` at actual browser submission, before its response. Returned task IDs are retained immediately.
+Rerun the identical command with the **same configuration and output directory**. The journal pins the selection SHA256. Before the browser admits a report, source, render, export or restore request, it saves that complete original action, payload, Workspace and `operation_id` and awaits the atomic journal write. If the write fails or the selected Workspace changes, the request is aborted before transport.
 
-An already submitted action is read through its original task ID. If its response was lost, the course looks up the exact operation in current Workspace state. An ambiguous lookup produces a retained exception. Reconcile that original `operation_id` in Operations and continue its task; preserve `receiving.json`.
+An acknowledged action reopens its original task ID. If its response was lost, the course first reads the complete original task history. It reopens the exact operation or one uniquely matching full request, including a completed task originally reused under a different operation ID. Multiple matches remain an actionable ambiguity in Operations; no duplicate is submitted. Only when no retained task matches does it submit the **same retained request with the same operation ID** to the existing operator. The returned task must match the original action, payload and Workspace, and an already saved task ID cannot change. No new identity is generated for recovery.
+
+This receipt recovery does not resume failed, interrupted or cancelled tasks. Those retain their original state and exception for normal Operations handling. Existing pre-correction journals can continue when they contain the complete original request; an incomplete or mismatched journal is preserved with an actionable exception.
 
 Failed/interrupted/cancelled native tasks retain their actual exception. Correct the original source/runtime issue with its owner, resume the same task in the application, then rerun this course. Existing report/source IDs reopen directly.
 
@@ -157,3 +159,48 @@ Native scientific results and user-facing reports remain the maintained product 
 The current source also binds pending project/observation reads and Save/Run admission to the original mounted Workspace, retained editor and native desk activation. Later edits or a newly selected file take precedence; leaving and returning cannot revive an older pending read. The native wrapper preserves the draft while changing the activation token. The queue keeps any already accepted original task and operation ID.
 
 Alongside this saved-result course, use the original populated editor to load a project and observation CSV, edit during a pending load, select a later file, open another scenario, and leave and return. Check the visible preserved draft and any actionable message. Then save and submit the intended current selection and inspect the queued Workspace/case/request before continuing report, scientific-source and selected-Study reopening. Keep this as the same receiving operation and inspect its actual rendered result.
+
+
+## Complete current owner direction
+
+The following complete brief is carried from `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3` (Git `8cd1c1f3d371a2fb75471813844e31f489aa8272`). It preserves the current scientific and native owners. This complementary saved-Chemistry report course does not replace the primary actual-geography modeled demonstration.
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Current project instructions
+
+Execute the prepared simulated model and deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time. Continue active work while checking progress. Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

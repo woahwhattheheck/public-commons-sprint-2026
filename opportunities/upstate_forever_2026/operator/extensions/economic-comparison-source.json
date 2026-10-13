@@ -1,0 +1,80 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "economic-comparison-source",
+  "title": "Economic comparison scientific reports",
+  "version": "1.0.0",
+  "order": 67,
+  "requires_actions": [
+    "economic.comparison.build"
+  ],
+  "assets": [
+    "economic_comparison_source.mjs",
+    "economic_received_comparisons.mjs"
+  ],
+  "backend": {
+    "module": "economic_comparison_source",
+    "factory": {
+      "handler": "EconomicComparisonSource",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/economic-comparison/report-source-preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/economic-comparison/report-source-detail",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/economic-comparison/report-sources",
+        "operation": "list",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "actions": [
+      "economic.comparison.report-source.import"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  }
+}

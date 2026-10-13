@@ -31,11 +31,12 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
  const root=resolve(output),binding={...choice,operator_origin_sha256:hash(origin)},owned=new Set(),bindings=[];
  const state=progress.qc_comparison||{schema:'upstate.simulated-qc-comparison-browser/v1',binding,created_at:now(),attempts:[],files:[],screenshots:[],requests:{}};
  if(state.schema!=='upstate.simulated-qc-comparison-browser/v1'||!equal(state.binding,binding))fail('Resume the same original comparison and operator registration.');
+ state.private_files=state.private_files||[];
  progress.qc_comparison=state;running.add(page);
  const attempt=state.attempts.length+1;state.attempts.push({number:attempt,started_at:now()});state.status='running';delete state.error;delete state.cleanup_errors;
  const savedViewport=page.viewportSize(),draftKey='upstate.implementation.qc-comparison/v1/'+choice.workspace_key+'/'+choice.plan_id;
  let original,baselinePlan,active=null,primary=null;
- const save=async()=>{state.updated_at=now();await checkpoint();};
+ const save=async()=>{if(state.draft&&Object.prototype.hasOwnProperty.call(state.draft,'original'))fail('Preserve the original local draft in its private recovery file before checkpointing.');state.updated_at=now();await checkpoint();};
  const stop=async()=>{await checkRunning();};
  const api=async(path,params={},body)=>{
   await stop();const response=body===undefined?await page.request.get(origin+path+'?'+new URLSearchParams(params),{headers:{Authorization:'Bearer '+token},maxRedirects:0}):await page.request.post(origin+path,{headers:{Authorization:'Bearer '+token},data:body,maxRedirects:0});
@@ -45,10 +46,50 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
  const retained=async(name,body,metadata={})=>{
   if(!name||isAbsolute(name)||name.includes('\\')||name.split('/').some(p=>!p||p==='.'||p==='..'))fail('A comparison artifact path differs.');
   const path=join(root,name);await immutable(path,body);const item={path:name,bytes:body.length,sha256:hash(body),...metadata};
-  const prior=state.files.find(x=>x.path===name);if(prior&&!equal(prior,item))fail('A retained comparison artifact identity changed.');
-  if(!prior)state.files.push(item);await save();return item;
+  const list=name.startsWith('private/')?state.private_files:state.files;
+  const prior=list.find(x=>x.path===name);if(prior&&!equal(prior,item))fail('A retained comparison artifact identity changed.');
+  if(!prior)list.push(item);await save();return item;
  };
  const jsonFile=(name,value)=>retained(name,Buffer.from(JSON.stringify(value,null,2)+'\n'),{kind:'native-source'});
+ const readMember=async item=>{
+  if(!item||typeof item.path!=='string'||isAbsolute(item.path)||item.path.includes('\\')||item.path.split('/').some(p=>!p||p==='.'||p==='..'))fail('The private recovery member path differs.');
+  let path=root;
+  for(const part of item.path.split('/')){path=join(path,part);if((await fs.lstat(path)).isSymbolicLink())fail('The private recovery member became an alias.');}
+  if(!(await fs.stat(path)).isFile())fail('Retain the original regular recovery file.');
+  const body=await fs.readFile(path);if(body.length!==item.bytes||hash(body)!==item.sha256)fail('The retained private recovery member changed.');
+  return body;
+ };
+ const privateSnapshot=async(name,value)=>{
+  if(!name.startsWith('private/qc-comparison/')||name.includes('\\')||name.split('/').some(p=>!p||p==='.'||p==='..'))fail('Use the original private comparison recovery directory.');
+  const body=Buffer.from(JSON.stringify(value,null,2)+'\n');await immutable(join(root,name),body);
+  const descriptor={path:name,bytes:body.length,sha256:hash(body),kind:'private-recovery'};
+  const prior=state.private_files.find(item=>item.path===name);if(prior&&!equal(prior,descriptor))fail('The private comparison recovery identity changed.');
+  if(!prior)state.private_files.push(descriptor);return descriptor;
+ };
+ const privateDraft=async descriptor=>{
+  if(!descriptor?.path?.startsWith('private/qc-comparison/'))fail('The original local draft needs its retained private file.');
+  const value=JSON.parse((await readMember(descriptor)).toString('utf8'));
+  if(value.key!==draftKey||value.operator_origin_sha256!==hash(origin)||(value.value!==null&&typeof value.value!=='string'))fail('The original local draft belongs to another recorded context.');
+  return value.value;
+ };
+ const migratePrivateState=async()=>{
+  // Recover only the known former private members of this exact retained course.
+  const legacy=[...state.files,...state.private_files].filter(item=>/^qc-comparison\/(?:attempt-\d+\/)?(?:draft-before-recovery|native-task-(?:export|source))\.json$/.test(item.path));
+  for(const old of legacy){
+   const next={...old,path:'private/qc-comparison/legacy/'+old.sha256+'-'+old.path.split('/').pop(),private:true};
+   let body,missing=false;
+   try{body=await readMember(old);}catch(error){if(error.code!=='ENOENT')throw error;missing=true;body=await readMember(next);}
+   await immutable(join(root,next.path),body);
+   if(!missing){await readMember(old);await fs.unlink(join(root,old.path));}
+   state.files=state.files.filter(item=>item.path!==old.path);state.private_files=state.private_files.filter(item=>item.path!==old.path);
+   if(!state.private_files.some(item=>item.path===next.path))state.private_files.push(next);
+  }
+  if(state.draft&&Object.prototype.hasOwnProperty.call(state.draft,'original')){
+   const payload={key:draftKey,operator_origin_sha256:hash(origin),value:state.draft.original};
+   const reference=await privateSnapshot('private/qc-comparison/legacy-original-draft-'+hash(canonical(payload))+'.json',payload);
+   delete state.draft.original;state.draft.original_file=reference;
+  }
+ };
  const wait=async(fn,label,seconds=60)=>{
   const until=Date.now()+seconds*1000;while(Date.now()<until){await stop();if(await fn())return;await page.waitForTimeout(150);}fail('The original comparison control did not finish: '+label);
  };
@@ -82,8 +123,9 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
   if(page.isClosed())fail('The recorded page closed; the original comparison draft remains pending for same-course recovery.');
   if(new URL(page.url()).origin!==origin)await page.goto(operatorURL,{waitUntil:'domcontentloaded'});
   await closeEditors();
-  await page.evaluate(({key,value})=>{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);},{key:draftKey,value:state.draft.original});
-  const actual=await page.evaluate(key=>localStorage.getItem(key),draftKey);if(actual!==state.draft.original)fail('The original comparison draft was not restored exactly.');
+  const originalValue=await privateDraft(state.draft.original_file);
+  await page.evaluate(({key,value})=>{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);},{key:draftKey,value:originalValue});
+  const actual=await page.evaluate(key=>localStorage.getItem(key),draftKey);if(actual!==originalValue)fail('The original comparison draft was not restored exactly.');
   state.draft.status='restored';state.draft.restored_at=now();await save();
  };
  const download=async(targetPage,label,trigger,expected,name)=>{
@@ -132,7 +174,7 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
   }
   if(task?.state!=='complete')fail('Resume this original comparison export/source task: '+entry.id);
   if(task.result?.comparison_report_id!==choice.comparison_report_id||task.result?.comparison_id!==choice.comparison_id)fail('The completed task returned another comparison.');
-  await jsonFile('qc-comparison/attempt-'+attempt+'/native-task-'+key+'.json',task);
+  await jsonFile('private/qc-comparison/attempt-'+attempt+'/native-task-'+key+'.json',task);
   // Restore only this exact retained task into the original editor after an interrupted response.
   // Its normal start()/poll() then receives the decorated native result and clears pending state.
   await page.locator('.iw-qcc [data-qcc="close"]').click();
@@ -147,14 +189,15 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
   return task;
  };
  try{
-  await stop();await save();await page.setViewportSize({width:1440,height:1000});
+  await stop();await migratePrivateState();await save();await page.setViewportSize({width:1440,height:1000});
   await page.goto(operatorURL,{waitUntil:'domcontentloaded'});
   if(state.draft?.status==='restore_required'){
    const current=await page.evaluate(key=>localStorage.getItem(key),draftKey);
-   await jsonFile('qc-comparison/attempt-'+attempt+'/draft-before-recovery.json',{key:draftKey,value:current});await restoreDraft();
+   await jsonFile('private/qc-comparison/attempt-'+attempt+'/draft-before-recovery.json',{key:draftKey,value:current});await restoreDraft();
   }
   const draft=await page.evaluate(key=>localStorage.getItem(key),draftKey);
-  state.draft={key:draftKey,original:draft,status:'restore_required',captured_at:now()};await save();
+  const draftFile=await privateSnapshot('private/qc-comparison/attempt-'+attempt+'/original-draft.json',{key:draftKey,operator_origin_sha256:hash(origin),value:draft});
+  state.draft={key:draftKey,original_file:draftFile,status:'restore_required',captured_at:now()};await save();
   // Preserve an existing human draft/pending task privately, then use a separate temporary local selection.
   await page.evaluate(key=>localStorage.removeItem(key),draftKey);
   original=await api('/api/implementation-qc/comparison-inspect',{workspace:choice.workspace_key,plan_id:choice.plan_id,comparison_report_id:choice.comparison_report_id});

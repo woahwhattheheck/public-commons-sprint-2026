@@ -409,7 +409,7 @@ def prepare_retained(workspace, selection, case_runs, *, provenance):
     if len({case["run_id"] for case in cases}) != len(cases):
         raise ValueError("A native run cannot represent two distinct parameter cases")
     selection = {**selection, "retained_native_cases": [
-        {name: deepcopy(case[name]) for name in ("id", "run_id", "profile_id", "run_selection")}
+        {name: deepcopy(case[name]) for name in ("id", "label", "overrides", "axis_values", "run_id", "profile_id", "run_selection")}
         for case in cases], "retained_source": deepcopy(provenance)}
     with held(workspace.root / ".workspace.lock", blocking=False):
         spec = workspace._save("experiment-specs", selection)
@@ -453,7 +453,7 @@ def _bind_state(workspace, key, spec, state):
     retained = state["selection"].get("retained_native_cases")
     if retained is not None and "cases" in state:
         actual_cases = [{name: deepcopy(case[name]) for name in (
-            "id", "run_id", "profile_id", "run_selection")} for case in state["cases"]]
+            "id", "label", "overrides", "axis_values", "run_id", "profile_id", "run_selection")} for case in state["cases"]]
         if actual_cases != retained:
             raise ValueError("The retained study changed its original adopted native roster")
     active = selected(state["baseline_selection"])
