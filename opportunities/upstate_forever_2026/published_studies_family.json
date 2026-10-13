@@ -1,9 +1,9 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "45a22336e58cb56f8efa3c6ae0baf1bf051d34af",
+  "source_reference_base": "250039f3973a41bc8fbd82de0074eaf51e3e5ffb",
   "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe.",
   "external_source_edition": {
     "files": 62,
@@ -30,6 +30,11 @@
       "path": "eighteenmile_lake_paired_analysis.sources.json",
       "bytes": 37871,
       "sha256": "34af2770b39339760994263833e981692cc1c75806206f78dbd9705c30b8eee8"
+    },
+    {
+      "path": "eighteenmile_paired_sensitivity.sources.json",
+      "bytes": 10719,
+      "sha256": "2c0cb2ca5ce42dc4b701bafb97d8f429e2b3a30709fe0b1c1cac306c2c0be81a"
     },
     {
       "path": "eighteenmile_physical_context.sources.json",
@@ -73,13 +78,13 @@
     },
     {
       "path": "measurement_workspace/STREAM_OBSERVATIONS.md",
-      "bytes": 14514,
-      "sha256": "e3273a1fd2ab22ad35c442b068f8a1cdf78013b83b27675bce840042182703ef"
+      "bytes": 17209,
+      "sha256": "21e70d6a80e6a3034781ceae52f7691e8f6c3e7a1e54b836716781c4dbc9c995"
     },
     {
       "path": "measurement_workspace/study_context.py",
-      "bytes": 4617,
-      "sha256": "590e1dfcba556bfcfce7b7fdaf89d9c241b699e0fc63f3cde175c04535c33e6c"
+      "bytes": 5008,
+      "sha256": "cfda0c0bfb3b6d66b4aba62dc9e22d7231516aee1c10cf1801e3497ce7bba6a0"
     },
     {
       "path": "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
@@ -667,6 +672,11 @@
       "sha256": "1e9cf2a1646173ee68ef8f8643aa35d6c3367816ab4784ac2d77991feaa0e87e"
     },
     {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/build_paired_sensitivity.mjs",
+      "bytes": 4312,
+      "sha256": "b6b24632f0a7c2b02c8d96f8f9c7aa93a8cd649ecfc02c4d8938b8fa2bddd02e"
+    },
+    {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/build_study.mjs",
       "bytes": 2547,
       "sha256": "5317cfac56f02f53103782ea97aa50f508371f22049d6179341748aa4d27873f"
@@ -737,9 +747,44 @@
       "sha256": "622caf002d5dd47e1c1d2f96dd6b4b2beb20d308622e8c7a4eda56f144fa015e"
     },
     {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired_sensitivity_report.mjs",
+      "bytes": 12417,
+      "sha256": "f797675b060cf2c96448426aa8771ccff84c1444c2f0b4eab2e9e83aa9ad000d"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/PAIRED_SENSITIVITY.md",
+      "bytes": 6007,
+      "sha256": "e9fe4d1f464584ccbf4305a75c9f68cd1e2dc20b129840ce7a9e9b38affb1925"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired_sensitivity.mjs",
+      "bytes": 9721,
+      "sha256": "95f24b9d4bd5017c38d6faba4848bee3c7f6f4220a78b7adeb71b35df188d54e"
+    },
+    {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-nitrogen-components.csv",
       "bytes": 6896,
       "sha256": "65db2355418943f74fbe641e0611e935338601fe8920286147c190efc7097100"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-sensitivity-input.json",
+      "bytes": 481,
+      "sha256": "a3bf27777603ffdbfc90d8bdd868afd0093dd9c12c1e74b8edbf4447c8bd8065"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-sensitivity-scenarios.csv",
+      "bytes": 43624,
+      "sha256": "7756d6d6f4f9089c1880bbd4e940a9889b9f8cdbe7145c7c9507a2557f0dc25f"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-sensitivity.html",
+      "bytes": 122856,
+      "sha256": "da007422a985338f96bcfe78ad7953e7cb0064c9e32f8dce93ee2e423eb44963"
+    },
+    {
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-sensitivity.json",
+      "bytes": 109194,
+      "sha256": "890afdb9cf931e08cb9e3b86d5af4a20c57fbd4090d253e795acc8e4a4f8909d"
     },
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
@@ -869,7 +914,7 @@
     {
       "path": "operator/extensions/published-studies.json",
       "bytes": 2476,
-      "sha256": "d9d0a7731a2c01cc3b41aecb038d366c8eeeb2bd4b69bbdb706ce4654e05f993"
+      "sha256": "62891332f4888ef975c314fbe1a2e9b37abbed55a9c3ef9f0838f744c8368a26"
     },
     {
       "path": "operator/published_study_operator.py",
@@ -888,8 +933,8 @@
     },
     {
       "path": "PUBLISHED_STUDIES.md",
-      "bytes": 34110,
-      "sha256": "5b15a2ae0d724de33dde8201321f8825f7c61b9d6dc71bd60fc58a12b4f84155"
+      "bytes": 34931,
+      "sha256": "de74d5f15174c51c9b6ddf3b868e596046923135331dc07c30a6a278f4a13696"
     },
     {
       "path": "receive_published_studies.py",
@@ -1335,6 +1380,11 @@
       "source_files": 30,
       "source_bytes": 1343693,
       "binding_module": "measurement_workspace/utility_microbiology_context.py"
+    },
+    "paired_sensitivity": {
+      "commit": "da78bc3dcd9af746c2ac2af311fcdaee9c34a4e0",
+      "manifest": "eighteenmile_paired_sensitivity.sources.json",
+      "manifest_sha256": "2c0cb2ca5ce42dc4b701bafb97d8f429e2b3a30709fe0b1c1cac306c2c0be81a"
     }
   }
 }
