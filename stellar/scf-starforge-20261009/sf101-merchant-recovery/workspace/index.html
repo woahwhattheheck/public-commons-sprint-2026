@@ -15,6 +15,10 @@
 <main>
   <div id="notice" role="status" aria-live="polite">Opening the retained recovery workspace…</div>
   <section class="host-line" aria-label="Host configuration"><div><span class="label" id="store-label">Recovery mode</span><span id="store-summary">—</span></div><div><span class="label">Passphrase</span><span id="passphrase-summary">—</span></div><div><span class="label">Original journal</span><code id="operations-path">—</code></div></section>
+  <section id="object-comparison-panel" class="panel object-recovery" aria-label="Compare authenticated Object backups" hidden></section>
+  <section id="object-bundle-panel" class="panel object-recovery" aria-label="Complete encrypted Object backup transfer"></section>
+  <section id="recovery-support-panel" class="panel object-recovery" aria-label="Recovery evidence to Support" hidden></section>
+  <section id="object-recovery-panel" class="panel object-recovery" aria-label="Standalone Object recovery" hidden></section>
   <div class="work-grid">
     <div>
       <section class="panel" aria-labelledby="transfer-heading">

@@ -519,6 +519,20 @@ See [the complete customer recovery workflow](RECOVERY.md) for passphrase-variab
 selection, quiescing writers, expected-record binding, typed interruption results
 and reopening the same Node and Python applications without repeating purchases.
 
+### Standalone free Object sessions
+
+Use `ObjectSessionRecovery` when a native Object session has `workspace: null`,
+zero original spending caps and an absent configured ledger. Its full review
+binds the original session, request/configuration, evidence, chunks, assembly
+receipts and prior lease history. Snapshot, verification and canonical restore
+use the same SF88/SF101 engine and native Object backup lease. An independent
+receiver can restore before creating any Buyer.
+
+The [standalone Object recovery guide](../OBJECT_SESSION_RECOVERY.md) includes
+the complete native and typed Node journey, exact review/record selection,
+interruption handling and preserved same-session reopen. Existing
+`WorkspaceRecovery` remains the choice for managed operator/ledger state.
+
 ## LangGraph and LangChain applications
 
 [FRAMEWORKS.md](FRAMEWORKS.md) provides the optional persistent graph, standard LangChain tools, TypeScript customer program, and executable operator CLI. Select one existing `buyer.operation(intentId)` and retain its original state. Graph checkpoints and ToolMessages refer to that same operation, native attempt, and verified response. The base package remains dependency-free; install the optional frameworks only for their corresponding subpath imports.
