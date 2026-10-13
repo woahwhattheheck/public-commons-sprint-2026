@@ -27,7 +27,7 @@ export function createMultivariateControlWorkbench(host){
    '<label class="mc-wide"><span>Scientific reason and comparison question</span><textarea data-mc-field="reason" rows="3">'+esc(d.reason)+'</textarea></label>'+
    select("baseline_run_id","Original baseline run",catalog.baselines.map(x=>option(x.id,(x.title||x.id)+" · "+x.state,d.baseline_run_id)).join(""))+
    select("restoration_footprint_id","Actual restoration footprint",catalog.restorations.map(x=>option(x.id,(x.title||x.id)+" · run "+x.run_id,d.restoration_footprint_id)).join(""))+
-   '</div><p>Select the prepared covariates to constrain. Exact land-cover transitions remain separate. Every original changed treatment cell stays in the design. Bounds divide each covariate into intervals; the first and last intervals remain open. Blank bounds create a single interval and do not constrain that covariate.</p>'+
+   '</div><p>Select the prepared covariates to constrain. Exact land-cover transitions remain separate. Every original changed treatment cell stays in the design. Bounds divide each covariate into intervals; the first and last intervals remain open. Blank bounds create a single interval and do not constrain that covariate. An included covariate still requires valid values at all treatment cells, even with no boundaries; disable it to keep it descriptive only.</p>'+
    table(["Include prepared covariate","Original units and range","Increasing interval boundaries"],ROLES.map(role=>['<label class="mc-check"><input type="checkbox" data-mc-enabled="'+role+'" '+(d.enabled[role]?"checked":"")+' '+(!restored?.scalars?.[role]?"disabled":"")+'>'+esc(label[role])+'</label>',esc(restored?.scalars?.[role]?.units||"Choose a footprint")+"<small>"+esc(numeric(restored?.scalars?.[role]?.minimum))+" to "+esc(numeric(restored?.scalars?.[role]?.maximum))+"</small>",'<label><span class="mc-sr">'+esc(label[role])+' boundaries</span><input data-mc-boundaries="'+role+'" value="'+esc(d.boundaries[role])+'" placeholder="Enter increasing boundaries"></label>']))+
    '<h3>Additional original covariates</h3><p>Slope and stream connectivity are matched only when you select aligned source rasters below. Elevation does not substitute for slope. Describe the physical meaning of each selected source.</p>'+
    ["SLOPE","CONNECTIVITY"].map(role=>{const x=d.optional[role];return '<section class="mc-optional"><label class="mc-check"><input type="checkbox" data-mc-optional="'+role+'" data-mc-part="enabled" '+(x.enabled?"checked":"")+'>Include '+esc(label[role])+'</label>'+(x.enabled?'<div class="mc-grid"><label><span>Original source and units</span><select data-mc-optional="'+role+'" data-mc-part="source">'+option("","Choose an aligned original raster",x.source)+list(catalog.covariate_sources).map(y=>option(exclusionKey(y),(y.title||y.source_id)+" · "+y.units,x.source)).join("")+'</select></label><label><span>Increasing boundaries</span><input data-mc-optional="'+role+'" data-mc-part="boundaries" value="'+esc(x.boundaries)+'"></label><label class="mc-wide"><span>What this raster measures</span><textarea data-mc-optional="'+role+'" data-mc-part="definition">'+esc(x.definition)+'</textarea></label></div>':"")+'</section>';}).join("")+
@@ -69,7 +69,7 @@ export function createMultivariateControlWorkbench(host){
    '<input type="file" accept=".json,application/json" data-mc-import hidden>'+
    '<section class="mc-section" data-mc-form>'+form()+'</section>'+
    '<section class="mc-section"><h2>Source preview</h2><div data-mc-preview>'+previewMarkup()+'</div></section>'+
-   '<section class="mc-section"><h2>Saved control designs</h2><div class="mc-actions"><label><span>Design</span><select data-mc-saved>'+option("","Choose a saved control design",desk?.selected_id)+list(catalog?.designs).map(x=>option(x.id,(x.selection?.title||x.id)+" · "+describeState(x.state),desk?.selected_id)).join("")+'</select></label>'+button("open","Open retained design")+'</div><div data-mc-result>'+resultMarkup()+'</div></section>'+
+   '<section class="mc-section"><h2>Saved control designs</h2><div class="mc-actions"><label><span>Design</span><select data-mc-saved>'+option("","Choose a saved control design",desk?.selected_id)+[...list(catalog?.designs),...(result&&!list(catalog?.designs).some(x=>x.id===result.id)?[result]:[])].map(x=>option(x.id,(x.selection?.title||x.id)+" · "+describeState(x.state),desk?.selected_id)).join("")+'</select></label>'+button("open","Open retained design")+'</div><div data-mc-result>'+resultMarkup()+'</div></section>'+
    '<section class="mc-section"><h2>Original native operations</h2><div data-mc-tasks>'+taskRows()+'</div></section>'+
    (list(catalog?.issues).length?'<section class="mc-section"><h2>Source catalogue issues</h2><ul>'+catalog.issues.map(x=>'<li>'+esc(typeof x==="string"?x:JSON.stringify(x))+'</li>').join("")+'</ul></section>':"")+'</div>';
   notice();
@@ -97,10 +97,11 @@ export function createMultivariateControlWorkbench(host){
   catalog=value;render();
   if(desk.selected_id&&list(catalog.designs).some(x=>x.id===desk.selected_id))await openDesign(desk.selected_id);
  }
- async function openDesign(id){
-  if(!id)return;
+ async function openDesign(id,{isCurrent=()=>true}={}){
+  if(!id||!isCurrent())return;
   const w=workspace,g=generation,own=++inspectGeneration;
-  const value=await read("inspect",{design_id:id},w);if(!active(w,g)||own!==inspectGeneration)return;
+  const value=await read("inspect",{design_id:id},w);if(!active(w,g)||own!==inspectGeneration||!isCurrent())return;
+  if(!desk){const project=value.binding?.project_id;if(typeof project!=="string"||!project)throw Error("The saved design is missing its original project identity.");const raw=storage.getItem(key(w));desk=raw?validateDesk(JSON.parse(raw),project):emptyDesk(project);}
   const next=clone(desk);next.selected_id=id;write(next);result=value;render();
  }
  async function sendRetained(request){
@@ -173,7 +174,7 @@ export function createMultivariateControlWorkbench(host){
  function update(state){
   if(!node||host.getWorkspace()!==workspace)return;
   const rows=list(state?.tasks).filter(x=>x.workspace===workspace&&/^control\./.test(x.action));
-  const signature=canonical(rows.map(x=>[x.id,x.state,x.updated_at]));
+  const signature=canonical(rows.map(x=>[x.id,x.state]));
   const target=node.querySelector("[data-mc-tasks]");if(target)target.innerHTML=taskRows();
   if(loadedTaskFingerprint&&signature!==loadedTaskFingerprint&&!busy){const w=workspace,g=generation;loadCatalog().catch(e=>{if(active(w,g))fail(e);});}
   loadedTaskFingerprint=signature;
@@ -184,6 +185,6 @@ export function createMultivariateControlWorkbench(host){
   const w=workspace,g=generation;try{await loadCatalog();}catch(e){if(active(w,g))fail(e);}
  }
  function detach(){generation++;loadGeneration++;inspectGeneration++;if(node){node.removeEventListener("click",click);node.removeEventListener("input",input);node.removeEventListener("change",input);}node=null;workspace=null;}
- async function openSavedDesign({workspace_key,design_id}){if(!node||workspace!==workspace_key||host.getWorkspace()!==workspace_key)throw Error("Open the design's original matched-control desk.");await openDesign(design_id);}
+ async function openSavedDesign({workspace_key,design_id,isCurrent=()=>true}){if(!isCurrent())return;if(!node||workspace!==workspace_key||host.getWorkspace()!==workspace_key)throw Error("Open the design's original matched-control desk.");await openDesign(design_id,{isCurrent});}
  return {mount,update,detach,openSavedDesign};
 }
